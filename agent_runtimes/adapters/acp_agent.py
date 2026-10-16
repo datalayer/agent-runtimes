@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import hashlib
 import logging
 import os
 import shutil
@@ -64,6 +63,7 @@ from acp.schema import (
 )
 from agent_shield.__version__ import __version__ as shield_version
 from agent_shield.acp import SHIELD_CLIENT_CAPABILITIES, normalize
+from agent_shield.acp.credential import fingerprint, lent_with
 from agent_shield.acp.events import (
     CommandsUpdated,
     Event,
@@ -1190,13 +1190,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     @staticmethod
     def _authority_of(context: AgentContext) -> str:
-        """Which authority a run's lent MCP carries: a delegated credential's fingerprint, else the runtime's."""
+        """Which authority a run's lent MCP carries: a delegated credential's fingerprint
+        (the Shield's, ``agent_shield.acp.credential``), else the runtime's."""
         from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
 
         delegated = str(context.metadata.get(DELEGATED_CREDENTIAL) or "")
         if not delegated:
             return "runtime"
-        return "delegated:" + hashlib.sha256(delegated.encode()).hexdigest()
+        return "delegated:" + fingerprint(delegated)
 
     def _lent_servers(self, bearer: str) -> list[Any]:
         """The lent toolsets as ``session/new.mcpServers``: HTTP with the bearer, or the stdio shim holding it."""
@@ -1208,27 +1209,30 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 f"{self.harness.name} is lent {names}, and this run carries no credential "
                 "to reach the gateway with: nothing is lent without one (SHIELD §4.4)."
             )
-        servers: list[Any] = []
-        for item in self.lent:
-            if self.lends_over_http:
-                servers.append(
+        if self.lends_over_http:
+            # Lent with the bearer as the Shield lends a credential
+            # (`agent_shield.acp.credential.lent_with`, SH-33): its
+            # `Authorization` on every HTTP server, whatever else was there.
+            return lent_with(
+                [
                     HttpMcpServer(
                         type="http",
                         name=item.name,
                         url=item.url,
+                        # The trace the session opens on, to the gateway
+                        # (§6.8): a harness that honours `_meta.traceparent`
+                        # sends its own per turn; one that does not sends this.
                         headers=[
-                            HttpHeader(name="Authorization", value=f"Bearer {bearer}"),
-                            # The trace the session opens on, to the gateway
-                            # (§6.8): a harness that honours `_meta.traceparent`
-                            # sends its own per turn; one that does not sends this.
-                            *(
-                                HttpHeader(name=name, value=value)
-                                for name, value in trace_headers().items()
-                            ),
+                            HttpHeader(name=name, value=value)
+                            for name, value in trace_headers().items()
                         ],
                     )
-                )
-                continue
+                    for item in self.lent
+                ],
+                bearer,
+            )
+        servers: list[Any] = []
+        for item in self.lent:
             # The credential stays in the runtime's hands: the shim reads it
             # from the Shield's home by an opaque handle, never from the
             # harness's arguments or environment.

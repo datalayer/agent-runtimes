@@ -239,3 +239,52 @@ def test_the_credential_in_the_prompts_meta_scopes_the_harnesss_subagent(
     )
     assert "subagent: write_note: refused" in said, said
     assert stand_in.seen == [("read_note", READ_ONLY), ("write_note", READ_ONLY)]
+
+
+@pytest.mark.asyncio
+async def test_the_credential_in_an_a2a_messages_metadata_scopes_the_harnesss_subagent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway: tuple[Gateway, str],
+    workspace: Path,
+) -> None:
+    """Over A2A: the delegating message's ``metadata.datalayer.credential`` (O1-17)
+    leaves the message before the task keeps it, is held for the run, and lends the
+    harness's MCP — the sub-agent's write refused by the read-only credential, the
+    credential nowhere in the task's history or the audit."""
+    from agent_runtimes.tests.test_a2a_harness_worker import _run, _statuses
+
+    store = SqliteProtocolStateStore(tmp_path / "a2a-state.sqlite")
+    monkeypatch.setattr(state_store, "_store", store)
+    stand_in, url = gateway
+    agent = harness(workspace, url)
+    message = {
+        "role": "user",
+        "parts": [{"text": SUBAGENT}],
+        "message_id": "m-chain",
+        "context_id": "ctx-1",
+        "metadata": {"datalayer": {"credential": READ_ONLY}},
+    }
+    task_id, events, storage = await _run(store, agent, message)
+    said = " ".join(
+        str(part.get("text") or "")
+        for event in events
+        for part in (
+            (event.get("status_update", {}).get("status", {}).get("message") or {}).get(
+                "parts"
+            )
+            or ()
+        )
+    ) + " ".join(
+        str(part.get("text") or "")
+        for event in events
+        for part in event.get("artifact_update", {}).get("artifact", {}).get("parts")
+        or ()
+    )
+    assert _statuses(events)[-1]["state"] == "completed", _statuses(events)[-1]
+    assert "subagent: write_note: refused" in said, said
+    assert stand_in.seen == [("read_note", READ_ONLY), ("write_note", READ_ONLY)]
+    kept = await storage.load_task(task_id)
+    assert READ_ONLY not in repr(kept)
+    assert kept["history"][0]["metadata"]["datalayer"]["credential"] == "withheld"
+    assert READ_ONLY not in repr(agent.audit.rows)

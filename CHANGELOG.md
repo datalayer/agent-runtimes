@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+SHIELD, 16 October 2026:
+
+- **The Shield's lending reused** (SH-33): the adapter lends its HTTP toolsets through `agent_shield.acp.credential.lent_with` and compares authorities by its `fingerprint`; `datalayer-agent-shield>=0.2.4`. The A2A half of a delegated credential held by a test (`metadata.datalayer.credential` withheld from the task, the sub-agent's write refused).
+
 ## 1.5.45
 
 VOICE, 16 October 2026 (agentspecs 0.0.108):
@@ -26,6 +30,8 @@ SHIELD, 16 October 2026:
 
 - **The Shield's examples** (SHIELD SH-23): `examples/shield/` — a coding agent on the local runtime as `loop --harness` starts it, the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff; each on the fake agent with no key, its output in the README, run by `test_the_shield_examples.py` and held by `check_examples.py` (which now checks example folders: every script named in the README, every import existing). In the examples app, *Shield Harness* (the web chat on a harness runtime: diffs, terminals, the approval banner) and *Shield Policy* (`@datalayer/agent-shield`'s types and `describeDecision`). [Examples](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **The harnesses and Shield pages brought to what is built** (SH-20, SH-38, SH-06): the mapping tables as built, what each harness honours, the policies, the record, the trace, session rules, the budget. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses), [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
+- **Authority across the chain** (SH-33, 881ee842, 30f89d94): a run delegated with an execution's credential (`_meta` / `metadata` `datalayer.credential`) lends its harness the gateway's toolsets with that credential before a deployment's principal or the caller's token, so a sub-agent the harness spawns is held to the execution's manifest; a later turn under another authority opens a new session, said. [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
+- **The Rules card's *This session*** (SH-54, 41a8f796): the session's rules read, a file-and-shell rule added in one click and removed, a loosening refused in the runtime's sentence (`session-rules-card.test.tsx`). [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
 
 ## 1.5.44
 
