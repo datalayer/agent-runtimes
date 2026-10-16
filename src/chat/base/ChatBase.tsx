@@ -142,6 +142,7 @@ import {
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
 import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
+import { answerSpokenOver } from '../../voice/handsFree';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
 import type { SpokenMetadata } from '../../voice/types';
 import { settledVoice } from '../../voice/chatVoice';
@@ -4025,6 +4026,18 @@ function ChatBaseInner({
   const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  // The conversation as shown, read when the person speaks over an answer.
+  const shownItemsRef = useRef<readonly DisplayItem[]>([]);
+  const markInterrupted = useCallback(() => {
+    const spokenOver = answerSpokenOver(
+      shownItemsRef.current.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      ),
+    );
+    if (spokenOver) {
+      setInterruptedIds(ids => new Set([...ids, spokenOver]));
+    }
+  }, []);
   const stopSpeaking =
     onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
   const readAnswerAloud =
@@ -4442,6 +4455,8 @@ function ChatBaseInner({
       thread: () => threadIdRef.current,
       // Its speaker, for a host whose composer holds the microphone (VO-10).
       stopSpeaking,
+      // The answer spoken over, marked for a host's own composer (VO-13).
+      markInterrupted,
     });
     return () => {
       onSendReady(null);
@@ -4454,6 +4469,7 @@ function ChatBaseInner({
     handleStop,
     handleNewChat,
     stopSpeaking,
+    markInterrupted,
   ]);
 
   // Streaming state, for a host that draws the prompt.
@@ -4912,6 +4928,7 @@ function ChatBaseInner({
       ]
     : displayItems;
 
+  shownItemsRef.current = welcomedItems;
   /*
    * *Read aloud* under each answer the agent has finished (VOICE.md VO-21),
    * when the host reads answers aloud on request.
@@ -5021,11 +5038,7 @@ function ChatBaseInner({
         // person speaks over it, and the answer marked interrupted.
         running={isLoading}
         onStopRun={handleStop}
-        onInterrupted={() => {
-          if (writingId) {
-            setInterruptedIds(ids => new Set([...ids, writingId]));
-          }
-        }}
+        onInterrupted={markInterrupted}
         onInterimChange={setVoiceInterim}
         // The menu offers when answers are heard where the application
         // lets them be (VO-21, VO-30).

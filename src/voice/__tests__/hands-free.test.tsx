@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HEARING_RATE, openMicrophone } from '../capture';
 import { consent, consentKeyFor } from '../consent';
 import {
+  answerSpokenOver,
   HANDS_FREE_WORDS,
   TURN_SILENCE_MS,
   bargedIn,
@@ -321,5 +322,31 @@ describe('Talk with it (VO-12, VO-13)', () => {
     });
     await until(() => opened.length === 1);
     expect(state()).toBe('listening');
+  });
+});
+
+describe('answerSpokenOver (VO-13)', () => {
+  it('is the agent’s answer to the last turn, written or being said', () => {
+    const turn = [
+      { id: 'u1', role: 'user' },
+      { id: 'a1', role: 'assistant' },
+      { id: 'u2', role: 'user' },
+      { id: 'a2', role: 'assistant' },
+    ];
+    expect(answerSpokenOver(turn)).toBe('a2');
+    // Answered in two messages: the last is the one being said.
+    expect(answerSpokenOver([...turn, { id: 'a3', role: 'assistant' }])).toBe(
+      'a3',
+    );
+  });
+
+  it('marks nothing before the agent answered the turn', () => {
+    expect(
+      answerSpokenOver([
+        { id: 'a1', role: 'assistant' },
+        { id: 'u2', role: 'user' },
+      ]),
+    ).toBeUndefined();
+    expect(answerSpokenOver([])).toBeUndefined();
   });
 });

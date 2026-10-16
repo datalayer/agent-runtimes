@@ -101,3 +101,30 @@ export function bargedIn(
 ): boolean {
   return (state === 'speaking' || state === 'thinking') && heard.spoke;
 }
+
+/** A message as the conversation holds it: enough to find the answer spoken over. */
+export interface ConversationItemLike {
+  id: string;
+  role?: string;
+}
+
+/**
+ * The answer the person spoke over (VO-13): the agent's last message after
+ * the person's last one — still being written, or written and being said.
+ * `undefined` while the agent has not answered the turn yet: there is
+ * nothing to mark.
+ */
+export function answerSpokenOver(
+  items: readonly ConversationItemLike[],
+): string | undefined {
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const role = items[i].role;
+    if (role === 'user') {
+      return undefined;
+    }
+    if (role === 'assistant') {
+      return items[i].id;
+    }
+  }
+  return undefined;
+}

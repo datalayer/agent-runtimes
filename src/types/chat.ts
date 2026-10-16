@@ -893,6 +893,11 @@ export interface ChatBaseProps {
        * Absent while its answers are not heard.
        */
       stopSpeaking?: () => void;
+      /**
+       * Marks the answer the person spoke over *interrupted* (VOICE.md
+       * VO-13), for a host whose composer holds the microphone.
+       */
+      markInterrupted: () => void;
     } | null,
   ) => void;
 
