@@ -20,6 +20,11 @@ SHIELD, 16 October 2026 (agent-shield 0.2.2):
 - **A dead ACP stdio agent fails at once** (SH-45's finding, agent-shield 0.2.2): the orchestration adapter's stdio channel refuses a request when the agent's process ends, naming its exit code, where it waited its timeout.
 - **Docs**: the transports page links the harnesses page by its file (`./index.mdx#…`), so the Deploy docs build no longer stops on a broken link.
 
+MOBILE, 16 October 2026:
+
+- **The portable entry carries Activity, a deployment's lifecycle and agent runtimes** (MOBILE M-015b, M-041b, M-014b): `portable/activity` (the record's entries and `/apps/activity`, read and said once, with `activityFixture`), `portable/lifecycle` (pause/resume/reset bodies and answers, a deployment's events in a line) and `portable/runtimes` (the runtimes service's agent runtimes, `AgentSummaryData`, `isCreatingAgent`, which `AgentSummary` reads). Proved under Expo/Hermes by Datalayer Mobile's CI with Core's and Primer Addons' portable entries.
+- **`useChat` and `ChatInline` on the shared conversation reducer** (M-030): adapter events through `conversationEventsOf`, an inference provider's deltas as AG-UI text events, the store's messages drawn from the conversation.
+
 ## 1.5.43
 
 SHIELD Phase 3, 16 October 2026 (agentspecs 0.0.107, agent-shield 0.2.1):
