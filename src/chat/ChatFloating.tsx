@@ -1728,6 +1728,7 @@ export function ChatFloating({
           voiceSpeaking={speakerState.speaking}
           voiceSentence={speakerState.sentence}
           onStopSpeaking={speaker ? stopSpeaking : undefined}
+          voiceLevel={mouthLevel}
           onReadAloud={speaker ? readAnswerAloud : undefined}
           {...panelProps}
           {...assistantChat}

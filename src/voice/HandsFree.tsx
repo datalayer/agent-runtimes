@@ -70,6 +70,12 @@ export interface HandsFreeProps {
   running?: boolean;
   /** The agent's answer is being said. */
   speaking?: boolean;
+  /**
+   * How loud the agent's voice plays now, between 0 and 1 (the speaker's
+   * `level`): while it speaks, speech counts as barge-in only above what the
+   * playback can leave in the microphone (VO-13, `heardOverPlayback`).
+   */
+  playbackLevel?: () => number;
   /** Stops the agent's voice at once (barge-in, VO-13). */
   onStopSpeaking?: () => void;
   /** Stops the run while the answer is still being written (barge-in, VO-13). */
@@ -92,6 +98,7 @@ export function HandsFree({
   onInterim,
   running = false,
   speaking = false,
+  playbackLevel,
   onStopSpeaking,
   onStopRun,
   onInterrupted,
@@ -110,6 +117,7 @@ export function HandsFree({
   const latest = useRef({
     send,
     onInterim,
+    playbackLevel,
     onStopSpeaking,
     onStopRun,
     onInterrupted,
@@ -117,6 +125,7 @@ export function HandsFree({
   latest.current = {
     send,
     onInterim,
+    playbackLevel,
     onStopSpeaking,
     onStopRun,
     onInterrupted,
@@ -210,7 +219,11 @@ export function HandsFree({
         if (so.spoke) {
           quietSince = Date.now();
         }
-        if (bargedIn(now, so)) {
+        const playing = latest.current.playbackLevel;
+        const levels = playing
+          ? { microphone: open.level(), playback: playing() }
+          : undefined;
+        if (bargedIn(now, so, levels)) {
           // The person speaks over the agent (VO-13): its voice and its run
           // stop; what was heard goes on as the next turn.
           latest.current.onStopSpeaking?.();
@@ -265,7 +278,6 @@ export function HandsFree({
       capture.current = undefined;
     };
     // The loop reads the state through a ref: it is not restarted on it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [on, paused, hearing, language, microphoneId, turnSilenceMs]);
 
   // Esc pauses it.

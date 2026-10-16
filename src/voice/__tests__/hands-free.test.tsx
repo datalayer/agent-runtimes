@@ -17,10 +17,13 @@ import { HEARING_RATE, openMicrophone } from '../capture';
 import { consent, consentKeyFor } from '../consent';
 import {
   answerSpokenOver,
+  ECHO_SHARE,
   HANDS_FREE_WORDS,
   TURN_SILENCE_MS,
+  VOICE_OVER_ECHO,
   bargedIn,
   handsFreeState,
+  heardOverPlayback,
   turnEnded,
 } from '../handsFree';
 import { HandsFree } from '../HandsFree';
@@ -78,6 +81,35 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(bargedIn('speaking', { spoke: false, silentMs: 0 })).toBe(false);
   });
 
+  it("counts speech over the answer only above what the answer's own sound can leave in the microphone (VO-13)", () => {
+    const spoke = { spoke: true, silentMs: 0 };
+    expect(ECHO_SHARE).toBe(0.6);
+    expect(VOICE_OVER_ECHO).toBe(0.08);
+    // Nothing plays: any speech is the person's.
+    expect(heardOverPlayback({ microphone: 0.05, playback: 0 })).toBe(true);
+    // The answer plays at 0.5: up to 0.3 may be its echo; 0.38 is the person.
+    expect(heardOverPlayback({ microphone: 0.3, playback: 0.5 })).toBe(false);
+    expect(heardOverPlayback({ microphone: 0.37, playback: 0.5 })).toBe(false);
+    expect(heardOverPlayback({ microphone: 0.38, playback: 0.5 })).toBe(true);
+    // A share measured on a laptop's own speakers (VO-52) is given in.
+    expect(heardOverPlayback({ microphone: 0.3, playback: 0.5 }, 0.4)).toBe(
+      true,
+    );
+    expect(
+      bargedIn('speaking', spoke, { microphone: 0.3, playback: 0.5 }),
+    ).toBe(false);
+    expect(
+      bargedIn('speaking', spoke, { microphone: 0.6, playback: 0.5 }),
+    ).toBe(true);
+    // Thinking, nothing plays yet: the levels are not asked.
+    expect(
+      bargedIn('thinking', spoke, { microphone: 0.01, playback: 0.9 }),
+    ).toBe(true);
+    expect(bargedIn('listening', spoke, { microphone: 0.9, playback: 0 })).toBe(
+      false,
+    );
+  });
+
   it('implies the answers heard as they are written, from an Appspec', () => {
     const voice = chatVoiceOf(
       {
@@ -121,10 +153,13 @@ class StandInHearing implements Hearing {
   }
 }
 
+/** How loud the stand-in microphone is: 0.3 unless a test says otherwise. */
+const micLevel = { now: 0.3 };
+
 function microphone() {
   const capture = {
     open: true,
-    level: () => 0.3,
+    level: () => micLevel.now,
     peek: () => new Float32Array(HEARING_RATE),
     stop: async () => {
       capture.open = false;
@@ -171,6 +206,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     act(() => root.unmount());
     container.remove();
     window.localStorage.clear();
+    micLevel.now = 0.3;
   });
 
   const state = () =>
@@ -291,6 +327,51 @@ describe('Talk with it (VO-12, VO-13)', () => {
     hearing.heard = { text: 'Wait', spoke: true, silentMs: 0 };
     await until(() => stopped.voice >= 1);
     expect(stopped.run).toBeGreaterThanOrEqual(1);
+    expect(stopped.marked).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not take the answer's own sound for the person while it plays, and stops for the person's voice over it (VO-13)", async () => {
+    const hearing = new StandInHearing();
+    const stopped = { voice: 0, run: 0, marked: 0 };
+    const playback = { now: 0.6 };
+    const draw = (running: boolean, speaking: boolean) =>
+      act(() =>
+        root.render(
+          <HandsFree
+            hearing={hearing}
+            language="en-US"
+            consentKey="desk"
+            send={() => undefined}
+            running={running}
+            speaking={speaking}
+            playbackLevel={() => playback.now}
+            onStopSpeaking={() => (stopped.voice += 1)}
+            onStopRun={() => (stopped.run += 1)}
+            onInterrupted={() => (stopped.marked += 1)}
+          />,
+        ),
+      );
+    draw(false, false);
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    draw(false, true);
+    await until(() => opened.length === 2);
+    expect(state()).toBe('speaking');
+    // The VAD finds speech, but the microphone (0.3) is no louder than the
+    // answer at 0.6 can leave in it (0.44): its echo, not the person.
+    hearing.heard = { text: 'the weather', spoke: true, silentMs: 0 };
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+    });
+    expect(stopped).toEqual({ voice: 0, run: 0, marked: 0 });
+    expect(state()).toBe('speaking');
+    // The person speaks up over it.
+    micLevel.now = 0.7;
+    await until(() => stopped.voice >= 1);
     expect(stopped.marked).toBeGreaterThanOrEqual(1);
   });
 

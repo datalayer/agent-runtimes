@@ -2086,6 +2086,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // opening stops it, and *Stop speaking* while it speaks.
               speaking={speaking}
               onStopSpeaking={() => controlsRef.current?.stopSpeaking?.()}
+              // Barge-in gated on how loud that speaker plays (VO-13).
+              playbackLevel={() => controlsRef.current?.voiceLevel?.() ?? 0}
               // Hands-free (VO-12, VO-13): the run in progress, stopped when
               // the person speaks over it, and the answer marked interrupted.
               running={busy}

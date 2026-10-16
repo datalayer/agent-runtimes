@@ -894,6 +894,12 @@ export interface ChatBaseProps {
        */
       stopSpeaking?: () => void;
       /**
+       * How loud the chat's speaker plays now, 0 to 1 (VOICE.md VO-13): a
+       * host's hands-free gates barge-in on it. Absent while its answers
+       * are not heard by a speaker that gives a level.
+       */
+      voiceLevel?: () => number;
+      /**
        * Marks the answer the person spoke over *interrupted* (VOICE.md
        * VO-13), for a host whose composer holds the microphone.
        */
@@ -1302,6 +1308,14 @@ export interface ChatBaseProps {
 
   /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening (VO-13). */
   onStopSpeaking?: () => void;
+
+  /**
+   * How loud the host's speaker plays now, between 0 and 1 (`useVoiceSpeaker`'s
+   * `level`): hands-free's barge-in counts speech only above what the answer's
+   * own sound can leave in the microphone (VOICE.md VO-13). A chat that speaks
+   * for itself reads its own.
+   */
+  voiceLevel?: () => number;
 
   /**
    * Reads an answer aloud (VOICE.md VO-21): given, each answer the agent has

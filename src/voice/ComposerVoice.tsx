@@ -44,6 +44,8 @@ export interface ComposerVoiceProps {
   speaking?: boolean;
   /** Stops the agent's voice, also when the microphone opens (VO-13). */
   onStopSpeaking?: () => void;
+  /** How loud the agent's voice plays now, 0 to 1: hands-free's barge-in is gated on it (VO-13). */
+  playbackLevel?: () => number;
   /** The agent is answering: a run is in progress (hands-free, VO-12). */
   running?: boolean;
   /** Stops the run while the answer is still being written (barge-in, VO-13). */
@@ -82,6 +84,7 @@ export function ComposerVoice({
   disabled = false,
   speaking = false,
   onStopSpeaking,
+  playbackLevel,
   running = false,
   onStopRun,
   onInterrupted,
@@ -144,6 +147,7 @@ export function ComposerVoice({
           disabled={disabled}
           running={running}
           speaking={speaking}
+          playbackLevel={playbackLevel}
           onStopSpeaking={onStopSpeaking}
           onStopRun={onStopRun}
           onInterrupted={onInterrupted}

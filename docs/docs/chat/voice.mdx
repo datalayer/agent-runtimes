@@ -44,8 +44,13 @@ text stays on screen.
   *Thinking…*, *Speaking…*, *Paused*. **Speak over it** and its voice stops
   at once; while the answer is still being written, the run is stopped too,
   the answer is marked *interrupted* in the conversation, and what you said
-  starts the next turn. `Esc` or *Pause* pauses it; five quiet minutes
-  pause it too; the toggle again turns it off.
+  starts the next turn. While the answer plays, speech counts as yours only
+  when the microphone is louder than the answer's own sound can leave in it
+  once the browser's echo cancellation has done its part (at most 0.6 of
+  what plays, on the meters' scales, plus a margin; the chat's speaker gives
+  its level as `voiceLevel`): a laptop's speakers do not interrupt their own
+  answer. `Esc` or *Pause* pauses it; five quiet minutes pause it too; the
+  toggle again turns it off.
 - **Pauses before I am done.** Someone who pauses longer while speaking
   chooses *Longer* or *Much longer* in the voice menu, or on
   */settings/appearance*: the silence that stops a microphone clicked on
@@ -79,7 +84,11 @@ text stays on screen.
   (`metadata.input: "voice"`, with its language, the model that heard it and
   where it ran). It shows a small microphone in the conversation. An
   application's record keeps the turn as its transcript, marked `spoken`.
-  Audio is never kept.
+  Audio is not kept. An Appspec may name `audio` in `record.include` (for
+  when kept audio is built): it is refused unless the application listens,
+  is not public, and its record — by `record.keep_for` or by the Track
+  `checks.track` names — is kept **30 days at most**; the Studio's checks
+  say the same sentences as agentspecs.
 
 ## At the terminal
 
@@ -333,9 +342,26 @@ Whisper small in the speech image on 16 October 2026 (`measure.py --server`,
 | Whisper small (faster-whisper, 8-bit) | 3.3% | 0.28 | 1.2 s | 1.2 s |
 | Moonshine base (onnxruntime, 8-bit) | 4.9% | 0.05 | 0.16 s | 0.19 s |
 
-Moonshine is about seven times faster but hears the fixtures less well, so
-English turns stay with Whisper small: a model is switched only when it is
-better at both.
+Moonshine is about seven times faster but heard the fixtures less well. The
+choice was the user's (16 October 2026, *go for Moonshine base for English*):
+since `speech:0.0.12`, a spoken turn told English is heard on the server by
+Moonshine base; a turn in another language, or one whose language is
+detected, by Whisper small; a recording past a turn (20 s) by large-v3-turbo.
+Measured on r1 on 16 October 2026 (`speech:0.0.14`, two pods, speech only):
+
+| | Time |
+|---|---|
+| A 3-second English turn (Moonshine base) | 0.50–0.84 s |
+| A 9-second English turn (Moonshine base) | 0.74–1.31 s |
+| A 9-second turn, detecting its language (Whisper small) | 7.5–12.7 s |
+| A 10.7–12.8-second French turn (Whisper small) | 8.6–14.5 s |
+| A French sentence said (`kokoro-ff-siwis`), first audio | 2.25 s |
+| 8 English turns at once, the last heard | 2.3 s |
+| 10 English turns at once, the last heard | 3.8 s |
+
+The table above it (4.3–4.6 s for a 9-second turn) is Whisper small's, before
+the switch. The service runs 2 pods, scaled up to 4 by the Datalayer operator
+on the turns in flight.
 
 ### Streaming to the server
 

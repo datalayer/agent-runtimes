@@ -816,6 +816,7 @@ function ChatBaseInner({
   voiceSpeaking = false,
   voiceSentence,
   onStopSpeaking,
+  voiceLevel,
   onReadAloud,
   showInformation = false,
   onInformationClick,
@@ -4046,6 +4047,8 @@ function ChatBaseInner({
   }, []);
   const stopSpeaking =
     onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
+  // How loud the answer plays: the host's speaker's, or the chat's own (VO-13).
+  const playbackLevel = hostSpeaks ? voiceLevel : ownVoice.level;
   const readAnswerAloud =
     onReadAloud ?? (ownVoice.speaker ? ownVoice.read : undefined);
   const handleSend = useCallback(
@@ -4461,6 +4464,8 @@ function ChatBaseInner({
       thread: () => threadIdRef.current,
       // Its speaker, for a host whose composer holds the microphone (VO-10).
       stopSpeaking,
+      // How loud it plays, for a host's hands-free barge-in (VO-13).
+      voiceLevel: playbackLevel,
       // The answer spoken over, marked for a host's own composer (VO-13).
       markInterrupted,
     });
@@ -4475,6 +4480,7 @@ function ChatBaseInner({
     handleStop,
     handleNewChat,
     stopSpeaking,
+    playbackLevel,
     markInterrupted,
   ]);
 
@@ -5043,6 +5049,9 @@ function ChatBaseInner({
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
+        // Barge-in gated on how loud the answer plays (VO-13): the host's
+        // speaker, or the chat's own.
+        playbackLevel={playbackLevel}
         // Hands-free (VO-12, VO-13): the run in progress, stopped when the
         // person speaks over it, and the answer marked interrupted.
         running={isLoading}

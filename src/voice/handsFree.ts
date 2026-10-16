@@ -90,16 +90,57 @@ export function turnEnded(
 }
 
 /**
+ * At most this share of what plays is taken to come back into the
+ * microphone once the browser's echo cancellation has done its part (VO-13),
+ * on the meters' own scales (the microphone's `Capture.level`, the speaker's
+ * `level`). A setting, not a measure yet: VO-52 measures it on a laptop's
+ * own speakers.
+ */
+export const ECHO_SHARE = 0.6;
+
+/** How far above that echo the person's voice must be, on the meter's scale. */
+export const VOICE_OVER_ECHO = 0.08;
+
+/** How loud the microphone and the agent's voice are now, each between 0 and 1. */
+export interface Levels {
+  microphone: number;
+  playback: number;
+}
+
+/**
+ * Whether the microphone holds more than the agent's own voice coming back
+ * (VO-13): nothing plays, or the microphone is louder than the echo the
+ * playback can leave by `VOICE_OVER_ECHO`.
+ */
+export function heardOverPlayback(
+  levels: Levels,
+  echoShare = ECHO_SHARE,
+): boolean {
+  if (levels.playback <= 0) {
+    return true;
+  }
+  return levels.microphone >= levels.playback * echoShare + VOICE_OVER_ECHO;
+}
+
+/**
  * Whether the person spoke over the agent (VO-13): speech found since the
  * agent began answering, while it thinks or speaks. The microphone is opened
- * anew when the agent begins, so what it holds is the person's, not the
- * answer's echo — the browser's echo cancellation keeps that out.
+ * anew when the agent begins, so what it holds came since; the browser's
+ * echo cancellation keeps most of the answer's sound out, and while the
+ * answer plays the VAD's speech counts only when the microphone is louder
+ * than what the playback can leave in it (`heardOverPlayback`) — when the
+ * levels are known. A host whose speaker gives no level (the browser's own
+ * voices) relies on echo cancellation alone.
  */
 export function bargedIn(
   state: HandsFreeState,
   heard: HeardSoFarLike,
+  levels?: Levels,
 ): boolean {
-  return (state === 'speaking' || state === 'thinking') && heard.spoke;
+  if (!(state === 'speaking' || state === 'thinking') || !heard.spoke) {
+    return false;
+  }
+  return state !== 'speaking' || !levels || heardOverPlayback(levels);
 }
 
 /** A message as the conversation holds it: enough to find the answer spoken over. */
