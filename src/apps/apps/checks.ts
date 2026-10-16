@@ -293,6 +293,47 @@ export function pageProblems(app: AppSpec): string[] {
 }
 
 /** What the spec says of itself that the tolerant reader lets through. */
+/** What was said aloud is kept 30 days at most (VOICE.md VO-63, decision 10): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
+export const AUDIO_KEPT_DAYS_AT_MOST = 30;
+
+/**
+ * agentspecs' refusals of an application keeping audio (VOICE.md VO-42,
+ * VO-63), in its sentences: never public, only when it listens, and never
+ * kept longer than 30 days — by `record.keep_for`, or by the Track its
+ * `checks.track` names, whose retention wins.
+ */
+export function keptAudioProblems(app: AppSpec): string[] {
+  if (!app.record.include.includes('audio')) {
+    return [];
+  }
+  if (app.deployment.hosted?.visibility === 'public') {
+    return [
+      'A public application keeps no audio: remove `audio` from `record.include`, or open it to fewer people.',
+    ];
+  }
+  const voice = app.interface.voice;
+  if (!voice?.enabled || voice.input === 'off') {
+    return [
+      'An application keeps audio only when it listens: turn `interface.voice` on.',
+    ];
+  }
+  let days = app.record.retentionDays;
+  let keeper = `\`record.keep_for\` (${app.record.keepFor})`;
+  const track = app.checks.track.trim()
+    ? getTrack(app.checks.track)
+    : undefined;
+  if (track) {
+    days = track.retentionDays;
+    keeper = `its Track ${track.id} (${track.retainFor})`;
+  }
+  if (days > AUDIO_KEPT_DAYS_AT_MOST) {
+    return [
+      `Audio is kept ${AUDIO_KEPT_DAYS_AT_MOST} days at most, and ${keeper} keeps the record ${days} days: keep it \`${AUDIO_KEPT_DAYS_AT_MOST}_days\` or less, or remove \`audio\` from \`record.include\`.`,
+    ];
+  }
+  return [];
+}
+
 function shapeProblems(app: AppSpec): string[] {
   const problems: string[] = [];
   if (!app.id.trim()) {
@@ -344,6 +385,7 @@ function shapeProblems(app: AppSpec): string[] {
       `A ${app.kind} application starts when somebody opens it: \`triggers\` are a worker's.`,
     );
   }
+  problems.push(...keptAudioProblems(app));
   // Its profiles (LOOP P-20): two at least, or none; each id slash-safe and
   // said once, each with a label.
   const profiles = app.interface.profiles ?? [];
@@ -873,6 +915,11 @@ const ENUMS = {
     'sources',
     'outputs',
     'feedback',
+    // agentspecs' RecordItem whole: audio (VOICE.md VO-42, VO-63, refused by
+    // keptAudioProblems unless allowed), a harness's diffs and terminals (SHIELD §6.4).
+    'audio',
+    'diffs',
+    'terminals',
   ],
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
   mode: ['inline', 'bubble', 'panel', 'assistant'],

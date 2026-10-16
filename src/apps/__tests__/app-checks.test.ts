@@ -361,7 +361,7 @@ describe('the instant checks', () => {
         'rules.0.behaviour: is one of do_it, if_asked, ask_first, leave_to_me.',
         'interface.layout: is one of chat, page, split.',
         'tests.ready_at: is a share, from 0 to 1.',
-        'record.include.0: is one of conversations, actions, decisions, approvals, checks, sources, outputs, feedback.',
+        'record.include.0: is one of conversations, actions, decisions, approvals, checks, sources, outputs, feedback, audio, diffs, terminals.',
         'triggers: is a list.',
         'deployment.embedded.origins.0: is an origin: https://example.com, without a path.',
         'permissions.computer.shell: is true or false.',
@@ -478,6 +478,56 @@ describe('the instant checks', () => {
     expect(said({ enabled: true, output: 'loud' })).toContain(
       'interface.voice.output: is one of off, on_request, always.',
     );
+  });
+
+  it('refuses kept audio as agentspecs does: public, not listening, kept over 30 days (VOICE.md VO-42, VO-63)', () => {
+    const listening = { voice: { enabled: true, input: 'push_to_talk' } };
+    const said = (extra: Record<string, unknown>) =>
+      checkAppspec({ ...BASE, interface: listening, ...extra }).problems;
+    expect(
+      said({ record: { keep_for: '30_days', include: ['audio'] } }),
+    ).toEqual([]);
+    expect(
+      said({
+        record: { keep_for: '31_days', include: ['conversations', 'audio'] },
+      }),
+    ).toEqual([
+      'Audio is kept 30 days at most, and `record.keep_for` (31_days) keeps the record 31 days: keep it `30_days` or less, or remove `audio` from `record.include`.',
+    ]);
+    // The default keeps a year.
+    expect(said({ record: { include: ['audio'] } })).toEqual([
+      'Audio is kept 30 days at most, and `record.keep_for` (1_years) keeps the record 365 days: keep it `30_days` or less, or remove `audio` from `record.include`.',
+    ]);
+    // A Track's retention wins over keep_for.
+    expect(
+      said({
+        record: { keep_for: '30_days', include: ['audio'] },
+        checks: { track: 'standard' },
+      }),
+    ).toEqual([
+      'Audio is kept 30 days at most, and its Track standard (1_years) keeps the record 365 days: keep it `30_days` or less, or remove `audio` from `record.include`.',
+    ]);
+    expect(
+      said({
+        record: { keep_for: '30_days', include: ['audio'] },
+        deployment: { hosted: { visibility: 'public', slug: 'desk' } },
+      }),
+    ).toEqual([
+      'A public application keeps no audio: remove `audio` from `record.include`, or open it to fewer people.',
+    ]);
+    for (const voice of [{ enabled: false }, { enabled: true, input: 'off' }]) {
+      expect(
+        checkAppspec({
+          ...BASE,
+          interface: { voice },
+          record: { keep_for: '30_days', include: ['audio'] },
+        }).problems,
+      ).toEqual([
+        'An application keeps audio only when it listens: turn `interface.voice` on.',
+      ]);
+    }
+    // Without audio, a year is fine.
+    expect(said({ record: { include: ['conversations'] } })).toEqual([]);
   });
 
   it('reads the theme it runs in, and refuses one Appearance does not have (T-30)', () => {
