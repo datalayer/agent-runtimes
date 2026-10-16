@@ -46,6 +46,23 @@ export {
   type AgUiEvent,
   type ToolResultSaid,
 } from './agui';
+// A run's stream reduced to what a chat host shows (DISCORD DC-005, SLACK S-205).
+export {
+  answerParts,
+  isTerminal,
+  SEMANTIC_EVENTS_VERSION,
+  SEMANTIC_KINDS,
+  type AnswerPart,
+  type AskQuestion,
+  type SemanticEvent,
+  type SemanticKind,
+} from './semantic';
+export {
+  askQuestionOf,
+  semanticOf,
+  turnOf,
+  type TurnInfo,
+} from './semanticOfAgUi';
 export {
   AG_UI_NOT_ALLOWED,
   AG_UI_NOT_ON_RUNTIME,

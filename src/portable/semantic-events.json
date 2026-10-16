@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "about": "The semantic agent events a chat host renders (Slack, Discord: plans/DISCORD.md DC-005, plans/SLACK.md S-004, S-205), and the AG-UI events of agent-runtimes' session API (agent_runtimes/routes/apps.py, agent_runtimes/loop/apps/sessions.py, agent_runtimes/loop/apps/external_turns.py) each reduces to. src/portable/semanticOfAgUi.ts reduces every case (src/portable/__tests__/semantic.unit.test.ts); agent_runtimes/tests/test_semantic_events_contract.py holds the cases to what the runtime emits.",
+  "kinds": [
+    "text",
+    "progress",
+    "tool",
+    "approval",
+    "table",
+    "file",
+    "citation",
+    "ask",
+    "completion",
+    "stop",
+    "error"
+  ],
+  "producers": {
+    "text": "AG-UI TEXT_MESSAGE_CONTENT / TEXT_MESSAGE_CHUNK delta",
+    "progress": "AG-UI STEP_STARTED stepName",
+    "tool": "AG-UI TOOL_CALL_START (running), TOOL_CALL_RESULT (complete, or failed when success is false)",
+    "approval": "AG-UI TOOL_CALL_RESULT whose result says pending_approval; the decision itself arrives as an approval.requested delivery",
+    "table": "a Markdown table in the answer (src/portable/semantic.ts answerParts); no AG-UI event carries one",
+    "file": "none in agent-runtimes 1.5.45: reserved, rendered as a safe HTTPS link when produced",
+    "citation": "an HTTPS Markdown link in the answer (answerParts); no AG-UI event carries one",
+    "ask": "AG-UI RUN_FINISHED with result.asking (agent_runtimes/loop/apps/sessions.py question_of); the run stream carries no loop.ask event",
+    "completion": "AG-UI RUN_FINISHED without asking",
+    "stop": "the host itself, after its own Stop: a stopped session's stream ends without RUN_FINISHED or RUN_ERROR (agent_runtimes/loop/apps/sessions.py stop, _close); no AG-UI event carries it",
+    "error": "AG-UI RUN_ERROR message"
+  },
+  "cases": [
+    {
+      "agui": [
+        {
+          "type": "TEXT_MESSAGE_CONTENT",
+          "messageId": "m1",
+          "delta": "Option B "
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "text",
+          "text": "Option B "
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "TEXT_MESSAGE_CHUNK",
+          "messageId": "m1",
+          "delta": "is safer."
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "text",
+          "text": "is safer."
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "TEXT_MESSAGE_CONTENT",
+          "messageId": "m1",
+          "delta": ""
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "STEP_STARTED",
+          "stepName": "Reading the launch notes"
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "progress",
+          "label": "Reading the launch notes"
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "TOOL_CALL_START",
+          "toolCallId": "c1",
+          "toolCallName": "search"
+        },
+        {
+          "type": "TOOL_CALL_ARGS",
+          "toolCallId": "c1",
+          "delta": "{\"q\":\"launch\"}"
+        },
+        {
+          "type": "TOOL_CALL_END",
+          "toolCallId": "c1"
+        },
+        {
+          "type": "TOOL_CALL_RESULT",
+          "toolCallId": "c1",
+          "messageId": "r1",
+          "content": "{\"success\": true}"
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "tool",
+          "id": "c1",
+          "name": "search",
+          "status": "running"
+        },
+        {
+          "kind": "tool",
+          "id": "c1",
+          "name": "search",
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "TOOL_CALL_START",
+          "toolCallId": "c2",
+          "toolCallName": "run_code"
+        },
+        {
+          "type": "TOOL_CALL_RESULT",
+          "toolCallId": "c2",
+          "messageId": "r2",
+          "content": "{\"success\": false, \"execution_error\": \"boom\"}"
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "tool",
+          "id": "c2",
+          "name": "run_code",
+          "status": "running"
+        },
+        {
+          "kind": "tool",
+          "id": "c2",
+          "name": "run_code",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "TOOL_CALL_START",
+          "toolCallId": "c3",
+          "toolCallName": "send_email"
+        },
+        {
+          "type": "TOOL_CALL_RESULT",
+          "toolCallId": "c3",
+          "messageId": "r3",
+          "content": "{\"pending_approval\": true}"
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "tool",
+          "id": "c3",
+          "name": "send_email",
+          "status": "running"
+        },
+        {
+          "kind": "approval",
+          "toolCallId": "c3",
+          "toolName": "send_email"
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1"
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "completion"
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1",
+          "result": {
+            "asking": {
+              "kind": "choice",
+              "prompt": "Which option?",
+              "options": ["A", "B"]
+            }
+          }
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "ask",
+          "question": {
+            "kind": "choice",
+            "prompt": "Which option?",
+            "options": ["A", "B"]
+          }
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1",
+          "result": {
+            "asking": {
+              "kind": "text",
+              "prompt": "Which quarter?"
+            }
+          }
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "ask",
+          "question": {
+            "kind": "text",
+            "prompt": "Which quarter?"
+          }
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1",
+          "result": {
+            "asking": {
+              "kind": "signature",
+              "prompt": "Sign here"
+            }
+          }
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "ask",
+          "question": {
+            "kind": "form",
+            "prompt": "Sign here"
+          }
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1",
+          "result": {
+            "asking": {
+              "kind": "form",
+              "prompt": "Your details",
+              "schema": {}
+            }
+          }
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "ask",
+          "question": {
+            "kind": "form",
+            "prompt": "Your details"
+          }
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_FINISHED",
+          "threadId": "S1",
+          "runId": "t1",
+          "result": {
+            "asking": {
+              "kind": "file",
+              "prompt": "Your receipt",
+              "accept": ["application/pdf"],
+              "max_bytes": 1000000
+            }
+          }
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "ask",
+          "question": {
+            "kind": "file",
+            "prompt": "Your receipt"
+          }
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "CUSTOM",
+          "name": "loop.turn",
+          "value": {
+            "turn": "t1",
+            "external_event_id": "Ev1",
+            "replayed": false,
+            "state": "running"
+          }
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "RUN_ERROR",
+          "message": "The model is unavailable."
+        }
+      ],
+      "semantic": [
+        {
+          "kind": "error",
+          "message": "The model is unavailable."
+        }
+      ]
+    },
+    {
+      "agui": [
+        {
+          "type": "CUSTOM",
+          "name": "loop.session",
+          "value": {
+            "uid": "S1"
+          }
+        },
+        {
+          "type": "CUSTOM",
+          "name": "reactor.ui",
+          "value": {}
+        },
+        {
+          "type": "RUN_STARTED",
+          "threadId": "S1",
+          "runId": "t1"
+        },
+        {
+          "type": "MESSAGES_SNAPSHOT",
+          "messages": []
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "CUSTOM",
+          "name": "loop.turn",
+          "value": {
+            "session": "S1",
+            "turn": "t1",
+            "external_event_id": "Ev1",
+            "replayed": true,
+            "state": "finished"
+          }
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "CUSTOM",
+          "name": "loop.turn",
+          "value": {
+            "session": "S1",
+            "turn": "t1",
+            "external_event_id": "Ev1",
+            "replayed": true,
+            "state": "failed"
+          }
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "CUSTOM",
+          "name": "loop.page",
+          "value": {
+            "inputs": {},
+            "outputs": {}
+          }
+        },
+        {
+          "type": "CUSTOM",
+          "name": "voice.say",
+          "value": {
+            "text": "Hello",
+            "voice": "",
+            "language": "en"
+          }
+        },
+        {
+          "type": "CUSTOM",
+          "name": "voice.interrupted",
+          "value": {}
+        }
+      ],
+      "semantic": []
+    },
+    {
+      "agui": [
+        {
+          "type": "TEXT_MESSAGE_START",
+          "messageId": "m2",
+          "role": "assistant"
+        },
+        {
+          "type": "TEXT_MESSAGE_END",
+          "messageId": "m2"
+        },
+        {
+          "type": "STEP_FINISHED",
+          "stepName": "Reading the launch notes"
+        }
+      ],
+      "semantic": []
+    }
+  ],
+  "answers": [
+    {
+      "answer": "Two options.\n\n| Option | Risk |\n|---|---|\n| A | High |\n| B | Low |\n\nSee [the launch notes](https://datalayer.ai/notes) and [an unsafe link](javascript:alert(1)).",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "Two options."
+        },
+        {
+          "kind": "table",
+          "columns": ["Option", "Risk"],
+          "rows": [
+            ["A", "High"],
+            ["B", "Low"]
+          ]
+        },
+        {
+          "kind": "text",
+          "text": "See [the launch notes](https://datalayer.ai/notes) and [an unsafe link](javascript:alert(1))."
+        },
+        {
+          "kind": "citation",
+          "title": "the launch notes",
+          "url": "https://datalayer.ai/notes"
+        }
+      ]
+    }
+  ]
+}
