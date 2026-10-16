@@ -4002,8 +4002,8 @@ function ChatBaseInner({
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
   // The sentence being said, marked in the conversation (VO-65).
   const sentenceSaid = hostSpeaks ? voiceSentence : ownVoice.state.sentence;
-  const conversationRef = useRef<HTMLDivElement>(null);
-  useSaidSentence(conversationRef, sentenceSaid, displayItems);
+  const saidConversationRef = useRef<HTMLDivElement>(null);
+  useSaidSentence(saidConversationRef, sentenceSaid, displayItems);
   /*
    * A line the agent wants heard, not written (VO-35): a caption while the
    * run goes on, said by the speaker where answers are said by themselves.
@@ -4975,7 +4975,7 @@ function ChatBaseInner({
     children
   ) : (
     <Box
-      ref={conversationRef}
+      ref={saidConversationRef}
       display="flex"
       flexDirection="column"
       minHeight={0}
