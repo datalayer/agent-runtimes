@@ -36,6 +36,23 @@ describe('MemoryWorkQueue', () => {
     expect(await queue.enqueue('a', 'ev-1')).toBe(false);
     expect(await queue.ready()).toBe(true);
   });
+
+  it('reports a failed job, drops it and works the next one', async () => {
+    const failures: Array<[string, number]> = [];
+    const queue = new MemoryWorkQueue<number>((error, item) =>
+      failures.push([(error as Error).message, item]),
+    );
+    const done: number[] = [];
+    queue.start(async item => {
+      if (item === 1) throw new Error('refused');
+      done.push(item);
+    });
+    await queue.enqueue(1);
+    await queue.enqueue(2);
+    await vi.waitFor(() => expect(done).toEqual([2]));
+    expect(failures).toEqual([['refused', 1]]);
+    await queue.stop();
+  });
 });
 
 describe('tablePrefixOf', () => {

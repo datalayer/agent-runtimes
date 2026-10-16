@@ -58,6 +58,19 @@ export class MemoryWorkQueue<T> implements WorkQueue<T> {
   #handler?: (item: T) => Promise<void>;
   #running = false;
 
+  /**
+   * A job that throws is reported here and dropped, and the next one is
+   * worked: one failure never stops the queue, nor the process with an
+   * unhandled rejection. The durable queue retries and dead-letters instead.
+   */
+  constructor(
+    readonly onFailure: (error: unknown, item: T) => void = error => {
+      console.error(
+        `A job failed and was dropped: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    },
+  ) {}
+
   async enqueue(item: T, idempotencyKey?: string): Promise<boolean> {
     if (idempotencyKey) {
       if (this.#keys.has(idempotencyKey)) {
@@ -99,7 +112,11 @@ export class MemoryWorkQueue<T> implements WorkQueue<T> {
         }
         const item = this.#items.shift();
         if (item !== undefined) {
-          await handler(item);
+          try {
+            await handler(item);
+          } catch (error) {
+            this.onFailure(error, item);
+          }
         }
       }
     } finally {

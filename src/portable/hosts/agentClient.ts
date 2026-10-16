@@ -244,17 +244,27 @@ export class DevelopmentCredentials<P> implements HostCredentials<P> {
       { headers: { authorization: `Bearer ${this.token}` } },
     );
     if (!response.ok) {
-      throw new Error(
-        `Datalayer did not answer the deployment (${response.status}).`,
+      throw new HostRefusedError(
+        response.status,
+        'Datalayer did not answer the deployment.',
+        'The deployment',
       );
     }
     const body = (await response.json()) as {
-      deployment?: { kept?: { agent_id?: string; url?: string } };
+      deployment?: {
+        kept?: { agent_id?: string; url?: string; why?: string };
+      };
     };
     const kept = body.deployment?.kept;
     if (!kept?.url || !kept.agent_id) {
-      throw new Error(
-        'The deployment is not kept always on: turn it on under Ship.',
+      // A refusal the host says to the person (409), with the deployment's
+      // own reason when it gives one (a daily credit limit spent, paused).
+      throw new HostRefusedError(
+        409,
+        kept?.why
+          ? `The deployment is not answering now: ${kept.why}`
+          : 'The deployment is not kept always on: turn it on under Ship.',
+        'The deployment',
       );
     }
     return {

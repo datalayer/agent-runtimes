@@ -19,6 +19,7 @@ import type { SemanticEvent } from '../../semantic';
 import {
   agUiEventsOf,
   assertTrustedStreamUrl,
+  DevelopmentCredentials,
   HostKeyCredentials,
   HostStarters,
   HttpAgentClient,
@@ -26,6 +27,7 @@ import {
   type HostShape,
   type HostTurnRequest,
 } from '../agentClient';
+import { HostRefusedError } from '../client';
 import { hostSessionUid } from '../sessionUid';
 
 const contracts = JSON.parse(
@@ -541,5 +543,73 @@ describe("an application's starters", () => {
         async () => undefined,
       ).startersOf('G', 'U', 'dep-1'),
     ).rejects.toThrow(NOT_BOUND);
+  });
+});
+
+describe('DevelopmentCredentials', () => {
+  const request = {
+    applicationId: 'dep-1',
+  } as unknown as HostTurnRequest<unknown>;
+  const answering = (status: number, body: unknown): typeof fetch =>
+    (async () =>
+      new Response(JSON.stringify(body), {
+        status,
+      })) as unknown as typeof fetch;
+
+  it('refuses a deployment not kept, with its own reason, as a refusal the host says', async () => {
+    const credentials = new DevelopmentCredentials(
+      'https://r1.example',
+      't',
+      answering(200, {
+        deployment: {
+          kept: { why: 'It has spent 20.00 of its 20.00 credits for today.' },
+        },
+      }),
+    );
+    const refusal = await credentials
+      .forTurn(request)
+      .catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(HostRefusedError);
+    expect((refusal as HostRefusedError).status).toBe(409);
+    expect((refusal as HostRefusedError).detail).toContain(
+      '20.00 credits for today',
+    );
+  });
+
+  it('refuses without a reason when the deployment gives none, and on a failed answer', async () => {
+    const notKept = await new DevelopmentCredentials(
+      'https://r1.example',
+      't',
+      answering(200, { deployment: {} }),
+    )
+      .forTurn(request)
+      .catch((error: unknown) => error);
+    expect((notKept as HostRefusedError).detail).toBe(
+      'The deployment is not kept always on: turn it on under Ship.',
+    );
+    const missing = await new DevelopmentCredentials(
+      'https://r1.example',
+      't',
+      answering(404, {}),
+    )
+      .forTurn(request)
+      .catch((error: unknown) => error);
+    expect(missing).toBeInstanceOf(HostRefusedError);
+    expect((missing as HostRefusedError).status).toBe(404);
+  });
+
+  it('answers the kept runtime when the deployment is kept', async () => {
+    const session = await new DevelopmentCredentials(
+      'https://r1.example',
+      't',
+      answering(200, {
+        deployment: { kept: { agent_id: 'a', url: 'https://rt.example/' } },
+      }),
+    ).forTurn(request);
+    expect(session).toMatchObject({
+      agent: 'a',
+      deploymentUid: 'dep-1',
+      sessionApiUrl: 'https://rt.example/api/v1/apps/sessions',
+    });
   });
 });
