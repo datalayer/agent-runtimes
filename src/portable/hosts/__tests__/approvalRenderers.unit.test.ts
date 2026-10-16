@@ -14,12 +14,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { renderApproval } from '../approvalRenderers';
+import { MAIL_WORDS, renderApproval } from '../approvalRenderers';
 import { presentationSchema, type ApprovalPresentation } from '../contracts';
 
 const contracts = JSON.parse(
   readFileSync(join(__dirname, '..', 'contracts.json'), 'utf8'),
-) as { presentation: { example: unknown } };
+) as { presentation: { example: unknown; mail_words: string[] } };
 const example = presentationSchema.parse(contracts.presentation.example);
 const of = (
   overrides: Partial<ApprovalPresentation>,
@@ -74,22 +74,15 @@ describe('typed approval renderers', () => {
     expect(shown.reasons.join(' ')).toContain('forward_to');
   });
 
-  it("shows a write's place and the whole of what it writes", () => {
-    const shown = renderApproval(
-      of({
-        action_class: 'write',
-        arguments: { content: '# Notes\nAll of it.', path: '/notes/launch.md' },
-        tool_name: 'write_file',
-      }),
-    );
-    expect(shown).toMatchObject({ complete: true, renderer: 'write' });
-    expect(shown.fields).toEqual([
-      { label: 'Where', value: '/notes/launch.md' },
-      { label: 'What is written', value: '# Notes\nAll of it.' },
-    ]);
-  });
-
-  it.each(['delete', 'publish', 'financial', 'execute', 'unknown'] as const)(
+  it.each([
+    'read',
+    'write',
+    'delete',
+    'publish',
+    'financial',
+    'execute',
+    'unknown',
+  ] as const)(
     'keeps a %s action to Datalayer, even when the server would let a host decide',
     actionClass => {
       expect(
@@ -100,7 +93,7 @@ describe('typed approval renderers', () => {
     },
   );
 
-  it('fails closed for a tool no renderer knows, and shows a read whole', () => {
+  it('decides mail only: a send that is not mail fails closed (SLACK §15, 5)', () => {
     expect(
       renderApproval(
         of({
@@ -110,17 +103,15 @@ describe('typed approval renderers', () => {
         }),
       ),
     ).toMatchObject({ complete: false, renderer: 'none' });
-    const search = renderApproval(
-      of({
-        action_class: 'read',
-        arguments: { limit: 5, query: 'launch' },
-        tool_name: 'search_documents',
-      }),
+    expect(renderApproval(of({ tool_name: 'send_message' })).renderer).toBe(
+      'none',
     );
-    expect(search).toMatchObject({ complete: true, renderer: 'read' });
-    expect(search.fields).toEqual([
-      { label: 'limit', value: '5' },
-      { label: 'query', value: 'launch' },
-    ]);
+    expect(renderApproval(of({ tool_name: 'gmailSend' })).renderer).toBe(
+      'mail',
+    );
+  });
+
+  it('holds the mail words to contracts.json', () => {
+    expect([...MAIL_WORDS].sort()).toEqual(contracts.presentation.mail_words);
   });
 });

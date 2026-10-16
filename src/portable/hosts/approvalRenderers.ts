@@ -11,8 +11,9 @@ import type { ApprovalPresentation } from './contracts';
  * tool proves that every material argument is shown: each argument the server
  * presented is named by the renderer, or the card fails closed. An unknown
  * tool, an argument the renderer does not know, an attachment, and every
- * destructive, financial or publishing action are reviewed in Datalayer
- * (SLACK §15, 5). They render ai-agents' presentation v1, a different input
+ * action that is not mail (reads, writes, other sends, destructive, financial,
+ * publishing, executing) are reviewed in Datalayer (SLACK §15, 5, decided by
+ * the user on 16 October 2026: mail only). They render ai-agents' presentation v1, a different input
  * from `../approvals.ts` and `../approvalCard.ts`. Moved from the Slack
  * service (plans/DISCORD.md DC-004).
  *
@@ -38,8 +39,14 @@ type Renderer = Readonly<{
   render(presentation: ApprovalPresentation): RenderedAction;
 }>;
 
-/** Action classes that are decided in Datalayer only (§15, 5). */
+/**
+ * Action classes that are decided in Datalayer only: every class but `send`,
+ * since only mail is decided in a host (decided by the user on 16 October
+ * 2026, SLACK §15, 5).
+ */
 export const DATALAYER_ONLY = new Set<ApprovalPresentation['action_class']>([
+  'read',
+  'write',
   'delete',
   'publish',
   'financial',
@@ -82,8 +89,23 @@ function rendered(
   return { complete: reasons.length === 0, fields, reasons, renderer: name };
 }
 
-const MAIL_TOOL =
-  /(^|[_.-])(send|draft)[_.-]?(e?mail|message)($|[_.-])|^gmail[_.-]send|^mail[_.-]send$/i;
+/** The words of a tool's name that make a send mail: contracts.json `mail_words`. */
+export const MAIL_WORDS: ReadonlySet<string> = new Set([
+  'email',
+  'gmail',
+  'mail',
+]);
+
+/** A tool name's words, as ai-agents reads them (camelCase and separators split). */
+const wordsOf = (name: string): string[] =>
+  name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+const isMail = (toolName: string): boolean =>
+  wordsOf(toolName).some(word => MAIL_WORDS.has(word));
 const MAIL_KEYS = [
   'to',
   'cc',
@@ -99,8 +121,7 @@ const MAIL_KEYS = [
 const mail: Renderer = {
   name: 'mail',
   matches: presentation =>
-    presentation.action_class === 'send' &&
-    MAIL_TOOL.test(presentation.tool_name),
+    presentation.action_class === 'send' && isMail(presentation.tool_name),
   render(presentation) {
     const args = presentation.arguments;
     const fields: RenderedField[] = [];
@@ -145,58 +166,15 @@ const mail: Renderer = {
   },
 };
 
-const WRITE_TOOL =
-  /(^|[_.-])(write|update|edit|append|create|save|set|rename|move)[_.-]?/i;
-const WRITE_KEYS = [
-  'path',
-  'file',
-  'filename',
-  'name',
-  'title',
-  'content',
-  'text',
-  'new_path',
-  'destination',
-  'mode',
-] as const;
-
-/** A write: where, and the whole of what is written. */
-const write: Renderer = {
-  name: 'write',
-  matches: presentation =>
-    presentation.action_class === 'write' &&
-    WRITE_TOOL.test(presentation.tool_name),
-  render(presentation) {
-    const args = presentation.arguments;
-    const fields: RenderedField[] = [];
-    for (const [key, label] of [
-      ['path', 'Where'],
-      ['file', 'Where'],
-      ['filename', 'Where'],
-      ['name', 'Name'],
-      ['title', 'Title'],
-      ['new_path', 'Moved to'],
-      ['destination', 'Moved to'],
-      ['mode', 'How'],
-      ['content', 'What is written'],
-      ['text', 'What is written'],
-    ] as const)
-      if (args[key] !== undefined)
-        fields.push({ label, value: text(args[key]) });
-    const extra =
-      fields.length === 0
-        ? ['The request does not say what it writes: review it in Datalayer.']
-        : [];
-    return rendered('write', presentation, fields, WRITE_KEYS, extra);
-  },
-};
-
-/** Delete, publish, money and running code: shown, decided only in Datalayer (§15, 5). */
+/** Everything but mail: shown, decided only in Datalayer (§15, 5). */
 const datalayerOnly: Renderer = {
   name: 'datalayer-only',
   matches: presentation => DATALAYER_ONLY.has(presentation.action_class),
   render(presentation) {
     const words: Record<string, string> = {
+      read: 'Only mail is decided outside Datalayer: reading is decided in Datalayer.',
+      write:
+        'Only mail is decided outside Datalayer: writing is decided in Datalayer.',
       delete: 'Deleting is decided in Datalayer.',
       execute: 'Running code is decided in Datalayer.',
       financial: 'Moving money is decided in Datalayer.',
@@ -215,30 +193,8 @@ const datalayerOnly: Renderer = {
   },
 };
 
-/** A read: every argument, by its name, whole — nothing is changed or sent. */
-const read: Renderer = {
-  name: 'read',
-  matches: presentation => presentation.action_class === 'read',
-  render(presentation) {
-    const fields = Object.entries(presentation.arguments).map(
-      ([key, value]) => ({ label: key, value: text(value) }),
-    );
-    return rendered(
-      'read',
-      presentation,
-      fields,
-      Object.keys(presentation.arguments),
-    );
-  },
-};
-
 /** The renderers, the first that matches wins: Datalayer-only before any other. */
-export const RENDERERS: readonly Renderer[] = [
-  datalayerOnly,
-  mail,
-  write,
-  read,
-];
+export const RENDERERS: readonly Renderer[] = [datalayerOnly, mail];
 
 /**
  * How a host shows an approval, by the renderer that knows its tool; with

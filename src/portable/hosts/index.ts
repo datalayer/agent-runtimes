@@ -64,6 +64,7 @@ export {
 export { hostSessionUid } from './sessionUid';
 export {
   DATALAYER_ONLY,
+  MAIL_WORDS,
   RENDERERS,
   renderApproval,
   type RenderedAction,

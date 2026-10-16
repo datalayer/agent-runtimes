@@ -239,9 +239,12 @@
       "unknown"
     ],
     "host_decidable": [
-      "read",
-      "send",
-      "write"
+      "send"
+    ],
+    "mail_words": [
+      "email",
+      "gmail",
+      "mail"
     ],
     "example": {
       "version": 1,
