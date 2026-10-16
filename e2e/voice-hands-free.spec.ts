@@ -7,10 +7,16 @@
  * Hands-free and barge-in (VO-12, VO-13), on two fixtures Chrome's fake
  * microphone plays over and over, one a file (`launchOptions` are a file's):
  *
- * - `eiffel-tower-history.wav` — a question that asks for a long answer
+ * - `quiet-then-eiffel-tower.wav` — a question that asks for a long answer
  *   (*Tell me the history of the Eiffel Tower, in ten sentences.*, said by
- *   `datalayer-speech`), a second of silence before and sixteen after, so
- *   that when it plays again the answer is being said: barge-in.
+ *   `datalayer-speech`), ten seconds of silence before and sixteen after,
+ *   so that when it plays again the answer is being said: barge-in. The
+ *   file starts again each time the page opens the microphone, as it does
+ *   once a turn is sent: with a second before the question (as
+ *   `eiffel-tower-history.wav` has), the question was heard again while the
+ *   answer's first sentence was still being made into sound, so it was
+ *   spoken over before a word of it played (16 October 2026, 4–6 s for a
+ *   sentence).
  * - `quiet-then-hello.wav` — 8 seconds of quiet, then *Reply with just
  *   one word: hello.*, so that the answer ends by itself: listening again,
  *   then paused with Esc and resumed, with the person's longer pause
@@ -30,7 +36,7 @@
 import { expect, test } from '@playwright/test';
 import { hearing, inOrder, talkWith, unreachable } from './handsFree';
 
-test.use(hearing('eiffel-tower-history.wav'));
+test.use(hearing('quiet-then-eiffel-tower.wav'));
 
 test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
   test.skip(Boolean(unreachable), unreachable);
@@ -38,11 +44,8 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     page,
     context,
   }) => {
-    const { runs, syntheses, toggle, state, states } = await talkWith(
-      page,
-      context,
-      {},
-    );
+    const { runs, syntheses, toggle, state, states, sentenceMarked } =
+      await talkWith(page, context, {});
     // The question is said, then silence: the turn goes by itself (VO-12).
     await expect
       .poll(() => runs.length, { timeout: 120_000 })
@@ -57,8 +60,8 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     await expect
       .poll(() => syntheses.length, { timeout: 30_000 })
       .toBeGreaterThan(0);
-    const saying = page.locator('[data-voice-saying]').first();
-    await expect(saying).toHaveAttribute('aria-current', 'true');
+    // Seen as it happened: the voice may be spoken over a moment later.
+    await expect.poll(sentenceMarked, { timeout: 30_000 }).toBe(true);
     // The question plays again while the answer is said: barge-in stops the
     // voice, and the answer is marked interrupted (VO-13).
     await expect(page.locator('[data-interrupted]').first()).toBeVisible({

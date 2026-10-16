@@ -55,6 +55,8 @@ export interface Talk {
   toggle: ReturnType<Page['locator']>;
   /** The state shown: *Listening…*, *Thinking…*, *Speaking…*, *Paused*. */
   state: ReturnType<Page['locator']>;
+  /** Whether a sentence of the answer was ever marked as being said. */
+  sentenceMarked: () => Promise<boolean>;
   /** The silence that ends a turn, as the hands-free composer was given it (ms). */
   turnSilenceMs: () => Promise<number | undefined>;
 }
@@ -92,10 +94,17 @@ export async function talkWith(
       ),
     { detectLanguage: true, ...settings },
   );
-  // Every state shown, as it changes: a state shown for a moment is seen.
+  // Every state shown, as it changes: a state shown for a moment is seen;
+  // and whether a sentence was ever marked as being said, since the answer
+  // may be spoken over a moment later (VO-65, VO-13).
   await context.addInitScript(() => {
     const seen: string[] = [];
-    (window as unknown as { __handsFree: string[] }).__handsFree = seen;
+    const held = window as unknown as {
+      __handsFree: string[];
+      __sentenceMarked: boolean;
+    };
+    held.__handsFree = seen;
+    held.__sentenceMarked = false;
     const note = () => {
       const shown = document
         .querySelector('[data-hands-free-state]')
@@ -103,12 +112,19 @@ export async function talkWith(
       if (shown && seen[seen.length - 1] !== shown) {
         seen.push(shown);
       }
+      if (document.querySelector('[data-voice-saying][aria-current="true"]')) {
+        held.__sentenceMarked = true;
+      }
     };
     new MutationObserver(note).observe(document, {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ['data-hands-free-state'],
+      attributeFilter: [
+        'data-hands-free-state',
+        'data-voice-saying',
+        'aria-current',
+      ],
     });
   });
   page.on('request', request => {
@@ -156,6 +172,11 @@ export async function talkWith(
     states: () =>
       page.evaluate(
         () => (window as unknown as { __handsFree: string[] }).__handsFree,
+      ),
+    sentenceMarked: () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __sentenceMarked: boolean }).__sentenceMarked,
       ),
     // Read from the component itself: the prop React holds for it, found
     // from its element up through its fibers.
