@@ -3,134 +3,162 @@
   "runtime": "faster-whisper, int8 on the CPU, 4 threads",
   "languages": {
     "en": {
-      "load_ms": 982,
+      "load_ms": 1130,
       "clips": [
         {
           "id": "en-6930-75918-0000",
           "heard": "Concord returned to its place amidst the tents.",
-          "ms": 1205,
+          "ms": 1241,
           "audio_s": 3.5
         },
         {
           "id": "en-6930-75918-0002",
           "heard": "Congratulations were poured in upon the princess everywhere during her journey.",
-          "ms": 1147,
+          "ms": 1192,
           "audio_s": 5.03
         },
         {
           "id": "en-6930-75918-0006",
           "heard": "This has indeed been a harassing day continued the young man his eyes fixed upon his friend",
-          "ms": 1247,
+          "ms": 1286,
           "audio_s": 5.85
         },
         {
           "id": "en-6930-75918-0007",
           "heard": "You will be frank with me. I always am",
-          "ms": 1157,
+          "ms": 1216,
           "audio_s": 3.31
         },
         {
           "id": "en-6930-75918-0008",
           "heard": "Can you imagine why Buckingham has been so violent? I suspect.",
-          "ms": 1251,
+          "ms": 1266,
           "audio_s": 4.79
         },
         {
           "id": "en-6930-75918-0009",
           "heard": "It is you who are mistaken, Raul. I have read his distress in his eyes, in his every gesture and action the whole day.",
-          "ms": 1443,
+          "ms": 1430,
           "audio_s": 7.28
         },
         {
           "id": "en-6930-75918-0010",
           "heard": "I can perceive love clearly enough.",
-          "ms": 1082,
+          "ms": 1133,
           "audio_s": 3.04
         },
         {
           "id": "en-6930-75918-0011",
           "heard": "I am convinced of what I say,\" said the Count.",
-          "ms": 1152,
+          "ms": 1225,
           "audio_s": 3.19
         },
         {
           "id": "en-6930-75918-0013",
           "heard": "In those very terms, I even added more.",
-          "ms": 1168,
+          "ms": 1158,
           "audio_s": 2.94
         },
         {
           "id": "en-6930-75918-0015",
           "heard": "Thus, it is that the honor of three is saved, our country, our masters, and our own.",
-          "ms": 1291,
+          "ms": 1427,
           "audio_s": 6.38
         }
       ]
     },
     "fr": {
-      "load_ms": 982,
+      "load_ms": 1130,
       "clips": [
         {
           "id": "fr-1406_1028_000002",
           "heard": "Dénarza, de la nuit suivante, a place à sœur quand il en fut temps. « Si vous ne dormez pas à ma sœur, lui dit-elle, je vous prie en attendant le jour qui paraîtra bientôt de continuer le compte du pêcheur.",
-          "ms": 2059,
+          "ms": 2043,
           "audio_s": 12.66
         },
         {
           "id": "fr-1406_1028_000003",
           "heard": "À l'aspect d'un monst d'une grandeur si démesurée, le pêcheur voulu prendre la suite, mais il se trouva si troublé et si effrayé qu'il ne pu marcher. Salomon",
-          "ms": 1860,
+          "ms": 1849,
           "audio_s": 10.67
         },
         {
           "id": "fr-1406_1028_000010",
           "heard": "Je te dis, repartis le génie, de me parler plus civilement avant que je te tue. Et pourquoi muturiez-vous, répitique-à-le-pêcheur ? Je viens de vous mettre en liberté, l'avez-vous déjà oublié ?",
-          "ms": 1944,
+          "ms": 1923,
           "audio_s": 12.78
         },
         {
           "id": "fr-1406_1028_000013",
           "heard": "Ce discours rafflige à fort le pêcheur. Je suis bien malheureux, c'est créatif, d'être venu en cet endroit rendre un si grand service à un ingrat.",
-          "ms": 1557,
+          "ms": 1672,
           "audio_s": 10.27
         },
         {
           "id": "fr-1406_1028_000014",
           "heard": "Le sultan, de son côté, témoigna de l'impatience d'apprentes qu'elle démêlait le génie avêtu avec Salomon. C'est pourquoi chez Erazade poursuivit ainsi le compte du pêcheur.",
-          "ms": 1910,
+          "ms": 1981,
           "audio_s": 11.1
         },
         {
           "id": "fr-1406_1028_000016",
           "heard": "Sir, il y avait autrefois un pêcheur fort âgé, et si pauvre Capaine, il pouvait-il gagner de quoi faire subsister sa femme et trois enfants dont sa famille était composée ?",
-          "ms": 1733,
+          "ms": 1707,
           "audio_s": 11.8
         },
         {
           "id": "fr-1406_1028_000019",
           "heard": "Charia Riccocenti et Cheyre Asad reprenant son discours poursuivi de cette manière. Histoire du pêcheur",
-          "ms": 1443,
+          "ms": 1480,
           "audio_s": 10.0
         },
         {
           "id": "fr-1406_1028_000020",
           "heard": "Sire, le pêcheur n'eut pas si tôt entendu les paroles que le génie avait prononcé, qu'il se rassura et lui dit « Esprit superbe, que dites-vous ? »",
-          "ms": 1702,
+          "ms": 1777,
           "audio_s": 10.11
         },
         {
           "id": "fr-1406_1028_000022",
           "heard": "Tu prends plaisir à maltraiter les ennets de gens et à laisser de grands hommes dans l'obscurité, tandis que tu favorises les méchants et que tu élèves ceux qui n'ont aucune vertu qui les rendent recommandables.",
-          "ms": 1814,
+          "ms": 1974,
           "audio_s": 11.5
         },
         {
           "id": "fr-1406_1028_000025",
           "heard": "Le pêcheur ayant fini cette prière, jeta ses filets pour la quatrième fois. Quand il jugea qu'il devait y avoir du poisson, il y tira comme auparavant avec assez de peine.",
-          "ms": 1839,
+          "ms": 1824,
           "audio_s": 12.5
         }
       ]
+    }
+  },
+  "turns": {
+    "3s": {
+      "file": "en-6930-75918-0013.flac",
+      "audio_s": 2.94,
+      "ms": [
+        1159,
+        1210,
+        1245,
+        1201,
+        1182
+      ],
+      "median_ms": 1201,
+      "heard": "In those very terms, I even added more."
+    },
+    "9s": {
+      "file": "weather-in-paris.wav",
+      "audio_s": 8.92,
+      "ms": [
+        1178,
+        1088,
+        1089,
+        1187,
+        1164
+      ],
+      "median_ms": 1164,
+      "heard": "What is the weather like in Paris today?"
     }
   }
 }

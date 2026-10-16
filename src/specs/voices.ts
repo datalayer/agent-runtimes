@@ -180,6 +180,77 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
       },
     ],
   },
+  'moonshine-base-en-server': {
+    id: 'moonshine-base-en-server',
+    version: '0.0.1',
+    name: 'Moonshine Base (English, server)',
+    description:
+      "Speech to text on Datalayer's servers, in English: Useful Sensors' Moonshine Base (61M parameters), the same 8-bit ONNX export the browser runs, run by onnxruntime on the CPU with a greedy decoder. Its encoder is as long as the speech, with no 30-second window: measured beside Whisper small for short spoken turns (decision 18).",
+    provider: 'usefulsensors',
+    task: 'stt',
+    engine: 'onnxruntime',
+    dtype: 'q8',
+    languages: ['en'],
+    where: ['server'],
+    streaming: false,
+    licence: {
+      weights: 'MIT',
+      code: 'MIT',
+    },
+    attribution: '',
+    upstream: 'https://huggingface.co/UsefulSensors/moonshine-base',
+    revision: 'b1e9b6aae3c3c7298f10c3798393fdf38e8fbbad',
+    files: [
+      {
+        path: 'config.json',
+        sha256:
+          'fab7241d1e9fc6c2370c4c6dfb5da79bb54d67ed9ab6b507ac51d29d2abe01d1',
+        size: 922,
+      },
+      {
+        path: 'generation_config.json',
+        sha256:
+          'f9b3f711b57be7def2e50a8942f64f36ee0a55fad5b84ff93a687b6c5bcc1d44',
+        size: 147,
+      },
+      {
+        path: 'preprocessor_config.json',
+        sha256:
+          'fa43a7017ef85cd1d0fba0d9aae77c8adb16990ae6f11115631f41ec5d8aa679',
+        size: 128,
+      },
+      {
+        path: 'special_tokens_map.json',
+        sha256:
+          'ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356',
+        size: 3,
+      },
+      {
+        path: 'tokenizer.json',
+        sha256:
+          '7b913404bdd039af4756783218af4440bc07fb7d6d8258d677e34f95b3ec416f',
+        size: 3761754,
+      },
+      {
+        path: 'tokenizer_config.json',
+        sha256:
+          'edaee394565d428ea98a663ae7209cdcfeefc5585c42d7a570ff7c986df2cd15',
+        size: 135735,
+      },
+      {
+        path: 'onnx/encoder_model_quantized.onnx',
+        sha256:
+          '1dd9ab0a7f987113d30affcba5a068d11c8f90fa0223caa3e491ade431ad9751',
+        size: 20513063,
+      },
+      {
+        path: 'onnx/decoder_model_merged_quantized.onnx',
+        sha256:
+          'cc9f3cd6698a369c6008b41aa60aa3fb3322e7f03c9bdf19d8e6b7200afca4f3',
+        size: 42498870,
+      },
+    ],
+  },
   'moonshine-base-en': {
     id: 'moonshine-base-en',
     version: '0.0.1',

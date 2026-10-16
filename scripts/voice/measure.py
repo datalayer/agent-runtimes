@@ -92,6 +92,29 @@ def transcribe(
     return json.loads(done.stdout.strip().splitlines()[-1])
 
 
+#: Spoken turns timed on the server (VO-47, decision 18): a 3 s fixture and the
+#: e2e suite's 9 s question, each heard ``TURN_RUNS`` times told its language.
+TURNS = {
+    "3s": VOICE_TESTS / "fixtures" / "en-6930-75918-0013.flac",
+    "9s": ROOT / "e2e" / "fixtures" / "weather-in-paris.wav",
+}
+TURN_RUNS = 5
+
+
+def server_transcriber(model: Dict[str, Any], folder: Path, threads: int) -> Any:
+    """The speech service's own engine for a model, as the image runs it (``datalayer_ai_agents``)."""
+    from datalayer_ai_agents.speech.transcription import (  # the speech image's own
+        FasterWhisperTranscriber,
+        MoonshineTranscriber,
+    )
+
+    if model["engine"] == "faster-whisper":
+        return FasterWhisperTranscriber(folder, model["id"], threads=threads)
+    if model["engine"] == "onnxruntime":
+        return MoonshineTranscriber(folder, model["id"], threads=threads)
+    raise SystemExit(f"{model['id']}: no server engine {model['engine']!r}")
+
+
 def measure_server(
     store: Path,
     voices: Any,
@@ -99,37 +122,34 @@ def measure_server(
     wavs: Dict[str, Path],
     measured: Path,
     threads: int,
+    only: List[str],
 ) -> None:
     """Each server speech-to-text model on the fixtures, as the speech service runs it (VO-47).
 
-    faster-whisper, 8-bit on the CPU with ``threads`` threads, told the
-    language, one clip at a time: what it heard and how long it took.
+    The service's own engines (faster-whisper 8-bit, Moonshine through
+    onnxruntime) on the CPU with ``threads`` threads, told the language, one
+    clip at a time: what it heard and how long it took; then a 3 s and a 9 s
+    English turn, each heard ``TURN_RUNS`` times (decision 18).
     """
-    from faster_whisper import WhisperModel  # the speech image's own
-
     for model in voices.SPEECH_MODEL_CATALOGUE.values():
         if model["task"] != "stt" or model["where"] != ["server"]:
             continue
+        if only and model["id"] not in only:
+            continue
         started = time.monotonic()
-        whisper = WhisperModel(
-            str(store / model["provider"] / model["id"]),
-            device="cpu",
-            compute_type="int8",
-            cpu_threads=threads,
+        engine = server_transcriber(
+            model, store / model["provider"] / model["id"], threads
         )
         load_ms = round((time.monotonic() - started) * 1000)
         by_language = {}
-        for language in ("en", "fr"):
+        for language in [code for code in ("en", "fr") if code in model["languages"]]:
             clips = [clip for clip in fixtures if clip["language"] == language]
             print(f"{model['id']} on {len(clips)} {language} clips", flush=True)
             results = []
             for clip in clips:
                 samples, _ = sf.read(wavs[clip["id"]], dtype="float32")
                 started = time.monotonic()
-                parts, _ = whisper.transcribe(
-                    samples, language=language, vad_filter=True
-                )
-                text = " ".join(part.text.strip() for part in parts).strip()
+                text = engine.transcribe(samples, language=language).text
                 results.append(
                     {
                         "id": clip["id"],
@@ -139,12 +159,40 @@ def measure_server(
                     }
                 )
             by_language[language] = {"load_ms": load_ms, "clips": results}
+        turns = {}
+        if "en" in model["languages"]:
+            for name, path in TURNS.items():
+                samples, rate = sf.read(path, dtype="float32")
+                samples = resample(samples, rate)
+                engine.transcribe(samples, language="en")  # warm
+                took = []
+                for _ in range(TURN_RUNS):
+                    started = time.monotonic()
+                    heard = engine.transcribe(samples, language="en").text
+                    took.append(round((time.monotonic() - started) * 1000))
+                turns[name] = {
+                    "file": path.name,
+                    "audio_s": round(len(samples) / 16000, 2),
+                    "ms": took,
+                    "median_ms": sorted(took)[len(took) // 2],
+                    "heard": heard,
+                }
+                print(
+                    f"{model['id']} {name} turn: {turns[name]['median_ms']} ms",
+                    flush=True,
+                )
+        runtime = (
+            f"faster-whisper, int8 on the CPU, {threads} threads"
+            if model["engine"] == "faster-whisper"
+            else f"onnxruntime {model['dtype']} on the CPU, greedy, {threads} threads"
+        )
         (measured / f"stt-{model['id']}.json").write_text(
             json.dumps(
                 {
                     "model": model["id"],
-                    "runtime": f"faster-whisper, int8 on the CPU, {threads} threads",
+                    "runtime": runtime,
                     "languages": by_language,
+                    **({"turns": turns} if turns else {}),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -165,7 +213,13 @@ def main() -> int:
     parser.add_argument(
         "--server",
         action="store_true",
-        help="Measure the server's speech-to-text models instead, with faster-whisper (in the speech image)",
+        help="Measure the server's speech-to-text models instead, with the speech service's engines (in the speech image)",
+    )
+    parser.add_argument(
+        "--model",
+        action="append",
+        default=[],
+        help="With --server, only this model (repeatable)",
     )
     parser.add_argument(
         "--threads", type=int, default=4, help="CPU threads for --server"
@@ -195,7 +249,13 @@ def main() -> int:
                 wavs[clip["id"]] = wav
             if args.server:
                 measure_server(
-                    args.store, voices, fixtures, wavs, measured, args.threads
+                    args.store,
+                    voices,
+                    fixtures,
+                    wavs,
+                    measured,
+                    args.threads,
+                    args.model,
                 )
                 return 0
             # --- speech to text, on the device's models ---------------------------------
