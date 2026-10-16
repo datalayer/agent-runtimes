@@ -372,6 +372,18 @@ export async function* agUiEventsOf(
  * stream reduced to semantic events, and its session mapped to the host's
  * thread so that approvals and completions are delivered (§4.3, 3).
  */
+/** A refusal's `detail` when the answer is FastAPI's JSON, its status alone otherwise. */
+async function refusalDetailOf(response: Response): Promise<string> {
+  const text = await response.text().catch(() => '');
+  try {
+    const detail = (JSON.parse(text) as { detail?: unknown }).detail;
+    if (typeof detail === 'string' && detail) return detail;
+  } catch {
+    // Not JSON: the status says it.
+  }
+  return `Datalayer refused the turn (${response.status}).`;
+}
+
 export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
   constructor(
     readonly apiUrl: string,
@@ -419,7 +431,14 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
           method: 'POST',
         });
     if (!response.ok || !response.body) {
-      throw new Error(`Datalayer refused the turn (${response.status}).`);
+      // The runtime's own reason, said to the person by the host: an
+      // application that signs its users and got no user token, a spent
+      // limit, a session of someone else.
+      throw new HostRefusedError(
+        response.status,
+        await refusalDetailOf(response),
+        'The turn',
+      );
     }
     const hostKey =
       host.bindable && this.hostKeyFor

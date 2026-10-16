@@ -613,3 +613,47 @@ describe('DevelopmentCredentials', () => {
     });
   });
 });
+
+describe('a refused turn', () => {
+  it('is a HostRefusedError carrying the reason the runtime gives', async () => {
+    const answers = [
+      new Response(
+        JSON.stringify({
+          deployment: { kept: { agent_id: 'a', url: 'https://r1.example/rt' } },
+        }),
+        { status: 200 },
+      ),
+      new Response(
+        JSON.stringify({
+          detail:
+            'It acts in the name of each of its users: no user token was sent.',
+        }),
+        { status: 401 },
+      ),
+    ];
+    const fetchImpl = (async () =>
+      answers.shift() as Response) as unknown as typeof fetch;
+    const client = new HttpAgentClient(
+      'https://r1.example',
+      new DevelopmentCredentials('https://r1.example', 't', fetchImpl),
+      {
+        sessionUidOf: () => 'session-1',
+        placeOf: () => 'p',
+        targetOf: () => ({}),
+      } as unknown as HostShape<unknown>,
+      fetchImpl,
+    );
+    const refusal = await client
+      .startTurn({
+        applicationId: 'dep-1',
+        externalEventId: 'ev-1',
+        prompt: 'hi',
+      } as unknown as HostTurnRequest<unknown>)
+      .catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(HostRefusedError);
+    expect((refusal as HostRefusedError).status).toBe(401);
+    expect((refusal as HostRefusedError).detail).toBe(
+      'It acts in the name of each of its users: no user token was sent.',
+    );
+  });
+});
