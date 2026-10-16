@@ -18,7 +18,13 @@ export const SYNTHESES_PATH = '/api/ai-agents/v1/speech/syntheses';
 
 /** What the speaker is doing, for the assistant and the controls. */
 export interface SpeakerState {
-  /** Sound is playing. */
+  /**
+   * Sound is playing, or a sentence given is being made into sound to play
+   * next: from the moment there is something to say, so that hands-free
+   * reads speech in that moment as the person speaking over it (VO-12,
+   * VO-13). What moves the mouth is the sound's level, and the sentence
+   * marked is the one playing.
+   */
   speaking: boolean;
   /** The sentence being said, for the balloon (VO-26). */
   sentence?: string;
@@ -158,6 +164,9 @@ export class ServerSpeaker {
       return;
     }
     this.queue.push({ text: sentence, asked: performance.now() });
+    if (!this.state.speaking) {
+      this.set({ speaking: true });
+    }
     this.askAhead();
     if (!this.running) {
       void this.run(this.generation);

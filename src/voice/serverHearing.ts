@@ -47,6 +47,13 @@ export const STREAM_IDLE_MS = 3000;
 /** How long the final words of a stream are waited for. */
 export const STREAM_FINAL_MS = 60_000;
 
+/**
+ * How much of the sound before a stream the service ended for its silence
+ * (with no words) is sent again to the next: a word begun at the cut is
+ * heard whole.
+ */
+export const STREAM_LOOKBACK_SAMPLES = HEARING_RATE / 2;
+
 /** The model the speech service hears with (agentspecs' catalogue). */
 export const SERVER_HEARING_MODEL = 'whisper-large-v3-turbo';
 
@@ -172,6 +179,8 @@ export function streamUrlOf(speechUrl: string): string {
 interface StreamFinal {
   text: string;
   language: string;
+  /** Why the service ended it: `end`, `silence`, a limit. */
+  why: string;
 }
 
 /**
@@ -197,7 +206,10 @@ class PressStream {
     open: (url: string) => SpeechSocket,
     speechUrl: string,
     first: { token?: string; language?: string },
+    from = 0,
   ) {
+    // The press's sound from `from` on: what came before was heard already.
+    this.sent = from;
     this.socket = open(streamUrlOf(speechUrl));
     this.socket.binaryType = 'arraybuffer';
     this.socket.onopen = () => {
@@ -227,6 +239,7 @@ class PressStream {
         this.final = {
           text: typeof said.text === 'string' ? said.text.trim() : '',
           language: typeof said.language === 'string' ? said.language : '',
+          why: typeof said.why === 'string' ? said.why : '',
         };
         this.settle();
       } else if (said.type === 'refused') {
@@ -243,6 +256,19 @@ class PressStream {
     };
     this.socket.onerror = () => undefined;
     this.touch();
+  }
+
+  /**
+   * The service ended it for its silence, with no words, while the press
+   * goes on: a person who waits before speaking (hands-free's microphone
+   * stays open) is heard by the next stream.
+   */
+  get silencedEmpty(): boolean {
+    return (
+      this.final !== undefined &&
+      this.final.why === 'silence' &&
+      !this.final.text
+    );
   }
 
   /** Send what the press added since the last call. */
@@ -355,15 +381,27 @@ export class ServerHearing implements Hearing {
     if (!open) {
       return undefined;
     }
+    let from = 0;
     if (this.press && audio.length < this.press.sent) {
+      this.press.close();
+      this.press = undefined;
+    } else if (this.press?.silencedEmpty) {
+      // Ended by the service for its silence, nothing said: a new stream
+      // hears the rest of the press, from just before the cut.
+      from = Math.max(0, this.press.sent - STREAM_LOOKBACK_SAMPLES);
       this.press.close();
       this.press = undefined;
     }
     if (!this.press) {
-      this.press = new PressStream(open, this.options.speechUrl, {
-        token: this.options.token,
-        language: this.options.detect ? '' : language,
-      });
+      this.press = new PressStream(
+        open,
+        this.options.speechUrl,
+        {
+          token: this.options.token,
+          language: this.options.detect ? '' : language,
+        },
+        from,
+      );
     }
     return this.press;
   }
@@ -385,6 +423,10 @@ export class ServerHearing implements Hearing {
     language: string,
   ): Promise<Transcript | undefined> {
     const started = performance.now();
+    if (this.press?.silencedEmpty && audio.length >= this.press.sent) {
+      // Cut for its silence before the person spoke: heard by a new stream.
+      this.streamFor(audio, language);
+    }
     const press =
       this.press && audio.length >= this.press.sent ? this.press : undefined;
     if (this.press && !press) {

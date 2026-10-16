@@ -293,7 +293,9 @@ describe('the speaker (VO-33)', () => {
     });
     speaker.say('Hello there, how are you?');
     speaker.say('This one is dropped.');
-    await vi.waitFor(() => expect(states.length).toBeGreaterThan(0));
+    // Speaking from the first sentence given, before its sound comes (VO-12).
+    expect(states[0]).toEqual({ speaking: true });
+    await vi.waitFor(() => expect(states.at(-1)?.refused).toBeTruthy());
     expect(fetcher.mock.calls[0][0]).toBe(
       `https://r1.example${SYNTHESES_PATH}`,
     );

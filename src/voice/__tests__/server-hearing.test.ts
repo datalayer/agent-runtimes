@@ -17,6 +17,7 @@ import {
   SERVER_HEARING_MODEL,
   ServerHearing,
   STREAM_IDLE_MS,
+  STREAM_LOOKBACK_SAMPLES,
   TRANSCRIPTIONS_PATH,
   TRANSCRIPTION_STREAM_PATH,
   hearingPlace,
@@ -369,6 +370,44 @@ describe('Speech heard on the server as it is said (VO-11, VO-34)', () => {
     });
     expect(await quiet.hear(second(2), 'en-US')).toBeUndefined();
     expect(silent.closed).toBe(true);
+  });
+
+  it('hears a person who waits longer than the service’s silence before speaking (VO-12)', async () => {
+    const hearing = new ServerHearing(new AllSpeech(), {
+      speechUrl: 'https://r1.example',
+      socket,
+    });
+    // Hands-free's microphone is open; the person has not spoken yet.
+    await hearing.hearSoFar(second(11), 'en-US');
+    const [quiet] = FakeSocket.opened;
+    quiet.open();
+    quiet.say({ type: 'ready' });
+    expect(quiet.sound()).toBe(HEARING_RATE * 11 * 2);
+    // The service ends a stream silent for 10 s, with no words.
+    quiet.say({ type: 'final', text: '', language: 'en', why: 'silence' });
+    // The press goes on: a new stream hears it from just before the cut.
+    await hearing.hearSoFar(second(14), 'en-US');
+    expect(FakeSocket.opened).toHaveLength(2);
+    expect(quiet.closed).toBe(true);
+    const next = FakeSocket.opened[1];
+    next.open();
+    next.say({ type: 'ready' });
+    expect(next.sound()).toBe(
+      (HEARING_RATE * 14 - (HEARING_RATE * 11 - STREAM_LOOKBACK_SAMPLES)) * 2,
+    );
+    next.ended = () =>
+      next.say({ type: 'final', text: 'Hello.', language: 'en', why: 'end' });
+    expect(await hearing.hear(second(15), 'en-US')).toMatchObject({
+      text: 'Hello.',
+    });
+    // A stream ended with words, or for another reason, is not reopened.
+    await hearing.hearSoFar(second(1), 'en-US');
+    const worded = FakeSocket.opened[2];
+    worded.open();
+    worded.say({ type: 'ready' });
+    worded.say({ type: 'final', text: 'Yes.', language: 'en', why: 'silence' });
+    await hearing.hearSoFar(second(2), 'en-US');
+    expect(FakeSocket.opened).toHaveLength(3);
   });
 
   it('opens a new stream for a new press, and closes one a cancelled press left', async () => {
