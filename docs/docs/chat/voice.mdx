@@ -102,10 +102,12 @@ through the machine's speaker. A terminal sees no key
 release, so there is no holding: a press starts, a press stops, and one
 press listens a minute at most.
 
-It needs the `voice` extra — `pip install 'agent-runtimes[voice]'`
-(sounddevice, faster-whisper and kokoro-onnx, MIT; kokoro-onnx brings eSpeak
-NG, GPL-3.0, and faster-whisper brings FFmpeg, LGPL, onto your machine) —
-which is never a default dependency. The models are copied into the pinned
+It needs the `voice` extra (sounddevice, faster-whisper and kokoro-onnx, MIT;
+kokoro-onnx brings eSpeak NG, GPL-3.0, and faster-whisper brings FFmpeg, LGPL,
+onto your machine), which is never a default dependency, beside `cli` for
+`loop` itself and `aws` for the Bedrock model its own agent runs by default —
+`pip install 'agent-runtimes[cli,voice,aws]'`. With `voice` alone, `loop`
+stops on a missing `boto3`. The models are copied into the pinned
 store (`DATALAYER_SPEECH_MODELS_DIR`, `~/.cache/voice-work/store` by default)
 from Datalayer's CDN, each file checked against the hash the catalogue pins:
 
