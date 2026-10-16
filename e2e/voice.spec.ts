@@ -151,6 +151,8 @@ test.describe('voice in the composer (VO-53)', () => {
     // Heard as it is said (VO-11): the stream's final words, and the sound
     // sent — the speech only, the silence around it stays in the browser.
     const finals: { language?: string; text?: string }[] = [];
+    // The words heard so far, while the person speaks (VO-11).
+    const partials: string[] = [];
     let soundBytes = 0;
     await context.route('**/api/**', route =>
       ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
@@ -184,6 +186,8 @@ test.describe('voice in the composer (VO-53)', () => {
           typeof frame.payload === 'string' ? JSON.parse(frame.payload) : {};
         if (message.type === 'final') {
           finals.push({ language: message.language, text: message.text });
+        } else if (message.type === 'partial') {
+          partials.push(String(message.text ?? ''));
         }
       });
     });
@@ -215,5 +219,9 @@ test.describe('voice in the composer (VO-53)', () => {
     expect(finals[0].language).toBe('en');
     expect(finals[0].text).toMatch(/weather like in/i);
     expect(soundBytes).toBeGreaterThan(0);
+    test.info().annotations.push({
+      type: 'partial words',
+      description: JSON.stringify(partials),
+    });
   });
 });

@@ -917,6 +917,7 @@ class A2AWorker(_FastA2AWorker):
         from ..adapters.base import AgentContext
         from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
         from ..context.delegation import (
+            DELEGATED_CREDENTIAL,
             CredentialLost,
             checkpoint_of,
             close_steering,
@@ -1014,6 +1015,8 @@ class A2AWorker(_FastA2AWorker):
                 },
                 **({"budget": budget} if budget else {}),
                 **({"user_token": credential} if credential else {}),
+                # Said apart, so a harness lends its MCP with it (SHIELD SH-33).
+                **({DELEGATED_CREDENTIAL: credential} if credential else {}),
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
                 # An approval a harness asks for is raised on this task as

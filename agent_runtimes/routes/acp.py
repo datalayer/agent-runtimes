@@ -1078,6 +1078,7 @@ async def _handle_prompt(
     # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
     from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
     from ..context.delegation import (
+        DELEGATED_CREDENTIAL,
         checkpoint_of,
         enter_execution,
         execution_of,
@@ -1087,6 +1088,8 @@ async def _handle_prompt(
     delegated_credential = take_credential(params.get("_meta"))
     if delegated_credential:
         context_metadata["user_token"] = delegated_credential
+        # Said apart, so a harness lends its MCP with it (SHIELD SH-33).
+        context_metadata[DELEGATED_CREDENTIAL] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 
     # The execution this turn is for, whose checkpoints it keeps, and the one

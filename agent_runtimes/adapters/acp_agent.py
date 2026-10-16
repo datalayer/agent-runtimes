@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import logging
 import os
 import shutil
@@ -44,7 +45,7 @@ import sys
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from acp import text_block
 from acp.exceptions import RequestError
@@ -730,6 +731,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: (which says its command) for the harness's row (which may not).
         self._terminal_commands: dict[str, str] = {}
         self._replayed: dict[str, int] = {}
+        #: ACP session -> the authority its lent MCP carries (``_authority_of``, SH-33).
+        self._lent_authority: dict[str, str] = {}
         self._cancelled: dict[str, asyncio.Event] = {}
         self._failures: dict[str, str] = {}
         #: The approvals a run raises through: the transport's (A2A's
@@ -1033,9 +1036,23 @@ class ACPAgent(BaseAgent, ShieldProxy):
     ) -> tuple[str, list[StreamEvent]]:
         """The harness's session for the runtime's: kept, loaded, or new and said so."""
         runtime_session = context.session_id
+        # Whose authority the session's lent MCP carries (SH-33): a delegated
+        # execution's credential, or the runtime's own. A turn under another
+        # does not run on servers lent with the first.
+        authority = self._authority_of(context)
         known = self._acp_of.get(runtime_session)
         if known and known in self.sessions:
-            return known, []
+            if self._lent_authority.get(known) == authority:
+                return known, []
+            servers = self._lent_servers(self._bearer_of(context))
+            return await self._new_session(
+                runtime_session,
+                f"This turn carries another authority than {self.harness.name}'s session {known} was lent "
+                "its tools with, so it starts a new session whose tools carry this turn's: the earlier "
+                "turns of this conversation were not replayed to it.",
+                servers,
+                authority,
+            )
         kept = known or await self._kept_session(runtime_session)
         # What the session is lent: the gateway's toolsets with the run's
         # credential, in the shape the harness takes (§4.4, SH-14).
@@ -1055,9 +1072,11 @@ class ACPAgent(BaseAgent, ShieldProxy):
                     f"{self.harness.name} could not load its session {kept} ({_message_of(exc)}): "
                     "it starts over; the earlier turns of this conversation were not replayed to it.",
                     servers,
+                    authority,
                 )
             await self._channel_drain(kept)
             self._acp_of[runtime_session] = kept
+            self._lent_authority[kept] = authority
             self._replayed.pop(kept, None)
             self.sessions[kept].rules_from = self._rules_from(runtime_session)
             # What the agent replayed is for the comparison, never the new
@@ -1089,14 +1108,19 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 f"{self.harness.name}'s session is new: it starts over; the earlier turns of this "
                 "conversation were not replayed to it."
             )
-        return await self._new_session(runtime_session, sentence, servers)
+        return await self._new_session(runtime_session, sentence, servers, authority)
 
     async def _new_session(
-        self, runtime_session: str, sentence: str, servers: list[Any]
+        self,
+        runtime_session: str,
+        sentence: str,
+        servers: list[Any],
+        authority: str,
     ) -> tuple[str, list[StreamEvent]]:
         """Open a session in the workspace, keep its id, and say ``sentence`` first when there is one."""
         answer = await self.new_session(str(self.workspace), servers)
         acp_session = answer.session_id
+        self._lent_authority[acp_session] = authority
         self._acp_of[runtime_session] = acp_session
         self._runtime_of[acp_session] = runtime_session
         self.sessions[acp_session].rules_from = self._rules_from(runtime_session)
@@ -1141,16 +1165,38 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return bool(mcp and mcp.http)
 
     def _bearer_of(self, context: AgentContext) -> str:
-        """The credential this run reaches the gateway with: a deployment's principal, else the run's, else the caller's."""
+        """The credential this run reaches the gateway with.
+
+        The execution's own, when the run was delegated with one (``_meta`` or
+        ``metadata`` ``datalayer.credential``, O1-17): the narrowest authority
+        the run holds, so the lent MCP — and every sub-agent the harness
+        spawns, which reaches MCP through the servers it was lent — is held
+        to that execution's manifest at the gateway (SHIELD §2.4, SH-33).
+        Else a deployment's principal, else the run's, else the caller's.
+        """
+        from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
         from agent_runtimes.loop.apps.principal import deployment_of, principal_token
         from agent_runtimes.models.models import app_instance_of
 
+        delegated = str(context.metadata.get(DELEGATED_CREDENTIAL) or "")
+        if delegated:
+            return delegated
         deployment = deployment_of(app_instance_of(self._agent_id))
         if deployment:
             held = principal_token(deployment)
             if held:
                 return held
         return str(context.metadata.get("user_token") or "") or self.credential
+
+    @staticmethod
+    def _authority_of(context: AgentContext) -> str:
+        """Which authority a run's lent MCP carries: a delegated credential's fingerprint, else the runtime's."""
+        from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
+
+        delegated = str(context.metadata.get(DELEGATED_CREDENTIAL) or "")
+        if not delegated:
+            return "runtime"
+        return "delegated:" + hashlib.sha256(delegated.encode()).hexdigest()
 
     def _lent_servers(self, bearer: str) -> list[Any]:
         """The lent toolsets as ``session/new.mcpServers``: HTTP with the bearer, or the stdio shim holding it."""

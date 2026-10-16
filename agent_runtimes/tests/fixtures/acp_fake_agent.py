@@ -17,11 +17,19 @@ sends an update ACP does not describe; ``slow`` waits until cancelled;
 ``mcp`` says which MCP servers its session was given, by name and shape
 (never a header). With ``FAKE_AGENT_MCP_HTTP=1`` in its environment it
 advertises ``mcpCapabilities.http``.
+
+``subagent: {"server": <name>, "calls": [[<tool>, {<arguments>}], ...]}``
+spawns a sub-agent — a process of its own, as a harness's Task sub-agent is —
+handed the MCP server its session was lent by that name, as a harness hands
+its sub-agents its own servers; the sub-agent calls each tool in turn over
+MCP and the agent says each answer (``subagent: <tool>: allowed|refused …``).
+Nothing else of the prompt is read (SHIELD SH-33).
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 from typing import Any
@@ -62,6 +70,7 @@ class FakeAgent(Agent):
         self._client: Client | None = None
         self._sessions: dict[str, str] = {}
         self._given: dict[str, list[str]] = {}
+        self._servers: dict[str, list[Any]] = {}
         self._cancelled: set[str] = set()
         self._counter = 0
 
@@ -104,6 +113,7 @@ class FakeAgent(Agent):
         session_id = f"fake_{self._counter}"
         self._sessions[session_id] = cwd
         names = [getattr(server, "name", "?") for server in mcp_servers]
+        self._servers[session_id] = list(mcp_servers)
         self._given[session_id] = [
             f"{name}:{'http' if getattr(server, 'type', None) == 'http' else 'stdio'}"
             for name, server in zip(names, mcp_servers)
@@ -151,6 +161,15 @@ class FakeAgent(Agent):
         )
         say = self.client.session_update
         await say(session_id=session_id, update=update_agent_thought_text("thinking"))
+        if text.startswith("subagent:"):
+            for line in await self._subagent(
+                session_id, json.loads(text.split(":", 1)[1])
+            ):
+                await say(
+                    session_id=session_id,
+                    update=update_agent_message_text(f"subagent: {line}\n"),
+                )
+            return PromptResponse(stop_reason="end_turn")
         if "bad" in text:
             await say(session_id=session_id, update=start_tool_call("c0", "Mystery"))
         if "mcp" in text:
@@ -366,6 +385,90 @@ class FakeAgent(Agent):
         await say(session_id=session_id, update=update_agent_message_text("done"))
         return PromptResponse(stop_reason="end_turn")
 
+    async def _subagent(self, session_id: str, asked: dict[str, Any]) -> list[str]:
+        """Spawn the sub-agent with the lent server named, and answer what it said."""
+        server = next(
+            (
+                one
+                for one in self._servers.get(session_id, [])
+                if getattr(one, "name", None) == asked["server"]
+            ),
+            None,
+        )
+        if server is None:
+            return [f"{asked['server']}: not lent to this session"]
+        handed = {
+            "calls": asked["calls"],
+            "server": server.model_dump(mode="json", by_alias=True),
+        }
+        child = await asyncio.create_subprocess_exec(
+            sys.executable,
+            __file__,
+            "--subagent",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+        )
+        out, _ = await child.communicate(json.dumps(handed).encode())
+        return out.decode().splitlines()
+
+
+async def subagent(handed: dict[str, Any]) -> None:
+    """The sub-agent: each call made through the server its parent handed it, each answer one line."""
+    from mcp import ClientSession
+    from mcp import types as T
+
+    server = handed["server"]
+
+    async def calls(session: ClientSession) -> None:
+        await session.initialize()
+        for tool, arguments in handed["calls"]:
+            # Asked raw: a refusal is text content, which the SDK's call_tool
+            # refuses for a tool with an output schema.
+            answer = await session.send_request(
+                T.CallToolRequest(
+                    method="tools/call",
+                    params=T.CallToolRequestParams(name=tool, arguments=arguments),
+                ),
+                T.CallToolResult,
+            )
+            said = " ".join(
+                c.text for c in answer.content if getattr(c, "type", None) == "text"
+            )
+            verdict = "refused" if answer.is_error else "allowed"
+            print(f"{tool}: {verdict} {said[:400]}", flush=True)
+
+    try:
+        if server.get("type") == "http":
+            from mcp.client.streamable_http import streamable_http_client
+            from mcp.shared._httpx_utils import create_mcp_http_client
+
+            headers = {h["name"]: h["value"] for h in server.get("headers") or []}
+            client = create_mcp_http_client(headers=headers)
+            async with streamable_http_client(server["url"], http_client=client) as (
+                read,
+                write,
+                *_,
+            ):
+                async with ClientSession(read, write) as session:
+                    await calls(session)
+        else:
+            from mcp.client.stdio import StdioServerParameters, stdio_client
+
+            parameters = StdioServerParameters(
+                command=server["command"],
+                args=list(server.get("args") or []),
+                env={e["name"]: e["value"] for e in server.get("env") or []} or None,
+            )
+            async with stdio_client(parameters) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await calls(session)
+    except Exception as exc:  # noqa: BLE001 - whatever stopped it is what it says
+        message = str(exc) or type(exc).__name__
+        print(f"error: {message[:400]}", flush=True)
+
 
 if __name__ == "__main__":
-    asyncio.run(run_agent(FakeAgent()))
+    if sys.argv[1:] == ["--subagent"]:
+        asyncio.run(subagent(json.loads(sys.stdin.read())))
+    else:
+        asyncio.run(run_agent(FakeAgent()))

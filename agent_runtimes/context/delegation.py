@@ -62,6 +62,7 @@ __all__ = [
     "SPENT_FIELD",
     "STEER_METHOD",
     "WITHHELD",
+    "DELEGATED_CREDENTIAL",
     "CredentialLost",
     "SteerCapability",
     "checkpoint_of",
@@ -105,6 +106,12 @@ SPENT_FIELD = USAGE_FIELD
 
 #: What the message keeps in the credential's place: that one was sent, and not what it was.
 WITHHELD = "withheld"
+
+#: Where a run's ``AgentContext.metadata`` holds the credential its delegation
+#: carried (ACP ``_meta`` or A2A ``metadata``), apart from ``user_token``, which
+#: any caller's token may be: the narrowest authority the run holds, so a
+#: harness's lent MCP is scoped by it before anything else (SHIELD SH-33).
+DELEGATED_CREDENTIAL = "delegated_credential"
 
 #: Run id -> the credential delegated for it. Process memory only.
 _held: dict[str, str] = {}
