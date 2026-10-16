@@ -407,3 +407,36 @@ async def test_a_card_that_names_what_it_is_asked_in_keeps_it_and_hears_no_audio
         ]
     finally:
         a2a_routes.unregister_a2a_agent("text-card")
+
+
+@pytest.mark.asyncio
+async def test_a_real_agent_s_task_says_its_voice_and_its_line(state):
+    """The worker holds the runtime's adapter, not the pydantic agent: its voice is still found (VO-36)."""
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+
+    from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from agent_runtimes.voice import VoiceCapability
+
+    agent = Agent(
+        TestModel(call_tools=["say_aloud"], custom_output_text="It is sunny."),
+        capabilities=[VoiceCapability(language="en-US", settings=dict(VOICE))],
+    )
+    adapter = PydanticAIAdapter(agent, name="speaking")
+    asked = {
+        "role": "user",
+        "parts": [{"text": "Weather?"}],
+        "message_id": "m-real",
+        "context_id": "ctx-1",
+    }
+    _, events, _ = await _run(state, adapter, asked)
+    voiced = [
+        status["message"]["metadata"]["voice"]
+        for status in _statuses(events)
+        if (status.get("message") or {}).get("metadata", {}).get("voice")
+    ]
+    assert voiced[0] == {"settings": VOICE}
+    [said] = [v["say"] for v in voiced[1:]]
+    assert said["voice"] == "kokoro-af-heart" and said["language"] == "en-US"
+    assert said["text"]
+    assert _text(_statuses(events)[-1]["message"]) == "It is sunny."

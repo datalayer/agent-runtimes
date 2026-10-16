@@ -21,6 +21,7 @@ import type { ProtocolAdapterConfig, AgentCard } from '../types';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
+import { VOICE_SAY_EVENT, VOICE_SETTINGS_EVENT } from '../voice/sayAloud';
 
 /**
  * The header fasta2a-based workers (`agent-runtimes`'s own, and any other
@@ -535,6 +536,25 @@ export class A2AAdapter extends BaseProtocolAdapter {
     if (eventKind === 'status-update') {
       const state = task.status?.state;
       console.log('[A2AAdapter] Status update:', state, 'final:', task.final);
+
+      // The agent's voice and the lines it says aloud, in a working status
+      // message's metadata (VOICE.md VO-36): activities the chat says and
+      // captions, as AG-UI's `voice.settings` and `voice.say` custom events.
+      const voice = task.status?.message?.metadata?.voice;
+      if (voice?.settings) {
+        this.emit({
+          type: 'activity',
+          activity: { type: VOICE_SETTINGS_EVENT, data: voice.settings },
+          timestamp: new Date(),
+        });
+      }
+      if (voice?.say) {
+        this.emit({
+          type: 'activity',
+          activity: { type: VOICE_SAY_EVENT, data: voice.say },
+          timestamp: new Date(),
+        });
+      }
 
       if (
         task.final &&

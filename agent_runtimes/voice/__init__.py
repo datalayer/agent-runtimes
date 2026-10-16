@@ -240,8 +240,12 @@ def voice_of_agent(agent: Any) -> Optional[Dict[str, Any]]:
 
     root = getattr(agent, "_root_capability", None)
     if root is None:
-        wrapped = getattr(agent, "wrapped", None)
-        return voice_of_agent(wrapped) if wrapped is not None else None
+        # A2A's worker holds the runtime's ``PydanticAIAdapter`` (its agent is
+        # ``pydantic_agent``); pydantic-ai's wrappers hold theirs as ``wrapped``.
+        inner = getattr(agent, "pydantic_agent", None) or getattr(
+            agent, "wrapped", None
+        )
+        return voice_of_agent(inner) if inner is not None else None
     for capability in leaf_capabilities(root):
         if isinstance(capability, VoiceCapability) and capability.settings:
             return dict(capability.settings)
