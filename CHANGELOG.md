@@ -7,6 +7,14 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.49
+
+DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **A turn carries where it comes from** (DC-006, SLACK S-204): the session API's `StartSessionRequest` and `SessionMessageRequest` take `provenance` — the host's kind, the place (a channel, a thread as its parent channel, or a direct conversation), the thread and the message — with no other key, at most 1 KiB; it is part of the turn's identity, so a retry naming another provenance is another request (409). The host kit sends it from `HostShape.provenanceOf`.
+- **A host's own administration** (DC-106): `DatalayerHostClient.admin` pauses, resumes or sets one channel's rule through ai-agents' `POST /apps/hosts/self/admin`, which takes it only from the host user linked to the installation's owner.
+- **`contracts.json` gains Discord's forms** (`discord`: the installation's `<application_id>:<guild_id>`, a member's id, a thread sent as its parent channel, the session uid, the delivery target), `external_turn.optional_request.provenance` and `admin`, byte-identical to ai-agents' fixture; `test_app_host_sessions` reads it.
+
 ## 1.5.48
 
 SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
