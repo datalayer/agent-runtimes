@@ -86,3 +86,53 @@ describe('DatalayerHostClient.admin', () => {
     expect((refused as HostRefusedError).status).toBe(403);
   });
 });
+
+describe('DatalayerHostClient.self', () => {
+  it('reads the installation, its uid included, with the host key', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const client = new DatalayerHostClient(API, (async (
+      url: string | URL,
+      init?: RequestInit,
+    ) => {
+      calls.push({ init, url: String(url) });
+      return Response.json({
+        success: true,
+        host: {
+          uid: 'bd7e7160',
+          account_uid: 'owner',
+          default_deployment: 'dep-1',
+          deployments: [{ uid: 'dep-1', app_name: 'Chat', kept: true }],
+          channels: [],
+          direct_only: [],
+          paused: false,
+        },
+      });
+    }) as typeof fetch);
+    expect(await client.self('dlhk_key')).toEqual({
+      accountUid: 'owner',
+      channels: [],
+      defaultDeployment: 'dep-1',
+      deployments: [{ appName: 'Chat', kept: true, uid: 'dep-1' }],
+      directOnly: [],
+      paused: false,
+      uid: 'bd7e7160',
+    });
+    expect(new URL(calls[0]!.url).pathname).toBe(
+      '/api/ai-agents/v1/apps/hosts/self',
+    );
+    expect(
+      (calls[0]?.init?.headers as Record<string, string>)[
+        contracts.headers.host_key!
+      ],
+    ).toBe('dlhk_key');
+  });
+
+  it('refuses an answer without the installation uid', async () => {
+    const client = new DatalayerHostClient(API, (async () =>
+      Response.json({
+        success: true,
+        host: { deployments: [] },
+      })) as typeof fetch);
+    await expect(client.self('dlhk_key')).rejects.toThrow();
+  });
+});

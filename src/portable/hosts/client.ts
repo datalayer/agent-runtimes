@@ -48,6 +48,8 @@ export type HostSelf = Readonly<{
   deployments: ReadonlyArray<{ appName: string; kept: boolean; uid: string }>;
   directOnly: readonly string[];
   paused: boolean;
+  /** The installation's own uid: what its deliveries are addressed to. */
+  uid: string;
 }>;
 
 export type BoundHost = Readonly<{
@@ -140,7 +142,9 @@ export class DatalayerHostClient {
   /**
    * The installation as Datalayer keeps it: the deployments it allows (with
    * their application's name and whether each is kept on), the default, the
-   * channel policy and whether it is paused.
+   * channel policy, whether it is paused, and its uid (a host bound
+   * outside the install flow, such as a development app given its key,
+   * reads it here to poll its deliveries).
    */
   async self(hostKey: string): Promise<HostSelf> {
     const answered = await this.#call(
@@ -165,6 +169,7 @@ export class DatalayerHostClient {
       })),
       directOnly: host.direct_only ?? [],
       paused: host.paused ?? false,
+      uid: host.uid,
     };
   }
 
