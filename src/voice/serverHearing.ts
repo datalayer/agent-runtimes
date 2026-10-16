@@ -7,7 +7,8 @@
  * Hearing on Datalayer's servers (VOICE.md VO-34, VO-14, §5): what was said
  * in one press, kept to its speech by Silero VAD in the page, then sent as a
  * WAV recording to the speech service's `POST /speech/transcriptions`, where
- * Whisper large-v3-turbo hears it — in any language it knows, and finding
+ * Whisper hears it — small for a spoken turn, large-v3-turbo past one
+ * (decision 17) — in any language it knows, and finding
  * the language itself when the person asks for that (detection, VO-14). The
  * sound is held in the request only: the service keeps neither it nor the
  * words (VO-60).
@@ -15,8 +16,15 @@
  * Used where the application's voice says `where: server`, where it says
  * `auto` and no model in the browser hears the language, and where the
  * person asked for their language to be detected — never when they chose to
- * keep speech on the device. A clip model: its words come at the end, not
- * while the person speaks (VO-11).
+ * keep speech on the device.
+ *
+ * While the person speaks, the words come too (VO-11): the first look at
+ * what was heard so far opens `WS /speech/transcriptions/stream` (the token
+ * in its first message, VO-37), the sound is sent as it is captured, 16-bit
+ * PCM at 16 kHz, and the service's partial words are what was heard so far,
+ * greyed in the composer until final. At the end of the press the stream is
+ * told so and its final words are the transcript. A press heard without a
+ * look before it (a short one) is sent whole as a recording instead.
  *
  * @module voice/serverHearing
  */
@@ -28,6 +36,16 @@ import type { Transcript } from './types';
 
 /** Where the speech service hears a recording, on ai-agents' host. */
 export const TRANSCRIPTIONS_PATH = '/api/ai-agents/v1/speech/transcriptions';
+
+/** Where the speech service hears speech as it is said. */
+export const TRANSCRIPTION_STREAM_PATH =
+  '/api/ai-agents/v1/speech/transcriptions/stream';
+
+/** A stream no look or hearing has fed for this long is closed: its press was cancelled. */
+export const STREAM_IDLE_MS = 3000;
+
+/** How long the final words of a stream are waited for. */
+export const STREAM_FINAL_MS = 60_000;
 
 /** The model the speech service hears with (agentspecs' catalogue). */
 export const SERVER_HEARING_MODEL = 'whisper-large-v3-turbo';
@@ -116,6 +134,189 @@ export interface ServerHearingOptions {
   /** Let Whisper find the language (VO-14), rather than tell it. */
   detect?: boolean;
   fetcher?: typeof fetch;
+  /** Opens a WebSocket; the browser's own unless a test gives one. */
+  socket?: (url: string) => SpeechSocket;
+}
+
+/** What `ServerHearing` needs of a WebSocket. */
+export interface SpeechSocket {
+  readonly readyState: number;
+  binaryType: string;
+  onopen: ((event: unknown) => void) | null;
+  onmessage: ((event: { data: unknown }) => void) | null;
+  onclose: ((event: unknown) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  send(data: string | ArrayBuffer): void;
+  close(code?: number): void;
+}
+
+/** 16 kHz samples in [-1, 1] as little-endian 16-bit PCM: what a `pcm16` stream takes. */
+export function pcm16Of(samples: Float32Array): ArrayBuffer {
+  const bytes = new ArrayBuffer(samples.length * 2);
+  const view = new DataView(bytes);
+  for (let i = 0; i < samples.length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return bytes;
+}
+
+/** The ws(s) address of the stream on ai-agents' origin. */
+export function streamUrlOf(speechUrl: string): string {
+  return `${speechUrl.replace(/\/+$/, '').replace(/^http/, 'ws')}${TRANSCRIPTION_STREAM_PATH}`;
+}
+
+interface StreamFinal {
+  text: string;
+  language: string;
+}
+
+/**
+ * One press heard as it is said: the sound sent as it comes, the service's
+ * partial words kept, its final words awaited at the end.
+ */
+class PressStream {
+  /** Samples of the press sent so far. */
+  sent = 0;
+  /** The newest partial words. */
+  partial = '';
+  /** Why the service refused, in its sentence. */
+  refused?: string;
+  private socket: SpeechSocket;
+  private ready = false;
+  private queued: Array<string | ArrayBuffer> = [];
+  private final?: StreamFinal;
+  private waiting?: (final: StreamFinal | undefined) => void;
+  private closed = false;
+  private idle?: ReturnType<typeof setTimeout>;
+
+  constructor(
+    open: (url: string) => SpeechSocket,
+    speechUrl: string,
+    first: { token?: string; language?: string },
+  ) {
+    this.socket = open(streamUrlOf(speechUrl));
+    this.socket.binaryType = 'arraybuffer';
+    this.socket.onopen = () => {
+      this.socket.send(
+        JSON.stringify({
+          token: first.token ?? '',
+          language: first.language ?? '',
+          format: 'pcm16',
+        }),
+      );
+    };
+    this.socket.onmessage = event => {
+      let said: Record<string, unknown>;
+      try {
+        said = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      if (said.type === 'ready') {
+        this.ready = true;
+        for (const chunk of this.queued.splice(0)) {
+          this.socket.send(chunk);
+        }
+      } else if (said.type === 'partial' && typeof said.text === 'string') {
+        this.partial = said.text.trim();
+      } else if (said.type === 'final') {
+        this.final = {
+          text: typeof said.text === 'string' ? said.text.trim() : '',
+          language: typeof said.language === 'string' ? said.language : '',
+        };
+        this.settle();
+      } else if (said.type === 'refused') {
+        this.refused =
+          typeof said.detail === 'string' && said.detail
+            ? said.detail
+            : "What you said could not be heard on Datalayer's servers.";
+        this.settle();
+      }
+    };
+    this.socket.onclose = () => {
+      this.closed = true;
+      this.settle();
+    };
+    this.socket.onerror = () => undefined;
+    this.touch();
+  }
+
+  /** Send what the press added since the last call. */
+  feed(audio: Float32Array): void {
+    this.touch();
+    if (audio.length <= this.sent || this.closed) {
+      return;
+    }
+    const chunk = pcm16Of(audio.subarray(this.sent));
+    this.sent = audio.length;
+    if (this.ready) {
+      this.socket.send(chunk);
+    } else {
+      this.queued.push(chunk);
+    }
+  }
+
+  /** The end of the press: the final words, or `undefined` when the stream ended without them. */
+  finish(audio: Float32Array): Promise<StreamFinal | undefined> {
+    this.feed(audio);
+    if (this.final || this.closed || this.refused) {
+      return Promise.resolve(this.final);
+    }
+    return new Promise(resolve => {
+      const timer = setTimeout(() => {
+        this.waiting = undefined;
+        this.close();
+        resolve(undefined);
+      }, STREAM_FINAL_MS);
+      this.waiting = final => {
+        clearTimeout(timer);
+        resolve(final);
+      };
+      const end = JSON.stringify({ type: 'end' });
+      if (this.ready) {
+        this.socket.send(end);
+      } else {
+        // Said once the service is ready, after the sound queued before it.
+        this.queued.push(end);
+      }
+    });
+  }
+
+  close(): void {
+    if (this.idle) {
+      clearTimeout(this.idle);
+    }
+    this.closed = true;
+    try {
+      this.socket.close(1000);
+    } catch {
+      // Already closed.
+    }
+    this.settle();
+  }
+
+  private touch(): void {
+    if (this.idle) {
+      clearTimeout(this.idle);
+    }
+    this.idle = setTimeout(() => {
+      if (!this.waiting) {
+        this.close();
+      }
+    }, STREAM_IDLE_MS);
+  }
+
+  private settle(): void {
+    const waiting = this.waiting;
+    this.waiting = undefined;
+    waiting?.(this.final);
+    if (this.final || this.refused) {
+      if (this.idle) {
+        clearTimeout(this.idle);
+      }
+    }
+  }
 }
 
 /**
@@ -135,10 +336,45 @@ export class ServerHearing implements Hearing {
     return this.finder.readyToFindSpeech(progress);
   }
 
-  /** Whether speech was found and how long it has been silent; its words come at the end. */
-  async hearSoFar(audio: Float32Array): Promise<HeardSoFar> {
+  /** The press being heard as it is said, while one is. */
+  private press?: PressStream;
+
+  /** The press's stream, opened anew when a new press began (its sound is shorter). */
+  private streamFor(
+    audio: Float32Array,
+    language: string,
+  ): PressStream | undefined {
+    const open =
+      this.options.socket ??
+      (typeof WebSocket === 'undefined'
+        ? undefined
+        : (url: string) => new WebSocket(url) as unknown as SpeechSocket);
+    if (!open) {
+      return undefined;
+    }
+    if (this.press && audio.length < this.press.sent) {
+      this.press.close();
+      this.press = undefined;
+    }
+    if (!this.press) {
+      this.press = new PressStream(open, this.options.speechUrl, {
+        token: this.options.token,
+        language: this.options.detect ? '' : language,
+      });
+    }
+    return this.press;
+  }
+
+  /**
+   * Whether speech was found and how long it has been silent, and the words
+   * the speech service heard so far: the sound goes to its stream as it comes.
+   */
+  async hearSoFar(audio: Float32Array, language = ''): Promise<HeardSoFar> {
     const { speech, silentMs } = await this.finder.findSpeech(audio);
-    return { text: '', spoke: speech.length >= SHORTEST, silentMs };
+    const spoke = speech.length >= SHORTEST;
+    const press = this.streamFor(audio, language);
+    press?.feed(audio);
+    return { text: spoke ? (press?.partial ?? '') : '', spoke, silentMs };
   }
 
   async hear(
@@ -146,9 +382,41 @@ export class ServerHearing implements Hearing {
     language: string,
   ): Promise<Transcript | undefined> {
     const started = performance.now();
+    const press =
+      this.press && audio.length >= this.press.sent ? this.press : undefined;
+    if (this.press && !press) {
+      this.press.close();
+    }
+    this.press = undefined;
     const { speech } = await this.finder.findSpeech(audio);
     if (speech.length < SHORTEST) {
+      press?.close();
       return undefined;
+    }
+    if (press) {
+      const final = await press.finish(audio);
+      press.close();
+      if (press.refused) {
+        throw new Error(press.refused);
+      }
+      if (!final) {
+        throw new Error(
+          "What you said could not be heard on Datalayer's servers: the stream ended before its words.",
+        );
+      }
+      return final.text
+        ? {
+            text: final.text,
+            metadata: {
+              input: 'voice',
+              language: final.language || language,
+              engine: SERVER_HEARING_MODEL,
+              where: 'server',
+            },
+            seconds: audio.length / HEARING_RATE,
+            ms: Math.round(performance.now() - started),
+          }
+        : undefined;
     }
     const { speechUrl, token, detect, fetcher = fetch } = this.options;
     const query = detect ? '' : `?language=${encodeURIComponent(language)}`;
