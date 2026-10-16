@@ -94,24 +94,33 @@ release, so there is no holding: a press starts, a press stops, and one
 press listens a minute at most.
 
 It needs the `voice` extra — `pip install 'agent-runtimes[voice]'`
-(sounddevice, MIT, and kokoro-onnx, MIT, which brings eSpeak NG, GPL-3.0,
-onto your machine) — which is never a default dependency. The models are
-copied into the pinned store (`DATALAYER_SPEECH_MODELS_DIR`,
-`~/.cache/voice-work/store` by default) from Datalayer's CDN, each file
-checked against the hash the catalogue pins:
+(sounddevice, faster-whisper and kokoro-onnx, MIT; kokoro-onnx brings eSpeak
+NG, GPL-3.0, and faster-whisper brings FFmpeg, LGPL, onto your machine) —
+which is never a default dependency. The models are copied into the pinned
+store (`DATALAYER_SPEECH_MODELS_DIR`, `~/.cache/voice-work/store` by default)
+from Datalayer's CDN, each file checked against the hash the catalogue pins:
 
 ```bash
 python -m agent_runtimes.voice.store              # whisper-small and kokoro-82m, about 0.8 GB
 python -m agent_runtimes.voice.store kokoro-82m   # one model
 ```
 
-Answers are said **on the machine** by Kokoro when the extra is installed and
-the store holds `hexgrad/kokoro-82m`. What is said is heard on the machine
-when `faster-whisper` is installed beside it and the store holds
-`openai/whisper-small`. Otherwise both happen **on Datalayer's servers** with
-your token (`DATALAYER_TOKEN` or `DATALAYER_API_KEY`); the line shown when
-voice starts says which. No microphone, no extra, no token: voice is refused
-in a sentence naming what was found, and the session goes on by typing.
+With the extra and the store, what you say is heard **on the machine** by
+Whisper small and answers are said **on the machine** by Kokoro — only the
+models the catalogue says run on a machine (`where: machine`). Kokoro is first
+asked to say one word in a process of its own: when it cannot speak here
+(eSpeak NG's data not found, say), the line shown when voice starts says why,
+and the answers are said by Datalayer's speech service instead. A voice is
+given its own language — `fr` is said as French (`fr-FR`) by a French voice,
+and a language the voice does not speak is refused in a sentence.
+
+When `loop` runs its agent **on Datalayer** (`loop --cloud`), what you say is
+heard and answers are said **on Datalayer's servers**, whatever this machine
+has. Without the extra or the store, both happen there too. The servers need
+your token: `DATALAYER_TOKEN` or `DATALAYER_API_KEY`, or the one `datalayer
+login` keeps. The line shown when voice starts says where each happens. No
+microphone, no extra, no token: voice is refused in a sentence naming what
+was found, and the session goes on by typing.
 
 ## An application's voice
 

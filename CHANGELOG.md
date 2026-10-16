@@ -7,6 +7,15 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.50
+
+VOICE, 16 October 2026 ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
+
+- **Voice at the terminal hears and speaks on the person's machine** (VO-16): `agent-runtimes[voice]` carries `faster-whisper` beside `sounddevice` and `kokoro-onnx`; only what the catalogue says runs on a machine (`where: machine`, agentspecs 0.0.110: whisper-small, kokoro-82m and the Kokoro voices) runs there.
+- **Kokoro asked first, in a process of its own**: eSpeak NG ending the process it runs in is a sentence at the start of `loop --voice --speak`, and the answers go to the speech service.
+- **A voice is given its own language** (`Voice.spoken_as`): `fr` is said as `fr-fr`, which eSpeak NG knows; a language the voice does not speak is refused in a sentence.
+- **`loop --cloud` hears and speaks on Datalayer**, whatever the machine has, with the `datalayer login` token when no variable names one.
+
 ## 1.5.49
 
 DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
