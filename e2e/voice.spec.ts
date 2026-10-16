@@ -13,10 +13,8 @@
  * person's voice menu beside it (VO-30). With *Detect the language I speak*
  * chosen, the same words are heard on Datalayer's servers instead (VO-34,
  * VO-14): asked apart, the recording sent to the speech service, the
- * language found there. With *Talking to it* set to hands-free, *Talk with
- * it* sends the turn by itself after the silence, the answer is said, and
- * the fixture, which Chrome's fake microphone plays again and again, speaks
- * over the answer: barge-in (VO-12, VO-13).
+ * language found there. Hands-free and barge-in are
+ * `voice-hands-free.spec.ts`, on a fixture of their own.
  *
  *   E2E_STATE=<signed-in storage state> E2E_VOICE_APP=<app id> \
  *     npx playwright test -c e2e/playwright.config.ts voice.spec.ts
@@ -53,6 +51,10 @@ test.use({
   launchOptions: {
     executablePath: process.env.E2E_CHROME || '/usr/bin/google-chrome',
     args: [
+      // Inside the memory a test is given: no GPU process, no extensions.
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-dev-shm-usage',
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
       `--use-file-for-fake-audio-capture=${FIXTURE}`,
@@ -74,6 +76,12 @@ test.describe('voice in the composer (VO-53)', () => {
       ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
         ? route.abort()
         : route.continue(),
+    );
+    // The notebook's Python in the browser is not needed to talk, and the
+    // Studio's page stays inside the memory a test is given.
+    await context.route(
+      /pyodide|jupyterlite|lite-service-worker|\.whl(\?|$)/,
+      route => route.abort(),
     );
     page.on('request', request => {
       if (
@@ -140,11 +148,20 @@ test.describe('voice in the composer (VO-53)', () => {
     page,
     context,
   }) => {
-    const heard: { status: number; language?: string; length: number }[] = [];
+    // Heard as it is said (VO-11): the stream's final words, and the sound
+    // sent — the speech only, the silence around it stays in the browser.
+    const finals: { language?: string; text?: string }[] = [];
+    let soundBytes = 0;
     await context.route('**/api/**', route =>
       ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
         ? route.abort()
         : route.continue(),
+    );
+    // The notebook's Python in the browser is not needed to talk, and the
+    // Studio's page stays inside the memory a test is given.
+    await context.route(
+      /pyodide|jupyterlite|lite-service-worker|\.whl(\?|$)/,
+      route => route.abort(),
     );
     // The person's choice, as the voice menu keeps it.
     await context.addInitScript(() =>
@@ -153,15 +170,22 @@ test.describe('voice in the composer (VO-53)', () => {
         JSON.stringify({ detectLanguage: true }),
       ),
     );
-    page.on('response', async response => {
-      if (response.url().includes('/speech/transcriptions')) {
-        const body = await response.json().catch(() => ({}));
-        heard.push({
-          status: response.status(),
-          language: body.language,
-          length: response.request().postDataBuffer()?.length ?? 0,
-        });
+    page.on('websocket', socket => {
+      if (!socket.url().includes('/speech/transcriptions/stream')) {
+        return;
       }
+      socket.on('framesent', frame => {
+        if (typeof frame.payload !== 'string') {
+          soundBytes += frame.payload.length;
+        }
+      });
+      socket.on('framereceived', frame => {
+        const message =
+          typeof frame.payload === 'string' ? JSON.parse(frame.payload) : {};
+        if (message.type === 'final') {
+          finals.push({ language: message.language, text: message.text });
+        }
+      });
     });
     await page.goto(
       `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
@@ -187,84 +211,9 @@ test.describe('voice in the composer (VO-53)', () => {
       timeout: 180_000,
     });
     await expect(box).toHaveText(/weather like in/i, { timeout: 120_000 });
-    expect(heard).toHaveLength(1);
-    expect(heard[0].status).toBe(200);
-    expect(heard[0].language).toBe('en');
-    // A WAV of the speech only: the silence around it stays in the browser.
-    expect(heard[0].length).toBeGreaterThan(44);
-  });
-
-  test('hands-free: the turn sent by itself after the silence, the answer said, and the voice stopped when spoken over (VO-12, VO-13)', async ({
-    page,
-    context,
-  }) => {
-    const runs: string[] = [];
-    const syntheses: number[] = [];
-    await context.route('**/api/**', route =>
-      ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
-        ? route.abort()
-        : route.continue(),
-    );
-    page.on('request', request => {
-      if (
-        request.method() === 'POST' &&
-        /\/(chat|runs?|messages|ag-ui|assistant)\b/.test(request.url())
-      ) {
-        runs.push(request.url());
-      }
-    });
-    page.on('response', response => {
-      if (response.url().includes('/speech/syntheses')) {
-        syntheses.push(response.status());
-      }
-    });
-    await page.goto(
-      `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
-    );
-    const card = page.locator('#app-voice');
-    await expect(card).toBeVisible({ timeout: 180_000 });
-    if (
-      !['on', 'true'].includes(
-        (await card.getAttribute('data-app-voice')) ?? '',
-      )
-    ) {
-      await card.locator('input[type=checkbox]').click();
-    }
-    // The page's own choice, never saved: hands-free, answers always said.
-    await card.getByLabel('Talking to it').selectOption('hands_free');
-    await page.locator('text=Compose >> visible=true').first().click();
-    const toggle = page.locator('[data-hands-free-toggle]').first();
-    await expect(toggle).toBeEnabled({ timeout: 120_000 });
-    await toggle.click();
-    const yes = page.locator('[data-hands-free-consent-yes]');
-    if (await yes.isVisible().catch(() => false)) {
-      await yes.click();
-    }
-    const state = page.locator('[data-hands-free-state]').first();
-    await expect(state).toHaveAttribute('data-hands-free-state', 'listening', {
-      timeout: 120_000,
-    });
-    // The fixture is said, then silence: the turn goes by itself (VO-12).
-    await expect
-      .poll(() => runs.length, { timeout: 120_000 })
-      .toBeGreaterThan(0);
-    await expect(state).toHaveAttribute(
-      'data-hands-free-state',
-      /thinking|speaking/,
-      { timeout: 30_000 },
-    );
-    // The answer is said as it is written (hands-free implies always).
-    await expect
-      .poll(() => syntheses.length, { timeout: 120_000 })
-      .toBeGreaterThan(0);
-    // The fixture plays again while it speaks: barge-in stops the voice and
-    // the run, and the answer is marked (VO-13).
-    await expect(page.locator('[data-interrupted]').first()).toBeVisible({
-      timeout: 120_000,
-    });
-    await toggle.click();
-    await expect(page.locator('[data-hands-free-state]')).toHaveCount(0);
-    expect(syntheses.every(status => status === 200)).toBe(true);
-    expect(runs.length).toBeLessThanOrEqual(5);
+    expect(finals).toHaveLength(1);
+    expect(finals[0].language).toBe('en');
+    expect(finals[0].text).toMatch(/weather like in/i);
+    expect(soundBytes).toBeGreaterThan(0);
   });
 });
