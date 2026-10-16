@@ -1190,8 +1190,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     @staticmethod
     def _authority_of(context: AgentContext) -> str:
-        """Which authority a run's lent MCP carries: a delegated credential's fingerprint
-        (the Shield's, ``agent_shield.acp.credential``), else the runtime's."""
+        """
+        Which authority a run's lent MCP carries.
+
+        A delegated credential's fingerprint (the Shield's,
+        ``agent_shield.acp.credential``), else the runtime's.
+        """
         from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
 
         delegated = str(context.metadata.get(DELEGATED_CREDENTIAL) or "")
@@ -1478,6 +1482,33 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         },
                     )
                 ]
+            # A terminal still running (SH-13, SH-16): its output so far rides
+            # the row as the page's display, so the terminal card fills while
+            # the command runs — the Shield pushes it whole at each change.
+            running = (
+                display_meta_of(
+                    displays,
+                    tool_call_id=event.tool_call_id,
+                    command=own_command
+                    or next(
+                        (
+                            self._terminal_commands[t]
+                            for t in terminal_ids
+                            if t in self._terminal_commands
+                        ),
+                        "",
+                    ),
+                    output={
+                        "output": event.output.get("output") or "",
+                        "exit": None,
+                        "released": False,
+                    },
+                )
+                if terminal_ids
+                and isinstance(event.output, dict)
+                and "output" in event.output
+                else None
+            )
             return [
                 StreamEvent(
                     type="tool_call",
@@ -1491,6 +1522,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         "status": event.status or "in_progress",
                         "awaiting": None,
                         "display": displays,
+                        **({"_meta": running} if running is not None else {}),
                     },
                 )
             ]

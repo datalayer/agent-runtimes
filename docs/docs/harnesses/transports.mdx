@@ -145,8 +145,12 @@ The web chat and the embed draw them through the preset's
 tool binding — the display says what it is); the session API's record carries
 each as a `tool_call` entry *shown* with the display; the phone reads the same
 contract (`protocolDisplayOf`, `displayLine`, `shieldDisplayFixtures()` as its
-fixture, MOBILE M-037) — drawing it there is the mobile plan's. Streaming a
-terminal's output while it runs is open: it is read when the agent asks.
+fixture, MOBILE M-037) — drawing it there is the mobile plan's. A terminal
+fills while its command runs: the Shield pushes the output whole at each
+change, and each push reaches the page as the running row's
+`_meta["reactor.ui/display"]` (the output so far, no exit code, not released)
+on the AG-UI `datalayer.harness.tool_call` event, which `portable/conversation`
+draws on the row (`HARNESS_TOOL_CALL`) until the result replaces it.
 The examples app's *Shield Harness* page is the web chat on a harness runtime
 (`examples/shield/harness_on_the_runtime.py --serve`), drawing both; not yet
 seen in a browser.

@@ -31,6 +31,7 @@ import {
   CUT_MARK,
   emptyConversation,
   formFieldsOf,
+  HARNESS_TOOL_CALL,
   ITEM_LIMIT,
   questionOf,
   reduceConversation,
@@ -241,6 +242,84 @@ describe('the conversation a run builds', () => {
       exitCode: null,
       display: null,
     });
+  });
+
+  it("draws a coding agent's terminal while it runs, then its result (SH-13, SH-16)", () => {
+    const wire = (output: string, exit: number | null) => ({
+      type: 'application/vnd.datalayer.shield.terminal+json',
+      version: 1,
+      id: 'c3-terminal',
+      text:
+        exit === null ? 'Ran `make`: running' : `Ran \`make\`: exit ${exit}`,
+      data: {
+        terminal_id: 'term_1',
+        command: 'make',
+        output,
+        exit_code: exit,
+        released: exit !== null,
+      },
+      actions: [],
+    });
+    const update = (output: string) => ({
+      type: 'CUSTOM',
+      name: HARNESS_TOOL_CALL,
+      value: {
+        id: 'c3',
+        name: 'Run `make`',
+        status: 'in_progress',
+        _meta: { 'reactor.ui/display': wire(output, null) },
+      },
+    });
+    let state = replay([
+      { type: 'RUN_STARTED' },
+      { type: 'TOOL_CALL_START', toolCallId: 'c3', toolCallName: 'Run `make`' },
+      { type: 'TOOL_CALL_END', toolCallId: 'c3' },
+      update('one\n'),
+    ]);
+    expect(state.items[0]).toMatchObject({
+      status: 'running',
+      result: '',
+      display: { kind: 'terminal', output: 'one\n', exitCode: null },
+      value: { _meta: { 'reactor.ui/display': wire('one\n', null) } },
+    });
+    state = replay([update('one\ntwo\n')], state);
+    expect(state.items[0]).toMatchObject({
+      status: 'running',
+      display: { output: 'one\ntwo\n' },
+    });
+    state = replay(
+      [
+        {
+          type: 'TOOL_CALL_RESULT',
+          toolCallId: 'c3',
+          content: JSON.stringify({
+            result: { output: 'one\ntwo\n', exit: 0 },
+            status: 'completed',
+            _meta: { 'reactor.ui/display': wire('one\ntwo\n', 0) },
+          }),
+        },
+        { type: 'RUN_FINISHED' },
+      ],
+      state,
+    );
+    expect(state.items[0]).toMatchObject({
+      status: 'complete',
+      display: { kind: 'terminal', exitCode: 0, released: true },
+    });
+    // An update without a display is only noted; one no client reads fails.
+    const plain = replay([{ ...update(''), value: { id: 'c3' } }], state);
+    expect(plain.items[0]).toEqual(state.items[0]);
+    expect(() =>
+      replay(
+        [
+          {
+            ...update(''),
+            value: { id: 'c3', _meta: { 'reactor.ui/display': { type: 1 } } },
+          },
+        ],
+        state,
+      ),
+    ).toThrow(/carries a display no client reads/);
   });
 
   it('says a turn that ended without a word by how it ended', () => {

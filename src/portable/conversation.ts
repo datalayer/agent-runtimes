@@ -44,7 +44,12 @@ import {
   type AgUiEvent,
   type ToolResultSaid,
 } from './agui';
-import { displayOfToolResult, type ProtocolDisplay } from './displays';
+import {
+  DISPLAY_META_KEY,
+  displayOfToolResult,
+  protocolDisplayOf,
+  type ProtocolDisplay,
+} from './displays';
 import { RUN_END_WORDS } from './records';
 import { messagesOfThread } from './thread';
 
@@ -299,6 +304,40 @@ function noted(state: ConversationState, event: AgUiEvent): ConversationState {
     ...state,
     diagnostics: [...state.diagnostics, entry].slice(-state.limits.diagnostics),
   };
+}
+
+/**
+ * A coding agent's row said again while it runs (the runtime's AG-UI
+ * stream, `agent_runtimes.transports.agui_stream`): a terminal's output so
+ * far rides it in `_meta["reactor.ui/display"]` (SHIELD SH-13, SH-16).
+ */
+export const HARNESS_TOOL_CALL = 'datalayer.harness.tool_call';
+
+/** A running row given the display its update carries; `null` when it carries none. */
+function withRunningDisplay(
+  state: ConversationState,
+  value: unknown,
+): ConversationState | null {
+  if (!isRecord(value) || !isRecord(value._meta)) {
+    return null;
+  }
+  const embedded = value._meta[DISPLAY_META_KEY];
+  if (embedded === undefined) {
+    return null;
+  }
+  const display = protocolDisplayOf(embedded);
+  if (!display) {
+    throw new Error(
+      `${HARNESS_TOOL_CALL} of ${text(value.id)} carries a display no client reads.`,
+    );
+  }
+  return changed(state, text(value.id), item =>
+    item.kind === 'tool' && item.status === 'running'
+      ? // Its value is the display alone, as a result would carry it, so the
+        // web resolves the same card; its words stay empty until it ends.
+        { ...item, value: { _meta: value._meta }, display }
+      : item,
+  );
 }
 
 let rowCount = 0;
@@ -848,6 +887,9 @@ export function reduceConversation(
           session,
           asking: questionOf(session.asking) ?? state.asking,
         };
+      }
+      if (event.name === HARNESS_TOOL_CALL) {
+        return withRunningDisplay(state, event.value) ?? noted(state, event);
       }
       return noted(state, event);
     }

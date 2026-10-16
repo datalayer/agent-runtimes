@@ -122,6 +122,51 @@ class TestAGUI:
         assert events[-1].result["stop_reason"] == "end_turn"
         assert (workspace / "hello.txt").exists()
 
+    async def test_a_running_terminal_reaches_the_page_before_its_result(
+        self, workspace: Path
+    ) -> None:
+        """SH-13, SH-16: the output so far rides the row's custom event, so the
+        page's terminal card fills while the command runs."""
+        agent = an_agent(workspace, approvals=Approvals())
+        try:
+            events = [
+                e
+                async for e in agui_events(
+                    agent,
+                    {
+                        "threadId": "t",
+                        "runId": "r",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": "run sh -c 'echo one; sleep 1; echo two'",
+                            }
+                        ],
+                    },
+                )
+            ]
+        finally:
+            await agent.cleanup()
+        running = [
+            (index, e.value["_meta"]["reactor.ui/display"])
+            for index, e in enumerate(events)
+            if e.type.value == "CUSTOM"
+            and e.name == "datalayer.harness.tool_call"
+            and "_meta" in e.value
+        ]
+        assert running and running[0][1]["data"]["output"] == "one\n"
+        assert running[0][1]["data"]["exit_code"] is None
+        call = events[running[0][0]].value["id"]
+        result_at = next(
+            index
+            for index, e in enumerate(events)
+            if e.type.value == "TOOL_CALL_RESULT" and e.tool_call_id == call
+        )
+        assert running[0][0] < result_at
+        final = json.loads(events[result_at].content)["_meta"]["reactor.ui/display"]
+        assert final["id"] == running[0][1]["id"]
+        assert final["data"]["output"] == "one\ntwo\n"
+
     async def test_a_plan_is_a_custom_event_and_a_refusal_ends_the_run(
         self, workspace: Path
     ) -> None:

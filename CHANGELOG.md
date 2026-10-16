@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.47
+
+SHIELD, 16 October 2026 ([Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses/transports)):
+
+- **A running terminal fills on the page** (SH-13, SH-16): each output the Shield pushes while a command runs reaches the page as the row's `_meta["reactor.ui/display"]` (the terminal, its output so far, no exit, not released) on the AG-UI `datalayer.harness.tool_call` event; `portable/conversation` draws it on the running row (`HARNESS_TOOL_CALL`), so the web chat, the embed and the phone show the output before the result.
+
 ## 1.5.46
 
 DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):

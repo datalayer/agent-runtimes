@@ -493,6 +493,41 @@ class TestTheDisplays:
         assert shown["data"]["output"] == "hi\n" and shown["data"]["exit_code"] == 0
         assert shown["data"]["terminal_id"] and shown["data"]["released"] is True
 
+    @pytest.mark.asyncio
+    async def test_a_running_command_shows_its_output_so_far(
+        self, workspace: Path
+    ) -> None:
+        """The Shield pushes a running terminal's output; each push reaches the
+        page as the row's terminal display, still running, before the result."""
+        agent = an_agent(workspace, approvals=Approvals())
+        try:
+            events = await turn(agent, "run sh -c 'echo one; sleep 1; echo two'")
+        finally:
+            await agent.cleanup()
+        running = [
+            (index, e.data["_meta"]["reactor.ui/display"])
+            for index, e in enumerate(events)
+            if e.type == "tool_call" and "_meta" in e.data
+        ]
+        assert running, "no running terminal reached the page"
+        first_at, first = running[0]
+        assert first["type"] == "application/vnd.datalayer.shield.terminal+json"
+        assert first["data"]["output"] == "one\n"
+        assert first["data"]["exit_code"] is None
+        assert first["data"]["released"] is False
+        assert first["text"].endswith(": running")
+        assert "sleep 1" in first["data"]["command"]
+        finished_at, finished = next(
+            (index, e.data["_meta"]["reactor.ui/display"])
+            for index, e in enumerate(events)
+            if e.type == "tool_result"
+            and e.data.get("id") == events[first_at].data["id"]
+        )
+        assert first_at < finished_at
+        assert finished["id"] == first["id"]
+        assert finished["data"]["output"] == "one\ntwo\n"
+        assert finished["data"]["exit_code"] == 0
+
     def test_languages_and_lines(self) -> None:
         from agent_runtimes.adapters.harness_displays import (
             DiffDisplay,
