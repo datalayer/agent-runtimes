@@ -6,7 +6,7 @@
 /**
  * UI Catalog.
  *
- * The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).
+ * The UI plugins: the Reactor plugins an interface is made of (R8).
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -1919,7 +1919,7 @@ export function listUI(): UISpec[] {
   return Object.values(UI_CATALOGUE);
 }
 
-/** The visual components the UI plugins render, by the name a surface gives them (LOOP C-13). */
+/** The visual components the UI plugins render, by the name a surface gives them (C-13). */
 export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> =
   Object.fromEntries(
     Object.values(UI_CATALOGUE).flatMap(plugin =>

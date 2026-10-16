@@ -631,7 +631,7 @@ export function voiceFor(language: string): VoiceSpec | undefined {
 
 /**
  * The speech-to-text model for a language, on the device: Moonshine where it
- * hears it, Whisper otherwise (decision 3).
+ * hears it, Whisper otherwise.
  */
 export function transcriberFor(language: string): SpeechModelSpec | undefined {
   const base = language.split('-')[0];

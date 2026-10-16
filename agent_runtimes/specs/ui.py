@@ -3,7 +3,7 @@
 """
 UI Catalog.
 
-The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).
+The UI plugins: the Reactor plugins an interface is made of (R8).
 
 This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -1880,7 +1880,7 @@ def list_ui() -> list[UISpec]:
 
 
 #: The visual components the UI plugins render, by the name a
-#: surface gives them (LOOP C-13).
+#: surface gives them (C-13).
 COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {
     component.id: component
     for plugin in UI_CATALOGUE.values()
@@ -1898,7 +1898,7 @@ def list_components() -> list[ComponentSpec]:
 
 
 # ============================================================================
-# The components as typed calls (LOOP C-15)
+# The components as typed calls (C-15)
 # ============================================================================
 
 #: A property bound to what the application publishes or takes: ``{"path": "/runs"}``.

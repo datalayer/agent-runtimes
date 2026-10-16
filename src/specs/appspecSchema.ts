@@ -2856,7 +2856,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     ui: {
       description:
-        'Its UI plugins, each `{plugin, renderer}` (AGENTIC_UI R8): a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered',
+        'Its UI plugins, each `{plugin, renderer}` (R8): a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered',
       items: {
         $ref: '#/$defs/UiChoice',
       },

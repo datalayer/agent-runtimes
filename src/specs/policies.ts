@@ -19,7 +19,7 @@ export const DEFAULT_POLICY_0_0_1: PolicySpec = {
   version: '0.0.1',
   name: 'The default policy',
   description:
-    "Decision 5's default, the session document every Shield decides with under the organization's and the application's: read, search, edit and move inside the workspace are done; delete, run a command, reach outside the workspace, a command naming a credential, sudo, a package install from the network or git push are asked first with the command shown; a fetch goes through the allow-list, which is empty; send and buy are asked.",
+    "The platform's default, the session document every Shield decides with under the organization's and the application's: read, search, edit and move inside the workspace are done; delete, run a command, reach outside the workspace, a command naming a credential, sudo, a package install from the network or git push are asked first with the command shown; a fetch goes through the allow-list, which is empty; send and buy are asked.",
   enabled: true,
   tags: ['policy', 'default'],
   policy: {

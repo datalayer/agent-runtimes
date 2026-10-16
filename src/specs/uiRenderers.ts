@@ -7,7 +7,7 @@
  * UI Renderer Catalog.
  *
  * How a UI plugin's interface reaches a host that is not Datalayer's own
- * page (AGENTIC_UI R8): A2UI, MCP Apps, MCP UI.
+ * page (R8): A2UI, MCP Apps, MCP UI.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
