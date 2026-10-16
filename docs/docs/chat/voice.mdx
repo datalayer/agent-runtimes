@@ -129,6 +129,14 @@ interface:
     where: auto              # auto | device | server: where what is said is heard
 ```
 
+With `where: auto`, the page chooses for each press: what is said is heard
+in the browser when a model there hears the language and loads, and on
+Datalayer's servers otherwise. When the browser's model cannot load, the
+press is refused with a sentence saying the next one goes to the servers, so
+that their own consent is asked first. When the servers refuse a press — a
+visitor's two minutes spent — and a model in the browser hears the language,
+that press is heard in the browser instead, and the sound stays there.
+
 `POST /api/v1/apps/configure` and `GET /api/v1/apps/current` answer the
 voice, resolved against the catalogue, so the page knows it before the first
 answer. When a voice doesn't speak the language, the first voice of the

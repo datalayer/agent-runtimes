@@ -56,6 +56,9 @@ const SHORTEST = HEARING_RATE * 0.2;
 /** Where a chat's voice hears: in the browser, or on Datalayer's servers. */
 export type HearingPlace = 'device' | 'server';
 
+/** The speech service refused a press, in its own sentence (a limit, a visitor's day). */
+export class ServerRefused extends Error {}
+
 /** What decides where a chat's voice hears. */
 export interface HearingAsked {
   language: string;
@@ -397,7 +400,7 @@ export class ServerHearing implements Hearing {
       const final = await press.finish(audio);
       press.close();
       if (press.refused) {
-        throw new Error(press.refused);
+        throw new ServerRefused(press.refused);
       }
       if (!final) {
         throw new Error(
@@ -437,7 +440,7 @@ export class ServerHearing implements Hearing {
       detail?: unknown;
     };
     if (!answered.ok) {
-      throw new Error(
+      throw new ServerRefused(
         typeof body.detail === 'string' && body.detail
           ? body.detail
           : `What you said could not be heard on Datalayer's servers (${answered.status}).`,
@@ -461,5 +464,92 @@ export class ServerHearing implements Hearing {
       seconds: speech.length / HEARING_RATE,
       ms: Math.round(performance.now() - started),
     };
+  }
+}
+
+/** Said when the device's model did not load and the server will hear instead. */
+export const MOVED_TO_SERVER =
+  "This device could not load its model: what you say will be heard on Datalayer's servers instead. Press the microphone again to agree.";
+
+/**
+ * `where: auto` (§5): each press heard on the device when a model there
+ * hears the language and loads, on the speech service otherwise.
+ *
+ * The device's model failing to load moves the hearing to the server, and
+ * the press is refused in a sentence so that the server's own consent is
+ * asked at the next one. The server refusing a press — a limit, a visitor's
+ * day spent — moves it back to the device when a model there hears the
+ * language, and the press is heard there: the sound then stays in the page.
+ */
+export class AutoHearing implements Hearing {
+  private place: HearingPlace;
+  /** The device's model did not load: it is not tried again on this page. */
+  private deviceBroken = false;
+
+  constructor(
+    private readonly device: Hearing,
+    private readonly server: Hearing,
+    language: string,
+    private readonly hearsHere: (language: string) => boolean = language =>
+      Boolean(transcriberFor(language)),
+  ) {
+    this.place = hearsHere(language) ? 'device' : 'server';
+  }
+
+  get where(): HearingPlace {
+    return this.place;
+  }
+
+  private get current(): Hearing {
+    return this.place === 'device' ? this.device : this.server;
+  }
+
+  async ready(language: string, progress?: HearingProgress): Promise<void> {
+    if (
+      this.place === 'server' &&
+      !this.deviceBroken &&
+      this.hearsHere(language)
+    ) {
+      // A language the device hears, chosen after a server-only one.
+      this.place = 'device';
+    }
+    if (this.place === 'device') {
+      try {
+        await this.device.ready(language, progress);
+        return;
+      } catch {
+        this.place = 'server';
+        this.deviceBroken = true;
+        throw new Error(MOVED_TO_SERVER);
+      }
+    }
+    await this.server.ready(language, progress);
+  }
+
+  hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar> {
+    return this.current.hearSoFar(audio, language);
+  }
+
+  async hear(
+    audio: Float32Array,
+    language: string,
+  ): Promise<Transcript | undefined> {
+    if (this.place === 'device') {
+      return this.device.hear(audio, language);
+    }
+    try {
+      return await this.server.hear(audio, language);
+    } catch (error) {
+      if (
+        !(error instanceof ServerRefused) ||
+        this.deviceBroken ||
+        !this.hearsHere(language)
+      ) {
+        throw error;
+      }
+      this.place = 'device';
+      await this.device.ready(language);
+      return this.device.hear(audio, language);
+    }
   }
 }

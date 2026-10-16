@@ -23,7 +23,7 @@ import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
 import { DeviceHearing, type Hearing } from './hearing';
 import { HandsFree } from './HandsFree';
-import { ServerHearing, hearingPlace } from './serverHearing';
+import { AutoHearing, ServerHearing, hearingPlace } from './serverHearing';
 import { VoiceInput } from './VoiceInput';
 import { VoiceMenu } from './VoiceMenu';
 import type { SettledVoice } from './chatVoice';
@@ -96,13 +96,20 @@ export function ComposerVoice({
       return undefined;
     }
     const device = new DeviceHearing(voice.modelsUrl, voice.engines);
-    return place === 'server' && voice.speechUrl
+    const server = voice.speechUrl
       ? new ServerHearing(device, {
           speechUrl: voice.speechUrl,
           token: voice.token,
           detect: voice.detect,
         })
-      : device;
+      : undefined;
+    // `where: auto` (§5): the device when it hears the language and its model
+    // loads, the server otherwise — and back to the device when the server
+    // refuses (a visitor's day spent).
+    if (server && !voice.detect && (voice.where ?? 'auto') === 'auto') {
+      return new AutoHearing(device, server, voice.language);
+    }
+    return place === 'server' && server ? server : device;
   }, [
     voice.input,
     voice.modelsUrl,
@@ -111,6 +118,8 @@ export function ComposerVoice({
     voice.speechUrl,
     voice.token,
     voice.detect,
+    voice.where,
+    voice.language,
   ]);
   // What the box held when the microphone opened: the words heard go after it.
   const base = useRef('');
