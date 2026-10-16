@@ -40,8 +40,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import (
     Any,
+    AsyncIterable,
     Callable,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -103,12 +105,14 @@ from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import (
     Channel,
     Feedback,
+    Interrupted,
     PageShown,
     Session,
     Shown,
     UploadedFile,
     call,
 )
+from agent_runtimes.loop.apps.speech import HeardSpeech, hear_speech
 from agent_runtimes.specs.ui import SurfaceComponents
 from agent_runtimes.types import (
     AppActionSpec,
@@ -182,6 +186,10 @@ EVENTS = (
     "resume",
     # What a person said of an answer, once kept (LOOP P-24).
     "feedback",
+    # What the person said, heard by the same engines as a page's or `loop`'s,
+    # and their speaking over the agent (LOOP P-22, VOICE.md VO-46).
+    "audio",
+    "interrupted",
     "end",
     "logout",
     # A widget's page, run on its inputs (LOOP P-05).
@@ -1691,6 +1699,27 @@ class Application:
         """React to the person signing out: ``handler(session)``, then the session ends."""
         return self._on("logout", handler)
 
+    def audio(self, handler: Handler) -> Handler:
+        """React to what the person said (LOOP P-22, VOICE.md VO-46):
+        ``handler(session, heard)``, a `HeardSpeech` — its words, language,
+        the model that heard it and where.
+
+        The sound comes in chunks (``AppHost.audio``) and is heard by the same
+        engines as a page's or ``loop --voice``'s: on this machine when the
+        pinned Whisper and faster-whisper are here, else by Datalayer's speech
+        service with the person's token. It is never kept. Without one, the
+        words are the person's message, marked spoken. ``session.say(text)``
+        says a line aloud; ``@app.interrupted`` hears the person speak over it.
+        """
+        return self._on("audio", handler)
+
+    def interrupted(self, handler: Handler) -> Handler:
+        """React to the person speaking over the agent (VOICE.md VO-46, VO-13):
+        ``handler(session)``, once what was running is stopped and its voice
+        with it.
+        """
+        return self._on("interrupted", handler)
+
     def action(
         self,
         name: str,
@@ -2837,6 +2866,70 @@ class AppHost:
         handler = self._reaction("settings")
         if handler is not None:
             await self._react(session, handler, updated)
+
+    async def audio(
+        self,
+        session: Session,
+        chunks: Union[bytes, Iterable[bytes], AsyncIterable[bytes]],
+        *,
+        content_type: str = "audio/wav",
+        language: str = "",
+        token: Optional[str] = None,
+        hearing: Optional[Any] = None,
+    ) -> HeardSpeech:
+        """The person spoke (LOOP P-22, VOICE.md VO-46): the sound, in chunks,
+        heard as one turn, then ``audio`` runs with what was heard — or, without
+        one, the words are the person's message, marked spoken.
+
+        Parameters
+        ----------
+        session : Session
+            The session.
+        chunks : bytes or an iterable of bytes
+            The turn's sound, as it came: a WAV, FLAC, Ogg or WebM recording.
+        content_type : str
+            What the chunks make, together.
+        language : str
+            The language it is said in; the one heard when unsaid.
+        token : str, optional
+            The person's token, for Datalayer's speech service.
+        hearing : optional
+            What hears it: ``voice.cli.Hearing`` (this machine, else the
+            service) when unsaid.
+
+        Returns
+        -------
+        HeardSpeech
+            What was heard.
+        """
+        self._open(session)
+        heard = await hear_speech(
+            chunks,
+            content_type=content_type,
+            language=language,
+            token=token,
+            hearing=hearing,
+        )
+        handler = self._reaction("audio")
+        if handler is not None:
+            await self._react(session, handler, heard)
+            return heard
+        from ...voice import hear  # noqa: PLC0415
+
+        hear(heard.spoken())
+        await self.message(session, heard.text)
+        return heard
+
+    async def interrupt(self, session: Session) -> None:
+        """The person spoke over the agent (VOICE.md VO-46, VO-13): what runs is
+        cancelled, the page told to stop the voice, then ``interrupted`` runs.
+        """
+        self._open(session)
+        await self._cancel(session)
+        await session.channel.deliver(Interrupted(session.id))
+        handler = self._reaction("interrupted")
+        if handler is not None:
+            await self._react(session, handler)
 
     async def stop(self, session: Session) -> None:
         """The user pressed Stop: what runs is cancelled, then ``stop`` runs."""

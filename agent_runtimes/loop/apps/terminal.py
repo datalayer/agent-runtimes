@@ -39,10 +39,12 @@ from agent_runtimes.loop.apps.session import (
     Event,
     FileQuestion,
     FormQuestion,
+    Interrupted,
     Message,
     PageShown,
     Question,
     Removed,
+    Said,
     Session,
     Shown,
     Step,
@@ -136,6 +138,12 @@ class TerminalChannel:
             title = self._elements.pop(event.element_id, "")
             if title:
                 self.console.print(f"[dim]▹ {title}, closed.[/dim]", highlight=False)
+        elif isinstance(event, Said):
+            # A line said aloud (VOICE.md VO-46): captioned here.
+            self.console.print("[dim]said aloud:[/dim] ", end="")
+            self.console.print(event.text, markup=False, highlight=False)
+        elif isinstance(event, Interrupted):
+            self.console.print("[dim]▹ interrupted.[/dim]", highlight=False)
         elif isinstance(event, WindowMessage):
             # A page the terminal does not have: what it would be told, said (LOOP P-25).
             self.console.print("[dim]⇢ to the page:[/dim] ", end="")

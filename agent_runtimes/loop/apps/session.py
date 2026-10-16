@@ -290,6 +290,28 @@ class WindowMessage:
 
 
 @dataclass(frozen=True)
+class Said:
+    """A line the application says aloud (VOICE.md VO-46): ``session.say``.
+
+    Heard where the person listens — the page says it with the application's
+    voice, as it says an agent's ``voice.say`` (VO-35) — and captioned; it
+    is not a message of the conversation.
+    """
+
+    session_id: str
+    text: str
+    voice: str = ""
+    language: str = ""
+
+
+@dataclass(frozen=True)
+class Interrupted:
+    """The person spoke over the agent (VOICE.md VO-46, VO-13): its voice stops."""
+
+    session_id: str
+
+
+@dataclass(frozen=True)
 class PageShown:
     """What a widget's page shows for its inputs (LOOP P-05): the outputs its
     code returned, by name, for the inputs it ran on — shown in place of the
@@ -308,7 +330,17 @@ class PageShown:
 #: output it streams (`StepDelta`); a message again when it changed,
 #: an element of a panel or a page likewise; a page's outputs each time it ran.
 Event = Union[
-    Message, Delta, Step, StepDelta, Removed, Shown, Closed, WindowMessage, PageShown
+    Message,
+    Delta,
+    Step,
+    StepDelta,
+    Removed,
+    Shown,
+    Closed,
+    WindowMessage,
+    PageShown,
+    Said,
+    Interrupted,
 ]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
@@ -1294,6 +1326,47 @@ class Session:
             await self.remove(open_.message)
             return
         await self.channel.deliver(Closed(element_id, self.id))
+
+    async def say(self, text: str) -> Said:
+        """Say a short line aloud (LOOP P-22, VOICE.md VO-46): ``await
+        session.say("One moment, I am looking that up.")``, at most 200
+        characters, with the application's voice (``interface.voice``).
+
+        Heard where the person listens, captioned, and not a message of the
+        conversation: what matters is written as well.
+
+        Parameters
+        ----------
+        text : str
+            The line.
+
+        Returns
+        -------
+        Said
+            What was said, with the voice and language it is said in.
+
+        Raises
+        ------
+        ValueError
+            For an empty line, a line past 200 characters, or an application
+            whose voice is off.
+        """
+        from ...voice import say_aloud_event, voice_settings  # noqa: PLC0415
+
+        settings = voice_settings(self.app)
+        if not settings.get("enabled"):
+            raise ValueError(
+                f"{self.app.name} has no voice (interface.voice): write the line instead."
+            )
+        said = say_aloud_event(text, settings).value
+        line = Said(
+            self.id,
+            said["text"],
+            voice=str(said.get("voice") or ""),
+            language=str(said.get("language") or ""),
+        )
+        await self.channel.deliver(line)
+        return line
 
     async def send_window_message(self, data: Any) -> WindowMessage:
         """Tell the page the application sits in something, outside the

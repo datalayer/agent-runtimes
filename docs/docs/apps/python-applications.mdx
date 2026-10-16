@@ -419,6 +419,8 @@ session always first:
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.feedback` | `(session, feedback)` | A person gave a thumb up or down on an answer, with a comment or not, and it is kept in the record (only when the Appspec's `record.include` names `feedback`). `feedback` is a `Feedback`: `liked`, `comment`, `message` (the answer it is about, `answer-<n>`) and `by`. See [Threads and feedback](#threads-and-feedback). |
+| `@app.audio` | `(session, heard)` | The person spoke (LOOP P-22): the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `loop --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
+| `@app.interrupted` | `(session)` | The person spoke over the agent: what was running is cancelled, the page told to stop the voice, then this runs. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
@@ -757,6 +759,8 @@ runs an application in this process. A runtime, a test or a script drives it:
 | `await host.window(session, data)` | Runs `window` with what the page posted; without one, raises `KeyError`. |
 | `await host.settings(session, values)` | Checks the values against the settings' form, keeps them, runs `settings`. A field the form does not have, or a value its schema refuses, raises `InvalidAnswer` (*“Its settings” was sent what its fields refuse: depth: 9 is greater than the maximum of 5.*). |
 | `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
+| `await host.audio(session, chunks, content_type="audio/wav", language="", token=None)` | Hears the turn's sound — bytes, or an iterable or async iterable of bytes — then runs `audio`, or sends the words to `message` marked spoken. A WAV (16-bit mono at 16 kHz) is heard on the machine when it can be; another type, or without the model here, by the speech service with `token`. What cannot be heard raises `AudioNotHeard`, in a sentence. Returns the `HeardSpeech`. |
+| `await host.interrupt(session)` | The person spoke over the agent: cancels what runs, tells the page (`voice.interrupted`), then runs `interrupted`. |
 | `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume` — an ended one too. |
 | `await host.end(session)` | Cancels what runs in the session, runs `end`; the session then takes nothing more — a message, an action, settings or Stop raise `ValueError` (*Session … has ended.*). Ending it again does nothing. |
 | `await host.logout(session)` | Cancels what runs, runs `logout`, then ends the session. |
@@ -899,6 +903,25 @@ made by that code.
 | `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
 | `session.profile` | The id of the profile the conversation is with (LOOP P-20): the first unless another was picked; `None` for an application without profiles. |
 | `session.app` | The application, as its Appspec says it. |
+
+### Voice
+
+An application whose Appspec has a voice (`interface.voice`) can say a short
+line aloud, beside what it writes:
+
+```python
+@app.audio
+async def heard(session, heard):
+    await session.say("One moment, I am looking that up.")
+    await session.stream(session.agent.stream(heard.text))
+```
+
+`await session.say(text)` says the line with the application's voice, at
+most 200 characters: the page says and captions it, as it does an agent's
+`say_aloud` line (`voice.say` on AG-UI), and it is not a message of the
+conversation — what matters is written as well. An application without a
+voice is refused (`ValueError`). In the terminal the line is printed,
+*said aloud:*.
 
 ### Writing to the person
 

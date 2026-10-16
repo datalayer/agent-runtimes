@@ -46,6 +46,8 @@ VOICE_INSTRUCTIONS = (
 
 #: The custom events voice adds to AG-UI (VO-35), and nothing else.
 VOICE_SAY_EVENT = "voice.say"
+#: The person spoke over the agent (VO-46, VO-13): a client stops its voice.
+VOICE_INTERRUPTED_EVENT = "voice.interrupted"
 VOICE_SETTINGS_EVENT = "voice.settings"
 
 #: The longest line `say_aloud` says: a line, never an answer.
@@ -260,6 +262,7 @@ __all__ = [
     "SAY_ALOUD_MAX_CHARACTERS",
     "SpokenInput",
     "VOICE_INSTRUCTIONS",
+    "VOICE_INTERRUPTED_EVENT",
     "VOICE_SAY_EVENT",
     "VOICE_SETTINGS_EVENT",
     "VoiceCapability",

@@ -58,7 +58,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import binascii
 import json
 import logging
 import re
@@ -122,11 +121,13 @@ from agent_runtimes.loop.apps.session import (
     Event,
     FileQuestion,
     FormQuestion,
+    Interrupted,
     InvalidAnswer,
     Message,
     PageShown,
     Question,
     Removed,
+    Said,
     Session,
     Shown,
     Step,
@@ -144,6 +145,7 @@ from agent_runtimes.loop.apps.uploads import (
     seen_whole,
 )
 from agent_runtimes.types import AppSpec
+from agent_runtimes.voice import VOICE_INTERRUPTED_EVENT, VOICE_SAY_EVENT
 
 logger = logging.getLogger(__name__)
 
@@ -1122,6 +1124,22 @@ class LiveSession:
                     body=WindowBody(name=WINDOW_MESSAGE, args={"data": event.data}),
                 )
             )
+        elif isinstance(event, Said):
+            # A line said aloud (VOICE.md VO-46): the page says and captions
+            # it as it does an agent's `voice.say` (VO-35).
+            self.emit(
+                CustomEvent(
+                    name=VOICE_SAY_EVENT,
+                    value={
+                        "text": event.text,
+                        "voice": event.voice,
+                        "language": event.language,
+                    },
+                )
+            )
+        elif isinstance(event, Interrupted):
+            # The person spoke over the agent: a client playing its voice stops it.
+            self.emit(CustomEvent(name=VOICE_INTERRUPTED_EVENT, value={}))
         elif isinstance(event, PageShown):
             # A widget's page, shown in place for its inputs (LOOP P-05).
             self.emit(

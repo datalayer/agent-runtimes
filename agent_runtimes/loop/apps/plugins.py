@@ -78,6 +78,9 @@ REACTIONS: Tuple[str, ...] = (
     "logout",
     # A widget's page, run on its inputs (LOOP P-05).
     "page",
+    # What the person said, heard; and their speaking over the agent (VOICE.md VO-46).
+    "audio",
+    "interrupted",
     "action",
     "schedule",
     "command",

@@ -59,12 +59,14 @@ from agent_runtimes.loop.apps.session import (
     Feedback,
     FileQuestion,
     FormQuestion,
+    Interrupted,
     InvalidAnswer,
     MemoryChannel,
     Message,
     PageShown,
     Question,
     Removed,
+    Said,
     Session,
     Shown,
     Step,
@@ -73,6 +75,7 @@ from agent_runtimes.loop.apps.session import (
     UploadedFile,
     WindowMessage,
 )
+from agent_runtimes.loop.apps.speech import HeardSpeech, hear_speech
 from agent_runtimes.loop.apps.utilities import cache, run_sync
 
 __all__ = [
@@ -91,12 +94,15 @@ __all__ = [
     "Element",
     "FileQuestion",
     "FormQuestion",
+    "HeardSpeech",
+    "Interrupted",
     "InvalidAnswer",
     "MemoryChannel",
     "Message",
     "PageShown",
     "Question",
     "Removed",
+    "Said",
     "Session",
     "Shown",
     "Step",
@@ -106,6 +112,7 @@ __all__ = [
     "WindowMessage",
     "app_capabilities",
     "cache",
+    "hear_speech",
     "load_application",
     "local_agent",
     "run_sync",
