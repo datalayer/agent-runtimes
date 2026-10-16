@@ -7,50 +7,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { strip } from '@datalayer/core/lib/utils';
+import {
+  isCreatingAgent,
+  type AgentSummaryData,
+} from '../../portable/runtimes';
 
-export interface AgentSummaryData {
-  agentName: string;
-  location: string;
-  specId?: string;
-  /**
-   * The framework turning this agent's loop, as its spec declares it —
-   * `pydantic-ai` server-side, `vercel-ai` in the page.
-   */
-  harness?: string;
-  /**
-   * The runtime variant the host chose: `<location>-<harness>`.
-   *
-   * Shown next to the harness rather than instead of it, because they answer
-   * different questions and can disagree: the harness is what the spec asked
-   * for, the variant is what it actually got.
-   */
-  variant?: string;
-  status?: string;
-  baseUrl?: string;
-  sandboxBaseUrl?: string;
-  agentId?: string;
-  isReady?: boolean;
-  error?: string;
-}
+// The summary and when an agent is being created are the portable contract every client reads (MOBILE M-014b).
+export type { AgentSummaryData } from '../../portable/runtimes';
 
 export interface AgentSummaryProps {
   summary: AgentSummaryData | null;
   title?: string;
 }
-
-/**
- * Statuses that represent an agent actively being created/started. The spinner
- * only shows for these; app-navigation states ("selected", "switching") and
- * settled states ("ready", "running", ...) never spin.
- */
-const CREATING_STATUSES = new Set([
-  'creating',
-  'starting',
-  'launching',
-  'connecting',
-  'pending',
-  'resuming',
-]);
 
 const MAX_AGENT_NAME_LENGTH = 32;
 
@@ -141,13 +109,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
     return null;
   }
 
-  const normalizedStatus = (summary.status || '').toLowerCase();
-  // Only show the spinner while the agent is genuinely being created: it is not
-  // ready, has no id yet, and its status is an active creation/startup state.
-  const isCreating =
-    !summary.isReady &&
-    !summary.agentId &&
-    CREATING_STATUSES.has(normalizedStatus);
+  // Only show the spinner while the agent is genuinely being created.
+  const isCreating = isCreatingAgent(summary);
   const hasError = Boolean(summary.error);
   // The agent is optional: some examples run only a code sandbox. Show the
   // agent status when there is an agent (or one is being created).

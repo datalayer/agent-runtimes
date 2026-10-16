@@ -52,7 +52,24 @@ import type { Protocol, ProtocolEvent } from '../types/protocol';
 import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
 import type { ChatMessage } from '../types/messages';
 import { generateMessageId } from '../types/messages';
-import { sanitizeAssistantContent } from '../utils';
+import {
+  BROWSER_LIMITS,
+  emptyConversation,
+  reduceConversation,
+  type ConversationState,
+} from '../portable/conversation';
+import { conversationEventsOf } from '../portable/adapterEvents';
+
+/** The answer so far: the newest assistant message of the conversation. */
+function answerOf(state: ConversationState): string {
+  for (let index = state.items.length - 1; index >= 0; index -= 1) {
+    const item = state.items[index];
+    if (item.kind === 'message' && item.role === 'assistant') {
+      return item.text;
+    }
+  }
+  return '';
+}
 
 /**
  * AI action option type
@@ -209,8 +226,17 @@ export function ChatInline({
   const [input, setInput] = useState('');
   // AI state
   const [aiState, setAiState] = useState<ChatInlineState>('initial');
-  // AI response content
-  const [aiResponse, setAiResponse] = useState<string>('');
+  // The one-shot conversation (MOBILE M-030): `reduceConversation`'s, as in
+  // ChatBase and on the phone; the response is its newest assistant message.
+  const [conversation, setConversation] = useState<ConversationState>(() =>
+    emptyConversation(BROWSER_LIMITS),
+  );
+  const conversationRef = useRef(conversation);
+  const changeConversation = useCallback((next: ConversationState) => {
+    conversationRef.current = next;
+    setConversation(next);
+  }, []);
+  const aiResponse = useMemo(() => answerOf(conversation), [conversation]);
   // Previous prompt for regeneration
   const [previousPrompt, setPreviousPrompt] = useState('');
   // Current page in options menu (for sub-menus like translate)
@@ -250,21 +276,27 @@ export function ChatInline({
 
     // Subscribe to events
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
-      switch (event.type) {
-        case 'message':
-          if (event.message?.content) {
-            const content =
-              typeof event.message.content === 'string'
-                ? sanitizeAssistantContent(event.message.content)
-                : '';
-            setAiResponse(content);
-          }
-          break;
-        case 'error':
-          console.error('[ChatInline] Protocol error:', event.error);
-          setError(event.error?.message || 'Unknown error');
-          setAiState('initial');
-          break;
+      if (event.type === 'error') {
+        console.error('[ChatInline] Protocol error:', event.error);
+        setError(event.error?.message || 'Unknown error');
+        setAiState('initial');
+        return;
+      }
+      // The event, as the conversation reads it: one reducer whatever the protocol.
+      try {
+        const inputs = conversationEventsOf(event, conversationRef.current);
+        if (inputs.length) {
+          changeConversation(
+            inputs.reduce(
+              (kept, input) => reduceConversation(kept, input),
+              conversationRef.current,
+            ),
+          );
+        }
+      } catch (failure) {
+        console.error('[ChatInline] Protocol event not read:', failure);
+        setError(failure instanceof Error ? failure.message : String(failure));
+        setAiState('initial');
       }
     });
 
@@ -275,7 +307,7 @@ export function ChatInline({
       unsubscribeRef.current?.();
       adapterRef.current?.disconnect();
     };
-  }, [protocol]);
+  }, [protocol, changeConversation]);
 
   // Submit prompt to AI
   const submitPrompt = useCallback(
@@ -289,7 +321,7 @@ export function ChatInline({
       setInput('');
       setPreviousPrompt(prompt);
       setError(null);
-      setAiResponse('');
+      changeConversation(emptyConversation(BROWSER_LIMITS));
 
       // Build system message with selected text context
       const systemContext = `Do not surround your answer in quote marks. Only return the answer, nothing else. The user is selecting this text:
@@ -326,7 +358,7 @@ ${selectedText || ''}
         setAiState('initial');
       }
     },
-    [selectedText],
+    [selectedText, changeConversation],
   );
 
   // Handle pending prompt from toolbar dropdown
@@ -394,8 +426,8 @@ ${selectedText || ''}
   // Handle back to options
   const handleBackToOptions = useCallback(() => {
     setAiState('initial');
-    setAiResponse('');
-  }, []);
+    changeConversation(emptyConversation(BROWSER_LIMITS));
+  }, [changeConversation]);
 
   // Handle discard
   const handleDiscard = useCallback(() => {

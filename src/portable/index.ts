@@ -140,7 +140,7 @@ export {
   type TurnEndItem,
   type TurnEndRowProps,
 } from './views';
-export { conversationFixture } from './fixtures';
+export { activityFixture, conversationFixture } from './fixtures';
 
 // The protocol displays a run's tool results carry (MOBILE M-037).
 export {
@@ -227,6 +227,53 @@ export {
   type RunMeasure,
   type StreamFailure,
 } from './runMeasures';
+
+// What an application is doing, and its record's entries (LOOP R-15, MOBILE M-015b).
+export {
+  ACTIVITY_WORDS,
+  activityOf,
+  entryOf,
+  entrySaid,
+  mergeActivityPages,
+  runEndOf,
+  scheduledSays,
+  sessionSentence,
+  wakesOn,
+  type AppActivity,
+  type RecordEntry,
+  type RecordKind,
+  type ScheduledRun,
+} from './activity';
+
+// A deployment's pause, resume and reset, and its recorded events (LOOP R-17, MOBILE M-041b).
+export {
+  deploymentEventLine,
+  deploymentEventOf,
+  notDeletedOf,
+  resetBody,
+  resetCountsOf,
+  resetLines,
+  stateChangeBody,
+  stoppedWorkLine,
+  stoppedWorkOf,
+  type DeploymentEvent,
+  type DeploymentEventKind,
+  type DeploymentState,
+  type ResetCounts,
+  type StoppedWork,
+} from './lifecycle';
+
+// A person's agent runtimes, and an agent's summary (MOBILE M-014b).
+export {
+  agentRuntimesOf,
+  agentSummaryOfRuntime,
+  CREATING_STATUSES,
+  isAgentRuntime,
+  isCreatingAgent,
+  runtimeOf,
+  type AgentRuntime,
+  type AgentSummaryData,
+} from './runtimes';
 
 // The runtime's routes a native client drives.
 export {

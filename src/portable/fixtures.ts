@@ -125,3 +125,54 @@ export function conversationFixture(): ConversationState {
     dropped: 3,
   };
 }
+
+/**
+ * `GET /api/ai-agents/v1/apps/activity`'s answer for one application: a
+ * session in progress, a scheduled run, a completed one ended by Stop, and a
+ * next page — what the Studio's Activity and the phone's read alike (MOBILE
+ * M-015b).
+ */
+export function activityFixture(): Record<string, unknown> {
+  return {
+    success: true,
+    in_progress: [
+      {
+        uid: 'e-run',
+        app_uid: 'app-1',
+        session_uid: 's-2',
+        deployment_uid: 'd-1',
+        version: 3,
+        kind: 'run',
+        summary: 'Triage the inbox',
+        payload: {},
+        created_at: '2026-10-16T08:00:00Z',
+      },
+    ],
+    scheduled: [
+      {
+        deployment_uid: 'd-1',
+        app_uid: 'app-1',
+        version: 3,
+        position: 0,
+        cron: '0 8 * * 1-5',
+        description: 'Every weekday morning',
+        next_at: '2026-10-17T08:00:00Z',
+      },
+    ],
+    scheduled_problem: '',
+    completed: [
+      {
+        uid: 'e-out',
+        app_uid: 'app-1',
+        session_uid: 's-1',
+        deployment_uid: 'd-1',
+        version: 3,
+        kind: 'output',
+        summary: '',
+        payload: { status: 'stopped' },
+        created_at: '2026-10-15T08:00:00Z',
+      },
+    ],
+    next_offset: 20,
+  };
+}
