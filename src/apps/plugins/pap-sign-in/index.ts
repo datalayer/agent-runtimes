@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-pap-sign-in` — *Sign in at a company*, drawn where
- * the gateway's `pap_sign_in` answers (AGENT_PROTOCOLS PI-56).
+ * the gateway's `pap_sign_in` answers (PI-56).
  *
  * Its own renderer, for its own display type
  * (`application/vnd.datalayer.pap.sign-in+json`, typed in Python as

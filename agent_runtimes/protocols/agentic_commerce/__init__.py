@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Agentic Commerce Protocol, ``2026-04-17`` (AGENT_PROTOCOLS PR-40 to PR-43).
+"""The Agentic Commerce Protocol, ``2026-04-17`` (PR-40 to PR-43).
 
 Never ``acp`` in code: that is the Agent Client Protocol (PR-40). Models
 generated from the specification's JSON Schema (:mod:`.models`, PR-41), a
@@ -27,7 +27,7 @@ from .client import (
 )
 
 #: Each operation's action class (F-10), for Rules (R-05): agentspecs'
-#: ``protocol-tools/agentic-commerce.yaml`` (AGENT_PROTOCOLS PR-54).
+#: ``protocol-tools/agentic-commerce.yaml`` (PR-54).
 ACTION_CLASSES = operation_classes("agentic-commerce")
 
 __all__ = [

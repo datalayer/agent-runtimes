@@ -72,7 +72,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": true,
-      "note": "PACT's optional Delegated profile (§5); without it, Identity alone."
+      "note": "PACT's optional Delegated profile; without it, Identity alone."
     }
   ]
 }

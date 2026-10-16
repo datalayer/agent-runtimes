@@ -4,7 +4,7 @@
  */
 
 /**
- * What a builder reads beside an application's page (LOOP R-01b): its rules
+ * What a builder reads beside an application's page (R-01b): its rules
  * and the approvals waiting for the person (`app-rules`, U-19), and what it
  * did (`app-activity`, R-15), as plugins of the workspace's sidebar — mounted
  * by the preset when the host asks (`sidebar`), and drawn in the sidebar
@@ -348,7 +348,7 @@ describe('in words', () => {
     );
   });
 
-  it('says how each run ended when its words are not kept (PAP_DATALAYER R-01)', () => {
+  it('says how each run ended when its words are not kept (R-01)', () => {
     const ends = [
       { uid: '1', kind: 'output', payload: { status: 'answered' } },
       { uid: '2', kind: 'output', payload: { status: 'answered' } },

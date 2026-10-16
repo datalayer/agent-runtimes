@@ -346,9 +346,9 @@ refused before anything is launched. See
 ### Deploy: an application at its address
 
 `loop apps deploy <app id>` deploys a saved version at the application's
-hosted address, `/apps/<slug>`, as the Ship tab does (LOOP S-06) — and, kept
+hosted address, `/apps/<slug>`, as the Ship tab does (S-06) — and, kept
 always on, serves it over A2A at a **stable address** that names the
-deployment and no runtime (STUDIO A-08):
+deployment and no runtime (A-08):
 `/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/`. The address stays the
 same when its runtime is started again or the deployment moves to another
 version; ai-agents passes each request to the runtime it is kept on now.
@@ -380,7 +380,7 @@ tab and on `/studio/deployments`. See
 ### Eject: an application into Python
 
 `loop apps eject app.yaml` writes an application built by spec or on the
-Canvas as an `app.py` that reproduces it (LOOP P-13): the file holds the
+Canvas as an `app.py` that reproduces it (P-13): the file holds the
 spec, ready for code, and builds the same spec again — checked before it is
 written; otherwise nothing is. It is one way, and it says so first: from then
 on the file is the application's source, its spec built from it. It asks
@@ -395,7 +395,7 @@ loop apps push app.py --app <id>         # the next version; the versions so far
 ```
 
 Your conversations with an application, and what was said of their answers
-(LOOP P-24):
+(P-24):
 
 ```bash
 loop apps threads [<id>] [--search words] [--tag tag] [--limit 50]   # newest first: title, turns, tags, session id
@@ -469,8 +469,7 @@ and the action of its code they press (`press`, with its `payload`), in
 order. Here, each is played in the application's session: what it asks is
 answered by the next turn that says or chooses, a press runs its
 `@app.action` with the payload — the action the session offered under that
-name, with its token, the payload checked against its model (REACTOR_UI
-RU-5); one it does not offer fails the test — the other turns are its
+name, with its token, the payload checked against its model (RU-5); one it does not offer fails the test — the other turns are its
 messages. The judge
 reads the whole conversation — each turn and what it answered — and its
 record, which says what its code kept (`session.record`: an insight, a

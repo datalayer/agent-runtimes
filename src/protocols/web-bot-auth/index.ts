@@ -5,7 +5,7 @@
 
 /**
  * Web Bot Auth: an agent's requests signed, and verified
- * (AGENT_PROTOCOLS PR-20 to PR-23).
+ * (PR-20 to PR-23).
  *
  * Implements `draft-ietf-webbotauth-httpsig-protocol-00` (2026-09-01) by
  * wrapping Cloudflare's `web-bot-auth` 0.2.0, which reproduces the draft's

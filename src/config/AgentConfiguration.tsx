@@ -64,7 +64,7 @@ export interface LibraryAgentspec {
   welcomeDocument?: string | null;
   sandboxVariant?: string | null;
   protocol?: string | null;
-  /** Its UI plugins, each with the renderer it is exposed through (AGENTIC_UI R8). */
+  /** Its UI plugins, each with the renderer it is exposed through (R8). */
   ui?: Array<{ plugin: string; renderer?: string }> | null;
   trigger?: Record<string, unknown> | null;
   modelConfig?: Record<string, unknown> | null;

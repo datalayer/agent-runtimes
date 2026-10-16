@@ -373,7 +373,7 @@ describe('the A2A capture', () => {
   it('records an answer once when its last chunk says it whole again', async () => {
     // The runtime streams `append` chunks, then the whole answer once more
     // without `append`: a visitor's refusal, said in one chunk, came out twice
-    // in the transcript (STUDIO H-03, 2026-10-10).
+    // in the transcript (H-03, 2026-10-10).
     const refusal =
       'Without an account it only reads: `Post` would do more than read.';
     const result = (text: string, append?: boolean) => ({

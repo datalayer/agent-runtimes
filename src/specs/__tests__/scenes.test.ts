@@ -4,7 +4,7 @@
  */
 
 /**
- * Scenes: the catalogue generated from agentspecs 0.0.61 (LOOP A-12).
+ * Scenes: the catalogue generated from agentspecs 0.0.61 (A-12).
  *
  * A scene stages a team. The generated catalogue carries its cast resolved,
  * its entry said, what each beat shows, and what it needs set up; the empty
@@ -21,7 +21,7 @@ import {
 import { getTeamSpec } from '../teams';
 import * as specs from '..';
 
-/** The four scenes of the home page (LOOP A-08): the entry, the members on a runtime. */
+/** The four scenes of the home page (A-08): the entry, the members on a runtime. */
 const HOME_SCENES: Record<string, [string, string[]]> = {
   'sales-and-accounting': ['sales', ['accounting']],
   'month-end-close': ['month-end-close', ['month-end-close']],
@@ -34,7 +34,7 @@ const HOME_SCENES: Record<string, [string, string[]]> = {
 
 describe('the scene catalogue', () => {
   it('holds the four scenes of the home page, each with a face of its own', () => {
-    // The teams staged; the scripted scenes (`kind: scripted`, AGENT_PROTOCOLS)
+    // The teams staged; the scripted scenes (`kind: scripted`)
     // are lines written out, with no team.
     expect(
       listSceneSpecs()

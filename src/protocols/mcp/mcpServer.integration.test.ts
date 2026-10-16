@@ -4,7 +4,7 @@
  */
 
 /**
- * The TypeScript MCP client at the Python server (AGENT_PROTOCOLS PR-51):
+ * The TypeScript MCP client at the Python server (PR-51):
  * `examples/protocols/mcp/fixture_server.py`, a server of the `mcp` SDK
  * answering the conformance fixture, at `MCP_FIXTURE_SERVER` over Streamable
  * HTTP — the readings the fixture says, and the version both SDKs agree on

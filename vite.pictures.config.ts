@@ -4,7 +4,7 @@
  */
 
 /**
- * The dev server the reference pictures are taken from (LOOP T-16): the
+ * The dev server the reference pictures are taken from (T-16): the
  * package's own Vite config, on a port of its own and with a dependency cache
  * of its own, so a run neither collides with the examples on :3000 nor makes
  * them re-optimize their dependencies. HMR stays on: a cold cache

@@ -4,7 +4,7 @@
  */
 
 /**
- * PACT 1.0 in TypeScript (AGENT_PROTOCOLS PR-11 to PR-13, PR-51, PR-53): the
+ * PACT 1.0 in TypeScript (PR-11 to PR-13, PR-51, PR-53): the
  * card fixture the Python package reads, the personal-agent JWT verified as
  * a Provider verifies it, and the Delegated profile against a Brand that
  * answers as `agent_runtimes.protocols.pact.provider` does.

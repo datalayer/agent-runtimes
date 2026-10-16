@@ -5,7 +5,7 @@
 
 /**
  * A notebook, read-only and small: what a member of the team gave, shown in
- * its balloon (LOOP T-23, H-29). It is jupyter-react's notebook in read-only
+ * its balloon (T-23, H-29). It is jupyter-react's notebook in read-only
  * mode (`NotebookPreviewView`): its cells and the outputs it carries, nothing
  * editable, on a service manager with no kernel (`ServiceManagerLess`) —
  * nothing runs, and no Pyodide is loaded. The view is imported only when a

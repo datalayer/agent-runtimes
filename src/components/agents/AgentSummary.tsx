@@ -12,7 +12,7 @@ import {
   type AgentSummaryData,
 } from '../../portable/runtimes';
 
-// The summary and when an agent is being created are the portable contract every client reads (MOBILE M-014b).
+// The summary and when an agent is being created are the portable contract every client reads (M-014b).
 export type { AgentSummaryData } from '../../portable/runtimes';
 
 export interface AgentSummaryProps {

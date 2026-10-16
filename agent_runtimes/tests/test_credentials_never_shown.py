@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Credentials are never shown to the model (LOOP R-19).
+"""Credentials are never shown to the model (R-19).
 
 A sentinel secret is given to the runtime the ways a real one is — an
 environment variable, a configure's ``env_vars``, an MCP server's expanded

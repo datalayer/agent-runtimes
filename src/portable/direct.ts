@@ -4,8 +4,8 @@
  */
 
 /**
- * A Direct Conversation the person types in themselves (PAP_DATALAYER P-08,
- * MOBILE M-038): a linked sub-conversation under the one a company answered
+ * A Direct Conversation the person types in themselves (P-08,
+ * M-038): a linked sub-conversation under the one a company answered
  * in, where the person's own words go to the company as `sender: human`,
  * never through the application's model, until the company closes it.
  *

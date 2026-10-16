@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A local runtime's personal agent at a PAP company (AGENT_PROTOCOLS PR-03).
+"""A local runtime's personal agent at a PAP company (PR-03).
 
 ``PapPersonalAgentCapability`` given the host's PAP reactor, against the SDK's
 Manzanita demo world on an in-process network: a signed-out Session, Device
@@ -216,7 +216,7 @@ async def test_public_metadata_only_without_a_host() -> None:
 async def test_what_it_says_is_sent_as_the_agents_words(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """PAP-7.8-01 (PAP_DATALAYER P-08): never as the person's own words."""
+    """PAP-7.8-01 (P-08): never as the person's own words."""
     from personal_agent_protocol.demo.manzanita import ManzanitaAgent
 
     senders: list[str] = []

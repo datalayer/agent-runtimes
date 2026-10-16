@@ -4,7 +4,7 @@
  */
 
 /**
- * The Canvas's palette as a contribution point (LOOP C-12): the blocks are
+ * The Canvas's palette as a contribution point (C-12): the blocks are
  * what the enabled plugins contribute, a plugin disabled takes its blocks
  * off, and an application using one of them says so in its setup notes.
  */
@@ -153,7 +153,7 @@ describe('the plugins an organization has turned off', () => {
     expect(
       canvasBlocksOf(canvasBlocksReactorOf(['chat', 'no-such-plugin'])).length,
     ).toBe(listComponents().length);
-    // 'a2ui' is a renderer, not a UI plugin (AGENTIC_UI R8): unknown, as any other.
+    // 'a2ui' is a renderer, not a UI plugin (R8): unknown, as any other.
     expect(
       unknownPluginsOff(['a2ui-surface', 'chat', 'a2ui', 'no-such-plugin']),
     ).toEqual(['a2ui', 'no-such-plugin']);

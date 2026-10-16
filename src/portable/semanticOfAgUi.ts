@@ -71,7 +71,7 @@ function resultRecord(content: unknown): Record<string, unknown> | undefined {
 /**
  * The question a turn ends on (`RUN_FINISHED.result.asking`), as
  * a host asks it, or `undefined` when the value is not a question. A kind a
- * host does not know is answered in Datalayer, as a form (SLACK S-307):
+ * host does not know is answered in Datalayer, as a form (S-307):
  * never guessed to be text. (`conversation.ts`'s `questionOf`, for a native
  * client, throws on such a kind instead.)
  */

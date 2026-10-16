@@ -4,7 +4,7 @@
  */
 
 /**
- * Components a developer writes (LOOP P-17): an A2UI component of one
+ * Components a developer writes (P-17): an A2UI component of one
  * application only, declared in its Appspec (`interface.custom_components`)
  * with its name, its properties as a JSON Schema, what it shows and sends,
  * and the address of the built ES module that draws it.
@@ -57,7 +57,7 @@ export const CUSTOM_SOURCE =
   /^(?:https:\/\/[A-Za-z0-9.-]+(?::\d+)?|http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?)\/\S*$/;
 
 /**
- * Or a file of the application's folder, by its path in it (LOOP P-29): a
+ * Or a file of the application's folder, by its path in it (P-29): a
  * `.js` or `.mjs` file inside the folder — no absolute path, no `..`.
  * Packaged with the application (`loop apps package`), it is served by the
  * server its package is installed beside (`LoopAppFiles`).
@@ -282,7 +282,7 @@ export function customComponentProblems(
 }
 
 /**
- * Whether an application's page side is packaged (LOOP P-29): a component
+ * Whether an application's page side is packaged (P-29): a component
  * its developer wrote is a file of its folder.
  */
 export const hasFolderModules = (app: Pick<AppSpec, 'interface'>): boolean =>

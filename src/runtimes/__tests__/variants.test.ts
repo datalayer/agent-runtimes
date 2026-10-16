@@ -35,7 +35,7 @@ import {
   variantsForSpec,
 } from '../variants';
 
-describe('a harness of the catalogue (SHIELD SH-01, SH-10)', () => {
+describe('a harness of the catalogue (SH-01, SH-10)', () => {
   const coder = { id: 'coder', harness: 'claude-code' };
 
   it('is served by the Datalayer runtime, which launches it, and never by the page', () => {

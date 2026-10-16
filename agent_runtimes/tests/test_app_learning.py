@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application learns (LOOP R-26, decided 2026-10-06).
+"""What an application learns (R-26, decided 2026-10-06).
 
 A conversation proposes a skill, which queues for its owner; the agent reads
 and follows only the skills its owner approved, read from ai-agents each

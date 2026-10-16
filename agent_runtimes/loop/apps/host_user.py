@@ -113,7 +113,7 @@ def use_user_secret(deployment_uid: str, secret: Optional[str]) -> None:
     """Give this runtime a deployment's secret in the process; ``None`` takes it back."""
     if secret:
         _GIVEN[deployment_uid] = secret
-        # Verifies the host's tokens, never shown to the model (LOOP R-19).
+        # Verifies the host's tokens, never shown to the model (R-19).
         hold(secret)
     else:
         release(_GIVEN.pop(deployment_uid, None))

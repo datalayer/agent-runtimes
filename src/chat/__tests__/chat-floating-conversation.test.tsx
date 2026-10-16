@@ -4,7 +4,7 @@
  */
 
 /**
- * `ChatFloating` holding a conversation its host draws (LOOP R-01): the
+ * `ChatFloating` holding a conversation its host draws (R-01): the
  * embed's bubble, panel and assistant hold the LOOP workspace, and keep
  * their chrome — the window's header and close, the button's balloon and
  * blink on words not yet heard, the assistant acting what the host says the

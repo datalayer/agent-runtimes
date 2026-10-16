@@ -4,7 +4,7 @@
  */
 
 /**
- * Feedback from the people who use an application (LOOP V-18): a thumb up or
+ * Feedback from the people who use an application (V-18): a thumb up or
  * down on an answer, and a comment, kept in the application's record.
  *
  * Kept only when the application's `record.include` names `feedback` — its
@@ -30,7 +30,7 @@ export type Feedback = {
   liked: boolean;
   comment: string;
   /**
-   * The answer it is about (LOOP P-24): `answer-<n>`, its place among the
+   * The answer it is about (P-24): `answer-<n>`, its place among the
    * conversation's answers; none for the conversation as a whole.
    */
   message?: string;

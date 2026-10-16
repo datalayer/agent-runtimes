@@ -4,7 +4,7 @@
  */
 
 /**
- * How a sign-in stands, for the person's own client (MOBILE M-039): accepted
+ * How a sign-in stands, for the person's own client (M-039): accepted
  * only bound to the application, the company and a verified issuer.
  *
  * @module portable/__tests__/signInStatus

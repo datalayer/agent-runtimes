@@ -4,7 +4,7 @@
  */
 
 /**
- * The chat's conversation is the shared reducer's (MOBILE M-030): the real
+ * The chat's conversation is the shared reducer's (M-030): the real
  * chat, the real AG-UI adapter. A turn stopped mid-call says the call
  * stopped and takes nothing more of the stream; a conversation read again
  * draws its tool cards with their results, and an answer without the call

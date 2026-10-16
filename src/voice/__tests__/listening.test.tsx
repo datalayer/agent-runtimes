@@ -540,7 +540,7 @@ describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('is asked as the chat speaks to its runtime: a visitor’s or an embed’s token, and no deployment of the page’s (VO-37, VO-19, decision 16)', async () => {
+  it('is asked as the chat speaks to its runtime: a visitor’s or an embed’s token, and no deployment of the page’s (VO-37, VO-19)', async () => {
     const given = {
       language: 'en-US',
       input: 'push_to_talk' as const,

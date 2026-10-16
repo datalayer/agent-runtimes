@@ -4,7 +4,7 @@
  */
 
 /**
- * Components an application's developer wrote, drawn (LOOP P-17): an A2UI
+ * Components an application's developer wrote, drawn (P-17): an A2UI
  * component of that application only, made as Datalayer's own are — its
  * schema from its declaration (`componentSchemaOf`), its view by A2UI's own
  * factory — so that it binds and acts as a Table does, and drawn in a
@@ -83,7 +83,7 @@ const setterOf = (name: string): string =>
 
 /**
  * Where the files of an application's folder are served, as its package's
- * page side said (`LoopAppFiles`, LOOP P-29); undefined until it says it —
+ * page side said (`LoopAppFiles`, P-29); undefined until it says it —
  * while its runtime starts, or for ever on a server it is not installed
  * beside.
  */
@@ -121,7 +121,7 @@ export function CustomComponentView({
   fetcher?: typeof fetch;
   /**
    * Its application's id: where a module that is a file of its folder is
-   * served is said for that application (LOOP P-29).
+   * served is said for that application (P-29).
    */
   appId?: string;
 }): JSX.Element {

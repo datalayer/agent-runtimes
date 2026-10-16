@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The plugins an organization has turned off, in the checks of an application (LOOP C-12)."""
+"""The plugins an organization has turned off, in the checks of an application (C-12)."""
 
 import json
 from pathlib import Path

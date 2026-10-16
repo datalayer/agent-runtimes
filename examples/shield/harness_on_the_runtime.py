@@ -29,7 +29,7 @@ runtime on port 8765 until interrupted instead of sending a turn::
     python harness_on_the_runtime.py --serve
 
 No Datalayer account: with no token the runtime decides by Datalayer's
-default policy (decision 5); on Datalayer, the runtime reads your
+default policy; on Datalayer, the runtime reads your
 organization's rules from IAM first, and refuses to start the harness when
 it cannot.
 """

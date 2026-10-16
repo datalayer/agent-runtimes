@@ -32,7 +32,7 @@ Both runs go through the same five steps, in the order a control plane does
 them:
 
 1. **Resolve the worker** the descriptor names, and read back what it turned
-   out to be able to do. Decision 5 requires a reduced
+   out to be able to do. The design requires a reduced
    guarantee to be _reported on the execution_ rather than hidden, so the
    first observation of every dispatch is the adapter's capability report —
    which is why the output says, in the adapter's own words, that A2A has no
@@ -48,7 +48,7 @@ them:
    seam: adapters report, the control plane decides. No adapter
    in this example ever names a canonical state.
 5. **Arbitrate the commit.** The first attempt to reach commit wins
-   (decision 4).
+  .
 
 The two runs come out with the same execution state, the same milestones, and
 **the same artifact content hash** — two hashes computed by two adapters from

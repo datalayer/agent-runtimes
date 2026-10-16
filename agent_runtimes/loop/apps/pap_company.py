@@ -5,13 +5,13 @@
 #
 # BSD 3-Clause License
 
-"""An application that is a company personal agents work with (PAP_DATALAYER B-04).
+"""An application that is a company personal agents work with (B-04).
 
 Datalayer's company service (ai-agents) asks the deployed application over A2A,
 marking the message ``metadata.pap``. Two kinds of turn come that way:
 
 - **A conversation turn.** The application answers as it always does, a
-  visitor's turn that only reads (LOOP R-30) — except that a call to a tool
+  visitor's turn that only reads (R-30) — except that a call to a tool
   its Appspec declares as an operation (``pap.company.operations``) is not
   refused: it is *proposed*. The tool does not run; its arguments become the
   operation's terms, returned beside the answer as a ``pap_operation`` data
@@ -73,7 +73,7 @@ def pap_turn_of(meta: Any) -> Optional[PapTurn]:
     return PapTurn(ticket=ticket if isinstance(ticket, str) else "")
 
 
-#: Where ai-agents marks a message its PACT business is asked for (AGENT_PROTOCOLS PR-13).
+#: Where ai-agents marks a message its PACT business is asked for (PR-13).
 PACT_META_KEY = "pact"
 
 

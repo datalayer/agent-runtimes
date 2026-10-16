@@ -237,7 +237,7 @@ class TestTheCard:
     async def test_the_extensions_its_appspec_declares_are_on_its_card(
         self, state: Any
     ) -> None:
-        """AGENT_PROTOCOLS PR-02: `a2a.extensions` of the Appspec, published after
+        """PR-02: `a2a.extensions` of the Appspec, published after
         the runtime's own and read back by the A2A plugin's reader."""
         from agent_runtimes.loop.apps.loading import load_app
         from agent_runtimes.protocols.a2a import find_extension
@@ -443,7 +443,7 @@ class TestWhoIsAnswered:
     async def test_its_own_deployments_principal_is_answered_and_no_other(
         self, state: Any, monkeypatch: Any
     ) -> None:
-        """PAP_DATALAYER B-04, found on r1: ai-agents sends a company application's
+        """B-04, found on r1: ai-agents sends a company application's
         agent each turn with the deployment's principal token, and the gate refused it
         (IAM's whoami answered 500 for a principal, then no task grant for this route).
         The principal this runtime acts as, for the same deployment grant, is answered,
@@ -668,7 +668,7 @@ async def _ask_as(client: httpx.AsyncClient, token: str) -> httpx.Response:
 
 
 class TestVisitors:
-    """Open to visitors (LOOP R-30 for a route served over A2A): the landing's Sales asks Accounting."""
+    """Open to visitors (R-30 for a route served over A2A): the landing's Sales asks Accounting."""
 
     @pytest.mark.asyncio
     async def test_a_visitor_is_refused_where_its_owner_did_not_open_it(
@@ -1035,7 +1035,7 @@ A2UI = "application/json+a2ui"
 
 
 class TestTheComponents:
-    """STUDIO H-02, H-03: Accounting shows components of the catalog to a caller that draws them."""
+    """H-02, H-03: Accounting shows components of the catalog to a caller that draws them."""
 
     @pytest.fixture
     def showing(self, monkeypatch: Any) -> list[dict[str, Any]]:

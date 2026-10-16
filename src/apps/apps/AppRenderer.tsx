@@ -5,7 +5,7 @@
 
 /**
  * An application, rendered: the LOOP workspace configured from an Appspec
- * (LOOP R-01).
+ * (R-01).
  *
  * One renderer for every place an application appears — the Studio's
  * Preview, its hosted page, an embed, the home page — so that what a builder
@@ -33,7 +33,7 @@
  *   address and embedded;
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
  *   window, its title the application's face and name;
- * - its **language** (LOOP P-26): what a person reads of it — its name,
+ * - its **language** (P-26): what a person reads of it — its name,
  *   welcome, starters, settings, commands, modes and profiles — in the first
  *   language they prefer that its Appspec is translated into (`language`,
  *   else the browser's), its own words otherwise (`translatedAppspec`);
@@ -118,7 +118,7 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 /**
  * The plugin that makes a LOOP workspace run an application.
  *
- * Its page plugin of the pair (LOOP F-15): named `loop-app-<id>`, as its
+ * Its page plugin of the pair (F-15): named `loop-app-<id>`, as its
  * runtime's plugin is, and requiring it — so that it stands down while its
  * runtime does not hold the application, and comes back when it does
  * (`AppRuntimePlugins` follows the runtime).
@@ -156,7 +156,7 @@ export function defineAppPlugin(
       name: app.id,
       app_spec: dumpAppspec(app),
       // Its shell is its code: Codemode's `execute_code`, only when it is on
-      // (LOOP R-23), as on Datalayer (`appDatalayerCreatePayload`).
+      // (R-23), as on Datalayer (`appDatalayerCreatePayload`).
       enable_codemode: Boolean(app.permissions?.computer?.shell),
       ...(app.model ? { model: app.model } : {}),
     },
@@ -167,12 +167,12 @@ export function defineAppPlugin(
     // spec's prompt, then the application's instructions; on the
     // application's model when it names one (`apps/apps/agent`). An agent
     // that computes in code is told where its code runs there, and where its
-    // documents are (STUDIO E-11, `browserSandbox`).
+    // documents are (E-11, `browserSandbox`).
     instructions: runsCodeInSandbox(app)
       ? [app.instructions, browserSandboxNote(app)].filter(Boolean).join('\n\n')
       : app.instructions,
     model: app.model,
-    // Its modes and its profiles (LOOP P-19, P-20), as the session API
+    // Its modes and its profiles (P-19, P-20), as the session API
     // applies them: the profile's instructions and those of the options
     // chosen, and the model one names, for the run they are sent with.
     ...((app.interface.modes ?? []).length > 0 ||
@@ -189,7 +189,7 @@ export function defineAppPlugin(
  * The application on the page: its plugins delivered as one extension named
  * as its plugin pair is, `loop-app-<id>` — the extension its runtime's plugin
  * says too, so that Reactor's manager ("Delivered by") and graph show the
- * page's plugins and the runtime's as one application (LOOP F-15).
+ * page's plugins and the runtime's as one application (F-15).
  */
 export function appExtension(
   app: AppSpec,
@@ -206,7 +206,7 @@ export function appExtension(
   });
 }
 
-/** Which instance of an application runs, as the platform knows it (LOOP R-07). */
+/** Which instance of an application runs, as the platform knows it (R-07). */
 export type AppInstance = {
   /** Its `app` item. */
   appUid?: string;
@@ -216,7 +216,7 @@ export type AppInstance = {
   version?: number;
   /**
    * The organization it belongs to: its agent keeps to that organization's
-   * contexts, read by the runtime from IAM (LOOP U-31); unsaid for an
+   * contexts, read by the runtime from IAM (U-31); unsaid for an
    * application of nobody's organization.
    */
   organizationUid?: string;
@@ -234,7 +234,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    */
   onPresence?: (state: PresenceState) => void;
   /**
-   * Its deployment is paused (LOOP R-17), as its host knows it: its chat
+   * Its deployment is paused (R-17), as its host knows it: its chat
    * says *Paused* beside its face and its assistant dozes (T-08, T-22).
    */
   paused?: boolean;
@@ -279,7 +279,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /**
    * The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
    * the platform's setting when the host knows it. The browser's languages
-   * when unsaid (LOOP P-26).
+   * when unsaid (P-26).
    */
   language?: string;
   /**
@@ -306,7 +306,7 @@ export type AppLayoutOptions = Pick<
 >;
 
 /**
- * The workspace an application's layout asks for (LOOP T-07).
+ * The workspace an application's layout asks for (T-07).
  *
  * - `chat`: the conversation alone — no editor, no page, no strip.
  * - `page`: the page layout — its page (or, without one, the editors) on the
@@ -347,7 +347,7 @@ export type AppPreset = {
 
 /**
  * The plugins an application's kind needs, and how its workspace is laid
- * out (LOOP R-01): the preset per kind, as `loopPlugins` is for the examples.
+ * out (R-01): the preset per kind, as `loopPlugins` is for the examples.
  *
  * - a **chat**, a **widget**, a **worker**: its agent (`defineAppPlugin`);
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
@@ -421,18 +421,17 @@ export function appPreset(
       // (P-29).
       defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
       // Its code in the browser's sandbox, when it turns in the page and
-      // computes in code (STUDIO E-11): `execute_code`, its documents there.
+      // computes in code (E-11): `execute_code`, its documents there.
       ...(runsCodeInSandbox(app) ? [defineAppBrowserSandboxPlugin(app)] : []),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
-      // The components its developer wrote (LOOP P-17): blocks of its page
+      // The components its developer wrote (P-17): blocks of its page
       // and renderers of its page, its elements and its answers — its own.
       ...(hasCustomComponents(app) ? [defineAppComponentsPlugin(app)] : []),
       // Its commands in the composer's `/` menu, its modes and its profiles
-      // beside the composer (LOOP P-19, P-20) and what a person may attach
+      // beside the composer (P-19, P-20) and what a person may attach
       // there (P-21): only for an application that has some.
       ...(needsAppComposer(app) ? [defineAppComposerPlugin(shown)] : []),
-      // A thumb and a comment on each answer, kept in its record (LOOP
-      // V-18): only for an application whose record keeps feedback.
+      // A thumb and a comment on each answer, kept in its record (V-18): only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
       // What it keeps, and for how long, before anything is said (R-31).
       ...(options.kept
@@ -450,7 +449,7 @@ export function appPreset(
         : options.computer
           ? [defineAppComputerPlugin(app)]
           : []),
-      // What its code opens beside the conversation (LOOP P-18): a side
+      // What its code opens beside the conversation (P-18): a side
       // panel, a page of its own; nothing drawn while nothing is open.
       AppElementsPlugin,
     ],
@@ -462,7 +461,7 @@ export function appPreset(
  * What an application's agent is created with on a Datalayer runtime: under
  * the application's id, over AG-UI, with the application's own document —
  * so that the runtime registers it and decides every tool call by its rules
- * (LOOP R-03, R-05), as `loop apps run --cloud` does. One payload for every
+ * (R-03, R-05), as `loop apps run --cloud` does. One payload for every
  * place it runs, all of them the workspace (`AppRenderer`): the Studio's
  * Preview, the hosted page, and the embed inline and floating.
  */
@@ -510,7 +509,7 @@ const NO_PLUGINS: PluginRef[] = [];
 
 /**
  * The application's accent over the theme its conversation wears, in both
- * modes (LOOP T-05): its bubbles and its one button in its own colour, and
+ * modes (T-05): its bubbles and its one button in its own colour, and
  * not in the theme's default — the chat sets its theme again inside it, so
  * what the page around it set does not reach in. The accents are the theme
  * system's: laid over whatever theme it wears (T-30; decided 2026-10-07).
@@ -527,7 +526,7 @@ export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
 }
 
 /**
- * The agent an application's chat speaks to (STUDIO D-15): its own, made
+ * The agent an application's chat speaks to (D-15): its own, made
  * under its id — or, for a visitor without an account, the one of the
  * visitors' runtime their token reaches (`visitorAgentOf`): an example's by
  * its id, an application at its address by `at-<slug>`. A token for another
@@ -636,8 +635,7 @@ export function AppRenderer({
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain
    * agentspec, its agent created there with the application's spec — so that
-   * the runtime registers it and decides every tool call by its rules (LOOP
-   * R-03, R-05), as `loop apps run --cloud` does.
+   * the runtime registers it and decides every tool call by its rules (R-03, R-05), as `loop apps run --cloud` does.
    */
   const conversation =
     !('problem' in preset) && preset.workspace.conversation !== false;

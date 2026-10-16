@@ -17,7 +17,7 @@ with what they produced. A `supervisor` team's supervisor routes the work
 itself: it is registered with the members as its subagents, each a seat it
 asks the control plane for (O2-06), and told the team's routing instructions.
 
-A member that is a **harness** (SHIELD SH-45: Claude Code, Codex, an
+A member that is a **harness** (SH-45: Claude Code, Codex, an
 organization's own) is registered by its harness id, so its worker is that
 agent program over ACP behind the Shield — no model, no tools of the team's:
 its own, its MCP lent. It is bound over ACP when a member of the team talks

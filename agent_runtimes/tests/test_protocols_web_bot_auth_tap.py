@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Visa's Trusted Agent Protocol, the draft profile over Web Bot Auth (AGENT_PROTOCOLS PR-24).
+"""Visa's Trusted Agent Protocol, the draft profile over Web Bot Auth (PR-24).
 
 ``fixtures/tap.json`` holds the vectors computed here and reproduced byte
 for byte by the TypeScript ``tap.unit.test.ts`` (Cloudflare's

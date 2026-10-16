@@ -38,7 +38,7 @@ from ..otel.prompt_turn_metrics import (
 )
 
 # AG-UI's adapter, with a tool's display beside the result the page draws
-# (REACTOR_UI RU-1).
+# (RU-1).
 from .agui_displays import DisplayAGUIAdapter as AGUIAdapter
 from .base import BaseTransport
 
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 #: What a run is told besides its agent's instructions, set by the runtime
 #: itself, never by the request: the modes an application's session is in
-#: (LOOP P-19), for the run it forwards to its agent.
+#: (P-19), for the run it forwards to its agent.
 _run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "run_instructions", default=None
 )
@@ -347,7 +347,7 @@ class AGUITransport(BaseTransport):
         """
         if self._app is None and not hasattr(self.agent, "_agent"):
             # An agent that is not pydantic-ai's — a harness driven over ACP
-            # (SHIELD SH-10) — is served from its own stream.
+            # (SH-10) — is served from its own stream.
             from .agui_stream import agui_app_of
 
             self._app = agui_app_of(self.agent, self._agent_id)
@@ -731,7 +731,7 @@ class AGUITransport(BaseTransport):
                 runtime_toolsets = transport_self._get_runtime_toolsets()
                 # An application's run reaches the Datalayer MCP gateway as
                 # the application, never with the process's key: a session's
-                # run of a deployment as its principal (LOOP I-03), of a
+                # run of a deployment as its principal (I-03), of a
                 # Preview with the token the session gives the run, narrowed
                 # to its granted Spaces (R-25) — which the gateway holds.
                 from ..loop.apps.principal import gateway_toolsets_of_the_run

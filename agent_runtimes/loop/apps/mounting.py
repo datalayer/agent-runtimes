@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application mounted into a FastAPI of one's own (LOOP P-25).
+"""An application mounted into a FastAPI of one's own (P-25).
 
 ``app.mount(api, path="/assistant")`` serves, under ``/assistant`` of the
 developer's own FastAPI:
@@ -18,18 +18,18 @@ developer's own FastAPI:
 - **a page** at ``/assistant`` itself: the application, embedded with
   ``<datalayer-app server="…/assistant">``, its Appspec written in the
   element;
-- **its routes** (LOOP P-35): what its Reactor plugin provides with an
+- **its routes** (P-35): what its Reactor plugin provides with an
   endpoint (``@app.route``, and the plugins it uses), mounted under
   ``/assistant`` by Reactor's ``include_plugin_routes`` from a platform the
   mount registers it on — as the application was when mounted: a route
   changed under ``--watch`` is mounted again on the next start.
 
-``loop apps run --web`` (LOOP P-08) serves an application the same way on
+``loop apps run --web`` (P-08) serves an application the same way on
 this machine, with a `HotReload` (`agent_runtimes.loop.apps.serving`): the
 page reads the application as it is now, and is told to reload when its file
 changed.
 
-Who may call is decided as on any runtime (LOOP R-32): the machine itself;
+Who may call is decided as on any runtime (R-32): the machine itself;
 else a person's token, or an embed token the developer's server issued for
 the visit (``token``), from an origin the Appspec names
 (``deployment.embedded.origins``) — the page's own included.
@@ -96,7 +96,7 @@ def create_payload(application: "Application", app_uid: str = "") -> Dict[str, A
         "transport": "ag-ui",
         "agent_spec_id": agent_spec_id(spec.agent),
         "app_spec": application.document,
-        # Its shell is its code (LOOP R-23): Codemode only when it is on.
+        # Its shell is its code (R-23): Codemode only when it is on.
         "enable_codemode": bool(spec.permissions.computer.shell),
     }
     if app_uid:
@@ -139,8 +139,7 @@ def page_of(
     """The page an application mounted at ``server`` is served on: the embed,
     its Appspec written in the element, its agent on ``server``.
 
-    With ``reload_events``, the address of a `HotReload`'s events (LOOP
-    P-08), the page reloads when the application was built again, starts a
+    With ``reload_events``, the address of a `HotReload`'s events (P-08), the page reloads when the application was built again, starts a
     new conversation each time (``resume="false"``: the one before was the
     code before), and says over the application why a change was refused.
     """
@@ -177,7 +176,7 @@ def page_of(
 
 
 def _reload_script(events: str) -> str:
-    """What reloads the page when its application was built again (LOOP P-08).
+    """What reloads the page when its application was built again (P-08).
 
     A ``reloaded`` event reloads it; a ``refused`` one lays the reasons over
     the application, which keeps running as it was, until a change is taken.
@@ -220,7 +219,7 @@ def mount(
     config: Optional["ServerConfig"] = None,
     hot_reload: Optional["HotReload"] = None,
 ) -> FastAPI:
-    """Mount an application into a FastAPI of one's own (LOOP P-25).
+    """Mount an application into a FastAPI of one's own (P-25).
 
     Parameters
     ----------
@@ -234,15 +233,14 @@ def mount(
         The application as Datalayer knows it, when an embed token names it.
     token : callable, optional
         Gives the page the visit's embed token, issued by the developer's
-        server (LOOP R-20); none for a page only the machine itself opens.
+        server (R-20); none for a page only the machine itself opens.
     embed_origin : str
         Where the embed's script is served; empty for the server the page is
         served by (``loop apps run --web --embed-dir``).
     config : ServerConfig, optional
         The runtime's configuration; its defaults when unsaid.
     hot_reload : HotReload, optional
-        What builds the application again when its file changed (LOOP
-        P-08): the page reads the application it holds, listens to its
+        What builds the application again when its file changed (P-08): the page reads the application it holds, listens to its
         events at ``<path>/_loop/reload``, and its watch runs while ``api``
         does.
 
@@ -288,7 +286,7 @@ def mount(
     for address in (path, f"{path}/"):
         api.add_api_route(address, page, methods=["GET"], include_in_schema=False)
     # Its routes, as its plugin provides them, before the runtime's mount
-    # would answer their paths (LOOP P-35).
+    # would answer their paths (P-35).
     platform = PluginPlatform()
     register_application(application, platform)
     platform.start()

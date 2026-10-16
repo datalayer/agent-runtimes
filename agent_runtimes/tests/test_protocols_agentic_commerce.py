@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Agentic Commerce Protocol 2026-04-17 at the test seller (AGENT_PROTOCOLS PR-40 to PR-43, PR-53)."""
+"""The Agentic Commerce Protocol 2026-04-17 at the test seller (PR-40 to PR-43, PR-53)."""
 
 from __future__ import annotations
 

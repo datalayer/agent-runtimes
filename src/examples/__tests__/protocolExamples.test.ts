@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent protocols' gallery examples (AGENT_PROTOCOLS EX-10): what each
+ * The agent protocols' gallery examples (EX-10): what each
  * page draws is what these run — a request signed in the page and verified,
  * a replay and a changed path refused; a UCP purchase from the in-page test
  * store proposed, approved once, bought once, its token in no summary.

@@ -4,7 +4,7 @@
  */
 
 /**
- * The nine inputs a setting is drawn with (LOOP P-20): each a JSON Schema
+ * The nine inputs a setting is drawn with (P-20): each a JSON Schema
  * field and, where the field's own widget is not the one wanted, the widget a
  * form's uiSchema names for it (`ui:widget`) — what `@datalayer/primer-rjsf`
  * draws. agentspecs' `SETTING_INPUTS`, `FORM_WIDGETS` and

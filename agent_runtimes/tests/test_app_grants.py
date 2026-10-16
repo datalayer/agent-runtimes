@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""*Do it if I asked*, decided from what the person approved in advance (LOOP U-25)."""
+"""*Do it if I asked*, decided from what the person approved in advance (U-25)."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""No protocol secret in a log line or a URL (AGENT_PROTOCOLS PR-53).
+"""No protocol secret in a log line or a URL (PR-53).
 
 Each protocol's own test checks that its secret is not in what an agent sees
 (a summary, a proposal, a reply, a card, a directory). This one runs each

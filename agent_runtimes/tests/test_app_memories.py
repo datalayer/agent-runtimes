@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application remembers (LOOP R-18), forgetting it, correcting it
-in place (LOOP R-34), each person apart (LOOP R-36), and what another
-remembers, read when the person allows it (LOOP R-35).
+"""What an application remembers (R-18), forgetting it, correcting it
+in place (R-34), each person apart (R-36), and what another
+remembers, read when the person allows it (R-35).
 
 On a real mem0, its store a FAISS index in a temporary directory: the
 memories are put in its vector store as mem0 keeps them — what it learned,
@@ -232,7 +232,7 @@ def test_it_remembers_each_person_apart_and_never_a_visitor_as_its_owner(
 ) -> None:
     assert _in_a_turn_opened_by(Caller(kind="person", uid="ada")) == ("ada", "")
     assert _in_a_turn_opened_by(Caller(kind="local")) == ("ada", "")
-    # A visitor signed in, under their own identity (LOOP R-36).
+    # A visitor signed in, under their own identity (R-36).
     assert _in_a_turn_opened_by(Caller(kind="person", uid="bob")) == ("bob", "")
     # Nobody known: nothing remembered, said — never the owner's.
     assert _in_a_turn_opened_by(Caller(kind="visitor", uid="tab-0001-visitor")) == (
@@ -424,7 +424,7 @@ def test_a_visitor_reads_and_forgets_only_their_own(
     remote: TestClient, remembered: Dict[str, str]
 ) -> None:
     assert remote.get("/api/v1/apps/memories/app-1").status_code == 401
-    # Bob, a visitor, reads what it remembers of him — not of its owner (LOOP R-36).
+    # Bob, a visitor, reads what it remembers of him — not of its owner (R-36).
     his = remote.get("/api/v1/apps/memories/app-1", headers=as_("bob"))
     assert his.status_code == 200, his.text
     assert what(his.json()["memories"]) == ["Bob reads in French"]
@@ -525,7 +525,7 @@ def test_its_owner_corrects_one_thing_and_nobody_else_does(
     assert (tone["memory"], tone["corrected_by"]) == ("Prefers long replies", "ada")
 
 
-# --- Its agent, for each person apart (LOOP R-36), and shared as allowed (R-35) -----
+# --- Its agent, for each person apart (R-36), and shared as allowed (R-35) -----
 
 
 @pytest.fixture()
@@ -557,7 +557,7 @@ def test_its_agent_finds_what_it_remembers_of_whoever_opened_the_session(
         "Mail from Grace is urgent",
         "Prefers short replies",
     ]
-    # A visitor at its address: his own, apart from its owner's (LOOP R-36).
+    # A visitor at its address: his own, apart from its owner's (R-36).
     assert what(found_by(Caller(kind="person", uid="bob"))) == ["Bob reads in French"]
     assert what(found_by(Caller(kind="person", uid="carol"))) == []
 

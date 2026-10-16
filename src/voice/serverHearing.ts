@@ -8,7 +8,7 @@
  * in one press, kept to its speech by Silero VAD in the page, then sent as a
  * WAV recording to the speech service's `POST /speech/transcriptions`, where
  * Whisper hears it — small for a spoken turn, large-v3-turbo past one
- * (decision 17) — in any language it knows, and finding
+ * — in any language it knows, and finding
  * the language itself when the person asks for that (detection, VO-14). The
  * sound is held in the request only: the service keeps neither it nor the
  * words (VO-60).

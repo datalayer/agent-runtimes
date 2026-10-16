@@ -72,7 +72,7 @@ export function SurfaceToolResult({
   );
   const title = parsed?.title ?? 'the form';
   const [validationError, setValidationError] = useState<string | null>(null);
-  // With the components the application's developer wrote (LOOP P-17).
+  // With the components the application's developer wrote (P-17).
   const catalog = useOwnCatalog();
 
   // Told once per result, when it is there to be told about.
@@ -95,7 +95,7 @@ export function SurfaceToolResult({
       if (action.name !== 'submit_a2ui_form') {
         // A tool's surface submits its form, and nothing else: the buttons
         // of what an application's answer shows are its display's
-        // (`AnswerShowsView`, REACTOR_UI RU-2).
+        // (`AnswerShowsView`, RU-2).
         return;
       }
       const values = (action.context ?? {}) as Record<string, unknown>;

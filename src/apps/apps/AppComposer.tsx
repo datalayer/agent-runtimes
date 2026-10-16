@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's commands and modes in the composer (LOOP P-19).
+ * An application's commands and modes in the composer (P-19).
  *
  * - Each of its **commands** is a workspace command (`LoopCommand`), listed
  *   in the composer's `/` menu (`composer`): picking it writes `/<name> `,
@@ -14,13 +14,13 @@
  *   one menu each; the option picked goes with every run as
  *   `forwardedProps.loop.modes` (`LoopRunProps`), and the runtime tells the
  *   agent its instructions, on the model it names, for that run.
- * - What a person may **send** without being asked (LOOP P-21,
+ * - What a person may **send** without being asked (P-21,
  *   `interface.uploads`): a paper clip beside the composer takes images,
  *   files and recordings of the kinds and sizes the Appspec says — one it
  *   does not take is refused in a sentence and never read — and the files
  *   held go with the next message as `forwardedProps.loop.files`, then are
  *   let go. The runtime refuses again what was sent all the same.
- * - Its **profiles** (LOOP P-20, `interface.profiles`): a picker beside the
+ * - Its **profiles** (P-20, `interface.profiles`): a picker beside the
  *   composer, on the first unless another is picked. The profile picked goes
  *   with every run as `forwardedProps.loop.profile`, and its starters (else
  *   the application's) are what the empty chat offers, by category

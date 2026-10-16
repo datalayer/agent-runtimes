@@ -5,7 +5,7 @@
 
 /**
  * Visa's Trusted Agent Protocol, the draft profile over Web Bot Auth
- * (AGENT_PROTOCOLS PR-24), against the vectors the Python package computed
+ * (PR-24), against the vectors the Python package computed
  * (`fixtures/tap.json`): the same key, the same bytes, as
  * `test_protocols_web_bot_auth_tap.py`.
  */

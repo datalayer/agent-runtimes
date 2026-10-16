@@ -13,20 +13,18 @@ call — the instant checks of the Studio — in a terminal and in CI:
   so, what it reaches in whose name, and whether it keeps a record;
 - **setup**: what it names that is not enabled today — a block of its page
   from a UI plugin its organization has turned off among it, with
-  ``--organization`` (LOOP C-12: read from IAM with the caller's token; with
+  ``--organization`` (C-12: read from IAM with the caller's token; with
   no organization, or offline, none is off and the run says so);
 - **its contexts**: a context of its organization's own (``org-…``) is checked
-  against the organization's, read from IAM with ``--organization`` (LOOP
-  U-32); without one, or when they cannot be read, it is not ready.
+  against the organization's, read from IAM with ``--organization`` (U-32); without one, or when they cannot be read, it is not ready.
 
 Its verdict is said in the Studio's words. *Not ready* when the spec is
 wrong; *Needs attention* when a safety check has something to say; otherwise
 the instant checks pass, which is not yet *Ready*: that takes its tests.
 
-With ``--safety`` it also asks the safety set every application runs (LOOP
-V-09, `agent_runtimes.loop.apps.safety`) — listed alone, asked on this
+With ``--safety`` it also asks the safety set every application runs (V-09, `agent_runtimes.loop.apps.safety`) — listed alone, asked on this
 machine (``--local``) or on Datalayer through the Evals engine (``--cloud``).
-With ``--tests`` it also runs its test conversations (LOOP V-08,
+With ``--tests`` it also runs its test conversations (V-08,
 `agent_runtimes.loop.apps.validation`) — listed alone, or run on this machine
 (``--local``): each case asked of the application in this process with its
 checks on — nothing sensitive leaves, the output has its shape, it answers
@@ -38,7 +36,7 @@ saved version the file is, as the Studio keeps a run of the Evals engine, so
 Readiness and the Ship tab read it.
 
 An application written in Python, an ``app.py``, is built to its Appspec
-first (`loop apps build`, LOOP P-07): `validate`, `run` and `push` take one
+first (`loop apps build`, P-07): `validate`, `run` and `push` take one
 as they take a spec, and `run` runs its code in this process (P-08).
 """
 
@@ -95,9 +93,9 @@ class Report:
     safety: List[Dict[str, str]] = field(default_factory=list)
     #: *Safety: 4 of 4 held.*, once asked.
     safety_says: str = ""
-    #: Where the plugins taken as off came from, in a sentence (LOOP C-12).
+    #: Where the plugins taken as off came from, in a sentence (C-12).
     plugins_off_says: str = ""
-    #: Its test conversations (LOOP V-08): each case, its outcome and the check
+    #: Its test conversations (V-08): each case, its outcome and the check
     #: that stopped it; `name` the function of its code that decides it (P-06).
     tests: List[Dict[str, str]] = field(default_factory=list)
     #: *Its tests: 2 of 3 passed; 1 stopped by a check.*, once run.
@@ -165,7 +163,7 @@ def safety_notes(module: Any, application: Any) -> List[str]:
             )
     if not application.record.include:
         notes.append("It keeps no record of what it did.")
-    # A Guard the runtime does not run checks nothing (LOOP R-06).
+    # A Guard the runtime does not run checks nothing (R-06).
     from agent_runtimes.loop.apps.guards import EXECUTORS
     from agent_runtimes.specs.guards import get_guard
 
@@ -181,7 +179,7 @@ def safety_notes(module: Any, application: Any) -> List[str]:
 
 
 def code_notes(application: Any) -> List[str]:
-    """What its spec says its code does, which nothing does without the file (LOOP P-06).
+    """What its spec says its code does, which nothing does without the file (P-06).
 
     Said for a spec read alone; for an ``app.py``, its code is there, and
     nothing is said.
@@ -213,7 +211,7 @@ def code_notes(application: Any) -> List[str]:
 
 
 def read_document(path: Path) -> Dict[str, Any]:
-    """The Appspec a file holds or, for an ``app.py``, amounts to (LOOP P-09).
+    """The Appspec a file holds or, for an ``app.py``, amounts to (P-09).
 
     Raises
     ------
@@ -246,7 +244,7 @@ def validate_file(
         The plugins its organization has turned off; none when not given.
     frames : OrganizationFrames, FramesUnread or None
         Its organization's contexts, or why they were not read; with none, a
-        context of an organization's own is refused (LOOP U-32).
+        context of an organization's own is refused (U-32).
 
     Returns
     -------
@@ -312,7 +310,7 @@ def validate_file(
 
 
 def code_agent_notes(path: Path) -> List[str]:
-    """What validation says of the agent an ``app.py`` gives itself (LOOP P-23).
+    """What validation says of the agent an ``app.py`` gives itself (P-23).
 
     An agent whose tool calls LOOP does not see — a plain function, a
     LlamaIndex workflow — has none of them decided by its rules: said, so that
@@ -512,8 +510,7 @@ def apps_validate(
 def _code_tests_of(
     path: Path, report: Report, *, local: bool, judge: Optional[str] = None
 ) -> bool:
-    """List, or run here, its test conversations with the checks on (LOOP
-    V-08) — each decided by its code (P-06) or by a judge — and its page on
+    """List, or run here, its test conversations with the checks on (V-08) — each decided by its code (P-06) or by a judge — and its page on
     its inputs' defaults (P-05).
 
     Returns whether they were asked but not all run (exit 3).
@@ -522,12 +519,12 @@ def _code_tests_of(
     return _page_test_of(path, report, local=local) or unrun
 
 
-#: What the page of a widget written in its code is checked for (LOOP P-05).
+#: What the page of a widget written in its code is checked for (P-05).
 PAGE_TEST = "It shows each of its outputs for its inputs' defaults."
 
 
 def _page_test_of(path: Path, report: Report, *, local: bool) -> bool:
-    """List, or run here, a widget's page on its inputs' defaults (LOOP P-05):
+    """List, or run here, a widget's page on its inputs' defaults (P-05):
     each of its outputs given, and drawn. Returns whether it was asked but not run.
     """
     import asyncio
@@ -620,7 +617,7 @@ def _agent_here() -> Any:
 def _case_tests_of(
     path: Path, report: Report, *, local: bool, judge: Optional[str] = None
 ) -> bool:
-    """List, or run here, its test conversations with the checks on (LOOP V-08).
+    """List, or run here, its test conversations with the checks on (V-08).
 
     Returns whether they were asked but not all run (exit 3).
     """
@@ -708,7 +705,7 @@ def _case_tests_of(
 
 def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
     """Hand the run's report to ai-agents, which keeps it against the saved
-    version the file is (LOOP V-08). Returns whether it was kept; what
+    version the file is (V-08). Returns whether it was kept; what
     refused it is said in `tests_says`.
     """
     import httpx
@@ -1059,7 +1056,7 @@ def apps_init(
         False, "--examples", help="List the examples to start from, and write nothing."
     ),
 ) -> None:
-    """Write a new application's folder: its spec and, in Python, its app.py (LOOP P-01).
+    """Write a new application's folder: its spec and, in Python, its app.py (P-01).
 
     Blank, or from an example of the catalogue with --from. What is written
     passes the checks `validate` makes of a spec; a folder that is there is
@@ -1113,7 +1110,7 @@ def apps_eject(
         False, "--yes", "-y", help="Eject without asking: it is one way."
     ),
 ) -> None:
-    """Write an application built by spec or on the Canvas as an app.py (LOOP P-13).
+    """Write an application built by spec or on the Canvas as an app.py (P-13).
 
     One way: from then on the file is its source, and its spec is built from
     it. Said before it is done, and asked unless --yes; the file holds the
@@ -1168,7 +1165,7 @@ def apps_build(
         False, "--force", help="Overwrite a file that is there."
     ),
 ) -> None:
-    """Write the Appspec an app.py amounts to (LOOP P-07).
+    """Write the Appspec an app.py amounts to (P-07).
 
     What its code decides is marked as code at the top of the spec. Refused,
     with the reasons, when the file defines no application or more than one,
@@ -1223,7 +1220,7 @@ def apps_package(
         False, "--no-wheel", help="Write its project, and do not build its wheel."
     ),
 ) -> None:
-    """Package an app.py with its page side, as a Reactor extension (LOOP P-29).
+    """Package an app.py with its page side, as a Reactor extension (P-29).
 
     Writes the Python distribution loop-app-<id> — the application's module,
     and the files of its folder its components name, under
@@ -1329,11 +1326,11 @@ def configure_on(
     """Configure a runtime with an application; its refusal said in sentences.
 
     With ``organization``, the runtime reads the plugins it turned off and the
-    contexts its agent keeps to (LOOP C-12, U-31) with the caller's token.
+    contexts its agent keeps to (C-12, U-31) with the caller's token.
     With ``a2a_url``, the runtime's address as its callers reach it, it also
     serves the application over A2A, to the members of its team. With
     ``visitors``, that A2A route also answers visitors without an account
-    (LOOP R-30), their runs acting with ``visitors_key`` when given.
+    (R-30), their runs acting with ``visitors_key`` when given.
     """
     import httpx
 
@@ -1476,7 +1473,7 @@ def apps_run(
         help="With --web: a build of the embed (agent-runtimes' dist-embed), served from here.",
     ),
 ) -> None:
-    """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
+    """Run an application in the terminal — here, or on Datalayer (L-05, P-08).
 
     With --web it is served in a browser page on this machine instead, at
     http://<host>:<port>/app, drawn by the same renderer as the hosted page
@@ -1728,7 +1725,7 @@ def _serve_web(
     embed_dir: Optional[Path],
     refused_with: List[str],
 ) -> None:
-    """`loop apps run --web`: the application in a browser page on this machine (LOOP P-08)."""
+    """`loop apps run --web`: the application in a browser page on this machine (P-08)."""
     import threading
     import webbrowser
 
@@ -1875,7 +1872,7 @@ def apps_deploy(
         "--a2a/--no-a2a",
         help=(
             "Kept always on, serve it over A2A at its stable address, "
-            "/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/ (STUDIO A-08)."
+            "/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/ (A-08)."
         ),
     ),
     visitors: bool = typer.Option(
@@ -1884,7 +1881,7 @@ def apps_deploy(
         help="Served over A2A and open to anyone with the link: visitors may ask it too.",
     ),
 ) -> None:
-    """Deploy a version at the application's hosted address (LOOP S-06).
+    """Deploy a version at the application's hosted address (S-06).
 
     The deployment the Studio's Ship tab shows: deploying another version
     moves it, and deploying a paused one resumes it. Prints the address and
@@ -1984,7 +1981,7 @@ def apps_deploy(
 def organization_frames(
     organization: Optional[str],
 ) -> "OrganizationFrames | FramesUnread":
-    """An organization's contexts, read from IAM with the caller's token, or why not (LOOP U-32).
+    """An organization's contexts, read from IAM with the caller's token, or why not (U-32).
 
     Parameters
     ----------
@@ -2067,11 +2064,11 @@ def apps_pull(
         False, "--force", help="Overwrite a file that is there."
     ),
 ) -> None:
-    """Write an application's Appspec to a file (LOOP S-04).
+    """Write an application's Appspec to a file (S-04).
 
     The text the Studio keeps, comments included: a repository holds the same
     file, and `push` saves it back. An application written in Python has its
-    app.py written beside it, as its item keeps it (LOOP P-10): the file to
+    app.py written beside it, as its item keeps it (P-10): the file to
     edit and push.
     """
     import httpx
@@ -2153,7 +2150,7 @@ def apps_protocols(
     ),
     as_json: bool = typer.Option(False, "--json", help="Print them as JSON."),
 ) -> None:
-    """The agent protocols this runtime speaks, each with its version (AGENT_PROTOCOLS PR-50, EX-08)."""
+    """The agent protocols this runtime speaks, each with its version (PR-50, EX-08)."""
     from dataclasses import asdict as _asdict
 
     import yaml
@@ -2196,12 +2193,12 @@ def apps_push(
     ),
     app_uid: str = typer.Option(..., "--app", help="The application it is saved as."),
 ) -> None:
-    """Save a file as an application, as the Studio saves it (LOOP S-04).
+    """Save a file as an application, as the Studio saves it (S-04).
 
     A file that is not ready is refused. A changed specification is the next
     version, and the one left behind is kept; the same one is not. An app.py
     is kept in the application's item beside the spec it builds, and a
-    changed app.py is the next version too (LOOP P-10).
+    changed app.py is the next version too (P-10).
     """
     import httpx
 
@@ -2262,7 +2259,7 @@ def apps_threads(
     tag: str = typer.Option("", "--tag", help="Only those that carry this tag."),
     limit: int = typer.Option(50, "--limit", min=1, max=1000),
 ) -> None:
-    """List your conversations with an application, newest first (LOOP P-24).
+    """List your conversations with an application, newest first (P-24).
 
     Each under its title — yours, else the one its code gave it, else your
     first question — with its turns, tags and id: the id `loop apps
@@ -2301,7 +2298,7 @@ def apps_feedback(
         ..., help="The conversation, by its id (`loop apps threads`)."
     ),
 ) -> None:
-    """List what people said of a conversation's answers (LOOP V-18, P-24).
+    """List what people said of a conversation's answers (V-18, P-24).
 
     Read from its application's record, which its owner reads: each thumb,
     the answer it is about, who said it and their comment, oldest first.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A kept deployment's agent served over A2A at its stable address (STUDIO A-08).
+"""A kept deployment's agent served over A2A at its stable address (A-08).
 
 ai-agents makes a deployment's agent on the runtime it keeps it on, then asks
 the runtime to serve it over A2A (`PUT /api/v1/apps/a2a`): the route is the

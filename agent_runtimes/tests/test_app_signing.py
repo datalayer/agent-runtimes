@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What it sends says who wrote it (LOOP I-10).
+"""What it sends says who wrote it (I-10).
 
 A note filed or a message sent through a connection is written by the
 account the connection acts as. The rules sign it: the argument the

@@ -4,8 +4,7 @@
  */
 
 /**
- * How a sign-in under way stands, asked by the person's own client (MOBILE
- * M-039): the gateway's `GET /api/mcp/v1/pap/sign-in?app_uid&company`, with
+ * How a sign-in under way stands, asked by the person's own client (M-039): the gateway's `GET /api/mcp/v1/pap/sign-in?app_uid&company`, with
  * the person's own sign-in, finishes what can be finished — a Direct return
  * IAM bound to their browser and the company asked, a Device code the
  * company confirmed — and says where it stands.

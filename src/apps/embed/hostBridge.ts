@@ -4,7 +4,7 @@
  */
 
 /**
- * The host page and an embedded application, talking (LOOP D-10).
+ * The host page and an embedded application, talking (D-10).
  *
  * In: the values the page passes — `user`, `page`, or names of its own —
  * read by the application's agent with the tool `host_context`, only those
@@ -13,7 +13,7 @@
  * Out: what the application does, as events — `message` when it has said
  * something, `action` when it called a function of the page,
  * `window-message` when its code told the page something outside the
- * conversation (LOOP P-25, `session.send_window_message`) — beside the
+ * conversation (P-25, `session.send_window_message`) — beside the
  * `decision` and `token-expired` the element raises already.
  *
  * Window messages, in (P-25): the page posts one with
@@ -21,7 +21,7 @@
  * the host's own server (`server`), and what it answers comes back as
  * `window-message` events.
  *
- * Who its user is (LOOP D-21): what the page says as `user` is a claim.
+ * Who its user is (D-21): what the page says as `user` is a claim.
  * An application whose Appspec says `deployment.embedded.host.user: signed`
  * takes only a token the host's **server** signed with the deployment's
  * secret (HS256: `sub`, `name`, `exp` at most an hour away), which the page
@@ -33,7 +33,7 @@
  *
  * Offered: the functions of the page its Appspec names
  * (`deployment.embedded.host.functions`), as Reactor has a plugin offer
- * what it does (REACTOR_UI RU-7): each a **command** of the host's plugin,
+ * what it does (RU-7): each a **command** of the host's plugin,
  * `host.<name>` (`host.context` for the values it passes), and the plugin's
  * **agent tools** bundle (`AgentTools`, id `host`) naming them for its agent
  * as the tools `host_<name>` and `host_context` — which the chat turns into
@@ -96,11 +96,11 @@ export type HostEvent =
     }
   | {
       type: 'window-message';
-      /** What its code told the page (LOOP P-25): anything JSON writes. */
+      /** What its code told the page (P-25): anything JSON writes. */
       detail: { data: unknown };
     };
 
-/** Posts a window message to the application's session (LOOP P-25). */
+/** Posts a window message to the application's session (P-25). */
 export type WindowPost = (data: unknown) => Promise<void>;
 
 /** A function of the page, as the page gives it. */
@@ -108,12 +108,12 @@ export type HostFunction = (
   args: Record<string, unknown>,
 ) => unknown | Promise<unknown>;
 
-/** What the page gives an embedded application (LOOP D-10). */
+/** What the page gives an embedded application (D-10). */
 export type AppEmbedHost = {
   /** What the page passes now: its visitor (`user`), itself (`page`), values of its own. */
   context?: () => Record<string, unknown>;
   /**
-   * The token the host's server signed naming its user (LOOP D-21), read as
+   * The token the host's server signed naming its user (D-21), read as
    * each run is sent: what an application that says `user: signed` opens its
    * session with. Never the deployment's secret.
    */
@@ -129,7 +129,7 @@ export type AppEmbedHost = {
   ask?: (question: HostQuestion) => boolean | Promise<boolean>;
   /**
    * Handed how a window message is posted to the application's session once
-   * the embed can (LOOP P-25) — on the host's own server, its conversation
+   * the embed can (P-25) — on the host's own server, its conversation
    * started — and `null` when it no longer can.
    */
   onWindowPort?: (post: WindowPost | null) => void;
@@ -185,7 +185,7 @@ type HostCommand = ReactorCommand<
 >;
 
 /**
- * The host plugin's commands (REACTOR_UI RU-7): `host.context` when the
+ * The host plugin's commands (RU-7): `host.context` when the
  * Appspec names values, and `host.<name>` for each function it names, each
  * decided by the rule naming its tool before the page is called. `host` is
  * read at each call, so that what the page passes is the newest.
@@ -278,7 +278,7 @@ export function hostCommands(
 }
 
 /**
- * The host plugin's agent tools (REACTOR_UI RU-7): `host_context` and
+ * The host plugin's agent tools (RU-7): `host_context` and
  * `host_<name>`, each running its command; `null` for an application the
  * Appspec embeds with no host bridge.
  */
@@ -315,7 +315,7 @@ export function hostAgentTools(
 }
 
 /**
- * The host's plugin (REACTOR_UI RU-7): its commands, its agent tools bundle,
+ * The host's plugin (RU-7): its commands, its agent tools bundle,
  * and the chat extras that hand the bundle to the chat's agent wherever it
  * runs. `null` for an application with no host bridge.
  */
@@ -346,7 +346,7 @@ export function hostPlugin(
 }
 
 /**
- * What goes with every run for the host's user (LOOP D-21): the token the
+ * What goes with every run for the host's user (D-21): the token the
  * host's server signed, as `forwardedProps.loop.user_token`, for an
  * application that says `user: signed` — read at each run, so that the
  * newest is sent; nothing when the page gives none, and the runtime refuses
@@ -374,7 +374,7 @@ export type SignedUserToken = { token: string; exp: number };
 
 /**
  * Asks ai-agents to sign the person signed in to Datalayer as a deployment's
- * user (LOOP D-21; STUDIO A-18 to A-20), with their own token: what a
+ * user (D-21; A-18 to A-20), with their own token: what a
  * surface that has no host server holding the deployment's secret — the
  * VS Code extension, Jupyter AI Agents, Datalayer Desktop — sends as
  * `forwardedProps.loop.user_token` with the runs of an application that

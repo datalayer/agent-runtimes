@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The application API: `Application`, `AppHost` and `Session` (LOOP P-01 to P-03)."""
+"""The application API: `Application`, `AppHost` and `Session` (P-01 to P-03)."""
 
 import asyncio
 from pathlib import Path
@@ -307,7 +307,7 @@ def test_a_component_its_schema_refuses_is_not_placed():
 
 
 def test_every_component_is_a_typed_call_writing_the_node_the_canvas_writes():
-    """LOOP C-15: ``app.ui.<component>`` for every component of the catalog —
+    """C-15: ``app.ui.<component>`` for every component of the catalog —
     its properties named and typed from the same JSON Schema — writes the node
     ``app.component`` writes, which the YAML and the Canvas read."""
     import inspect
@@ -355,7 +355,7 @@ def test_a_typed_call_its_schema_refuses_is_not_placed_a_standard_one_too():
 
 
 def test_python_yaml_and_back_are_one_surface():
-    """LOOP C-15: what Python places is the spec's text, and read back from
+    """C-15: what Python places is the spec's text, and read back from
     that text it is the same surface — one component, three editors."""
     import yaml
 
@@ -410,7 +410,7 @@ class Quote(BaseModel):
 
 
 def test_an_action_is_typed_in_its_appspec():
-    """REACTOR_UI RU-5: ``@app.action(name, payload=Model)`` writes the
+    """RU-5: ``@app.action(name, payload=Model)`` writes the
     model's JSON Schema in the Appspec; an action without one takes nothing."""
     app = quote_app()
 
@@ -436,7 +436,7 @@ def test_an_action_is_typed_in_its_appspec():
 
 
 async def test_a_press_its_model_refuses_never_reaches_its_handler():
-    """REACTOR_UI RU-5: the payload is checked against its model, each field
+    """RU-5: the payload is checked against its model, each field
     and why; the handler is given the model, an action taking nothing nothing."""
     app = quote_app()
     seen: list = []
@@ -488,7 +488,7 @@ async def test_send_and_stream():
 
 
 async def test_an_answer_shows_components_of_the_catalog():
-    """What an answer shows is the catalog the Canvas places (LOOP P-04)."""
+    """What an answer shows is the catalog the Canvas places (P-04)."""
     host, channel, _ = hosted(interview())
     session = await host.open()
     sent = await session.send(
@@ -617,7 +617,7 @@ async def test_steps_nest_and_say_how_they_ended():
 
 
 async def test_steps_are_kept_in_the_record_with_its_actions():
-    """A step that ended is a `step` entry, sent when the outermost one ends (LOOP P-16)."""
+    """A step that ended is a `step` entry, sent when the outermost one ends (P-16)."""
     host, _, sent = hosted(interview(), include=("actions",))
     session = await host.open()
     sent.clear()
@@ -988,7 +988,7 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
         app, channel, agent=host._agent, recorder=host.recorder, platform=platform
     )
     # Its identity is the plugin's manifest; its spec and every reaction are
-    # contributions of that plugin, delivered as its extension (LOOP P-35).
+    # contributions of that plugin, delivered as its extension (P-35).
     assert host.plugin.name == "loop-app-customer-interview"
     assert [e["name"] for e in platform.list_extensions()] == [host.plugin.name]
     assert find_app("customer-interview", platform) == app.spec

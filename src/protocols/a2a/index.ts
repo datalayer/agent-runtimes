@@ -4,7 +4,7 @@
  */
 
 /**
- * A2A as a Reactor Plugin (AGENT_PROTOCOLS PR-02): Agent Card extensions
+ * A2A as a Reactor Plugin (PR-02): Agent Card extensions
  * read, published from what is contributed, and negotiated.
  *
  * Each A2A extension this runtime implements is a Contribution Point of the

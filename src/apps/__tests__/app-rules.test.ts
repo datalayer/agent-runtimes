@@ -281,7 +281,7 @@ describe('what a rule decides', () => {
     expect(behaviourFor(forbidden, label, trash)).toBe('leave_to_me');
   });
 
-  it('takes a forward outside the organization for a publish, as Python does (LOOP W-04)', () => {
+  it('takes a forward outside the organization for a publish, as Python does (W-04)', () => {
     const send = 'google-workspace.send_gmail_message';
     const mailbox = { user_google_email: 'eric@datalayer.io' };
     expect(

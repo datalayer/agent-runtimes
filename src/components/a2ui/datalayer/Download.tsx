@@ -4,7 +4,7 @@
  */
 
 /**
- * A file to download (STUDIO P-04): what an application gives to save — a
+ * A file to download (P-04): what an application gives to save — a
  * report, a sheet, an export — by its name and its link, an http(s) link or
  * the file itself as a `data:` URL. Its kind and size are said beside its
  * name, its description under it. Pressing it saves the file under its name

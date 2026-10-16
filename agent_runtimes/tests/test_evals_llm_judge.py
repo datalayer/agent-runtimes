@@ -73,7 +73,7 @@ def test_a_passing_verdict_scores_and_explains():
 
 
 def test_a_judge_handed_a_record_reads_it_beside_the_answer():
-    """STUDIO V-08: a test of an application is graded on what it did."""
+    """V-08: a test of an application is graded on what it did."""
     judge = _judge(
         {
             "score": 0,

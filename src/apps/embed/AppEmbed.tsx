@@ -4,8 +4,7 @@
  */
 
 /**
- * An application in another product's page, as a React component (LOOP
- * D-07, D-09, D-11): what the `<datalayer-app>` element draws, and what a
+ * An application in another product's page, as a React component (D-07, D-09, D-11): what the `<datalayer-app>` element draws, and what a
  * host that uses React mounts itself.
  *
  * Four modes, as the Appspec says (`deployment.embedded.mode`) or the host:
@@ -115,7 +114,7 @@ export type AppEmbedProps = {
   font?: string;
   /**
    * The language the visitor reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
-   * its translation into it and the chat's own words (LOOP P-26). The
+   * its translation into it and the chat's own words (P-26). The
    * visitor's browser's by default.
    */
   language?: string;
@@ -128,14 +127,14 @@ export type AppEmbedProps = {
   /** What its record is kept under, on Datalayer. */
   instance?: AppInstance;
   /**
-   * The embed token the host's server was issued for this visit (LOOP R-20):
+   * The embed token the host's server was issued for this visit (R-20):
    * what the chat speaks to the application's session with on the
    * agent-runtimes server that runs its deployment (`serverUrl`). It runs a
    * session of that deployment, and reaches nothing else.
    */
   embedToken?: string;
   /**
-   * A conversation without an account (STUDIO D-07, R-30): a public
+   * A conversation without an account (D-07, R-30): a public
    * application run on the visitors' runtime, which the chat speaks to with
    * a visitor's token it mints from ai-inference for that one application —
    * what the element gives a public `app` with no token. Nothing is launched
@@ -164,14 +163,14 @@ export type AppEmbedProps = {
    */
   plugins?: PluginRef[];
   /**
-   * What the page gives the application (LOOP D-10): the values it passes,
+   * What the page gives the application (D-10): the values it passes,
    * its functions, and what it is told — read for the names the Appspec
    * gives under `deployment.embedded.host`.
    */
   host?: AppEmbedHost;
   /**
    * Keep the visit's session in the host's storage, and pick it up again
-   * after the page reloads (LOOP D-13); on by default. Off, the session
+   * after the page reloads (D-13); on by default. Off, the session
    * lasts as long as the page.
    */
   resume?: boolean;
@@ -188,7 +187,7 @@ export type EmbedSession = {
 };
 
 /**
- * The visit's session, kept and picked up again (LOOP D-13): on the host's
+ * The visit's session, kept and picked up again (D-13): on the host's
  * server with an embed token that names its visit, the session the chat
  * opens is kept under the application and the visit — in the host's
  * storage unless `resume` is off, in memory always — and, when the
@@ -275,7 +274,7 @@ export function useEmbedSession({
 }
 
 /**
- * Window messages from the page (LOOP P-25): on the host's own server, the
+ * Window messages from the page (P-25): on the host's own server, the
  * page is handed how to post one to the application's session
  * (`host.onWindowPort`) — the session the chat goes on with, its uid known
  * from its first message — and what the code answers is raised on the page
@@ -326,7 +325,7 @@ export function useWindowPort({
         throw new Error(WINDOW_NOT_YET);
       }
       // What its code answers comes on the ui socket, raised as any
-      // window message is (REACTOR_UI RU-W).
+      // window message is (RU-W).
       await postWindowMessage({
         serverUrl,
         uid: uid.current,
@@ -352,7 +351,7 @@ function SessionSaid({ said }: { said?: string }): JSX.Element | null {
 const NO_HOST_PLUGINS: PluginRef[] = [];
 
 /**
- * The page and the application talking (LOOP D-10): the tools of the host
+ * The page and the application talking (D-10): the tools of the host
  * the Appspec names, given to its agent through a chat-extras plugin made
  * once — the page's newest values and functions read at each call — and
  * `message` said to the page when an answer is done.
@@ -369,7 +368,7 @@ export function useHostBridge(
   hostRef.current = host;
   const bridge = app.deployment.embedded?.host;
   const key = JSON.stringify([bridge ?? null, app.rules, app.connections]);
-  // The host's plugin (REACTOR_UI RU-7): the page's functions as its
+  // The host's plugin (RU-7): the page's functions as its
   // commands, named for the agent by its agent tools bundle — made again
   // when what the Appspec names, or the rules that decide them, change.
   const hosting = useMemo(
@@ -404,7 +403,7 @@ export function useHostBridge(
         : NO_HOST_PLUGINS,
     [hosting, userPlugin],
   );
-  // What its code tells the page during a turn (LOOP P-25), raised on it.
+  // What its code tells the page during a turn (P-25), raised on it.
   useEffect(
     () =>
       onLoopWindowMessage(data =>
@@ -465,7 +464,7 @@ export function embedAssistantCharacter(
 
 /** What a floating application says to a visitor Datalayer does not know. */
 export const signedOutSentence = (app: Pick<AppSpec, 'name'>): string =>
-  `${app.name} runs on Datalayer, which needs you signed in. An application embedded for visitors who are not needs its embed token (LOOP D-14), or an agent-runtimes server of the host's own (the "server" attribute).`;
+  `${app.name} runs on Datalayer, which needs you signed in. An application embedded for visitors who are not needs its embed token (D-14), or an agent-runtimes server of the host's own (the "server" attribute).`;
 
 /** The application's face, as the floating window's button and header draw it. */
 function Face({ emoji }: { emoji: string }): JSX.Element {

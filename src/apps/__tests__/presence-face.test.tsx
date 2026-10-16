@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's face in its chat, drawn in Fluent Emoji (LOOP T-20): the
+ * An application's face in its chat, drawn in Fluent Emoji (T-20): the
  * same drawing on every platform, from Datalayer's bundle — in the header's
  * presence, in the empty state at the page's size, and on the embed's
  * bubble — and the system's emoji only for one Datalayer ships no drawing of.

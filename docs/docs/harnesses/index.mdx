@@ -109,7 +109,7 @@ is **served by the Datalayer runtime** (`variantSupportsSpecHarness` is true
 for `local-pydanticai` and `cloud-pydanticai`, the runtimes that launch it,
 and false for `browser-vercelai`, which has no process to launch;
 `specHarnessOf` keeps the catalogue id; `isServedCatalogueHarness` says which),
-and `checkAppspec` passes an application on one (1.5.31, SHIELD SH-10's Studio
+and `checkAppspec` passes an application on one (1.5.31, SH-10's Studio
 side). Nothing runs pydantic-ai in a refused harness's place.
 
 ## The register (built: SH-04's part in agentspecs)
@@ -198,7 +198,7 @@ what needs the runtime.
   closed; the table-driven test both ways is `test_acp_agent.py`). The policies
   in force are the application's Rules on classes read into a `team`-scope
   document (`agent_runtimes/guardrails/shield_policy.py`; `if_asked` read as
-  *ask me first*) above decision 5's default. *Do it* answers `allow_once`
+  *ask me first*) above the platform's default. *Do it* answers `allow_once`
   without asking; *ask me first* raises the approval through the runtime's
   tool approvals (Waiting for you, ai-agents `/ws`, `GET /tool-approvals/{id}`)
   with the caller's token and answers what the person chose — a note saying
@@ -228,7 +228,7 @@ what needs the runtime.
   events), `acp` and `a2a`; `vercel-ai` is refused in a sentence (it reads a
   pydantic-ai agent, SH-16).
 - **`loop --harness <id>`** runs a harness on this machine over stdio, the
-  directory `loop` runs from as its workspace, decision 5's policy, the record
+  directory `loop` runs from as its workspace, the platform's default policy, the record
   in the terminal; a missing adapter, secret or workspace is refused before
   anything starts. **`loop harnesses`** lists the catalogue with each one's
   adapter, credential, third-party serving and licence.

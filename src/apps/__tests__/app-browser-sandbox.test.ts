@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's code, run in the page (STUDIO E-11): the agent of an
+ * An application's code, run in the page (E-11): the agent of an
  * application that computes in code is handed `execute_code` on the
  * browser's sandbox, its documents put there before its first run, and told
  * where they are.

@@ -5,7 +5,7 @@
 """
 Generate Python and TypeScript code from the YAML UI renderer specifications.
 
-One YAML per UI renderer under ``agentspecs/ui-renderers`` (AGENTIC_UI R8,
+One YAML per UI renderer under ``agentspecs/ui-renderers`` (R8,
 F-01): how a UI plugin's interface reaches a host that is not Datalayer's own
 page — A2UI, MCP Apps, MCP UI. A UI plugin (``agentspecs/ui``) says the
 renderers it may be exposed through; an agent's or an application's ``ui``
@@ -66,7 +66,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "UI Renderer Catalog.",
         "",
         "How a UI plugin's interface reaches a host that is not Datalayer's own page",
-        "(AGENTIC_UI R8): A2UI, MCP Apps, MCP UI.",
+        "(R8): A2UI, MCP Apps, MCP UI.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -119,7 +119,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * UI Renderer Catalog.",
         " *",
         " * How a UI plugin's interface reaches a host that is not Datalayer's own",
-        " * page (AGENTIC_UI R8): A2UI, MCP Apps, MCP UI.",
+        " * page (R8): A2UI, MCP Apps, MCP UI.",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",

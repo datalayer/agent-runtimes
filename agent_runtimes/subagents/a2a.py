@@ -162,7 +162,7 @@ def refuse_in_an_orchestrated_run(what: str) -> None:
 
     Such a run asks for its children (``request_child``). An agent it
     resolved, launched or relayed to itself would be a child the tree's
-    budget and depth never saw (decision 2).
+    budget and depth never saw.
 
     Parameters
     ----------

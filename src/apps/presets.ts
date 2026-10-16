@@ -25,7 +25,7 @@
  * The plugin graph is not among them: a host that shows it adds
  * `GraphViewPlugin` (`./plugins/graph`) to the list itself. It brings
  * `@datalayer/reactor-graph` and ECharts with it, which a workspace that never
- * draws the graph — an embedded application (STUDIO D-08) — should not load.
+ * draws the graph — an embedded application (D-08) — should not load.
  *
  * @module apps/presets
  */
@@ -176,27 +176,27 @@ export type LoopPresetOptions = {
   datalayerAgentSpecId?: string;
   /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
   datalayerCreatePayload?: Record<string, unknown>;
-  /** A conversation without an account, on the visitors' runtime (LOOP R-30). */
+  /** A conversation without an account, on the visitors' runtime (R-30). */
   datalayerVisitors?: AgentsConfig['datalayerVisitors'];
-  /** A deployment's agent, already on the runtime it is kept on (LOOP R-33). */
+  /** A deployment's agent, already on the runtime it is kept on (R-33). */
   datalayerKept?: AgentsConfig['datalayerKept'];
-  /** An embed token: the embedded application's session, and nothing else (LOOP R-20). */
+  /** An embed token: the embedded application's session, and nothing else (R-20). */
   embedToken?: string;
   /** The target is the host's to fix, even with the agent control hidden. */
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
   themeVariant?: string;
-  /** Laid over that theme, by mode: an application's accent (LOOP T-05). */
+  /** Laid over that theme, by mode: an application's accent (T-05). */
   themeOverrides?: ThemeOverrides;
   /** The mode the conversation is drawn in, when the host decides it; the person's unless said. */
   colorMode?: 'light' | 'dark';
-  /** Who is answering, as the person meets them (LOOP T-08). */
+  /** Who is answering, as the person meets them (T-08). */
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
   /** Its voice, when it has one: the chat's `voice`. */
   voice?: ChatPluginConfig['voice'];
-  /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
+  /** The conversation to go on with: an embed's session after a reload (D-13). */
   thread?: ResumedThread;
   /**
    * The agentspec the local agent is created from, by id.
@@ -229,7 +229,7 @@ export type LoopPresetOptions = {
    *
    * True by default. A host whose one view is a page of its own — an
    * application that answers in its page and has no agent to talk to, a
-   * decision (LOOP R-02) — passes `false`: the chat and its composer, the
+   * decision (R-02) — passes `false`: the chat and its composer, the
    * agents, the models, the editors and the page layout all stay out, so
    * that nothing is launched or fetched for a conversation nobody has, and
    * the workspace opens on the view a host's plugin contributes.

@@ -3,7 +3,7 @@
 
 """What an agent that serves a deployment holds is nobody's to read or decide on its runtime.
 
-PAP_DATALAYER's release gates, found on r1 (14 October 2026): a shipped
+the release gates, found on r1 (14 October 2026): a shipped
 application kept always on serves every visitor from one agent, whose message
 history in memory is the last run's — whoever ran it. A second account, and a
 caller with no token at all, read the first person's turns from the runtime's

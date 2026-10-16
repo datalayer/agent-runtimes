@@ -9,8 +9,7 @@ point yet. MCP's optional capabilities and extensions (``sampling``,
 ``elicitation``, ``roots``; ``tools``, ``resources``, ``prompts``,
 ``completions``; and the ``extensions`` capability, e.g. MCP Apps) become
 ``mcp.extension.<name>`` points of this plugin when the client and the
-server of ``agent_runtimes.mcp`` take them from contributions (AGENT_PROTOCOLS
-PR-01): declaring a point nothing reads would promise what is not built.
+server of ``agent_runtimes.mcp`` take them from contributions (PR-01): declaring a point nothing reads would promise what is not built.
 What a client reads from a server's answers, the same in both languages, is
 ``reading`` (PR-51).
 """

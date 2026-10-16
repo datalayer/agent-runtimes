@@ -4,7 +4,7 @@
  */
 
 /**
- * Feedback from the people who use an application (LOOP V-18): offered only
+ * Feedback from the people who use an application (V-18): offered only
  * where its record keeps it, sent to the runtime under the conversation's
  * thread, and a refusal said in the runtime's own sentence.
  */

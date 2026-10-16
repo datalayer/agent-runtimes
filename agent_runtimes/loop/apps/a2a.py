@@ -31,7 +31,7 @@ decides what it reaches from what the key was granted.
 
 **Visitors.** An application its owner served *open to visitors*
 (``/apps/configure`` with ``visitors: true``) also answers a visitor without
-an account, as LOOP R-30 does for ``at:<slug>`` addresses: a visitor's token
+an account, as R-30 does for ``at:<slug>`` addresses: a visitor's token
 from ai-inference (``POST /anonymous/token``) naming the visitor and this
 application by its id, verified with ai-inference (``GET /anonymous/whoami``).
 A token for another application is refused. A visitor's run never acts with
@@ -219,8 +219,7 @@ def card_of(app: Any, url: str) -> Any:
         default_input_modes=["text/plain"],
         default_output_modes=outputs,
         face={"emoji": app.emoji, **({"avatar": app.avatar} if app.avatar else {})},
-        # What the Appspec declares beside the runtime's own (AGENT_PROTOCOLS
-        # PR-02): published after the A2A plugin's contributions, a URI the
+        # What the Appspec declares beside the runtime's own (PR-02): published after the A2A plugin's contributions, a URI the
         # runtime already publishes refused.
         extensions=[
             extension.model_dump(by_alias=True) for extension in app.a2a.extensions
@@ -522,7 +521,7 @@ class A2AGate:
         claims = _unverified_claims(token)
         if caller.kind == "principal":
             # The deployment's own principal, as ai-agents sends it a company's
-            # turn (PAP_DATALAYER B-04): only the principal this runtime acts as,
+            # turn (B-04): only the principal this runtime acts as,
             # for the same deployment grant; any other principal is refused.
             from agent_runtimes.loop.apps.principal import (
                 is_held_principal,  # noqa: PLC0415

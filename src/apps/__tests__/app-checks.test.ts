@@ -4,7 +4,7 @@
  */
 
 /**
- * The instant checks of an application (LOOP V-01 to V-04), as `loop apps
+ * The instant checks of an application (V-01 to V-04), as `loop apps
  * validate` says them, computed in the page with no model call.
  */
 
@@ -22,7 +22,7 @@ import {
 } from '../apps/checks';
 
 // Two agents the catalogue does not have: one on Claude Code, one on the
-// `custom` harness (SHIELD SH-01, SH-10), both otherwise the mail triage agent.
+// `custom` harness (SH-01, SH-10), both otherwise the mail triage agent.
 vi.mock('../../specs/agents', async importOriginal => {
   const actual = await importOriginal<typeof import('../../specs/agents')>();
   const onHarness = (id: string, harness: string) => ({
@@ -272,7 +272,7 @@ describe('the instant checks', () => {
     };
     expect(settings({ type: 'object', properties: { tone } })).toEqual([]);
     expect(settings([{ id: 'tone', type: 'select', label: 'Tone' }])).toEqual([
-      'interface.settings: is the JSON Schema of a form, an object of named fields (LOOP C-16), not a list of settings: say each one as a property, its title and its default.',
+      'interface.settings: is the JSON Schema of a form, an object of named fields (C-16), not a list of settings: say each one as a property, its title and its default.',
     ]);
     expect(settings({ type: 'object', properties: {} })).toEqual([
       'The form “settings” asks for no named field: its schema is an object with properties.',
@@ -563,7 +563,7 @@ describe('the instant checks', () => {
     expect(said('earth')).toContain('interface.theme: is a mapping.');
   });
 
-  it('checks a context of an organization’s own against the organization’s (LOOP U-32)', () => {
+  it('checks a context of an organization’s own against the organization’s (U-32)', () => {
     const own = { ...BASE, context: ['org-house-style'] };
     expect(
       checkAppspec(own, {
@@ -582,7 +582,7 @@ describe('the instant checks', () => {
   });
 });
 
-describe('what its code declares (LOOP P-06)', () => {
+describe('what its code declares (P-06)', () => {
   const DECLARED = {
     ...BASE,
     tools: [
@@ -649,7 +649,7 @@ describe('what its code declares (LOOP P-06)', () => {
     expect(checkAppspec(DECLARED).problems).toEqual([]);
   });
 
-  it('passes an agent on a catalogue harness, the runtime serving it, and refuses custom (SHIELD SH-10)', () => {
+  it('passes an agent on a catalogue harness, the runtime serving it, and refuses custom (SH-10)', () => {
     expect(checkAppspec({ ...BASE, agent: 'coder:0.0.1' }).problems).toEqual(
       [],
     );

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Reactor extensibility, first class in a Python application (LOOP P-35).
+"""Reactor extensibility, first class in a Python application (P-35).
 
 An `Application` is a Reactor plugin: its manifest, its extension, registered
 on a host's `PluginPlatform` with Reactor's public API. Its author extends with
@@ -224,7 +224,7 @@ async def test_its_commands_are_reactors_listed_and_run_from_the_composer() -> N
         "Hello, Ada.",
         "{'customer': 'ada@example.com'}",
     ]
-    # Declared as its composer's, as any command (LOOP P-19).
+    # Declared as its composer's, as any command (P-19).
     assert [c.name for c in app.spec.interface.commands] == ["greet", "lookup"]
     with pytest.raises(ValueError, match="not both"):
         app.command("both", "Both", prompt="Say hi.", run="greeter.greet")

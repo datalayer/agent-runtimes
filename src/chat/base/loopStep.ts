@@ -5,14 +5,14 @@
 
 /**
  * A step of an application's code, shown in the conversation as it runs
- * (LOOP P-16): the chain of thought.
+ * (P-16): the chain of thought.
  *
  * AG-UI's `STEP_STARTED` and `STEP_FINISHED` carry a step's name only; the
  * session API shows the step whole beside them as a `reactor.ui` display of
- * type `application/vnd.datalayer.loop.step+json` (REACTOR_UI RU-3) — its
+ * type `application/vnd.datalayer.loop.step+json` (RU-3) — its
  * data `{name, kind, parent_id, input, output, error, started_at,
  * ended_at}`, its id the step's — shown as it starts and again as it ends,
- * its output patched in as it streams (LOOP P-31). A step is drawn as the
+ * its output patched in as it streams (P-31). A step is drawn as the
  * chat draws a tool call: one row, collapsed, its input and output inside,
  * running until it ends; a nested step says the step it is in.
  */
@@ -76,7 +76,7 @@ export function stepItem(step: LoopStep, inside?: string): ToolCallMessage {
       kind: step.kind,
       ...(step.input !== null ? { input: step.input } : {}),
     },
-    // Running, what it wrote so far — a step that streams (LOOP P-31).
+    // Running, what it wrote so far — a step that streams (P-31).
     ...(!step.error && step.output !== null ? { result: step.output } : {}),
     status: !step.ended ? 'executing' : step.error ? 'error' : 'complete',
     ...(step.error ? { error: step.error } : {}),

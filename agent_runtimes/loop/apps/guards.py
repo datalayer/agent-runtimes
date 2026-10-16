@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's checks, executed (LOOP R-06).
+"""An application's checks, executed (R-06).
 
 agentspecs declares Guards and Gates; this is the first runtime that runs
 them. Three things happen, at three moments:
@@ -62,7 +62,7 @@ from pydantic_ai.tools import ToolDefinition
 from agent_runtimes.guardrails.common import GuardrailBlockedError
 
 # What a credential is, and what it becomes in what is shown, are the
-# runtime's (LOOP R-19): the secrets it holds by their value, then what looks
+# runtime's (R-19): the secrets it holds by their value, then what looks
 # like one. Named here too, as the checks have always named them.
 from agent_runtimes.guardrails.credentials import credentials_in, redact
 from agent_runtimes.types import AppSpec
@@ -418,7 +418,7 @@ RETRIES = {"retry"}
 ASKS = {"human_approval_required", "human_review_required", "expert_review_required"}
 
 
-#: Told what came of asking a person (LOOP R-07): the tool, the sentence it was
+#: Told what came of asking a person (R-07): the tool, the sentence it was
 #: asked under, the outcome — ``approved``, ``declined`` or ``unanswered`` —
 #: and what the person said with it.
 Answered = Callable[[str, str, str, str], None]
@@ -659,7 +659,7 @@ class AppChecksCapability(AbstractCapability[Any]):
     agent_id: Optional[str] = None
 
     app_uid: str = ""
-    """The application as the platform knows it, when it does (LOOP U-19)."""
+    """The application as the platform knows it, when it does (U-19)."""
 
     ask: Optional[Ask] = None
     """How a person is asked, when a Gate says so: the tool-approval path when unsaid."""
@@ -672,10 +672,10 @@ class AppChecksCapability(AbstractCapability[Any]):
 
     notify: Optional[Notify] = None
     """Told when a person is asked through the tool-approval path: the
-    application's channels (LOOP R-37)."""
+    application's channels (R-37)."""
 
     answered: Optional[Answered] = None
-    """Told what came of asking a person: the record's approval (LOOP R-07)."""
+    """Told what came of asking a person: the record's approval (R-07)."""
 
     organization: Optional[Any] = None
     """The contexts of the organization it belongs to (`OrganizationFrames`),
@@ -770,7 +770,7 @@ class AppChecksCapability(AbstractCapability[Any]):
             tool_name=tool_name,
             tool_args={
                 **{key: str(value)[:500] for key, value in args.items()},
-                # Whose, and why: a Gate asks as a rule does (LOOP U-19).
+                # Whose, and why: a Gate asks as a rule does (U-19).
                 **_marks_of(self.checks.app.id, self.app_uid, sentence),
             },
         )

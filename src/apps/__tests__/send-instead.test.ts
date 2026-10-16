@@ -5,7 +5,7 @@
 
 /**
  * Words that go elsewhere than the agent (`LoopChatExtrasValue.sendInstead`,
- * PAP_DATALAYER P-08): a person's own words in a Direct Conversation with a
+ * P-08): a person's own words in a Direct Conversation with a
  * company, never the model's.
  */
 

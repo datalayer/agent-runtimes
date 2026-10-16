@@ -374,7 +374,7 @@ async def test_create_approval_does_not_reuse_executing_record() -> None:
 async def test_a_visitors_turn_refuses_a_call_that_waits_for_a_person() -> None:
     """Nobody is there to approve for a visitor: the call is refused in the
     visitor's sentence and the run goes on, rather than ending an A2A task
-    whose run takes no DeferredToolRequests (STUDIO H-03)."""
+    whose run takes no DeferredToolRequests (H-03)."""
     from agent_runtimes.loop.apps.visitors import enter_visitor_run, leave_visitor_run
 
     await _reset_approvals()

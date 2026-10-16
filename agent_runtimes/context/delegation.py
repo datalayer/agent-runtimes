@@ -110,7 +110,7 @@ WITHHELD = "withheld"
 #: Where a run's ``AgentContext.metadata`` holds the credential its delegation
 #: carried (ACP ``_meta`` or A2A ``metadata``), apart from ``user_token``, which
 #: any caller's token may be: the narrowest authority the run holds, so a
-#: harness's lent MCP is scoped by it before anything else (SHIELD SH-33).
+#: harness's lent MCP is scoped by it before anything else (SH-33).
 DELEGATED_CREDENTIAL = "delegated_credential"
 
 #: Run id -> the credential delegated for it. Process memory only.

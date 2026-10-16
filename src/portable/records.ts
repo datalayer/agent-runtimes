@@ -14,7 +14,7 @@
 
 /**
  * How a run ended, in the `output` entry every run ends with, kept whatever
- * the application's `record.include` says (PAP_DATALAYER R-01): its words
+ * the application's `record.include` says (R-01): its words
  * only when it keeps `outputs`.
  */
 export const RUN_END_WORDS: Record<string, string> = {
@@ -32,7 +32,7 @@ export const ASKED_FOR_TAG = 'asked-for';
 
 /**
  * What a person asked, as they are shown it: without what the runtime told
- * the application before their words (PAP_DATALAYER, decided 2026-10-14).
+ * the application before their words (decided 2026-10-14).
  * The record keeps it for the application's builder; the person never wrote
  * it, so *Your conversations* and a thread opened again leave it out.
  */

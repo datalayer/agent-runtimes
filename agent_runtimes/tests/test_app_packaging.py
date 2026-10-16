@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's page side packaged as a Reactor extension (LOOP P-29).
+"""An application's page side packaged as a Reactor extension (P-29).
 
 `loop apps package` writes the distribution of an app.py whose component is a
 file of its folder and builds its wheel; installed, the wheel is found by the
@@ -88,7 +88,7 @@ def test_its_project_carries_the_application_and_the_files_it_names(
     share = project / "share/datalayer/reactor/extensions/loop-app-dial-desk"
     assert (share / "components/dial.js").read_text() == DIAL_JS
     assert (share / "index.js").is_file()
-    # Its application is its module: nothing said of it beside (LOOP P-35).
+    # Its application is its module: nothing said of it beside (P-35).
     assert sorted(p.name for p in (project / "loop_app_dial_desk").iterdir()) == [
         "__init__.py",
         "app.py",
@@ -174,7 +174,7 @@ def test_the_installed_page_side_is_served_beside_its_plugin_state(
 def test_the_entry_point_advertises_the_applications_own_extension(
     installed: Path,
 ) -> None:
-    """LOOP P-35: what the wheel's entry point resolves to is
+    """P-35: what the wheel's entry point resolves to is
     ``Application.extension()`` — its plugin, its page side."""
     from importlib.metadata import entry_points
 

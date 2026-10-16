@@ -5,7 +5,7 @@
 
 /**
  * What a hosted or embedded application keeps, said under its prompt before
- * the first message (LOOP R-31) — in every layout, since the composer draws
+ * the first message (R-31) — in every layout, since the composer draws
  * what is hung on `LoopPromptPanel` wherever it stands. Gone once a message
  * is sent: what it keeps was said before anything was.
  *
@@ -37,7 +37,7 @@ export function AppKept({ says }: { says: string }): JSX.Element | null {
   }
   return (
     // Clear of the floating assistant in its corner, at a phone's width too
-    // (REVIEWS Q-08).
+    // (Q-08).
     <div
       role="note"
       style={{ padding: `4px var(${ASSISTANT_CLEARANCE_VAR}, 8px) 4px 8px` }}

@@ -4,7 +4,7 @@
  */
 
 /**
- * *Sign in at a company* drawn in the chat (AGENT_PROTOCOLS PI-56) for the
+ * *Sign in at a company* drawn in the chat (PI-56) for the
  * sign-ins the card did not draw before: Mediated — Datalayer's own page,
  * where the person types what the company asks — and a business's Device
  * Sign-In over PACT.
@@ -64,7 +64,7 @@ describe('the sign-in card', () => {
     expect(view.container.querySelector('svg[title]')).toBeNull();
   });
 
-  it('names the company of a bound direct sign-in, and goes on by itself once the person is back (PAP_DATALAYER P-04)', async () => {
+  it('names the company of a bound direct sign-in, and goes on by itself once the person is back (P-04)', async () => {
     const sent: string[] = [];
     const view = render(
       <PapSignInCard

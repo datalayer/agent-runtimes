@@ -5,7 +5,7 @@
 
 /**
  * What every protocol adapter says, as the conversation reducer reads it
- * (MOBILE M-030): the web chat's message state is `reduceConversation`'s,
+ * (M-030): the web chat's message state is `reduceConversation`'s,
  * whatever protocol its agent speaks.
  *
  * ## What the adapters say (the inventory)

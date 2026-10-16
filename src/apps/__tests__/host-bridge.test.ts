@@ -4,7 +4,7 @@
  */
 
 /**
- * The host page and an embedded application (LOOP D-10): what the page
+ * The host page and an embedded application (D-10): what the page
  * passes, read with `host_context` for the names the Appspec gives; the
  * page's functions called as `host_<name>`, each as the rule naming it
  * decides — one no rule names refused before the page is called; what it
@@ -33,7 +33,7 @@ import {
 } from '../embed/hostBridge';
 
 /**
- * The host's tools as the chat has them (REACTOR_UI RU-7): the host plugin
+ * The host's tools as the chat has them (RU-7): the host plugin
  * mounted on a reactor, its agent tools bundle turned into tools that run
  * its commands, as for any plugin's bundle.
  */
@@ -97,7 +97,7 @@ const RULED = hosted([
 const tool = (tools: ReturnType<typeof hostFrontendTools>, name: string) =>
   tools.find(each => each.name === name)!;
 
-describe('the host plugin (REACTOR_UI RU-7)', () => {
+describe('the host plugin (RU-7)', () => {
   it('offers the page as its commands, named for the agent by its bundle', async () => {
     const reactor = buildReactorFromPlugins([hostPlugin(RULED, () => ({}))!]);
     reactor.start();
@@ -381,7 +381,7 @@ describe('who its user is (D-21)', () => {
   });
 });
 
-describe('fetchUserToken (D-21; STUDIO A-18 to A-20)', () => {
+describe('fetchUserToken (D-21; A-18 to A-20)', () => {
   it('asks ai-agents to sign the person, with their own token, and says its refusal', async () => {
     const fetcher = vi.fn(
       async (_url: string, _init: RequestInit) =>

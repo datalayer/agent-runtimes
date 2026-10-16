@@ -174,7 +174,7 @@ const EphemeralDocument = React.lazy(() =>
 // The agent's details (its context charts draw with ECharts) and the
 // companion notebook (JupyterLab's notebook) are opened by a click, not drawn
 // with the conversation: each is its own chunk, fetched when first shown, so
-// a chat — and an embedded application (STUDIO D-08) — loads without them.
+// a chat — and an embedded application (D-08) — loads without them.
 // A chunk that cannot load says so where the view would be.
 const loadAgentDetails = () =>
   import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
@@ -1705,7 +1705,7 @@ function ChatBaseInner({
 
   // ---- Component state ----
   /*
-   * The conversation (MOBILE M-030): `reduceConversation`'s, as on the phone,
+   * The conversation (M-030): `reduceConversation`'s, as on the phone,
    * whatever protocol the agent speaks — its adapter's events normalised by
    * `conversationEventsOf`. Kept in a ref as each change lands, so the events
    * of one network chunk each read the last, and drawn on the next render
@@ -1858,7 +1858,7 @@ function ChatBaseInner({
   const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // The steps of an application's code shown so far, as displays (patched
-  // as they stream), and the elements it showed (REACTOR_UI RU-3).
+  // as they stream), and the elements it showed (RU-3).
   const uiStepsRef = useRef<UiModel>(emptyUiModel());
   const uiElementsRef = useRef<Set<string>>(new Set());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
@@ -2303,7 +2303,7 @@ function ChatBaseInner({
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
   const threadIdRef = useRef<string>(thread?.id || generateMessageId());
   /*
-   * The thread a host gave, kept as it was given at mount (LOOP D-13), and
+   * The thread a host gave, kept as it was given at mount (D-13), and
    * told when a message is first sent on a thread: the host keeps it.
    */
   const threadGivenRef = useRef(thread);
@@ -2319,7 +2319,7 @@ function ChatBaseInner({
   }, []);
 
   /*
-   * The conversation's ui channel (REACTOR_UI RU-W): one WebSocket per
+   * The conversation's ui channel (RU-W): one WebSocket per
    * conversation, its thread the scope, opened once its session is there
    * (the first event of its first run, or a thread reopened). What its
    * messages show, its steps, its elements, its authors and its window
@@ -2334,7 +2334,7 @@ function ChatBaseInner({
   const uiSocketTokenRef = useRef(protocol?.authToken);
   uiSocketTokenRef.current = protocol?.authToken;
   /*
-   * Its files (REACTOR_UI RU-6): uploaded to its runtime before the run or
+   * Its files (RU-6): uploaded to its runtime before the run or
    * the press that names them, the conversation's thread their scope; the
    * run carries the ref, never the bytes.
    */
@@ -2434,10 +2434,10 @@ function ChatBaseInner({
       uiStepsRef.current = next.steps;
       const routed = next.routed;
       if (routed.to === 'window') {
-        // For the page it sits in, outside the conversation (LOOP P-25).
+        // For the page it sits in, outside the conversation (P-25).
         tellLoopWindow(routed.data);
       } else if (routed.to === 'step') {
-        // A step of its code, drawn as it runs (LOOP P-16).
+        // A step of its code, drawn as it runs (P-16).
         const step = routed.step;
         changeLayer(kept => {
           const anchors = new Map(
@@ -2459,7 +2459,7 @@ function ChatBaseInner({
           };
         });
       } else if (routed.to === 'element') {
-        // In a side panel or on a page of its own (LOOP P-18).
+        // In a side panel or on a page of its own (P-18).
         uiElementsRef.current.add(routed.change.id);
         applyLoopElement(routed.change);
       } else if (!placeable(messageStubs(), routed.op)) {
@@ -3276,7 +3276,7 @@ function ChatBaseInner({
     if (!historyScopeId) return;
 
     /*
-     * A thread the host gave (LOOP D-13): its session's conversation, drawn
+     * A thread the host gave (D-13): its session's conversation, drawn
      * once, and never replaced by the runtime's snapshot, which is its
      * agent's — every session's — not this one's.
      */
@@ -3807,7 +3807,7 @@ function ChatBaseInner({
 
         case 'activity':
           // What the server says besides the conversation's text comes on
-          // the ui socket (REACTOR_UI RU-W); the run's own — `loop.session`
+          // the ui socket (RU-W); the run's own — `loop.session`
           // among them — are the conversation's.
           if (event.activity) {
             voiceSayRef.current?.(event.activity);
@@ -4055,7 +4055,7 @@ function ChatBaseInner({
     async (
       messageOverride?: string,
       // AG-UI's: what goes with the run besides the conversation — an
-      // application's page says there what it did (LOOP R-04).
+      // application's page says there what it did (R-04).
       forwardedPropsGiven?: Record<string, unknown>,
       // How the message was heard, when it was said (VO-27).
       spokenGiven?: SpokenMetadata,
@@ -4078,7 +4078,7 @@ function ChatBaseInner({
         }
       }
       // A press of what a display offered goes up the ui socket, checked
-      // there; the run that answers it names it only (REACTOR_UI RU-W).
+      // there; the run that answers it names it only (RU-W).
       const pressed = displayPressOf(forwardedPropsGiven);
       if (pressed && forwardedPropsGiven) {
         const socket = uiSocketRef.current?.socket;
@@ -4388,7 +4388,7 @@ function ChatBaseInner({
   ]);
 
   /*
-   * How a message's display presses what it offered (REACTOR_UI RU-4,
+   * How a message's display presses what it offered (RU-4,
    * RU-W): with the token of the offer, as the run's press — which
    * `handleSend` sends up the ui socket before the run, the run naming it
    * only. An answer is the person's words in the conversation; any other

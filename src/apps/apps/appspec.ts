@@ -83,7 +83,7 @@ import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 /** The version of the spec itself. */
 export const APP_SCHEMA = 'loop.app/v1';
 
-/** The language an application's own words are in, unless it says (LOOP P-26). */
+/** The language an application's own words are in, unless it says (P-26). */
 export const DEFAULT_LANGUAGE = 'en';
 
 /** The face of an application that has not chosen one. */
@@ -101,7 +101,7 @@ export const APP_ACCENTS: AppAccent[] = [
 ];
 
 /**
- * The themes an application may run in (LOOP T-30): Appearance's, as
+ * The themes an application may run in (T-30): Appearance's, as
  * primer-addons lists them (`themeVariants`), in its order.
  */
 export const APP_THEME_VARIANTS: AppThemeVariant[] = [
@@ -119,7 +119,7 @@ export const APP_THEME_VARIANTS: AppThemeVariant[] = [
 /** The colour modes a theme is worn in. */
 export const APP_THEME_MODES: AppThemeMode[] = ['light', 'dark', 'auto'];
 
-/** The four ways an application sits in another product's page (LOOP D-07). */
+/** The four ways an application sits in another product's page (D-07). */
 export const APP_EMBED_MODES: AppEmbedMode[] = [
   'inline',
   'bubble',
@@ -128,7 +128,7 @@ export const APP_EMBED_MODES: AppEmbedMode[] = [
 ];
 
 /**
- * How an Appspec names the character of its floating assistant (LOOP T-24):
+ * How an Appspec names the character of its floating assistant (T-24):
  * the id a plugin contributes it under, `paperclip` or `acme-owl` — as
  * agentspecs' `ASSISTANT_CHARACTER_ID`. Which ids exist is what the enabled
  * plugins contribute (`assistantCharacterNamed`), not the spec's to say.
@@ -179,7 +179,7 @@ export interface AppUiFacts {
 }
 
 /**
- * The UI plugins an application is drawn with (AGENTIC_UI R8), as its `ui`
+ * The UI plugins an application is drawn with (R8), as its `ui`
  * lists them: what `appPreset` mounts for it. A decision: its page alone,
  * drawn by its host. Every other kind: the conversation — `chat`, which
  * stands for the conversation base the runtime mounts — then the A2UI
@@ -263,7 +263,7 @@ const records = (value: unknown): Data[] =>
   Array.isArray(value) ? value.filter(isData) : [];
 
 /**
- * An application's UI plugins as its document says them (AGENTIC_UI R8):
+ * An application's UI plugins as its document says them (R8):
  * `{plugin, renderer}` each. Anything else — a bare id, the old shape — is
  * not read as a plugin: `parseAppspec` refuses it (`uiShapeProblems`).
  */
@@ -294,7 +294,7 @@ const uiShapeProblems = (value: unknown): string[] =>
     : [];
 
 /**
- * One turn of a test's conversation as its document says it (STUDIO E-01):
+ * One turn of a test's conversation as its document says it (E-01):
  * what it says, chooses or presses, with a press's payload; nothing it does
  * not say.
  */
@@ -344,7 +344,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     contents: [],
     connections: [],
     protocols: [],
-    // A blank application starts with its kind's UI plugins (AGENTIC_UI R8).
+    // A blank application starts with its kind's UI plugins (R8).
     ui: uiFor(kind),
     rules: [],
     permissions: {
@@ -444,10 +444,10 @@ const KNOWN_KEYS = [
   'banner',
 ] as const;
 
-/** Where a check of its code runs (LOOP P-06). */
+/** Where a check of its code runs (P-06). */
 const CHECK_STAGES = ['answer', 'tool_call'] as const;
 
-/** A tool of its own, written in its code (LOOP P-06); a wrong one is said by the checks. */
+/** A tool of its own, written in its code (P-06); a wrong one is said by the checks. */
 function parseTool(data: Data): AppToolSpec {
   return {
     name: text(data.name),
@@ -468,7 +468,7 @@ function parseConnection(data: Data): AppConnectionSpec {
   };
 }
 
-/** The Personal Agent Protocol profiles Datalayer speaks, as agentspecs' `PAP_PROFILES` (PAP_DATALAYER S-03). */
+/** The Personal Agent Protocol profiles Datalayer speaks, as agentspecs' `PAP_PROFILES` (S-03). */
 export const PAP_PROFILES: readonly PapProfile[] = ['draft-01'];
 
 /** The profile a `pap` block is written for when the Studio or a builder starts one. */
@@ -504,7 +504,7 @@ const enumsOf = <T extends string>(
 };
 
 /**
- * Personal Agent Protocol (PAP_DATALAYER S-01): the companies the
+ * Personal Agent Protocol (S-01): the companies the
  * application works with, and whether it is one. Defaults are agentspecs'.
  */
 function parsePap(data: Data): AppPapSpec {
@@ -554,7 +554,7 @@ function parsePap(data: Data): AppPapSpec {
   };
 }
 
-/** A standing permission an operation gives (PAP_DATALAYER R-07), as agentspecs reads it. */
+/** A standing permission an operation gives (R-07), as agentspecs reads it. */
 function parsePapStanding(data: Data): AppPapStandingSpec {
   return {
     connection: text(data.connection),
@@ -645,7 +645,7 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
     ).data;
 }
 
-/** PACT (AGENT_PROTOCOLS PI-01): the businesses it asks for each person, and as one (PR-13). */
+/** PACT (PI-01): the businesses it asks for each person, and as one (PR-13). */
 function parsePact(data: Data): AppPactSpec {
   const business: Data = isData(data.business) ? data.business : {};
   const scopes: Record<string, string> = {};
@@ -674,7 +674,7 @@ function parsePact(data: Data): AppPactSpec {
   };
 }
 
-/** Commerce (AGENT_PROTOCOLS PI-01): the merchants it shops at for each person. */
+/** Commerce (PI-01): the merchants it shops at for each person. */
 function parseCommerce(data: Data): AppCommerceSpec {
   return {
     merchants: records(data.merchants).map(merchant => ({
@@ -719,7 +719,7 @@ function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
   ).data;
 }
 
-/** Signed fetch (AGENT_PROTOCOLS EX-11): the exact sites it reads pages of, each request signed. */
+/** Signed fetch (EX-11): the exact sites it reads pages of, each request signed. */
 function parseSignedFetch(data: Data): AppSignedFetchSpec {
   return {
     sites: records(data.sites).map(site => ({
@@ -743,7 +743,7 @@ function dumpSignedFetch(signedFetch: AppSignedFetchSpec | undefined): Data {
   ).data;
 }
 
-/** One of a pair of examples (AGENT_PROTOCOLS PR-13): its id and its side, or a problem. */
+/** One of a pair of examples (PR-13): its id and its side, or a problem. */
 function parsePair(data: Data): AppPairSpec | string {
   const id = text(data.id);
   const role = text(data.role);
@@ -796,7 +796,7 @@ function dumpPact(pact: AppPactSpec | undefined): Data {
     ).data;
 }
 
-/** A2A (AGENT_PROTOCOLS PR-02): the extensions its Agent Card advertises. */
+/** A2A (PR-02): the extensions its Agent Card advertises. */
 function parseA2A(data: Data): AppA2ASpec {
   return {
     extensions: records(data.extensions).map(extension => ({
@@ -835,8 +835,8 @@ function parseRule(data: Data): AppRuleSpec {
   };
 }
 
-/** A slash command (LOOP P-19); a wrong one is said by the checks. */
-/** An action of its code, typed (REACTOR_UI RU-5): its payload's schema kept as written. */
+/** A slash command (P-19); a wrong one is said by the checks. */
+/** An action of its code, typed (RU-5): its payload's schema kept as written. */
 function parseAction(data: Data): AppActionSpec {
   const action: AppActionSpec = { name: text(data.name) };
   if (text(data.description)) {
@@ -870,7 +870,7 @@ function parseModeOption(data: Data): AppModeOptionSpec {
   return option;
 }
 
-/** A mode switch (LOOP P-19). */
+/** A mode switch (P-19). */
 function parseMode(data: Data): AppModeSpec {
   const mode: AppModeSpec = {
     id: text(data.id),
@@ -883,7 +883,7 @@ function parseMode(data: Data): AppModeSpec {
   return mode;
 }
 
-/** A starter, its category said only when it has one (LOOP P-20). */
+/** A starter, its category said only when it has one (P-20). */
 function parseStarter(data: Data): AppStarterSpec {
   const starter: AppStarterSpec = {
     label: text(data.label),
@@ -895,7 +895,7 @@ function parseStarter(data: Data): AppStarterSpec {
   return starter;
 }
 
-/** One of several assistants in one application (LOOP P-20). */
+/** One of several assistants in one application (P-20). */
 function parseProfile(data: Data): AppProfileSpec {
   return {
     id: text(data.id),
@@ -933,7 +933,7 @@ const mapValues = <T, U>(
     Object.entries(value).map(([key, item]) => [key, map(item)]),
   );
 
-/** An application's words in one other language (LOOP P-26), every key present. */
+/** An application's words in one other language (P-26), every key present. */
 function parseTranslation(data: Data): AppTranslationSpec {
   return {
     name: text(data.name),
@@ -1022,7 +1022,7 @@ function parseUploads(data: Data): AppUploadsSpec {
   };
 }
 
-/** What a page's output may be drawn with (LOOP P-05), and the property of each that shows its value. */
+/** What a page's output may be drawn with (P-05), and the property of each that shows its value. */
 export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
   Text: 'text',
   Image: 'url',
@@ -1034,7 +1034,7 @@ export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
 export const DEFAULT_CUSTOM_HEIGHT = 240;
 
 /**
- * A component its developer wrote (LOOP P-17), as written: its schema and
+ * A component its developer wrote (P-17), as written: its schema and
  * example kept whole, so that the checks say what is wrong with them.
  */
 function parseCustomComponent(data: Data): AppCustomComponentSpec {
@@ -1244,7 +1244,7 @@ function parseDecision(data: Data): AppDecisionSpec {
   };
 }
 
-/** What it is tried on before it is anybody's (STUDIO E-06, E-11): read only. */
+/** What it is tried on before it is anybody's (E-06, E-11): read only. */
 function parseSamples(data: Data): AppSamplesSpec {
   return {
     documents: records(data.documents).map(document => ({
@@ -1369,7 +1369,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   const verified = isData(tests.verified) ? tests.verified : {};
   const record = isData(data.record) ? data.record : {};
   const checks = isData(data.checks) ? data.checks : {};
-  // A check of its code runs on an answer or a tool call (LOOP P-06).
+  // A check of its code runs on an answer or a tool call (P-06).
   for (const check of records(checks.code)) {
     if (!(CHECK_STAGES as readonly unknown[]).includes(check.on)) {
       problems.push(
@@ -1428,12 +1428,12 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       evalset: text(tests.evalset),
       cases: records(tests.cases).map(testCase => ({
         ask: text(testCase.ask),
-        // A conversation, turn by turn, when it is one (STUDIO E-01).
+        // A conversation, turn by turn, when it is one (E-01).
         ...(records(testCase.turns).length
           ? { turns: records(testCase.turns).map(parseTestTurn) }
           : {}),
         expect: text(testCase.expect),
-        // Decided by its code (LOOP P-06), when it names the function.
+        // Decided by its code (P-06), when it names the function.
         ...(text(testCase.code) ? { code: text(testCase.code) } : {}),
         // Given files with what it is asked, when it is.
         ...(records(testCase.files).length
@@ -1487,7 +1487,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     app.decision = parseDecision(data.decision);
   }
   // A `pap` block names a profile Datalayer speaks, or it is refused and not
-  // read (PAP_DATALAYER S-03); a block saying nothing is no block.
+  // read (S-03); a block saying nothing is no block.
   if (isData(data.pap) && Object.keys(data.pap).length > 0) {
     const problem = papProfileProblem(data.pap.profile);
     if (problem) {
@@ -1521,7 +1521,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
 }
 
 /**
- * What is wrong with the UI plugins an application names (AGENTIC_UI R8), in
+ * What is wrong with the UI plugins an application names (R8), in
  * the sentences agentspecs says (`ui_choices_problems`): a plugin the
  * catalogue does not have or said twice — a renderer named as a plugin is
  * refused —, a renderer the catalogue does not have or the plugin may not be
@@ -1573,7 +1573,7 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
 
 /**
  * What is wrong with the protocols an application says it speaks
- * (AGENT_PROTOCOLS PS-02), as agentspecs says it: an id the catalogue does not
+ * (PS-02), as agentspecs says it: an id the catalogue does not
  * know or said twice, a planned protocol while it is offered, and a `pap`,
  * `pact`, `a2a` or `signed_fetch` block configuring a protocol it does not list.
  */
@@ -2079,7 +2079,7 @@ export function dumpAppspec(app: AppSpec): Data {
         .list(
           'cases',
           app.tests.cases.map(testCase => ({
-            // One message, or a conversation in its place (STUDIO E-01).
+            // One message, or a conversation in its place (E-01).
             ...(testCase.turns?.length
               ? {
                   turns: testCase.turns.map(turn => parseTestTurn({ ...turn })),

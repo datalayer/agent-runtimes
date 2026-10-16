@@ -162,7 +162,7 @@ export {
 } from '../agents/AgentRuntimeChat';
 export * from './EphemeralSurfaceControl';
 
-// The chat's own words in the person's language (LOOP P-26)
+// The chat's own words in the person's language (P-26)
 export { ChatLanguage, useChatLanguage, useChatWords } from './ChatLanguage';
 export {
   CHAT_WORDS,

@@ -21,7 +21,7 @@ export {
   type MessageAsked,
 } from './approvals';
 
-// An approval as every card says it (MOBILE M-016).
+// An approval as every card says it (M-016).
 export {
   actionOf,
   APPROVAL_CARD_WORDS,
@@ -46,7 +46,7 @@ export {
   type AgUiEvent,
   type ToolResultSaid,
 } from './agui';
-// A run's stream reduced to what a chat host shows (DISCORD DC-005, SLACK S-205).
+// A run's stream reduced to what a chat host shows (DC-005, S-205).
 export {
   answerParts,
   isTerminal,
@@ -116,7 +116,7 @@ export {
   type SaidMessage,
 } from './adapterEvents';
 
-// What an application is doing, in the words beside its face (LOOP T-08).
+// What an application is doing, in the words beside its face (T-08).
 export {
   PRESENCE_LINES,
   presenceOfConversation,
@@ -159,7 +159,7 @@ export {
 } from './views';
 export { activityFixture, conversationFixture } from './fixtures';
 
-// The protocol displays a run's tool results carry (MOBILE M-037).
+// The protocol displays a run's tool results carry (M-037).
 export {
   DISPLAY_META_KEY,
   displayLine,
@@ -191,7 +191,7 @@ export {
   type PapSignInWaiting,
 } from './signIn';
 
-// A Direct Conversation the person types in themselves (PAP_DATALAYER P-08, MOBILE M-038).
+// A Direct Conversation the person types in themselves (P-08, M-038).
 export {
   DIRECT_MAX,
   DIRECT_WORDS,
@@ -209,7 +209,7 @@ export {
   type DirectTarget,
 } from './direct';
 
-// How a sign-in under way stands, asked by the person's own client (MOBILE M-039).
+// How a sign-in under way stands, asked by the person's own client (M-039).
 export {
   SIGN_IN_POLL_MS,
   SIGN_IN_STATUS_PATH,
@@ -218,7 +218,7 @@ export {
   type SignInStands,
 } from './signInStatus';
 
-// What a company asks the person to type in a mediated sign-in, sent with its one-use ticket (MOBILE M-039).
+// What a company asks the person to type in a mediated sign-in, sent with its one-use ticket (M-039).
 export {
   emptyFields,
   fieldProblems,
@@ -236,7 +236,7 @@ export {
   type ProtectedRequest,
 } from './protectedInput';
 
-// How a streamed turn went, measured without its words (MOBILE M-036).
+// How a streamed turn went, measured without its words (M-036).
 export {
   failureOf,
   otlpMetricsOf,
@@ -245,7 +245,7 @@ export {
   type StreamFailure,
 } from './runMeasures';
 
-// What an application is doing, and its record's entries (LOOP R-15, MOBILE M-015b).
+// What an application is doing, and its record's entries (R-15, M-015b).
 export {
   ACTIVITY_WORDS,
   activityOf,
@@ -262,7 +262,7 @@ export {
   type ScheduledRun,
 } from './activity';
 
-// A deployment's pause, resume and reset, and its recorded events (LOOP R-17, MOBILE M-041b).
+// A deployment's pause, resume and reset, and its recorded events (R-17, M-041b).
 export {
   deploymentEventLine,
   deploymentEventOf,
@@ -280,7 +280,7 @@ export {
   type StoppedWork,
 } from './lifecycle';
 
-// A person's agent runtimes, and an agent's summary (MOBILE M-014b).
+// A person's agent runtimes, and an agent's summary (M-014b).
 export {
   agentRuntimesOf,
   agentSummaryOfRuntime,

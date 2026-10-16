@@ -7,7 +7,7 @@ The engine is the ``agent-shield`` package's — ``agent_shield.policy``: the
 document, the classes, *first decision wins*, the stateful limits — and
 agent-runtimes never keeps a second table of it. What agent-runtimes owns is
 the reading of an Appspec's Rules (the Maker's level) into that document, and
-the platform's default policy of decision 5 beneath them:
+the platform's default policy beneath them:
 
 - the Appspec's Rules on **classes** — *do it*, *ask me first*, *leave it to
   me* on read, write, send, buy, delete — become a ``team``-scope policy, one
@@ -20,7 +20,7 @@ the platform's default policy of decision 5 beneath them:
 - the gateway toolsets the Appspec connects are the ``team`` policy's
   ``mcp.allow`` list (SH-14): the package's ``mcpServers`` rewriting lends
   those and cuts every other server from ``session/new``;
-- the ``session`` scope holds the platform's default (decision 5): read and
+- the ``session`` scope holds the platform's default: read and
   edit inside the workspace done, delete and execute and anything outside
   asked, flagged commands asked with the command shown, fetch refused with
   no allow-list;
@@ -32,7 +32,7 @@ the platform's default policy of decision 5 beneath them:
 - above them all, on a managed runtime, the **organization's and the teams'
   documents from IAM** (``guardrails.managed_policies``, SH-50): pulled for
   the account, kept until they expire, refreshed while the runtime runs;
-  with none readable and no unexpired copy, nothing is decided (decision 11).
+  with none readable and no unexpired copy, nothing is decided.
 
 ACP's tool ``kind`` is classed by :func:`agent_shield.policy.class_of`
 (``KIND_CLASS``: ``other`` → write, fail closed); the table-driven test in
@@ -77,7 +77,7 @@ BEHAVIOUR_VERDICT: Dict[str, str] = {
     LEAVE_TO_ME: "deny",
 }
 
-#: The Shield's verdict, as the record's behaviour word (LOOP R-07).
+#: The Shield's verdict, as the record's behaviour word (R-07).
 VERDICT_BEHAVIOUR: Dict[str, str] = {
     "allow": DO_IT,
     "ask": ASK_FIRST,
@@ -151,7 +151,7 @@ def policies_of(
     managed: Optional[Sequence[Policy]] = None,
     spend_limit: float = 0.0,
 ) -> List[Policy]:
-    """The policies in force for a harness run by ``app``: IAM's, its Rules, then decision 5's default.
+    """The policies in force for a harness run by ``app``: IAM's, its Rules, then the platform's default.
 
     Parameters
     ----------
@@ -265,7 +265,7 @@ def deployment_said(
 
 def datalayer_default() -> Policy:
     """
-    Decision 5's default as Datalayer runs it.
+    The platform's default as Datalayer runs it.
 
     The classes the platform writes relationships for need the authorizer's
     allow beside the Rules: ``send`` and ``buy``, and in a managed runtime pod
@@ -293,7 +293,7 @@ def policies_in_force(
     ------
     PolicyUnavailable
         On a managed runtime whose documents cannot be read and hold no
-        unexpired copy (decision 11): the caller refuses in the sentence.
+        unexpired copy: the caller refuses in the sentence.
     """
     policies = runtime_policies()
     managed = policies.in_force(token)
@@ -321,7 +321,7 @@ def harness_refusal(policies: Sequence[Policy], harness_id: str) -> Optional[str
         return (
             f"The harness {harness_id!r} is refused: the policy runs harnesses on the "
             "platform's credentials, and this runtime lends only the account's own "
-            "declared secret (SHIELD decision 3)."
+            "declared secret."
         )
     return None
 

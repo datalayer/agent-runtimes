@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A Agent Card extensions: read, published from contributions, negotiated (AGENT_PROTOCOLS PR-02)."""
+"""A2A Agent Card extensions: read, published from contributions, negotiated (PR-02)."""
 
 from __future__ import annotations
 

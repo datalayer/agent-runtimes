@@ -5,7 +5,7 @@
  */
 
 /**
- * A character one brings, speaking (LOOP T-26): its mouths drawn while it
+ * A character one brings, speaking (T-26): its mouths drawn while it
  * speaks, by its voice's loudness or one after another; its sounds played
  * only once asked, from its menu, and muted from it.
  */

@@ -5,7 +5,7 @@
 
 /**
  * An MCP client in TypeScript, on the official `@modelcontextprotocol/sdk`
- * (AGENT_PROTOCOLS PR-51, decided 2026-10-13), and what it reads from a
+ * (PR-51, decided 2026-10-13), and what it reads from a
  * server's answers — the twin of `agent_runtimes.protocols.mcp.reading`.
  *
  * The readings are the plain shape both languages agree on, held to

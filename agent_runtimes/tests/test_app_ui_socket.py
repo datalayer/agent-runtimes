@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A session's ui channel over one WebSocket, on the runtime's server
-(REACTOR_UI RU-W): ``/api/v1/apps/ui``.
+(RU-W): ``/api/v1/apps/ui``.
 
 The page says hello with its token — the one it gives the session's other
 routes, in the first frame, never in the URL — and the session's uid;
@@ -34,7 +34,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
 
 
 class Row(BaseModel):
-    """What the button presses with: the row it was on (REACTOR_UI RU-5)."""
+    """What the button presses with: the row it was on (RU-5)."""
 
     row: int = 0
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PAP and PACT in one task: the example answers from both, one record (AGENT_PROTOCOLS EX-07, PR-14, PR-53)."""
+"""PAP and PACT in one task: the example answers from both, one record (EX-07, PR-14, PR-53)."""
 
 from __future__ import annotations
 

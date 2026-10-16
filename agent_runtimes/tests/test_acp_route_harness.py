@@ -5,7 +5,7 @@
 
 An IDE connects to the runtime's ACP endpoint and gets the fake harness: its
 ``session/new`` opens the adapter's session in the runtime's workspace (the
-IDE's cwd is not it, decision 6); prompts and updates are relayed as ACP
+IDE's cwd is not it); prompts and updates are relayed as ACP
 spells them (a tool call with its kind, its diff as content, a plan); a
 permission reaches the IDE only after the Rules decided *ask me first*, with
 the same options, and its answer goes back to the harness — a *do it* never
@@ -184,7 +184,7 @@ def test_an_edit_is_relayed_as_acp_and_the_workspace_is_the_runtimes(
     diffs = [c for u in done for c in u.get("content") or [] if c["type"] == "diff"]
     assert diffs and diffs[-1]["path"] == "hello.txt"
     assert diffs[-1]["newText"] == "hello, shield\n"
-    # Written in the runtime's workspace, not the IDE's cwd (decision 6), and
+    # Written in the runtime's workspace, not the IDE's cwd, and
     # never asked of the IDE's filesystem.
     assert (workspace / "hello.txt").read_text() == "hello, shield\n"
     assert _texts(updates).endswith("done")
@@ -220,7 +220,7 @@ def test_leave_it_to_me_is_answered_without_the_ide(
 ) -> None:
     with ide(client, workspace) as (wire, session_id):
         updates, answer = wire.request("session/prompt", _prompt(session_id, "fetch"))
-    # A fetch with no allow-list is refused by decision 5's policy: the turn
+    # A fetch with no allow-list is refused by the platform's default policy: the turn
     # ends with the sentence and ACP's `refusal`, and the IDE was not asked.
     assert wire.asked == []
     assert answer["result"]["stopReason"] == "refusal"

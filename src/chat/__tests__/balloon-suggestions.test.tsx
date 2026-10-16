@@ -4,7 +4,7 @@
  */
 
 /**
- * What the balloon offers and shows besides its words (LOOP T-23): the
+ * What the balloon offers and shows besides its words (T-23): the
  * suggestions while it waits for a question, one clicked sent; the chat's
  * three dots while it works with nothing written; *more* and *less* for
  * words cut to fit; and the history drawn large with *Expand*, *Shrink* and

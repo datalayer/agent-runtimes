@@ -4,7 +4,7 @@
  */
 
 /**
- * What stays out of the embed's initial load (STUDIO D-08): the modules it
+ * What stays out of the embed's initial load (D-08): the modules it
  * imports statically do not import what is drawn only when shown. The build
  * itself measures the load against its budget (`vite.embed.config.ts`); this
  * holds the imports that budget was won with, where a slip would be an import

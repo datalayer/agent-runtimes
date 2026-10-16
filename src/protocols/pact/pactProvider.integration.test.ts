@@ -4,8 +4,7 @@
  */
 
 /**
- * The TypeScript personal agent at the Python Provider (AGENT_PROTOCOLS
- * EX-06): Example Air served by `examples/protocols/pact/provider_server.py`
+ * The TypeScript personal agent at the Python Provider (EX-06): Example Air served by `examples/protocols/pact/provider_server.py`
  * at `PACT_PROVIDER`, over real HTTP — the card read, a conversation under
  * the personal-agent JWT alone, a sign-in granting one scope of two, the
  * step-up, the change made, and every receipt the Python Brand signed

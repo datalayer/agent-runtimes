@@ -4,10 +4,10 @@
  */
 
 /**
- * A deployment's lifecycle as its owner drives it (LOOP R-17, D-04): pause
+ * A deployment's lifecycle as its owner drives it (R-17, D-04): pause
  * and resume one exact version, reset what it holds, and the events recorded
  * with who did each. The requests' bodies, the answers read and the words
- * said — the same in the Studio and Datalayer Mobile (MOBILE M-041b). Pure:
+ * said — the same in the Studio and Datalayer Mobile (M-041b). Pure:
  * each client sends them with its own authentication.
  *
  * @module portable/lifecycle
@@ -94,7 +94,7 @@ export type ResetCounts = {
   schedules: number;
   /**
    * Why its memories stay: they are its application's, not the
-   * deployment's (LOOP R-18) — forgotten under *What it remembers*.
+   * deployment's (R-18) — forgotten under *What it remembers*.
    */
   memoriesNote: string;
 };

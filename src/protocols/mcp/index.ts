@@ -7,7 +7,7 @@
  * MCP as a Reactor Plugin. It says what it is on `protocols.description` and
  * declares no point yet: MCP's optional capabilities and extensions become
  * `mcp.extension.<name>` points when the MCP client and server read them
- * from contributions (AGENT_PROTOCOLS PR-01). The twin of
+ * from contributions (PR-01). The twin of
  * `agent_runtimes.protocols.mcp`. Its client, on the official
  * `@modelcontextprotocol/sdk`, is `./client` (PR-51).
  *

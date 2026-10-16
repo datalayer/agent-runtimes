@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Personal Agent Protocol in the Loop Python surface, both roles (PAP_DATALAYER S-04).
+"""The Personal Agent Protocol in the Loop Python surface, both roles (S-04).
 
 `app.company_connection`, `app.as_company` and `@app.company_operation` write
 the `pap` block the Spec and the Canvas write: the catalogue's *Order Desk*
@@ -62,7 +62,7 @@ def test_the_personal_agent_role_is_order_desks_block() -> None:
     document = _order_desk().document
     built = parse_app(document).pap
     assert built == APP_CATALOGUE["order-desk"].pap
-    # The block names the profile it is written for, first (PAP_DATALAYER S-03).
+    # The block names the profile it is written for, first (S-03).
     assert list(document["pap"])[0] == "profile" and built.profile == "draft-01"
 
 
@@ -159,7 +159,7 @@ def test_what_the_builders_refuse() -> None:
 
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
-    """`protocols` and `ui` from Python (AGENT_PROTOCOLS PS-02, AGENTIC_UI R8): the Canvas and the YAML read the same lists."""
+    """`protocols` and `ui` from Python (PS-02, R8): the Canvas and the YAML read the same lists."""
     from agent_runtimes.loop.apps.application import Application
 
     app = Application(
@@ -181,7 +181,7 @@ def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
 
 
 def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
-    """The old shape (AGENTIC_UI R8): a renderer's id under `ui` is refused, with no reading of it."""
+    """The old shape (R8): a renderer's id under `ui` is refused, with no reading of it."""
     from agent_runtimes.loop.apps.application import Application
 
     with pytest.raises(Exception, match="UI renderer"):
@@ -231,7 +231,7 @@ def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
 
 
 def test_a_standing_permission_is_declared_in_python_as_in_yaml() -> None:
-    """PAP_DATALAYER R-07: an operation that gives a standing permission (the Ledgerly
+    """R-07: an operation that gives a standing permission (the Ledgerly
     pattern), written by its builder, is the block agentspecs reads — no tool, every bound."""
     app = Application("ledger", "chat", agent="example-blank:0.0.1")
     app.company_connection(

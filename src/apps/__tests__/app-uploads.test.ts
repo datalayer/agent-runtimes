@@ -4,7 +4,7 @@
  */
 
 /**
- * What a person sends (LOOP P-21): the kinds and sizes an application takes
+ * What a person sends (P-21): the kinds and sizes an application takes
  * in its composer without asking, read and written as agentspecs says them,
  * checked as it checks them, refused in the runtime's sentences before
  * anything is read, and sent once with the next message.

@@ -30,7 +30,7 @@ Two objects say it, from one table (`services/egress.py` in the Operator): an **
 
 Proved on r1 (15 October 2026, operator 1.0.94): from a fresh pool pod, `example.com`, `pypi.org` and `api.anthropic.com` are refused at once (`Network unreachable`); the gateway, ai-inference and IAM answer; the sandbox container is held the same.
 
-An Appspec's own allowance (a host its harness must reach itself, decision 3) is written into the pod's `NetworkPolicy` at assignment, and holds where a plugin enforces it — not on flannel. Until then a harness that needs the web gets it through the gateway's `signed-fetch` toolset, a tool call with a class, a Rule and a record.
+An Appspec's own allowance (a host its harness must reach itself) is written into the pod's `NetworkPolicy` at assignment, and holds where a plugin enforces it — not on flannel. Until then a harness that needs the web gets it through the gateway's `signed-fetch` toolset, a tool call with a class, a Rule and a record.
 
 ## The audit: every action in the record
 
@@ -61,7 +61,7 @@ The W3C trace context arrives with the face — an A2A or AG-UI request's `trace
 2. the turn is a child of it, so the audit's events are on the caller's trace;
 3. the harness is handed it in the prompt's **`_meta.traceparent`**, the key ACP reserves, so a harness that honours it continues the trace into its own tool calls;
 4. the lent gateway toolset carries it: as a header of the HTTP server the session opened with, and, over the stdio shim, **per call of the current turn** (the runtime carries each turn's context to the shim's handle; the shim reads it per request);
-5. a sub-agent reached through an orchestration delegation gets it as ORCHESTRATOR's tracing already carries it.
+5. a sub-agent reached through an orchestration delegation gets it as orchestration's tracing already carries it.
 
 Proved locally through the A2A face with the ACP SDK's fake agent: one trace id on the turn's span, in the harness's `_meta.traceparent` and on the shim's outgoing header. On r1 the runtime's spans reach prod1's ingest under the deployment's account; the gateway's own spans do not leave r1 (its collector address exists on prod1 only — a plane setting).
 
@@ -71,13 +71,13 @@ The Shield decides with **three documents of one schema** (agentspecs' `policies
 
 1. the **organization's** (and its teams'), written in IAM as the `shield` rule of the organization's policy layer (`PUT /mcp-policies/organization/{uid}` with `{"shield": {...}}`), validated by the Shield's own model — a team's refused when it would permit more than its organization's, in the engine's sentences;
 2. the **application's** Rules, read into the `team` scope (`guardrails/shield_policy.py`);
-3. the **session's**: decision 5's default plus what a person allows or tightens while it runs.
+3. the **session's**: the platform's default plus what a person allows or tightens while it runs.
 
-A managed runtime pulls the organization's documents for the account at the agent's creation (`GET /mcp-policies/shield/accounts/{account_uid}` with the runtime's token; `guardrails/managed_policies.py`), keeps them until the `expires` IAM stamped (ten minutes), and is told of a change over ai-agents' `/ws` (`shield_policy_changed`, pulled at once; 1.5.40) beside a thirty-second poll: an administrator's change reaches a running harness within seconds, a minute at most (`ACPAgent.replace_policies`). Drilled on r1: 15 seconds by the poll, 0.2 seconds by the push. Administrators write the document on the organization's *Policies* page of the landing (the *Shield rules* form, versioned; a moved version is a conflict, never an overwrite) or through IAM's route. It **fails closed** (decision 11): with IAM unreachable and no unexpired copy the harness is refused at creation in a sentence naming IAM, and every further action of a running one is refused until IAM answers. A runtime with no token, or a token and no `DATALAYER_IAM_URL` — the terminal's `loop`, a test — is unmanaged, says so once, and decides with the application's Rules and the default alone (1.5.40; 1.5.36 refused the second case). The `harnesses` section is honoured: a harness the organization does not admit is refused, and so is a `platform` credentials rule (a runtime lends the account's own declared secret, decision 3).
+A managed runtime pulls the organization's documents for the account at the agent's creation (`GET /mcp-policies/shield/accounts/{account_uid}` with the runtime's token; `guardrails/managed_policies.py`), keeps them until the `expires` IAM stamped (ten minutes), and is told of a change over ai-agents' `/ws` (`shield_policy_changed`, pulled at once; 1.5.40) beside a thirty-second poll: an administrator's change reaches a running harness within seconds, a minute at most (`ACPAgent.replace_policies`). Drilled on r1: 15 seconds by the poll, 0.2 seconds by the push. Administrators write the document on the organization's *Policies* page of the landing (the *Shield rules* form, versioned; a moved version is a conflict, never an overwrite) or through IAM's route. It **fails closed**: with IAM unreachable and no unexpired copy the harness is refused at creation in a sentence naming IAM, and every further action of a running one is refused until IAM answers. A runtime with no token, or a token and no `DATALAYER_IAM_URL` — the terminal's `loop`, a test — is unmanaged, says so once, and decides with the application's Rules and the default alone (1.5.40; 1.5.36 refused the second case). The `harnesses` section is honoured: a harness the organization does not admit is refused, and so is a `platform` credentials rule (a runtime lends the account's own declared secret).
 
 **The limits** (SH-32): beside tool calls, terminals and bytes written, `limits.model_tokens` (the model budget) and `limits.spend` (credits, 100 a USD), each soft then hard. `guardrails/shield_budget.py` holds every model request of an application's agent to them: past a soft threshold the person is asked once through the tool approvals, past a hard one the run ends in a sentence saying what would let it go on; what each response spent is counted from its usage and its price, per session — a response whose stream the client left early reconciled from the run's own usage at its end (1.5.40). Drilled on r1: soft 1 asked once, hard 3000 refused the second request of a turn in the sentence.
 
-**A rule on a running session** (SH-54, decision 7) — the contract the page and the phone share:
+**A rule on a running session** (SH-54) — the contract the page and the phone share:
 
 | Route | Body | Answer |
 |---|---|---|

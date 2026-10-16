@@ -4,7 +4,7 @@
  */
 
 /**
- * The *UCP checkout* gallery example's work (AGENT_PROTOCOLS EX-10, after
+ * The *UCP checkout* gallery example's work (EX-10, after
  * EX-04): the UCP client buying from *Example Store*, the local test
  * merchant running in the page (`protocols/ucp/merchant`). A checkout is
  * proposed as an exact, revisioned purchase; completing it asks the host's

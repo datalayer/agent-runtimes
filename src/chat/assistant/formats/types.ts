@@ -4,7 +4,7 @@
  */
 
 /**
- * The one shape a character file is read into (LOOP T-26), whatever its
+ * The one shape a character file is read into (T-26), whatever its
  * format: a sprite sheet, frames that index into it, animations by name.
  *
  * @module chat/assistant/formats/types

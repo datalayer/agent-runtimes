@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The safety set every application runs (LOOP V-09), from the terminal.
+"""The safety set every application runs (V-09), from the terminal.
 
 The questions an application is asked beside its own tests, and what it
 should do with each:
@@ -558,7 +558,7 @@ def model_judge(model: str) -> JudgeCall:
 class _SafetyChannel:
     """What the application's sessions show, kept; a question to the person is part of its answer.
 
-    A test that is a conversation (``turns``, STUDIO E-01) answers what it
+    A test that is a conversation (``turns``, E-01) answers what it
     asks with its next turn when that turn says or chooses something, as the
     person would on its page; anything else it asks ends the conversation.
     """
@@ -601,20 +601,20 @@ class Conversed:
     error: str = ""
     """Why the turn failed, when it did."""
     checks: Tuple[Tuple[str, Any], ...] = ()
-    """What its checks said on the way (LOOP R-06, P-06): each as the record
+    """What its checks said on the way (R-06, P-06): each as the record
     keeps it, the stage and the `Verdict` — a step stopped, an answer asked
     again, a person asked."""
     tools: Tuple[str, ...] = ()
-    """The tools it called, in order, as its rules decided them (LOOP R-05)."""
+    """The tools it called, in order, as its rules decided them (R-05)."""
     record: Tuple[Dict[str, Any], ...] = ()
     """Its record, every entry as ai-agents would keep it (``{kind, summary,
-    payload}``): what a test is graded on beside its answer (STUDIO V-08)."""
+    payload}``): what a test is graded on beside its answer (V-08)."""
 
 
 class _WatchedRecorder(AppRecorderBase):
     """A recorder that sends nothing and keeps what the checks and the rules
     said, and the whole record of the conversation, for the run that asked
-    (LOOP V-08). A test's: it keeps every entry, whatever ``record.include``
+    (V-08). A test's: it keeps every entry, whatever ``record.include``
     says (`record.AppRecorder.kept`).
     """
 
@@ -665,12 +665,11 @@ async def converse_in_process(
     """Each case's ``ask`` sent to the application in this process, a session of its own each.
 
     Its code answers when it takes messages, else its agent — with its rules,
-    checks and record attached, and its code's own tools and checks (LOOP
-    P-06), as `loop apps run --ask` asks it. A question the application puts
+    checks and record attached, and its code's own tools and checks (P-06), as `loop apps run --ask` asks it. A question the application puts
     to the person ends its conversation; a turn that fails is said, and the
     other cases are asked. Its record is not sent: it is nobody's session.
 
-    A case that is a conversation (``turns``, STUDIO E-01) is played turn by
+    A case that is a conversation (``turns``, E-01) is played turn by
     turn in its session: what it asks is answered by the next turn that says
     or chooses, a turn that presses runs its code's action with its payload,
     and the other turns are its messages; what it showed from its opening on

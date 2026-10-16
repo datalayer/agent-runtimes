@@ -42,7 +42,7 @@ const answer: Display = {
   actions: [{ name: 'again', token: 'minted-for-m1-shows' }],
 };
 
-describe('a button of what an answer shows (LOOP P-04, REACTOR_UI RU-2)', () => {
+describe('a button of what an answer shows (P-04, RU-2)', () => {
   it('presses the action its display offered, with its token and what it read', () => {
     expect(answerPress(answer, { name: 'again', context: { row: 2 } })).toEqual(
       {

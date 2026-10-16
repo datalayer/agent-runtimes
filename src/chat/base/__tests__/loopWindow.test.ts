@@ -4,7 +4,7 @@
  */
 
 /**
- * Window messages (LOOP P-25): what an application's code tells the page it
+ * Window messages (P-25): what an application's code tells the page it
  * sits in, handed to whoever listens, and what the page posts to its code,
  * answered on the turn's stream.
  */
@@ -25,7 +25,7 @@ import {
 const sse = (...events: unknown[]): string =>
   events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('');
 
-/** A window op, as the session API sends one (REACTOR_UI RU-3). */
+/** A window op, as the session API sends one (RU-3). */
 const windowOp = (name: string, args?: Record<string, unknown>): WindowOp => ({
   v: 1,
   op: 'window',

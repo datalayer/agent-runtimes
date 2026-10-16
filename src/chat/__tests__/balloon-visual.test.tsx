@@ -4,7 +4,7 @@
  */
 
 /**
- * A large visual in the balloon (LOOP T-23): what goes with the words shows
+ * A large visual in the balloon (T-23): what goes with the words shows
  * in either display, a tool line or not; a large visual (a notebook) offers
  * *Expand*, drawn into the element the host names, or in a dialog over the
  * page that Esc closes; a notebook's large view is the one that runs on the

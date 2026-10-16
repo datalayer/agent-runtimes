@@ -4,7 +4,7 @@
  */
 
 /**
- * Datalayer's own components, drawn (LOOP C-18): a renderer for each the
+ * Datalayer's own components, drawn (C-18): a renderer for each the
  * catalog has beside A2UI's basic ones — Table, Chart, File upload, Chat,
  * Evidence, Form and File to download — made as A2UI makes its own, so that the decision
  * surface, an application's page, the Surface view and the components page

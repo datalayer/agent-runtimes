@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene kept in the person's Space, as the Studio keeps one (LOOP P-30, S-08).
+"""A scene kept in the person's Space, as the Studio keeps one (P-30, S-08).
 
 The Studio keeps a scene as an item of type ``scene`` whose content is
 ``{"format": "loop.scene.item/v1", "spec": <the scene spec>}`` — its name and

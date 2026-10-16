@@ -5,15 +5,15 @@
 
 /**
  * PACT 1.0, Personal Agent Consent & Trust, as a Reactor Plugin and a
- * personal agent (AGENT_PROTOCOLS PR-10 to PR-13) — the twin of
+ * personal agent (PR-10 to PR-13) — the twin of
  * `agent_runtimes.protocols.pact`. Built against
  * `openpactprotocol/openpactprotocol` `docs/spec.md` at 838c6bd
  * (2026-10-06), reviewed 2026-10-12.
  *
- * The personal-agent JWT (§3.2) is signed by the host's key through
+ * The personal-agent JWT is signed by the host's key through
  * `pact.signer` (ES256, the Web Bot Auth signer's contract); the delegation
- * token (§5) is kept in `pact.delegationStore`, never handed to the agent;
- * every receipt (§5.6) is verified with `jose` before it is kept in
+ * token is kept in `pact.delegationStore`, never handed to the agent;
+ * every receipt is verified with `jose` before it is kept in
  * `pact.receiptStore`.
  *
  * @module protocols/pact
@@ -174,7 +174,7 @@ function bearer(scheme: Json | undefined): boolean {
   );
 }
 
-/** A Brand's card as PACT 1.0 reads it (§2.1, §5.1); throws when it is not one. */
+/** A Brand's card as PACT 1.0 reads it; throws when it is not one. */
 export function readCard(card: Json): PactCard {
   const iface = (card.supportedInterfaces ?? []).find(
     (entry: Json) =>
@@ -239,7 +239,7 @@ function b64url(bytes: Uint8Array): string {
   return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** One personal-agent JWT (§3.2): ES256 by the host's signer, `sub` opaque, ≤ 300 s. */
+/** One personal-agent JWT: ES256 by the host's signer, `sub` opaque, ≤ 300 s. */
 export async function signPersonalAgentJwt(
   signer:
     | HttpSigner

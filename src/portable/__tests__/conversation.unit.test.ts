@@ -4,7 +4,7 @@
  */
 
 /**
- * The portable conversation (MOBILE M-030): a run stream read the way every
+ * The portable conversation (M-030): a run stream read the way every
  * client reads it, into the conversation a native client draws — bounded.
  * The run of `agent_runtimes/tests/fixtures/app_session_ops.json`, which the
  * runtime's own test holds the session to, is the shared fixture.

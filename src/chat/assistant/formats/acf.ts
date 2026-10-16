@@ -4,7 +4,7 @@
  */
 
 /**
- * Microsoft Agent's character for the web (LOOP T-26): an `.acf` that holds
+ * Microsoft Agent's character for the web (T-26): an `.acf` that holds
  * the character — its size, palette, states, names — and names one `.aca`
  * file per animation, each holding that animation's frames, images, sounds
  * and mouths. Read in the page after Lebeau's public description (MSAgent

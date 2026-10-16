@@ -206,7 +206,7 @@ const domainOf = (address: string): string =>
 
 /**
  * Whether a call forwards a message to somebody outside the organization
- * (LOOP W-04): the domain of the mailbox it sends from. Fails closed: a
+ * (W-04): the domain of the mailbox it sends from. Fails closed: a
  * forward that does not say its mailbox is outside. A reply is not a forward.
  */
 export function forwardsOutside(
@@ -286,7 +286,7 @@ const reaches = (connection: AppConnectionSpec, tool: string): boolean =>
 
 /**
  * Whether the application is given a tool of a server: its connection's
- * level (LOOP U-15). A connection gives the tools of its server it reaches
+ * level (U-15). A connection gives the tools of its server it reaches
  * (`only`); one that only reads gives only the tools that only read — a tool
  * nobody classed is taken to write, so a read connection does not give it.
  * A tool of a server the application is not connected to is not given.

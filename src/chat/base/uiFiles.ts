@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation's files as references (REACTOR_UI RU-6).
+ * A conversation's files as references (RU-6).
  *
  * What the page holds of a file it was given — File upload and the composer
  * read it as `{name, type, data_url}` — is uploaded to the application's

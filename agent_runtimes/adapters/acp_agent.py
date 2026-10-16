@@ -11,13 +11,13 @@ capabilities on, answered here); ``stream`` opens or loads a session in the
 workspace, prompts, and turns every ``session/update`` into the runtime's
 ``StreamEvent``s (the event table); ``cleanup`` cancels and ends the process.
 
-The engine is the ``agent-shield`` package's, hosted and never copied
-(decision 14): this class **is** a :class:`agent_shield.acp.proxy.ShieldProxy`
+The engine is the ``agent-shield`` package's, hosted and never copied:
+this class **is** a :class:`agent_shield.acp.proxy.ShieldProxy`
 whose outer face is a Datalayer agent instead of an ACP client — the same
 inner client classes the harness's tool calls, decides them by the policies
-(the application's Rules, then decision 5's default), answers ``fs/*`` and
+(the application's Rules, then the platform's default), answers ``fs/*`` and
 ``terminal/*`` against the workspace, counts the limits, and turns
-``allow_always`` into a session rule (decision 7). What agent-runtimes adds:
+``allow_always`` into a session rule. What agent-runtimes adds:
 
 - the mapping of the package's neutral events onto ``StreamEvent``s;
 - ``session/request_permission`` raised through the runtime's tool approvals
@@ -1643,7 +1643,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         note = await self._note_of(result.get("id"))
         # The page's approval has approve and reject; a person who writes
         # "always" in the note chooses the agent's allow_always, which the
-        # proxy turns into a session rule (decision 7).
+        # proxy turns into a session rule.
         wanted = (
             ("allow_always", "allow_once")
             if "always" in note.lower()
@@ -1697,7 +1697,7 @@ def _origin_of(policy: Policy) -> str:
     return (
         "the application's Rules"
         if policy.scope == "team"
-        else "the platform's default (decision 5)"
+        else "the platform's default"
     )
 
 
@@ -1825,7 +1825,7 @@ def harness_agent(
     lent_names = [item.name for item in lent]
     # The policies in force (SH-50): IAM's documents for the account —
     # fail closed, in a sentence naming IAM, when none can be read —, the
-    # application's Rules, decision 5's default; the harness admitted by them.
+    # application's Rules, the platform's default; the harness admitted by them.
     try:
         policies = policies_in_force(app, lent_names, token=credential or None)
     except PolicyUnavailable as unavailable:

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The TypeScript buyer at the Python seller (AGENT_PROTOCOLS EX-05).
+"""The TypeScript buyer at the Python seller (EX-05).
 
 Example Outfitters is served on localhost by
 ``examples/protocols/agentic_commerce/seller_server.py`` and the TypeScript

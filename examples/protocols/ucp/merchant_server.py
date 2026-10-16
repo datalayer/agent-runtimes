@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Example Store served on localhost, for a shopping client in another language (AGENT_PROTOCOLS EX-04).
+"""Example Store served on localhost, for a shopping client in another language (EX-04).
 
 The test merchant of ``shopping.py`` (``agent_runtimes.protocols.ucp.merchant``)
 over real HTTP — its profile at ``/.well-known/ucp``, the ``2026-08-25`` REST

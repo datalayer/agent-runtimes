@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """File analysis — Chainlit's cookbook ``openai-data-analyst``, rebuilt with
-LOOP's API (LOOP P-27).
+LOOP's API (P-27).
 
 Chainlit hands the files a user sends with a message to an OpenAI Assistant
 with its code interpreter, streams its steps, and shows the images it draws
@@ -30,7 +30,7 @@ app = Application.from_spec(
         "id": "file-analysis",
         "name": "File Analysis",
         "kind": "chat",
-        # Its interface (AGENTIC_UI R8): the conversation.
+        # Its interface (R8): the conversation.
         "ui": [{"plugin": "chat"}],
         "agent": AGENT,
         "description": "Reads a CSV you send, computes its figures, charts them and says what they show.",
@@ -39,7 +39,7 @@ app = Application.from_spec(
             "sentences; never invent one. The chart is drawn beside your answer: "
             "never write code."
         ),
-        # What may be sent: a CSV of at most 10 MB (LOOP P-21).
+        # What may be sent: a CSV of at most 10 MB (P-21).
         "interface": {"uploads": {"kinds": [{"type": ".csv", "max_mb": 10}]}},
     }
 )

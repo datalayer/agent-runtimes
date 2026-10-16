@@ -6,7 +6,7 @@
 /**
  * A shipped application's page opens on the conversation its runtime's agent
  * holds: a turn a personal agent asked over PAP is drawn without what the
- * runtime told the application before it (PAP_DATALAYER, decided 2026-10-14).
+ * runtime told the application before it (decided 2026-10-14).
  */
 
 import { describe, expect, it } from 'vitest';

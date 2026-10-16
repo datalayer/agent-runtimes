@@ -4,7 +4,7 @@
 """A catalog MCP server that is not running is started again for the next turn.
 
 Disaster Assessment's `earthdata` started 11 ms before the runtime's key was in
-its environment, failed, and every turn after skipped it (STUDIO H-03).
+its environment, failed, and every turn after skipped it (H-03).
 """
 
 from __future__ import annotations

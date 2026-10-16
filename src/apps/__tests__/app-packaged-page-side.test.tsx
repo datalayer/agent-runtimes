@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's page side packaged as a Reactor extension (LOOP P-29): a
+ * An application's page side packaged as a Reactor extension (P-29): a
  * component that is a file of the application's folder is reviewed as one,
  * the page side its package carries is read with Reactor's
  * `bootstrapExtensions` and installed into the running platform, and the

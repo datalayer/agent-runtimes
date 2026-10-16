@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A counterpart's public metadata, fetched on one egress path (AGENT_PROTOCOLS PI-13).
+"""A counterpart's public metadata, fetched on one egress path (PI-13).
 
 Key directories (Web Bot Auth), merchant profiles (UCP's
 ``/.well-known/ucp``) and seller discovery documents (the Agentic Commerce
 Protocol's ``/.well-known/acp.json``) name addresses an agent then reaches:
 each is read through the PAP SDK's ``create_resolving_client``
-(personal-agent-protocol 0.14.0 and later, PAP_DATALAYER B-07) — the host
+(personal-agent-protocol 0.14.0 and later, B-07) — the host
 is resolved before the request and refused unless HTTPS with every address
 public (``unsafe_address``, nothing sent), only the approved address is
 dialled, no redirect is followed, no proxy from the environment is used,

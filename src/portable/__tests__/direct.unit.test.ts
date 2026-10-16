@@ -4,7 +4,7 @@
  */
 
 /**
- * A Direct Conversation (MOBILE M-038, PAP_DATALAYER P-08): one-use ticket,
+ * A Direct Conversation (M-038, P-08): one-use ticket,
  * then the words; replies read from the cursor, never by sending again; lines
  * said apart by who wrote them; closed by the company, nothing more sent.
  *

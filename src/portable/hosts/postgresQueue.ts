@@ -124,7 +124,7 @@ export class PostgresWorkQueue<T> implements WorkQueue<T> {
 
   /**
    * Put a dead job back to work: once, by id, the replay kept with who asked
-   * in the same transaction (`<prefix>_job_replays`, SLACK S-405), refused or not.
+   * in the same transaction (`<prefix>_job_replays`, S-405), refused or not.
    */
   async replay(id: string, operator: string): Promise<boolean> {
     if (!/^\d+$/.test(id)) return false;

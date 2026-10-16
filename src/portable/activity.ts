@@ -4,10 +4,10 @@
  */
 
 /**
- * What an application is doing (LOOP R-15), as ai-agents answers
+ * What an application is doing (R-15), as ai-agents answers
  * `/api/ai-agents/v1/apps/activity`, and its record's entries
  * (`/apps/sessions`, `/apps/records`): read and said the same by the Studio
- * and Datalayer Mobile (MOBILE M-015b). Pure: each client fetches with its own
+ * and Datalayer Mobile (M-015b). Pure: each client fetches with its own
  * authentication and hands the body here.
  *
  * @module portable/activity
@@ -198,7 +198,7 @@ export const ACTIVITY_WORDS = {
   nothing: 'Nothing yet.',
 } as const;
 
-/** What happens that starts it on its own, in words (LOOP W-03): its event triggers. */
+/** What happens that starts it on its own, in words (W-03): its event triggers. */
 export const wakesOn = (
   triggers:
     | ReadonlyArray<{ type: string; event?: string; description?: string }>

@@ -555,8 +555,8 @@ def _post_vercel_ai_chat(
     """POST a single prompt to a Vercel AI chat endpoint.
 
     ``chat_id`` is the chat's id, the conversation the runtime records the
-    turn under (an application's session, LOOP R-07): a caller that reads
-    the record afterwards (the Evals engine, STUDIO V-08) names it; one is
+    turn under (an application's session, R-07): a caller that reads
+    the record afterwards (the Evals engine, V-08) names it; one is
     made up otherwise.
     """
     message_id = f"chat-{int(time.time() * 1000)}"
@@ -741,7 +741,7 @@ def run_cloud_agent_chat(
     return last_result
 
 
-#: What a turn of a test's conversation does: exactly one of these (STUDIO E-01).
+#: What a turn of a test's conversation does: exactly one of these (E-01).
 TURN_DOINGS = ("say", "choose", "press")
 
 
@@ -774,7 +774,7 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
 
 def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
     """The actions a session offers, by name, as its ``loop.session`` event
-    says them (REACTOR_UI RU-5): each with the display that offers it and its
+    says them (RU-5): each with the display that offers it and its
     token.
     """
     offers: dict[str, dict[str, Any]] = {}
@@ -804,14 +804,14 @@ def run_cloud_app_conversation(
     turns: list[Any],
     timeout: int = 300,
 ) -> dict[str, Any]:
-    """Play a test that is a conversation (STUDIO E-01) on an application's
+    """Play a test that is a conversation (E-01) on an application's
     session, as its page has it: the session opened on the session API
     (``/api/v1/apps/sessions``, named ``session`` — the record it is kept
     under), then each turn sent once the one before was answered — a message
     for what the person says, the option's words for a choice they pick (as
     the chat answers a choice), and for what they press the action the
     session offered under that name, its token and its payload
-    (``/sessions/{uid}/press``, REACTOR_UI RU-5) — an action it did not offer
+    (``/sessions/{uid}/press``, RU-5) — an action it did not offer
     is a failure. ``agent`` is the application's agent on the runtime, made on
     AG-UI, which the session API runs on.
 
@@ -1131,7 +1131,7 @@ class AgentClient(
         app_spec : Optional[dict[str, Any]], optional
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made
-            (LOOP R-19), as `loop apps run --cloud` launches one.
+            (R-19), as `loop apps run --cloud` launches one.
 
         Returns
         -------

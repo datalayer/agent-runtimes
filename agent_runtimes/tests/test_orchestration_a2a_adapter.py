@@ -351,7 +351,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_reduced_guarantees_land_on_the_execution(self, monkeypatch):
-        """Decision 5: the reduction is reported, not hidden."""
+        """The reduction is reported, not hidden."""
         _relay(monkeypatch, GOOD_RUN)
         _no_task_lookup(monkeypatch)
         store = InMemoryExecutionStore()
@@ -459,7 +459,7 @@ class TestEndings:
 class TestRecoveryAndCancellation:
     @pytest.mark.asyncio
     async def test_re_attaching_reports_where_the_task_stands(self, monkeypatch):
-        """Conformance scenario 4, on the polling decision 5 allows.
+        """Conformance scenario 4, on the polling the design allows.
 
         The first look is progress, not a state change: an execution that
         was running before the disconnect is still running, and saying so

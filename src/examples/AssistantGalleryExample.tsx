@@ -4,7 +4,7 @@
  */
 
 /**
- * Every representation of the floating assistant, as a gallery (LOOP T-21
+ * Every representation of the floating assistant, as a gallery (T-21
  * to T-27): each character — Datalayer's four, the owl an example plugin
  * contributes to `loop.assistant.character`, a test sprite read through
  * the clippy.js reader, and, when asked, the characters clippy.js publishes,

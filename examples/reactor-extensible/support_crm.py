@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A third-party Reactor extension the application composes (LOOP P-35).
+"""A third-party Reactor extension the application composes (P-35).
 
 Nothing here knows about LOOP: it is a Reactor extension as any — a plugin
 that registers a command (``crm.lookup``), offers it to agents as a tool

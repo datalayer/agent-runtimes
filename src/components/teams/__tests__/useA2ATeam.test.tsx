@@ -4,7 +4,7 @@
  */
 
 /**
- * A team of N in the page (LOOP A-08): the entry asks each peer with a tool
+ * A team of N in the page (A-08): the entry asks each peer with a tool
  * of its own, its instructions naming each; each peer keeps its own persona,
  * history, flow and calls; and an entry on a runtime is asked over A2A from
  * the page itself.

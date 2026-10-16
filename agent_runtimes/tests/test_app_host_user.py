@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who the user is, when it matters (LOOP D-21).
+"""Who the user is, when it matters (D-21).
 
 An embedded application whose Appspec says `deployment.embedded.host.user:
 signed` opens a session only for a user the host's server signed: a token,

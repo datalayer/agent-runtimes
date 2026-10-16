@@ -4,7 +4,7 @@
  */
 
 /**
- * Answers heard, from Datalayer's speech service (VO-20, VO-33, decision 1):
+ * Answers heard, from Datalayer's speech service (VO-20, VO-33):
  * each sentence is sent to ai-agents as soon as it is written
  * and played as soon as its audio arrives, one after the other, while the
  * next ones are being made. The level of what plays moves the assistant's
@@ -40,7 +40,7 @@ export interface SpeakerOptions {
   language: string;
   /**
    * The person's token, an application's principal's, a visitor's or an
-   * embed's — whose deployment is the one it names (VO-19, decision 16).
+   * embed's — whose deployment is the one it names (VO-19).
    */
   token?: string;
   /**

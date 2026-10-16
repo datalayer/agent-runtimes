@@ -303,7 +303,7 @@ class TestUnsupportedOperations:
 
     @pytest.mark.asyncio
     async def test_the_reduction_is_reported_on_the_execution(self):
-        """Decision 5: reported, not hidden.
+        """The reduction is reported, not hidden.
 
         The first thing a dispatch says is what it cannot do, so the answer
         to "why did this execution never checkpoint?" is on the execution.

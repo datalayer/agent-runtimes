@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a person sends an application (LOOP P-21): images, files, audio.
+"""What a person sends an application (P-21): images, files, audio.
 
 A file reaches an application three ways, and each is limited by what asked
 for it:
@@ -161,10 +161,10 @@ def page_refused(app: AppSpec, files: Sequence[Any]) -> Optional[str]:
 def given_refused(app: AppSpec, files: Sequence[Any]) -> Optional[str]:
     """Why files given with a run are refused, in a sentence; None when its
     page's File upload asks for each of them, or ``interface.uploads`` takes
-    them (LOOP P-21).
+    them (P-21).
 
     A page's block sends its files with a message, as the composer does
-    (REACTOR_UI RU-5): what its page asks for is said first.
+    (RU-5): what its page asks for is said first.
     """
     refused = page_refused(app, files)
     if refused is None or unasked_refused(app, files) is None:

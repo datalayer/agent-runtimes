@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""The companies an application works with as a personal agent (PAP_DATALAYER ADR-1, B-02, B-03).
+"""The companies an application works with as a personal agent (ADR-1, B-02, B-03).
 
 Each `pap.connections[]` of an Appspec is reached through Datalayer's MCP
 gateway, whose `pap` toolset acts for the person at that company
@@ -13,19 +13,17 @@ gateway, whose `pap` toolset acts for the person at that company
 token of the company's — and is reached in the person's name, with the token
 of who talks to the application, as a connection `as: user` is.
 
-A business over PACT (each `pact.connections[]`, AGENT_PROTOCOLS PI-20) is
+A business over PACT (each `pact.connections[]`, PI-20) is
 reached the same way, through the gateway's `pact` toolset
 (``/mcp?only=pact&pact-brand=<domain>``), in the person's name: the gateway
 signs the application's personal-agent JWT and holds the person's delegation.
 
-A merchant over UCP or ACP (each `commerce.merchants[]`, AGENT_PROTOCOLS
-PI-20) is reached through the gateway's `ucp` or `acp` toolset
+A merchant over UCP or ACP (each `commerce.merchants[]`, PI-20) is reached through the gateway's `ucp` or `acp` toolset
 (``/mcp?only=ucp&ucp-merchant=<domain>``), in the person's name: the
 gateway shops at test merchants only and asks the person before every
 purchase (decided 2026-10-13).
 
-A site it reads pages of (each `signed_fetch.sites[]`, AGENT_PROTOCOLS
-EX-11, decided 2026-10-13) is reached through the gateway's `signed-fetch`
+A site it reads pages of (each `signed_fetch.sites[]`, EX-11, decided 2026-10-13) is reached through the gateway's `signed-fetch`
 toolset (``/mcp?only=signed-fetch&signed-fetch-site=<domain>``): GET only at
 that exact site, every request signed with the application's own Web Bot
 Auth key, its one tool a read under the Rules.
@@ -47,7 +45,7 @@ from urllib.parse import quote
 from agent_runtimes.specs.actions import PROTOCOL_TOOL_CLASSES
 
 #: What each tool of the gateway's `pap` toolset can do: agentspecs'
-#: ``protocol-tools/pap.yaml`` (AGENT_PROTOCOLS PR-54), as the gateway reads it.
+#: ``protocol-tools/pap.yaml`` (PR-54), as the gateway reads it.
 TOOL_CLASSES_BY_PROTOCOL: Dict[str, Dict[str, Tuple[str, ...]]] = {
     protocol: {
         name: tuple(classes)

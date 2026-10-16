@@ -8,7 +8,7 @@ spec, or an ``app.py`` driven in-process — builds its agent's capabilities
 here and nowhere else (`app_capabilities`): its rules decide every tool call,
 its checks look at what the rules let through, its record keeps what
 happened, and its tools — documents, saving, learning — are the same on a
-cloud runtime as in a terminal (LOOP R-25).
+cloud runtime as in a terminal (R-25).
 
 `AppAgent` is what a session's code calls (``session.agent``): one agent, one
 conversation, its history kept from turn to turn.
@@ -53,7 +53,7 @@ AgentFactory = Callable[[AppSpec], Agent]
 
 def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> None:
     """A session nobody opened — woken by a schedule — has nobody present: it
-    only reads, unless a rule says otherwise (LOOP R-16).
+    only reads, unless a rule says otherwise (R-16).
 
     Said on the rules of every agent of an application: the one made in
     process (`app_capabilities`) and the one a runtime makes for it.
@@ -64,8 +64,7 @@ def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> N
 
 
 def signed_as_recorded(rules: AppRulesCapability, recorder: AppRecorder) -> None:
-    """What it sends through a connection is signed with its byline (LOOP
-    I-10): the application, and the person it acts for in the current
+    """What it sends through a connection is signed with its byline (I-10): the application, and the person it acts for in the current
     session, by name — or *on its own* in a session nobody opened.
     """
     from agent_runtimes.loop.apps.record import current_session
@@ -99,7 +98,7 @@ def app_capabilities(
     The one builder for every agent of an application: the one made in
     process (the terminal, a framework's), and the one a runtime's create
     route makes for a Preview or a deployment — so a cloud runtime's agent
-    has exactly what the terminal's has, saving included (LOOP R-24, R-25).
+    has exactly what the terminal's has, saving included (R-24, R-25).
 
     Parameters
     ----------
@@ -136,7 +135,7 @@ def app_capabilities(
 
     rules = rules_for(app, agent_id=agent_id, platform=platform)
     rules.record = recorder.decided
-    # What the person answered when asked is an entry of its own (LOOP R-07).
+    # What the person answered when asked is an entry of its own (R-07).
     rules.answered = recorder.answered
     rules.app_uid = recorder.app_uid
     unattended_when_woken(rules, recorder)
@@ -144,7 +143,7 @@ def app_capabilities(
     if ask_rule is not None:
         rules.ask = ask_rule
     # Who is asked before it acts is told through the channels it names,
-    # as its principal on a deployment (LOOP R-37).
+    # as its principal on a deployment (R-37).
     notifier = AppNotifier(
         app=app,
         recorder=recorder,
@@ -153,7 +152,7 @@ def app_capabilities(
     )
     rules.notify = notifier.approval_asked
     # *Do it if I asked* decided from what the person approved in advance,
-    # read from IAM as it acts (LOOP U-25); an application the platform does
+    # read from IAM as it acts (U-25); an application the platform does
     # not know has none.
     if recorder.app_uid:
         from agent_runtimes.loop.apps.grants import StandingApprovals
@@ -176,7 +175,7 @@ def app_capabilities(
         organization=organization,
     )
     # The model budget and the spend limit of the policies in force, soft then
-    # hard, on every model request (SHIELD SH-32): the organization's from
+    # hard, on every model request (SH-32): the organization's from
     # IAM, the application's Rules, the session's; read at every request.
     from types import SimpleNamespace
 
@@ -204,7 +203,7 @@ def app_capabilities(
         said=lambda decision, context, tokens, cost: deployment_said(
             decision, context, tokens=tokens, cost=cost, spend_limit=spend_limit()
         ),
-        # A threshold crossed is a decision of the record (LOOP R-07), in the
+        # A threshold crossed is a decision of the record (R-07), in the
         # shape every other decision is written in.
         record=lambda said: recorder.decided(
             SimpleNamespace(
@@ -231,7 +230,7 @@ def app_capabilities(
     voicing = voice_capability(app)
     if voicing is not None:
         capabilities.append(voicing)
-    # What it knows: the tool that searches its documents (LOOP R-29). Run
+    # What it knows: the tool that searches its documents (R-29). Run
     # from a file, nothing was read for it on Datalayer, and the tool says so.
     if knows_documents(app):
         capabilities.append(
@@ -241,7 +240,7 @@ def app_capabilities(
                 deployment_uid=recorder.deployment_uid,
             )
         )
-    # Approve and save (LOOP R-24): the tool that saves a result as a page of
+    # Approve and save (R-24): the tool that saves a result as a page of
     # a Space it is granted to write, once a person approved it.
     from agent_runtimes.loop.apps.saving import AppSavingCapability, saves
 
@@ -260,7 +259,7 @@ def app_capabilities(
                 named=recorder.acts_for,
             )
         )
-    # What it learns (LOOP R-26): skills proposed for its owner to review,
+    # What it learns (R-26): skills proposed for its owner to review,
     # and those approved, used — an application saved on Datalayer only.
     if recorder.app_uid:
         from agent_runtimes.loop.apps.learning import AppLearningCapability
@@ -272,7 +271,7 @@ def app_capabilities(
                 deployment_uid=recorder.deployment_uid,
             )
         )
-    # Credentials are never shown to the model (LOOP R-19), last of all.
+    # Credentials are never shown to the model (R-19), last of all.
     from agent_runtimes.guardrails.credentials import credentials_withheld
 
     return credentials_withheld(capabilities)
@@ -297,7 +296,7 @@ def local_agent(
 
     Its model is the application's, else its agent's; its instructions are its
     agent's prompt, the contexts it works under as its organization reads them
-    (LOOP U-31), then the application's own, as on a runtime. What
+    (U-31), then the application's own, as on a runtime. What
     only a runtime brings — connections to MCP servers, skills, tools, a team —
     is refused rather than left out: an application that would run without
     what it names is not that application.
@@ -327,7 +326,7 @@ def local_agent(
 def browser_agent(
     app: AppSpec, organization: Optional[OrganizationFrames] = None
 ) -> Agent:
-    """The agent of an application as a visitor's browser plays it (LOOP A-13, A-14).
+    """The agent of an application as a visitor's browser plays it (A-13, A-14).
 
     A scene's member *in the browser* — Sales, the entry of Sales & Accounting —
     is played by the page with its model (the application's, else its
@@ -433,11 +432,11 @@ class AppAgent:
 
     toolsets: List[Any] = field(default_factory=list)
     """What every run reaches besides the agent's own tools: on a runtime,
-    the MCP servers and sandbox its agent was made with (LOOP R-04)."""
+    the MCP servers and sandbox its agent was made with (R-04)."""
 
     mode: ModeEffect = field(default_factory=ModeEffect)
     """What the modes the person chose tell every run, and the model it runs
-    on (LOOP P-19); set by the session."""
+    on (P-19); set by the session."""
 
     inference_provider: Optional[str] = None
     """Where a model the person's modes choose is called (P-19): on a
@@ -447,13 +446,13 @@ class AppAgent:
     app_instance: Optional[dict[str, Any]] = None
     """The application instance it serves on a runtime: a model its modes
     choose names its application and deployment on every call, as the
-    agent's own model does, so it is metered on them (STUDIO R-09)."""
+    agent's own model does, so it is metered on them (R-09)."""
 
     def _run_kwargs(
         self, context: dict[str, Any], model_settings: Optional[ModelSettings] = None
     ) -> dict[str, Any]:
         """What a run is given: its turn's context and modes, the session's
-        history, and the model's settings for this call (LOOP P-27).
+        history, and the model's settings for this call (P-27).
         """
         from agent_runtimes.models.models import resolve_model_for_inference_provider
 
@@ -493,7 +492,7 @@ class AppAgent:
         model_settings : ModelSettings, optional
             How the model answers this call — ``{"temperature": 0,
             "max_tokens": 500, "stop_sequences": ["```"]}`` — over the
-            agent's own (LOOP P-27).
+            agent's own (P-27).
         **context : Any
             What the agent is told for this turn, by name (``goal="…"``).
 
@@ -522,7 +521,7 @@ class AppAgent:
         prompt : str
             What the agent is asked.
         model_settings : ModelSettings, optional
-            How the model answers this call, over the agent's own (LOOP P-27).
+            How the model answers this call, over the agent's own (P-27).
         **context : Any
             What the agent is told for this turn, by name.
 

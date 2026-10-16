@@ -490,7 +490,7 @@ from agent_runtimes.types import (
             # `shared` by default: routing only makes sense if the member
             # receiving the work can see what was already said.
             context = spec.get("context") or {}
-            # The Frames of its shared context (LOOP A-04): written only when
+            # The Frames of its shared context (A-04): written only when
             # it names some, as the parser reads it.
             frames = context.get("frames") or []
             code += (

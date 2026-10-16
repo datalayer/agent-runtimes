@@ -137,7 +137,7 @@ Handler = Callable[..., Any]
 
 class NoPayload(BaseModel):
     """What an action that declares no payload is pressed with: nothing
-    (REACTOR_UI RU-5) — a press with anything is refused.
+    (RU-5) — a press with anything is refused.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -147,7 +147,7 @@ def action_payload(
     name: str, model: Type[BaseModel], payload: Mapping[str, Any]
 ) -> BaseModel:
     """A press's payload as the model its action declares, or the refusal in a
-    sentence (`ValueError`): each field and why (REACTOR_UI RU-5).
+    sentence (`ValueError`): each field and why (RU-5).
     """
     # Only what its model names: a field it does not take is refused, never dropped.
     taken = {
@@ -184,7 +184,7 @@ EVENTS = (
     "window",
     "stop",
     "resume",
-    # What a person said of an answer, once kept (LOOP P-24).
+    # What a person said of an answer, once kept (P-24).
     "feedback",
     # What the person said, heard by the same engines as a page's or `loop`'s,
     # and their speaking over the agent (P-22, VO-46).
@@ -192,7 +192,7 @@ EVENTS = (
     "interrupted",
     "end",
     "logout",
-    # A widget's page, run on its inputs (LOOP P-05).
+    # A widget's page, run on its inputs (P-05).
     "page",
 )
 
@@ -208,7 +208,7 @@ UsedPlugin = Tuple[PluginManifest, Any]
 
 @dataclass(frozen=True)
 class Contributed:
-    """One contribution its author made in Reactor's vocabulary (LOOP P-35):
+    """One contribution its author made in Reactor's vocabulary (P-35):
     to a point (``app.contribute``), or to one contribution of it
     (``app.extend``, ``target`` the contribution extended).
     """
@@ -257,7 +257,7 @@ class Application:
         (``["mcp", "pap"]``); a block of a protocol it writes lists it too.
     ui : Sequence[Mapping[str, str]]
         Its UI plugins, each with the renderer it is exposed through when it is
-        one (AGENTIC_UI R8): ``[{"plugin": "a2ui-surface", "renderer": "a2ui"}]``.
+        one (R8): ``[{"plugin": "a2ui-surface", "renderer": "a2ui"}]``.
         A plugin is one of agentspecs' ``ui``, a renderer one of its
         ``ui-renderers`` the plugin may be exposed through; a renderer's id
         alone (``["a2ui"]``) is refused.
@@ -297,8 +297,8 @@ class Application:
         ):
             if value:
                 document[key] = value
-        # What it speaks (AGENT_PROTOCOLS PS-02), ids of agentspecs' protocols,
-        # and its UI plugins with their renderers (AGENTIC_UI R8), as the
+        # What it speaks (PS-02), ids of agentspecs' protocols,
+        # and its UI plugins with their renderers (R8), as the
         # Appspec's lists; the spec refuses a renderer's id said alone.
         if protocols:
             document["protocols"] = list(protocols)
@@ -325,10 +325,10 @@ class Application:
         self._tests: Dict[str, Handler] = {}
         self._code_agent: Optional[CodeAgent] = None
         # What its code decides of the Personal Agent Protocol, and on which line
-        # (PAP_DATALAYER U-06): `(moment, builder, line)`, marked by `loop apps build`.
+        # (U-06): `(moment, builder, line)`, marked by `loop apps build`.
         self._pap_marks: List[Tuple[str, str, int]] = []
         self._page_signature: Optional[PageSignature] = None
-        # Reactor's vocabulary (LOOP P-35).
+        # Reactor's vocabulary (P-35).
         self._contributed: List[Contributed] = []
         self._points: List[str] = []
         self._used_plugins: List[UsedPlugin] = []
@@ -380,7 +380,7 @@ class Application:
 
         A code that says no version (an ``app.py`` written by *Eject*, whose
         ``SPEC`` holds none) is of whatever version it is deployed as: the
-        deployment's stored version is the authority (LOOP P-24, R-14).
+        deployment's stored version is the authority (P-24, R-14).
         """
         if not self._version_declared:
             return None
@@ -486,7 +486,7 @@ class Application:
             What is sent when they pick it.
         category : str
             The heading it is offered under: the starters of one category
-            together, those without one first (LOOP P-20).
+            together, those without one first (P-20).
         profile : str, optional
             The profile that offers it, in place of the application's
             starters (``app.profile`` first); the application's when unsaid.
@@ -526,7 +526,7 @@ class Application:
         instructions: str = "",
         model: Optional[str] = None,
     ) -> AppProfileSpec:
-        """Offer one of several assistants in the application (LOOP P-20).
+        """Offer one of several assistants in the application (P-20).
 
         The person picks a profile before the conversation starts — the first
         declared, unless they pick another — and keeps it to the end: its
@@ -577,7 +577,7 @@ class Application:
         return profile
 
     def translation(self, language: str, words: Mapping[str, Any]) -> Dict[str, Any]:
-        """Say what a person reads of the application in another language (LOOP P-26).
+        """Say what a person reads of the application in another language (P-26).
 
         ``words`` is keyed as the Appspec's ``interface.translations`` are:
         ``name``, ``description``, ``welcome``; ``starters`` by their label
@@ -624,7 +624,7 @@ class Application:
     ) -> Dict[str, Any]:
         """Let the user set something for their session: a field of its settings' form.
 
-        An application's settings are the JSON Schema of a form (LOOP C-16),
+        An application's settings are the JSON Schema of a form (C-16),
         an object of named fields, drawn with ``@datalayer/primer-rjsf`` beside
         the conversation and on a deployment's Ship card; what a run is given
         is checked against it.
@@ -640,7 +640,7 @@ class Application:
         required : bool
             Whether a run must be given it.
         widget : str, optional
-            The input it is drawn with, when not its field's own (LOOP P-20):
+            The input it is drawn with, when not its field's own (P-20):
             ``range`` (a slider), ``switch``, ``radio``, ``textarea``,
             ``checkboxes``, ``tags``, ``updown`` — its ``ui:widget`` in
             ``interface.settings_ui``. The nine inputs are a field and,
@@ -679,7 +679,7 @@ class Application:
     def command(
         self, name: str, description: str, *, prompt: str = "", run: str = ""
     ) -> Callable[[Handler], Handler]:
-        """Offer a slash command in the composer (LOOP P-19).
+        """Offer a slash command in the composer (P-19).
 
         Typing ``/`` lists the application's commands. With a ``prompt``,
         picking it sends that prompt, ``{input}`` the words typed after it::
@@ -693,7 +693,7 @@ class Application:
             @app.command("export", "Export the table")
             async def export(session: Session, words: str) -> None: ...
 
-        With ``run``, a Reactor command answers it (LOOP P-35) — the
+        With ``run``, a Reactor command answers it (P-35) — the
         application's own (`reactor_command`) or one of a plugin it uses
         (`uses`): run on its host's platform with the words typed after it,
         what it returns sent as the answer::
@@ -756,7 +756,7 @@ class Application:
         *,
         default: Optional[str] = None,
     ) -> AppModeSpec:
-        """Offer a mode switch in the composer (LOOP P-19).
+        """Offer a mode switch in the composer (P-19).
 
         The option the person picks goes with every run: its ``instructions``
         are told to the agent, and the ``model`` it names is run on; the code
@@ -866,7 +866,7 @@ class Application:
         self._declare("connections", connection)
         return connection
 
-    # --- the Personal Agent Protocol, both roles (PAP_DATALAYER S-04) ------------
+    # --- the Personal Agent Protocol, both roles (S-04) ------------
 
     @property
     def pap_marks(self) -> List[Tuple[str, str, int]]:
@@ -891,10 +891,9 @@ class Application:
         """Return the app's ``pap`` block, made on first use."""
         from agentspecs.apps import PAP_PROFILES
 
-        # A `pap` block names the profile it is written for (PAP_DATALAYER S-03).
+        # A `pap` block names the profile it is written for (S-03).
         pap = self._document.setdefault("pap", {"profile": PAP_PROFILES[-1]})
-        # Its `pap` block is read only with the protocol listed (AGENT_PROTOCOLS
-        # PS-02): a builder that writes the block says the application speaks it.
+        # Its `pap` block is read only with the protocol listed (PS-02): a builder that writes the block says the application speaks it.
         protocols = self._document.setdefault("protocols", [])
         if "pap" not in protocols:
             protocols.append("pap")
@@ -1037,7 +1036,7 @@ class Application:
         days: str,
     ) -> None:
         """Declare an operation that gives a standing permission once the person
-        confirms it (``pap.company.operations[].allows``, PAP_DATALAYER R-07, the
+        confirms it (``pap.company.operations[].allows``, R-07, the
         Ledgerly pattern): this application may then confirm, at one of its own
         companies and in the person's account there, what stays within the bounds.
 
@@ -1174,7 +1173,7 @@ class Application:
 
         return decorate
 
-    # --- PACT: a business's agent, asked for each person (AGENT_PROTOCOLS PI-01) ---
+    # --- PACT: a business's agent, asked for each person (PI-01) ---
 
     def business_connection(
         self,
@@ -1247,7 +1246,7 @@ class Application:
         brand: str = "",
     ) -> Any:
         """Answer people's personal agents as a PACT 1.0 business
-        (``pact.business``, AGENT_PROTOCOLS PR-13): published at the
+        (``pact.business``, PR-13): published at the
         deployment's own address when it ships, its card naming Datalayer as the
         Provider and ``brand`` (the application's owner when empty) as the
         Brand. Only the personal agents registered here are accepted, each
@@ -1295,7 +1294,7 @@ class Application:
         return business
 
     def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
-        """Place a component of the catalog on the application's surface (LOOP C-15).
+        """Place a component of the catalog on the application's surface (C-15).
 
         ``app.component("runs", "Table", title="Runs", columns=["model", "cost"])``
         writes the node the Canvas and the YAML write; ``app.ui.table(...)`` is
@@ -1331,7 +1330,7 @@ class Application:
         self._spec = None
         return dict(node)
 
-    # --- components its developer wrote (LOOP P-17) -----------------------------
+    # --- components its developer wrote (P-17) -----------------------------
 
     def _custom_components(self) -> List[AppCustomComponentSpec]:
         """The components it declares of its own, as the spec holds them."""
@@ -1354,7 +1353,7 @@ class Application:
         height: int = 240,
         example: Optional[Mapping[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Declare a component its developer wrote (LOOP P-17): of this application only.
+        """Declare a component its developer wrote (P-17): of this application only.
 
         ``app.custom_component("Gauge", description="A dial.", source=
         "https://elements.example.com/gauge.js", props={"type": "object",
@@ -1440,7 +1439,7 @@ class Application:
 
     @property
     def ui(self) -> SurfaceComponents:
-        """Every component of the catalog as a typed call (LOOP C-15).
+        """Every component of the catalog as a typed call (C-15).
 
         ``app.ui.table("runs", columns=["model", "cost"], page_size=10)`` is
         ``app.component("runs", "Table", ...)`` with its properties named and
@@ -1449,7 +1448,7 @@ class Application:
         """
         return SurfaceComponents(self.component)
 
-    # --- a widget's page (LOOP P-05) --------------------------------------------
+    # --- a widget's page (P-05) --------------------------------------------
 
     def _page(self) -> Dict[str, Any]:
         """The page, as the document holds it; made empty the first time."""
@@ -1463,7 +1462,7 @@ class Application:
     def input(
         self, name: str, field: Mapping[str, Any], *, required: bool = False
     ) -> Dict[str, Any]:
-        """An input of its page (LOOP P-05): a field of the form its page draws.
+        """An input of its page (P-05): a field of the form its page draws.
 
         Its page's function takes it by name; without this, each parameter of
         the function is an input, typed by its annotation, its default its
@@ -1514,7 +1513,7 @@ class Application:
     def output(
         self, name: str, component: str = "Text", *, title: str = "", **props: Any
     ) -> Dict[str, Any]:
-        """An output of its page (LOOP P-05): a value it shows, with a component.
+        """An output of its page (P-05): a value it shows, with a component.
 
         ``app.output("total", title="Total")`` shows words;
         ``app.output("lines", "Table", columns=["item", "amount"])`` rows;
@@ -1566,7 +1565,7 @@ class Application:
         return dict(output)
 
     def page(self, handler: Optional[Handler] = None, *, live: bool = True) -> Any:
-        """The page (LOOP P-05): ``handler([session], **inputs)`` returns its outputs.
+        """The page (P-05): ``handler([session], **inputs)`` returns its outputs.
 
         ``@app.page`` or ``@app.page(live=False)``. Each parameter of the
         function is an input of the page — typed by its annotation (``int``,
@@ -1646,8 +1645,7 @@ class Application:
         return self._on("message", handler)
 
     def file(self, handler: Handler) -> Handler:
-        """React to files the user sent without being asked for them (LOOP
-        P-21): ``handler(session, files, text)`` — the `UploadedFile` s sent
+        """React to files the user sent without being asked for them (P-21): ``handler(session, files, text)`` — the `UploadedFile` s sent
         with one message, and its words.
 
         Which kinds and sizes may be sent is the Appspec's
@@ -1662,8 +1660,7 @@ class Application:
         return self._on("settings", handler)
 
     def window(self, handler: Handler) -> Handler:
-        """React to a message from the page the application sits in (LOOP
-        P-25): ``handler(session, data)``, ``data`` what the page posted.
+        """React to a message from the page the application sits in (P-25): ``handler(session, data)``, ``data`` what the page posted.
 
         Embedded, the page posts with ``element.postWindowMessage(data)``;
         ``session.send_window_message(data)`` answers it.
@@ -1679,7 +1676,7 @@ class Application:
         return self._on("resume", handler)
 
     def feedback(self, handler: Handler) -> Handler:
-        """React to a person's word on an answer (LOOP P-24): ``handler(session,
+        """React to a person's word on an answer (P-24): ``handler(session,
         feedback)``, a `Feedback` — the thumb, the comment, the answer it is
         about and who said it — once it is kept in the record.
 
@@ -1730,7 +1727,7 @@ class Application:
         """React to a button: ``handler(session, payload)``, or
         ``handler(session)`` for an action that takes nothing.
 
-        Typed (REACTOR_UI RU-5): ``payload`` is the pydantic model of what it
+        Typed (RU-5): ``payload`` is the pydantic model of what it
         is pressed with, its JSON Schema written in the Appspec
         (``interface.actions``); a press is checked against it before the
         handler runs, which is given the model. Without one, the action takes
@@ -1837,7 +1834,7 @@ class Application:
                 prompt=prompt,
             )
             # Where it sits among the triggers: what the platform's scheduler
-            # keeps it under, and wakes it by (LOOP R-14).
+            # keeps it under, and wakes it by (R-14).
             self._schedule_positions[name] = len(self._document.get("triggers") or [])
             self._declare("triggers", trigger)
             self._schedules[name] = handler
@@ -1846,7 +1843,7 @@ class Application:
 
         return decorate
 
-    # --- an agent of its own code (LOOP P-23) -----------------------------------
+    # --- an agent of its own code (P-23) -----------------------------------
 
     def agent(
         self,
@@ -1928,7 +1925,7 @@ class Application:
         """The agent its code gives it (``app.agent``), if any."""
         return self._code_agent
 
-    # --- code where plain words are not enough (LOOP P-06) ---------------------
+    # --- code where plain words are not enough (P-06) ---------------------
 
     def tool(
         self,
@@ -2010,7 +2007,7 @@ class Application:
         return decorate
 
     def check(self, on: str, *, description: str = "") -> Callable[[Handler], Handler]:
-        """Check every answer, or every tool call, with code (LOOP P-06).
+        """Check every answer, or every tool call, with code (P-06).
 
         Run at its stage beside the built-in checks (R-06): on ``answer``,
         ``handler(text)`` before the answer is given — one it refuses is asked
@@ -2063,7 +2060,7 @@ class Application:
         return decorate
 
     def test(self, expect: str, *, ask: str) -> Callable[[Handler], Handler]:
-        """A test whose verdict is code: ``handler(conversation)`` (LOOP P-06).
+        """A test whose verdict is code: ``handler(conversation)`` (P-06).
 
         A case of the spec (``tests.cases``) — what it is asked, and what it
         should do in words — decided by the function, given the
@@ -2156,7 +2153,7 @@ class Application:
     def schedule_at(self, position: int) -> Optional[str]:
         """The schedule its code declared at a position among its triggers.
 
-        A deployment's schedule is woken by its position (LOOP R-14): the
+        A deployment's schedule is woken by its position (R-14): the
         scheduler knows a trigger by where it sits, and a trigger has no name.
 
         Parameters
@@ -2180,11 +2177,11 @@ class Application:
         """The commands its code answers, by name; a copy."""
         return dict(self._commands)
 
-    # --- Reactor, first class (LOOP P-35) ---------------------------------------
+    # --- Reactor, first class (P-35) ---------------------------------------
 
     @property
     def manifest(self) -> PluginManifest:
-        """Return its Reactor plugin's manifest: ``loop-app-<id>`` (LOOP F-15), the
+        """Return its Reactor plugin's manifest: ``loop-app-<id>`` (F-15), the
         plugins it uses as its dependencies, the points it declares as its own.
         """
         return replace(
@@ -2208,7 +2205,7 @@ class Application:
         Its Python half: the plugins it composes (`uses`, a manifest and an
         implementation each), then its own plugin (`AppPlugin`) — its spec, its
         code's reactions, and what it contributes. Its frontend half: its page
-        side, the files of its folder (LOOP P-29), as its installed package
+        side, the files of its folder (P-29), as its installed package
         says them; none when unsaid. What ``loop apps package`` advertises
         under Reactor's entry-point group, and what a host registers with
         ``PluginPlatform.register_extension_object``.
@@ -2509,7 +2506,7 @@ class Application:
         """Return its routes, each with its endpoint; a copy."""
         return [dict(route) for route in self._routes]
 
-    # --- where it is served (LOOP P-25) ----------------------------------------
+    # --- where it is served (P-25) ----------------------------------------
 
     def mount(
         self,
@@ -2521,7 +2518,7 @@ class Application:
         embed_origin: str = "https://datalayer.ai",
         config: Any = None,
     ) -> Any:
-        """Serve the application inside a FastAPI of one's own (LOOP P-25):
+        """Serve the application inside a FastAPI of one's own (P-25):
         ``app.mount(api, path="/assistant")``.
 
         Under ``path``: its page (the embed, its agent on this runtime), the
@@ -2539,7 +2536,7 @@ class Application:
             The application as Datalayer knows it, when an embed token names it.
         token : callable, optional
             ``token(request)``: the visit's embed token, issued by the
-            developer's server, given to the page (LOOP R-20).
+            developer's server, given to the page (R-20).
         embed_origin : str
             Where the embed's script is served.
         config : ServerConfig, optional
@@ -2599,11 +2596,11 @@ class AppHost:
         Where the record is kept; one that sends it to ai-agents when unsaid.
     agent_maker : callable, optional
         The agent a session's code calls, made for that session: on a
-        runtime, the agent the runtime made for the application (LOOP R-04);
+        runtime, the agent the runtime made for the application (R-04);
         built from ``agent`` when unsaid.
     platform : PluginPlatform, optional
         The Reactor platform the application is registered on, as its
-        extension (LOOP P-28, P-35); one of the host's own when unsaid, started
+        extension (P-28, P-35); one of the host's own when unsaid, started
         here and stopped with it. What a moment calls is what the platform
         holds for it, so a later contribution — another plugin's — answers in
         the application's place; its sessions read the points it declares, and
@@ -2638,7 +2635,7 @@ class AppHost:
         self._ended: set[str] = set()
 
     def _session(self, **kwargs: Any) -> Session:
-        # What its code adds to its agent (LOOP P-06): its tools, and its
+        # What its code adds to its agent (P-06): its tools, and its
         # checks at their stages — what the platform holds for each now.
         """Make a session with the app's tools and checks."""
         tools = {tool.name: self._tool(tool.name) for tool in self.spec.tools}
@@ -2648,7 +2645,7 @@ class AppHost:
         }
         toolset = own_toolset(self.spec, tools)
         capability = own_checks(self.spec, checks, record=self.recorder.checked)
-        # An agent of its code (LOOP P-23) is every session's, wherever it runs.
+        # An agent of its code (P-23) is every session's, wherever it runs.
         maker = self._reaction("agent") or self._agent_maker
         return Session(
             self.spec,
@@ -2729,12 +2726,12 @@ class AppHost:
             The user's settings, beside their defaults.
         id : str, optional
             The session's id, when whoever opens it names it — the session
-            API's uid (LOOP R-04); a new one when unsaid.
+            API's uid (R-04); a new one when unsaid.
         modes : mapping, optional
             The option of each mode the user is in, by mode id; where each
-            starts when unsaid (LOOP P-19).
+            starts when unsaid (P-19).
         profile : str, optional
-            The profile the conversation is with; the first when unsaid (LOOP P-20).
+            The profile the conversation is with; the first when unsaid (P-20).
 
         Returns
         -------
@@ -2751,7 +2748,7 @@ class AppHost:
 
     async def message(self, session: Session, text: str) -> None:
         """The user wrote: the command its code answers, when the message calls one
-        (``/<name> words``, LOOP P-19); else ``message``, or the agent answers.
+        (``/<name> words``, P-19); else ``message``, or the agent answers.
         """
         self._open(session)
         called = command_called(self.spec, text)
@@ -2771,7 +2768,7 @@ class AppHost:
         """The user pressed a button: run the action of that name.
 
         What it was pressed with is checked against the model its code
-        declares (REACTOR_UI RU-5) — refused, the handler is not called — and
+        declares (RU-5) — refused, the handler is not called — and
         given to the handler as that model; an action that takes nothing is
         given nothing.
         """
@@ -2793,7 +2790,7 @@ class AppHost:
     async def files(
         self, session: Session, files: Sequence[UploadedFile], text: str = ""
     ) -> None:
-        """The user sent files without being asked (LOOP P-21): run ``file``.
+        """The user sent files without being asked (P-21): run ``file``.
 
         Without one, the words go to ``message`` (or the agent), and the files
         wait for what the code asks.
@@ -2809,7 +2806,7 @@ class AppHost:
     async def page(
         self, session: Session, inputs: Optional[Mapping[str, Any]] = None
     ) -> Dict[str, Any]:
-        """An input of its page changed (LOOP P-05): run ``page`` on its inputs.
+        """An input of its page changed (P-05): run ``page`` on its inputs.
 
         The inputs are checked against the page's form, each with its default
         for the rest; what the function returns is shown as its outputs
@@ -2844,7 +2841,7 @@ class AppHost:
         return shown
 
     async def window(self, session: Session, data: Any) -> None:
-        """The page posted a message (LOOP P-25): run ``window``.
+        """The page posted a message (P-25): run ``window``.
 
         Raises
         ------
@@ -2940,7 +2937,7 @@ class AppHost:
             await self._react(session, handler)
 
     async def feedback(self, session: Session, feedback: Feedback) -> bool:
-        """A person's word on an answer, kept in the record (LOOP P-24): run
+        """A person's word on an answer, kept in the record (P-24): run
         ``feedback``. Whether the code has one.
         """
         self._open(session)
@@ -2952,7 +2949,7 @@ class AppHost:
 
     async def end(self, session: Session) -> None:
         """The conversation closed: what runs is cancelled, ``end`` runs, and
-        the session takes nothing more (LOOP P-14).
+        the session takes nothing more (P-14).
 
         Ending a session that has ended does nothing.
         """
@@ -2966,7 +2963,7 @@ class AppHost:
 
     async def logout(self, session: Session) -> None:
         """The person signed out: what runs is cancelled, ``logout`` runs, then
-        the session ends (LOOP P-14).
+        the session ends (P-14).
         """
         self._open(session)
         await self._cancel(session)
@@ -2998,7 +2995,7 @@ class AppHost:
         settings : mapping, optional
             Its settings, as they were.
         elements : sequence of Shown
-            What was open in a side panel or on a page (LOOP P-18): open
+            What was open in a side panel or on a page (P-18): open
             again, for its code to change or close.
 
         Returns
@@ -3006,7 +3003,7 @@ class AppHost:
         Session
             The session.
         """
-        # An ended session is reopened so: its thread, its state (LOOP P-14).
+        # An ended session is reopened so: its thread, its state (P-14).
         self._ended.discard(session_id)
         session = self._session(
             id=session_id, user=user, state=dict(state), settings=settings
@@ -3047,7 +3044,7 @@ class AppHost:
 
     async def scheduled(self, session: Session, name: str) -> None:
         """Run a schedule's handler in a session already open — one the
-        platform's scheduler woke on a runtime (LOOP R-14) — as a command's
+        platform's scheduler woke on a runtime (R-14) — as a command's
         code runs: what the platform holds for it, as one turn of the session.
 
         Parameters
@@ -3098,7 +3095,7 @@ def load_application(path: Union[str, Path]) -> Application:
 
 def load_application_source(source: Union[str, bytes], file: str) -> Application:
     """The application a Python source defines: an ``app.py`` as a
-    deployment carries it to its runtime (LOOP R-14, P-10), not a file here.
+    deployment carries it to its runtime (R-14, P-10), not a file here.
 
     Parameters
     ----------

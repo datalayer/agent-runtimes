@@ -4,7 +4,7 @@
  */
 
 /**
- * The parts the two balloon displays are drawn with (LOOP T-23): the tool
+ * The parts the two balloon displays are drawn with (T-23): the tool
  * line ("Using **list_invoices**…"), what a screen reader hears of it, the
  * `current` balloon's *Now*, and the `history` balloon's header
  * ("Conversation · 6").

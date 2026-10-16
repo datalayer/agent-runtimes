@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Verifying an agent's signed request (AGENT_PROTOCOLS PR-23).
+"""Verifying an agent's signed request (PR-23).
 
 The draft's §4 on RFC 9421 §3.2: parse ``Signature``, ``Signature-Input``
 and ``Signature-Agent``; keep the signatures tagged ``web-bot-auth``; find
@@ -126,7 +126,7 @@ def resolving_fetch(
     resolver: Callable[[str], Awaitable[list[str]]] | None = None,
     transport: Any = None,
 ) -> Fetch:
-    """A directory fetch on the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13).
+    """A directory fetch on the PAP SDK's single egress path (PI-13).
 
     :func:`agent_runtimes.protocols.egress.metadata_fetch`, answering the
     directory's media type and bounded to a directory's size.

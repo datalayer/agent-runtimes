@@ -281,7 +281,7 @@ class TestEveryUpdateKind:
         said = next(c for c in calls if c["id"] == "c1")
         assert said["kind"] == "edit" and said["awaiting"] == "approval"
         assert said["arguments"] == {"path": "hello.txt"}
-        # The permission decided by decision 5 without asking anybody.
+        # The permission decided by the platform's default policy without asking anybody.
         assert approvals.asked == []
         # The Shield's own row for fs/write_text_file, decided and done.
         shield = next(c for c in calls if c["id"].startswith("shield_"))
@@ -318,7 +318,7 @@ class TestEveryUpdateKind:
     async def test_a_write_outside_the_workspace_is_refused_in_a_sentence(
         self, workspace: Path, tmp_path: Path
     ) -> None:
-        """SHIELD SH-37's drill: a write outside the workspace through the Shield's ``fs/write_text_file``."""
+        """SH-37's drill: a write outside the workspace through the Shield's ``fs/write_text_file``."""
         elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
         elsewhere.mkdir()
         agent = an_agent(workspace)

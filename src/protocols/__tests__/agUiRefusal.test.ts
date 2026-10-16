@@ -4,7 +4,7 @@
  */
 
 /**
- * Why an AG-UI run was not answered, in the page's own words (LOOP F-15):
+ * Why an AG-UI run was not answered, in the page's own words (F-15):
  * the page says the agent is not on this runtime instead of
  * `AG-UI request failed: 404`, and says the platform's own sentence
  * whenever the refusal carried one.

@@ -24,7 +24,7 @@ An operation an adapter cannot perform returns ``Unsupported`` rather than
 answering as though it had. And it is decided before anything is dispatched:
 ``AdapterCapabilities`` refuses to exist unless it accounts for every member
 of ``WorkerOperation``, so there is no operation whose absence is discovered
-at the worst moment. Decision 5 requires the reduction to be
+at the worst moment. The design requires the reduction to be
 reported on the execution rather than hidden, which is what
 ``capability_report`` is for: the adapters yield it as the first observation
 of a dispatch, so "why did this execution never checkpoint?" is answered
@@ -350,7 +350,7 @@ class AdapterCapabilities:
     Every ``WorkerOperation`` is either in ``supported`` or has an entry in
     ``unsupported``; a capability report that leaves one out does not
     validate. The two sets are what ``agents.discover`` matches against and
-    what the reduction of decision 5 is written from.
+    what the reported reduction is written from.
 
     ``acknowledgements`` is the second half of that reduction and the one
     that is easiest to fake: it lists the acknowledgement milestones this
@@ -810,7 +810,7 @@ def capability_report(capabilities: AdapterCapabilities) -> Observation:
     """
     The reduction, as an observation, so it lands on the execution.
 
-    Decision 5 says the reduced guarantees of a plain worker are reported
+    The design says the reduced guarantees of a plain worker are reported
     rather than hidden. An adapter yields this first, before it dispatches
     anything, and the answer to "why is there no acceptance acknowledgement
     on this execution?" is then in the execution's own event stream rather

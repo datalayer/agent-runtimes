@@ -485,7 +485,7 @@ class _DummyHarnessAgent:
 async def test_create_agent_on_a_harness_launches_the_acp_agent(
     monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
 ) -> None:
-    """SHIELD SH-10: the route builds the ACP adapter, not a pydantic-ai agent."""
+    """SH-10: the route builds the ACP adapter, not a pydantic-ai agent."""
     import agent_runtimes.adapters.acp_agent as acp_agent
 
     made: list[_DummyHarnessAgent] = []
@@ -539,7 +539,7 @@ async def test_create_agent_on_a_harness_refuses_vercel_ai_and_says_what_refused
             ),
             _DummyRequest(),
         )
-    assert refused.value.status_code == 422 and "SHIELD SH-16" in refused.value.detail
+    assert refused.value.status_code == 422 and "SH-16" in refused.value.detail
 
     def refusing(agent_id: str, harness_id: str, **kwargs: object) -> object:
         raise acp_agent.HarnessRefused(

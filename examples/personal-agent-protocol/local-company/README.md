@@ -1,6 +1,6 @@
 # PAP Local Company
 
-`PapCompanyCapability` (AGENT_PROTOCOLS PR-04) publishes an application whose
+`PapCompanyCapability` (PR-04) publishes an application whose
 Appspec enables `pap.company` as a PAP company, through the SDK's reference
 company (`personal_agent_protocol.company`):
 

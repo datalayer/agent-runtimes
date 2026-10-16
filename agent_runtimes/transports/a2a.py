@@ -421,7 +421,7 @@ def unified_diff(path: str, old_text: str | None, new_text: str) -> str:
 
 def provenance_of(body: str, *sources: str) -> dict[str, Any]:
     """
-    ``artifactProvenance`` of the orchestration extension (ORCHESTRATOR 7.2): the body's hash, when, from what.
+    ``artifactProvenance`` of the orchestration extension: the body's hash, when, from what.
 
     Parameters
     ----------
@@ -590,7 +590,7 @@ class A2AApprovals:
     The harness's *ask me first* reaches an A2A caller as a
     status ``input-required`` whose message says the sentence and the options
     in words, and carries the orchestration extension's ``approvalRequest
-    {toolCall, options, expiresAt}`` (ORCHESTRATOR 7.2) in its metadata. The
+    {toolCall, options, expiresAt}`` in its metadata. The
     caller answers with a message on the same task: ``datalayer.approval
     {optionId}`` when it knows the extension, else one whole word (*yes*,
     *no*, *always*, or an option's name — a2acode's convention, the fallback
@@ -821,7 +821,7 @@ class A2AWorker(_FastA2AWorker):
             # nothing about why. Log it, and put the reason on the failed
             # status; closing here keeps the base's own failed status from
             # following it.
-            # Said, and logged, with any credential withheld (LOOP R-19).
+            # Said, and logged, with any credential withheld (R-19).
             logger.error(
                 "A2A task %s for agent %s failed: %s",
                 task_id,
@@ -869,11 +869,11 @@ class A2AWorker(_FastA2AWorker):
 
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         # A visitor's run, as the application's gate marked it: it only reads,
-        # whatever its rules say (LOOP R-30).
+        # whatever its rules say (R-30).
         visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
         # A turn asked by a personal agent through the company service: its
         # declared operations are proposed, or performed once confirmed
-        # (PAP_DATALAYER B-04).
+        # (B-04).
         from ..loop.apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
 
         pap_turn = enter_pap_turn(pap_turn_of(params["message"].get("metadata")))
@@ -980,7 +980,7 @@ class A2AWorker(_FastA2AWorker):
 
         # Asked of its company or its PACT business: which personal agent asks,
         # for whom and with what the person granted, as ai-agents marked it
-        # (AGENT_PROTOCOLS PR-13, PAP_DATALAYER B-04).
+        # (PR-13, B-04).
         asked_for = asked_for_said(meta)
         if asked_for:
             prompt = f"{asked_for}\n\n{prompt}"
@@ -1015,7 +1015,7 @@ class A2AWorker(_FastA2AWorker):
                 },
                 **({"budget": budget} if budget else {}),
                 **({"user_token": credential} if credential else {}),
-                # Said apart, so a harness lends its MCP with it (SHIELD SH-33).
+                # Said apart, so a harness lends its MCP with it (SH-33).
                 **({DELEGATED_CREDENTIAL: credential} if credential else {}),
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
@@ -1031,12 +1031,12 @@ class A2AWorker(_FastA2AWorker):
         canceled = False
         # A harness's plan, one artifact replaced as it progresses, and its
         # diffs, one artifact per file; reasoning is never an
-        # artifact (decision 8): a `thought` event is not published at all.
+        # artifact: a `thought` event is not published at all.
         plan_id = f"plan-{task_id}"
         plan: Artifact | None = None
         diffs: dict[str, Artifact] = {}
         # A button of an answer's surface that would do more than read, pressed
-        # by a visitor, is refused in a sentence: no model runs (STUDIO H-03).
+        # by a visitor, is refused in a sentence: no model runs (H-03).
         refused = refused_action(incoming)
         # `say_aloud`'s lines, by call: said once the call has answered (VO-36).
         say_lines: dict[str, str] = {}

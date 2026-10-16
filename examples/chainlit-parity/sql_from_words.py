@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Text to SQL — the example of Chainlit's documentation (``examples/openai-sql``),
-rebuilt with LOOP's API (LOOP P-27).
+rebuilt with LOOP's API (P-27).
 
 Chainlit offers a starter (*>50 minutes watched*), fills a prompt template
 with what the person asked, calls the model with its own settings
@@ -31,7 +31,7 @@ app = Application(
         "You write SQL queries, and nothing else: the query alone, with no "
         "fence and no words around it."
     ),
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 app.starter(

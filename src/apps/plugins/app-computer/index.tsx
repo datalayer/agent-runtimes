@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-app-computer` — an application's computer, as a
- * plugin (LOOP R-23, R-01b): the sandbox its agent runs on, shown live in
+ * plugin (R-23, R-01b): the sandbox its agent runs on, shown live in
  * the workspace's sidebar (`LoopSlots.sidebar`) — its parts on or off, what
  * ran on it, its files, *Take over* and *Hand back*.
  *

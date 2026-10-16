@@ -4,7 +4,7 @@
  */
 
 /**
- * What a person sends (LOOP P-21), as rules: the kinds of file an
+ * What a person sends (P-21), as rules: the kinds of file an
  * application takes in its composer without asking (`interface.uploads`),
  * each with its largest size, and how many at once — and why a file is
  * refused, in the sentence the runtime says when it was sent all the same.

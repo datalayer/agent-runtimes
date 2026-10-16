@@ -11,7 +11,7 @@ Points it declares:
   default ``memory``. On Datalayer, IAM custody (PI-11).
 - ``pact.receiptStore`` — keeps the receipts a Brand signs; default
   ``memory``. On Datalayer, the application's record (R-07).
-- ``pact.extension.delegated`` — the *Delegated* profile (§5), PACT's one
+- ``pact.extension.delegated`` — the *Delegated* profile, PACT's one
   optional part: default ``device-code``, RFC 8628 as §5.3 says. Without a
   contribution here, a personal agent speaks the *Identity* profile alone
   (:func:`profile_of`).

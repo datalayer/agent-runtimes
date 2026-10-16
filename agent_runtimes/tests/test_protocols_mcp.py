@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""MCP conformance in Python (AGENT_PROTOCOLS PR-51, EX-09).
+"""MCP conformance in Python (PR-51, EX-09).
 
 ``agent_runtimes/protocols/mcp/fixtures/session.json`` holds one server's
 answers as they arrive on the wire and what a client reads from each; the

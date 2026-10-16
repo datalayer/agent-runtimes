@@ -4,11 +4,11 @@
  */
 
 /**
- * The frame a component its developer wrote is drawn in (LOOP P-17), and
+ * The frame a component its developer wrote is drawn in (P-17), and
  * what passes between it and the page.
  *
  * A hosted application lives on the origin where people are signed in, and
- * no script an application supplies reaches that page (LOOP D-22). A custom
+ * no script an application supplies reaches that page (D-22). A custom
  * component's module is such a script, so it never runs in the page: it runs
  * in an `<iframe sandbox="allow-scripts">` — no `allow-same-origin`, so the
  * frame has an origin of its own that is no one's: no cookie, no storage, no

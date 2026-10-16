@@ -5,7 +5,7 @@
 
 /**
  * What a server says to a conversation's page, as `reactor.ui` ops
- * (REACTOR_UI RU-2, RU-3), and what the page presses back (RU-W).
+ * (RU-2, RU-3), and what the page presses back (RU-W).
  *
  * The ops arrive on the conversation's ui socket (Reactor's `UiSocket`,
  * one per session, beside the run stream that carries the conversation's

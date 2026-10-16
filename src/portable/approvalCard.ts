@@ -4,7 +4,7 @@
  */
 
 /**
- * An approval as every card says it (MOBILE M-016): the shared controller
+ * An approval as every card says it (M-016): the shared controller
  * and prop contract under the web's *Waiting for you* and Datalayer Mobile's
  * Inbox and detail. A message to send is shown whole — its recipients,
  * subject and body — and anything else is every argument the tool gave,

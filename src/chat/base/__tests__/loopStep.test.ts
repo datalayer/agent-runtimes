@@ -4,8 +4,8 @@
  */
 
 /**
- * A step of an application's code (LOOP P-16): its `reactor.ui` display
- * (REACTOR_UI RU-3), as the chat draws it.
+ * A step of an application's code (P-16): its `reactor.ui` display
+ * (RU-3), as the chat draws it.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -62,7 +62,7 @@ describe('steps', () => {
     });
   });
 
-  it('draws what a running step wrote so far, in place (LOOP P-31)', () => {
+  it('draws what a running step wrote so far, in place (P-31)', () => {
     let items: DisplayItem[] = [];
     for (const output of [null, 'SELECT', 'SELECT 1']) {
       items = withLoopStep(

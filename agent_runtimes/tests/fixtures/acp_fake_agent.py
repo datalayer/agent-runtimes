@@ -23,14 +23,14 @@ spawns a sub-agent — a process of its own, as a harness's Task sub-agent is �
 handed the MCP server its session was lent by that name, as a harness hands
 its sub-agents its own servers; the sub-agent calls each tool in turn over
 MCP and the agent says each answer (``subagent: <tool>: allowed|refused …``).
-Nothing else of the prompt is read (SHIELD SH-33).
+Nothing else of the prompt is read (SH-33).
 
 ``tool: {"server": <name>, "tool": <tool>, "arguments": {...}}`` is the agent
 calling a lent tool itself, as a harness does: a tool call named
 ``<server>_<tool>`` (kind ``other``), permission asked, and only when allowed
 the call made over MCP, its answer the call's content;
 ``tool: {"kind": "fetch", "url": <url>}`` says a fetch of that URL. Nothing
-else of the prompt is read (SHIELD SH-70, SH-72).
+else of the prompt is read (SH-70, SH-72).
 """
 
 from __future__ import annotations

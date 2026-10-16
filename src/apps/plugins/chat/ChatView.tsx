@@ -215,7 +215,7 @@ const FULLSCREEN_HINT_PERIOD_MS = 1400;
 
 /**
  * An application's face in the empty state: the page's size of the three a
- * face is drawn at (LOOP T-19, `--loop-face-large`, 72px).
+ * face is drawn at (T-19, `--loop-face-large`, 72px).
  */
 const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
 
@@ -390,7 +390,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     turnFeedRef.current?.setPresence(presenceNow);
   }, [onPresence, presenceNow]);
   // What it last said, for a host that says it outside the conversation —
-  // the embed's floating chrome (LOOP R-01): its balloon and its blink.
+  // the embed's floating chrome (R-01): its balloon and its blink.
   // Through a ref: the handler below is made once.
   const onSayingRef = useRef(config?.presence?.onSaying);
   onSayingRef.current = config?.presence?.onSaying;
@@ -554,7 +554,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const inPageRef = useRef(false);
   /**
    * The page's sandbox, when the agent turned in the page runs its code
-   * there (`execute_code`, STUDIO E-11): what a file given on the page is
+   * there (`execute_code`, E-11): what a file given on the page is
    * put in. Read by `sendNow`, set below.
    */
   const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
@@ -564,7 +564,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * stopped deployment, a visitor's turns all taken. Set below.
    */
   const hostClosedRef = useRef<string | undefined>(undefined);
-  /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
+  /** What goes with every run (an application's modes, P-19), read when it is sent. */
   // How the words in the composer were heard, when they were said (VO-27).
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   const runProps = useContributions(LoopRunProps);
@@ -577,12 +577,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * begins its turn, and a page reading the turn sees it asked and answered.
    *
    * What the page did besides the message goes with it as AG-UI's
-   * `forwardedProps` (`loop`, LOOP R-04): the application's session takes a
+   * `forwardedProps` (`loop`, R-04): the application's session takes a
    * file there. An agent turned in this page has no session: one that runs
    * its code in the page's sandbox has the files put there, and the message
-   * names them (STUDIO E-11); to any other no file is handed — said, rather
+   * names them (E-11); to any other no file is handed — said, rather
    * than dropped. What the workspace's plugins send with every run
-   * (`LoopRunProps`: the modes the person is in, LOOP P-19) goes under it —
+   * (`LoopRunProps`: the modes the person is in, P-19) goes under it —
    * and an agent turned in this page applies the modes itself (`modeEffect`,
    * `BrowserAgentAdapter`).
    */
@@ -599,7 +599,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         runPropsRef.current.map(entry => entry.value),
         spoken ? { ...(given ?? {}), voice: spoken } : given,
       );
-      // The page's files, or those attached in the composer (LOOP P-21).
+      // The page's files, or those attached in the composer (P-21).
       const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
       if (inPageRef.current && loop?.files && loop.files.length > 0) {
         const sandbox = pageSandboxRef.current;
@@ -716,7 +716,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
        */
       setTransient(null);
       /*
-       * Words that go elsewhere than the agent (`sendInstead`, PAP_DATALAYER
+       * Words that go elsewhere than the agent (`sendInstead`,
        * P-08): a Direct Conversation with a company, the person's own words
        * sent as theirs. Neither a command nor a turn, and never the model's;
        * refused, the words stay where they were typed and the reason is said.
@@ -1038,7 +1038,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * An agent of the catalogue or a Cog's, as a runtime resolves it: an
    * application on a Cog looked up among the agentspecs alone was turned in
-   * the page with no instructions at all (LOOP H-01).
+   * the page with no instructions at all (H-01).
    */
   const spec =
     resolveAgentspec(member?.specId ?? agentId) ??
@@ -1093,7 +1093,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     const offered = <T extends { text: string }>(items: T[]): T[] =>
       hidden.size === 0 ? items : items.filter(item => !hidden.has(item.text));
     // What a plugin offers live (an application's profile's starters,
-    // LOOP P-20) wins over what was contributed when the reactor was built.
+    // P-20) wins over what was contributed when the reactor was built.
     if (liveOpeners) {
       return offered(liveOpeners);
     }
@@ -1291,7 +1291,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   }, [notebookTools, commandTools]);
   /*
    * The page's own tools for an agent on a server: a host example's, and
-   * the tools of the `AgentTools` bundles its extras name (REACTOR_UI RU-7:
+   * the tools of the `AgentTools` bundles its extras name (RU-7:
    * the host page's functions, `host_<name>`, each running its command on
    * this reactor). An in-page agent has every bundle already (above).
    */
@@ -1340,7 +1340,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   /*
    * The commands the composer lists while `/` is typed: those contributed for
-   * it, an application's (LOOP P-19). Picking one writes `/<name> `, and the
+   * it, an application's (P-19). Picking one writes `/<name> `, and the
    * workspace runs it when the message is sent.
    */
   const commands = useContributions(LoopCommand);
@@ -1424,7 +1424,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * What its host said of whether there is anything to talk to
    * (`ChatAvailabilityProvider`): an application whose model is not offered
-   * or not served (LOOP R-27) is switched off with the reason, by the
+   * or not served (R-27) is switched off with the reason, by the
    * Studio's Preview and the hosted page, rather than left unanswered.
    */
   const ambient = useChatAvailability();
@@ -1432,7 +1432,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     ? ambient.disableReason || 'This conversation is closed here.'
     : undefined;
   /*
-   * No agent to talk to: a Datalayer runtime not assigned (STUDIO P-24,
+   * No agent to talk to: a Datalayer runtime not assigned (P-24,
    * round 9). Said in a sentence — why, when its launch was refused — and
    * nothing is sent; the header does not say *Ready*.
    */
@@ -1602,7 +1602,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   }, [suggestion]);
 
   /*
-   * An application's session checks who is calling (LOOP R-32, R-04): its
+   * An application's session checks who is calling (R-32, R-04): its
    * chat says so with the person's token. The embed hands its own.
    */
   /*
@@ -1610,7 +1610,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * whether the application's plugin is up: while its runtime does not hold
    * it, its page plugin stands down (F-15), and its chat is then never sent
    * to the runtime's bare agent route — on the visitors' runtime one that is
-   * not published (STUDIO D-15). It speaks to the application's session API,
+   * not published (D-15). It speaks to the application's session API,
    * whose refusal says why.
    */
   const hostCreatePayload =
@@ -1622,21 +1622,21 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const deploymentUid = deploymentOfPayload(hostCreatePayload);
   const memberToken = useIAMStore(state => state.token);
   /*
-   * Without an account (LOOP R-30) the application runs on the visitors'
+   * Without an account (R-30) the application runs on the visitors'
    * runtime, which answers a visitor's token for it and nobody signed in.
    */
   const visitors =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
   const visitor = useVisitorToken(visitors);
   // An embedded application's own token, for a visitor the platform does
-  // not know (LOOP R-20): it runs a session of its deployment, and no more.
+  // not know (R-20): it runs a session of its deployment, and no more.
   const embedToken =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   /*
    * Its voice asked of the speech service as this chat speaks to its runtime
    * (VO-37, VO-19): the host's token, else this one — a visitor's,
-   * an embed's or the person's; an embed's names its deployment (decision 16).
+   * an embed's or the person's; an embed's names its deployment.
    */
   const askedVoice = useMemo(
     () => voiceAskedAs(config?.voice, iamToken || undefined),
@@ -1644,7 +1644,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   );
   /*
    * A deployment's runtime, and the visitors', answer only the application's
-   * own routes (OwnRoutesOnly, PAP_DATALAYER's release gates): its chat calls
+   * own routes (OwnRoutesOnly, the release gates): its chat calls
    * nothing else — Stop is its session's, no monitoring stream, no sandbox
    * socket, no runtime-wide model switch. A Preview runs on the Maker's.
    */
@@ -1655,7 +1655,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     );
   }
   /*
-   * A thread opened from the person's history (LOOP P-24): its conversation
+   * A thread opened from the person's history (P-24): its conversation
    * read from the runtime once it answers — held there, else resumed from
    * its record — then drawn and gone on with on the same thread. One that
    * cannot be opened is said, and a new one starts.
@@ -1768,7 +1768,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // composer's pulse draw an in-page delegation like any other.
             onSubagentEvent: event =>
               agentRuntimeStore.getState().appendSubagentEvent(event),
-            // An application's modes (LOOP P-19): the options sent with a
+            // An application's modes (P-19): the options sent with a
             // run tell it their instructions, on the model one names, as
             // its session API does on a runtime.
             modeEffect: blueprintTurn?.modeEffect,
@@ -1777,14 +1777,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           ? {
               type: 'ag-ui',
               // An application's agent is spoken to through its session API
-              // (LOOP R-04): each thread a session, recorded under its uid,
+              // (R-04): each thread a session, recorded under its uid,
               // run in the name the application runs in, and taking what the
               // page did besides the message — the same AG-UI events back.
               endpoint: runsApp
                 ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
                 : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
               ...(runsApp && iamToken ? { authToken: iamToken } : {}),
-              // Its session's ui channel (REACTOR_UI RU-W): what its answers
+              // Its session's ui channel (RU-W): what its answers
               // show, its steps and its elements, beside the run's text.
               ...(runsApp
                 ? {
@@ -2117,7 +2117,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     /*
       An application's conversation keeps none of the session's controls
       under its composer — the agents, the model, the tools and their servers,
-      the skills (LOOP T-17, T-18): a person using an application is not
+      the skills (T-17, T-18): a person using an application is not
       choosing them, and its builder chose them in its spec. An agent's chat
       keeps them.
     */
@@ -2344,7 +2344,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               themeVariant={config?.themeVariant}
               themeOverrides={config?.themeOverrides}
               colorMode={config?.colorMode}
-              // The session an embed goes on with after a reload (LOOP D-13),
+              // The session an embed goes on with after a reload (D-13),
               // or one opened from the person's history (P-24).
               key={chatThread?.id}
               thread={chatThread}
@@ -2359,7 +2359,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               disableReason={disabledReason}
               protocol={protocol}
               /*
-                The page's own tools — a host page's functions (LOOP D-10), an
+                The page's own tools — a host page's functions (D-10), an
                 example's client tool — run by this chat when the agent is on a
                 server: sent with each run and executed here when it calls
                 one. An in-page agent is handed them in its protocol instead
@@ -2420,7 +2420,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               }
               emptyState={{
                 // An application's own face, at the page's size of the three
-                // (LOOP T-08, T-19): the thing a person's eye lands on first.
+                // (T-08, T-19): the thing a person's eye lands on first.
                 icon: presence?.face ? (
                   <span
                     aria-hidden

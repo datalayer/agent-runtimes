@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company, through the SDK's reference company (AGENT_PROTOCOLS PR-04).
+"""A Loop application as a PAP company, through the SDK's reference company (PR-04).
 
 ``PapCompanyCapability`` assembles ``personal_agent_protocol.company`` for an
 application whose Appspec enables ``pap.company``. Its Reactor points:
@@ -405,7 +405,7 @@ class PapCompanyCapability:
         giving = [o.action for o in company.operations if o.allows is not None]
         if giving:
             # Recorded as the person's approval in advance, which only Datalayer
-            # keeps (PAP_DATALAYER R-07): a company in this process has nowhere to.
+            # keeps (R-07): a company in this process has nowhere to.
             raise ValueError(
                 f"A local company gives no standing permission: {giving[0]} is given "
                 "only by the application shipped on Datalayer"

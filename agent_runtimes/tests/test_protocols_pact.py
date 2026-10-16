@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT 1.0 at a local Provider: both profiles (AGENT_PROTOCOLS PR-11 to PR-13, PR-53)."""
+"""PACT 1.0 at a local Provider: both profiles (PR-11 to PR-13, PR-53)."""
 
 from __future__ import annotations
 

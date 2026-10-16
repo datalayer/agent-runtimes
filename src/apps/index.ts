@@ -345,7 +345,7 @@ export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
 // An application in another product's page: the React component, the
-// `<datalayer-app>` element, and the snippet a host pastes (LOOP D-07 to D-09).
+// `<datalayer-app>` element, and the snippet a host pastes (D-07 to D-09).
 export {
   AppEmbed,
   AppFloating,
@@ -361,7 +361,7 @@ export {
   embedSessionKey,
   visitOfToken,
 } from './embed/embedSession';
-// The host page and an embedded application, talking (LOOP D-10).
+// The host page and an embedded application, talking (D-10).
 export {
   HOST_CONTEXT_COMMAND,
   HOST_CONTEXT_TOOL,

@@ -274,13 +274,13 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'LoopAppComputerExample',
     () => import('./LoopAppComputerExample'),
-    'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (LOOP R-23).',
+    'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (R-23).',
     ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
   ),
   makeEntry(
     'ScenesExample',
     () => import('./ScenesExample'),
-    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (LOOP A-15).',
+    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (A-15).',
     ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
   ),
   makeEntry(

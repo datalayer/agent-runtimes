@@ -5,7 +5,7 @@
 
 /**
  * What the gateway's `pap_sign_in` answers, read and checked: kept in
- * `portable/signIn`, which Datalayer Mobile reads too (MOBILE M-037).
+ * `portable/signIn`, which Datalayer Mobile reads too (M-037).
  *
  * @module apps/plugins/pap-sign-in/signIn
  */

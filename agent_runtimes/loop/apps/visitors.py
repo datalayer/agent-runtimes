@@ -50,7 +50,7 @@ models answer anybody but the pod itself (:func:`path_answered`): every other
 route of a runtime — making agents, configuring it, its MCP servers — is the
 pod's own, as its ingress publishes nothing else either. One gate
 (:class:`OwnRoutesOnly`) holds a runtime that serves a deployment to the same
-routes (PAP_DATALAYER's release gates, decided 14 October 2026).
+routes (the release gates, decided 14 October 2026).
 """
 
 from __future__ import annotations
@@ -348,7 +348,7 @@ _READS = ("/api/v1/configure", "/api/v1/configure/models")
 
 #: Under the application routes, and not the application's own: what makes the
 #: runtime's agent another application (the companion's, at launch) and the
-#: Studio's tools, a person's (LOOP P-10, P-13).
+#: Studio's tools, a person's (P-10, P-13).
 _NOT_THE_APPLICATIONS = (
     "/api/v1/apps/configure",
     "/api/v1/apps/build",
@@ -389,7 +389,7 @@ VISITORS_OWN = "This route of the visitors' runtime is its own."
 class OwnRoutesOnly:
     """The one gate: a runtime held to the application's own routes (:func:`path_answered`).
 
-    The visitors' runtime always (LOOP R-30); any other runtime once one of its
+    The visitors' runtime always (R-30); any other runtime once one of its
     agents serves a deployment (`a_deployment_is_served`) — a deployment's kept
     runtime, or the one a hosted page launched for it, beside the agent it was
     allocated with. Every other route — configuring it, its inference token,

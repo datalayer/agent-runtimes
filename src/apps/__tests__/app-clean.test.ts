@@ -4,7 +4,7 @@
  */
 
 /**
- * The rules of clean (LOOP T-17), held where an application's own chrome is
+ * The rules of clean (T-17), held where an application's own chrome is
  * drawn: its reactions (the thumbs of V-18, T-06), the rail (T-07) and the
  * split — line icons in the ink, no verdict's colour on a control, no
  * filled button beside the composer's, no gradient.

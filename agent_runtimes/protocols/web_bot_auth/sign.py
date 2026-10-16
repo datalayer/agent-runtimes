@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Signing an agent's outbound requests (AGENT_PROTOCOLS PR-21).
+"""Signing an agent's outbound requests (PR-21).
 
 Three headers on every request, as ``draft-ietf-webbotauth-httpsig-protocol-00``
 says them: ``Signature-Agent`` (a Dictionary: where the key directory is),

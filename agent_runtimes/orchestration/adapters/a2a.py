@@ -225,7 +225,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
         "took the message, not that a worker took responsibility (6.3).",
         _NO_CHECKPOINTED,
         "No lease: an attempt that loses its stream is re-attached by "
-        "polling tasks/get, which is decision 5's 'no lease beyond polling'.",
+        "polling tasks/get, which is the 'no lease beyond polling' rule.",
         "The objective and its context references travel as one text part, "
         "not as a structured DataPart (7.1); the structured form arrives "
         "with the extension package (O3-02).",
@@ -469,7 +469,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # the task itself may not have broken at all. Check over a
                 # fresh, short `tasks/get` before declaring the worker
                 # unreachable — the same recovery `subscribe` already does
-                # after a restart (decision 5's "no lease beyond polling"),
+                # after a restart (the "no lease beyond polling" rule),
                 # reused here because a dropped long-lived connection is
                 # that same situation, just discovered inside the same
                 # attempt instead of a later one. Found live, 2026-09-14: a
@@ -515,7 +515,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         """
         Re-attach to a task already dispatched, by polling ``tasks/get``.
 
-        This is the whole of decision 5's "no lease beyond polling", and the
+        This is the whole of the "no lease beyond polling" rule, and the
         recovery path of conformance scenario 4. The first poll reports
         where the task stands as progress rather than as a state change: an
         execution that was running before the disconnect is still running,
@@ -577,7 +577,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         *own* streaming connection drops mid-task. Declaring the worker
         unreachable on a broken stream without checking first turns a
         connection hiccup into a fabricated task failure — this is
-        decision 5's "no lease beyond polling" either way.
+        the "no lease beyond polling" rule either way.
 
         The first poll reports where the task stands as progress rather
         than as a state change: a task that was running before the stream
@@ -1283,7 +1283,7 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     if not seen.acknowledged:
         # The first status of any kind is the endpoint saying it has the
         # message. That is 'received', and on standard A2A it is the only
-        # acknowledgement there is (decision 5).
+        # acknowledgement there is.
         seen.acknowledged = True
         observations.append(
             Observation.acknowledged(
@@ -1423,7 +1423,7 @@ def _task_artifacts(
         else:
             summary = text if len(text) <= 200 else text[:200] + "…"
         # What the worker claims of it (the extension's `artifactProvenance`,
-        # SHIELD SH-15): the hash is computed here from the body received, and
+        # SH-15): the hash is computed here from the body received, and
         # a claim that differs is said rather than taken.
         claimed = _claimed_provenance(raw)
         if claimed and claimed.get("contentHash") not in (None, digest):

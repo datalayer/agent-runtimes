@@ -64,7 +64,7 @@ class A2AAgentCard:
     face: dict[str, str] | None = None
     #: Extensions it advertises besides the runtime's own (orchestration,
     #: face): each ``{uri, description?, required?, params?}``, as A2A's
-    #: ``capabilities.extensions`` writes it (AGENT_PROTOCOLS PR-02). A URI
+    #: ``capabilities.extensions`` writes it (PR-02). A URI
     #: the runtime already publishes is refused.
     extensions: list[dict[str, Any]] | None = None
 
@@ -359,7 +359,7 @@ def register_a2a_agent(
 
         heard_app = HearA2AAudio(a2a_app) if hears_audio else a2a_app
         served = gate(heard_app) if gate is not None else heard_app
-        # An agent that signs its requests (Web Bot Auth, AGENT_PROTOCOLS
+        # An agent that signs its requests (Web Bot Auth,
         # PR-23) is verified before anything else: a signature that does not
         # hold is refused; a verified one is in `scope["state"]["web_bot_auth"]`;
         # an unsigned request passes as `unverified`, for the gate to judge.

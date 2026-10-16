@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with LOOP's API (LOOP P-27).
+"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with LOOP's API (P-27).
 
 Chainlit asks for a PDF or a text file when the chat starts (``AskFileMessage``),
 says it is processing it and updates that message when it is done, splits it
@@ -40,7 +40,7 @@ app = Application(
         "Answer only from the passages you are given, and name the ones you used as "
         "source_<n>. When they do not hold the answer, say so; never guess."
     ),
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

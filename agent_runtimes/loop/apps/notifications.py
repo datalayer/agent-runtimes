@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's notifications, sent through the channels it names (LOOP R-37).
+"""An application's notifications, sent through the channels it names (R-37).
 
 An Appspec's ``notifications`` lists where an approval reaches a person —
 ``email``, ``slack``, ``teams`` — and those are the channels the runtime
@@ -10,7 +10,7 @@ sends through for its sessions, not the ones its agent's own spec names
 
 **The event.** An application notifies when it asks a person before it acts:
 a rule that says *Ask me first* (or *Do it if I asked*, on a call nothing
-the person approved in advance covers, LOOP U-25), or a Gate that asks — each time the question goes through the
+the person approved in advance covers, U-25), or a Gate that asks — each time the question goes through the
 tool-approval path, where nobody may be watching. A question asked in the
 terminal the person is typing in is not notified: they are already there.
 
@@ -21,13 +21,13 @@ Slack to the incoming webhook kept among the account's secrets as
 deployment, the owner's secrets.
 
 **As whom.** A deployment's runtime asks with its application's principal's
-token (LOOP I-03), so what is sent reaches the application's owner, in the
+token (I-03), so what is sent reaches the application's owner, in the
 owner's channels. A Preview — a builder trying a draft — asks with the
 person's own token, so it reaches that person, in their own channels, and
 nobody else: that is how a builder sees the channels work before shipping.
 
 **Never silent.** A channel Datalayer does not offer (Teams today) is refused
-here with the sentence the setup states say (LOOP R-27) and not sent; one
+here with the sentence the setup states say (R-27) and not sent; one
 ai-agents could not send through — no address, no ``SLACK_WEBHOOK_URL``, a
 webhook that refused — comes back with its sentence. Every channel's outcome
 is written to the application's record, as a ``notification`` entry, whatever
@@ -196,7 +196,7 @@ class AppNotifier:
     async def approval_asked(self, tool_name: str, sentence: str) -> None:
         """Tell the channels that it asks a person before it acts."""
         app = self.app.name.strip() or "An application"
-        # Its face first, where only text goes (LOOP I-08): a person tells two
+        # Its face first, where only text goes (I-08): a person tells two
         # applications apart by it before reading their names.
         face = f"{self.app.emoji} " if self.app.emoji else ""
         await self.notify(

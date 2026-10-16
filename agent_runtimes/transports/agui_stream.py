@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Any ``BaseAgent`` served over AG-UI, from its ``stream`` (SHIELD SH-10, SH-19).
+"""Any ``BaseAgent`` served over AG-UI, from its ``stream`` (SH-10, SH-19).
 
 The AG-UI transport runs a pydantic-ai agent through pydantic-ai's own
 adapter; an agent that is not one — a harness driven over ACP — has only

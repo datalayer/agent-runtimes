@@ -4,7 +4,7 @@
  */
 
 /**
- * The TypeScript buyer at the Python seller (AGENT_PROTOCOLS EX-05): Example
+ * The TypeScript buyer at the Python seller (EX-05): Example
  * Outfitters served by `examples/protocols/agentic_commerce/seller_server.py`
  * at `ACP_SELLER`, over real HTTP — discovery, a session created, the buyer's
  * email given, the exact purchase proposed, approved, completed once with a

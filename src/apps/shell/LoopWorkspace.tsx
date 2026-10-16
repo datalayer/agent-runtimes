@@ -164,7 +164,7 @@ export type LoopWorkspaceProps = {
    */
   headerContainer?: HTMLElement | null;
   /**
-   * The sidebar as a rail (LOOP T-07): a narrow column of line icons, one per
+   * The sidebar as a rail (T-07): a narrow column of line icons, one per
    * panel, and the chosen panel beside it — rather than every panel stacked
    * in one column. False by default; an application's shell asks for it. In
    * a `panel` layout the sidebar stays a stack under the view.
@@ -334,7 +334,7 @@ function WorkspaceBody({
         argv: command.argv,
       });
       // What a command sends goes to the agent as if typed: an
-      // application's command sends its prompt (LOOP P-19).
+      // application's command sends its prompt (P-19).
       if (result?.prompt) {
         onSend?.(result.prompt, currentWorkspace.current!);
         prompts.submit(result.prompt);

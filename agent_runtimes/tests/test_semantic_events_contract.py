@@ -101,7 +101,7 @@ def test_every_custom_event_the_session_code_emits_has_a_case():
 
 def test_no_case_is_a_custom_event_the_runtime_never_sends():
     # `reactor.ui` is in a case because a run stream must never carry it
-    # (it comes over the ui socket, REACTOR_UI RU-W): a host ignores it.
+    # (it comes over the ui socket, RU-W): a host ignores it.
     cased = {event["name"] for event in _cased() if event["type"] == "CUSTOM"}
     assert cased - _emitted_custom_names() == {"reactor.ui"}
 

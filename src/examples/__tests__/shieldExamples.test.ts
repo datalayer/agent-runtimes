@@ -4,7 +4,7 @@
  */
 
 /**
- * The Shield's examples (SHIELD SH-23): registered under *Shield*; the policy
+ * The Shield's examples (SH-23): registered under *Shield*; the policy
  * page draws what `@datalayer/agent-shield` says, in `describeDecision`'s
  * words; the harness page connects to what `examples/shield/
  * harness_on_the_runtime.py --serve` serves, and offers what the fake agent

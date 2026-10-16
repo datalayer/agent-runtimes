@@ -4,7 +4,7 @@
  */
 
 /**
- * A streamed turn measured without its words (MOBILE M-036).
+ * A streamed turn measured without its words (M-036).
  *
  * @module portable/__tests__/runMeasures
  */

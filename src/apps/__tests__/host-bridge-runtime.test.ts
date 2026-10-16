@@ -4,7 +4,7 @@
  */
 
 /**
- * The host's functions, end to end through the bridge (STUDIO D-10): a
+ * The host's functions, end to end through the bridge (D-10): a
  * runtime stood in for asks the page to call `host_<name>`, as a runtime
  * asks the chat to run a frontend tool; the page dispatches the call as
  * `ChatBase` does — the tool found by its name among the frontend tools, its
@@ -35,7 +35,7 @@ import {
 } from '../embed/hostBridge';
 
 /**
- * The host's tools as the chat has them (REACTOR_UI RU-7): the host plugin
+ * The host's tools as the chat has them (RU-7): the host plugin
  * mounted on a reactor, its agent tools bundle turned into tools that run
  * its commands, as for any plugin's bundle.
  */

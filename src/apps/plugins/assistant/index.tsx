@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace (LOOP T-24): the character a
+ * The floating assistant in the LOOP workspace (T-24): the character a
  * page draws over its workspace, chosen from what the enabled plugins
  * contribute to `loop.assistant.character` — the application's own
  * (`interface.assistant`) when its Appspec names one, else the person's
@@ -18,7 +18,7 @@
  * the runtime to ask (`decisions`), its balloon offers *Ask a decision*: a
  * typed decision asked of Jev through the runtime, answered there.
  *
- * Its balloon shows the conversation as `balloon` says (LOOP T-23; the
+ * Its balloon shows the conversation as `balloon` says (T-23; the
  * Appspec's `interface.balloon`): a peek of the newest words (`history`, the
  * default), or the one thing being said or done now (`current`). Either way
  * what the agent is doing while a tool runs — the turn's `activity` — is said

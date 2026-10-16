@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-app-rules` — an application's rules and the
- * approvals it waits on, as a plugin (LOOP R-01b, U-19): a card in the
+ * approvals it waits on, as a plugin (R-01b, U-19): a card in the
  * workspace's sidebar (`LoopSlots.sidebar`), beside its page.
  *
  * @module apps/plugins/app-rules

@@ -7,7 +7,7 @@
  * A person's agent runtimes as the runtimes service lists them
  * (`GET /api/runtimes/v1/runtimes`), and an agent's summary and status as
  * every client says them — the web's `AgentSummary` badge and Datalayer
- * Mobile's Agents (MOBILE M-014b). A raw runtime carries no application
+ * Mobile's Agents (M-014b). A raw runtime carries no application
  * capabilities: no Rules, Protocols or Activity are read from it.
  *
  * @module portable/runtimes

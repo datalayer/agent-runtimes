@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-app-activity` — what an application did, as a
- * plugin (LOOP R-01b, R-15): its activity feed in the workspace's sidebar
+ * plugin (R-01b, R-15): its activity feed in the workspace's sidebar
  * (`LoopSlots.sidebar`), read from its record.
  *
  * @module apps/plugins/app-activity

@@ -80,7 +80,7 @@ export interface ChatPresence {
   /** What it says before anyone writes. */
   welcome?: string;
   /**
-   * Its deployment is paused (LOOP R-17): it says so beside its face, and
+   * Its deployment is paused (R-17): it says so beside its face, and
    * its assistant dozes (T-08, T-22), whatever its last turn left behind.
    */
   paused?: boolean;
@@ -94,7 +94,7 @@ export interface ChatPresence {
   /**
    * Told what it last said, and whether its newest words are an answer, as
    * they change — for a host that says them outside the conversation, as the
-   * embed's floating chrome does in its balloon and its blink (LOOP R-01).
+   * embed's floating chrome does in its balloon and its blink (R-01).
    * Read once, when the workspace is built: pass a stable function, such as
    * a state setter.
    */
@@ -112,12 +112,12 @@ export type ChatSaid = {
 export type ChatPluginConfig = {
   /**
    * The theme the conversation wears, by name: the person's unless said. An
-   * application says `loop` (LOOP T-06, T-12) — the conversation then takes
+   * application says `loop` (T-06, T-12) — the conversation then takes
    * the theme's bubbles, pills and colours whatever the page around it wears.
    */
   themeVariant?: string;
   /**
-   * Laid over that theme, by mode: an application's accent (LOOP T-05), so
+   * Laid over that theme, by mode: an application's accent (T-05), so
    * that its bubbles and its one button wear its colour and not the theme's.
    */
   themeOverrides?: ThemeOverrides;
@@ -129,13 +129,13 @@ export type ChatPluginConfig = {
    */
   colorMode?: 'light' | 'dark';
   /**
-   * Who is answering, as the person meets them (LOOP T-08): a name, a face
+   * Who is answering, as the person meets them (T-08): a name, a face
    * and a welcome, in place of the agent's id and a generic icon. An
    * application sets its own.
    */
   presence?: ChatPresence;
   /**
-   * The conversation to go on with (LOOP D-13): an embedded application's
+   * The conversation to go on with (D-13): an embedded application's
    * session, reattached after its page reloaded, and what it holds.
    */
   thread?: ResumedThread;
@@ -157,7 +157,7 @@ export type ChatPluginConfig = {
    * Configured on the plugin rather than passed to the workspace: the prompt
    * belongs to the chat, and a shell that has no chat plugin has no prompt to
    * put a placeholder in. A host that wants different words says so where the
-   * words are. Empty, the chat's own, in the person's language (LOOP P-26).
+   * words are. Empty, the chat's own, in the person's language (P-26).
    */
   placeholder: string;
   /**

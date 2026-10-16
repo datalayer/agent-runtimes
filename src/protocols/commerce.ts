@@ -22,7 +22,7 @@ type Json = Record<string, any>;
 /**
  * Each operation's action class (F-10) for Rules (R-05), as agentspecs
  * classes a protocol's tools (`protocol-tools/<protocol>.yaml`,
- * AGENT_PROTOCOLS PR-54), named as the TypeScript client names them
+ * PR-54), named as the TypeScript client names them
  * (`complete_checkout` → `completeCheckout`). A commerce operation does one
  * thing: one with several classes, or none, throws rather than guess.
  */

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An agent's key directory (AGENT_PROTOCOLS PR-22).
+"""An agent's key directory (PR-22).
 
 Served at ``/.well-known/http-message-signatures-directory`` as a JWK Set
 (``application/http-message-signatures-directory+json``), each key's ``kid``

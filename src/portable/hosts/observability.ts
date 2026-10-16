@@ -129,7 +129,7 @@ export class Logger {
   }
 
   /**
-   * An identity audit event (SLACK S-103): who (pseudonymous), which installation
+   * An identity audit event (S-103): who (pseudonymous), which installation
    * (its hash), what happened, why. Never a code, a token or a principal's
    * name.
    */

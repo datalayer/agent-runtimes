@@ -7,7 +7,7 @@ Written here over ``http-sfv`` and ``cryptography`` because the maintained
 Python library (``http-message-signatures`` 2.0.1) ignores a component's
 ``;key=`` parameter, and Web Bot Auth covers ``"signature-agent";key="…"``
 on every request: that library signs the wrong base and fails the draft's
-vectors (AGENT_PROTOCOLS PR-20). Only what the draft and its vectors use is
+vectors (PR-20). Only what the draft and its vectors use is
 supported — the derived components ``@method``, ``@authority``, ``@scheme``,
 ``@target-uri``, ``@path``, ``@query`` and ``@request-target``, header fields
 with ``;key=`` (a Dictionary member) and ``;req`` (the request's, on a

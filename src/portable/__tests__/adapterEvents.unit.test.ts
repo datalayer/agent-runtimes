@@ -4,8 +4,7 @@
  */
 
 /**
- * What every protocol adapter says, as the conversation reads it (MOBILE
- * M-030): the normalisation of adapter events and of a conversation read
+ * What every protocol adapter says, as the conversation reads it (M-030): the normalisation of adapter events and of a conversation read
  * again, and the reducer's own said-whole events — strict, and bounded.
  *
  * @module portable/__tests__/adapterEvents

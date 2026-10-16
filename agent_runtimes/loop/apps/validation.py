@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A run of an application's tests (LOOP V-08), from the terminal.
+"""A run of an application's tests (V-08), from the terminal.
 
 Each test conversation (``tests.cases``: *when it is asked this, it should
 do that*) is asked of the application in this process, a session of its
@@ -26,8 +26,7 @@ order, the first that fails naming the check:
 - **it does what it should**: decided by the function its code names
   (``code``, `own.verdict_of`), else by a judge (`safety.JudgeCall`, as the
   Studio's run judges it) — with no judge, the case is not run and says so.
-  The judge is handed the conversation's record beside its answer (STUDIO
-  V-08): the tools it called, what its rules decided, what its checks said
+  The judge is handed the conversation's record beside its answer (V-08): the tools it called, what its rules decided, what its checks said
   and the people it asked (`what_it_did`), so a test such as *it never sends
   without asking* is graded on what it did, not on what it said.
 
@@ -233,7 +232,7 @@ def sources_read(spec: AppSpec, tools: Sequence[str]) -> Optional[str]:
 
 class RecordUnavailable(Exception):
     """The record of a test's conversation could not be read: the test is not
-    graded on its answer alone (STUDIO V-08).
+    graded on its answer alone (V-08).
     """
 
 
@@ -329,7 +328,7 @@ def what_it_did(entries: Sequence[Dict[str, Any]]) -> List[str]:
             kind == "output" and payload and not RUNTIME_OUTPUT_KEYS & set(payload)
         ):
             # What its code kept (`session.record`): an insight, a result —
-            # what a test that is a conversation is judged on (STUDIO E-01).
+            # what a test that is a conversation is judged on (E-01).
             kept = json.dumps(payload, ensure_ascii=False, default=str)
             lines.append(_line(f"Its code kept {summary or kind}: {kept}"))
     if len(lines) > MAX_RECORD_LINES:

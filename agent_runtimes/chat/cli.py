@@ -830,7 +830,7 @@ def _pick_agentspec_interactive() -> str:
 
 
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
-    """Here or on Datalayer, asked before the agentspec (LOOP L-01).
+    """Here or on Datalayer, asked before the agentspec (L-01).
 
     Datalayer is offered only to somebody signed in; nobody else is asked,
     and is told in one line how to be offered it.
@@ -1230,7 +1230,7 @@ def main_callback(
         "--harness",
         help=(
             "Run a harness of the catalogue (claude-code, codex, …) on this machine "
-            "over ACP, in the directory you run from, with decision 5's policy and "
+            "over ACP, in the directory you run from, with the platform's default policy and "
             "the record in the terminal; `loop harnesses` lists them."
         ),
     ),
@@ -1356,7 +1356,7 @@ def main_callback(
         )
         preview_tux.show_welcome()
 
-    # Where it runs (LOOP L-01), asked first: what the flags say, else what
+    # Where it runs (L-01), asked first: what the flags say, else what
     # the person answers — on this machine, or on Datalayer. Here the
     # agentspec is picked from the list this machine's keys allow; on
     # Datalayer the environment is picked instead, and no agentspec list is

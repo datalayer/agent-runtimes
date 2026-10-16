@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent an application runs, turned in the page (LOOP H-01, E-11): its
+ * The agent an application runs, turned in the page (H-01, E-11): its
  * agent's spec — a Cog's through the Cogs catalogue — and the application's
  * own instructions on top, as a runtime builds it; an agent that resolves to
  * nothing is refused rather than run bare.
@@ -32,7 +32,7 @@ const blueprintOf = (plugin: ReturnType<typeof defineAppPlugin>) =>
 
 /**
  * What follows the application's instructions when its agent computes in
- * the page's sandbox (STUDIO E-11): where its code runs and its documents are.
+ * the page's sandbox (E-11): where its code runs and its documents are.
  */
 const sandboxNote = (app: (typeof APP_CATALOGUE)[string]) =>
   runsCodeInSandbox(app) ? `\n\n${browserSandboxNote(app)}` : '';

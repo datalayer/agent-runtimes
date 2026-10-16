@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A cloud runtime's agent of an application has exactly the terminal's
-capabilities (LOOP R-25).
+capabilities (R-25).
 
 The create route builds an application's capabilities through the one
 builder, `app_capabilities` — it used to build its own, without the saving

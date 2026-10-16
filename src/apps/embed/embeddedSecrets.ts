@@ -4,7 +4,7 @@
  */
 
 /**
- * What no file the embed ships may hold (PAP_DATALAYER B-02): the PAP SDK's
+ * What no file the embed ships may hold (B-02): the PAP SDK's
  * emitted-bundle test (`src/__tests__/canaries.test.mjs`, `EMBEDDED_SECRETS`)
  * extended to the embed, a browser artifact anybody's page loads. Its build
  * fails on a file holding one (`vite.embed.config.ts`), naming the kind and

@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant on the page (LOOP T-21 to T-23, T-27): the
+ * The floating assistant on the page (T-21 to T-23, T-27): the
  * character acts its state, its balloon says the agent's words while the
  * conversation is closed, a click opens it, a drag does not, and it can be
  * sent away; it steps aside for a dialog, another chat's composer and the
@@ -61,7 +61,7 @@ const balloon = (container: HTMLElement) =>
   container.querySelector('[data-speech-balloon]');
 
 describe('the floating assistant', () => {
-  it('says what it covers in a bottom corner, for a line written there (REVIEWS Q-08)', async () => {
+  it('says what it covers in a bottom corner, for a line written there (Q-08)', async () => {
     const root = document.documentElement;
     await render({ place: { right: '24px', bottom: '24px' }, size: 88 });
     expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('112px');

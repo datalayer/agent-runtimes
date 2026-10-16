@@ -4,11 +4,11 @@
  */
 
 /**
- * Window messages (LOOP P-25): what an application's code tells the page it
+ * Window messages (P-25): what an application's code tells the page it
  * sits in, outside the conversation — ``session.send_window_message(data)``.
  *
  * The session says it with a `reactor.ui` `window` op named `message`, its
- * `args` `{data}` (REACTOR_UI RU-3), on the conversation's ui socket (RU-W). The chat does not draw it: it hands
+ * `args` `{data}` (RU-3), on the conversation's ui socket (RU-W). The chat does not draw it: it hands
  * it to whoever listens here — the embed's host bridge, which raises it on
  * the element as its `window-message` event. A window op of another name is
  * not one this page acts on: refused, it throws.
@@ -53,7 +53,7 @@ export function onLoopWindowMessage(
 /**
  * Why the turn a window message posted by the page ran failed — its
  * `RUN_ERROR`'s sentence — or `null`. What its code tells the page back comes
- * on the conversation's ui socket (REACTOR_UI RU-W), never on this stream: a
+ * on the conversation's ui socket (RU-W), never on this stream: a
  * `reactor.ui` event here is refused.
  */
 export function windowTurnErrorOf(stream: string): string | null {

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Desk & Sales: a scene and its stage written in Python (LOOP P-30).
+"""Desk & Sales: a scene and its stage written in Python (P-30).
 
     loop scenes rehearse scene.py                 # played here, beat by beat
     loop scenes build scene.py --out scene.yaml   # the scene spec, loop.scene/v1

@@ -4,7 +4,7 @@
  */
 
 /**
- * The side panel and the pages an application's code opens (LOOP P-18):
+ * The side panel and the pages an application's code opens (P-18):
  * drawn from what the chat keeps, each with its own Close, nothing drawn
  * while nothing is open, a button sent to the application's action.
  */
@@ -28,7 +28,7 @@ import type { Display } from '@datalayer/reactor/ui';
 const CATALOG =
   'https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json';
 
-/** What the session API sends: the element's display (REACTOR_UI RU-2). */
+/** What the session API sends: the element's display (RU-2). */
 function shows(id: string, title: string, text: string): Display {
   const surfaceId = id;
   return {

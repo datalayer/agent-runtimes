@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's line of status (LOOP T-08): idle, thinking, working,
+ * An application's line of status (T-08): idle, thinking, working,
  * waiting for you or paused, from the turn, the newest tool call and its
  * deployment.
  */

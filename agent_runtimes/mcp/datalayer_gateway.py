@@ -112,7 +112,7 @@ def toolsets_for_the_run(
         The run's own token.
     in_users_name : frozenset[str]
         The gateway's servers an application reaches in the name of each
-        person who uses it (LOOP I-04): reached with `users_token`, never
+        person who uses it (I-04): reached with `users_token`, never
         with the run's.
     users_token : str
         The token of the person talking to it, naming the application;
@@ -121,7 +121,7 @@ def toolsets_for_the_run(
         run, which goes on without them (never reached with an empty Bearer).
     companies : tuple[tuple[str, str], ...]
         The companies its application works with as a personal agent
-        (PAP_DATALAYER ADR-1), as `(server id, in whose name)`: each the
+        (ADR-1), as `(server id, in whose name)`: each the
         gateway's `pap` toolset for that company, its tools named with the
         server id, reached in the person's name unless it says `owner`.
 
@@ -177,7 +177,7 @@ def toolsets_for_the_run(
         if not bearer:
             # A company reached in each person's name, and nobody signed in to Datalayer is
             # talking to it — a company's turn for a personal agent, run as the deployment's
-            # principal (PAP_DATALAYER B-04): left out, the turn answered without it.
+            # principal (B-04): left out, the turn answered without it.
             _left_out(sid)
             continue
         swapped.append(

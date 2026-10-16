@@ -4,7 +4,7 @@
  */
 
 /**
- * The conversation's component contract (MOBILE M-030, M-032): presence read
+ * The conversation's component contract (M-030, M-032): presence read
  * from a conversation, and what each row and the message box say, over the
  * fixture every renderer is tested against.
  *

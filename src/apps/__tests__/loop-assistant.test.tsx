@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace (LOOP T-24): the character
+ * The floating assistant in the LOOP workspace (T-24): the character
  * drawn is the one the enabled plugins contribute under the id the
  * application names, else the person's, else the paper clip; an id nothing
  * contributes is said, not replaced; and it acts out the chat's turn.

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """An agent of the application's code: a plain function, a LangGraph graph, a
-LlamaIndex agent (LOOP P-23).
+LlamaIndex agent (P-23).
 
 Each framework is run twice where it is installed: through a small fake that
 says the framework's events as the framework says them, and through the
@@ -124,7 +124,7 @@ def test_a_plain_function_answers_streamed_and_is_a_step() -> None:
 def test_a_framework_turns_end_is_kept_without_its_answer_when_outputs_are_not() -> (
     None
 ):
-    """PAP_DATALAYER R-01, decided 2026-10-13: every run's end is kept, so
+    """R-01, decided 2026-10-13: every run's end is kept, so
     Activity never reads the session *In progress* once it answered."""
     app = Application(id="echo", kind="chat", agent=AGENT)
 
@@ -145,7 +145,7 @@ def test_a_framework_turns_end_is_kept_without_its_answer_when_outputs_are_not()
 
 
 def test_a_framework_agent_is_refused_a_models_settings_in_a_sentence() -> None:
-    """``model_settings`` is the application's own agent's (LOOP P-27): a
+    """``model_settings`` is the application's own agent's (P-27): a
     framework's model is set in its own code, and saying it here is refused."""
     app = Application(id="echo", kind="chat", agent=AGENT)
 

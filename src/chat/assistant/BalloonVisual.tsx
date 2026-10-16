@@ -4,7 +4,7 @@
  */
 
 /**
- * A large visual a balloon carries (LOOP T-23): a notebook today, a chart or
+ * A large visual a balloon carries (T-23): a notebook today, a chart or
  * a table later. The balloon shows it compact — its `attachment`, such as
  * the read-only preview of a notebook — with an *Expand* button; expanded,
  * the visual is drawn large: into the element the host names

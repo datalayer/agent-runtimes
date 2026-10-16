@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps build` and `loop apps run app.py` (LOOP P-07, P-08, P-09)."""
+"""`loop apps build` and `loop apps run app.py` (P-07, P-08, P-09)."""
 
 import asyncio
 import os
@@ -101,7 +101,7 @@ def test_build_writes_the_spec_the_file_amounts_to_with_its_code_marked(
         ]
     )
     assert "# loop:code message: reply (app.py:21)" in built.text.splitlines()
-    # Its action typed, the model's schema in the spec (REACTOR_UI RU-5).
+    # Its action typed, the model's schema in the spec (RU-5).
     [action] = document["interface"]["actions"]
     assert action["name"] == "save"
     assert action["payload"]["required"] == ["a"]
@@ -333,7 +333,7 @@ class _Attached:
 def test_an_application_refused_on_a_runtime_attached_to_is_told_to_launch_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, refusal: str, told: bool
 ) -> None:
-    """Its secrets are given at launch only (STUDIO R-19)."""
+    """Its secrets are given at launch only (R-19)."""
     import typer
 
     launched: List[Any] = []
@@ -490,7 +490,7 @@ def test_the_renderer_routes_to_the_code_and_reloads_with_the_state(
 
 
 def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -> None:
-    """LOOP P-14, P-15: a terminal does not write over what it printed."""
+    """P-14, P-15: a terminal does not write over what it printed."""
     from agent_runtimes.loop.apps import Session
 
     app = Application(id="interview", agent="example-simple")
@@ -534,13 +534,13 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
     assert "● Searcher: Found 3." in said
     assert "↻ edited: Searched: 3 results." in said
     assert "✗ a message was removed." in said
-    # What an answer shows is named, not drawn (LOOP P-04).
+    # What an answer shows is named, not drawn (P-04).
     assert "▣ Table runs: Runs" in said
     assert tux.app_session is not None and ended == [tux.app_session.id]
 
 
 def test_the_terminal_runs_an_applications_commands() -> None:
-    """LOOP P-19: ``/<command> words`` — the code answers the one it has, else its prompt is sent."""
+    """P-19: ``/<command> words`` — the code answers the one it has, else its prompt is sent."""
     app = Application(id="desk", agent="example-simple")
     app.command("summarise", "Summarise", prompt="Summarise: {input}")
     heard: List[str] = []

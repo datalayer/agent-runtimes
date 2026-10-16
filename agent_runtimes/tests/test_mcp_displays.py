@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display reaches the page; the model reads its model view (REACTOR_UI RU-1).
+"""A tool's display reaches the page; the model reads its model view (RU-1).
 
 The gateway's ``pap_sign_in`` answers with a ``PapSignIn`` in its result's
 ``_meta["reactor.ui/display"]``. pydantic-ai's MCP client drops ``_meta``, so

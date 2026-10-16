@@ -4,7 +4,7 @@
  */
 
 /**
- * The `loop` theme, carried inside the embed (LOOP T-13, D-11).
+ * The `loop` theme, carried inside the embed (T-13, D-11).
  *
  * The element draws the application in a shadow root: the host's styles do
  * not reach in, and the application's do not reach out. The theme travels

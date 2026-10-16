@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An agent whose requests are signed, and a shop that knows it (AGENT_PROTOCOLS EX-01, EX-02).
+"""An agent whose requests are signed, and a shop that knows it (EX-01, EX-02).
 
 Runs in one process, with no network: the agent's origin serves its key
 directory (signed, Appendix B of draft-ietf-webbotauth-httpsig-protocol-00),

@@ -3,7 +3,7 @@
 
 """A harness served over the runtime's transports, and the orchestrator's stdio channel.
 
-- AG-UI (SHIELD SH-10, SH-19): ``BaseAgent.stream`` as AG-UI events, what the
+- AG-UI (SH-10, SH-19): ``BaseAgent.stream`` as AG-UI events, what the
   terminal (``loop``) and the web chat read;
 - the orchestration adapter's ``ShieldChannel`` (SH-02's agent-runtimes
   part): ``stdio:<command>`` launches the agent through ``agent_shield.acp``,

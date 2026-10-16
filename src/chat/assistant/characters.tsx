@@ -4,7 +4,7 @@
  */
 
 /**
- * Datalayer's own characters for the floating assistant (LOOP T-25): drawn
+ * Datalayer's own characters for the floating assistant (T-25): drawn
  * for LOOP and owned by Datalayer, in the spirit of the Office Assistant —
  * a paper clip of our own, a wizard, a cat and the L👀P eyes. The characters
  * of Office are Microsoft's and are never bundled; a person loads

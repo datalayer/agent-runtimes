@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's computer beside its page (LOOP R-23, R-01b): a plugin of
+ * An application's computer beside its page (R-23, R-01b): a plugin of
  * the workspace's sidebar, mounted by the preset with the rules card and the
  * activity feed. It says which of its parts are off, lists what its agent
  * ran on it from the conversation's tool calls, shows its files read-only

@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's code, run in the page (STUDIO E-11).
+ * An application's code, run in the page (E-11).
  *
  * On a runtime, an application's agent runs its code in a sandbox of the
  * runtime's, through `execute_code` — what *Quote Calculator* and *Report

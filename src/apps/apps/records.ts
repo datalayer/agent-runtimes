@@ -4,7 +4,7 @@
  */
 
 /**
- * The record of an application (LOOP R-07), as ai-agents keeps it: what it
+ * The record of an application (R-07), as ai-agents keeps it: what it
  * did, session by session, written by the runtime it ran on — read here for
  * its activity feed (R-01b, R-15): the sessions, newest first, and what each
  * one did, step by step.

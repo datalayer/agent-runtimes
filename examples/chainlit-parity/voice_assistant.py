@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A voice assistant — Chainlit's cookbook ``openai-whisper``, rebuilt with
-LOOP's API as far as LOOP goes (LOOP P-27).
+LOOP's API as far as LOOP goes (P-27).
 
 Chainlit streams the microphone to the application (``on_audio_start``,
 ``on_audio_chunk``: 16-bit PCM, a turn ended by 1.3 s of silence), writes the
@@ -33,7 +33,7 @@ app = Application.from_spec(
         "id": "voice-assistant",
         "name": "Voice Assistant",
         "kind": "chat",
-        # Its interface (AGENTIC_UI R8): the conversation.
+        # Its interface (R8): the conversation.
         "ui": [{"plugin": "chat"}],
         "agent": AGENT,
         "description": "Send a voice note: it is transcribed, answered, and the answer spoken back.",

@@ -58,7 +58,7 @@ def expand_env_vars(value: str) -> str:
     def replace(match: re.Match[str]) -> str:
         var_name = match.group(1)
         expanded = os.environ.get(var_name, "")
-        # Used by the server, never shown to the model (LOOP R-19).
+        # Used by the server, never shown to the model (R-19).
         hold_expansion(value, var_name, expanded)
         return expanded
 
@@ -129,7 +129,7 @@ def get_mcp_servers_from_config() -> list[dict[str, Any]]:
     mcp_servers = config.get("mcpServers", {})
     for server_id, server_config in mcp_servers.items():
         # Its args and env keep their `${VAR}`: expanded where the server is
-        # started, never in what is listed (LOOP R-19).
+        # started, never in what is listed (R-19).
         servers.append(
             {
                 "id": server_id,
@@ -164,7 +164,7 @@ async def discover_mcp_server_tools(
     command = server_config.get("command")
     raw_args = server_config.get("args", [])
     # Expanded here, where the server is started, and held: used by the
-    # server, never shown to the model (LOOP R-19).
+    # server, never shown to the model (R-19).
     expanded = expand_config_env_vars(
         {"args": raw_args, "env": server_config.get("env", {})}
     )

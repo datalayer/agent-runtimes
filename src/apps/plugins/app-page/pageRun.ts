@@ -4,12 +4,12 @@
  */
 
 /**
- * A widget's page written in its code, run on its inputs (LOOP P-05).
+ * A widget's page written in its code, run on its inputs (P-05).
  *
  * The page opens a session of the application's agent on its runtime
  * (`POST /api/v1/apps/sessions`), then, each time an input changes, sends
  * them all to its page (`POST …/sessions/{uid}/page`, `{inputs}`) — not an
- * action of its code (REACTOR_UI RU-5). The runtime checks them against the
+ * action of its code (RU-5). The runtime checks them against the
  * page's form — refused with 422 and a sentence — runs its code's
  * `@app.page` on them, and answers its outputs as a `CUSTOM` event named
  * `loop.page`, `{inputs, outputs}`, which the page shows in place. Nothing is

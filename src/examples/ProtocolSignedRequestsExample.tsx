@@ -4,7 +4,7 @@
  */
 
 /**
- * Signed requests (Web Bot Auth) in the browser (AGENT_PROTOCOLS EX-10): a
+ * Signed requests (Web Bot Auth) in the browser (EX-10): a
  * key generated in the page signs one request; the page shows the three
  * headers, the signature base the key signed, and what a website's check
  * finds — verified, then the same request replayed and one with its path

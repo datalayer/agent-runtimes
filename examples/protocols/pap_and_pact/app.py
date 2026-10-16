@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PAP and PACT in one task (AGENT_PROTOCOLS EX-07, PR-14).
+"""PAP and PACT in one task (EX-07, PR-14).
 
 Ada asks her application, *Atlas*, one question: *where is my jacket order,
 and when do I fly?* The order is at a PAP company, Manzanita Outfitters (the

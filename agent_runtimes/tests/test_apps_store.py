@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps pull` and `push` (LOOP S-04): the same file in a repository and in the Studio."""
+"""`loop apps pull` and `push` (S-04): the same file in a repository and in the Studio."""
 
 import json
 

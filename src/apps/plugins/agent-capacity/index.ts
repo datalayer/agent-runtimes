@@ -54,11 +54,11 @@ export type AgentCapacityOptions = {
   instructions?: string;
   /** The model it runs on in the page, in place of its spec's. */
   model?: string;
-  /** What its modes tell a run turned in the page (LOOP P-19). */
+  /** What its modes tell a run turned in the page (P-19). */
   modeEffect?: AgentBlueprintContribution['modeEffect'];
   /**
    * Its own name in place of `@datalayer/loop-plugin-agent-<key>`: an
-   * application's, the name its runtime's plugin has too (LOOP F-15).
+   * application's, the name its runtime's plugin has too (F-15).
    */
   name?: string;
   /** The runtime plugins it cannot work without (Reactor's cross-tier declaration). */

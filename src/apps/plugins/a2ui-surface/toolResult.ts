@@ -170,8 +170,8 @@ export function validateA2uiSubmission(
 }
 
 /**
- * The display type of what an application's answer shows (LOOP P-04,
- * REACTOR_UI RU-2): `AnswerShows` in `agent_runtimes.loop.apps.components`.
+ * The display type of what an application's answer shows (P-04,
+ * RU-2): `AnswerShows` in `agent_runtimes.loop.apps.components`.
  */
 export const ANSWER_DISPLAY_TYPE = 'application/vnd.datalayer.loop.answer+json';
 

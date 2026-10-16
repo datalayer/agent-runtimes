@@ -4,8 +4,7 @@
  */
 
 /**
- * A plugin that contributes a character to the floating assistant (LOOP
- * T-24): an owl, drawn here, contributed to `loop.assistant.character` as
+ * A plugin that contributes a character to the floating assistant (T-24): an owl, drawn here, contributed to `loop.assistant.character` as
  * any plugin would. The *Assistant* example enables it beside
  * Datalayer's own characters and lists what the enabled plugins contribute.
  *

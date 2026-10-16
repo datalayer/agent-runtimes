@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps init`: a new application's folder (LOOP P-01)."""
+"""`loop apps init`: a new application's folder (P-01)."""
 
 import asyncio
 import subprocess
@@ -55,7 +55,7 @@ def test_a_blank_python_application_builds_its_spec_and_answers_through_its_agen
     assert text == build(written.folder / "app.py").text
     assert [mark.moment for mark in read_code_marks(text)] == ["message"]
     assert _spec(written.folder)["kind"] == "widget"
-    # Its agent is the blank one this process builds (LOOP P-32): an AppHost
+    # Its agent is the blank one this process builds (P-32): an AppHost
     # runs it here without a runtime.
     assert _spec(written.folder)["agent"] == BLANK_PYTHON_AGENT
     local_agent(load_application(written.folder / "app.py").spec)
@@ -150,7 +150,7 @@ def test_the_command_writes_the_folder_and_lists_the_examples(tmp_path: Path) ->
 def test_the_folder_s_own_tests_pass_as_written(
     tmp_path: Path, example: Any, python: bool, checks: int
 ) -> None:
-    # LOOP E-13: a starting repository, its CI's checks passing from the start.
+    # E-13: a starting repository, its CI's checks passing from the start.
     written = init("mine", tmp_path, example=example, python=python)
     assert "tests/test_app.py" in written.files
     ran = subprocess.run(  # noqa: S603  # nosec B603 - this interpreter, a fixed command

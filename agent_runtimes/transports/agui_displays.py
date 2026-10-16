@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display, beside the result the page draws (REACTOR_UI RU-1).
+"""A tool's display, beside the result the page draws (RU-1).
 
 A tool result that carried a display reaches the model as the display's model
 view (``agent_runtimes.mcp.displays``) and keeps the whole display in its

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The safety set every application runs (LOOP V-09), from `loop apps validate`.
+"""The safety set every application runs (V-09), from `loop apps validate`.
 
 The cases are the Studio's (`appSafety.ts` in the landing), case for case:
 the same ids, failure modes, words and conditions, and the same key. Where

@@ -24,7 +24,7 @@ The decision, in order:
    and the most restricted wins.
 
 Before any call, the first two steps decide what the agent is *given*
-(`gives`, LOOP U-15): a connection's level maps to its tools by their
+(`gives`, U-15): a connection's level maps to its tools by their
 classes, so a read connection carries no tool that writes, and a tool nobody
 classed is taken to write.
 
@@ -202,7 +202,7 @@ def domain_of(address: str) -> str:
 
 
 def forwards_outside(server: str, tool_name: str, arguments: Mapping[str, Any]) -> bool:
-    """Whether a call forwards a message to somebody outside the organization (LOOP W-04).
+    """Whether a call forwards a message to somebody outside the organization (W-04).
 
     The organization is the domain of the mailbox the call sends from. Fails
     closed: a forward that does not say its mailbox is outside. A reply is
@@ -249,7 +249,7 @@ def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[
 
 def signs_of(ref: str) -> str:
     """The argument of a server's tool that carries what it sends, which is
-    signed with the application's byline (LOOP I-10); ``""`` when its spec
+    signed with the application's byline (I-10); ``""`` when its spec
     names none — a tool of the catalogue, or one that reads.
 
     Answered by the entry that answers for the tool's classes: its name, else
@@ -355,7 +355,7 @@ RULE_ON_TOOL = "rule_on_tool"
 UNCLASSED = "unclassed"
 RULE_ON_CLASS = "rule_on_class"
 BY_DEFAULT = "default"
-#: A rule a person added to the running session tightened it (SHIELD SH-54).
+#: A rule a person added to the running session tightened it (SH-54).
 SESSION_RULE = "session_rule"
 
 
@@ -425,8 +425,7 @@ def decision_for(
     """What an application does when its agent calls a tool, and why.
 
     `tool` is `server.tool` for a tool of an MCP server, the id of a tool of
-    the catalogue, or the name of one of the application's own tools (LOOP
-    P-06). Its classes are the catalogue's — or, for its own, what it says it
+    the catalogue, or the name of one of the application's own tools (P-06). Its classes are the catalogue's — or, for its own, what it says it
     `does` — unless given; a tool met at run time that the catalogue does not
     know is given none, and is left to the person.
 

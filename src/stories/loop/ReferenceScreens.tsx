@@ -4,7 +4,7 @@
  */
 
 /**
- * The four reference screens of the `loop` theme (LOOP T-01), and the
+ * The four reference screens of the `loop` theme (T-01), and the
  * floating assistant's states (T-27), drawn from the real chat components
  * with fixed data: no agent, no network, no clock.
  *

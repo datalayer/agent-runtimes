@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Where an element shows: inline, in a side panel, or on a page of its own,
-opened and closed from Python (LOOP P-18).
+opened and closed from Python (P-18).
 """
 
 import json
@@ -193,7 +193,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     ]
     shows = ops[0]["body"]
     assert ops[0]["scope"] == live.uid
-    # What it shows is its display (REACTOR_UI RU-2), where it shows in it.
+    # What it shows is its display (RU-2), where it shows in it.
     assert shows["type"] == "application/vnd.datalayer.loop.answer+json"
     assert (shows["id"], shows["data"]["where"], shows["data"]["title"]) == (
         panel.id,

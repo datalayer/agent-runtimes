@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript of a scene (LOOP A-06): a scripted scene — the person asks
+ * The transcript of a scene (A-06): a scripted scene — the person asks
  * Sales, Sales asks Accounting over A2A, Accounting calls Odoo, answers, and
  * Sales reports — gives the expected lines, in order, from the spans the
  * Agent Inspector reads; the same lines from a finished run's record; and

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An embed token runs a session, and nothing beyond (LOOP R-20).
+"""An embed token runs a session, and nothing beyond (R-20).
 
 The app embed token reads one application and asks its decisions; it now also
 runs a session of that application's deployment — as its principal, never in
@@ -213,7 +213,7 @@ def test_the_page_an_embed_is_on_is_said_to_ai_agents(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """ai-agents opens an embed's session only for a page of a site its
-    owner allows it on (LOOP D-12): the runtime says the page's origin, as
+    owner allows it on (D-12): the runtime says the page's origin, as
     the visitor's browser sent it, and each page is asked about apart."""
     monkeypatch.setenv(
         "AGENT_RUNTIMES_APP_ORIGINS", "https://host.example,https://other.example"
@@ -264,7 +264,7 @@ def test_a_visit_reads_its_thread_again_after_a_reload(
     runtime: Runtime, remote: TestClient, embedded: Any
 ) -> None:
     """The page reloaded asks for its session's conversation with a token
-    renewed for the same visit, and draws it again (LOOP D-13); another
+    renewed for the same visit, and draws it again (D-13); another
     visit, or a session the runtime let go, is told nothing is there."""
     runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
     events_of(start(remote, "embed:visit-a", "session-visa"))

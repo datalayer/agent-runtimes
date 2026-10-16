@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where ``loop`` runs its agent: on this machine, or on Datalayer (LOOP L-01 to L-06).
+"""Where ``loop`` runs its agent: on this machine, or on Datalayer (L-01 to L-06).
 
 Launching ``loop`` asks one question more than it used to — *where?* — and,
 for Datalayer, the few a cloud runtime needs: the environment, how long to
@@ -684,7 +684,7 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
     Its agent answers from the moment the pod starts, before the runtime is
     set up for the account: an application configured on it then finds none
     of the account's secrets (an owner's connection does not start), and is
-    replaced by the platform's own configuration when it comes (STUDIO A-08).
+    replaced by the platform's own configuration when it comes (A-08).
     """
     import httpx
 
@@ -934,7 +934,7 @@ def _attach(
 
 def attached_refusal(runtime_name: str, app_name: str) -> str:
     """Why an application refused on a runtime it was attached to cannot be
-    set up there, and what to do (LOOP R-19).
+    set up there, and what to do (R-19).
 
     Secrets reach a runtime once, from its companion, when it is launched:
     a runtime launched for something else was given that one's, and nothing
@@ -973,7 +973,7 @@ def launch_cloud(
     ``app_spec`` is the Appspec of the application the runtime is launched
     for (`loop apps run --cloud`): sent with the launch, so the runtime is
     given the secrets its connections declare and a missing one is said
-    before the application is configured (LOOP R-19). A running runtime is
+    before the application is configured (R-19). A running runtime is
     not offered for it: one not launched for the application was not given
     its secrets. ``runtime`` still attaches to the one the person names; its
     configure then declares the application's secrets and refuses, in a

@@ -4,7 +4,7 @@
  */
 
 /**
- * Why an AG-UI run was not answered, in the page's own words (LOOP F-15).
+ * Why an AG-UI run was not answered, in the page's own words (F-15).
  *
  * What a person met before was `AG-UI request failed: 404` — the status and
  * nothing else. A 404 at an agent's AG-UI address has one meaning: the agent

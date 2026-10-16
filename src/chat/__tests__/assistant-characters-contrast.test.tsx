@@ -4,7 +4,7 @@
  */
 
 /**
- * Datalayer's characters, tested for contrast on the page (LOOP T-25), as
+ * Datalayer's characters, tested for contrast on the page (T-25), as
  * the `loop` theme's faces are (T-15, primer-addons'
  * `theme/__tests__/loopContrast.test.ts`): the same WCAG measure, applied to
  * each character's key parts in each mode — its edge against the page, its

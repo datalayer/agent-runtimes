@@ -4,7 +4,7 @@
  */
 
 /**
- * *Sign in at a company* in the chat (AGENT_PROTOCOLS PI-56): the gateway's
+ * *Sign in at a company* in the chat (PI-56): the gateway's
  * `pap_sign_in` answer read whole, whatever wraps it, and only an `https`
  * page ever shown.
  */
@@ -48,7 +48,7 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
-  it('names what the company said it needs, scope tokens only (PAP_DATALAYER P-02)', () => {
+  it('names what the company said it needs, scope tokens only (P-02)', () => {
     const asked = readPapSignIn({
       ...DEVICE,
       needs: ['orders:read', 'orders:write', 'not a scope', 7],
@@ -89,7 +89,7 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
-  it('reads a bound direct sign-in: Datalayer’s start link, and the company it signs in at (PAP_DATALAYER P-04)', () => {
+  it('reads a bound direct sign-in: Datalayer’s start link, and the company it signs in at (P-04)', () => {
     expect(
       readPapSignIn({
         status: 'waiting_for_the_person',

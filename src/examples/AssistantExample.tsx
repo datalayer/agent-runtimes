@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant (LOOP T-21 to T-27): the chat as a character on the
+ * The floating assistant (T-21 to T-27): the chat as a character on the
  * page, after the Office Assistant — Datalayer's own characters, chosen
  * here, acting out what the agent does and speaking in a balloon.
  *

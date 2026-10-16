@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Security, personal data — the example of Chainlit's documentation
-(``examples/security``), rebuilt with LOOP's API (LOOP P-27).
+(``examples/security``), rebuilt with LOOP's API (P-27).
 
 Chainlit looks for personal data in what the person wrote before anything
 is done with it (Microsoft Presidio's analyzer); when it finds some, it asks
@@ -36,7 +36,7 @@ app = Application(
         "You are a helpful assistant. Placeholders such as <EMAIL_ADDRESS> stand "
         "for data you are not shown: keep them as they are."
     ),
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application knows (LOOP U-24, R-29).
+"""What an application knows (U-24, R-29).
 
 An application that names documents is given one tool, `search_documents`,
 which asks Contents for the passages of those documents that answer a

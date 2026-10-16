@@ -1,16 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A PACT 1.0 Provider's side of a Brand (AGENT_PROTOCOLS PR-13, EX-06).
+"""A PACT 1.0 Provider's side of a Brand (PR-13, EX-06).
 
 :class:`PactBrand` is a Brand answered by its Provider, both profiles:
 *Identity* (§2–4: the card, the personal-agent JWT verified against the keys
 of a registered issuer, one ``contextId`` per (agent, user, Brand),
-idempotent retries by ``messageId``) and *Delegated* (§5: RFC 8628 device
-code, the person's own sign-in at the Brand's page granting what they choose
-— :meth:`PactBrand.approve` —, the delegation token, a step-up when a turn
-needs a scope the token lacks, and a signed receipt on every reply under
-delegation). What a host decides is passed in, never assumed: the key that
+idempotent retries by ``messageId``) and *Delegated* (RFC 8628 device code, the person's own sign-in at the Brand's page granting what they choose — :meth:`PactBrand.approve` —, the delegation token, a step-up when a turn needs a scope the token lacks, and a signed receipt on every reply under delegation).
+What a host decides is passed in, never assumed: the key that
 signs (an :class:`~agent_runtimes.protocols.web_bot_auth.HttpSigner`, ES256),
 which issuers it accepts (:class:`IssuerKeys`), where its grants, contexts and
 replies are kept (:class:`BrandStore`), and the Brand's own agent
@@ -135,7 +132,7 @@ class BrandTurn:
 @dataclass(frozen=True)
 class BrandAnswer:
     """What the Brand's agent says, the scopes it used and its actions (for the receipt),
-    and the scopes it lacks (a step-up, §5.5).
+    and the scopes it lacks (a step-up).
     """
 
     text: str
@@ -152,7 +149,7 @@ class BrandAgent(Protocol):
 
 
 class IssuerKeys(Protocol):
-    """The personal agents a Brand accepts (§3.1): an issuer's public keys, or None."""
+    """The personal agents a Brand accepts: an issuer's public keys, or None."""
 
     async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]:
         """Return the issuer's public keys, or None when not accepted."""
@@ -271,7 +268,7 @@ class PactBrand:
         return f"{self.interface_url}/oauth"
 
     def card(self) -> dict[str, Any]:
-        """Return its A2A Agent Card (§2.1, §5.1): the JWT alone, or with the device-code delegation."""
+        """Return its A2A Agent Card: the JWT alone, or with the device-code delegation."""
         schemes: dict[str, Any] = {
             "paJwt": {
                 "httpAuthSecurityScheme": {"scheme": "Bearer", "bearerFormat": "JWT"}
@@ -405,7 +402,7 @@ class PactBrand:
         }
 
     def step_up_uri(self, missing: tuple[str, ...]) -> str:
-        """Where the person grants what a turn lacks (§5.5)."""
+        """Where the person grants what a turn lacks."""
         joiner = "&" if "?" in self.verification_uri else "?"
         return f"{self.verification_uri}{joiner}scopes={'+'.join(missing)}"
 
@@ -725,7 +722,7 @@ class ExampleAir(PactBrand):
 
     @property
     def agents(self) -> dict[str, Mapping[str, Any]]:
-        """Registered personal agents: issuer → JWKS (§3.1)."""
+        """Registered personal agents: issuer → JWKS."""
         return self._registered.agents
 
     @property

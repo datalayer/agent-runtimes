@@ -4,7 +4,7 @@
  */
 
 /**
- * Components in the answers (STUDIO H-02): a surface a peer shows
+ * Components in the answers (H-02): a surface a peer shows
  * (`application/json+a2ui`) is kept by the team with the peer that gave it,
  * drawn with `InlineSurface` on Datalayer's catalog, and a button pressed
  * on it goes back to that peer with its action — what it does said, so that
@@ -229,7 +229,7 @@ describe('AnswerSurfaces', () => {
         does: 'send',
       });
       // A form's submission is not an answer's button; the surface's id
-      // says nothing either way (REACTOR_UI RU-2: no `answer-` prefix).
+      // says nothing either way (RU-2: no `answer-` prefix).
       expect(
         pressedOf({ name: 'submit_a2ui_form', surfaceId: SURFACE_ID }),
       ).toBeNull();

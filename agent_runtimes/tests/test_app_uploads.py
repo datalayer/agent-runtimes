@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a person sends (LOOP P-21): images, files and audio, limited by kind
+"""What a person sends (P-21): images, files and audio, limited by kind
 and size by the Appspec, refused by the runtime when the page was bypassed,
 and a file sent without being asked handed to ``@app.file``.
 """
@@ -227,7 +227,7 @@ def test_a_file_given_on_its_page_is_held_to_what_its_page_asks_for(
     runtime: Runtime,
     local: TestClient,  # noqa: F811 - the fixture
 ) -> None:
-    """A page's block sends its files with a message (REACTOR_UI RU-5): held to
+    """A page's block sends its files with a message (RU-5): held to
     what its File upload asks for, said first."""
     runtime.make("report-from-a-file", REPORT, {"app_uid": "app-3"})
     run = composed(
@@ -345,7 +345,7 @@ def test_without_app_file_the_words_go_to_message_and_the_file_answers_what_it_a
     assert answer_of(events) == "Look: a.png"
 
 
-# --- files as refs (REACTOR_UI RU-6) -------------------------------------------------
+# --- files as refs (RU-6) -------------------------------------------------
 
 
 def test_a_file_is_uploaded_once_named_by_its_ref_and_fetched_signed(

@@ -4,7 +4,7 @@
  */
 
 /**
- * A scene as a page stages it (LOOP A-13, A-15), read from the scene spec
+ * A scene as a page stages it (A-13, A-15), read from the scene spec
  * and its team: who is on stage and where each one stands, who asks whom
  * over A2A, what the entry suggests, and where the members on a runtime are
  * reached when the scene plays against local servers.

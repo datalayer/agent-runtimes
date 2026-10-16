@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company (AGENT_PROTOCOLS PR-04).
+"""A Loop application as a PAP company (PR-04).
 
 ``PapCompanyCapability`` publishes an application's ``pap.company`` through the
 SDK's reference company, ``pap.company.agent`` being the application over its
@@ -276,7 +276,7 @@ def test_a_local_company_offers_its_agent_only() -> None:
 
 
 def test_a_local_company_gives_no_standing_permission() -> None:
-    """PAP_DATALAYER R-07: a standing permission is the person's approval in advance, which only
+    """R-07: a standing permission is the person's approval in advance, which only
     Datalayer keeps; a company in this process refuses an Appspec that would give one."""
     from agentspecs.apps import AppPapStanding
 

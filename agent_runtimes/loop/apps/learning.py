@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application learns: skills its conversations propose, used once its owner approved them (LOOP R-26).
+"""What an application learns: skills its conversations propose, used once its owner approved them (R-26).
 
 An application saved on Datalayer is given two tools:
 

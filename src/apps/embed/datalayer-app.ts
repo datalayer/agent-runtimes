@@ -4,7 +4,7 @@
  */
 
 /**
- * The element's module (LOOP D-08): it defines `<datalayer-app>` and nothing
+ * The element's module (D-08): it defines `<datalayer-app>` and nothing
  * else. Built on its own by `npm run build:embed` (`vite.embed.config.ts`)
  * into `dist-embed/datalayer-app-main.js`, with the chunks it imports under
  * `dist-embed/chunks/` and the stylesheet the element links into its shadow

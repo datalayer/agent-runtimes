@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's rules, enforced before every tool call (LOOP R-05).
+"""An application's rules, enforced before every tool call (R-05).
 
 The capability runs before each tool the agent calls: it does the reading,
 asks the person before what its rules say to ask about, and refuses what is
@@ -254,7 +254,7 @@ async def test_do_it_if_asked_asks_without_an_approval_given_in_advance() -> Non
     assert harness.asked and harness.asked[0][1].behaviour == "if_asked"
 
 
-# --- what a connection gives (LOOP U-15) -----------------------------------------
+# --- what a connection gives (U-15) -----------------------------------------
 
 
 def _defs(*names: str) -> list[ToolDefinition]:
@@ -319,7 +319,7 @@ async def test_the_agent_is_given_only_what_its_connections_give() -> None:
         "runtime_echo",
     )
     given = await capability.prepare_tools(None, offered)
-    # Its shell is off: no tool that runs code is given (LOOP R-23).
+    # Its shell is off: no tool that runs code is given (R-23).
     assert [tool.name for tool in given] == [
         "google-workspace__search_gmail_messages",
         "call_tool",

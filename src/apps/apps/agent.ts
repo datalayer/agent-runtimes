@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent an application runs, as the page turns it (LOOP H-01, E-11).
+ * The agent an application runs, as the page turns it (H-01, E-11).
  *
  * On a runtime, an application's agent is its agent's spec — an agent of the
  * catalogue, or a Cog's, which is an agent equipped with Frames, their

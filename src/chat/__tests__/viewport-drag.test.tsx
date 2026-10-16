@@ -5,8 +5,7 @@
 
 /**
  * Moving a fixed box about the viewport: the chat's window keeps a margin on
- * screen, the floating assistant's character stays whole inside it (LOOP
- * T-23), so its balloon and conversation open inside the window too.
+ * screen, the floating assistant's character stays whole inside it (T-23), so its balloon and conversation open inside the window too.
  */
 
 import React, { act, useRef } from 'react';

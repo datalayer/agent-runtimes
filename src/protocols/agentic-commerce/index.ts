@@ -5,7 +5,7 @@
 
 /**
  * The Agentic Commerce Protocol, `2026-04-17`, as a Reactor Plugin and a
- * client (AGENT_PROTOCOLS PR-40 to PR-42) — the twin of
+ * client (PR-40 to PR-42) — the twin of
  * `agent_runtimes.protocols.agentic_commerce`. Never `acp` in code: that is
  * the Agent Client Protocol (`../ACPAdapter`).
  *
@@ -52,7 +52,7 @@ export const AGENTIC_COMMERCE_PLUGIN =
 
 /**
  * Each operation's action class (F-10), for Rules (R-05): agentspecs'
- * `protocol-tools/agentic-commerce.yaml` (AGENT_PROTOCOLS PR-54).
+ * `protocol-tools/agentic-commerce.yaml` (PR-54).
  */
 export const AGENTIC_COMMERCE_ACTION_CLASSES =
   operationClasses('agentic-commerce');

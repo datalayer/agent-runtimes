@@ -4,7 +4,7 @@
  */
 
 /**
- * The *Signed requests* gallery example's work (AGENT_PROTOCOLS EX-10): a
+ * The *Signed requests* gallery example's work (EX-10): a
  * fresh Ed25519 key generated in the page, one request signed with it
  * (`signRequest`), the three headers and the signature base the signer was
  * handed, then the request verified against the key's directory — and the

@@ -366,7 +366,7 @@ export interface RuntimeMemory {
   scope?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
-  /** Who corrected it, when it was corrected in place (LOOP R-34). */
+  /** Who corrected it, when it was corrected in place (R-34). */
   corrected_by?: string | null;
   /** When it was corrected (ISO). */
   corrected_at?: string | null;
@@ -490,7 +490,7 @@ export interface ForgetRuntimeMemoriesResponse {
 }
 
 /**
- * Forget one of the caller's own persisted memories (LOOP R-18).
+ * Forget one of the caller's own persisted memories (R-18).
  *
  * Somebody else's is not found (404), whoever asks: forgetting is the
  * person's own.
@@ -526,7 +526,7 @@ export interface CorrectRuntimeMemoryResponse {
 }
 
 /**
- * Correct one of the caller's own persisted memories in place (LOOP R-34):
+ * Correct one of the caller's own persisted memories in place (R-34):
  * its words become `text`, kept with who corrected it and when.
  *
  * Somebody else's is not found (404), whoever asks; empty words, more than
@@ -561,7 +561,7 @@ export const correctRuntimeMemory = async (
  * Forget everything one agent — an application, by its key `app:<uid>` —
  * remembers of the caller, no more than `count`: the number the person was
  * shown and confirmed. When it remembers more now, nothing is forgotten and
- * the service refuses (409) in a sentence (LOOP R-18).
+ * the service refuses (409) in a sentence (R-18).
  */
 export const forgetRuntimeMemories = async (
   token: string,
@@ -594,7 +594,7 @@ export const forgetRuntimeMemories = async (
 };
 
 /**
- * One allowance of a person (LOOP R-35): `reader` uses what `source`
+ * One allowance of a person (R-35): `reader` uses what `source`
  * remembers of them, both applications by their key `app:<uid>`.
  */
 export interface RuntimeMemoryShare {
@@ -632,7 +632,7 @@ export const listRuntimeMemoryShares = async (
 };
 
 /**
- * Allow `reader` to use what `source` remembers of the caller (LOOP R-35).
+ * Allow `reader` to use what `source` remembers of the caller (R-35).
  * Allowed again, it is kept as it was.
  */
 export const allowRuntimeMemoryShare = async (
@@ -655,7 +655,7 @@ export const allowRuntimeMemoryShare = async (
 
 /**
  * Stop sharing what `source` remembers of the caller with `reader`
- * (LOOP R-35); the service refuses (404) what was never allowed.
+ * (R-35); the service refuses (404) what was never allowed.
  */
 export const stopRuntimeMemoryShare = async (
   token: string,

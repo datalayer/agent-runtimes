@@ -4,7 +4,7 @@
 """Authority across the chain (SH-33).
 
 A run delegated with an execution's credential (``_meta.datalayer.credential``
-over ACP, ``metadata.datalayer.credential`` over A2A, ORCHESTRATOR O1-17) lends
+over ACP, ``metadata.datalayer.credential`` over A2A, O1-17) lends
 its harness the gateway's toolsets with *that* credential — before a
 deployment's principal or the caller's token — so a sub-agent the harness
 spawns, which reaches MCP through the servers its parent was lent, is held to

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenes: the catalogue generated from agentspecs 0.0.61 (LOOP A-12).
+"""Scenes: the catalogue generated from agentspecs 0.0.61 (A-12).
 
 A scene stages a team; the generated catalogue carries it with its cast
 resolved, its entry said, what each beat shows, and what it needs set up.
@@ -16,7 +16,7 @@ from agent_runtimes.specs.scenes import (
 from agent_runtimes.specs.teams import get_team_spec
 from agent_runtimes.types import SceneSpec
 
-#: The four scenes of the home page (LOOP A-08): the entry, the members on a runtime.
+#: The four scenes of the home page (A-08): the entry, the members on a runtime.
 HOME_SCENES = {
     "sales-and-accounting": ("sales", ["accounting"]),
     "month-end-close": ("month-end-close", ["month-end-close"]),
@@ -28,14 +28,14 @@ HOME_SCENES = {
 }
 
 
-#: The Personal Agent Protocol's Stages, scripted (PAP_DATALAYER X-02).
+#: The Personal Agent Protocol's Stages, scripted (X-02).
 PAP_STAGES = (
     "pap-a-person-and-a-company",
     "pap-approve-once",
     "pap-your-application-a-company",
     "pap-two-companies",
 )
-#: The other protocols' Stages, scripted (AGENT_PROTOCOLS EX-14, EX-15).
+#: The other protocols' Stages, scripted (EX-14, EX-15).
 PROTOCOL_STAGES = ("ucp-a-purchase-approved", "pact-a-personal-agent-at-a-business")
 
 

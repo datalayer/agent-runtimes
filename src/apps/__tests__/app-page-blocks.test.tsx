@@ -4,7 +4,7 @@
  */
 
 /**
- * Datalayer's own blocks on an application's page (LOOP C-18, R-01, E-01):
+ * Datalayer's own blocks on an application's page (C-18, R-01, E-01):
  * a Chat block draws the conversation the application runs as and sends
  * through it, and a File upload on a widget's page hands its agent the file.
  * The page is the plugin's own `AppPage`, fed by the chat's turn feed, its
@@ -237,7 +237,7 @@ describe('a File upload on a widget’s page', () => {
     expect(send).toHaveBeenCalledTimes(1);
     const [said, forwarded] = send.mock.calls[0];
     expect(said).toBe('Report: Summary');
-    // A block sends a message, never an action of its own (REACTOR_UI RU-5).
+    // A block sends a message, never an action of its own (RU-5).
     expect(forwarded.loop.action).toBeUndefined();
     expect(forwarded.loop.settings).toEqual({
       report: 'Summary',

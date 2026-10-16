@@ -6,7 +6,7 @@
 An agent program driven over ACP, generated from agentspecs 0.0.100. An
 agent spec names one with `harness:` beside `pydantic-ai` and `vercel-ai`;
 what the harness cannot honour is refused at load, in a sentence; and an
-agent on a catalogue harness is served by the ACP adapter (SHIELD SH-10,
+agent on a catalogue harness is served by the ACP adapter (SH-10,
 `test_acp_agent.py`), never run on pydantic-ai in its place.
 """
 

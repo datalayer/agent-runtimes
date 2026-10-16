@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display, beside the output the page draws, on the Vercel AI stream (REACTOR_UI RU-1).
+"""A tool's display, beside the output the page draws, on the Vercel AI stream (RU-1).
 
 The Vercel AI twin of ``agent_runtimes.transports.agui_displays``: a tool
 result that carried a display reaches the model as the display's model view

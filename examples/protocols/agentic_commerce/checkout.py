@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An Agentic Commerce Protocol checkout, approved once (AGENT_PROTOCOLS EX-05).
+"""An Agentic Commerce Protocol checkout, approved once (EX-05).
 
 The Agentic Commerce Protocol 2026-04-17 (never ``acp`` in code: that is the
 Agent Client Protocol) against a local test seller, *Example Outfitters*, in

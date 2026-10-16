@@ -4,7 +4,7 @@
  */
 
 /**
- * An application drawn as its layout says (LOOP R-01, T-07): `chat` the
+ * An application drawn as its layout says (R-01, T-07): `chat` the
  * conversation alone, `page` the page layout's sheet with the conversation
  * over it, `split` the conversation and the page side by side with a
  * hairline to drag — on the workspace's own page-layout plugin, through

@@ -685,7 +685,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
   /**
    * A `reactor.ui` op on the run stream: refused, and said as an error. The
-   * ops come over the conversation's ui socket (REACTOR_UI RU-W).
+   * ops come over the conversation's ui socket (RU-W).
    */
   private refuseUiOnRun(): void {
     this.emit({
@@ -914,7 +914,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       case 'ACTIVITY_SNAPSHOT':
       case 'ACTIVITY_DELTA': {
         // `reactor.ui` ops come over the conversation's ui socket, never
-        // the run stream (REACTOR_UI RU-W): one here is refused. Any other
+        // the run stream (RU-W): one here is refused. Any other
         // activity is nobody's here.
         if (event.activityType === REACTOR_UI_NAME) {
           this.refuseUiOnRun();

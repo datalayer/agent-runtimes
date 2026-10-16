@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Rules a person adds to a running session (SH-54, decision 7's scope).
+"""Rules a person adds to a running session (SH-54: a person's rules last as long as the session).
 
 From the session panel — the page's Rules card, the phone's, the terminal — a
 person **adds or tightens** a rule on a session while it runs: in force at
@@ -80,7 +80,7 @@ class SessionRules:
 
         ``above`` is the organization's documents to tighten under; unsaid,
         the runtime's managed documents (IAM's), which a managed runtime
-        must be able to read (decision 11).
+        must be able to read.
         """
         ceiling = (
             list(above)
@@ -110,7 +110,7 @@ class SessionRules:
         return list(kept)
 
     def forget(self, session: str) -> None:
-        """Gone with the session (decision 7)."""
+        """Gone with the session."""
         self._rules.pop(session, None)
 
     def clear(self) -> None:

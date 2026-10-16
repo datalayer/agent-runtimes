@@ -58,7 +58,7 @@ export interface RulesInForce {
   managed?: boolean;
   policies: PolicyInForce[];
   session_rules: SessionRule[];
-  /** The sentence when nothing can be decided (SHIELD decision 11), else null. */
+  /** The sentence when nothing can be decided, else null. */
   unavailable: string | null;
 }
 
@@ -94,15 +94,15 @@ export const SESSION_RULES_WORDS = {
     `Nothing is decided right now: ${sentence}`,
 } as const;
 
-/** Where a file rule holds, in words (SHIELD decision 5). */
+/** Where a file rule holds, in words. */
 export const WHERE_WORDS: Record<'inside' | 'outside', string> = {
   inside: 'inside the workspace',
   outside: 'outside the workspace',
 };
 
 /**
- * A rule in words: *writing, sending: leave it to me*; with decision 5's file
- * and shell wording when it says where or what (SHIELD SH-43) — *writing
+ * A rule in words: *writing, sending: leave it to me*; with the default policy's file
+ * and shell wording when it says where or what (SH-43) — *writing
  * inside the workspace (src/**): do it*, *running `git push`: ask me first*.
  */
 export function sessionRuleInWords(rule: SessionRule): string {
@@ -123,7 +123,7 @@ export function sessionRuleInWords(rule: SessionRule): string {
 }
 
 /**
- * Decision 5's file and shell rules, offered on a running session in the
+ * The default policy's file and shell rules, offered on a running session in the
  * Shield's own words: each one a rule a person adds as it stands, and the
  * runtime refuses one that would loosen what the organization says.
  */

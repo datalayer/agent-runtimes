@@ -4,7 +4,7 @@
  */
 
 /**
- * The instant checks of an application (LOOP V-01 to V-04): what an editor
+ * The instant checks of an application (V-01 to V-04): what an editor
  * shows on every change, with no model call.
  *
  * The same checks `loop apps validate` runs with agentspecs, in the words it
@@ -89,7 +89,7 @@ const idOf = (ref: string): string => {
 };
 
 /**
- * The component a layout names (LOOP C-13), from the catalogs of the enabled
+ * The component a layout names (C-13), from the catalogs of the enabled
  * UI specs, by the name a surface gives it.
  */
 export const componentNamed = (name: string): ComponentSpec | undefined =>
@@ -133,7 +133,7 @@ const matches = (name: string, pattern: string): boolean =>
 const CODE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
- * What its code declares that agentspecs refuses (LOOP P-06): its tools,
+ * What its code declares that agentspecs refuses (P-06): its tools,
  * its checks and the tests it decides, each by a Python name, each name
  * once; a tool says what it does, by class, each class once.
  */
@@ -195,8 +195,7 @@ export function ownCodeProblems(app: AppSpec): string[] {
 }
 
 /**
- * What agentspecs refuses of a widget's page written in its code (LOOP
- * P-05): a page that is not a widget's, inputs that are not a form, outputs
+ * What agentspecs refuses of a widget's page written in its code (P-05): a page that is not a widget's, inputs that are not a form, outputs
  * of one name twice, drawn with another component, saying in their `props`
  * what their value fills or lacking what their component needs, and an input
  * named as a setting — both are on the page at `/inputs/<name>`.
@@ -293,7 +292,7 @@ export function pageProblems(app: AppSpec): string[] {
 }
 
 /** What the spec says of itself that the tolerant reader lets through. */
-/** What was said aloud is kept 30 days at most (VO-63, decision 10): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
+/** What was said aloud is kept 30 days at most (VO-63): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
 export const AUDIO_KEPT_DAYS_AT_MOST = 30;
 
 /**
@@ -351,7 +350,7 @@ function shapeProblems(app: AppSpec): string[] {
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );
   }
-  // agentspecs refuses either way round (LOOP E-01): off says why, on says nothing.
+  // agentspecs refuses either way round (E-01): off says why, on says nothing.
   const because = (app.unavailable_because ?? '').trim();
   if (!app.enabled && !because) {
     problems.push(
@@ -386,7 +385,7 @@ function shapeProblems(app: AppSpec): string[] {
     );
   }
   problems.push(...keptAudioProblems(app));
-  // Its profiles (LOOP P-20): two at least, or none; each id slash-safe and
+  // Its profiles (P-20): two at least, or none; each id slash-safe and
   // said once, each with a label.
   const profiles = app.interface.profiles ?? [];
   if (profiles.length === 1) {
@@ -475,7 +474,7 @@ function shapeProblems(app: AppSpec): string[] {
       }
     }
   }
-  // What its code declares (LOOP P-06), as agentspecs refuses it.
+  // What its code declares (P-06), as agentspecs refuses it.
   problems.push(...ownCodeProblems(app));
   const servers = app.connections.map(connection => idOf(connection.server));
   if (new Set(servers).size !== servers.length) {
@@ -508,7 +507,7 @@ function shapeProblems(app: AppSpec): string[] {
 
 /** How an organization's own context is named: never a catalogue id (agentspecs' `ORGANIZATION_FRAME_PREFIX`). */
 /**
- * What stops a Form block from asking (LOOP C-16), in agentspecs'
+ * What stops a Form block from asking (C-16), in agentspecs'
  * `form_problems` sentences: its schema is an object of named fields, each
  * required one among them, so that the page draws it and the runtime checks
  * what it receives against the same schema.
@@ -556,7 +555,7 @@ const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
 
 export const ORGANIZATION_FRAME_PREFIX = 'org-';
 
-/** Whether a reference names an organization's own context rather than the catalogue's (LOOP U-32). */
+/** Whether a reference names an organization's own context rather than the catalogue's (U-32). */
 export const isOrganizationFrame = (ref: string): boolean =>
   idOf(ref).startsWith(ORGANIZATION_FRAME_PREFIX);
 
@@ -576,7 +575,7 @@ function referenceProblems(
     missing('agent or Cog', app.agent);
   }
   // An agent on a catalogue harness is served by the runtime's ACP adapter
-  // (SHIELD SH-10); `custom` and a harness that is none are refused, not run
+  // (SH-10); `custom` and a harness that is none are refused, not run
   // on pydantic-ai in their place (SH-01).
   const agent = app.agent ? getAgentspecs(idOf(app.agent)) : undefined;
   const unserved = agent ? unservedHarnessProblem(agent) : undefined;
@@ -626,7 +625,7 @@ function referenceProblems(
   if (app.model && !getModel(app.model)) {
     missing('model', app.model);
   }
-  // The model a profile runs on is the catalogue's (LOOP P-20).
+  // The model a profile runs on is the catalogue's (P-20).
   for (const profile of app.interface.profiles ?? []) {
     if (profile.model && !getModel(profile.model)) {
       problems.push(
@@ -634,7 +633,7 @@ function referenceProblems(
       );
     }
   }
-  // The model a mode runs on is the catalogue's (LOOP P-19).
+  // The model a mode runs on is the catalogue's (P-19).
   for (const mode of app.interface.modes ?? []) {
     for (const option of mode.options) {
       if (option.model && !getModel(option.model)) {
@@ -707,7 +706,7 @@ function referenceProblems(
       const [server, name] = splitRef(target);
       if (server === undefined) {
         if (hostTools.includes(target)) continue;
-        // A tool of its own, written in its code (LOOP P-06).
+        // A tool of its own, written in its code (P-06).
         if ((app.tools ?? []).some(tool => tool.name === target)) continue;
         if (!getBackendToolSpec(name)) {
           problems.push(
@@ -771,7 +770,7 @@ function attentionNotes(app: AppSpec): string[] {
   if (app.record.include.length === 0) {
     notes.push('It keeps no record of what it did.');
   }
-  // A Guard the runtime does not run checks nothing (LOOP R-06): said here,
+  // A Guard the runtime does not run checks nothing (R-06): said here,
   // where the builder decides, rather than found out in production.
   for (const ref of app.checks.guards) {
     const guard = own(GUARD_CATALOGUE, idOf(ref));
@@ -855,7 +854,7 @@ function setupNotes(app: AppSpec): string[] {
  * Where an application is checked: the plugins its organization has turned
  * off (catalogue ids, `plugins_off` in IAM), none when it has decided nothing
  * or the checks run with no organization; and the ids of its organization's
- * contexts (`frames` in IAM: its versions and its own, LOOP U-32), unsaid
+ * contexts (`frames` in IAM: its versions and its own, U-32), unsaid
  * when no organization is known — a context of an organization's own is then
  * refused.
  */
@@ -1111,7 +1110,7 @@ export function documentShapeProblems(document: unknown): string[] {
       unknownKeys(item, ['label', 'message', 'category'], where, 'a starter');
     };
     records(ui.starters, 'interface.starters', starter);
-    // Its profiles (LOOP P-20), as agentspecs refuses them: no key unknown.
+    // Its profiles (P-20), as agentspecs refuses them: no key unknown.
     records(ui.profiles, 'interface.profiles', (profile, where) => {
       required(profile, 'id', where);
       required(profile, 'label', where);
@@ -1155,7 +1154,7 @@ export function documentShapeProblems(document: unknown): string[] {
         );
       }
     });
-    // Its commands and modes in the composer (LOOP P-19), as agentspecs
+    // Its commands and modes in the composer (P-19), as agentspecs
     // refuses them: names and ids slash-safe and said once, no key unknown.
     const named = new Set<string>();
     records(ui.commands, 'interface.commands', (item, where) => {
@@ -1260,14 +1259,14 @@ export function documentShapeProblems(document: unknown): string[] {
     if (Array.isArray(ui.settings)) {
       at(
         'interface.settings',
-        'is the JSON Schema of a form, an object of named fields (LOOP C-16), not a list of settings: say each one as a property, its title and its default',
+        'is the JSON Schema of a form, an object of named fields (C-16), not a list of settings: say each one as a property, its title and its default',
       );
     } else {
       mapping(ui.settings, 'interface.settings', settings => {
         problems.push(...formProblems({ id: 'settings', schema: settings }));
       });
     }
-    // What a person may send without being asked (LOOP P-21), as agentspecs
+    // What a person may send without being asked (P-21), as agentspecs
     // refuses it: a kind at least, each a type said once, sizes it takes.
     mapping(ui.uploads, 'interface.uploads', uploads => {
       unknownKeys(
@@ -1324,7 +1323,7 @@ export function documentShapeProblems(document: unknown): string[] {
           required(item, 'component', where);
         },
       );
-    }); // A widget's page written in its code (LOOP P-05), as agentspecs reads it.
+    }); // A widget's page written in its code (P-05), as agentspecs reads it.
     mapping(ui.page, 'interface.page', page => {
       unknownKeys(
         page,

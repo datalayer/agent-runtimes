@@ -4,7 +4,7 @@
  */
 
 /**
- * What the floating assistant's balloon shows (LOOP T-23): the whole
+ * What the floating assistant's balloon shows (T-23): the whole
  * conversation (`history`), or only what it says or does now (`current`);
  * and, either way, the tool it calls, in plain words — "Using
  * **list_invoices**…", then "Done: list_invoices" or "list_invoices failed".

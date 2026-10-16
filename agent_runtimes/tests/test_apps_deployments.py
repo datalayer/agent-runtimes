@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps deploy` (LOOP S-06): the Studio's deployments, from a terminal."""
+"""`loop apps deploy` (S-06): the Studio's deployments, from a terminal."""
 
 import json
 from typing import Any
@@ -180,7 +180,7 @@ def test_a_deployment_is_read_as_ai_agents_answers():
             version_of_model(older)
 
 
-# --- a session of a deployment, woken by its trigger (LOOP R-14) ----------------
+# --- a session of a deployment, woken by its trigger (R-14) ----------------
 
 DIGEST = {
     "schema": "loop.app/v1",
@@ -284,7 +284,7 @@ SESSION_SAID = {"type": "CUSTOM", "name": "loop.session", "value": {"uid": "s-1"
 
 
 def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():
-    """LOOP R-14: the agent made, then a session of it on the session API —
+    """R-14: the agent made, then a session of it on the session API —
     said to be woken, the trigger's prompt its opener — whose stream is read
     to its end."""
     from agent_runtimes.loop.apps.deployments import start_session
@@ -464,7 +464,7 @@ def test_a_payload_not_made_for_the_session_api_is_refused_before_anything_is_as
 
 
 def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
-    """LOOP R-33: the agent on the runtime a deployment is kept on is the
+    """R-33: the agent on the runtime a deployment is kept on is the
     one the hosted page's chat addresses — the application's id, over AG-UI —
     with the deployment as its instance and nothing woken."""
     pytest.importorskip("agentspecs.apps")
@@ -491,7 +491,7 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
             "app_instance"
         ]
     )
-    # The deployment's spend limit travels in the instance (SHIELD SH-32).
+    # The deployment's spend limit travels in the instance (SH-32).
     limited = kept_payload(
         DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4, spend_limit=500
     )
@@ -537,7 +537,7 @@ def test_a_kept_agent_is_created_once_and_one_already_there_is_kept():
 
 def test_an_application_the_runtime_refuses_is_said_once_in_its_sentence():
     """A refusal is the application's, not the runtime's: not asked again,
-    and its sentence is the runtime's own (STUDIO D-21)."""
+    and its sentence is the runtime's own (D-21)."""
     from agent_runtimes.loop.apps.deployments import (
         ApplicationRefused,
         SessionNotStarted,

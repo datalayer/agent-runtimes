@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the record keeps of a person's answers, and for how long (LOOP R-07).
+"""What the record keeps of a person's answers, and for how long (R-07).
 
 An approval's outcome is an entry of its own — approved, declined, or not
 answered in time — whether a rule or a Gate asked. An application that names

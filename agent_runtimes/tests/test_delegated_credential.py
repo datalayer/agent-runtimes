@@ -286,7 +286,7 @@ class TestTheAdapterBuildsTheRunsToolset:
 
 
 class TestAnApplicationsRunOverA2AReachesItsCompanies:
-    """PAP_DATALAYER B-04, found on r1: a company's turn reached its kept deployment over
+    """B-04, found on r1: a company's turn reached its kept deployment over
     A2A, and its agent answered that it had no tool to ask the company it works with — the
     adapter, which runs every A2A task, reached the gateway with the run's token alone and
     without the application's companies, which only the AG-UI and Vercel runs were given.

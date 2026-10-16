@@ -118,7 +118,7 @@ export type ApprovalArgs = {
   toolArgs?: Record<string, unknown>;
 };
 
-/** A message it asks to send, as the approval carries it, whole (LOOP W-05). */
+/** A message it asks to send, as the approval carries it, whole (W-05). */
 export type MessageAsked = {
   to: string;
   cc: string;
@@ -147,7 +147,7 @@ const addressed = (value: unknown): string =>
       : '';
 
 /**
- * The message a send asks for, to show whole before *Approve* (LOOP W-05):
+ * The message a send asks for, to show whole before *Approve* (W-05):
  * an approval whose arguments say to whom and what. `null` for anything else.
  */
 export function messageOfApproval(approval: ApprovalArgs): MessageAsked | null {

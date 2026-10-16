@@ -4,11 +4,11 @@
  */
 
 /**
- * What the web chat draws of its conversation (MOBILE M-030): the rows of
+ * What the web chat draws of its conversation (M-030): the rows of
  * `reduceConversation`'s state as the `DisplayItem`s `ChatMessageList`
  * renders, with what only the web holds beside them — what a message showed
- * and who said it (Reactor UI ops, REACTOR_UI RU-W), the steps of an
- * application's code (LOOP P-16), and what a message carried that the
+ * and who said it (Reactor UI ops, RU-W), the steps of an
+ * application's code (P-16), and what a message carried that the
  * conversation does not keep (when it was said, a voice's metadata).
  *
  * The conversation is the reducer's; this only draws it. A turn that ended

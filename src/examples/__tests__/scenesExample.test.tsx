@@ -4,7 +4,7 @@
  */
 
 /**
- * The Scenes example (LOOP A-15): the catalogue's scenes in tabs, each
+ * The Scenes example (A-15): the catalogue's scenes in tabs, each
  * drawn from its scene spec — its face and name, its `assumes` line, its
  * members where its stage puts them, its cues as the entry's suggestions —
  * and a member that is not reached drawn all the same, with what it needs.
@@ -195,7 +195,7 @@ describe('the Scenes example', () => {
     const { ScenesExample } = await import('../ScenesExample');
     const { container } = render(<ScenesExample />);
     const tabs = [...container.querySelectorAll('[data-scene-tab]')];
-    // The teams staged live: a scripted scene is played as written on its page (PAP_DATALAYER X-02).
+    // The teams staged live: a scripted scene is played as written on its page (X-02).
     const staged = listSceneSpecs().filter(scene => scene.kind === 'team');
     expect(tabs.map(tab => tab.getAttribute('data-scene-tab'))).toEqual(
       Object.keys(SCENE_CATALOGUE).filter(

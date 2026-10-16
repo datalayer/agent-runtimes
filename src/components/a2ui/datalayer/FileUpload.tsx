@@ -4,7 +4,7 @@
  */
 
 /**
- * File upload (LOOP C-18): a file a person gives the application — chosen
+ * File upload (C-18): a file a person gives the application — chosen
  * with *Choose a file*, or dropped on the block. One of a kind it does not
  * accept, or larger than it takes, is refused in words and never sent. What
  * it takes is read and written where its `files` binding points, as a list
@@ -47,7 +47,7 @@ const MAX_MB = 25;
 /**
  * Why a file is refused, or `null` when it is taken: its kinds are
  * extensions (`.csv`), media types (`application/pdf`) or families
- * (`image/*`), as the Appspec's uploads say them (LOOP P-21).
+ * (`image/*`), as the Appspec's uploads say them (P-21).
  */
 export function refusal(
   file: Pick<File, 'name' | 'size'> & { type?: string },

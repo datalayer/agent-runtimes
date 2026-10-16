@@ -7,7 +7,7 @@
  * A team over A2A, as a graph (React Flow): each member is its character
  * (`AssistantStage`), with its name and where it runs under it, and an edge
  * links the entry to each peer it asks — one peer (`peer`, a team of two)
- * or several (`peers`, a team of N; LOOP A-08). The edges are the team's
+ * or several (`peers`, a team of N; A-08). The edges are the team's
  * `talks_to` (`links`): a peer that talks to another peer has its edge
  * drawn too, still, since the page runs the entry's asks only.
  *
@@ -20,7 +20,7 @@
  *
  * The members stand where the layout puts them: the entry on the left and
  * the peers to its right, one under another — or where a scene's stage
- * directions say (`positions`, fractions of the box; LOOP A-13): the
+ * directions say (`positions`, fractions of the box; A-13): the
  * distinct `x` values are the columns, left to right, the distinct `y`
  * values the rows, top to bottom.
  *
@@ -107,7 +107,7 @@ export type A2ATeamGraphMember = {
   /** The MCP servers it reaches, drawn to its right (`teamConnectionsOf`). */
   connections?: A2ATeamConnection[];
   /**
-   * How its balloon shows what it says (LOOP T-23): only what it says or
+   * How its balloon shows what it says (T-23): only what it says or
    * does now (`current`, a team's default) — the words, the tool it calls,
    * a notebook it was given — or a peek (`history`).
    */
@@ -1009,9 +1009,7 @@ function connectionsReach(
   connectionHeight: number,
 ): number {
   return count
-    ? size / 4 +
-        count * connectionHeight +
-        (count - 1) * CONNECTIONS_APART
+    ? size / 4 + count * connectionHeight + (count - 1) * CONNECTIONS_APART
     : 0;
 }
 

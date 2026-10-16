@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-// The Dial of the Dial desk: a file of its application's folder (LOOP P-29),
+// The Dial of the Dial desk: a file of its application's folder (P-29),
 // drawn in a sandboxed frame from the server its package is installed beside.
 export default function draw(root, { props }) {
   const label = document.createElement('div');

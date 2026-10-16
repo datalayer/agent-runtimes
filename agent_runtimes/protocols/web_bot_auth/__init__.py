@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Web Bot Auth: an agent's requests signed, and verified (AGENT_PROTOCOLS PR-20 to PR-23).
+"""Web Bot Auth: an agent's requests signed, and verified (PR-20 to PR-23).
 
 Implements ``draft-ietf-webbotauth-httpsig-protocol-00`` (2026-09-01) over
 RFC 9421 HTTP Message Signatures:

@@ -7,7 +7,7 @@ Inbox triage reaches mail through Gmail's tools, as the catalogue's Google
 Workspace server serves them (`google-workspace__search_gmail_messages`…).
 That server is not enabled on Datalayer: reaching a person's Gmail needs
 Google's consent screen and, outside Datalayer's own domain, Google's review
-(LOOP W-02, W-10). So that the worker runs end to end before then, this
+(W-02, W-10). So that the worker runs end to end before then, this
 module is the **mail source** it runs against:
 
 - `MailSource` — what a worker needs of a mailbox;
@@ -21,7 +21,7 @@ module is the **mail source** it runs against:
   forward outside the organization is told from the call);
 - `MailWatch` and `post_mail_event` — what arrived since it last looked, as
   `email_received` events, told to ai-agents, which wakes the deployments
-  whose Appspec says *when a message arrives* (LOOP R-14, W-03).
+  whose Appspec says *when a message arrives* (R-14, W-03).
 
 An event carries the ids of what arrived and nothing written by its sender:
 the session reads the message with its tools, under its rules.

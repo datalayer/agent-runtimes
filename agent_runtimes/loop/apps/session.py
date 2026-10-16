@@ -3,7 +3,7 @@
 
 """An application's session: one conversation of one user with one application.
 
-What an application's code is given (LOOP P-03). It writes to the user
+What an application's code is given (P-03). It writes to the user
 (`Session.send`, `Session.stream`), shows what it is doing (`Session.step`),
 stops to ask (`Session.ask`), keeps state across turns (`Session.state`),
 writes to the application's record (`Session.record`) and calls the
@@ -15,7 +15,7 @@ with an agent, and knows nothing of applications.
 
 A session talks to its user through a `Channel`: the page, the terminal, a
 test. In this process the channel is a `MemoryChannel`; on a runtime it is the
-session API's (`agent_runtimes.loop.apps.sessions`, LOOP R-04), which
+session API's (`agent_runtimes.loop.apps.sessions`, R-04), which
 streams what the application shows as AG-UI events and brings back what the
 page answers.
 """
@@ -82,7 +82,7 @@ class Message:
     author: str
     """Who wrote it: the application's name unless said."""
     components: Tuple[Dict[str, Any], ...] = ()
-    """What it shows besides its text: components of the catalog (LOOP P-04)."""
+    """What it shows besides its text: components of the catalog (P-04)."""
     data: Mapping[str, Any] = field(default_factory=dict)
     """What its components bound to a path read (a Table's rows, a Chart's points)."""
     _session: Optional["Session"] = field(default=None, compare=False, repr=False)
@@ -100,7 +100,7 @@ class Message:
         show: Optional[Sequence[Mapping[str, Any]]] = None,
         data: Optional[Mapping[str, Any]] = None,
     ) -> "Message":
-        """Change what the message says, where the user reads it (LOOP P-15).
+        """Change what the message says, where the user reads it (P-15).
 
         Parameters
         ----------
@@ -119,7 +119,7 @@ class Message:
         return await self._sent_by().update(self, text, show=show, data=data)
 
     async def remove(self) -> None:
-        """Take the message away from the conversation (LOOP P-15)."""
+        """Take the message away from the conversation (P-15)."""
         await self._sent_by().remove(self)
 
 
@@ -160,7 +160,7 @@ class Step:
 
 @dataclass(frozen=True)
 class StepDelta:
-    """A piece of a step's output, written as it comes (LOOP P-31): the SQL
+    """A piece of a step's output, written as it comes (P-31): the SQL
     as the model writes it. The step, ended, follows with its whole output.
     """
 
@@ -171,7 +171,7 @@ class StepDelta:
 
 def shown_step(step: Step) -> Step:
     """A step as it is shown: what it read, wrote and failed with, a
-    credential withheld (LOOP R-19).
+    credential withheld (R-19).
     """
     from agent_runtimes.guardrails.credentials import redact, redacted
 
@@ -183,14 +183,14 @@ def shown_step(step: Step) -> Step:
     )
 
 
-#: Where an element shows (LOOP P-18): in the conversation, in a side panel
+#: Where an element shows (P-18): in the conversation, in a side panel
 #: beside it, or on a page of its own over it.
 WHERE: Tuple[str, ...] = ("inline", "panel", "page")
 
 
 @dataclass(frozen=True)
 class Shown:
-    """An element shown in a side panel or on a page of its own (LOOP P-18).
+    """An element shown in a side panel or on a page of its own (P-18).
 
     Delivered again under its id, it is that element changed; `Closed` takes
     it away. An element shown inline is a `Message`.
@@ -202,14 +202,14 @@ class Shown:
     """``panel`` or ``page``."""
     title: str
     components: Tuple[Dict[str, Any], ...]
-    """What it shows: components of the catalog (LOOP P-04)."""
+    """What it shows: components of the catalog (P-04)."""
     data: Mapping[str, Any] = field(default_factory=dict)
     """What its components bound to a path read."""
 
 
 @dataclass(frozen=True)
 class Closed:
-    """An element of a side panel or a page closed by the code (LOOP P-18)."""
+    """An element of a side panel or a page closed by the code (P-18)."""
 
     element_id: str
     session_id: str
@@ -217,7 +217,7 @@ class Closed:
 
 @dataclass(frozen=True)
 class Element:
-    """What `Session.show` opened, where it opened it (LOOP P-18).
+    """What `Session.show` opened, where it opened it (P-18).
 
     ``await element.update(...)`` changes it in place; ``await
     element.close()`` takes it away — ``session.close(element.id)`` says the
@@ -248,7 +248,7 @@ class Element:
         title: Optional[str] = None,
         data: Optional[Mapping[str, Any]] = None,
     ) -> "Element":
-        """Change what it shows, where it is (LOOP P-18).
+        """Change what it shows, where it is (P-18).
 
         Parameters
         ----------
@@ -273,13 +273,13 @@ class Element:
         )
 
     async def close(self) -> None:
-        """Take it away (LOOP P-18)."""
+        """Take it away (P-18)."""
         await self._shown_by().close(self)
 
 
 @dataclass(frozen=True)
 class WindowMessage:
-    """A message to the page the application sits in (LOOP P-25): not shown
+    """A message to the page the application sits in (P-25): not shown
     in the conversation, but handed to the page — raised on the embed as its
     ``window-message`` event — for the page's own code to read.
     """
@@ -313,7 +313,7 @@ class Interrupted:
 
 @dataclass(frozen=True)
 class PageShown:
-    """What a widget's page shows for its inputs (LOOP P-05): the outputs its
+    """What a widget's page shows for its inputs (P-05): the outputs its
     code returned, by name, for the inputs it ran on — shown in place of the
     last ones, not in the conversation.
     """
@@ -387,7 +387,7 @@ class FileQuestion:
 class FormQuestion:
     """Ask for several values at once. The answer is a `dict` by field name.
 
-    Its ``schema`` is the JSON Schema of a form (LOOP C-16), an object of named
+    Its ``schema`` is the JSON Schema of a form (C-16), an object of named
     fields, as an application's settings and a Form block say theirs: the page
     draws it with ``@datalayer/primer-rjsf`` and the answer is checked against it.
     """
@@ -419,7 +419,7 @@ class UploadedFile:
 
 @dataclass(frozen=True)
 class Feedback:
-    """What a person said of an answer (LOOP V-18, P-24): a thumb, and a comment.
+    """What a person said of an answer (V-18, P-24): a thumb, and a comment.
 
     Given to the application's ``@app.feedback`` once it is kept in its record.
     """
@@ -436,7 +436,7 @@ class Feedback:
 
 #: How long a conversation's title and a tag may be, how many tags it
 #: carries, and how large its metadata is once written: as ai-agents keeps
-#: a person's threads (LOOP P-24).
+#: a person's threads (P-24).
 THREAD_TITLE_LIMIT = 200
 THREAD_TAG_LIMIT = 40
 THREAD_MAX_TAGS = 20
@@ -473,7 +473,7 @@ def thread_tags(tags: Iterable[Any]) -> List[str]:
 
 
 class ThreadMetadata(Dict[str, Any]):
-    """A conversation's metadata (LOOP P-24): a dict whose every change is
+    """A conversation's metadata (P-24): a dict whose every change is
     kept with the conversation, in its record — ``session.metadata["plan"] =
     "pro"``. Its values are written as JSON; at most 10,000 characters.
     """
@@ -606,7 +606,7 @@ class MemoryChannel:
 
     @property
     def shown(self) -> List[Shown]:
-        """The elements open in a side panel or on a page, as they are now (LOOP P-18)."""
+        """The elements open in a side panel or on a page, as they are now (P-18)."""
         open_: Dict[str, Shown] = {}
         for event in self.events:
             if isinstance(event, Shown):
@@ -642,7 +642,7 @@ _WHERE_WORDS = {
 
 
 def with_own_checks(capabilities: Sequence[Any], own: Sequence[Any]) -> List[Any]:
-    """An agent's capabilities with its code's checks (LOOP P-06) right after
+    """An agent's capabilities with its code's checks (P-06) right after
     its built-in ones: before its record, so that an answer they refuse is
     not kept, and their refusals are.
     """
@@ -665,7 +665,7 @@ def _now() -> datetime:
 
 @dataclass
 class ToolCallSteps(AbstractCapability[Any]):
-    """Each tool call of a session's agent, shown as a ``tool`` step (LOOP P-33).
+    """Each tool call of a session's agent, shown as a ``tool`` step (P-33).
 
     What the chat draws for an agent's tool call on a runtime, through any
     channel: the terminal, a test, the page. A call starts its step when the
@@ -740,7 +740,7 @@ def form_values(
     given: Mapping[str, Any],
     title: str = "Its settings",
 ) -> Dict[str, Any]:
-    """Check values against a form's schema; the default for the rest (LOOP C-16).
+    """Check values against a form's schema; the default for the rest (C-16).
 
     Parameters
     ----------
@@ -864,7 +864,7 @@ class Session:
         self._recorder = recorder
         self._agent: Optional[AppAgent] = None
         self._removed: set[str] = set()
-        # What its code adds to its agent (LOOP P-06): its tools, its checks.
+        # What its code adds to its agent (P-06): its tools, its checks.
         self._own_toolsets = list(toolsets)
         self._own_capabilities = list(capabilities)
         self._elements: Dict[str, Element] = {}
@@ -872,7 +872,7 @@ class Session:
         self._tags: List[str] = []
         self._metadata = ThreadMetadata(self._named)
 
-    # --- Reactor, from a session (LOOP P-35) -------------------------------------
+    # --- Reactor, from a session (P-35) -------------------------------------
 
     def _host_platform(self) -> Any:
         """Return the Reactor platform, or raise when none."""
@@ -914,7 +914,7 @@ class Session:
         """
         return await self._host_platform().execute_command(command_id, argument)
 
-    # --- what the conversation is called (LOOP P-24) ----------------------------
+    # --- what the conversation is called (P-24) ----------------------------
 
     @property
     def title(self) -> str:
@@ -983,12 +983,12 @@ class Session:
 
     @property
     def modes(self) -> Dict[str, str]:
-        """The option of each of the application's modes the user is in, by mode id; a copy (LOOP P-19)."""
+        """The option of each of the application's modes the user is in, by mode id; a copy (P-19)."""
         return dict(self._modes)
 
     @property
     def profile(self) -> Optional[str]:
-        """The id of the profile the conversation is with (LOOP P-20); None
+        """The id of the profile the conversation is with (P-20); None
         for an application without profiles. Kept to the end of the session.
         """
         return self._profile
@@ -1002,7 +1002,7 @@ class Session:
 
     @property
     def ui(self) -> SurfaceComponents:
-        """Every component of the catalog as a typed call, for an answer to show (LOOP P-04).
+        """Every component of the catalog as a typed call, for an answer to show (P-04).
 
         ``await session.send("Here they are.", show=[session.ui.table("runs",
         columns=[...], rows=[...])])``: the same components, checked against
@@ -1013,7 +1013,7 @@ class Session:
 
     def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
         """A component for an answer or an element to show, its properties checked
-        (LOOP P-04, P-17): one of the catalog, or one the application's developer
+        (P-04, P-17): one of the catalog, or one the application's developer
         wrote (``interface.custom_components``), by its name.
 
         ``await session.show(session.component("load", "Gauge", label="Load",
@@ -1052,7 +1052,7 @@ class Session:
         show : sequence of components
             What it shows besides its text: components of the catalog
             (``session.ui.<component>(...)``), each carrying its values,
-            drawn under the text in the order given (LOOP P-04).
+            drawn under the text in the order given (P-04).
         data : mapping, optional
             What its components bound to a path read:
             ``session.ui.table("runs", columns=[...], rows={"path": "/runs"})``
@@ -1098,7 +1098,7 @@ class Session:
         show: Optional[Sequence[Mapping[str, Any]]] = None,
         data: Optional[Mapping[str, Any]] = None,
     ) -> Message:
-        """Change what a message of this session says, in place (LOOP P-15).
+        """Change what a message of this session says, in place (P-15).
 
         ``await message.update(text)`` says the same.
 
@@ -1130,7 +1130,7 @@ class Session:
         return changed
 
     async def remove(self, message: Message) -> None:
-        """Take a message of this session away from the conversation (LOOP P-15).
+        """Take a message of this session away from the conversation (P-15).
 
         ``await message.remove()`` says the same; a removed message cannot be
         changed again.
@@ -1164,7 +1164,7 @@ class Session:
         author : str, optional
             Who wrote it; the application's name when unsaid.
         show : sequence of components
-            What it shows under its text once it is whole (LOOP P-04).
+            What it shows under its text once it is whole (P-04).
         data : mapping, optional
             What its components bound to a path read.
 
@@ -1191,7 +1191,7 @@ class Session:
         await self.channel.deliver(message)
         return message
 
-    # --- where an element shows (LOOP P-18) -------------------------------------
+    # --- where an element shows (P-18) -------------------------------------
 
     @property
     def elements(self) -> Dict[str, Element]:
@@ -1208,7 +1208,7 @@ class Session:
         id: Optional[str] = None,
     ) -> Element:
         """Show an element where it belongs: in the conversation, in a side
-        panel beside it, or on a page of its own (LOOP P-18).
+        panel beside it, or on a page of its own (P-18).
 
         ``panel = await session.show(session.ui.table("runs", ...),
         where="panel", title="Runs")``, then ``await panel.close()``. Shown
@@ -1291,7 +1291,7 @@ class Session:
         return element
 
     def _reopen(self, shown: Iterable[Shown]) -> None:
-        """What was open in a panel or on a page before a resume, open again (LOOP P-18)."""
+        """What was open in a panel or on a page before a resume, open again (P-18)."""
         for item in shown:
             self._elements[item.id] = Element(
                 item.id,
@@ -1305,7 +1305,7 @@ class Session:
             )
 
     async def close(self, element: Union[Element, str]) -> None:
-        """Close an element it shows (LOOP P-18): one inline is removed from
+        """Close an element it shows (P-18): one inline is removed from
         the conversation; a panel or a page goes.
 
         Parameters
@@ -1370,7 +1370,7 @@ class Session:
 
     async def send_window_message(self, data: Any) -> WindowMessage:
         """Tell the page the application sits in something, outside the
-        conversation (LOOP P-25): ``await session.send_window_message({"open":
+        conversation (P-25): ``await session.send_window_message({"open":
         "invoice", "id": 42})``. Embedded, the page hears it as the element's
         ``window-message`` event; its answer comes back to ``@app.window``.
 
@@ -1408,7 +1408,7 @@ class Session:
         ``async with session.step("Searching") as step: step.output = found``.
         A step opened inside another is nested in it. Its output may be
         written as it comes — ``await step.stream(session.agent.stream(prompt))``
-        — rather than shown when it ends (LOOP P-31).
+        — rather than shown when it ends (P-31).
 
         Parameters
         ----------
@@ -1439,7 +1439,7 @@ class Session:
         await self.channel.deliver(shown_step(started))
 
         async def streamed(text: str) -> None:
-            """A piece of its output, shown in it as it comes (LOOP P-31)."""
+            """A piece of its output, shown in it as it comes (P-31)."""
             await self.channel.deliver(StepDelta(started.id, self.id, text))
 
         holder = StepOutput(_stream=streamed)
@@ -1461,7 +1461,7 @@ class Session:
         await self._ended(replace(started, output=holder.output, ended_at=_now()))
 
     async def _ended(self, step: Step) -> None:
-        """A step that ended: shown, and kept in the record (LOOP P-16).
+        """A step that ended: shown, and kept in the record (P-16).
 
         The record is sent when the outermost step ends, with the steps
         nested in it.
@@ -1557,7 +1557,7 @@ class Session:
         A rule or a Gate that asks the person asks the user of this session.
         On a runtime it is the agent the runtime made for the application,
         with the rules, checks and record it was made with
-        (``agent_maker``, LOOP R-04).
+        (``agent_maker``, R-04).
         """
         if self._agent is None and self._agent_maker is not None:
             made = self._agent_maker(self)
@@ -1584,7 +1584,7 @@ class Session:
                         ),
                         self._own_capabilities,
                     ),
-                    # Each of its tool calls, a step its user sees (LOOP P-33).
+                    # Each of its tool calls, a step its user sees (P-33).
                     ToolCallSteps(self),
                 ],
                 toolsets=list(self._own_toolsets),
@@ -1624,7 +1624,7 @@ class StepOutput:
     async def stream(
         self, tokens: Union[str, AsyncIterable[str], Iterable[str]]
     ) -> str:
-        """Write the step's output as it comes, piece by piece (LOOP P-31).
+        """Write the step's output as it comes, piece by piece (P-31).
 
         ``sql = await step.stream(session.agent.stream(prompt))``: each piece
         is shown in the step as the model writes it, and added to its output,

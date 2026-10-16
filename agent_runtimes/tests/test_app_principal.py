@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's agent acts as its application's principal (LOOP I-03).
+"""A deployment's agent acts as its application's principal (I-03).
 
 Its token is asked of ai-agents with the token of whoever opens the session,
 kept by deployment and asked for again before it runs out; the agent calls
@@ -189,7 +189,7 @@ def test_a_deployments_agent_is_not_made_without_its_principals_token():
 
 
 def test_its_keeper_renews_it_whatever_is_held(asked):
-    """A kept deployment asked only over A2A is renewed by ai-agents (STUDIO A-08)."""
+    """A kept deployment asked only over A2A is renewed by ai-agents (A-08)."""
     from agent_runtimes.loop.apps.principal import renew_principal_token
 
     # Its agent made an hour ago: the token still holds, and is asked again anyway.

@@ -14,7 +14,7 @@
  * 2. Store mode: When `useStore` is true
  * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
  * 4. A conversation its host draws (`conversation`): the LOOP workspace,
- *    which the embed's bubble, panel and assistant hold (LOOP R-01) — the
+ *    which the embed's bubble, panel and assistant hold (R-01) — the
  *    floating chrome around it, told by the host what it is doing and what
  *    it last said
  *
@@ -126,7 +126,7 @@ import { useChatWords } from './ChatLanguage';
 
 /**
  * A conversation the host draws in the floating window, in place of the
- * chat: the LOOP workspace (LOOP R-01). The window keeps its chrome — the
+ * chat: the LOOP workspace (R-01). The window keeps its chrome — the
  * button, its blink and its balloon, the panel, the assistant, dragging and
  * dismissing — and is told by the host what the conversation is doing and
  * what it last said, which it would otherwise read from its own chat.
@@ -162,7 +162,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * Properties laid over the theme the conversation wears, by mode — an
-   * application's accent (LOOP T-05): the chat sets its theme again inside
+   * application's accent (T-05): the chat sets its theme again inside
    * it, so the accent the page around it set does not reach its bubbles.
    */
   themeOverrides?: ThemeOverrides;
@@ -222,7 +222,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * - 'floating': Full-height floating panel (pinned to right edge with offset)
    * - 'floating-small': Standard floating popup
    * - 'floating-draggable': The popup with a handle, movable about the viewport
-   * - 'assistant': A character on the page that speaks in a balloon (LOOP T-21)
+   * - 'assistant': A character on the page that speaks in a balloon (T-21)
    * - 'panel': Full-height side panel (right edge, no floating offset)
    * @default 'floating'
    */
@@ -235,15 +235,14 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * The character of the floating assistant: one Datalayer ships, by id
-   * (`ASSISTANT_CHARACTERS`, LOOP T-25), or one a person loaded from a file
+   * (`ASSISTANT_CHARACTERS`, T-25), or one a person loaded from a file
    * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
    * @default 'paperclip'
    */
   assistantCharacter?: string | AssistantCharacter | AssistantCharacterData;
 
   /**
-   * How the floating assistant's balloon shows the conversation (LOOP
-   * T-23; an Appspec's `interface.balloon`):
+   * How the floating assistant's balloon shows the conversation (T-23; an Appspec's `interface.balloon`):
    * - 'history': every message, scrolled, under a header that counts them,
    *   the composer last; closed, the balloon lists the messages too.
    * - 'current': only what it says or does now — the answer being written,
@@ -297,7 +296,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * A conversation the host draws in the window instead of the chat — the
-   * LOOP workspace, as the embed's floating modes do (LOOP R-01). The chat's
+   * LOOP workspace, as the embed's floating modes do (R-01). The chat's
    * own props (`protocol`, `suggestions`, …) are then not read.
    */
   conversation?: FloatingConversation;
@@ -537,7 +536,7 @@ export function ChatFloating({
   }, [viewMode, resetDrag]);
 
   /*
-   * The floating assistant (LOOP T-21, T-22, T-27): a character that acts out
+   * The floating assistant (T-21, T-22, T-27): a character that acts out
    * the presence of what answers — read here from the chat's own loading and
    * items — greets when it arrives, says goodbye when sent away, and is
    * dragged about by itself, the conversation following it.

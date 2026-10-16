@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's policies from IAM, on a runtime (SH-50, decisions 10 and 11).
+"""The Shield's policies from IAM, on a runtime (SH-50).
 
 A Datalayer runtime is **managed**: the organization's and the teams' Shield
 documents are IAM's, pulled for the account the runtime runs under
@@ -24,12 +24,12 @@ no unexpired copy is :class:`agent_shield.saas.PolicyUnavailable`, a
 sentence naming IAM: the harness is refused with it at creation, and every
 further action of a running one is refused with it until IAM answers. A
 runtime with no token at all — the terminal's ``loop``, a test — is
-**unmanaged**: the application's Rules and decision 5's default alone, as
+**unmanaged**: the application's Rules and the platform's default alone, as
 the standalone proxy runs on its file. So is a process with a token but no
 ``DATALAYER_IAM_URL`` — a developer's shell, CI — said once in the log: a
 Datalayer runtime's pod always carries IAM's URL (the operator sets it), so
-on the platform decision 11 holds, and off it the Rules decide as the
-proxy's file does. (1.5.37 refused such a process outright, which refused
+on the platform nothing is decided without a readable policy, and off it
+the Rules decide as the proxy's file does. (1.5.37 refused such a process outright, which refused
 every application run in a shell that only held a token.)
 """
 
@@ -179,7 +179,7 @@ class RuntimePolicies:
         if not account:
             raise PolicyUnavailable(
                 "The Shield cannot read its policy: the runtime's token names no account, "
-                "so IAM cannot be asked for its documents (SHIELD decision 11)"
+                "so IAM cannot be asked for its documents"
             )
         self._credential = credential
         return IamPolicySource(iam_url, credential, account)

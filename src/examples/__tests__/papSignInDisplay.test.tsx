@@ -4,7 +4,7 @@
  */
 
 /**
- * PAP Sign-In Display (REACTOR_UI RU-1): each result a page receives for a
+ * PAP Sign-In Display (RU-1): each result a page receives for a
  * sign-in is drawn as the *Sign in at a company* card — from the display the
  * result embeds, or through the plugin's tool binding — while what the model
  * read holds neither the page to open nor the code.

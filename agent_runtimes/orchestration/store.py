@@ -700,7 +700,7 @@ class ExecutionStore(ABC):
         Registering an artifact identifier twice adds the second attempt's
         provenance to the one record rather than replacing it, and a record
         that is already committed is never demoted by a later registration:
-        the first attempt to commit wins (decision 4). Deciding which
+        the first attempt to commit wins. Deciding which
         of two artifacts supersedes the other is O0-10's, on the canonical
         model, where the rule can be stated once for every store.
 
@@ -727,7 +727,7 @@ class ExecutionStore(ABC):
 
         ``commit_artifacts`` in ``core`` decides — the first attempt to
         commit wins, and a later one's artifacts are kept and superseded
-        (decision 4). This is where the decision is stored, said on the
+       . This is where the decision is stored, said on the
         event stream and counted (O1-14). Durable's commit step and the O0-13
         example both call it, so a commit is written in one place rather than
         once per caller.

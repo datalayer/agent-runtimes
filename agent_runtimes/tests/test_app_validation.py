@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A run of an application's tests with the checks on (LOOP V-08).
+"""A run of an application's tests with the checks on (V-08).
 
 Each test conversation is asked of the application in this process; what
 came of it is read with the built-in checks — nothing sensitive leaves, the
@@ -246,7 +246,7 @@ def test_the_sources_check_reads_what_it_did_not_the_words_of_its_answer() -> No
 
 
 def test_the_judge_grades_on_what_the_record_says_it_did_not_on_its_words() -> None:
-    """STUDIO V-08: the judge is handed the conversation's record beside its
+    """V-08: the judge is handed the conversation's record beside its
     answer — an answer that says it looked nothing up, while its record shows
     the lookup, is graded on the lookup."""
     app = desk(
@@ -652,7 +652,7 @@ def test_attach_says_the_refusal_in_its_sentence() -> None:
 
 
 def test_the_judge_reads_what_its_code_kept() -> None:
-    """STUDIO E-01: what its code kept (``session.record``) is on the lines a
+    """E-01: what its code kept (``session.record``) is on the lines a
     judge reads — an insight as feedback, a result as an output of its own —
     and the runtime's own output of a turn is not."""
     entries = [
@@ -677,7 +677,7 @@ def test_the_judge_reads_what_its_code_kept() -> None:
 
 
 def test_a_test_that_is_a_conversation_is_played_turn_by_turn() -> None:
-    """STUDIO E-01: Customer Interview's tests are conversations — its consent
+    """E-01: Customer Interview's tests are conversations — its consent
     answered by a choice, its goal by a message, its insight and result by its
     actions — played in one session each, in this process, and judged whole on
     what it said and what its code kept."""

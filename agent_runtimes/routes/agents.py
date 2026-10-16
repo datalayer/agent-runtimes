@@ -581,12 +581,12 @@ def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
 
 
 def _application_code_of(code: dict[str, Any], app: Any) -> Any:
-    """The `Application` a deployment's ``app.py`` defines (LOOP R-14), loaded
+    """The `Application` a deployment's ``app.py`` defines (R-14), loaded
     from the text the request carries: refused (422) when it is not an
     ``app.py``, does not load, defines another application than the
     Appspec the agent runs, or says itself another version. A code that
     says no version takes the deployed one: the stored version is the
-    authority (LOOP P-24).
+    authority (P-24).
     """
     from agent_runtimes.loop.apps.application import load_application_source
     from agent_runtimes.loop.apps.deployments import DeployRefused, code_carried
@@ -615,7 +615,7 @@ def _application_code_of(code: dict[str, Any], app: Any) -> Any:
                 "runs: its code is another application's."
             ),
         )
-    # The deployment's stored version is the authority (LOOP P-24): a code
+    # The deployment's stored version is the authority (P-24): a code
     # that says no version of its own (an ejected ``app.py``) is of the
     # version deployed; one that says another is refused.
     declared = application.declared_version
@@ -1158,7 +1158,7 @@ class McpServerSelection(BaseModel):
         return self.origin == "contents"
 
 
-#: Why a request that makes an agent carries no code (LOOP R-14).
+#: Why a request that makes an agent carries no code (R-14).
 APP_CODE_REFUSED = (
     "A deployment's code is read from the deployment: a request that makes "
     "its agent carries none (app_code is refused)."
@@ -1185,7 +1185,7 @@ class CreateAgentRequest(BaseModel):
     @classmethod
     def _carries_no_code(cls, data: Any) -> Any:
         """Refuse `app_code`: a deployment's code is read from the deployment
-        by the runtime (LOOP R-14), never taken from the request that makes
+        by the runtime (R-14), never taken from the request that makes
         its agent and run in its principal's name.
         """
         if isinstance(data, dict) and ("app_code" in data or "appCode" in data):
@@ -1287,7 +1287,7 @@ class CreateAgentRequest(BaseModel):
             "An application's Appspec (`loop.app/v1`), when the agent is the one "
             "an application runs: it reaches only the MCP servers the application "
             "connects to, its instructions are added, and its rules are enforced "
-            "before every tool call in place of the default approvals (LOOP R-03, R-05)."
+            "before every tool call in place of the default approvals (R-03, R-05)."
         ),
     )
     app_instance: dict[str, Any] | None = Field(
@@ -1297,10 +1297,10 @@ class CreateAgentRequest(BaseModel):
             "knows it: `app_uid` (its Spacer item), `deployment_uid`, `version`, "
             "and `purpose` `test` with its `launch_uid` when the session tests it "
             "(the Evals engine's runs), and `woken_by` when nobody opened the "
-            "session — `{kind: schedule, ...}` (LOOP R-14). What its record is "
-            "kept under (LOOP R-07). `organization_uid`, the organization it "
+            "session — `{kind: schedule, ...}` (R-14). What its record is "
+            "kept under (R-07). `organization_uid`, the organization it "
             "belongs to: its agent keeps to that organization's contexts, read "
-            "from IAM with the caller's token (LOOP U-31)."
+            "from IAM with the caller's token (U-31)."
         ),
     )
     subagents: SubAgentsConfig | None = Field(
@@ -1374,7 +1374,7 @@ class AgentListResponse(BaseModel):
 def _keep_app_recorder(
     agent_id: str, running_app: Any, request: "CreateAgentRequest"
 ) -> Any:
-    """The record of the application this agent runs (LOOP R-07), kept for it."""
+    """The record of the application this agent runs (R-07), kept for it."""
     from agent_runtimes.loop.apps.record import AppRecorder, keep_agent_recorder
     from agent_runtimes.routes.apps import keep_running
 
@@ -1396,7 +1396,7 @@ def _keep_app_recorder(
     keep_agent_recorder(agent_id, recorder)
     # The runtime knows the application this agent runs: what is asked of
     # "the runtime's application" — its feedback, its rules — is answered on
-    # a kept runtime too (LOOP P-24).
+    # a kept runtime too (P-24).
     keep_running(agent_id, running_app)
     return recorder
 
@@ -1408,7 +1408,7 @@ async def _harness_agent_of(
     running_app: Any,
     http_request: Request,
 ) -> Any:
-    """An agent on a catalogue harness, launched and negotiated (SHIELD SH-10).
+    """An agent on a catalogue harness, launched and negotiated (SH-10).
 
     Its permissions are raised through the runtime's tool approvals with the
     caller's token (SH-12); its record is the application's (SH-18); its
@@ -1447,7 +1447,7 @@ async def _harness_agent_of(
             description=request.description or "",
             state_store=protocol_state_store(),
             # An organization's own harness is read for the organization the
-            # application belongs to (SHIELD SH-46).
+            # application belongs to (SH-46).
             organization_uid=str(
                 (request.app_instance or {}).get("organization_uid") or ""
             ).strip(),
@@ -1893,7 +1893,7 @@ async def create_agent(
                 )
             # A deployment's agent acts as its application's principal, with
             # the token ai-agents mints for it from the caller's: it is not
-            # made without one (LOOP I-03).
+            # made without one (I-03).
             from agent_runtimes.loop.apps.principal import (
                 DeploymentCodeUnread,
                 PrincipalTokenMissing,
@@ -1904,13 +1904,12 @@ async def create_agent(
             from agent_runtimes.loop.apps.visitors import visitors_runtime
 
             serving_deployment = deployment_of(request.app_instance)
-            # The version's own code is the deployment's, read from it (LOOP
-            # R-14): a request never brings code of its own (`app_code` is
+            # The version's own code is the deployment's, read from it (R-14): a request never brings code of its own (`app_code` is
             # refused by the request's model).
             served_code = None
             # On the visitors' runtime nobody's principal acts: a visitor's
             # own token calls its models, and it reaches nothing of its
-            # owner's (LOOP R-30).
+            # owner's (R-30).
             if serving_deployment and not visitors_runtime():
                 creator = http_request.headers.get("Authorization", "")
                 bearer = (
@@ -1949,7 +1948,7 @@ async def create_agent(
                     served_code = _application_code_of(code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
-            # its own (LOOP U-31, U-32), read from IAM with the caller's
+            # its own (U-31, U-32), read from IAM with the caller's
             # token; what cannot be read stops it. Kept for the Required
             # Frame Guard at each session's start (R-06).
             organization_frames = None
@@ -1985,7 +1984,7 @@ async def create_agent(
                     raise HTTPException(
                         status_code=422, detail={"problems": refused.problems}
                     ) from None
-            # The application runs as a Reactor plugin of its own (LOOP F-13).
+            # The application runs as a Reactor plugin of its own (F-13).
             register_app(running_app)
             # Codemode calls every tool through `execute_code`, which an
             # application without a shell is refused (rules.py): its tools are
@@ -1999,7 +1998,7 @@ async def create_agent(
             request.selected_mcp_servers = selected_mcp_servers
             # It remembers what its Appspec says, never what its agent's spec
             # does: per person and application, its Preview and its
-            # deployments together (LOOP R-18).
+            # deployments together (R-18).
             from agent_runtimes.loop.apps.memory import agent_memory
 
             request.memory, request.memory_config = agent_memory(
@@ -2116,7 +2115,7 @@ async def create_agent(
             "jupyter-server" if request.jupyter_sandbox else "eval"
         )
         # The `browser` sandbox is Pyodide in the page: no sandbox of a
-        # runtime is it, and none stands in for it (STUDIO F-15, 2026-10-08).
+        # runtime is it, and none stands in for it (F-15, 2026-10-08).
         if effective_variant == BROWSER_SANDBOX:
             raise HTTPException(
                 status_code=422,
@@ -2523,10 +2522,10 @@ async def create_agent(
                 final_system_prompt + "\n\n" + running_app.instructions.strip()
             )
 
-        # Create the agent based on the library — or the harness (SHIELD SH-10):
+        # Create the agent based on the library — or the harness (SH-10):
         # an agent whose spec names a catalogue harness is launched over ACP
         # in this runtime, the Shield deciding its actions by the
-        # application's Rules and decision 5's default; nothing of pydantic-ai
+        # application's Rules and the platform's default; nothing of pydantic-ai
         # runs in its place.
         harness_id = str(
             _spec_value("harness")
@@ -2539,7 +2538,7 @@ async def create_agent(
                     status_code=422,
                     detail=(
                         f"The harness {harness_id!r} is served over ag-ui, acp and a2a; "
-                        "the vercel-ai transport reads a pydantic-ai agent (SHIELD SH-16)."
+                        "the vercel-ai transport reads a pydantic-ai agent (SH-16)."
                     ),
                 )
             usage_limits = None
@@ -2631,7 +2630,7 @@ async def create_agent(
 
                 capabilities = _without_approval_capabilities(capabilities)
                 # Its channels are the application's, not its agent's: the
-                # agent's own `notifications` give it no tools (LOOP R-37).
+                # agent's own `notifications` give it no tools (R-37).
                 capabilities = [
                     capability
                     for capability in capabilities
@@ -2645,7 +2644,7 @@ async def create_agent(
                 # Exactly what the terminal's agent of the application runs
                 # with — its rules, checks and record first, what its agent's
                 # spec gave it, then its documents, saving and learning tools
-                # (LOOP R-25): one builder, so a cloud runtime's agent lacks
+                # (R-25): one builder, so a cloud runtime's agent lacks
                 # nothing an in-process one has.
                 capabilities = app_capabilities(
                     running_app,
@@ -2749,7 +2748,7 @@ async def create_agent(
 
             # The application instance it serves names every model call it
             # makes through ai-inference, so its owner reads what each
-            # application and deployment spent (LOOP R-09).
+            # application and deployment spent (R-09).
             serving_app = request.app_instance if running_app is not None else None
             # A typed-decision model, or a model ai-inference said it does
             # not serve, is refused here, in a sentence, rather than at the
@@ -2764,25 +2763,25 @@ async def create_agent(
                 raise HTTPException(status_code=400, detail=f"{refusal}.")
             remember_app_instance(agent_id, serving_app)
             # Which of its gateway's servers it reaches in each user's name,
-            # with the token of who talks to it (LOOP I-04).
+            # with the token of who talks to it (I-04).
             from agent_runtimes.loop.apps.acting import remember_servers_in_users_name
 
             remember_servers_in_users_name(
                 agent_id, running_app.connections if running_app is not None else None
             )
             # The companies it works with as a personal agent, each the
-            # gateway's `pap` toolset for it (PAP_DATALAYER ADR-1).
+            # gateway's `pap` toolset for it (ADR-1).
             from agent_runtimes.loop.apps.pap_connections import remember_agent
 
             remember_agent(agent_id, running_app)
             # In whose name it reaches Gmail, with a token IAM mints per run
-            # for them (STUDIO W-02).
+            # for them (W-02).
             from agent_runtimes.mcp.google_workspace import remember_gmail_connection
 
             remember_gmail_connection(
                 agent_id, running_app.connections if running_app is not None else None
             )
-            # Credentials are never shown to the model (LOOP R-19): last, so
+            # Credentials are never shown to the model (R-19): last, so
             # it wraps every tool call innermost and reads every request last.
             from agent_runtimes.guardrails.credentials import credentials_withheld
 
@@ -3492,7 +3491,7 @@ async def delete_agent(
 
     # Remove the stored creation spec
     _agentspecs.pop(agent_id, None)
-    # And what the session API knew of it (LOOP R-04), and the code it ran (R-14).
+    # And what the session API knew of it (R-04), and the code it ran (R-14).
     from agent_runtimes.loop.apps.record import keep_agent_recorder
     from agent_runtimes.loop.apps.sessions import serve_agent_code
     from agent_runtimes.routes.apps import keep_running
@@ -3500,7 +3499,7 @@ async def delete_agent(
     keep_agent_recorder(agent_id, None)
     serve_agent_code(agent_id, None)
     keep_running(agent_id, None)
-    # The browser of its computer, when it opened one (LOOP R-23).
+    # The browser of its computer, when it opened one (R-23).
     from agent_runtimes.loop.apps.browser import close_browser
 
     await close_browser(agent_id)
@@ -4179,7 +4178,7 @@ class StartAgentMcpServersRequest(BaseModel):
         default=None,
         description="The Appspec of the application the runtime was launched "
         "for, passed by the Operator: its connections' secrets are declared "
-        "before its agent is made (LOOP R-19).",
+        "before its agent is made (R-19).",
     )
     launch_app_instance: dict[str, Any] | None = Field(
         default=None,
@@ -5273,7 +5272,7 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     Names only, never a value: ``runtime`` (what the process may hold),
     ``kernel`` (what the code sandbox gets: the skills'), ``consumers`` (who
     needs which). The companion gives the runtime those of the account's
-    secrets and no other (LOOP R-19, decided 2026-10-07).
+    secrets and no other (R-19, decided 2026-10-07).
     """
     if body.agent_spec_id:
         spec = get_library_agent_spec(body.agent_spec_id)

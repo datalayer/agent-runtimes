@@ -1,5 +1,5 @@
 {
-  "description": "Example Air's Agent Card (the local Provider of agent_runtimes.protocols.pact.provider) and what PACT 1.0 reads of it: both languages read the same (AGENT_PROTOCOLS PR-11, PR-51).",
+  "description": "Example Air's Agent Card (the local Provider of agent_runtimes.protocols.pact.provider) and what PACT 1.0 reads of it: both languages read the same (PR-11, PR-51).",
   "card": {
     "name": "Example Air Support",
     "supportedInterfaces": [

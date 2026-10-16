@@ -720,7 +720,7 @@ def require_acknowledgement(
     """
     Skip when the adapter declared it can never reach this milestone.
 
-    The milestones are the half of decision 5's reduction that is
+    The milestones are the half of the reported reduction that is
     easiest to fake, so a scenario about one of them is skipped rather than
     quietly rewritten to assert something weaker. The reason is the
     adapter's: a reduction that is about a milestone names it in quotes.

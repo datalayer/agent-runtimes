@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """An agent of the application's own code: a plain function, a LangGraph graph
-or LangChain runnable, a LlamaIndex agent or workflow (LOOP P-23).
+or LangChain runnable, a LlamaIndex agent or workflow (P-23).
 
 ``app.agent(...)`` gives the application such an agent in place of the
 catalogue's: ``session.agent`` is then a `FrameworkAgent`, with the same

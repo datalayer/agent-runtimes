@@ -4,7 +4,7 @@
  */
 
 /**
- * What the floating assistant acts out (LOOP T-22): the presence of the
+ * What the floating assistant acts out (T-22): the presence of the
  * application (T-08) — paused among them, when its owner paused it — and
  * three moments of its own — greeting when it
  * arrives, speaking while an answer streams in, goodbye when it is sent away.

@@ -1,8 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a step shows while it runs: an output written as it comes (LOOP
-P-31), and each tool call of the agent a step of its own, in this process
+"""What a step shows while it runs: an output written as it comes (P-31), and each tool call of the agent a step of its own, in this process
 (P-33) — through a `MemoryChannel`, the terminal, and the session API's
 AG-UI stream. And the blank agent this process builds (P-32).
 """
@@ -269,7 +268,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
     None
 ):
     """The agent a runtime made (``agent_maker``), called by the code: each
-    call is said on the session API's stream as ``loop.step`` (LOOP P-33)."""
+    call is said on the session API's stream as ``loop.step`` (P-33)."""
     from agent_runtimes.loop.apps.agent import AppAgent
 
     application = Application(id="order-desk", kind="chat", agent=BLANK_PYTHON_AGENT)

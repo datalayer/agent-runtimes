@@ -51,7 +51,7 @@ export type BrowserProtocolOptions = {
   sharing?: TeamContextSharing;
   /** Told what a delegated run does, as it does it — see `subagentTools`. */
   onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
-  /** What the modes a run is sent in tell it (LOOP P-19); none when unsaid. */
+  /** What the modes a run is sent in tell it (P-19); none when unsaid. */
   modeEffect?: (
     chosen: Record<string, string>,
     profile?: string,

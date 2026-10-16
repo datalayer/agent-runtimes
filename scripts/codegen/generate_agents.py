@@ -236,7 +236,7 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
 
 def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
-    `ui_plugin` (it is `ui` now, AGENT_PROTOCOLS PS-03).
+    `ui_plugin` (it is `ui` now, PS-03).
     """
     if "ui_plugin" in spec:
         raise SystemExit(
@@ -249,7 +249,7 @@ def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     ):
         raise SystemExit(
             f"Error: {path} says `ui: {ui!r}`: `ui` lists UI plugins, each "
-            "`{plugin, renderer}` (AGENTIC_UI R8); a renderer is said as a plugin's `renderer`"
+            "`{plugin, renderer}` (R8); a renderer is said as a plugin's `renderer`"
         )
     if "tools" in spec:
         raise SystemExit(
@@ -333,7 +333,7 @@ def voice_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
 
 
 def load_protocol_ids(specs_dir: Path) -> set[str]:
-    """Every id of the protocols catalogue (`agentspecs/protocols`, AGENT_PROTOCOLS PS-01)."""
+    """Every id of the protocols catalogue (`agentspecs/protocols`, PS-01)."""
     ids: set[str] = set()
     for yaml_file in sorted((specs_dir.parent / "protocols").glob("*.yaml")):
         protocol = yaml.safe_load(yaml_file.read_text()) or {}

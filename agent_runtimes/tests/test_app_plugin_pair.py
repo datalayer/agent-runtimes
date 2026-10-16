@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's two plugins, named once (LOOP F-15, F-16).
+"""An application's two plugins, named once (F-15, F-16).
 
 The runtime's plugin and the page's share the application's name,
 ``loop-app-<id>``; the runtime's manifest names the page's as what it cannot be
@@ -116,7 +116,7 @@ def test_the_routes_answer_reactors_shape_for_one_application() -> None:
 
 
 def test_a_spec_and_the_app_py_eject_writes_give_the_same_pair(tmp_path: Path) -> None:
-    """LOOP F-16, the runtime's half: the spec, and the ``app.py`` that
+    """F-16, the runtime's half: the spec, and the ``app.py`` that
     ``loop apps eject`` writes from it, are the same plugin pair."""
     written = init("desk", tmp_path, example="support-desk")
     spec_path = written.folder / "app.yaml"

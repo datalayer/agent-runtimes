@@ -4,7 +4,7 @@
  */
 
 /**
- * Pictures as tests (LOOP T-16, and T-27's states of the floating assistant).
+ * Pictures as tests (T-16, and T-27's states of the floating assistant).
  *
  * Each picture is a page of `html/pictures.html` — the real chat components
  * with fixed data (`src/stories/loop/ReferenceScreens.tsx`) — taken once its

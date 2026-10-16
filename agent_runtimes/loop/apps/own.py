@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Code where plain words are not enough: an application's own tools, checks
-and tests (LOOP P-06).
+and tests (P-06).
 
 An ``app.py`` declares them with ``@app.tool``, ``@app.check`` and
 ``@app.test``; its spec says each by name (``tools``, ``checks.code``,
@@ -51,7 +51,7 @@ Handler = Callable[..., Any]
 @dataclass(frozen=True)
 class CommandTool:
     """A tool of a plugin the application uses, run as the Reactor command it
-    names (LOOP P-35): ``app.uses(plugin, tools={...})``.
+    names (P-35): ``app.uses(plugin, tools={...})``.
 
     Contributed unbound; the host that runs a session binds it to its
     platform (`on`), where the command is registered.
@@ -106,7 +106,7 @@ def own_toolset(app: AppSpec, handlers: Mapping[str, Optional[Handler]]) -> Any:
 
     tools = [
         # A plugin's tool runs its command with its declared parameters: there
-        # is no signature of its own to read them from (LOOP P-35).
+        # is no signature of its own to read them from (P-35).
         Tool.from_schema(
             handler.run,
             name=tool.name,
@@ -150,7 +150,7 @@ def refusal_of(name: str, said: Any) -> Optional[str]:
 
 @dataclass
 class AppCodeChecksCapability(AbstractCapability[Any]):
-    """Run the checks of an application's code at their stage (LOOP P-06).
+    """Run the checks of an application's code at their stage (P-06).
 
     After its rules and its built-in checks: a call the rules refuse is not
     checked. A tool call refused is stopped (`AppCheckBlockedError`); an

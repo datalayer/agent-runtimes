@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """What an answer shows is a display; its buttons press only what it offered
-(REACTOR_UI RU-2, RU-W).
+(RU-2, RU-W).
 
 An answer's components reach the page as an ``AnswerShows`` display — a
 ``show`` op on the session's ui socket, never a fake tool call — and each
@@ -32,7 +32,7 @@ from agent_runtimes.loop.apps.session import Session
 
 
 class Row(BaseModel):
-    """What the button presses with: the row it was on (REACTOR_UI RU-5)."""
+    """What the button presses with: the row it was on (RU-5)."""
 
     row: int = 0
 

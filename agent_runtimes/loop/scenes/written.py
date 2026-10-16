@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene and its stage, written in Python (LOOP P-30).
+"""A scene and its stage, written in Python (P-30).
 
 Beside ``loop.app(...)``, an application, a developer writes the rest of the
 lifecycle in code::
@@ -414,7 +414,7 @@ def scene(
     tags: Sequence[str] = (),
     icon: str = "",
 ) -> Scene:
-    """A scene, written in Python (LOOP P-30); see `Scene`."""
+    """A scene, written in Python (P-30); see `Scene`."""
     return Scene(
         id,
         name,
@@ -445,7 +445,7 @@ def stage(
     page: str = "",
     addresses: Optional[Mapping[str, str]] = None,
 ) -> Scene:
-    """Where a scene plays, written into it (LOOP P-30, S-09): its stage.
+    """Where a scene plays, written into it (P-30, S-09): its stage.
 
     A stage is not a spec of its own: it is the parts of the scene that say
     where each player runs (``runs_in``: ``browser`` or ``runtime``), where

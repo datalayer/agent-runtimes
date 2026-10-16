@@ -4,7 +4,7 @@
  */
 
 /**
- * The embed (LOOP D-08): `<datalayer-app>` for a host that writes one script
+ * The embed (D-08): `<datalayer-app>` for a host that writes one script
  * tag and one element.
  *
  *   npm run build:embed  →  dist-embed/
@@ -105,7 +105,7 @@ function embedLoader(): Plugin {
 }
 
 /**
- * No file of the embed holds a secret (PAP_DATALAYER B-02): the PAP SDK's
+ * No file of the embed holds a secret (B-02): the PAP SDK's
  * emitted-bundle test, run on what the build wrote. Says the kind and the
  * file, never what matched.
  */

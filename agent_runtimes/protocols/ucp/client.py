@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A UCP shopping client (AGENT_PROTOCOLS PR-30, PR-31): Universal Commerce Protocol ``2026-08-25``.
+"""A UCP shopping client (PR-30, PR-31): Universal Commerce Protocol ``2026-08-25``.
 
 Discovery (``/.well-known/ucp``), catalog search, and the checkout lifecycle
 over the REST binding, every response read through ``ucp-sdk`` 0.5.0's
@@ -135,7 +135,7 @@ class UcpClient:
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
     #: How its public metadata is read: the PAP SDK's single egress path
-    #: (AGENT_PROTOCOLS PI-13), or ``egress.client_fetch`` for a local test one.
+    #: (PI-13), or ``egress.client_fetch`` for a local test one.
     metadata: Fetch = field(
         default_factory=lambda: metadata_fetch(
             accept="application/json", max_bytes=MAX_METADATA_BYTES

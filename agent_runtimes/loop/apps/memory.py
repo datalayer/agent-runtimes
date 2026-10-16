@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application remembers (LOOP R-18, R-35, R-36).
+"""What an application remembers (R-18, R-35, R-36).
 
 An application remembers when its Appspec says so — ``memory: mem0``, the
 memory of the catalogue enabled today; any other is not enabled, and its
@@ -12,14 +12,14 @@ memories are kept in mem0 under the person and the application's key,
 Its Preview and every deployment of it remember together: a deployment has
 no memories of its own.
 
-**Each person apart** (LOOP R-36): a turn remembers under whoever opened its
+**Each person apart** (R-36): a turn remembers under whoever opened its
 session — its owner, or a visitor at its address under the visitor's own uid,
 apart from its owner and from each other (`remember_for`). Nobody is never
 the owner: a visitor who is not signed in, or one of an embed, which does not
 know who its visitor is, has nothing remembered, and the agent is told so in
 a sentence. A run outside a session — the scheduler's tick — is its owner's.
 
-**Shared with the applications a person allows** (LOOP R-35): besides its
+**Shared with the applications a person allows** (R-35): besides its
 own, an application's agent reads what the other applications the person
 allowed remember of them — and never any other's. The allowances are the
 person's, kept by the runtimes service beside the memories
@@ -28,7 +28,7 @@ caller's token (`read_shares`). What it learns it writes under its own key
 only.
 
 A person reads what an application remembers of them, corrects one in place
-(LOOP R-34) and forgets them, one or all, here
+(R-34) and forgets them, one or all, here
 (`agent_runtimes.routes.apps`, ``/api/v1/apps/memories/{app}``) — their own,
 the owner and a visitor alike — or through the runtimes service, whether or
 not a runtime is running.
@@ -97,7 +97,7 @@ _TURN: ContextVar[Optional[Rememberer]] = ContextVar(
 
 
 def remember_for(caller: Any, token: str) -> None:
-    """Remember, in the turn under way, for whoever opened its session (LOOP R-36).
+    """Remember, in the turn under way, for whoever opened its session (R-36).
 
     ``caller`` is who opened it (`agent_runtimes.loop.apps.callers.Caller`):
     the machine itself and the runtime's owner remember as the owner; another
@@ -258,7 +258,7 @@ class AppMemory(BaseMemoryBackend):
     """What an application's agent remembers: for whoever the turn is of.
 
     It writes under its own key; it reads its own and what the applications
-    the person allowed remember of them (LOOP R-35), each marked with the
+    the person allowed remember of them (R-35), each marked with the
     application that remembered it (``remembered_by``).
     """
 

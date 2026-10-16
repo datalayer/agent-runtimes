@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The MCP conformance server on localhost, for a client in another language (AGENT_PROTOCOLS PR-51).
+"""The MCP conformance server on localhost, for a client in another language (PR-51).
 
 A server of the ``mcp`` SDK that answers exactly what
 ``agent_runtimes/protocols/mcp/fixtures/session.json`` holds: its tools, each

@@ -1,5 +1,5 @@
 {
-  "description": "A ready_for_payment session of the test seller, its discovery document, and its revision: both languages compute the same digest (AGENT_PROTOCOLS PR-51).",
+  "description": "A ready_for_payment session of the test seller, its discovery document, and its revision: both languages compute the same digest (PR-51).",
   "version": "2026-04-17",
   "discovery": {
     "protocol": {

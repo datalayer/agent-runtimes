@@ -4,8 +4,7 @@
  */
 
 /**
- * `app-components` — the components an application's developer wrote (LOOP
- * P-17), registered as that application's A2UI contributions: each a block
+ * `app-components` — the components an application's developer wrote (P-17), registered as that application's A2UI contributions: each a block
  * of its Canvas's palette (`loop.canvas.block`, as a UI's components
  * are) and a renderer of the catalog its page, its elements and its answers
  * are drawn with (`loop.a2ui.component`). One plugin per application, in its

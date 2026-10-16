@@ -56,7 +56,7 @@ export interface TeamContextSpec {
   sharing: TeamContextSharing;
   /**
    * The Frames every member works under, in order, `id` or `id:version`
-   * (LOOP A-04): the team's shared context, as a Cog names its own.
+   * (A-04): the team's shared context, as a Cog names its own.
    */
   frames?: string[];
 }
@@ -99,13 +99,13 @@ export interface TeamAgentspec {
   /**
    * MCP server catalogue reference, in place of `ref` and `app`: the member
    * is that server, a system of the scene the others reach over MCP
-   * (LOOP A-04). It asks nobody.
+   * (A-04). It asks nobody.
    */
   server?: string;
   /**
    * Harness catalogue id, in place of `ref`, `app` and `server`: the member is
    * that agent program over ACP behind the Shield — Claude Code, Codex, an
-   * organization's own — asked over A2A or ACP (SHIELD SH-45).
+   * organization's own — asked over A2A or ACP (SH-45).
    */
   harness?: string;
   /** Where its loop turns: in the person's `browser`, or on a `runtime`. */

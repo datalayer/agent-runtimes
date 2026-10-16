@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's computer (LOOP R-23, I-01): what its agent is given of it,
+"""An application's computer (R-23, I-01): what its agent is given of it,
 what it holds, and who has it.
 
 Its computer is the sandbox its agent runs on. Three permissions of its

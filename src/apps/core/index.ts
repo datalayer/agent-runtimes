@@ -86,7 +86,7 @@ export type SandboxSnapshot = {
  * On Datalayer the agent is on its runtime and nowhere else: until one is
  * assigned there is nothing to address, and the host's own server is not a
  * stand-in — on a hosted page it is the page's own origin, which answered a
- * question with a 404 while the pool had no runtime (STUDIO P-24, round 9).
+ * question with a 404 while the pool had no runtime (P-24, round 9).
  * Every other target's agent is on the host's server, or on the one its
  * sandbox names.
  */
@@ -362,7 +362,7 @@ export type ViewControls = {
    * message had no way in.
    *
    * `forwardedProps` go with the run as AG-UI's: an application's page says
-   * there what it did besides the message (`loop`, LOOP R-04). Answers why
+   * there what it did besides the message (`loop`, R-04). Answers why
    * the message cannot go, when it cannot.
    */
   send?: (
@@ -474,7 +474,7 @@ export type CommandContribution = {
   args?: readonly CommandArgSpec[];
   /**
    * Listed in the composer's `/` menu, as an application's commands are
-   * (LOOP P-19). Most commands are not: the menu is for what a person sends,
+   * (P-19). Most commands are not: the menu is for what a person sends,
    * the palette and `/help` for the rest.
    */
   composer?: boolean;
@@ -483,8 +483,7 @@ export type CommandContribution = {
 
 /**
  * What goes with every run besides the message, as AG-UI's `forwardedProps`:
- * an application's modes say there which option the person is in (LOOP
- * P-19). Read when a message is sent, so it says what is true then; what a
+ * an application's modes say there which option the person is in (P-19). Read when a message is sent, so it says what is true then; what a
  * page says with its own message (its action, its files) is merged over it,
  * the `loop` part key by key.
  */
@@ -706,7 +705,7 @@ export type ChatSuggestionItem = {
   /**
    * The heading it is offered under: openers of one group together, under
    * its name, those without one first — an application's starter's category
-   * (LOOP P-20).
+   * (P-20).
    */
   group?: string;
 };
@@ -727,7 +726,7 @@ export const LoopChatSuggestion =
   defineContributionPoint<ChatSuggestionContribution>('loop.chat.suggestion');
 
 /**
- * A character the floating assistant may show (LOOP T-24): a drawing — one
+ * A character the floating assistant may show (T-24): a drawing — one
  * of Datalayer's own (T-25) or a plugin's — or a character read from a file
  * a person holds the rights to (T-26). The catalogue of characters is what
  * the enabled plugins contribute here, and nothing else; an application
@@ -764,25 +763,24 @@ export type AssistantMenuContribution = {
 export const LoopAssistantMenu =
   defineContributionPoint<AssistantMenuContribution>('loop.assistant.menu');
 
-// A block the Canvas may place (LOOP C-12), in a module of its own so that
+// A block the Canvas may place (C-12), in a module of its own so that
 // the palette is read without the rest of the contracts.
 export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
 
-// A part of an agent the Canvas may place (LOOP C-20), beside the blocks.
+// A part of an agent the Canvas may place (C-20), beside the blocks.
 export {
   LoopCanvasPart,
   type CanvasPartContribution,
   type CanvasPartKind,
 } from './canvasParts';
 
-// A component an application adds to the catalog it is drawn with (LOOP
-// P-17): the components its developer wrote, for its workspace alone.
+// A component an application adds to the catalog it is drawn with (P-17): the components its developer wrote, for its workspace alone.
 export {
   LoopA2uiComponent,
   type A2uiComponentContribution,
 } from './a2uiComponents';
 
-// Where the files of an application's folder are served (LOOP P-29): said
+// Where the files of an application's folder are served (P-29): said
 // by the page side its package carries.
 export { LoopAppFiles, type AppFilesContribution } from './appFiles';
 
@@ -820,7 +818,7 @@ export type LoopChatExtrasValue = {
    * The ids of the `AgentTools` bundles (Reactor's) the chat hands its agent
    * wherever it runs — on a runtime too, where the plugins' bundles are not
    * otherwise given — each tool running its command on this workspace's
-   * reactor (REACTOR_UI RU-7): the host page's (`host`), which an embedded
+   * reactor (RU-7): the host page's (`host`), which an embedded
    * application calls as `host_<name>`.
    */
   agentToolBundles?: string[];
@@ -861,7 +859,7 @@ export type LoopChatExtrasValue = {
   hideOpeners?: boolean;
   /**
    * Openers in place of the contributed ones, live: what an application
-   * offers with the profile picked in its composer (LOOP P-20) — the empty
+   * offers with the profile picked in its composer (P-20) — the empty
    * chat offers these, and changes them when the profile changes, without
    * rebuilding the reactor. `hiddenOpeners` still applies.
    */
@@ -881,7 +879,7 @@ export type LoopChatExtrasValue = {
    *
    * While set, the composer's placeholder is `says` and sending hands the
    * words to `send`, never to the model or the runtime: a person talking with
-   * a company themselves in a Direct Conversation (PAP_DATALAYER P-08), their
+   * a company themselves in a Direct Conversation (P-08), their
    * own words sent as theirs. A refusal `send` throws is said under the
    * composer and the words stay where they were typed. Unset, the composer
    * talks to the agent again.
@@ -1354,7 +1352,7 @@ export type ChatTurnSnapshot = {
   /**
    * The conversation the turn belongs to, as the runtime knows it (AG-UI's
    * thread) — what an application's record keeps its session under, and
-   * what feedback on it names (LOOP V-18). Absent when the chat does not say.
+   * what feedback on it names (V-18). Absent when the chat does not say.
    */
   thread?: string;
   status: ChatTurnStatus;
@@ -1372,7 +1370,7 @@ export type ChatTurnSnapshot = {
 };
 
 /**
- * One message of the conversation, as a page shows it (LOOP R-01, C-18): a
+ * One message of the conversation, as a page shows it (R-01, C-18): a
  * person's or the assistant's words, or a tool the assistant called — what
  * the Chat component draws, bound to a chat application's `/messages`.
  */
@@ -1397,7 +1395,7 @@ export type ChatTurnContribution = {
   conversation: ReadonlySignal<ConversationEntry[]>;
   /**
    * What the application is doing, as its chat says it beside its face
-   * (LOOP T-08) — waiting for the person on an approval, paused when its
+   * (T-08) — waiting for the person on an approval, paused when its
    * deployment is — for whoever acts it out away from the chat: the
    * floating assistant (T-22).
    */

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Text to SQL — Chainlit's cookbook ``bigquery``, rebuilt with LOOP's API (LOOP P-27).
+"""Text to SQL — Chainlit's cookbook ``bigquery``, rebuilt with LOOP's API (P-27).
 
 Chainlit runs a chain of three steps for each question about an ``order``
 table: a model writes the SQL, the query runs, and a model explains the
@@ -13,7 +13,7 @@ the application's agent for both model calls, the result shown as the
 catalog's Table, and the button an ``@app.action``. The table is SQLite in
 this process rather than BigQuery — the warehouse is the developer's, in
 Chainlit's example as here. As in Chainlit, the SQL is written into its step
-as the model writes it (``step.stream``, LOOP P-31), and the step ends with
+as the model writes it (``step.stream``, P-31), and the step ends with
 the query alone.
 """
 
@@ -31,7 +31,7 @@ app = Application(
     agent=AGENT,
     description="Writes the SQL for a question about orders, runs it, and explains the result.",
     instructions="You write SQLite queries and explain query results to customer support, briefly.",
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

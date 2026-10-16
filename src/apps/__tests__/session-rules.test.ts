@@ -4,7 +4,7 @@
  */
 
 /**
- * A rule on a running session (SHIELD SH-54): the words, the shapes the
+ * A rule on a running session (SH-54): the words, the shapes the
  * runtime takes, and the three routes the card speaks to.
  */
 
@@ -136,7 +136,7 @@ describe('a rule on a running session', () => {
   });
 });
 
-describe('the file and shell rules of decision 5 (SHIELD SH-43)', () => {
+describe("the platform's default file and shell rules (SH-43)", () => {
   it('says where and what in the Shield’s words', () => {
     const words = Object.fromEntries(
       FILE_AND_SHELL_RULES.map(rule => [rule.name, sessionRuleInWords(rule)]),

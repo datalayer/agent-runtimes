@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A Agent Card extensions, published and negotiated (AGENT_PROTOCOLS EX-03).
+"""A2A Agent Card extensions, published and negotiated (EX-03).
 
 Every A2A extension this runtime implements is a contribution point of the A2A
 plugin (`a2a.extension.<name>`): what an agent's card publishes is what is

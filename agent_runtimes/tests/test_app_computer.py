@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's computer (LOOP R-23, I-01).
+"""An application's computer (R-23, I-01).
 
 Its three permissions — browse, files, shell — each off until it is turned on,
 gate the tools its agent is given where its connections' are (U-15): a part
@@ -296,7 +296,7 @@ def test_the_machine_sees_takes_over_runs_and_hands_back(held: None) -> None:
 
 
 def test_a_file_of_its_computer_is_a_download_never_a_page(held: None) -> None:
-    """STUDIO D-22: an uploaded page is saved, not drawn, whatever it holds."""
+    """D-22: an uploaded page is saved, not drawn, whatever it holds."""
     page = '<script>alert(document.cookie)</script><img src=x onerror="alert(1)">'
     sandbox_of("desk").files.write("files/s1/page.html", page)
     sandbox_of("desk").files.write('files/s1/r"é;port.svg', "<svg onload=1/>")
@@ -321,7 +321,7 @@ def test_a_file_of_its_computer_is_a_download_never_a_page(held: None) -> None:
 
 
 def test_it_says_which_origin_serves_its_files(held: None, monkeypatch) -> None:
-    """STUDIO D-22: the host kept for what applications serve, or none.
+    """D-22: the host kept for what applications serve, or none.
 
     The runtimes' host is every runtime's, so a file served there is
     same-origin with all of them. A plane that keeps a host for what

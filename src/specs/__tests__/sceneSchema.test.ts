@@ -4,7 +4,7 @@
  */
 
 /**
- * The scene spec's JSON Schema (LOOP A-03, S-01): generated from agentspecs
+ * The scene spec's JSON Schema (A-03, S-01): generated from agentspecs
  * beside the catalogue, it says what `loop.scene/v1` accepts — the parts of
  * a scene, the cast member, a beat's move — so that an editor of the text
  * completes and explains the same thing the loader checks.

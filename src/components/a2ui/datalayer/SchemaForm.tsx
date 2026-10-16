@@ -6,7 +6,7 @@
 /**
  * The form a Form block draws, with what checks it: `@datalayer/primer-rjsf`
  * and Ajv. Its own module, fetched when a form is first drawn (`Form.tsx`):
- * the catalogue is in every surface, and in the embed (STUDIO D-08), a form
+ * the catalogue is in every surface, and in the embed (D-08), a form
  * only in some — and Ajv with rjsf weigh more than the rest of the catalogue.
  *
  * @module components/a2ui/datalayer/SchemaForm

@@ -46,7 +46,7 @@ describe('reading an Appspec', () => {
     }
   });
 
-  it('reads the actions its code declares, typed (REACTOR_UI RU-5)', () => {
+  it('reads the actions its code declares, typed (RU-5)', () => {
     const { app } = parseAppspec(APP_SOURCES['customer-interview']);
     const [save, finish] = app.interface.actions ?? [];
     expect(save.name).toBe('save');
@@ -217,7 +217,7 @@ describe('writing an Appspec', () => {
   });
 
   it('writes nothing that is at its default', () => {
-    // A blank application lists its kind's UI plugins (AGENTIC_UI R8): what
+    // A blank application lists its kind's UI plugins (R8): what
     // it is drawn with is said, not a default, so it is written.
     expect(dumpAppspec(emptyAppspec('chat'))).toEqual({
       schema: APP_SCHEMA,
@@ -363,7 +363,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app)).not.toHaveProperty('setup');
     expect(dumpAppspec(app).record).toBeUndefined();
   });
-  it('reads and writes the protocols it speaks, refusing what agentspecs refuses (AGENT_PROTOCOLS PS-02)', () => {
+  it('reads and writes the protocols it speaks, refusing what agentspecs refuses (PS-02)', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['mcp', 'a2a'],
@@ -416,7 +416,7 @@ describe('writing an Appspec', () => {
       /add 'a2a' to `protocols`/,
     );
   });
-  it('reads and writes its UI plugins, each with its renderer (AGENTIC_UI R8)', () => {
+  it('reads and writes its UI plugins, each with its renderer (R8)', () => {
     const ui = [
       { plugin: 'a2ui-surface', renderer: 'a2ui' },
       { plugin: 'chat' },
@@ -457,7 +457,7 @@ describe('writing an Appspec', () => {
       }),
     ).toEqual([]);
   });
-  it('reads and writes the personal agents a company accepts (PAP_DATALAYER U-04)', () => {
+  it('reads and writes the personal agents a company accepts (U-04)', () => {
     const agent = 'https://agents.example/agent.json';
     const company = {
       enabled: true,
@@ -476,7 +476,7 @@ describe('writing an Appspec', () => {
     expect(app.pap?.company.interfaces).toEqual(['agent', 'mcp']);
     expect(dumpAppspec(app).pap).toEqual({ profile: 'draft-01', company });
   });
-  it('reads and writes Personal Agent Protocol (PAP_DATALAYER S-01)', () => {
+  it('reads and writes Personal Agent Protocol (S-01)', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['pap'],
@@ -536,7 +536,7 @@ describe('writing an Appspec', () => {
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
   });
-  it('refuses a Personal Agent Protocol profile it does not speak, in a sentence (PAP_DATALAYER S-03)', () => {
+  it('refuses a Personal Agent Protocol profile it does not speak, in a sentence (S-03)', () => {
     const connections = [{ id: 'orders', company: 'manzanita.example' }];
     const read = (pap: Record<string, unknown>) =>
       parseAppspec({ kind: 'chat', protocols: ['pap'], pap });
@@ -554,7 +554,7 @@ describe('writing an Appspec', () => {
     expect(read({}).problems).toEqual([]);
     expect(read({}).app.pap).toBeUndefined();
   });
-  it('reads and writes PACT businesses and A2A card extensions (AGENT_PROTOCOLS PI-01, PR-02)', () => {
+  it('reads and writes PACT businesses and A2A card extensions (PI-01, PR-02)', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact', 'a2a'],
@@ -585,7 +585,7 @@ describe('writing an Appspec', () => {
       ...document.pact.connections[0],
       access: 'read',
     });
-    // No business said: none (AGENT_PROTOCOLS PR-13).
+    // No business said: none (PR-13).
     expect(app.pact?.business?.enabled).toBe(false);
     expect(app.a2a?.extensions).toEqual([
       { ...document.a2a.extensions[0], required: false },
@@ -605,7 +605,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('a2a');
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pact');
   });
-  it('reads and writes the application as a PACT business (AGENT_PROTOCOLS PR-13, PI-32)', () => {
+  it('reads and writes the application as a PACT business (PR-13, PI-32)', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact'],
@@ -649,7 +649,7 @@ describe('writing an Appspec', () => {
     // An application without the block is no business.
     expect(parseAppspec({ kind: 'chat' }).app.pact).toBeUndefined();
   });
-  it('reads and writes the merchants it shops at, each listed protocol (AGENT_PROTOCOLS PI-01)', () => {
+  it('reads and writes the merchants it shops at, each listed protocol (PI-01)', () => {
     const document = {
       kind: 'chat',
       protocols: ['ucp', 'acp'],
@@ -680,7 +680,7 @@ describe('writing an Appspec', () => {
       "Its `commerce` block shops over ACP, which it does not list: add 'acp' to `protocols`.",
     ]);
   });
-  it('reads and writes the sites it reads signed, its protocol listed (AGENT_PROTOCOLS EX-11)', () => {
+  it('reads and writes the sites it reads signed, its protocol listed (EX-11)', () => {
     const document = {
       kind: 'chat',
       protocols: ['web-bot-auth'],
@@ -701,7 +701,7 @@ describe('writing an Appspec', () => {
       "Its `signed_fetch` block configures Web Bot Auth, which it does not list: add 'web-bot-auth' to `protocols`.",
     ]);
   });
-  it('reads and writes one of a pair of examples (AGENT_PROTOCOLS PR-13)', () => {
+  it('reads and writes one of a pair of examples (PR-13)', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact'],
@@ -721,7 +721,7 @@ describe('writing an Appspec', () => {
       'One of a pair is its business or its personal_agent, not "company".',
     ]);
   });
-  it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
+  it('reads and writes what a company does once the person confirms (B-04)', () => {
     const operations = [
       {
         action: 'orders.exchange',
@@ -763,7 +763,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app).pap).toEqual(source.pap);
     expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
   });
-  it('reads and writes an operation that gives a standing permission (PAP_DATALAYER R-07)', () => {
+  it('reads and writes an operation that gives a standing permission (R-07)', () => {
     const allows = {
       connection: 'bank',
       action: 'buy',

@@ -4,7 +4,7 @@
  */
 
 /**
- * The language the chat speaks in (LOOP P-26): the one its host says — the
+ * The language the chat speaks in (P-26): the one its host says — the
  * `language` of `AppRenderer` and of the embed — else the browser's.
  *
  * @module chat/ChatLanguage

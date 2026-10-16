@@ -4,7 +4,7 @@
  */
 
 /**
- * Character files a person brings (LOOP T-26): clippy.js sprite maps and
+ * Character files a person brings (T-26): clippy.js sprite maps and
  * Microsoft Agent `.acs` files, or `.acf` files with their `.aca` files,
  * read in the page into one shape.
  *

@@ -5,7 +5,7 @@
 
 /**
  * What a message shows arrives as a `reactor.ui` display and is kept on the
- * message (REACTOR_UI RU-2), from the conversation's ui socket (RU-W); a
+ * message (RU-2), from the conversation's ui socket (RU-W); a
  * thread's snapshot is its text, and refuses a display.
  */
 

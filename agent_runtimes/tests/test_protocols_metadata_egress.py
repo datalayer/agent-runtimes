@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Merchant profiles, seller discovery and PACT cards read through the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13).
+"""Merchant profiles, seller discovery and PACT cards read through the PAP SDK's single egress path (PI-13).
 
 A UCP business's ``/.well-known/ucp``, an Agentic Commerce seller's
 ``/.well-known/acp.json`` and a PACT Brand's Agent Card (with its OAuth

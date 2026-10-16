@@ -65,7 +65,7 @@ describe('the PAP trace examples', () => {
     const view = render(<View />);
     const page = view.container;
     expect(page.textContent).toContain(trace.title);
-    // Said as recorded, with the released SDK that recorded it (E-14, AGENT_PROTOCOLS PR-05).
+    // Said as recorded, with the released SDK that recorded it (E-14, PR-05).
     expect(page.textContent).toContain(
       `Recorded data, not live: replayed from a trace the PAP Python SDK's demo world generated with ${trace.sdk}`,
     );

@@ -128,7 +128,7 @@ describe('The voice a person hears', () => {
     const voice = voiceForPerson(APPLICATION, { onDeviceOnly: true });
     expect(voice.speechUrl).toBeUndefined();
     expect(voice.token).toBeUndefined();
-    // Answers are said by the service only (decision 1): not heard.
+    // Answers are said by the service only: not heard.
     expect(voice.output).toBe('off');
   });
 

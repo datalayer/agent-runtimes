@@ -5,7 +5,7 @@
 
 /**
  * What a session says to its page besides its messages, as `reactor.ui` ops
- * on its ui socket (REACTOR_UI RU-3, RU-W), drawn as the chat draws them:
+ * on its ui socket (RU-3, RU-W), drawn as the chat draws them:
  * the Python test's fixture (`agent_runtimes/tests/fixtures/app_session_ops.json`)
  * — `run`, the run stream's events, and `ui`, the socket's op frames —
  * placed by `routeUiOp`, the socket's ops arriving before the run's text

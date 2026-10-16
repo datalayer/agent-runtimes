@@ -56,7 +56,7 @@ added without its spec, a spec whose plugin went, or a Slot added to a plugin an
 to its spec fails there.
 
 The plugin that draws A2UI surfaces (`a2ui-surface`) hosts **the catalog of visual
-components** (LOOP C-13): A2UI's 18 standard v0.9 components (`Text`, `Row`, `Card`,
+components** (C-13): A2UI's 18 standard v0.9 components (`Text`, `Row`, `Card`,
 `Button`, `ChoicePicker`…) and Datalayer's own — `Table`, `Chart`, `FileUpload`, `Chat`,
 `Evidence`, `Form` and `Download`. Every one has a version and carries its properties
 as a JSON Schema of the catalog's own — a standard one's named, required and chosen as
@@ -137,7 +137,7 @@ listComponents().filter(c => !c.standard).map(c => c.id);
   not have — the same sentences as `app_problems` in Agentspecs.
 - **Python** (`Application.component`, and `app.ui`, below): every component placed
   from Python is checked against its schema, a standard one too.
-- **Forms** (LOOP C-16): `checkApp` refuses a `Form` whose `schema` is not an object of
+- **Forms** (C-16): `checkApp` refuses a `Form` whose `schema` is not an object of
   named fields, or that requires a field it does not ask (`formProblems`, agentspecs'
   `form_problems`); and when an action arrives, the runtime checks the values a `Form`
   sends with it against the same schema (`agent_runtimes.loop.apps.forms.form_values_refused`):
@@ -153,7 +153,7 @@ listComponents().filter(c => !c.standard).map(c => c.id);
 
 ## Typed calls from Python
 
-The same generation writes every component as a typed call (LOOP C-15):
+The same generation writes every component as a typed call (C-15):
 `SurfaceComponents` in `agent_runtimes.specs.ui`, which an application reaches
 as `app.ui`. One method per component, named for it in snake case (`Table` → `table`,
 `TextField` → `text_field`), whose keyword arguments are its properties, typed from its
@@ -175,7 +175,7 @@ app.ui.text("hello", text="Hello", variant="huge")  # refused: 'huge' is not one
 is the A2UI catalog every Datalayer surface draws from — the decision surface,
 `InlineSurface`, `A2uiView`, an application's page and the Studio's components page.
 It holds A2UI's basic components **and a renderer for each of Datalayer's own six**
-(LOOP C-18), under the basic catalog's id, with `visible_when` on every one.
+(C-18), under the basic catalog's id, with `visible_when` on every one.
 
 Each renderer is made by `@a2ui/react`'s own `createComponentImplementation`, so it
 binds and acts exactly as a basic component does. Its A2UI schema is built from the

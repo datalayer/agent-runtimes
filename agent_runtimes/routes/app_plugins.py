@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Which of an application's plugins a runtime holds (LOOP F-15).
+"""Which of an application's plugins a runtime holds (F-15).
 
 An application is two Reactor plugins of one name, ``loop-app-<id>``: the
 page's, which declares the runtime's as required (``requiredBackendPlugins``),
@@ -15,7 +15,7 @@ follows the runtime's with Reactor's ``useBackendPluginStream``, which reads
 - ``GET /api/v1/apps/<id>/events/stream``: the same snapshot as server-sent
   events, one whenever the revision moves;
 - ``GET /api/v1/apps/<id>/plugins/frontend-extensions``: its page side when
-  its package is installed here (LOOP P-29), as Reactor's route of that name
+  its package is installed here (P-29), as Reactor's route of that name
   answers — none, or the extension ``loop-app-<id>``;
 - ``GET /api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>``: a file
   of it, as Reactor's route of that name serves one.
@@ -52,7 +52,7 @@ async def plugins_state(app_id: str) -> Dict[str, Any]:
 
 @router.get("/{app_id}/plugins/frontend-extensions")
 async def frontend_extensions(app_id: str) -> List[Dict[str, Any]]:
-    """The application's page side installed here, looked up now (LOOP P-29).
+    """The application's page side installed here, looked up now (P-29).
 
     Reactor's answer for one extension, the application's: its entry is
     relative to ``/api/v1/apps/<id>``, where the page reads it from.
@@ -62,7 +62,7 @@ async def frontend_extensions(app_id: str) -> List[Dict[str, Any]]:
 
 @router.get("/{app_id}/reactor-extensions/{extension}/{asset_path:path}")
 async def extension_file(app_id: str, extension: str, asset_path: str) -> FileResponse:
-    """A file of the application's installed page side (LOOP P-29).
+    """A file of the application's installed page side (P-29).
 
     Served as Reactor serves an extension's: from its directory alone, and
     only of the types a browser is handed from there; anything else is not

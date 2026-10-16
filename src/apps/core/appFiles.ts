@@ -4,7 +4,7 @@
  */
 
 /**
- * Where the files of an application's folder are served (LOOP P-29), as a
+ * Where the files of an application's folder are served (P-29), as a
  * contribution point, re-exported by `apps/core`.
  *
  * A component its developer wrote may be a file of its folder (`source:

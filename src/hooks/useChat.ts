@@ -138,7 +138,7 @@ export function useChat(): UseChatReturn {
 
   /**
    * Send a user message and get the AI's response. The conversation is
-   * `reduceConversation`'s (MOBILE M-030), as in ChatBase and on the phone:
+   * `reduceConversation`'s (M-030), as in ChatBase and on the phone:
    * every adapter event read by `conversationEventsOf`, an inference
    * provider's deltas as AG-UI text events, and the store's messages drawn
    * from it.

@@ -62,8 +62,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    */
   frameHeight?: number | string;
   /**
-   * The sidebar as a rail of line icons, one panel shown at a time (LOOP
-   * T-07). See `LoopWorkspaceProps.sidebarRail`.
+   * The sidebar as a rail of line icons, one panel shown at a time (T-07). See `LoopWorkspaceProps.sidebarRail`.
    */
   sidebarRail?: boolean;
   /**
@@ -73,7 +72,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    * window's title bar, a panel of its own, a command. Without this a host
    * would have to rebuild the plugin list to add one thing to it, which is the
    * assembly this component exists to save. An extension groups some of
-   * them, as an application's own plugins are (`AppRenderer`, LOOP F-15).
+   * them, as an application's own plugins are (`AppRenderer`, F-15).
    */
   plugins?: PlatformInput[];
 };

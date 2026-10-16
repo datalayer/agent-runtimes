@@ -4,7 +4,7 @@
  */
 
 /**
- * The one script a host writes (LOOP D-08):
+ * The one script a host writes (D-08):
  *
  *   <script src="https://datalayer.app/embed/datalayer-app.js" async></script>
  *
@@ -37,7 +37,7 @@
   // ReferenceError unless the global exists, and the module's own body runs
   // after everything it imports, so it is declared here, before the import —
   // without it no application loads (`… did not load (__webpack_public_path__
-  // is not defined)`, seen with `loop apps run --web`, LOOP P-08).
+  // is not defined)`, seen with `loop apps run --web`, P-08).
   const globals = window as unknown as Record<string, unknown>;
   if (globals['__webpack_public_path__'] === undefined) {
     globals['__webpack_public_path__'] = '';

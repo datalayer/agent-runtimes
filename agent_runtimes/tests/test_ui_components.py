@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The visual components, hosted by the UI specs (LOOP C-13)."""
+"""The visual components, hosted by the UI specs (C-13)."""
 
 import jsonschema
 
@@ -36,7 +36,7 @@ def test_a_component_no_plugin_renders_is_none() -> None:
 
 
 def test_ui_plugins_name_only_renderers_of_the_catalogue() -> None:
-    """The two kinds (AGENTIC_UI R8): each plugin's renderers are UI renderers, none is a UI."""
+    """The two kinds (R8): each plugin's renderers are UI renderers, none is a UI."""
     from agent_runtimes.specs.ui import UI_CATALOGUE
     from agent_runtimes.specs.ui_renderers import UI_RENDERER_CATALOGUE
 

@@ -4,9 +4,9 @@
  */
 
 /**
- * What an application is doing, in plain words (LOOP T-08): the one line of
+ * What an application is doing, in plain words (T-08): the one line of
  * status beside its face — the same states and words in the web chat
- * (`chat/presence`) and on Datalayer Mobile (MOBILE M-030).
+ * (`chat/presence`) and on Datalayer Mobile (M-030).
  *
  * @module portable/presence
  */
@@ -15,7 +15,7 @@ import type { ConversationState } from './conversation';
 
 /**
  * The states a person is told about. Paused is its deployment's: its owner
- * paused it (LOOP R-17), and it answers nobody until it is resumed.
+ * paused it (R-17), and it answers nobody until it is resumed.
  */
 export type PresenceState =
   'idle' | 'thinking' | 'working' | 'waiting' | 'paused';

@@ -5,7 +5,7 @@
 
 A harness's ``tool_call_update`` carries what it changed as a diff and what
 it ran as a terminal. The page and the phone draw them as they draw every
-protocol display (MOBILE M-037, REACTOR_UI RU-1): beside the tool's result,
+protocol display (M-037, RU-1): beside the tool's result,
 in ``_meta["reactor.ui/display"]``, typed here as Reactor displays —
 
 - ``application/vnd.datalayer.shield.diff+json``: ``{path, old_text,

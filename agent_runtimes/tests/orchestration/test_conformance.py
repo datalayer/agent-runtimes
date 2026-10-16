@@ -115,7 +115,7 @@ class TestSuccessfulDelegation:
     async def test_the_reduced_guarantees_reach_the_execution_first(
         self, binding, monkeypatch
     ):
-        """Decision 5: the reduction is reported, not hidden.
+        """The reduction is reported, not hidden.
 
         It is the first event of the dispatch, so 'why did this execution
         never checkpoint?' is answered from the execution's own stream
@@ -609,7 +609,7 @@ class TestWorkerCrashAndRecovery:
     async def test_a_worker_with_no_checkpoint_says_so_rather_than_pretending(
         self, binding, monkeypatch
     ):
-        """The reduced guarantee of decision 5, read from the adapter.
+        """The reported reduced guarantee, read from the adapter.
 
         A plain worker cannot be resumed from a checkpoint, and the useful
         thing on the day somebody asks why a crash cost the whole run is

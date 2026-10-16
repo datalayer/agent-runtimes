@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent's toolbox as a contribution point (LOOP C-20): the parts are
+ * The agent's toolbox as a contribution point (C-20): the parts are
  * what the enabled plugins contribute, a source turned off takes its parts
  * off, and every part arrives with an example the Appspec takes as it is.
  */
@@ -112,7 +112,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       ]),
     );
     // Every protocol of the catalogue, a planned one offered but not enabled
-    // (PS-04), and every UI plugin (AGENTIC_UI R8) — never a renderer.
+    // (PS-04), and every UI plugin (R8) — never a renderer.
     for (const protocol of listProtocolSpecs()) {
       expect(
         parts.find(part => part.id === `protocol:${protocol.id}`)?.enabled,
@@ -125,7 +125,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       plugin: 'chat',
     });
     expect(ids).toContain('character:paperclip');
-    // The catalogue's harnesses as the agent (SHIELD SH-43): Claude Code by
+    // The catalogue's harnesses as the agent (SH-43): Claude Code by
     // the agent that runs on it; a harness no agent runs yet offered off.
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');

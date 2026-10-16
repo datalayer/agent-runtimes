@@ -428,7 +428,7 @@ describe('stopping a run in flight', () => {
   });
 });
 
-describe('an application’s modes, in the page (LOOP P-19)', () => {
+describe('an application’s modes, in the page (P-19)', () => {
   /** The system prompt and model each request to the inference service asked for. */
   function recording(
     modeEffect?: (chosen: Record<string, string>, profile?: string) => any,
@@ -490,7 +490,7 @@ describe('an application’s modes, in the page (LOOP P-19)', () => {
     ]);
   });
 
-  it('tells a run the profile its conversation is with (LOOP P-20)', async () => {
+  it('tells a run the profile its conversation is with (P-20)', async () => {
     const { adapter, asked } = recording((chosen, profile) =>
       profile === 'sales'
         ? { instructions: 'Talk plans.', model: 'bedrock:sales-one' }

@@ -6,7 +6,7 @@
 
 ``agent-shield run -- <an ACP agent>`` stands in front of the agent as an ACP
 agent itself; this script is the ACP client an editor would be. It starts the
-proxy over stdio with the fake agent behind it, a policy file (decision 5's
+proxy over stdio with the fake agent behind it, a policy file (the platform's default
 default) and an audit file of its own, and sends three prompts:
 
 1. ``edit`` — editing inside the workspace is *do it*: the agent's permission
@@ -90,7 +90,7 @@ async def main() -> int:
     audit = workspace.parent / f"{workspace.name}-audit.jsonl"
     editor = Editor()
     print(f"Workspace  {workspace}")
-    print("Policy     Datalayer's default (decision 5)\n")
+    print("Policy     Datalayer's default\n")
     async with StdioACPChannel.launch(
         editor,
         shield,

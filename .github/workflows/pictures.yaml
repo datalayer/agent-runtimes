@@ -1,6 +1,6 @@
 name: Pictures
 
-# The reference pictures as tests (LOOP T-16, TESTING.md "Pictures as tests"):
+# The reference pictures as tests (T-16, TESTING.md "Pictures as tests"):
 # the four reference screens in every theme and mode and the floating
 # assistant's states, taken in the runner's Chrome and compared with
 # pictures/baselines/. A difference fails and uploads the baseline, the new

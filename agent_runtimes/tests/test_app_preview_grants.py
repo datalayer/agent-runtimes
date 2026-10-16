@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Preview is held to its application's Space grants (LOOP R-25).
+"""A Preview is held to its application's Space grants (R-25).
 
 Decided 2026-10-06: a Preview, though it runs as the person trying it, reaches
 only the Spaces its application is granted, as its deployments do. As its
@@ -246,7 +246,7 @@ def test_no_grant_reaches_no_space(
 def test_its_companies_are_asked_for_with_its_spaces(
     runtime: Any, remote: TestClient, ai_agents: AiAgents
 ) -> None:
-    """PAP_DATALAYER P-01, found in a Preview on r1: its token named no company, so
+    """P-01, found in a Preview on r1: its token named no company, so
     the gateway refused every call of its `pap` toolset. The Preview asks for the
     companies its Appspec works with beside its Spaces."""
     shop: dict[str, Any] = {
@@ -280,7 +280,7 @@ def test_its_companies_are_asked_for_with_its_spaces(
 def test_its_businesses_and_merchants_are_asked_for_too(
     runtime: Any, remote: TestClient, ai_agents: AiAgents
 ) -> None:
-    """AGENT_PROTOCOLS PI-42: a Preview of an application that asks a business over PACT or
+    """PI-42: a Preview of an application that asks a business over PACT or
     buys at a test merchant names them as its token is asked for, as its deployment's grant
     does; without them, every call of the gateway's `pact`, `ucp` and `acp` toolsets was refused."""
     desk = {
@@ -308,7 +308,7 @@ def test_its_businesses_and_merchants_are_asked_for_too(
                 }
             ]
         },
-        # The sites it reads signed (AGENT_PROTOCOLS EX-11).
+        # The sites it reads signed (EX-11).
         "signed_fetch": {
             "sites": [{"id": "verifier", "site": "verify.examples.datalayer.run"}]
         },
@@ -403,7 +403,7 @@ def test_it_is_kept_and_asked_again_before_it_runs_out(ai_agents: AiAgents) -> N
     }
     assert asyncio.run(ensure_preview_token("app-1", "ada", wider, "ada-4")) != renewed
     assert ai_agents.asked[-1][1] == wider
-    # A company added is a token asked again too, naming it (PAP_DATALAYER P-01).
+    # A company added is a token asked again too, naming it (P-01).
     company = {
         **permissions,
         "pap": {"connections": [{"id": "orders", "company": "manzanita.example"}]},

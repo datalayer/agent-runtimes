@@ -10,7 +10,7 @@ path with the extension's ``artifactProvenance``, its tool calls as
 ``input-required`` carrying ``approvalRequest {toolCall, options,
 expiresAt}``, answered on the same task — by the option chosen, or by one
 whole word from a caller that does not know the extension. Reasoning is not
-an artifact (decision 8). The last test is the drill: an orchestrator
+an artifact. The last test is the drill: an orchestrator
 delegates to the worker over HTTP and gets the diff back.
 """
 
@@ -179,7 +179,7 @@ async def test_the_plan_and_each_diff_are_artifacts_with_provenance(
     assert kept is not None and kept.get("artifacts") is not None
     names = [a.get("name") for a in kept["artifacts"]]
     assert "plan" in names and "hello.txt" in names and "result" in names
-    # Reasoning is not an artifact, nor a message (decision 8).
+    # Reasoning is not an artifact, nor a message.
     assert "thinking" not in str(events)
 
 

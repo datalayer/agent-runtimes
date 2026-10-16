@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application whose page side is a file of its folder (LOOP P-29).
+"""An application whose page side is a file of its folder (P-29).
 
 Its dial is ``components/dial.js``, beside this file. ``loop apps package
 app.py`` puts it in the application's wheel; installed beside the server that
@@ -20,7 +20,7 @@ app = Application(
     description="A desk with a dial of its own, drawn from its package.",
     kind="widget",
     agent="example-simple",
-    # Its interface (AGENTIC_UI R8): the conversation, its page laid out with
+    # Its interface (R8): the conversation, its page laid out with
     # the Canvas's blocks, and the components it packages.
     ui=[
         {"plugin": "chat"},

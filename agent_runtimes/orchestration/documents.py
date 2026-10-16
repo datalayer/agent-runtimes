@@ -265,7 +265,7 @@ def markdown_document(title: str, body: str) -> dict[str, Any]:
     """
     A document of a title and a text in markdown, its blocks unmarked — an
     editable page, anybody's to change: what an application saves once a
-    person approved it (LOOP R-24).
+    person approved it (R-24).
 
     Parameters
     ----------

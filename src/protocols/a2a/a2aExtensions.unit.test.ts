@@ -97,7 +97,7 @@ describe('A2A card extensions', () => {
   });
 
   it("publishes the extensions an application's Appspec declares", () => {
-    // `a2a.extensions` as agentspecs writes it (AGENT_PROTOCOLS PR-02).
+    // `a2a.extensions` as agentspecs writes it (PR-02).
     const a2a: AppA2ASpec = {
       extensions: [
         {

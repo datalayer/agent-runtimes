@@ -357,7 +357,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_session_reaches_the_attempt_and_the_binding(self):
-        """A session is a projection of the execution (decision 6).
+        """A session is a projection of the execution.
 
         The identifier has to be on the attempt or the next step cannot
         load it, and O1-11 moves session ownership behind this store.

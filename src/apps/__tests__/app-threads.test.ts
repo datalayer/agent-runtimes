@@ -4,7 +4,7 @@
  */
 
 /**
- * Threads (LOOP P-24): a thread opened from a person's history is read from
+ * Threads (P-24): a thread opened from a person's history is read from
  * the runtime — held there, else resumed from its record — and feedback
  * names the answer it is about.
  */
@@ -159,7 +159,7 @@ describe('a turn a personal agent asked (decided 2026-10-14)', () => {
   });
 });
 
-describe("a deployment's visit (PAP_DATALAYER, found on r1 2026-10-14)", () => {
+describe("a deployment's visit (found on r1 2026-10-14)", () => {
   it('opens a new thread of its own, never the runtime agent of every visitor', () => {
     expect(threadOfVisit(undefined, 'dep-7', 'visit-1')).toEqual({
       id: 'visit-1',

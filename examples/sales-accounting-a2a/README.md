@@ -10,7 +10,7 @@ side is the `AgentA2ATeamExample` of the examples app. The documentation is
   runtime that is already running. The examples' local server is one, and from
   this machine it needs no key.
 - `serve_scenes.py --url http://127.0.0.1:8767` serves every member on a
-  runtime of every scene of the catalogue (LOOP A-15): Accounting on the
+  runtime of every scene of the catalogue (A-15): Accounting on the
   runtime at `--url`, and each other member — Crop monitoring, Disaster
   assessment, Change detection, Month-end close — on a runtime of its own the
   script starts, ports from 8768 in that order, since a runtime serves one

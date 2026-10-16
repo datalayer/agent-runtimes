@@ -4,8 +4,7 @@
  */
 
 /**
- * A component an application adds to the A2UI catalog it is drawn with (LOOP
- * P-17), as a contribution point, re-exported by `apps/core`: the components
+ * A component an application adds to the A2UI catalog it is drawn with (P-17), as a contribution point, re-exported by `apps/core`: the components
  * its developer wrote, contributed by the application's own plugin, so that
  * its page, the elements its code shows and its answers draw them — in that
  * application's workspace, and in no other.

@@ -30,9 +30,9 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
 
     Its setup notes say what it names that is not enabled today, a block of
     its page from a UI plugin in ``plugins_off`` — the catalogue ids its
-    organization has turned off (LOOP C-12) — among it.
+    organization has turned off (C-12) — among it.
 
-    A context of its organization's own (``org-…``, LOOP U-32) is checked
+    A context of its organization's own (``org-…``, U-32) is checked
     where its organization's contexts are read, when its agent is made
     (`frames.frames_instructions`), not here: the document does not say its
     organization.

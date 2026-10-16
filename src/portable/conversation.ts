@@ -134,7 +134,7 @@ export type ConversationItem =
       codeError: ToolCodeError | null;
       /** The exit code its code ended with (`sys.exit`), or `null`. */
       exitCode: number | null;
-      /** The protocol display its result carries, read strictly (`portable/displays`, MOBILE M-037). */
+      /** The protocol display its result carries, read strictly (`portable/displays`, M-037). */
       display: ProtocolDisplay | null;
     }
   | {
@@ -309,7 +309,7 @@ function noted(state: ConversationState, event: AgUiEvent): ConversationState {
 /**
  * A coding agent's row said again while it runs (the runtime's AG-UI
  * stream, `agent_runtimes.transports.agui_stream`): a terminal's output so
- * far rides it in `_meta["reactor.ui/display"]` (SHIELD SH-13, SH-16).
+ * far rides it in `_meta["reactor.ui/display"]` (SH-13, SH-16).
  */
 export const HARNESS_TOOL_CALL = 'datalayer.harness.tool_call';
 

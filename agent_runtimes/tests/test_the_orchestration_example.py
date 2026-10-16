@@ -280,7 +280,7 @@ class TestWhatTheExecutionRecords:
         self, runs: list[Any]
     ) -> None:
         """
-        Decision 5's rule: the reduction is reported, not hidden.
+        The rule: the reduction is reported, not hidden.
 
         Parameters
         ----------

@@ -4,7 +4,7 @@
  */
 
 /**
- * The UI plugins an application is drawn with (AGENTIC_UI R8), one mapping
+ * The UI plugins an application is drawn with (R8), one mapping
  * in two languages: `uiFor` and agentspecs' `ui_for` are held to the same
  * cases, the fixture `agent_runtimes/tests/fixtures/app_ui.json`, which the
  * Python test (`agent_runtimes/tests/test_app_ui.py`) reads too. A new blank

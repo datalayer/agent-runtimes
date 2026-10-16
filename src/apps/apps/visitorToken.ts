@@ -5,7 +5,7 @@
 
 /**
  * A visitor's token, for a conversation without an account on the visitors'
- * runtime (LOOP R-30).
+ * runtime (R-30).
  *
  * ai-inference mints it (`POST /anonymous/token`) naming the visitor — the id
  * this tab keeps for them, so that a new token is the same visitor, whose
@@ -193,7 +193,7 @@ export type VisitorAgent = { agent: string; appId: string };
 
 /**
  * Ask the visitors' runtime for the agent a visitor's token names, made
- * there if it is not (`POST /api/v1/apps/visitors/agent`, STUDIO D-15): an
+ * there if it is not (`POST /api/v1/apps/visitors/agent`, D-15): an
  * application at its address has its agent made as it is first opened, so
  * that the runtime holds the application before the page follows it.
  * Throws with the runtime's sentence when it refuses.

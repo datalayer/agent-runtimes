@@ -4,7 +4,7 @@
  */
 
 /**
- * An approval as every card says it (MOBILE M-016): a message whole, anything
+ * An approval as every card says it (M-016): a message whole, anything
  * else every argument, why it asked apart.
  *
  * @module portable/__tests__/approvalCard

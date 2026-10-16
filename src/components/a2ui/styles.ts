@@ -48,7 +48,7 @@ export const A2UI_RENDER_SCOPE_SX: BetterSystemStyleObject = {
   },
 
   /*
-   * A button is the theme's filled button (STUDIO P-04, T-30): its fill and
+   * A button is the theme's filled button (P-04, T-30): its fill and
    * its label are Primer's primary-button properties, which every theme and
    * an application's accent set together (`themeAccentVars`), so the label
    * is always the accent's own text on it. The label is a Text inside the

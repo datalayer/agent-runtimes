@@ -57,8 +57,8 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 | `teamPicker`, `showAgentVariants`, `pluginsPanel` | `false`. The plugin graph is not among the preset's plugins any more: a host that shows it adds `GraphViewPlugin` itself.   |
 | `editors`, `showViewSelector`, `pageLayout`, `pageLayoutArrangement`, … | What its layout asks for (`appLayoutOptions(app)`): see [An application's layout](./index.mdx#an-applications-layout). |
 | `datalayerAgentSpecId`, `datalayerCreatePayload`   | On Datalayer, a runtime allocated with a plain agentspec and the application's agent created on it with the application's spec, so that the runtime enforces its rules. |
-| `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account (LOOP R-30), the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
-| `datalayerKept`                                    | `{url}`: a deployment kept always on (LOOP R-33) already has its agent on a runtime of its own, at `url`, made from its deployment record (`kept_payload`; the runtime reads its version's `app.py` from the deployment when it is written in Python, which that agent's sessions run) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
+| `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account (R-30), the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
+| `datalayerKept`                                    | `{url}`: a deployment kept always on (R-33) already has its agent on a runtime of its own, at `url`, made from its deployment record (`kept_payload`; the runtime reads its version's `app.py` from the deployment when it is written in Python, which that agent's sessions run) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
 
 **A host wins over the application.** Every `LoopEmbed` prop a host passes is
 applied after these, and replaces them: `showTokenUsage` brings the counters
@@ -188,7 +188,7 @@ block no enabled plugin contributes is not drawn; it says, in its place,
 *This page places Chart, which no enabled plugin contributes: it is drawn once
 the plugin that contributes it is on.*
 
-The components its developer wrote (`interface.custom_components`, LOOP P-17)
+The components its developer wrote (`interface.custom_components`, P-17)
 are among them: the application's own plugin (`app-components`,
 `defineAppComponentsPlugin`), in its preset only, contributes each as a block
 (`loop.canvas.block`) and as a renderer (`loop.a2ui.component`), which its
@@ -201,7 +201,7 @@ the module the page fetched without credentials and checked against its
 only under a name it declares, written where its binding points before its
 action is dispatched. Another application's workspace has none of them.
 
-What its answers show (`session.send(text, show=[...])`, LOOP P-04) is drawn
+What its answers show (`session.send(text, show=[...])`, P-04) is drawn
 under the answer by the same renderer, Datalayer's catalog with the
 application's own components — the one a team's answers are drawn with on
 the home page. Among them, a **file to download** (`Download`): its name, its
@@ -212,7 +212,7 @@ followed — the block says so in its place.
 ## No markup in its conversation
 
 An application may be hosted on the platform's own origin, where people are
-signed in (LOOP D-22), so nothing a model, a connection or an application
+signed in (D-22), so nothing a model, a connection or an application
 writes as markup reaches the page — in its Preview, at its address and
 embedded alike:
 
@@ -274,11 +274,11 @@ beside it what it is allowed to do and what it did:
   the conversation ends. An application not saved on Datalayer has no record:
   the feed says it is recorded once it is. Real use only: the sessions its
   tests ran (`purpose: test`, the Evals engine's) are read apart
-  (`listSessions(…, tests)`, LOOP R-07). What the person answered when they
+  (`listSessions(…, tests)`, R-07). What the person answered when they
   were asked is a step of its own — *send_gmail_message: approved*,
   *declined*, or *not answered in time* — whether a rule or a Gate asked. A
   run's start is sent at once (`run`), so that the platform reads what is in
-  progress (LOOP R-15); the feed shows it as no step.
+  progress (R-15); the feed shows it as no step.
 - **Computer** (`defineAppComputerPlugin`, `AppComputer`): the sandbox its
   agent runs on, live — see [Its computer](#its-computer).
 
@@ -287,7 +287,7 @@ The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 
 ## Its computer
 
-An application's computer is the sandbox its agent runs on (LOOP R-23). Its
+An application's computer is the sandbox its agent runs on (R-23). Its
 Appspec's `permissions.computer` turns on three parts, each off until it is
 turned on, and a part that is off gives its agent no tool — it is never shown
 one, where its connections' tools are filtered (`AppRulesCapability.prepare_tools`,
@@ -395,7 +395,7 @@ and an application's page under [An application's page](./index.mdx#an-applicati
 ## When it cannot answer
 
 A host that knows the application cannot answer — its model is not offered,
-or not served today (LOOP R-27) — wraps it in `ChatAvailabilityProvider`
+or not served today (R-27) — wraps it in `ChatAvailabilityProvider`
 (`chat/base/ChatAvailability`) with `disabled` and the reason in a sentence.
 The workspace's chat honours it as it honours a sandbox's gate: the composer
 is switched off and says the reason, instead of sending a question nothing
@@ -415,7 +415,7 @@ to:
 | *Live*                         | A model answers now; nothing plays from a recording.                                                                                                                                                                                                        |
 | the model, *Claude Sonnet 4.6* | Resolved as the chat resolves it on the browser target: the agent spec under the application's id, then the agent the application names, then the platform's default (`DEFAULT_MODEL`), shown by its catalogue name without its provider. The application's own `model` is sent only to a runtime, and is not read in the browser. |
 | *nothing is kept*              | A signed-out conversation is not saved: closing the page ends it.                                                                                                                                                                                           |
-| the limit                      | **Not built.** There is no limit per visitor and no spend ceiling for the day yet, and no recorded conversation that would play, saying it is one, when the limit is reached (LOOP H-04, H-08). The page says nothing about a limit until there is one. |
+| the limit                      | **Not built.** There is no limit per visitor and no spend ceiling for the day yet, and no recorded conversation that would play, saying it is one, when the limit is reached (H-04, H-08). The page says nothing about a limit until there is one. |
 
 *How it is built*, a quiet link under the chat, turns the frame over to show
 the same application written out, read only, as the Studio's text view writes
@@ -424,14 +424,14 @@ documentation is on the site, at
 [/docs/applications/home-chat](https://datalayer.ai/docs/applications/home-chat).
 
 **On the visitors' runtime.** Given `target="datalayer"` and
-`datalayerVisitors`, it runs on the visitors' runtime (LOOP R-30): with its
+`datalayerVisitors`, it runs on the visitors' runtime (R-30): with its
 search, reading only, nothing kept, under a visitor's limits. In the browser
 target the model answers alone: no runtime, no tool, no search.
 
 ## Commands and modes in the composer
 
 An application's Appspec may give its composer **commands** and **modes**
-(`interface.commands`, `interface.modes`, LOOP P-19). `AppRenderer` adds them
+(`interface.commands`, `interface.modes`, P-19). `AppRenderer` adds them
 as a plugin of their own (`defineAppComposerPlugin`), only for an application
 that has some:
 
@@ -480,7 +480,7 @@ and a mode's model for an agent whose model its host chose itself.
 
 An application's Appspec may offer several **profiles** — assistants in one
 application, each with its instructions, its model and its starters
-(`interface.profiles`, LOOP P-20). The composer's plugin adds a picker beside
+(`interface.profiles`, P-20). The composer's plugin adds a picker beside
 the composer, *Profile: Support*, on the first unless another is picked; the
 profile picked goes with every run as `forwardedProps.loop.profile`, and the
 runtime tells the agent its `instructions` before the modes' and runs its
@@ -498,7 +498,7 @@ rebuilding the workspace.
 
 ## The nine inputs
 
-The settings' form (`interface.settings`, LOOP C-16) is drawn with the inputs
+The settings' form (`interface.settings`, C-16) is drawn with the inputs
 `interface.settings_ui` names, a uiSchema by field name — the page's Form
 block takes it as `ui` (Form 1.1.0). Seven are `@datalayer/primer-rjsf`'s
 widgets: Select (a field with an `enum`), Slider (`range`), TextInput (a
@@ -515,7 +515,7 @@ What a person reads of an application — its name, description and welcome,
 its starters and their categories, its settings' titles and their values'
 names, its commands' descriptions, its modes and its profiles — is shown in
 their language when its Appspec is translated into it
-(`interface.translations`, by BCP 47 tag, LOOP P-26), and in its own words
+(`interface.translations`, by BCP 47 tag, P-26), and in its own words
 otherwise. `AppRenderer` picks the language: its `language` prop, else the
 browser's; `fr-CA` reads `fr` (`pickLanguage`). `translatedAppspec(app,
 preferred)` is the application as they read it; the agent is still created
@@ -586,7 +586,7 @@ POST /api/v1/apps/feedback
 ```
 
 `message` names the answer it is about by its place among the
-conversation's answers (`answerIdOf`, LOOP P-24). The answer says
+conversation's answers (`answerIdOf`, P-24). The answer says
 `{"kept": true, "summary": ..., "heard": ...}`: `heard` is whether the
 application's Python code ran its `@app.feedback`.
 
@@ -597,11 +597,11 @@ sends it to ai-agents at once, through the same `/api/ai-agents/v1/apps/records`
 every entry takes. It answers `404` for a conversation it did not record,
 `409` for an application that keeps no feedback, and `502` when the record
 could not be sent, with the reason; the strip says that sentence. The
-Studio's Readiness page counts what was kept (LOOP V-18).
+Studio's Readiness page counts what was kept (V-18).
 
 ## A thread opened from the history
 
-A host that opens one of the person's earlier conversations (LOOP P-24)
+A host that opens one of the person's earlier conversations (P-24)
 hands the chat its session's uid with `fromRuntime`:
 
 ```tsx
@@ -619,7 +619,7 @@ is said, and a new conversation starts.
 An application whose Appspec grants it a Space to write
 (`permissions.spaces`, `access: write`) is given one tool on the runtime,
 `save_to_space(title, content, space?)` — the result it wants to keep, in
-markdown (LOOP R-24). Nothing is written before a person saw it:
+markdown (R-24). Nothing is written before a person saw it:
 
 - **Shown first.** The call is always asked on the approvals path — whatever
   its rules say of writing, short of *Leave it to me*, which refuses it — and
@@ -650,7 +650,7 @@ Preview, the person. A visitor without an account only reads: the call is
 refused before anybody is asked. On a deployment the approval reaches its
 maker, as every approval of its rules does.
 
-**What it writes says who wrote it** (LOOP I-10). The page ends with its
+**What it writes says who wrote it** (I-10). The page ends with its
 byline — *Written by 📬 Inbox Triage, for Ana Lopez.*, or *Written by 📬 Inbox
 Triage, on its own.* in a session nobody opened — and the document's metadata
 names the application and the person it acted for (`authorship`). The person
@@ -686,7 +686,7 @@ not signed; what only reads is never touched.
 ## What it learns
 
 An application saved on Datalayer is given two more tools on the runtime
-(LOOP R-26, `agent_runtimes.loop.apps.learning`):
+(R-26, `agent_runtimes.loop.apps.learning`):
 
 - `propose_skill(name, description, instructions)` — what a conversation
   worked out, written so that it can be done again: a name in lower-case
@@ -711,7 +711,7 @@ file learns nothing.
 ## With nobody present
 
 A session nobody opened — woken by one of its schedules (`woken_by`) — has
-nobody to ask (LOOP R-16). Its rules capability is told so
+nobody to ask (R-16). Its rules capability is told so
 (`AppRulesCapability.unattended`, set from the recorder by
 `unattended_when_woken` — on the agent made in process by `app_capabilities`
 and on the one a runtime makes for a deployment):
@@ -728,7 +728,7 @@ still shown first: with a rule on writing, its maker is asked.
 At its address and embedded — wherever it runs as a deployment, so whenever
 `instance.deploymentUid` is given — an application says under its prompt,
 before anything is written, what its record keeps of the conversation and for
-how long (LOOP R-31). The words come from its Appspec: each item of
+how long (R-31). The words come from its Appspec: each item of
 `record.include` in a person's words (`KEPT_ITEMS`), and `record.keep_for`
 as a duration (`keptForWords`):
 

@@ -4,7 +4,7 @@
  */
 
 /**
- * The assistant's own menu (LOOP T-27): it opens on a right-click and on
+ * The assistant's own menu (T-27): it opens on a right-click and on
  * Shift+F10, shows what each host passes and nothing it does not, each entry
  * it offers does something, *Inspect the agent…* opens the Agent Inspector
  * over the page, and Esc closes it.
@@ -290,16 +290,17 @@ describe('Inspect the agent…', () => {
 
 describe('a suggestion’s description in the menu', () => {
   it('keeps to one line, whole words and an ellipsis, the full text in its tooltip', async () => {
-    const { shortDescription, MENU_DESCRIPTION_MAX } = await import(
-      '../assistant/AssistantContextMenu'
-    );
-    expect(shortDescription('Chart the aged receivables as of today, by customer.')).toBe(
-      'Chart the aged receivables as of today, by customer.',
-    );
+    const { shortDescription, MENU_DESCRIPTION_MAX } =
+      await import('../assistant/AssistantContextMenu');
+    expect(
+      shortDescription('Chart the aged receivables as of today, by customer.'),
+    ).toBe('Chart the aged receivables as of today, by customer.');
     const long =
       'Show me the open customer invoices as a notebook: the invoices, the total due, and a chart of what each customer owes.';
     const short = shortDescription(long);
-    expect(short).toBe('Show me the open customer invoices as a notebook: the…');
+    expect(short).toBe(
+      'Show me the open customer invoices as a notebook: the…',
+    );
     expect(short.length).toBeLessThanOrEqual(MENU_DESCRIPTION_MAX + 1);
   });
 });

@@ -4,7 +4,7 @@
  */
 
 /**
- * No file of the embed holds a secret (PAP_DATALAYER B-02): what the build
+ * No file of the embed holds a secret (B-02): what the build
  * refuses (`vite.embed.config.ts`, `embedSecrets`), and that nothing of the
  * environment it is built in enters it.
  */

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene and its stage written in Python (LOOP P-30): ``loop.scene`` and
+"""A scene and its stage written in Python (P-30): ``loop.scene`` and
 ``loop.stage`` write the scene spec agentspecs reads — refused in agentspecs'
 sentences — ``loop scenes rehearse scene.py`` plays it, ``loop scenes build``
 writes the YAML the Studio's spec editor reads, and ``loop scenes push`` keeps

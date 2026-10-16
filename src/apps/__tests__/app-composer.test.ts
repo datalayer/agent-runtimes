@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's commands and modes in the composer (LOOP P-19): read and
+ * An application's commands and modes in the composer (P-19): read and
  * written as agentspecs says them, checked as it checks them, its commands
  * workspace commands listed in the `/` menu, its modes sent with every run.
  */

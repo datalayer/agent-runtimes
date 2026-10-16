@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The TypeScript shopping client at the Python merchant (AGENT_PROTOCOLS EX-04).
+"""The TypeScript shopping client at the Python merchant (EX-04).
 
 Example Store is served on localhost by ``examples/protocols/ucp/merchant_server.py``
 and the TypeScript client of ``src/protocols/ucp`` shops there over HTTP

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The plugins an organization has turned off, for the checks of an application (LOOP C-12).
+"""The plugins an organization has turned off, for the checks of an application (C-12).
 
 An organization keeps the UI plugins of the catalogue it has turned off in IAM
 (`GET /api/iam/v1/organizations/{uid}/plugins-off`, ids of agentspecs' ``ui``

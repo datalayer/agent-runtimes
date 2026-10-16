@@ -4,7 +4,7 @@
  */
 
 /**
- * The files a person picked, read as one character (LOOP T-26): one
+ * The files a person picked, read as one character (T-26): one
  * Microsoft Agent `.acs`; a Microsoft Agent `.acf` with the `.aca` files it
  * names; or a clippy.js character's `agent.js` and map image (and its
  * sounds file, if there is one). Read in the page; nothing is

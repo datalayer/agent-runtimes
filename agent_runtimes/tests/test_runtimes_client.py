@@ -88,7 +88,7 @@ class TestARuntimeOfAnExecutionTree:
 
 
 class TestAnApplicationIsLaunchedWithItsAppspec:
-    """Its connections' secrets are given before its agent is made (LOOP R-19)."""
+    """Its connections' secrets are given before its agent is made (R-19)."""
 
     APP = {"schema": "loop.app/v1", "id": "web-research", "connections": []}
 

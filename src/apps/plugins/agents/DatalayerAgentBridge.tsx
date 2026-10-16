@@ -47,10 +47,10 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   const agentSpecId =
     agentsConfig?.datalayerAgentSpecId ?? DEFAULT_DATALAYER_AGENTSPEC;
   const createPayload = agentsConfig?.datalayerCreatePayload;
-  // A conversation without an account (LOOP R-30): the agent is already on
+  // A conversation without an account (R-30): the agent is already on
   // the visitors' runtime, kept warm there; nothing is allocated or made.
   const visitors = agentsConfig?.datalayerVisitors;
-  // A deployment kept on a runtime of its own (LOOP R-33): its agent was made
+  // A deployment kept on a runtime of its own (R-33): its agent was made
   // there from the deployment record as the runtime started; nothing is
   // allocated or made either.
   const kept = agentsConfig?.datalayerKept;
@@ -62,7 +62,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
 
   /*
    * On the visitors' runtime, the application's agent made before the page
-   * follows it (STUDIO D-15): an application at its address has none until
+   * follows it (D-15): an application at its address has none until
    * a visitor opens it, and its runtime holds no plugin of it until then —
    * so the page's plugin of the pair (F-15) would stand down and its chat
    * have nothing to speak to. Asked with a visitor's token, the runtime
@@ -160,7 +160,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   );
 
   /*
-   * The application the runtime is launched for (STUDIO R-19): its Appspec
+   * The application the runtime is launched for (R-19): its Appspec
    * and where it runs, read from the payload its agent is created with — the
    * Studio's Preview, the hosted page signed in. Sent with the launch, so the
    * runtime is given the secrets its connections declare before its agent is

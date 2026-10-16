@@ -4,7 +4,7 @@
  */
 
 /**
- * The Canvas's palette as a contribution point (LOOP C-12), re-exported by
+ * The Canvas's palette as a contribution point (C-12), re-exported by
  * `apps/core`: kept apart so that reading the palette loads the reactor and
  * the catalogue, and nothing of the workspace.
  *
@@ -15,7 +15,7 @@ import { defineContributionPoint } from '@datalayer/reactor';
 import type { ComponentSpec } from '../../types/agentspecs';
 
 /**
- * A block the Canvas may place (LOOP C-12): one component of the catalog of
+ * A block the Canvas may place (C-12): one component of the catalog of
  * visual components (C-13), contributed by the plugin of the UI that
  * renders it. The Canvas's palette is what the enabled plugins contribute
  * here, and nothing else: a plugin disabled takes its blocks off it, and an

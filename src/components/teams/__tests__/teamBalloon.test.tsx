@@ -4,7 +4,7 @@
  */
 
 /**
- * A team's balloons (LOOP T-23, H-29): each member's shows only what it
+ * A team's balloons (T-23, H-29): each member's shows only what it
  * says or does now (`current`) — "Asking Accounting…" for Sales' one tool,
  * "Using list_invoices…" while Accounting calls Odoo — and the notebook
  * Accounting gave shows in Sales' balloon read-only, drawn statically (no

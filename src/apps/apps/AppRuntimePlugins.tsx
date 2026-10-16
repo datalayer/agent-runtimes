@@ -4,8 +4,7 @@
  */
 
 /**
- * The page told which of an application's plugins its runtime holds (LOOP
- * F-15).
+ * The page told which of an application's plugins its runtime holds (F-15).
  *
  * The application's page plugin requires the runtime's plugin of the same
  * name (`requiredBackendPlugins`). Reactor stands such a plugin down while
@@ -23,7 +22,7 @@
  *   its own runtime, and the pair is whole: nothing stands down, nothing is
  *   blank.
  *
- * An application whose components are files of its folder (LOOP P-29) has
+ * An application whose components are files of its folder (P-29) has
  * its page side in its package, installed beside the server that runs it:
  * once on a runtime, the page reads it there with Reactor's
  * `bootstrapExtensions` (`<base>/plugins/frontend-extensions`) and installs

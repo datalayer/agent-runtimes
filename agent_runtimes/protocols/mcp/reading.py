@@ -3,7 +3,7 @@
 
 """What an MCP client of agent-runtimes reads from a server's answers.
 
-The twin of ``src/protocols/mcp/client.ts`` (AGENT_PROTOCOLS PR-51): each
+The twin of ``src/protocols/mcp/client.ts`` (PR-51): each
 answer is the ``mcp`` SDK's own type, read into the plain shape both
 languages agree on, held to ``fixtures/session.json`` by
 ``test_protocols_mcp.py`` and the TypeScript ``mcpClient.unit.test.ts``. A

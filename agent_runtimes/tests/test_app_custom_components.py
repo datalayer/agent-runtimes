@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Components a developer writes (LOOP P-17): declared in the application's
+"""Components a developer writes (P-17): declared in the application's
 spec, of that application only, reviewed as the catalog's own, placed on its
 surface, shown by its code and drawing a widget's page's output.
 """
@@ -59,7 +59,7 @@ def test_a_component_is_declared_in_its_spec_and_reviewed() -> None:
     assert own[0].source == GAUGE["source"] and own[0].height == 240
     assert app.document["interface"]["custom_components"][0]["shows"] == ["value"]
     # Refused in agentspecs' sentences, before anything runs.
-    # A file of its folder is named by its path in it (LOOP P-29).
+    # A file of its folder is named by its path in it (P-29).
     with pytest.raises(ValueError, match="is a file of the application's folder"):
         app.custom_component("Dial", **{**GAUGE, "source": "../dial.js"})
     assert (

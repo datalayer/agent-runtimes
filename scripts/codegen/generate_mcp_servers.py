@@ -122,7 +122,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             ]
         )
         # A server its command runs as a local HTTP process: where it is
-        # reached (STUDIO W-02, `google-workspace`).
+        # reached (W-02, `google-workspace`).
         if spec.get("url"):
             lines.append(f'    url="{spec["url"]}",')
 
@@ -132,7 +132,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         lines.append(f"    required_env_vars={envvars_formatted},")
         # What the code its tools write reads in the code sandbox: given there
-        # when the account has them, never required (LOOP R-19).
+        # when the account has them, never required (R-19).
         sandbox_envvars = spec.get("sandbox_envvars", [])
         if sandbox_envvars:
             lines.append(

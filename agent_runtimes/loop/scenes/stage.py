@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene on stage: its members played, and what they did recorded as spans (LOOP A-14).
+"""A scene on stage: its members played, and what they did recorded as spans (A-14).
 
 The rehearsal plays each beat's cue through the scene the way `loop apps
 run` runs one application: the entry's application in this process
@@ -64,7 +64,7 @@ _KIND_WORDS = re.compile(
     r"^(?:an?\s+)?(words|table|chart|notebook|map|file|image|sources|choice|approval)$"
 )
 
-#: The catalog's components that show a kind not named in theirs (STUDIO H-02).
+#: The catalog's components that show a kind not named in theirs (H-02).
 _COMPONENT_KINDS = {"evidence": "sources", "button": "choice"}
 
 #: A2UI's media type, as an answer's surface comes under it.
@@ -408,7 +408,7 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
     }
     headers = {"Accept": "text/event-stream"}
     if member.key:
-        # Sent by the stage, never shown to a model or a span (LOOP R-19).
+        # Sent by the stage, never shown to a model or a span (R-19).
         hold(member.key)
         headers["Authorization"] = f"Bearer {member.key}"
     texts: Dict[str, str] = {}
@@ -841,7 +841,7 @@ def with_ask_tools(
     """The member's spec document with a tool per member it talks to, declared as its own.
 
     The team said the member asks that one over A2A, so the ask is a tool of
-    the application's own (``tools``, LOOP P-06) that reads: its rules let
+    the application's own (``tools``, P-06) that reads: its rules let
     it through as they let a read through, and a rule may still name it.
     """
     document = dict(member.document)

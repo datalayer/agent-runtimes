@@ -92,7 +92,7 @@ export interface InputPromptBaseProps {
    * suggestion a person cannot see is worse than none.
    */
   mentionableAgents?: MentionableAgent[];
-  /** Commands listed while `/` is typed, before the prompt's own (LOOP P-19). Lexical only. */
+  /** Commands listed while `/` is typed, before the prompt's own (P-19). Lexical only. */
   promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this composer mounted, oldest first.
@@ -349,7 +349,7 @@ export function InputPromptBase({
           // Named so the turn-end refocus can ask whether the caret is already
           // somewhere inside this prompt before it reaches for it.
           ref={containerRef}
-          // What the floating assistant never sits over (LOOP T-27).
+          // What the floating assistant never sits over (T-27).
           data-chat-composer=""
           onFocusCapture={() => {
             if (selfFocused.current) {
@@ -371,7 +371,7 @@ export function InputPromptBase({
             }
           }}
           border="1px solid"
-          // The theme's card (LOOP T-03, T-06): today's 6px elsewhere.
+          // The theme's card (T-03, T-06): today's 6px elsewhere.
           borderRadius="var(--theme-radius-card, 6px)"
           bg="canvas.default"
           overflow="hidden"

@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's computer, shown where the person is (LOOP R-23).
+"""An application's computer, shown where the person is (R-23).
 
 Under ``/api/v1/apps/agents/{agent}/computer``, for the agent the platform
 made for an application:
 
 - ``GET``: its parts — browse, files, shell, each on or off — whether it has
   started, who has taken it over, and the origin its files are served from
-  (``servedFrom``, STUDIO D-22);
+  (``servedFrom``, D-22);
 - ``GET …/files?path=``: a directory of its working directory, read-only;
 - ``GET …/file?path=``: one of its files, to download — always a download
   (`download_headers`): never a page a browser draws, whatever it holds;
@@ -105,7 +105,7 @@ class OpenRequest(BaseModel):
 
 
 def download_headers(path: str) -> Dict[str, str]:
-    """The headers a file of its computer is served with (STUDIO D-22).
+    """The headers a file of its computer is served with (D-22).
 
     Whatever it holds — a person's upload, what its agent wrote — it is saved,
     never drawn: an attachment, of no type a browser would sniff into a page,
@@ -129,7 +129,7 @@ def download_headers(path: str) -> Dict[str, str]:
 
 
 def served_from() -> str:
-    """Where a file of this computer is served from (STUDIO D-22).
+    """Where a file of this computer is served from (D-22).
 
     A hosted application hands a person files — a download it wrote, an
     upload read back — and the runtime serves them. The runtimes' host is

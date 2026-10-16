@@ -280,7 +280,7 @@ export function voiceForPerson(
   }
   if (chosen.onDeviceOnly) {
     // Nothing is asked of the speech service: no token, no origin. Answers
-    // are said by that service only (decision 1: no voice made in the
+    // are said by that service only (no voice made in the
     // browser), so they are not heard; listening stays on the device.
     next.speechUrl = undefined;
     next.token = undefined;

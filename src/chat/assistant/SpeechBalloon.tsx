@@ -7,7 +7,7 @@
  * A speech balloon over something that stands for the agent — the floating
  * assistant's character, or the floating popup's button while the chat is
  * closed: a peek, one short line — the agent's newest words, as the Office
- * Assistant said them (LOOP T-23), cut to their first words, or a
+ * Assistant said them (T-23), cut to their first words, or a
  * notification — that opens the conversation when clicked, and can be
  * dismissed; an approval it waits on, answered there with *Approve* or
  * *Deny*, and how many more wait; and, where the runtime can be asked and
@@ -21,7 +21,7 @@
  * Given suggestions while the agent waits for a question, it offers them as
  * chips under its words: one clicked is sent as the person's prompt.
  *
- * Shown `current` (LOOP T-23), it is the one thing being said or done now:
+ * Shown `current` (T-23), it is the one thing being said or done now:
  * *Now*, then the words as they are written, or the tool being called
  * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
  * (a notebook given, read-only). Either way a tool line stands in for the

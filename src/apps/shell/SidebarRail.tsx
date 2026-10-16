@@ -4,7 +4,7 @@
  */
 
 /**
- * The rail (LOOP T-07): the workspace's sidebar as a narrow column of line
+ * The rail (T-07): the workspace's sidebar as a narrow column of line
  * icons, one per panel, and the one panel chosen beside it.
  *
  * The sidebar stacks every panel its plugins contribute — an application's

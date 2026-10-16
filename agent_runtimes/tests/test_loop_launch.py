@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where ``loop`` runs its agent: here, or on Datalayer (LOOP L-01 to L-06)."""
+"""Where ``loop`` runs its agent: here, or on Datalayer (L-01 to L-06)."""
 
 from __future__ import annotations
 
@@ -393,7 +393,7 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
         back.relay.stop()
 
 
-# --- a runtime set up for the account before anything is configured on it (STUDIO A-08)
+# --- a runtime set up for the account before anything is configured on it (A-08)
 
 
 def test_the_record_datalayer_sets_a_runtime_up_with_is_told_from_the_pools() -> None:

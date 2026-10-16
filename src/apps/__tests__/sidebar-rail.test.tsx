@@ -4,7 +4,7 @@
  */
 
 /**
- * The rail (LOOP T-07) and a pane opening at the theme's pace (T-10): the
+ * The rail (T-07) and a pane opening at the theme's pace (T-10): the
  * sidebar's panels as line icons, one shown at a time, every one kept
  * mounted; an application's rules, activity and computer naming themselves
  * on it; the pane's motion read from the theme's tokens, and none when

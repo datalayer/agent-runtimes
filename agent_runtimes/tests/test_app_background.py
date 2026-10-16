@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Background work with nobody present only reads, unless a rule says otherwise (LOOP R-16).
+"""Background work with nobody present only reads, unless a rule says otherwise (R-16).
 
 A session woken by a schedule has nobody to ask: what acts on the world —
 writing, sending, buying, deleting, publishing — is done, or asked of its

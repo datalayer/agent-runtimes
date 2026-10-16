@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display, kept for the page; its model view, for the model (REACTOR_UI RU-1).
+"""A tool's display, kept for the page; its model view, for the model (RU-1).
 
 An MCP tool may answer with a Reactor UI display beside its result, in the
 result's ``_meta["reactor.ui/display"]`` — the gateway's ``pap_sign_in`` with

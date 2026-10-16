@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The examples written in Python (LOOP E-02): each `app.py` of agentspecs'
+"""The examples written in Python (E-02): each `app.py` of agentspecs'
 catalogue builds the spec committed beside it, and its code runs in process,
 the person played by a `MemoryChannel` and the model scripted.
 """
@@ -38,7 +38,7 @@ def test_the_catalogue_has_its_three_python_examples() -> None:
 
 
 def test_the_catalogue_says_how_each_example_was_built() -> None:
-    """LOOP E-05: Python where an `app.py` sits beside the spec, the Canvas where
+    """E-05: Python where an `app.py` sits beside the spec, the Canvas where
     the page says it was composed there, written otherwise."""
     from agent_runtimes.specs.apps import APP_BUILT, APP_CATALOGUE
 
@@ -124,7 +124,7 @@ def test_the_report_from_a_file_takes_a_csv_and_refuses_anything_else() -> None:
 def test_the_exchange_desk_exchanges_at_manzanita_once_per_confirmed_operation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Decided 2026-10-13 (AGENT_PROTOCOLS PI-42): its exchange_order exchanges
+    """Decided 2026-10-13 (PI-42): its exchange_order exchanges
     against the hosted Manzanita's back office, keyed by the confirmed
     operation's ticket; a stand-in answers as Manzanita does."""
     import importlib.util

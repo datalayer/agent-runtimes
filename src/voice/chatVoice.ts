@@ -102,7 +102,7 @@ export function chatVoiceOf(
  * its runtime (VO-37, VO-19): the token its host gave, else the chat's own —
  * a visitor's token minted from ai-inference, an embed's token, or the
  * person's. One token for the conversation and its voice, never a second.
- * An embed's deployment is the one its token names (decision 16): the page
+ * An embed's deployment is the one its token names: the page
  * says none.
  */
 export function voiceAskedAs(

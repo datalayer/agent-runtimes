@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Example Outfitters served on localhost, for a buyer in another language (AGENT_PROTOCOLS EX-05).
+"""Example Outfitters served on localhost, for a buyer in another language (EX-05).
 
 The test seller of ``checkout.py`` (``agent_runtimes.protocols.agentic_commerce.merchant``)
 over real HTTP — its discovery at ``/.well-known/acp.json``, the

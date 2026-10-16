@@ -4,7 +4,7 @@
  */
 
 /**
- * A character one brings, played (LOOP T-26): frames stepped as authored,
+ * A character one brings, played (T-26): frames stepped as authored,
  * branches by their weights, an animation chosen by the state.
  */
 

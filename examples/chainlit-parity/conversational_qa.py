@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Conversational document QA — the example of Chainlit's documentation
-(``examples/qa``), rebuilt with LOOP's API (LOOP P-27).
+(``examples/qa``), rebuilt with LOOP's API (P-27).
 
 Chainlit asks for a text file until one comes (``AskFileMessage`` in a loop,
 three minutes each time), says it is processing it and updates that message,
@@ -46,7 +46,7 @@ app = Application(
         "Answer only from the passages you are given and from the conversation so "
         "far. When they do not hold the answer, say so; never guess."
     ),
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

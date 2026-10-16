@@ -4,7 +4,7 @@
  */
 
 /**
- * What the web chat draws of the shared conversation (MOBILE M-030): the
+ * What the web chat draws of the shared conversation (M-030): the
  * reducer's rows as the cards and messages `ChatMessageList` renders, with
  * the web's own layer beside them.
  */

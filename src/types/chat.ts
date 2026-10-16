@@ -842,7 +842,7 @@ export type ThemeOverrides = {
 };
 
 /**
- * A conversation the chat goes on with (LOOP D-13): an embedded
+ * A conversation the chat goes on with (D-13): an embedded
  * application's session, reattached after its page reloaded.
  */
 export type ResumedThread = {
@@ -851,7 +851,7 @@ export type ResumedThread = {
   /** What it holds already; none for a new one. */
   messages: ChatMessage[];
   /**
-   * Opened from a person's history (LOOP P-24): its conversation is read
+   * Opened from a person's history (P-24): its conversation is read
    * from the runtime the application's chat runs on as the chat mounts —
    * held there, else resumed from its record — in place of `messages`.
    */
@@ -1006,7 +1006,7 @@ export interface ChatBaseProps {
   mentionableAgents?: MentionableAgent[];
   /**
    * Commands the prompt lists while `/` is typed, before its own: an
-   * application's (LOOP P-19). Picking one writes `/<name> `. Lexical only.
+   * application's (P-19). Picking one writes `/<name> `. Lexical only.
    */
   promptCommands?: PromptCommand[];
   /**
@@ -1140,7 +1140,7 @@ export interface ChatBaseProps {
 
   /**
    * Properties laid over the theme's own, by mode — an application's accent
-   * over the theme it wears (LOOP T-05): without them the chat would wear the
+   * over the theme it wears (T-05): without them the chat would wear the
    * theme's default accent whatever the page around it set.
    */
   themeOverrides?: ThemeOverrides;
@@ -1279,7 +1279,7 @@ export interface ChatBaseProps {
   /**
    * The agent's welcome, said as the first message of the history: drawn as
    * the chat draws the agent's messages, and never sent nor kept. The floating
-   * assistant's balloon opens on it (LOOP T-23).
+   * assistant's balloon opens on it (T-23).
    */
   welcome?: string;
 
@@ -1567,7 +1567,7 @@ export interface ChatBaseProps {
   }>;
 
   /**
-   * The conversation to go on with (LOOP D-13): its AG-UI thread — an
+   * The conversation to go on with (D-13): its AG-UI thread — an
    * application's session — and what it holds, drawn in place of the
    * runtime's history, which is its agent's and not one session's. Read
    * when the chat mounts; a new thread (the header's +) is the chat's own.

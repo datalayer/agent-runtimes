@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a runtime says it speaks: the route and `loop apps protocols` (AGENT_PROTOCOLS PR-50, EX-08)."""
+"""What a runtime says it speaks: the route and `loop apps protocols` (PR-50, EX-08)."""
 
 from __future__ import annotations
 

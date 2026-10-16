@@ -4,7 +4,7 @@
 """Signers and public keys for Web Bot Auth.
 
 A signer is anything that can sign bytes under a key id: the host owns the
-key (Vault transit in Datalayer, PAP_DATALAYER I-02), and an agent only ever
+key (Vault transit in Datalayer, I-02), and an agent only ever
 holds the signer — never the key. :class:`LocalSigner` holds a key in
 process, for tests and examples only.
 
@@ -143,8 +143,8 @@ class PublicKey:
 class HttpSigner(Protocol):
     """Signs under one key the host holds (the ``protocols.httpSigner`` contribution).
 
-    ``sign`` answers the raw signature (RFC 9421 §3.3: Ed25519's 64 bytes,
-    ECDSA's ``r || s``). In Datalayer it is Vault transit's sign call; the
+    ``sign`` answers the raw signature (RFC 9421 §3.3: Ed25519's 64 bytes, ECDSA's ``r || s``).
+    In Datalayer it is Vault transit's sign call; the
     key never reaches the runtime.
     """
 

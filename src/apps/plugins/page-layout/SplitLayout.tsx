@@ -5,7 +5,7 @@
 
 /**
  * The split: the conversation and the work side by side, one hairline
- * between them that a person drags (LOOP T-07, an Appspec's `layout: split`).
+ * between them that a person drags (T-07, an Appspec's `layout: split`).
  *
  * The page layout's other arrangement. Where `page` puts the work on a sheet
  * and the conversation in a panel that opens when wanted, `split` keeps both

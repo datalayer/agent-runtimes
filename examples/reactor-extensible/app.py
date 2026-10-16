@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application that extends with Reactor's vocabulary (LOOP P-35).
+"""An application that extends with Reactor's vocabulary (P-35).
 
 It is a Reactor plugin, ``loop-app-support-desk-plus``, and its author
 extends it as any Reactor plugin is extended:
@@ -43,7 +43,7 @@ app = Application(
         "email, look them up with lookup_customer before answering about their "
         "account. Answer in two sentences at most."
     ),
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

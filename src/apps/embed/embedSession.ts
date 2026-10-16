@@ -5,7 +5,7 @@
 
 /**
  * An embedded application's conversation, picked up again after the host's
- * page reloads (LOOP D-13).
+ * page reloads (D-13).
  *
  * The session an embed opened is kept by its uid in the host page's own
  * storage, under the application and the visit its embed token names —
@@ -173,9 +173,9 @@ export const WINDOW_NOT_YET =
   'The application takes a window message once its conversation has started, on its own server (the "server" attribute).';
 
 /**
- * Post a window message to a session (LOOP P-25): its code's `@app.window`
+ * Post a window message to a session (P-25): its code's `@app.window`
  * runs on it. What the code tells the page back arrives on the
- * conversation's ui socket (REACTOR_UI RU-W), raised as any window message
+ * conversation's ui socket (RU-W), raised as any window message
  * is; refused — the runtime's sentence — when the session or its code takes
  * none.
  */

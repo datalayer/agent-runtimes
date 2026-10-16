@@ -4,7 +4,7 @@
  */
 
 /**
- * What an application did, beside its page (LOOP R-01b, R-15, U-20): its
+ * What an application did, beside its page (R-01b, R-15, U-20): its
  * sessions, newest first, each in a sentence, opened on what it did step by
  * step — tool calls, the rules' decisions, the checks that stopped a step,
  * the approvals, the answer. Read from the record ai-agents keeps (R-07),

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The TypeScript MCP client at the Python server (AGENT_PROTOCOLS PR-51, EX-09).
+"""The TypeScript MCP client at the Python server (PR-51, EX-09).
 
 ``examples/protocols/mcp/fixture_server.py`` serves the conformance fixture's
 answers on localhost over Streamable HTTP with the ``mcp`` SDK, and the

@@ -8,7 +8,7 @@
  * Put `dist-embed/` in a checkout: the embed element's own bundle.
  *
  * `dist-embed/datalayer-app.js` is what a page loads to put an application on
- * someone else's site (LOOP D-08). A release carries it — `npm run build:embed`
+ * someone else's site (D-08). A release carries it — `npm run build:embed`
  * runs in the release, and the npm package ships the folder — but a workspace
  * checkout has never run it, and the folder is gitignored. The landing's
  * production build refuses to ship without it, because an embed bundle that

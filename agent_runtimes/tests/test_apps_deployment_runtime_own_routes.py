@@ -3,7 +3,7 @@
 
 """A runtime that serves a deployment answers only the application's own routes.
 
-PAP_DATALAYER's release gates, decided 14 October 2026: a deployment's kept
+the release gates, decided 14 October 2026: a deployment's kept
 runtime — and the one a hosted page launched for it — answers anybody but the
 pod itself on the application's own routes only (its sessions, its chat, its
 page's plugins and files, its computer, what it remembers, what ai-agents keeps
@@ -62,7 +62,7 @@ OWN = {
     ("GET", "/api/v1/apps/{app_id}/events/stream"),
     # A visitor's page on the visitors' runtime (refused anywhere else, by itself).
     ("POST", "/api/v1/apps/visitors/agent"),
-    # What ai-agents keeps a deployment with (STUDIO A-08).
+    # What ai-agents keeps a deployment with (A-08).
     ("PUT", "/api/v1/apps/a2a"),
     ("DELETE", "/api/v1/apps/a2a"),
     ("POST", "/api/v1/apps/principal"),
@@ -71,7 +71,7 @@ OWN = {
     ("GET", "/api/v1/apps/current"),
     ("POST", "/api/v1/apps/decide"),
     ("POST", "/api/v1/apps/feedback"),
-    # Each person's own sessions and chat (LOOP R-04).
+    # Each person's own sessions and chat (R-04).
     ("POST", "/api/v1/apps/sessions"),
     ("GET", "/api/v1/apps/sessions"),
     ("GET", "/api/v1/apps/sessions/{uid}"),
@@ -85,7 +85,7 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/end"),
     ("POST", "/api/v1/apps/sessions/logout"),
     ("POST", "/api/v1/apps/sessions/{uid}/resume"),
-    # A person's rules on their running session (SHIELD SH-54).
+    # A person's rules on their running session (SH-54).
     ("GET", "/api/v1/apps/sessions/{uid}/rules"),
     ("POST", "/api/v1/apps/sessions/{uid}/rules"),
     ("DELETE", "/api/v1/apps/sessions/{uid}/rules/{name}"),
@@ -93,12 +93,12 @@ OWN = {
     ("WS", "/api/v1/apps/ui"),
     ("POST", "/api/v1/apps/agents/{agent}/files"),
     ("GET", "/api/v1/apps/files/{scope}/{ref}"),
-    # What it remembers of the caller (LOOP R-18, R-36).
+    # What it remembers of the caller (R-18, R-36).
     ("GET", "/api/v1/apps/memories/{app}"),
     ("DELETE", "/api/v1/apps/memories/{app}/{memory_id}"),
     ("PATCH", "/api/v1/apps/memories/{app}/{memory_id}"),
     ("DELETE", "/api/v1/apps/memories/{app}"),
-    # Its computer, shown where the person is (LOOP R-23).
+    # Its computer, shown where the person is (R-23).
     ("GET", "/api/v1/apps/agents/{agent}/computer"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/files"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/file"),

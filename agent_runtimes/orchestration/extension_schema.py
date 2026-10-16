@@ -48,7 +48,7 @@ BUDGET_FIELD = "budget"
 #: What a worker says stopped it, which `budget.budget_refusal` reads.
 ERROR_FIELD = "error"
 
-#: What a task waiting on `input-required` waits for (SHIELD SH-15), which
+#: What a task waiting on `input-required` waits for (SH-15), which
 #: `transports.a2a.A2AApprovals` writes.
 APPROVAL_REQUEST_FIELD = "approvalRequest"
 

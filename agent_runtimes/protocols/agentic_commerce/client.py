@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An Agentic Commerce Protocol client (AGENT_PROTOCOLS PR-40 to PR-42), ``2026-04-17``.
+"""An Agentic Commerce Protocol client (PR-40 to PR-42), ``2026-04-17``.
 
 Named ``agentic_commerce`` everywhere, never ``acp``: that is the Agent
 Client Protocol of :mod:`agent_runtimes.transports.acp` (PR-40).
@@ -143,7 +143,7 @@ class AgenticCommerceClient:
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
     #: How its public metadata is read: the PAP SDK's single egress path
-    #: (AGENT_PROTOCOLS PI-13), or ``egress.client_fetch`` for a local test one.
+    #: (PI-13), or ``egress.client_fetch`` for a local test one.
     metadata: Fetch = field(
         default_factory=lambda: metadata_fetch(
             accept="application/json", max_bytes=MAX_METADATA_BYTES

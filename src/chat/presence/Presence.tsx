@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's presence in its chat (LOOP T-08): its face, with a quiet
+ * An application's presence in its chat (T-08): its face, with a quiet
  * motion around it while it thinks or works, and one line saying what it is
  * doing. The face is never redrawn; the motion is a soft ring in the accent,
  * still under `prefers-reduced-motion`, and the line changes at the theme's
@@ -25,7 +25,7 @@ const ACCENT = 'var(--theme-accent)';
 
 /**
  * A face at `size`: an emoji drawn in Fluent Emoji, the same on every
- * platform (LOOP T-20) — the system's, as text, only for one Datalayer ships
+ * platform (T-20) — the system's, as text, only for one Datalayer ships
  * no drawing of — or a host's own drawing, left as it is.
  */
 export function FaceDrawing({ face, size }: { face: ReactNode; size: number }) {

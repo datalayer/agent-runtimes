@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript's grammar is one (LOOP A-06, A-14): the lines the page
+ * The transcript's grammar is one (A-06, A-14): the lines the page
  * reads from the Agent Inspector's spans (`sceneTranscript.ts`, the
  * reference) are the lines `loop scenes rehearse` reads in Python
  * (`agent_runtimes/loop/scenes/transcript.py`, its twin). Both are held to
@@ -88,7 +88,7 @@ describe('the transcript fixture, shared with the Python twin', () => {
     expect(transcriptOfRecord(entries, record.member).map(lineText)).toEqual(
       record.without_conversations.lines,
     );
-    // Kept without its outputs either: the run's end says no words (PAP_DATALAYER R-01).
+    // Kept without its outputs either: the run's end says no words (R-01).
     const bare = record.without_outputs.entries.map(
       index => record.entries[index],
     );

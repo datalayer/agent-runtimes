@@ -4,8 +4,7 @@
  */
 
 /**
- * Every protocol adapter, read by the one conversation reducer (MOBILE
- * M-030): the real adapters fed their wire as their servers send it, what
+ * Every protocol adapter, read by the one conversation reducer (M-030): the real adapters fed their wire as their servers send it, what
  * they emit normalised (`conversationEventsOf`) and reduced
  * (`reduceConversation`) — the web chat's message state, whatever protocol
  * its agent speaks.

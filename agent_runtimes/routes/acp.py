@@ -262,7 +262,7 @@ class PermissionRelay:
     own, and the IDE's response, read off the same connection by its id,
     answers the harness. A *do it* never reaches the IDE; a *leave it to me*
     is answered without it. ``fs/*`` and ``terminal/*`` are answered by the
-    runtime against its workspace (decision 6) and never sent here.
+    runtime against its workspace and never sent here.
     """
 
     def __init__(self, websocket: WebSocket) -> None:
@@ -595,7 +595,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     _adapters[session_id] = adapter
 
             # ACP spec method: authenticate. A browser opens a websocket with
-            # no header of its own, so a notebook's panel (SHIELD SH-49) says
+            # no header of its own, so a notebook's panel (SH-49) says
             # who it is in a message, as agent-shield's `serve` takes it:
             # methodId `bearer`, the token in `_meta.token` — never in the
             # address. The token is the connection's from then on, as the
@@ -945,7 +945,7 @@ async def _handle_new_session(
         getattr(agent, "workspace", None) if hasattr(agent, "harness") else None
     )
     if harness_workspace is not None:
-        # ACP in, ACP out (decision 6): the harness's session is
+        # ACP in, ACP out: the harness's session is
         # the adapter's, in the runtime's workspace, lent the application's
         # connections; the IDE's cwd and mcpServers are not what it gets.
         logger.info(
@@ -1088,7 +1088,7 @@ async def _handle_prompt(
     delegated_credential = take_credential(params.get("_meta"))
     if delegated_credential:
         context_metadata["user_token"] = delegated_credential
-        # Said apart, so a harness lends its MCP with it (SHIELD SH-33).
+        # Said apart, so a harness lends its MCP with it (SH-33).
         context_metadata[DELEGATED_CREDENTIAL] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 

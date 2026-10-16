@@ -64,7 +64,7 @@ describe('Component/Function Name', () => {
 
 The `loop` theme's four reference screens — a conversation, a conversation
 beside its work, the activity of a worker, an approval — and the floating
-assistant's states are pictures kept in `pictures/baselines/` (LOOP T-01,
+assistant's states are pictures kept in `pictures/baselines/` (T-01,
 T-16, T-27). A run takes them again in Chrome and compares them; a changed
 token, radius or colour shows as a failed picture, to fix or to accept.
 
@@ -117,7 +117,7 @@ npm run test:pictures:accept
   shows what that change would do, as differences.
 - **Fonts.** The `loop` pictures are drawn in Inter, served by the pictures
   page's own Vite: it imports `@datalayer/primer-addons/style/loop-face.css`
-  (LOOP T-04) and is ready only once both weights, 400 and 600, are in. The
+  (T-04) and is ready only once both weights, 400 and 600, are in. The
   other themes use whatever face they resolve on the machine that takes them.
   Baselines are taken on Linux: another system draws text differently and
   accepts its own.

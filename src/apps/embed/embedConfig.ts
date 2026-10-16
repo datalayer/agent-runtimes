@@ -4,8 +4,7 @@
  */
 
 /**
- * An application in another product's page, as its host writes it (LOOP
- * D-07, D-08, D-11, T-13): one script tag and one element, `<datalayer-app>`,
+ * An application in another product's page, as its host writes it (D-07, D-08, D-11, T-13): one script tag and one element, `<datalayer-app>`,
  * whose attributes — or, for the theme, the host's CSS variables — say what
  * it shows and how it looks.
  *
@@ -68,7 +67,7 @@ export const EMBED_ATTRIBUTES = {
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
 
 /**
- * The deployment an embed token names (decision 16): the embedded
+ * The deployment an embed token names: the embedded
  * deployment its owner's server asked it for. Read without vouching for it —
  * the services that take the token verify it — and the only place the
  * element learns its deployment: it takes no attribute for one.
@@ -91,7 +90,7 @@ export function embedTokenDeployment(token: string): string | undefined {
   }
 }
 
-/** What an embed token naming no deployment is told (decision 16). */
+/** What an embed token naming no deployment is told. */
 export const EMBED_TOKEN_NAMES_NO_DEPLOYMENT =
   'datalayer-app: the embed token names no deployment. Your server asks for one naming the application’s embedded deployment: POST …/api/spacer/v1/apps/<id>/embed-token with {"deployment": "<its uid>"}.';
 
@@ -258,8 +257,7 @@ export function embedLookOf(
 }
 
 /**
- * Whether a visit's conversation is picked up again after a reload (LOOP
- * D-13): on unless the host writes `resume="false"`. Anything else is
+ * Whether a visit's conversation is picked up again after a reload (D-13): on unless the host writes `resume="false"`. Anything else is
  * refused in a sentence.
  */
 export function resumeOf(value: string | null | undefined): boolean {
@@ -269,7 +267,7 @@ export function resumeOf(value: string | null | undefined): boolean {
 }
 
 /**
- * The language a host says its visitor reads (LOOP P-26), checked: a BCP 47
+ * The language a host says its visitor reads (P-26), checked: a BCP 47
  * tag (`fr`, `pt-BR`), else refused in a sentence. Unsaid, none: the
  * visitor's browser's.
  */
@@ -315,7 +313,7 @@ export const EMBED_PROPERTIES = ['context', 'functions', 'token'] as const;
  * element sets them on an element not yet upgraded: each becomes a property
  * of that object, which shadows the class's accessor once it is defined, and
  * the application was never offered the page's functions (seen 2026-10-10,
- * STUDIO D-10: the run sent no tool). Called as the element is constructed.
+ * D-10: the run sent no tool). Called as the element is constructed.
  */
 export function adoptPropertiesSetEarly(
   element: object,

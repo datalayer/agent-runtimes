@@ -4,7 +4,7 @@
  */
 
 /**
- * UCP 2026-08-25 in TypeScript (AGENT_PROTOCOLS PR-30 to PR-32, PR-51,
+ * UCP 2026-08-25 in TypeScript (PR-30 to PR-32, PR-51,
  * PR-53): the revision fixture the Python package reads, and a purchase
  * proposed, approved and made once against an in-memory store that answers
  * as `agent_runtimes.protocols.ucp.merchant` does.

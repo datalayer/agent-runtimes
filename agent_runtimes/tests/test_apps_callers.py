@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who may call an application's routes (LOOP R-32)."""
+"""Who may call an application's routes (R-32)."""
 
 from __future__ import annotations
 
@@ -68,8 +68,8 @@ def test_a_person_is_whom_iam_accepts_and_is_asked_once() -> None:
 
 
 def test_a_principals_own_token_is_a_principal_never_a_person() -> None:
-    """A deployment's principal (LOOP I-03) is verified at IAM as anybody, and is
-    then a principal: a route for a person refuses it (PAP_DATALAYER B-04)."""
+    """A deployment's principal (I-03) is verified at IAM as anybody, and is
+    then a principal: a route for a person refuses it (B-04)."""
     platform = Platform()
     verifier = CallerVerifier(fetch=platform)
     caller = asyncio.run(
@@ -94,7 +94,7 @@ def test_an_embed_token_is_whom_spacer_accepts_for_its_application() -> None:
 
 
 def test_an_embed_token_says_its_visit_and_what_it_may_do() -> None:
-    """LOOP R-20: the visit its owner's server issued it for, kept across the
+    """R-20: the visit its owner's server issued it for, kept across the
     tokens renewed for it — else the token's own id — and its scope."""
     verifier = CallerVerifier(fetch=Platform())
     claims = {"sub": "owner", "aud": APP_EMBED_AUDIENCE, "app_uid": "web-research"}

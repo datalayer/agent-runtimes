@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation's files as references (REACTOR_UI RU-6): what the page holds
+ * A conversation's files as references (RU-6): what the page holds
  * of a file is uploaded before the run, which names the ref it answers; the
  * bytes never ride in the run.
  */

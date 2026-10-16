@@ -4,7 +4,7 @@
  */
 
 /**
- * What an application keeps, said before the first message (LOOP R-31): its
+ * What an application keeps, said before the first message (R-31): its
  * `record.include` and `record.keep_for` in a person's words, under its
  * prompt at its address and embedded — never in its builder's Preview — and,
  * to a visitor not signed in, that nothing is kept.

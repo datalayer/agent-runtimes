@@ -4,7 +4,7 @@
  */
 
 /**
- * The results a page receives for a sign-in (REACTOR_UI RU-1), as Agent
+ * The results a page receives for a sign-in (RU-1), as Agent
  * Runtimes sends them: a display's model view with the whole display beside
  * it in `_meta`, or a plain `pap_sign_in` answer. Fictional company, no
  * credential.

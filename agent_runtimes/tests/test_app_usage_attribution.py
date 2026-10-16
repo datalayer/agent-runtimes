@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's model calls name it, so its owner reads what it spent (LOOP R-09).
+"""An application's model calls name it, so its owner reads what it spent (R-09).
 
 Routed through datalayer-ai-inference, every call of an agent that serves an
 application instance carries ``X-Datalayer-App-Uid`` and, for a deployment,
@@ -53,7 +53,7 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
 
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
     give_inference_token("the-runtime-token")
-    # A deployment calls as its application's principal (LOOP I-03).
+    # A deployment calls as its application's principal (I-03).
     give_principal_token("01DEP", "the-principal-token", expires_in=3600)
     model = resolve_model_for_inference_provider(
         "bedrock:x", "datalayer", app_instance=DEPLOYMENT
@@ -123,7 +123,7 @@ def test_the_header_names_are_ai_inference_s():
 
 
 def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
-    """STUDIO R-09: on a runtime, a model a mode chooses (P-19) is called
+    """R-09: on a runtime, a model a mode chooses (P-19) is called
     through the agent's provider, naming the instance it serves — not
     around ai-inference, unmetered on the application."""
     from pydantic_ai import Agent

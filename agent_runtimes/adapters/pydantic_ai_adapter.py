@@ -535,7 +535,7 @@ class PydanticAIAdapter(BaseAgent):
         An application's run reaches it as its AG-UI runs do
         (`gateway_toolsets_of_the_run`): a deployment as its principal, with
         the companies it works with — over A2A too, where a company's turn
-        reaches its kept deployment (PAP_DATALAYER B-04: found on r1, its
+        reaches its kept deployment (B-04: found on r1, its
         agent answered without the company's tools it was given). Any other
         run with an identity of its own reaches it with that identity, never
         with the process's key (O1-17).
@@ -547,8 +547,7 @@ class PydanticAIAdapter(BaseAgent):
             from ..loop.apps.principal import gateway_toolsets_of_the_run
             from ..loop.apps.sessions import agent_code_toolset
 
-            # And the tools of its code, when it is written in Python (LOOP
-            # R-14): a session adds them itself, a run over A2A only here.
+            # And the tools of its code, when it is written in Python (R-14): a session adds them itself, a run over A2A only here.
             own = agent_code_toolset(self._agent_id)
             gateway = await gateway_toolsets_of_the_run(
                 self._agent_id, toolsets, user_token
@@ -625,7 +624,7 @@ class PydanticAIAdapter(BaseAgent):
 
                     # Gmail, for this run only, in the name of whom it acts
                     # for: every request carries a token IAM minted for them
-                    # (STUDIO W-02), never the process's or anybody else's.
+                    # (W-02), never the process's or anybody else's.
                     toolsets.append(
                         toolset_for_the_run(
                             self._agent_id,
@@ -672,7 +671,7 @@ class PydanticAIAdapter(BaseAgent):
                     logger.warning(
                         f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping"
                     )
-                    # Started again for the next turn (STUDIO H-03).
+                    # Started again for the next turn (H-03).
                     lifecycle_manager.retry_in_background(server_id)
 
         elif codemode_enabled:

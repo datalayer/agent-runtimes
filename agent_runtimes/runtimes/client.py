@@ -210,8 +210,7 @@ class RuntimesClient:
             deployment is always of an application: one named without
             ``app_uid`` is refused (`ValueError`).
         app_spec : Optional[dict[str, Any]]
-            The Appspec of the application the runtime is launched for (LOOP
-            R-19). The Operator passes it to the runtime's companion, which
+            The Appspec of the application the runtime is launched for (R-19). The Operator passes it to the runtime's companion, which
             gives the runtime the secrets its connections declare before its
             agent is made. An application's launch carries it: ``app_uid``
             without it is refused (`ValueError`).

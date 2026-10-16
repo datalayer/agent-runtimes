@@ -11,7 +11,7 @@ discovery, a personal agent's identity). Given the host's PAP Reactor
 (``build_pap_reactor`` with its ``pap.signer``, ``pap.dpopProofProvider``,
 ``pap.tokenStore``, ``pap.authorizationStateStore`` and
 ``pap.pairwiseUserIdStore`` contributions), it is a local runtime's personal
-agent (AGENT_PROTOCOLS PR-03): it opens a pairwise Session at a company,
+agent (PR-03): it opens a pairwise Session at a company,
 talks in a conversation, signs the person in with Device Sign-In, and
 confirms an operation the person approved on the host's own approval surface
 (``pap.approvalSurface``). Every answer is a summary: no token, proof,

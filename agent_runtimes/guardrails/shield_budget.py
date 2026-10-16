@@ -57,7 +57,7 @@ __all__ = [
     "catalogue_usd",
 ]
 
-#: One credit is one hundredth of a USD (STUDIO's pricing, 100 credits a USD).
+#: One credit is one hundredth of a USD (100 credits a USD).
 CREDITS_PER_USD = 100
 
 #: What a model request is called in the approvals it raises.

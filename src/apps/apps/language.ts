@@ -4,7 +4,7 @@
  */
 
 /**
- * An application in the person's language (LOOP P-26).
+ * An application in the person's language (P-26).
  *
  * An Appspec says its words in its own language (`interface.language`, `en`
  * unless said) and may say them in others (`interface.translations`, by BCP

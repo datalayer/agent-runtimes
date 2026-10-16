@@ -121,7 +121,7 @@ class TestTheCogCatalogue:
         assert cogs_using("nope") == []
 
     def test_the_crawler_and_customer_interviewer_cogs_are_offered(self) -> None:
-        # The customer interviewer was switched on in agentspecs 0.0.51 (LOOP E-01).
+        # The customer interviewer was switched on in agentspecs 0.0.51 (E-01).
         assert sorted(cog.id for cog in list_cogs() if cog.enabled) == [
             "cog-crawler",
             "cog-customer-interviewer",

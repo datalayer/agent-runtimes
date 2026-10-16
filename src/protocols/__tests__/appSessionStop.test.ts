@@ -4,7 +4,7 @@
  */
 
 /**
- * Stop, in an application's chat, is its session's (PAP_DATALAYER's release
+ * Stop, in an application's chat, is its session's (the release
  * gates, round 19): `POST /api/v1/apps/sessions/{thread}/stop`, with the
  * person's token. A deployment's runtime answers only the application's own
  * routes (OwnRoutesOnly, f111c5ec): the generic `/ag-ui/terminate` is a 404

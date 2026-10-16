@@ -4,7 +4,7 @@
 """Applications as Reactor plugins, on the runtime's side (F-12, F-13).
 
 An application runs as two Reactor plugins of one name, ``loop-app-<id>``
-(LOOP F-15): the page's (`defineAppPlugin`, in `src/apps/apps/AppRenderer.tsx`)
+(F-15): the page's (`defineAppPlugin`, in `src/apps/apps/AppRenderer.tsx`)
 and this one. Each declares the other — the page's ``requiredBackendPlugins``,
 this manifest's ``frontend_dependencies`` — and both say the same
 ``extension``, which is how Reactor's manager and graph show the pair as one
@@ -25,7 +25,7 @@ application only as a contribution to the ``loop.app`` point:
 A contribution made by an application's own plugin wins over the catalogue's:
 a runtime configured with an edited *Web research* runs the edit.
 
-An application written in Python is the same plugin with its code (LOOP P-28):
+An application written in Python is the same plugin with its code (P-28):
 each of its decorators — ``@app.start``, ``@app.message``, ``@app.action``,
 ``@app.schedule`` and the rest — is a contribution to a ``loop.app.<moment>``
 point, beside its spec, disposed with the plugin (`register_application`). An
@@ -63,7 +63,7 @@ RulesFactory = Callable[[AppSpec, Optional[str]], AppRulesCapability]
 
 #: The moments an application's code reacts to, one point each: a moment's
 #: contribution is known by the application's id, an action's, a
-#: schedule's and a command's (LOOP P-19) — and a tool's, a check's and a
+#: schedule's and a command's (P-19) — and a tool's, a check's and a
 #: test's (P-06) — by ``<application id>/<name>``.
 REACTIONS: Tuple[str, ...] = (
     "start",
@@ -76,7 +76,7 @@ REACTIONS: Tuple[str, ...] = (
     "feedback",
     "end",
     "logout",
-    # A widget's page, run on its inputs (LOOP P-05).
+    # A widget's page, run on its inputs (P-05).
     "page",
     # What the person said, heard; and their speaking over the agent (VO-46).
     "audio",
@@ -87,12 +87,12 @@ REACTIONS: Tuple[str, ...] = (
     "tool",
     "check",
     "test",
-    # The agent its code gives it (LOOP P-23): what makes a session's agent.
+    # The agent its code gives it (P-23): what makes a session's agent.
     "agent",
 )
 
 #: The reactions known by a name besides the application's id; a tool's, a
-#: check's and a test's are its code's own (LOOP P-06).
+#: check's and a test's are its code's own (P-06).
 NAMED_REACTIONS: Tuple[str, ...] = (
     "action",
     "schedule",
@@ -126,7 +126,7 @@ def revision_of(platform: Optional[PluginPlatform] = None) -> int:
 
 def app_plugin_name(app_id: str) -> str:
     """The one name of an application's two plugins, the page's and the runtime's
-    (LOOP F-15): ``src/apps/apps/pluginPair.ts`` says the same.
+    (F-15): ``src/apps/apps/pluginPair.ts`` says the same.
     """
     return f"loop-app-{app_id}"
 
@@ -134,7 +134,7 @@ def app_plugin_name(app_id: str) -> str:
 def manifest_of(app: AppSpec) -> PluginManifest:
     """An application's identity, as its plugin says it: the page plugin of the
     same name is what it cannot be used without, and both are delivered as
-    one extension of that name — the application (LOOP F-15).
+    one extension of that name — the application (F-15).
     """
     name = app_plugin_name(app.id)
     return PluginManifest(
@@ -164,7 +164,7 @@ def app_plugins_state(
     app_id: str, platform: Optional[PluginPlatform] = None
 ) -> Dict[str, Any]:
     """Which of an application's plugins this runtime holds, as Reactor's
-    ``GET /plugins/state`` says it (LOOP F-15).
+    ``GET /plugins/state`` says it (F-15).
 
     Asked for one application, by whoever already knows its id — the page
     running it — so that a runtime shared by several (the visitors' runtime)
@@ -196,7 +196,7 @@ def app_plugins_state(
 
 
 def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
-    # The tool that searches its documents only reads (LOOP R-29): classed
+    # The tool that searches its documents only reads (R-29): classed
     # here, as the runtime's own, for every place its rules are read.
     from agent_runtimes.loop.apps.documents import DOCUMENT_CLASSES, knows_documents
     from agent_runtimes.loop.apps.saving import SAVING_CLASSES, saves
@@ -206,11 +206,11 @@ def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
         if knows_documents(app)
         else {}
     )
-    # The tool that saves a result writes (LOOP R-24), and is always asked.
+    # The tool that saves a result writes (R-24), and is always asked.
     if saves(app):
         extra.update({name: list(classes) for name, classes in SAVING_CLASSES.items()})
     # Proposing a skill and reading the approved ones act on nothing outside
-    # the platform: its owner decides (LOOP R-26).
+    # the platform: its owner decides (R-26).
     from agent_runtimes.loop.apps.learning import LEARNING_CLASSES
 
     extra.update({name: list(classes) for name, classes in LEARNING_CLASSES.items()})
@@ -239,7 +239,7 @@ class CataloguePlugin:
 
 
 class SpecPlugin:
-    """The plugin of an application known by its spec alone (LOOP F-13)."""
+    """The plugin of an application known by its spec alone (F-13)."""
 
     def __init__(self, app: AppSpec):
         self.app = app
@@ -250,7 +250,7 @@ class SpecPlugin:
 
 
 class AppPlugin:
-    """The plugin of an application written in Python (LOOP P-28, P-35).
+    """The plugin of an application written in Python (P-28, P-35).
 
     Its implementation, as Reactor activates it: its spec on ``loop.app``,
     each reaction of its code on its ``loop.app.<moment>`` point, and what its
@@ -409,7 +409,7 @@ def register_application(
     frontend: Optional[FrontendExtension] = None,
 ) -> PluginManifest:
     """Register an application written in Python as its Reactor extension
-    (LOOP P-28, P-35): the extensions it uses first, then its own —
+    (P-28, P-35): the extensions it uses first, then its own —
     ``loop-app-<id>``, the plugins it composes and its own plugin, whose
     spec, reactions and contributions Reactor collects as it activates. An
     earlier registration of the same application is taken away first.
@@ -421,7 +421,7 @@ def register_application(
     platform : PluginPlatform, optional
         The host's platform; the runtime's when unsaid.
     frontend : FrontendExtension, optional
-        Its page side, when its package is installed (LOOP P-29).
+        Its page side, when its package is installed (P-29).
 
     Returns
     -------

@@ -1,7 +1,7 @@
 # PAP Local Personal Agent
 
 `PapPersonalAgentCapability` given the host's PAP reactor is a local
-runtime's personal agent (AGENT_PROTOCOLS PR-03). Against Manzanita
+runtime's personal agent (PR-03). Against Manzanita
 Outfitters, the SDK's demo company, it:
 
 - opens a pairwise Session (the host's `pap.pairwiseUserIdStore`) and asks;

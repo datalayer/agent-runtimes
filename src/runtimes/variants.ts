@@ -99,7 +99,7 @@ export const CUSTOM_HARNESS = 'custom';
  *
  * A harness of the catalogue (`agentspecs/harnesses`, SH-01) — Claude
  * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is served
- * by the Datalayer runtime through its ACP adapter (`ACPAgent`, SHIELD SH-10):
+ * by the Datalayer runtime through its ACP adapter (`ACPAgent`, SH-10):
  * the runtime launches the harness as its subprocess, so the runtime's
  * locations run it and the browser, which has no process to launch, does not.
  * Two are refused: `custom`, which names no command in the shared catalogue
@@ -254,7 +254,7 @@ export function variantForLocation(
  *
  * A harness of the catalogue (Claude Code, Codex, …) is a program, not a
  * framework: the Datalayer runtime launches it as its subprocess and serves it
- * through its ACP adapter (SHIELD SH-10), so the runtime's locations run it
+ * through its ACP adapter (SH-10), so the runtime's locations run it
  * and the browser does not — the page has no process to launch, and nothing
  * is run in the harness's place.
  */
@@ -327,7 +327,7 @@ export function legacyTargetOf(
 export function specHarnessOf(spec: Pick<Agentspec, 'id' | 'harness'>): string {
   const problem = unservedHarnessProblem(spec);
   if (problem) {
-    // Never pydantic-ai in its place: said, and refused (SHIELD SH-01).
+    // Never pydantic-ai in its place: said, and refused (SH-01).
     throw new Error(problem);
   }
   const harness = spec.harness ?? '';

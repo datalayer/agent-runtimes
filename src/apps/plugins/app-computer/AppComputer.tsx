@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's computer, beside its page (LOOP R-23, R-01b): the sandbox
+ * An application's computer, beside its page (R-23, R-01b): the sandbox
  * its agent runs on, live.
  *
  * - its **parts** — browse, files, shell — on or off, as its permissions say;
@@ -166,7 +166,7 @@ function Terminal({
 
 function save(blob: Blob, name: string): void {
   // A file of its computer is saved, never opened: its address on this page's
-  // origin carries no type a browser would draw (STUDIO D-22).
+  // origin carries no type a browser would draw (D-22).
   const url = URL.createObjectURL(
     new Blob([blob], { type: 'application/octet-stream' }),
   );
@@ -631,7 +631,7 @@ export function AppComputer({
   const agentId = workspace?.agentId || app.id;
   const [state, setState] = useState<ComputerState | undefined>();
   /*
-   * Where its files come from (STUDIO D-22).
+   * Where its files come from (D-22).
    *
    * The runtime says it when the plane keeps a host for what applications
    * serve (`servedFrom`, `DATALAYER_USER_APPS_URL`): a file is then fetched

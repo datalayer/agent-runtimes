@@ -87,7 +87,7 @@ class DurableStorage(Storage[Any]):
         named = str(message.get("task_id") or "")
         if named:
             # A2A 1.0: a message naming a task continues it. Here that is a
-            # task waiting on the caller (`input-required`, SHIELD SH-15):
+            # task waiting on the caller (`input-required`, SH-15):
             # the message joins its history and the worker answers the wait.
             key = _key(self._scope, named)
             waiting: Any = await self._store.get(TASK, key)

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Brand's A2A Agent Card, as PACT 1.0 reads it (§2.1, §5.1; AGENT_PROTOCOLS PR-11).
+"""A Brand's A2A Agent Card, as PACT 1.0 reads it (PR-11).
 
 - the **interface URL**: the ``supportedInterfaces`` entry with
   ``protocolBinding: "HTTP+JSON"`` and ``protocolVersion: "1.0"`` — chosen

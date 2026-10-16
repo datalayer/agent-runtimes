@@ -1,5 +1,5 @@
 {
-  "description": "A ready_for_complete checkout of the test merchant and its revision: both languages compute the same digest (AGENT_PROTOCOLS PR-51).",
+  "description": "A ready_for_complete checkout of the test merchant and its revision: both languages compute the same digest (PR-51).",
   "ucp_version": "2026-08-25",
   "checkout": {
     "ucp": {

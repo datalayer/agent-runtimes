@@ -4,7 +4,7 @@
  */
 
 /**
- * An application in a LOOP workspace (LOOP R-01): the agent created with the
+ * An application in a LOOP workspace (R-01): the agent created with the
  * application in its payload, and the application's starters on the empty
  * chat.
  */
@@ -44,7 +44,7 @@ describe('the application plugin', () => {
     expect(blueprint.value.createPayload.agent_library).toBe('pydantic-ai');
   });
 
-  it('says the organization it belongs to on a Datalayer runtime, whose contexts its agent keeps to (LOOP U-31)', () => {
+  it('says the organization it belongs to on a Datalayer runtime, whose contexts its agent keeps to (U-31)', () => {
     expect(
       appDatalayerCreatePayload(research, {
         appUid: 'app-1',
@@ -92,7 +92,7 @@ describe('the application plugin', () => {
   });
 });
 
-describe('the application’s accent in its conversation (LOOP T-05, T-18)', () => {
+describe('the application’s accent in its conversation (T-05, T-18)', () => {
   it('is laid over the theme the chat wears, in both modes', () => {
     const research = APP_CATALOGUE['web-research'];
     expect(research.interface.accent).toBe('sky');
@@ -126,7 +126,7 @@ describe('the application’s accent in its conversation (LOOP T-05, T-18)', () 
   });
 });
 
-describe('the agent its chat speaks to (STUDIO D-15)', () => {
+describe('the agent its chat speaks to (D-15)', () => {
   const research = APP_CATALOGUE['web-research'];
 
   it('is its own, under its id', () => {

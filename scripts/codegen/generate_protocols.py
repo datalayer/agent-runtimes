@@ -5,8 +5,7 @@
 """
 Generate Python and TypeScript code from the YAML protocol specifications.
 
-One YAML per agent protocol under ``agentspecs/protocols`` (AGENT_PROTOCOLS
-PS-01); an agent spec's or an application's ``protocols`` names the ones it
+One YAML per agent protocol under ``agentspecs/protocols`` (PS-01); an agent spec's or an application's ``protocols`` names the ones it
 speaks (PS-02).
 
 Usage:
@@ -68,7 +67,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Protocol Catalog.",
         "",
-        "The agent protocols Datalayer targets (AGENT_PROTOCOLS PS-01).",
+        "The agent protocols Datalayer targets (PS-01).",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -137,7 +136,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * Protocol Catalog.",
         " *",
-        " * The agent protocols Datalayer targets (AGENT_PROTOCOLS PS-01).",
+        " * The agent protocols Datalayer targets (PS-01).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",

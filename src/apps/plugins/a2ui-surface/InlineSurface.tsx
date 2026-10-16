@@ -82,7 +82,7 @@ export function InlineSurface({
   /**
    * Told of each surface once it is created, for a host that reads what a
    * person writes as they write it — a widget's page run again as an input
-   * changes (LOOP P-05) — rather than when a button is pressed.
+   * changes (P-05) — rather than when a button is pressed.
    */
   onSurface?: (surface: Surface) => void;
 }): JSX.Element | null {

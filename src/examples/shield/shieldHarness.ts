@@ -4,7 +4,7 @@
  */
 
 /**
- * What `ShieldHarnessExample` connects to and offers (SHIELD SH-23).
+ * What `ShieldHarnessExample` connects to and offers (SH-23).
  *
  * `examples/shield/harness_on_the_runtime.py --serve` names the harness's
  * agent `chat`, as `loop --harness` does with `AGENT_RUNTIMES_AGENT_NAME`;

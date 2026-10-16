@@ -19,7 +19,7 @@ import { RUN_END_WORDS } from './records';
 /**
  * A coding agent's diff and terminal, as the runtime sends them beside a tool
  * result (`_meta["reactor.ui/display"]`, SH-16): what the phone
- * draws for MOBILE M-037, read by `protocolDisplayOf`.
+ * draws for M-037, read by `protocolDisplayOf`.
  */
 export function shieldDisplayFixtures(): {
   diff: Record<string, unknown>;
@@ -129,8 +129,7 @@ export function conversationFixture(): ConversationState {
 /**
  * `GET /api/ai-agents/v1/apps/activity`'s answer for one application: a
  * session in progress, a scheduled run, a completed one ended by Stop, and a
- * next page — what the Studio's Activity and the phone's read alike (MOBILE
- * M-015b).
+ * next page — what the Studio's Activity and the phone's read alike (M-015b).
  */
 export function activityFixture(): Record<string, unknown> {
   return {

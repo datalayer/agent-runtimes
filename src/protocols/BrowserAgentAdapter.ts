@@ -82,7 +82,7 @@ export interface BrowserAgentAdapterConfig
   /** Told what a delegated run does, as it does it — see `subagentTools`. */
   onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
   /**
-   * What the modes a run is sent in (`forwardedProps.loop.modes`, LOOP P-19)
+   * What the modes a run is sent in (`forwardedProps.loop.modes`, P-19)
    * tell it, and the model it runs on: an application's, by agentspecs'
    * rules. Unsaid for an agent with no modes, which refuses a run sent in
    * some.
@@ -220,7 +220,7 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
 
   /**
    * What the modes a run is sent in, and the profile its conversation is
-   * with, tell it, and the model it runs on (LOOP P-19, P-20) — the
+   * with, tell it, and the model it runs on (P-19, P-20) — the
    * runtime's session API applies the same, for that run only.
    *
    * Refused, in a sentence, rather than run without them: modes or a profile

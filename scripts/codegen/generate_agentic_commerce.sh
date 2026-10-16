@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 #
 # The Agentic Commerce Protocol's checkout models, generated from the
-# specification's JSON Schema (AGENT_PROTOCOLS PR-41), in both languages:
+# specification's JSON Schema (PR-41), in both languages:
 #   agent_runtimes/protocols/agentic_commerce/models.py   (datamodel-code-generator 0.34.0)
 #   src/protocols/agentic-commerce/models.ts              (json-schema-to-typescript 15.0.4)
 #

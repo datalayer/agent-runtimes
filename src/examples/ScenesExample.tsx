@@ -4,7 +4,7 @@
  */
 
 /**
- * The scenes of the catalogue (agentspecs `scenes`, LOOP A-15), in tabs:
+ * The scenes of the catalogue (agentspecs `scenes`, A-15), in tabs:
  * each scene's face and name, its `assumes` line under them, its graph and
  * its transcript behind *Graph · Transcript* (`SceneView`), its members
  * standing where its stage directions put them (`positions`), the entry's
@@ -519,7 +519,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
 }
 
 function Scenes(): JSX.Element {
-  // A scripted scene is played as written on its page (PAP_DATALAYER X-02): here, the teams staged live.
+  // A scripted scene is played as written on its page (X-02): here, the teams staged live.
   const scenes = useMemo(
     () => listSceneSpecs().filter(scene => scene.kind === 'team'),
     [],

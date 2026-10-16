@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The contexts an application's agent works under (LOOP U-31, U-32).
+"""The contexts an application's agent works under (U-31, U-32).
 
 An application names its contexts — the Frames of the catalogue, or its
 organization's own (``org-…``) — in its ``context``. Its agent is told them

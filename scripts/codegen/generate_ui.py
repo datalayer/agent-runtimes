@@ -6,9 +6,9 @@
 Generate Python and TypeScript code from YAML UI specifications.
 
 A UI spec is one Reactor plugin of this package (``src/apps/plugins/``) a
-Maker composes an interface with (AGENTIC_UI R8): its registered name, its
+Maker composes an interface with (R8): its registered name, its
 Contributions, the Contribution Points it offers, its settings, the visual
-components it renders (LOOP C-13) and the UI renderers it may be exposed
+components it renders (C-13) and the UI renderers it may be exposed
 through (``agentspecs/ui-renderers``, ``generate_ui_renderers.py``). One YAML
 per plugin under ``agentspecs/ui``; an agent's or an application's ``ui``
 names plugins, each with its renderer.
@@ -115,12 +115,12 @@ def _py_type(prop: dict[str, Any]) -> str:
 
 
 def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
-    """The catalog's components as typed calls (LOOP C-15), one method each."""
+    """The catalog's components as typed calls (C-15), one method each."""
     lines = [
         "",
         "",
         "# " + "=" * 76,
-        "# The components as typed calls (LOOP C-15)",
+        "# The components as typed calls (C-15)",
         "# " + "=" * 76,
         "",
         '#: A property bound to what the application publishes or takes: ``{"path": "/runs"}``.',
@@ -220,7 +220,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "UI Catalog.",
         "",
-        "The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).",
+        "The UI plugins: the Reactor plugins an interface is made of (R8).",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -299,7 +299,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "",
             "#: The visual components the UI plugins render, by the name a",
-            "#: surface gives them (LOOP C-13).",
+            "#: surface gives them (C-13).",
             "COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {",
             "    component.id: component",
             "    for plugin in UI_CATALOGUE.values()",
@@ -332,7 +332,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * UI Catalog.",
         " *",
-        " * The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).",
+        " * The UI plugins: the Reactor plugins an interface is made of (R8).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -391,7 +391,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(UI_CATALOGUE);",
             "}",
             "",
-            "/** The visual components the UI plugins render, by the name a surface gives them (LOOP C-13). */",
+            "/** The visual components the UI plugins render, by the name a surface gives them (C-13). */",
             "export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> = Object.fromEntries(",
             "  Object.values(UI_CATALOGUE)",
             "    .flatMap(plugin => plugin.components.map(component => [component.id, component])),",

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``examples/sales-accounting-a2a/serve_scenes.py`` (LOOP A-15): which members
+"""``examples/sales-accounting-a2a/serve_scenes.py`` (A-15): which members
 it serves, on which ports — the same the Scenes example reads
 (``sceneRuntimePorts``) — and what it says of a member it cannot serve.
 """

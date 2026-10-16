@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Typed actions (REACTOR_UI RU-5).
+"""Typed actions (RU-5).
 
 Each action of an application's code is declared with the pydantic model of
 its payload (``@app.action(name, payload=Model)``), its JSON Schema in the

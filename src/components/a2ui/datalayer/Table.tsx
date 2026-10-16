@@ -4,7 +4,7 @@
  */
 
 /**
- * Table (LOOP C-18): the rows an application publishes, under the columns
+ * Table (C-18): the rows an application publishes, under the columns
  * the builder chose, a page at a time. A selectable table lets a person
  * choose a row — by pointer, or by Tab and Enter or Space — which is written
  * where its `selected` binding points, and then its action is dispatched,

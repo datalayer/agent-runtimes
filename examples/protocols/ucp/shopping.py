@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Shopping over UCP, a purchase approved once (AGENT_PROTOCOLS EX-04).
+"""Shopping over UCP, a purchase approved once (EX-04).
 
 The Universal Commerce Protocol 2026-08-25 against a local test merchant,
 *Example Store*, in one process with no network: search, a checkout that

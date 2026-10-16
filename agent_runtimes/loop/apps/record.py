@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The record of an application, written for every session (LOOP R-07).
+"""The record of an application, written for every session (R-07).
 
 What the runtime saw the application do — a session starting, each tool
 call, the rule that decided it, each check that did not let it pass, the
@@ -14,14 +14,14 @@ the instance names its `purpose`, `test`, and the launch that ran it, and
 both are sent with its entries, so that ai-agents reads tests apart from
 real use. A session that names no purpose is real use. A test's session
 keeps every entry, whatever `record.include` says: the engine grades the
-test on it (STUDIO V-08).
+test on it (V-08).
 
-A session nobody opened says what woke it (LOOP R-14): the instance, or the
+A session nobody opened says what woke it (R-14): the instance, or the
 host that ran it, names `woken_by` — ``{"kind": "schedule", ...}`` with the
 schedule's details — and it is sent with the entries and written on the
 session's first one. A session a person opened names nothing.
 
-Who opened a session is sent with its entries (``opened_by``, LOOP R-31):
+Who opened a session is sent with its entries (``opened_by``, R-31):
 the uid of the person the runtime verified, its owner or anybody it is shown
 to — what they export and delete their own conversations by. A session
 nobody opened, or opened by somebody nobody knows (an embed's visitor, a
@@ -32,13 +32,13 @@ record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
 
 What a person says of a conversation — a thumb up or down, and a comment
-(LOOP V-18) — is written to the same record, as a ``feedback`` entry of that
+(V-18) — is written to the same record, as a ``feedback`` entry of that
 session, by the recorder that recorded it (`recorder_of`); only when the
 application's ``record.include`` names ``feedback``. Unlike the rest, it is
 sent at once and a failure to send it is said: the person is waiting for it.
 
 What its code names a conversation — its title, tags and metadata
-(``session.title``, ``session.tags``, ``session.metadata``, LOOP P-24) — is
+(``session.title``, ``session.tags``, ``session.metadata``, P-24) — is
 a ``thread`` entry of that session, always kept, sent as it changes: the
 person's history lists their threads under it, their own word over its.
 
@@ -46,7 +46,7 @@ What was said — each turn of a conversation, what the person asked and what
 it answered — is kept as a ``turn`` entry, under ``conversations``, the
 item of ``record.include`` that names it. Each turn says whether the
 application let its conversations be used to suggest tests when it was had
-(``record.suggest_tests``, LOOP V-16): only a turn kept while it was on may
+(``record.suggest_tests``, V-16): only a turn kept while it was on may
 be sampled into a suggested test, and ai-agents samples no other.
 """
 
@@ -102,7 +102,7 @@ INCLUDED_BY = {
     "output": "outputs",
     "feedback": "feedback",
     "turn": "conversations",
-    # What the application did, step by step: with its actions (LOOP P-16).
+    # What the application did, step by step: with its actions (P-16).
     "step": "actions",
     # A harness's edits whole, and its terminals' output (SH-34):
     # each is a hash and a size, or a command and an exit, unless named.
@@ -111,9 +111,9 @@ INCLUDED_BY = {
 }
 
 #: Kept whatever `record.include` says: a session's start, a run's start
-#: (what Activity reads as in progress, LOOP R-15), what its channels were
-#: sent (LOOP R-37), and that it asked the person and waits (`asked`, what
-#: ai-agents tells them of, MOBILE M-023).
+#: (what Activity reads as in progress, R-15), what its channels were
+#: sent (R-37), and that it asked the person and waits (`asked`, what
+#: ai-agents tells them of, M-023).
 ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread", "asked"})
 
 #: How a run ended, in the `output` entry that ends it (`AppRecorder.ended`):
@@ -121,14 +121,14 @@ ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread", "asked"})
 #: before the answer.
 RUN_ENDS = ("answered", "stopped", "gone")
 
-#: What a person's answer is said as, in an approval entry (LOOP R-07).
+#: What a person's answer is said as, in an approval entry (R-07).
 ANSWERS = {
     "approved": "approved",
     "declined": "declined",
     "unanswered": "not answered in time",
 }
 
-#: What a decision is said as when its call is refused with nobody asked (LOOP R-25).
+#: What a decision is said as when its call is refused with nobody asked (R-25).
 REFUSED = "refused"
 
 #: Why such a call was refused, in the entry's summary.
@@ -145,11 +145,11 @@ Send = Callable[[Dict[str, Any]], Awaitable[None]]
 _RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The recorder of each application's agent on this runtime, by agent id: the
-#: one the session API writes a session's start to (LOOP R-04).
+#: one the session API writes a session's start to (R-04).
 _AGENT_RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The sends begun as a run starts, held until done: a task nothing refers to may be collected.
-#: The sends in flight, by session (LOOP R-14): a stream of the session ends
+#: The sends in flight, by session (R-14): a stream of the session ends
 #: only once they are done (`AppRecorder.settled`), so a scheduler that stops
 #: the runtime as the stream ends finds the turn on the record.
 _SENDING: Dict[str, Set[Any]] = {}
@@ -205,7 +205,7 @@ def agent_recorder(agent_id: str) -> Optional["AppRecorder"]:
 
 def kept_of(app: AppSpec) -> Any:
     """What the record keeps and for how long: as `record` says, or as the
-    Track the application names under `checks` says (LOOP R-07).
+    Track the application names under `checks` says (R-07).
 
     Read from agentspecs (`kept_record`), not from the generated
     `retention_days`, which is a plain field there and says a year whatever
@@ -227,7 +227,7 @@ def keep_days_of(app: AppSpec) -> int:
 
 def _trace_id() -> str:
     """The current run's trace ID, the correlation ID its calls carry to the
-    gateway (PAP_DATALAYER A-05); ``""`` without a trace, never one made up.
+    gateway (A-05); ``""`` without a trace, never one made up.
     """
     from agent_runtimes.mcp.tracing import trace_headers
     from agent_runtimes.orchestration.adapter import trace_id_of
@@ -247,7 +247,7 @@ class RecordNotSent(RuntimeError):
 def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     """The token an application's runtime writes to ai-agents with, or why there is none.
 
-    A deployment's is its application's principal's (LOOP I-03), and nobody
+    A deployment's is its application's principal's (I-03), and nobody
     else's; anything else — a Preview, a test — writes as the person whose
     request it is, else as the runtime's own token.
     """
@@ -273,7 +273,7 @@ def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
 
 
 #: The person's own token during a Preview's run, whose request token is
-#: theirs narrowed to the Spaces its application is granted (LOOP R-25).
+#: theirs narrowed to the Spaces its application is granted (R-25).
 _PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "loop_preview_persons_own_token", default=None
 )
@@ -292,7 +292,7 @@ def persons_own_token(token: Optional[str]) -> Iterator[None]:
 def own_token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     """The token for what the runtime does for a person that reaches no Space
     — an application's documents: `token_for`, but in a Preview's run the
-    person's own, not the one narrowed to its Space grants (LOOP R-25).
+    person's own, not the one narrowed to its Space grants (R-25).
     """
     own = _PERSONS_OWN.get()
     if own and not deployment_uid.strip():
@@ -372,18 +372,18 @@ class AppRecorder:
     _turns: Dict[str, int] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
-        # Nothing is kept of a conversation without an account (LOOP R-30).
+        # Nothing is kept of a conversation without an account (R-30).
         from agent_runtimes.loop.apps.visitors import visitors_runtime
 
         if visitors_runtime() or self.visitors:
             return False
         # What a channel was sent, or why it was not, is always kept: a
-        # notification that reached nobody is never silent (LOOP R-37).
+        # notification that reached nobody is never silent (R-37).
         if kind in ALWAYS_KEPT:
             return True
         # A test's session keeps everything: its record is what the test is
         # graded on — the tools it called, its rules' decisions, its checks
-        # (STUDIO V-08) — and it is nobody's conversation, read apart.
+        # (V-08) — and it is nobody's conversation, read apart.
         if self.purpose == "test":
             return True
         return INCLUDED_BY.get(kind) in kept_of(self.app).include
@@ -401,7 +401,7 @@ class AppRecorder:
         session = _SESSION.get()
         if not session:
             return
-        # Nothing kept holds a credential, whoever wrote the entry (LOOP R-19).
+        # Nothing kept holds a credential, whoever wrote the entry (R-19).
         self._pending.setdefault(session, []).append(
             {
                 "kind": kind,
@@ -411,7 +411,7 @@ class AppRecorder:
         )
 
     def opened(self, session: str, person_uid: str, name: str = "") -> None:
-        """Say which person opened ``session`` (LOOP R-31), and their name when
+        """Say which person opened ``session`` (R-31), and their name when
         it is known (I-10); ``""`` for nobody known.
         """
         if person_uid:
@@ -428,7 +428,7 @@ class AppRecorder:
         return self._opened.get(session, "")
 
     def signed(self, session: str, user: Optional[Dict[str, Any]]) -> None:
-        """Say which user the host's server signed for ``session`` (LOOP D-21); ``None`` for none."""
+        """Say which user the host's server signed for ``session`` (D-21); ``None`` for none."""
         if user:
             self._signed[session] = dict(user)
         else:
@@ -439,7 +439,7 @@ class AppRecorder:
         return dict(self._signed.get(session) or {})
 
     def acts_for(self, session: str) -> str:
-        """The name of the person it acts for in ``session`` (LOOP I-10): the
+        """The name of the person it acts for in ``session`` (I-10): the
         user the host's server signed, else who opened it; ``""`` when no name
         is known — never a uid.
         """
@@ -459,7 +459,7 @@ class AppRecorder:
     ) -> None:
         """Make ``session`` the one entries are added to, and say it started.
 
-        A session resumed from its record (LOOP R-04) says it resumed, in an
+        A session resumed from its record (R-04) says it resumed, in an
         entry of the same session: its record goes on where it stopped.
         """
         _SESSION.set(session)
@@ -499,7 +499,7 @@ class AppRecorder:
     async def settled(self, session: str) -> None:
         """Wait until every send of ``session``'s record in flight is done,
         then send what is still pending: what a stream's end waits for
-        (LOOP R-14), so nothing of the turn is lost to a runtime stopped as
+        (R-14), so nothing of the turn is lost to a runtime stopped as
         the stream ends. Never fails: a record is never worth a run.
         """
         while _SENDING.get(session):
@@ -528,7 +528,7 @@ class AppRecorder:
         metadata: Dict[str, Any],
     ) -> None:
         """What its code names a conversation now — its title, tags and
-        metadata (LOOP P-24) — as a ``thread`` entry of ``session``, sent in
+        metadata (P-24) — as a ``thread`` entry of ``session``, sent in
         a task of its own when a loop runs, else with the session's next
         send. The latest one stands.
         """
@@ -641,7 +641,7 @@ class AppRecorder:
         """How many turns of ``session`` this recorder kept.
 
         What a Python application's code turn reads to tell whether the
-        agent its code ran kept the turn already (LOOP P-24).
+        agent its code ran kept the turn already (P-24).
 
         Parameters
         ----------
@@ -656,7 +656,7 @@ class AppRecorder:
         return self._turns.get(session, 0)
 
     def stepped(self, step: Any) -> None:
-        """Keep a step that ended, as the chain of thought shows it (LOOP P-16).
+        """Keep a step that ended, as the chain of thought shows it (P-16).
 
         Kept under ``actions``: its name and kind, the step it is nested in,
         what it started from and what it gave, or why it failed, each cut
@@ -686,7 +686,7 @@ class AppRecorder:
         nodes: Any,
         data: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Keep what an answer showed under its message (LOOP P-04).
+        """Keep what an answer showed under its message (P-04).
 
         Kept under ``outputs``, as the answer is: the message it came with,
         who said it, each component of the catalog by its kind and id and
@@ -733,8 +733,7 @@ class AppRecorder:
 
     def decided(self, enforced: Any) -> None:
         decision = getattr(enforced, "decision", enforced)
-        # A call refused with nobody asked — a Space it is not granted (LOOP
-        # R-25) — is said refused: the behaviour that lets its tool run only
+        # A call refused with nobody asked — a Space it is not granted (R-25) — is said refused: the behaviour that lets its tool run only
         # to refuse it is not what was decided.
         refused = str(getattr(enforced, "refused", "") or "")
         behaviour = REFUSED if refused else getattr(decision, "behaviour", "")
@@ -742,12 +741,12 @@ class AppRecorder:
             "tool": getattr(decision, "tool", ""),
             "behaviour": behaviour,
             "because": getattr(decision, "because", ""),
-            # What the call does: a send is counted against its approval (LOOP W-08).
+            # What the call does: a send is counted against its approval (W-08).
             "classes": list(getattr(decision, "classes", ()) or ()),
         }
         if refused:
             detail["refused"] = refused
-        # What a company's tool was decided on (PAP_DATALAYER R-01).
+        # What a company's tool was decided on (R-01).
         inputs = getattr(enforced, "inputs", None)
         if inputs:
             detail["inputs"] = dict(inputs)
@@ -771,7 +770,7 @@ class AppRecorder:
         )
 
     def answered(self, tool: str, under: str, outcome: str, note: str = "") -> None:
-        """What a person answered when they were asked (LOOP R-07): an entry of its own.
+        """What a person answered when they were asked (R-07): an entry of its own.
 
         ``outcome`` is ``approved``, ``declined`` or ``unanswered``; ``under``
         the rule or Gate it was asked under, in its sentence.
@@ -784,7 +783,7 @@ class AppRecorder:
         )
 
     def ran(self, session: str) -> None:
-        """Say that a run of ``session`` began, and send it now (LOOP R-15).
+        """Say that a run of ``session`` began, and send it now (R-15).
 
         What Activity reads as *in progress*: a run that began and has not
         answered yet. Sent at once, with the session's start when it is its
@@ -797,7 +796,7 @@ class AppRecorder:
     def asked(self, session: str, kind: str) -> None:
         """Say that the application asked the person and waits for the answer
         (`loop.ask`), and send it now: ai-agents tells whoever opened the
-        session — on their phone too (MOBILE M-023). Its kind only, never the
+        session — on their phone too (M-023). Its kind only, never the
         question's words, which the conversation keeps.
         """
         _SESSION.set(session)
@@ -816,7 +815,7 @@ class AppRecorder:
     def ended(
         self, status: str, summary: str, payload: Optional[Dict[str, Any]] = None
     ) -> None:
-        """Say that the current run ended (LOOP R-15; PAP_DATALAYER R-01).
+        """Say that the current run ended (R-15; R-01).
 
         An ``output`` entry, kept whatever ``record.include`` says: a session
         whose latest run has no end reads *in progress* in Activity, and never
@@ -847,7 +846,7 @@ class AppRecorder:
         """A check's verdict: the stage, what it did, the Gate that decided
         and the Guard that checked (``built-in`` for the built-in check),
         and whether it passed — at a session's start every Guard's verdict is
-        kept, passed or failed (LOOP R-06); later, those that stop a step.
+        kept, passed or failed (R-06); later, those that stop a step.
         """
         guard = getattr(verdict, "guard", "")
         passed = getattr(verdict, "passed", None)
@@ -969,7 +968,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         # A response that also calls a tool is not the last: words and a call
         # in one response ("let me check…", then the search) carry the run on,
         # and closing the turn at its words lost the call and every answer
-        # after it from the record (STUDIO E-01, 2026-10-10).
+        # after it from the record (E-01, 2026-10-10).
         called = False
         try:
             async for event in stream:

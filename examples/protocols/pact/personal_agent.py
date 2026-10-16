@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A personal agent at a business, over PACT 1.0 (AGENT_PROTOCOLS EX-06).
+"""A personal agent at a business, over PACT 1.0 (EX-06).
 
 A local Provider with one Brand, *Example Air*, and a personal agent, in one
 process with no network: the Brand's card read, a conversation under the
@@ -49,7 +49,7 @@ class Host:
 async def main() -> None:
     provider = ExampleAir()
     key = LocalSigner.generate("ecdsa-p256-sha256")
-    # Registration, once per personal agent and Provider (§3.1).
+    # Registration, once per personal agent and Provider.
     provider.register(
         ISSUER, {"keys": [{**key.public_jwk, "alg": "ES256", "use": "sig"}]}
     )

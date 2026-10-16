@@ -78,7 +78,7 @@ export async function createRuntime(
     );
   }
   /*
-   * An application's launch carries its Appspec (STUDIO R-19), as
+   * An application's launch carries its Appspec (R-19), as
    * `RuntimesClient.create` does in Python: the Operator hands it to the
    * companion, which gives the runtime the secrets its connections declare
    * before its agent is made. Refused here, before any request, as the

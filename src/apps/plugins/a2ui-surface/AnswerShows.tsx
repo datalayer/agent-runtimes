@@ -4,8 +4,8 @@
  */
 
 /**
- * What an application's answer shows, drawn from its display (LOOP P-04,
- * REACTOR_UI RU-2): the A2UI surface in its data, and its buttons pressing
+ * What an application's answer shows, drawn from its display (P-04,
+ * RU-2): the A2UI surface in its data, and its buttons pressing
  * only the actions the display offered, each with the token the session
  * minted for it. The answer under its message and an element in a panel or
  * a page of its own are drawn by this one view.
@@ -39,7 +39,7 @@ export function AnswerShowsView({
     () => answerSurface(display, SURFACE_CATALOG_ID),
     [display],
   );
-  // With the components the application's developer wrote (LOOP P-17).
+  // With the components the application's developer wrote (P-17).
   const catalog = useOwnCatalog();
   const [said, setSaid] = useState<string | null>(null);
   if (!parsed?.messages || parsed.messages.length === 0) {

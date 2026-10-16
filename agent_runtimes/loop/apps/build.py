@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An ``app.py`` to its Appspec: what ``loop apps build`` writes (LOOP P-07).
+"""An ``app.py`` to its Appspec: what ``loop apps build`` writes (P-07).
 
 The Appspec a file amounts to is `Application.spec`, as YAML. What the code
 decides — a reaction the spec cannot say in its fields — is marked as code in
@@ -46,11 +46,11 @@ class CodeMark:
 
     moment: str
     """``start``, ``message``…, ``action <name>``, ``schedule <name>``,
-    ``command <name>``, or what its code adds (LOOP P-06): ``tool <name>``,
+    ``command <name>``, or what its code adds (P-06): ``tool <name>``,
     ``check <name>``, ``test <name>``; and ``agent <framework>``, the agent
     its code gives it (P-23): ``function``, ``langgraph``, ``langchain``,
     ``llamaindex-agent`` or ``llamaindex-workflow``; and what it decides of
-    the Personal Agent Protocol (PAP_DATALAYER U-06): ``pap company
+    the Personal Agent Protocol (U-06): ``pap company
     <domain>``, ``pap company-role``, ``pap operation <action>``."""
 
     handler: str
@@ -92,7 +92,7 @@ def is_python(path: Union[str, Path]) -> bool:
 
 
 def _named(handler: Any, name: str = "") -> str:
-    """A handler's name; a Reactor command's id when one answers (LOOP P-35)."""
+    """A handler's name; a Reactor command's id when one answers (P-35)."""
     command = getattr(handler, "command", None)
     if isinstance(command, str) and not hasattr(handler, "__name__"):
         return f"the Reactor command {command}"
@@ -124,7 +124,7 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         handler = application.handler(event)
         if handler is not None:
             marks.append(CodeMark(event, handler.__name__, _where(handler, source)))
-    # The agent its code gives it (LOOP P-23), by what it is.
+    # The agent its code gives it (P-23), by what it is.
     agent = application.code_agent
     if agent is not None:
         marks.append(
@@ -144,7 +144,7 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         marks.append(
             CodeMark(f"command {name}", _named(handler), _where(handler, source))
         )
-    # Code where plain words are not enough (LOOP P-06), declared in the spec
+    # Code where plain words are not enough (P-06), declared in the spec
     # by name: here, where its code is.
     for kind, named in (
         ("tool", application.tools),
@@ -157,7 +157,7 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
                     f"{kind} {name}", _named(handler, name), _where(handler, source)
                 )
             )
-    # The Personal Agent Protocol its builders decide (PAP_DATALAYER U-06): read-only
+    # The Personal Agent Protocol its builders decide (U-06): read-only
     # on the Studio's cards, each a link to its line.
     for moment, decider, line in application.pap_marks:
         marks.append(CodeMark(moment, decider, f"{source}:{line}" if line else source))
@@ -271,7 +271,7 @@ def build(path: Union[str, Path]) -> Built:
             [f"{file.name} does not load: {type(error).__name__}: {error}"]
         ) from None
     except ImportError as error:
-        # A framework it is written with, not installed here (LOOP P-23).
+        # A framework it is written with, not installed here (P-23).
         from agent_runtimes.loop.apps.frameworks import missing_framework
 
         missing = missing_framework(error)
@@ -287,7 +287,7 @@ def build(path: Union[str, Path]) -> Built:
             [f"{file.name} does not load: {type(error).__name__}: {error}"]
         ) from None
     application.spec  # noqa: B018 - refused here, with its reasons
-    # What its tests press, its code declares, with what it takes (REACTOR_UI RU-5).
+    # What its tests press, its code declares, with what it takes (RU-5).
     from agentspecs.apps import parse_app, press_problems
 
     problems = press_problems(parse_app(application.document))
@@ -301,7 +301,7 @@ def build(path: Union[str, Path]) -> Built:
     )
 
 
-#: How long a file is given to build apart, in seconds (LOOP P-10).
+#: How long a file is given to build apart, in seconds (P-10).
 APART_SECONDS = 60.0
 
 #: The largest file built apart: an application's source, not a dataset.
@@ -332,7 +332,7 @@ def _apart_child() -> None:
 
 
 def build_apart(file: str, text: str, timeout: float = APART_SECONDS) -> str:
-    """Build an application's file in a process of its own (LOOP P-10).
+    """Build an application's file in a process of its own (P-10).
 
     What the Studio's Python tab runs: the file written in a scratch folder
     and built by another Python process, which has ``timeout`` seconds — a

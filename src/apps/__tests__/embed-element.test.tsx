@@ -4,7 +4,7 @@
  */
 
 /**
- * `<datalayer-app>` and `AppEmbed` in the DOM (LOOP D-07, D-08, D-09, D-11,
+ * `<datalayer-app>` and `AppEmbed` in the DOM (D-07, D-08, D-09, D-11,
  * T-13): the application drawn in the element's shadow root, in its mode, in
  * its theme; the floating modes as `ChatFloating`'s chrome holding the
  * application as `AppRenderer` draws it (R-01), the assistant with the
@@ -286,7 +286,7 @@ describe('AppEmbed, the React component', () => {
     const host = document.createElement('div');
     const shown = createRoot(host);
     await act(async () => shown.render(body));
-    expect(host.textContent).toMatch(/embed token \(LOOP D-14\)/);
+    expect(host.textContent).toMatch(/embed token \(D-14\)/);
     expect(seen.renderer).toHaveLength(0);
     expect(seen.runtimes).toHaveLength(0);
     await act(async () => shown.unmount());
@@ -353,7 +353,7 @@ describe('AppEmbed, the React component', () => {
     await act(async () => two.root.unmount());
   });
 
-  it('speaks to the host’s server with the visit’s embed token, and never hands it to a Datalayer runtime (LOOP R-20)', async () => {
+  it('speaks to the host’s server with the visit’s embed token, and never hands it to a Datalayer runtime (R-20)', async () => {
     const hosted = await render(
       <AppEmbed
         app={chatApp()}
@@ -780,7 +780,7 @@ describe('reading an application on Datalayer with its token', () => {
     });
   });
 
-  it('runs the deployment its token names, and refuses a token naming none (decision 16)', async () => {
+  it('runs the deployment its token names, and refuses a token naming none', async () => {
     expect(
       embedTokenDeployment(tokenNaming({ deployment_uid: '01K?>_dep' })),
     ).toBe('01K?>_dep');

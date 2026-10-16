@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's agent keeps to its organization's contexts (LOOP U-31, U-32).
+"""An application's agent keeps to its organization's contexts (U-31, U-32).
 
 The organization's version of a catalogue Frame replaces the catalogue's,
 its own Frames are given beside them, both read from IAM with the caller's

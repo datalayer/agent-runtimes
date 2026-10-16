@@ -4,7 +4,7 @@
  */
 
 /**
- * Datalayer's own components, drawn (LOOP C-18): each of Table, Chart, File
+ * Datalayer's own components, drawn (C-18): each of Table, Chart, File
  * upload, Chat, Evidence, Form and File to download renders from its catalog example on a
  * surface drawn by `datalayerCatalog`, reads what the application publishes
  * through its binding, and sends what a person does through the A2UI action
@@ -45,7 +45,7 @@ vi.mock('echarts-for-react', () => ({
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-// A form and a chart are fetched when first drawn (STUDIO D-08): fetched once
+// A form and a chart are fetched when first drawn (D-08): fetched once
 // here, so a test's draw finds them there and renders them in its act().
 beforeAll(async () => {
   await Promise.all([
@@ -608,7 +608,7 @@ describe('Datalayer’s own components', () => {
     expect(actions).toEqual([]);
   });
 
-  it('Form: its fields drawn with the inputs its ui names — a switch, tags, radio buttons, a slider (LOOP P-20)', async () => {
+  it('Form: its fields drawn with the inputs its ui names — a switch, tags, radio buttons, a slider (P-20)', async () => {
     const { container, actions } = await draw(
       [
         {

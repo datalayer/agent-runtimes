@@ -4,7 +4,7 @@
  */
 
 /**
- * `visible_when` (LOOP C-03): any block of a surface drawn by Datalayer's
+ * `visible_when` (C-03): any block of a surface drawn by Datalayer's
  * renderer is shown only while what it names holds, and appears and goes as
  * the data changes; the basic catalog alone refuses the key.
  */

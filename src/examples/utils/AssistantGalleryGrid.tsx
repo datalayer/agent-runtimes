@@ -5,7 +5,7 @@
 
 /**
  * The floating assistant's characters, every one in every pose, small, for
- * a quick visual check (LOOP T-16, T-22, T-24 to T-27): Datalayer's four and
+ * a quick visual check (T-16, T-22, T-24 to T-27): Datalayer's four and
  * the owl as the enabled plugins contribute them to
  * `loop.assistant.character`, and a test sprite read through the clippy.js
  * reader. Each cell is the real `AssistantStage`, set in the grid's flow

@@ -5,7 +5,7 @@
 
 /**
  * A deployment's page asks its runtime nothing but the application's own
- * routes (PAP_DATALAYER's release gates, decided 14 October 2026).
+ * routes (the release gates, decided 14 October 2026).
  *
  * Round 19 (94c9586c) told the chat (`ownRoutesOnly`): Stop is the
  * session's, no monitoring stream, no sandbox socket, no model switch. What

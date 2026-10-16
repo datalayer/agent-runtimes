@@ -106,7 +106,7 @@ export function McpStatusIndicator({
   );
 
   /*
-   * Nothing drawn when the agent has no MCP server (LOOP H-21): a control
+   * Nothing drawn when the agent has no MCP server (H-21): a control
    * that only says so was read out as *No MCP Server defined* in every
    * composer, an in-page agent's and an application's alike. When there are
    * some, it is named by their state, and the tooltip — its description —

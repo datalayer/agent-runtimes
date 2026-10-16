@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's page (LOOP R-01, R-01b): a chat, a widget or a worker
+ * An application's page (R-01, R-01b): a chat, a widget or a worker
  * draws its A2UI surface beside its conversation, publishes what the
  * conversation says to it by path, and answers its buttons through the chat.
  */
@@ -42,7 +42,7 @@ import {
   type InlineSurfaceModel,
 } from '../plugins/a2ui-surface/InlineSurface';
 
-// A Form block's form is fetched when first drawn (STUDIO D-08): fetched once
+// A Form block's form is fetched when first drawn (D-08): fetched once
 // here, so a test's draw finds it there and renders it in its act().
 beforeAll(async () => {
   await import('../../components/a2ui/datalayer/SchemaForm');
@@ -304,7 +304,7 @@ describe('what a button does', () => {
     );
     // What the page did goes with it to the session (R-04): the settings
     // as the session takes them — a message, never an action of its own
-    // (REACTOR_UI RU-5).
+    // (RU-5).
     const loop = {
       settings: { product: 'Desktop', short: true },
     };
@@ -379,7 +379,7 @@ describe('what a button does', () => {
       data({ '/inputs': inputs, '/files': files }),
     );
     // The file is not read here: the session puts it where the application
-    // reads it, or refuses it in a sentence (LOOP R-04).
+    // reads it, or refuses it in a sentence (R-04).
     expect(run).toEqual({
       send: 'Report: Summary',
       inputs: 'Report: Summary',

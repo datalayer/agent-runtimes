@@ -5,7 +5,7 @@
 
 /**
  * The components the application of this workspace adds to the catalog it
- * is drawn with (LOOP P-17, `loop.a2ui.component`): what its answers, its
+ * is drawn with (P-17, `loop.a2ui.component`): what its answers, its
  * elements and its page draw beside Datalayer's catalog. None outside an
  * application's workspace, or in one whose developer wrote none.
  *

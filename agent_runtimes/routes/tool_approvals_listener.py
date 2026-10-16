@@ -25,7 +25,7 @@ Lifecycle:
 A narrowed token (a Preview's, held to its application; a run's; one acting
 in a person's name — any carrying ``authorization_details`` or a task grant)
 is refused by ai-agents' ``/ws``, which takes no narrowed token (fail closed,
-PAP_DATALAYER release gates, decided 2026-10-14). Its approvals are read one
+the release gates, decided 2026-10-14). Its approvals are read one
 by one instead — ``GET /tool-approvals/{id}`` takes a narrowed token for the
 approvals it asked — every ``NARROWED_POLL_SECONDS`` until each is decided:
 it learns of nothing else of the person's.

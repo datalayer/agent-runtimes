@@ -5,7 +5,7 @@
 
 /**
  * What the members of a team showed with their answers: components of the
- * catalog, drawn under the conversation (STUDIO H-02).
+ * catalog, drawn under the conversation (H-02).
  *
  * A member that gives `application/json+a2ui` shows an A2UI surface beside
  * its words — the sources as cards that open (`Evidence`), a comparison as a

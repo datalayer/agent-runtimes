@@ -9,13 +9,13 @@
  *
  * The runtime sends each beside the tool's result in
  * `_meta["reactor.ui/display"]`, as every protocol display travels
- * (REACTOR_UI RU-1): `application/vnd.datalayer.shield.diff+json` and
+ * (RU-1): `application/vnd.datalayer.shield.diff+json` and
  * `application/vnd.datalayer.shield.terminal+json`, typed in Python as
  * `agent_runtimes.adapters.harness_displays`. This plugin contributes one
  * renderer per type; it binds no tool, since a harness names its tools as it
  * likes (*Edit hello.py*, *Run pytest*) and the display is what says what
  * it is. The web chat and the embed mount it through the preset; the phone
- * reads the same contract from `portable/displays` (MOBILE M-037).
+ * reads the same contract from `portable/displays` (M-037).
  *
  * @module apps/plugins/shield-displays
  */

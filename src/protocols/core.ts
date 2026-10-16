@@ -41,7 +41,7 @@ export interface ProtocolDescription {
   plugin: string;
   /**
    * Its id in the agentspecs protocols catalogue (`agentspecs/protocols`,
-   * AGENT_PROTOCOLS PS-01): `web-bot-auth`, `acp`… — how Studio reads a
+   * PS-01): `web-bot-auth`, `acp`… — how Studio reads a
    * runtime's answer against the catalogue (PR-50).
    */
   catalogue: string;

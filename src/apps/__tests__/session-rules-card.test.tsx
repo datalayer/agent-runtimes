@@ -4,7 +4,7 @@
  */
 
 /**
- * The Rules card's *This session* section drawn (SHIELD SH-54): the rules in
+ * The Rules card's *This session* section drawn (SH-54): the rules in
  * force read from the runtime, a file-and-shell rule added in one click, a
  * rule removed, and a loosening the runtime refuses said in its sentence.
  */

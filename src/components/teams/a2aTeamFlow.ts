@@ -142,7 +142,7 @@ export function toolWords(
 
 /**
  * A tool's own name, without its connection's prefix: `list_invoices` for
- * `odoo_accounting_list_invoices` — as a balloon says it (LOOP T-23).
+ * `odoo_accounting_list_invoices` — as a balloon says it (T-23).
  */
 export function toolOwnName(
   tool: string,

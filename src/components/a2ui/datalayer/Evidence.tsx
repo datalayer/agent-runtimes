@@ -4,7 +4,7 @@
  */
 
 /**
- * Evidence (LOOP C-18): what an answer rests on — the sources it opened,
+ * Evidence (C-18): what an answer rests on — the sources it opened,
  * each with its link and the passage cited from it. A source is
  * `{title, url, passage}` (a title or a link at least); the first
  * `max_items` show, the rest behind *more*. Opening a source opens its link

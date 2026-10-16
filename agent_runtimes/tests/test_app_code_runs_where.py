@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where a Python application's code runs (LOOP R-14, R-21).
+"""Where a Python application's code runs (R-14, R-21).
 
 On the platform, Python application code runs on a runtime only, the
 sandbox a person's agent runs in: the catalogue's — its examples'

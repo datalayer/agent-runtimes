@@ -25,7 +25,7 @@ import {
   stoppedWorkOf,
 } from '..';
 
-describe('activity (MOBILE M-015b)', () => {
+describe('activity (M-015b)', () => {
   it('reads the shared fixture: in progress, scheduled, completed and the next page', () => {
     const activity = activityOf(activityFixture());
     expect(activity.inProgress.map(entry => entry.sessionUid)).toEqual(['s-2']);
@@ -50,7 +50,7 @@ describe('activity (MOBILE M-015b)', () => {
   });
 });
 
-describe('lifecycle (MOBILE M-041b)', () => {
+describe('lifecycle (M-041b)', () => {
   it('pauses one exact version, and refuses none', () => {
     expect(stateChangeBody(3, 'paused')).toEqual({
       version: 3,
@@ -105,7 +105,7 @@ describe('lifecycle (MOBILE M-041b)', () => {
   });
 });
 
-describe('runtimes (MOBILE M-014b)', () => {
+describe('runtimes (M-014b)', () => {
   it('lists agent runtimes only, and says one being created', () => {
     const runtimes = agentRuntimesOf({
       runtimes: [

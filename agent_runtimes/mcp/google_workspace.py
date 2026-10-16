@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Gmail, reached in the name of the person an application acts for (STUDIO W-02).
+"""Gmail, reached in the name of the person an application acts for (W-02).
 
 The catalogue's ``google-workspace`` server is ``workspace-mcp`` in its
 external OAuth provider mode: a local HTTP process (its spec's ``command``,
@@ -15,7 +15,7 @@ the runtime makes a toolset of its own, bound to who the run is for, whose
 every HTTP request to the server carries an access token IAM minted
 (``POST /api/iam/v1/oauth2/google-workspace/token``) — asked with
 
-- the person's token naming the application (LOOP I-04, ``loop.apps.acting``)
+- the person's token naming the application (I-04, ``loop.apps.acting``)
   when the application's connection to Gmail is in the name of who uses it
   (``as: user``);
 - the application's principal's token (I-03) when it is in its owner's;

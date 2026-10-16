@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation the chat goes on with (LOOP D-13): an embedded
+ * A conversation the chat goes on with (D-13): an embedded
  * application's session, reattached after its page reloaded. Its messages
  * are drawn, the next message is sent on its thread with them, and the
  * runtime's snapshot — its agent's, every session's — never replaces them.

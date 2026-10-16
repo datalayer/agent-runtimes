@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A widget's page written in its code (LOOP P-05): ``@app.page``.
+"""A widget's page written in its code (P-05): ``@app.page``.
 
 A widget's page is a function of its inputs::
 
@@ -16,7 +16,7 @@ A widget's page is a function of its inputs::
 
 Its inputs are the function's parameters — each typed by its annotation, its
 default its default, one without a default required — or declared with
-``app.input(name, field)``; together they are a form (LOOP C-16), drawn on the
+``app.input(name, field)``; together they are a form (C-16), drawn on the
 page at ``/inputs/<name>``. Its outputs are declared with ``app.output``, each
 drawn at ``/outputs/<name>`` with its component; one ``result``, in words,
 when none is. As an input changes, the page sends them all as the ``page``
@@ -203,7 +203,7 @@ def page_signature(function: Any) -> PageSignature:
 
 def page_values(app: AppSpec, inputs: Any) -> Dict[str, Any]:
     """The inputs a page runs on, checked against its form, each with its default
-    for the rest (LOOP C-16).
+    for the rest (C-16).
 
     Raises
     ------
@@ -252,7 +252,7 @@ def shown_value(output: AppPageOutputSpec, value: Any) -> Any:
         For a value its component does not draw, or that JSON does not write.
     """
     if output.component not in OUTPUT_SHOWS:
-        # A component its developer wrote (LOOP P-17): any value JSON writes,
+        # A component its developer wrote (P-17): any value JSON writes,
         # a table of pandas its rows.
         to_dict = getattr(value, "to_dict", None)
         shown: Any = (

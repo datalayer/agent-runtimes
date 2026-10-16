@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Key directories fetched through the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13).
+"""Key directories fetched through the PAP SDK's single egress path (PI-13).
 
 A ``Signature-Agent`` names a URL a verifier then fetches: a name pointing
 inside (a private, loopback, link-local or cluster address) is refused before

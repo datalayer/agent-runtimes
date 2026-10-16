@@ -4,7 +4,7 @@
  */
 
 /**
- * A widget's page written in its code (LOOP P-05): `interface.page` read,
+ * A widget's page written in its code (P-05): `interface.page` read,
  * written and checked; its inputs drawn as one form at `/inputs`, its
  * outputs at `/outputs/<name>`; as an input changes, the page runs it in a
  * session of its own through the session API's `page` action and shows what
@@ -43,7 +43,7 @@ import {
 } from '../plugins/app-page';
 import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
 
-// A Form block's form is fetched when first drawn (STUDIO D-08): fetched once
+// A Form block's form is fetched when first drawn (D-08): fetched once
 // here, so a test's draw finds it there and renders it in its act().
 beforeAll(async () => {
   await import('../../components/a2ui/datalayer/SchemaForm');

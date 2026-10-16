@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating chat's assistant, by balloon display (LOOP T-23): what the
+ * The floating chat's assistant, by balloon display (T-23): what the
  * chat's items say reaches the character's balloon — the tool it calls, in
  * plain words, closed — and open, `history` is the conversation under a
  * header that counts it, `current` the one line said now over the composer.

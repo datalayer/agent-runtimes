@@ -67,8 +67,7 @@ jobs:
 
       # `lib/` for the npm package, `dist/` (the Vite app) for the wheel, and
       # `dist-embed/` for the npm package: the `<datalayer-app>` element's
-      # script, the module and chunks it imports, and its stylesheet (STUDIO
-      # D-08), versioned with the runtime it talks to. The landing copies it
+      # script, the module and chunks it imports, and its stylesheet (D-08), versioned with the runtime it talks to. The landing copies it
       # from the package into `/embed/`. The embed's build prints every file's
       # size and fails when the initial load is over its budget
       # (vite.embed.config.ts).
@@ -115,7 +114,7 @@ jobs:
           grep -qx 'package/dist-embed/datalayer-app-main.js' npm-files.txt
           grep -qx 'package/dist-embed/datalayer-app.css' npm-files.txt
           # The hosts entry Slack and Discord bundle, and the contracts they
-          # read (DISCORD DC-004, DC-005), are in the package.
+          # read (DC-004, DC-005), are in the package.
           grep -qx 'package/lib/portable/hosts/index.js' npm-files.txt
           grep -qx 'package/lib/portable/hosts/contracts.json' npm-files.txt
           grep -qx 'package/lib/portable/semantic-events.json' npm-files.txt

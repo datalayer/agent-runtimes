@@ -4,8 +4,7 @@
  */
 
 /**
- * The Agentic Commerce Protocol 2026-04-17 in TypeScript (AGENT_PROTOCOLS
- * PR-40 to PR-42, PR-51, PR-53): the session fixture the Python package
+ * The Agentic Commerce Protocol 2026-04-17 in TypeScript (PR-40 to PR-42, PR-51, PR-53): the session fixture the Python package
  * reads, and a purchase approved and made once against a seller that answers
  * with it.
  */

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Approve and save (LOOP R-24).
+"""Approve and save (R-24).
 
 An application granted a Space to write is given `save_to_space`; the call is
 always asked — the whole text shown — whatever its rules say short of
@@ -332,7 +332,7 @@ async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
     assert tokens == ["p-token"] and said == "Saved as “T”: /documents/doc-1"
 
 
-# What it writes says who wrote it (LOOP I-10).
+# What it writes says who wrote it (I-10).
 
 
 def test_its_byline_carries_its_face_and_says_when_it_wrote_on_its_own() -> None:
@@ -412,7 +412,7 @@ def test_its_capability_knows_who_opened_each_session() -> None:
 
 
 async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
-    """LOOP R-25: the grant is read before the person is asked, not after."""
+    """R-25: the grant is read before the person is asked, not after."""
     app = digest()
     decided = rules_for(app).decide(
         SAVE_TOOL, {"title": "t", "content": "c", "space": "sp-wiki"}

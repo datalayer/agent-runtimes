@@ -283,7 +283,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
-     * Correct one of the caller's own memories in place (LOOP R-34): its
+     * Correct one of the caller's own memories in place (R-34): its
      * words become `text`, kept with who corrected it and when.
      */
     async correctRuntimeMemory(
@@ -322,7 +322,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * The caller's allowances to share what an application remembers of
-     * them with another (LOOP R-35), by `source` or by `reader`.
+     * them with another (R-35), by `source` or by `reader`.
      */
     async listRuntimeMemoryShares(filter: {
       source?: string;

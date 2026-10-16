@@ -4,7 +4,7 @@
  */
 
 /**
- * Chat (LOOP C-18): the conversation with the application, drawn by the
+ * Chat (C-18): the conversation with the application, drawn by the
  * chat's own parts — its transcript (`ChatMessageList`, the one every chat
  * draws its turns with), its welcome and starters (`ChatEmptyState`) and its
  * composer (`InputPromptText`) — from what the application publishes.

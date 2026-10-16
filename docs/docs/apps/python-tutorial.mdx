@@ -122,7 +122,7 @@ async def finish(session: Session) -> None:
 an answer shows, or pressed with the token its session offers. It is typed:
 the model's JSON Schema is written in the Appspec (`interface.actions`), a
 press is checked against it before the handler runs and the handler is given
-the model; an action without a model takes nothing (REACTOR_UI RU-5). `session.record` writes to the application's record, kept
+the model; an action without a model takes nothing (RU-5). `session.record` writes to the application's record, kept
 as its spec's `record.include` says.
 
 ### Try it

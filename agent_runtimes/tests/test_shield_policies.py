@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The policy side of SHIELD Phase 2 on the runtime (SH-50, SH-31, SH-32, SH-54, SH-35).
+"""The Shield's policies on the runtime (SH-50, SH-31, SH-32, SH-54, SH-35).
 
 IAM's documents in force on a managed runtime and fail closed without them;
 the organization's tightening over the Appspec's and the session's; a rule a
@@ -252,7 +252,7 @@ class TestManagedFromIam:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """A scene rehearsed in process, a test, a terminal with nothing of the
-        platform's: the Rules and decision 5's default alone, and nothing in the
+        platform's: the Rules and the platform's default alone, and nothing in the
         log about it."""
         managed_policies.use_source(None)
         monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
@@ -415,7 +415,7 @@ class TestAdmittedHarnesses:
         platform = Policy(
             scope="organization", harnesses=Harnesses(credentials="platform")
         )
-        assert "SHIELD decision 3" in str(
+        assert "lends only the account's own declared secret" in str(
             harness_refusal([platform, default_policy()], "claude-code")
         )
         either = Policy(scope="organization", harnesses=Harnesses(credentials="either"))
@@ -669,7 +669,7 @@ class TestTheSessionRulesRoutes:
             == 200
         )
         assert session_rules().of("session-0001") == [], (
-            "gone with the session (decision 7)"
+            "gone with the session"
         )
 
 

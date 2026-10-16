@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant on the page (LOOP T-21, T-22, T-27): a character in
+ * The floating assistant on the page (T-21, T-22, T-27): a character in
  * a corner, acting out what the application is doing, with a balloon that
  * says a word while the conversation is closed. Clicked, it opens the
  * conversation; dragged, it moves, and the conversation follows; sent away,
@@ -592,7 +592,7 @@ export interface AssistantStageProps {
    */
   expandOnArrival?: boolean;
   /**
-   * How the balloon shows the conversation (LOOP T-23): the conversation
+   * How the balloon shows the conversation (T-23): the conversation
    * (`history`, the default — closed, the messages in `balloon.history`, or
    * a peek of the newest when none are given; open, the whole history), or
    * the one thing being said or done now (`current`).
@@ -803,7 +803,7 @@ export function AssistantStage({
       stayPut,
   );
   // What it covers in its corner, for a line written under a prompt there
-  // (REVIEWS Q-08).
+  // (Q-08).
   const cornerRight =
     place.left === undefined && place.top === undefined
       ? pixels(place.right)

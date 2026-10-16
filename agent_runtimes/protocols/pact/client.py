@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A PACT 1.0 personal agent (AGENT_PROTOCOLS PR-11 to PR-13, personal-agent side).
+"""A PACT 1.0 personal agent (PR-11 to PR-13, personal-agent side).
 
-Talks to a Brand's agent over A2A 1.0 HTTP+JSON (§2, §4): every request but
-the card carries a fresh personal-agent JWT signed by the host's key (§3),
+Talks to a Brand's agent over A2A 1.0 HTTP+JSON: every request but
+the card carries a fresh personal-agent JWT signed by the host's key,
 the conversation goes on in its ``contextId``, a retry reuses its
-``messageId``. With the *Delegated* profile (§5), it asks the person to sign
+``messageId``. With the *Delegated* profile, it asks the person to sign
 in at the Brand with RFC 8628's device code — it shows the Brand's own link,
 never a login of its own — reads back what the person actually approved
 (``scope`` may be less than asked), sends the delegation token in
@@ -102,7 +102,7 @@ class Reply:
 
 @dataclass(frozen=True)
 class StepUp:
-    """The Brand needs more permission (§5.5): the missing scopes and where to grant them."""
+    """The Brand needs more permission: the missing scopes and where to grant them."""
 
     text: str
     context_id: str
@@ -135,7 +135,7 @@ class PactPersonalAgent:
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
     #: How the Brand's public metadata (its card, its OAuth metadata and keys)
-    #: is read: the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13), or
+    #: is read: the PAP SDK's single egress path (PI-13), or
     #: ``egress.client_fetch`` for a local test Provider.
     metadata: Fetch = field(
         default_factory=lambda: metadata_fetch(

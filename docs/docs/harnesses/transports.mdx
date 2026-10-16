@@ -22,7 +22,7 @@ ACP's `session/update`s become the `StreamEvent`s every transport reads:
 | ACP `session/update` | `StreamEvent` | On the page and the phone |
 | --- | --- | --- |
 | `agent_message_chunk` | `text` | The answer, streamed |
-| `agent_thought_chunk` | `thought` | A *thinking* row, folded; kept in the record, never an A2A artifact (decision 8) |
+| `agent_thought_chunk` | `thought` | A *thinking* row, folded; kept in the record, never an A2A artifact |
 | `tool_call {kind, title, status, rawInput, locations, content}` | `tool_call` with `kind`, `status`, `arguments`, `locations`, `display`, `awaiting: approval` while pending, the policy's sentence | A tool row titled by the harness, its kind as its icon |
 | `tool_call_update` | `tool_call` (in progress) or `tool_result` (completed, failed) with `display` and, for the page, `_meta["reactor.ui/display"]` | A diff, a terminal, a file read |
 | `plan` | `plan {steps}` | The plan card, steps ticked |
@@ -111,9 +111,9 @@ both shapes, and `launch_sandbox`, outside it, is refused by the gateway.
 | The plan | One artifact named `plan`, replaced as it progresses: a `text/markdown` part (`- [x] step`, `[~]` in progress) and an `application/json` part with the steps |
 | A diff | One artifact per file, named by its path, one `text/x-diff` part (the unified diff, `a/<path>` → `b/<path>`, `/dev/null` for a new file), `metadata.datalayer.artifactProvenance {contentHash: sha256:…, producedAt, sourceReferences}`; the same path replaces its artifact |
 | A tool call, a result | A `working` status whose message carries the data part as before and `{kind, title, status}` in its metadata |
-| A permission | `input-required` whose message says the sentence and the options, and carries `datalayer.approvalRequest {toolCall, options, expiresAt}` (ORCHESTRATOR 7.2); the stream ends there as A2A says |
+| A permission | `input-required` whose message says the sentence and the options, and carries `datalayer.approvalRequest {toolCall, options, expiresAt}`; the stream ends there as A2A says |
 | Its answer | A message **naming the task** (`taskId`): `datalayer.approval {optionId}`, or — for a caller without the extension — one whole word: *yes*, *no*, *always*, or an option's name; a message choosing nothing is asked again. `protocol_state/a2a.py` reads such a message as the waiting task's continuation (A2A 1.0) |
-| Reasoning | Not an artifact, not a message (decision 8) |
+| Reasoning | Not an artifact, not a message |
 | The agent card | Its skills from the harness spec (`routes/a2a.py`), `text/x-diff` and `application/json` among its output modes |
 
 The orchestrator (`orchestration/adapters/a2a.py`) keeps a part's media type on
@@ -145,7 +145,7 @@ The web chat and the embed draw them through the preset's
 tool binding — the display says what it is); the session API's record carries
 each as a `tool_call` entry *shown* with the display; the phone reads the same
 contract (`protocolDisplayOf`, `displayLine`, `shieldDisplayFixtures()` as its
-fixture, MOBILE M-037) — drawing it there is the mobile app's. A terminal
+fixture, M-037) — drawing it there is the mobile app's. A terminal
 fills while its command runs: the Shield pushes the output whole at each
 change, and each push reaches the page as the running row's
 `_meta["reactor.ui/display"]` (the output so far, no exit code, not released)
@@ -161,7 +161,7 @@ An IDE connects to the runtime's ACP endpoint (`routes/acp.py`,
 `/api/v1/acp/ws/{agent_id}`) and names an application whose agent is a harness:
 
 - `session/new` opens the adapter's session **in the runtime's workspace**
-  (decision 6): the IDE's `cwd` and `mcpServers` are not what the harness
+ : the IDE's `cwd` and `mcpServers` are not what the harness
   gets — it is lent the application's connections;
 - prompts go to prompts; updates come back as ACP spells them — a harness's
   tool call with its kind, status, locations and displays as content (a

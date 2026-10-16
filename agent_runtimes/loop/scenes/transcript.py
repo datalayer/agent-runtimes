@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The transcript of a scene, in Python (LOOP A-06, A-14).
+"""The transcript of a scene, in Python (A-06, A-14).
 
 What happens in a scene, as lines, in the order it happened — *You → Sales:
 …*, *Sales → Accounting: …*, *Accounting → Odoo: odoo_accounting_aged_balance*,

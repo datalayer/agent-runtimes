@@ -3,7 +3,7 @@
 
 """Check that the documentation's examples name calls that exist.
 
-A page cannot describe a call that no longer exists (LOOP G-10). For every
+A page cannot describe a call that no longer exists (G-10). For every
 written page under ``docs/docs`` (the generated API references are left out),
 this reads the code blocks and checks:
 
@@ -15,8 +15,7 @@ this reads the code blocks and checks:
 - each relative link to another page (``./x.mdx``, ``../chat/presence``)
   points at a page that exists.
 
-And the examples the pages point a reader at (``EXAMPLE_FOLDERS``, SHIELD
-SH-23): every script of the folder is named in its README (``python
+And the examples the pages point a reader at (``EXAMPLE_FOLDERS``, SH-23): every script of the folder is named in its README (``python
 <script>``), every script the README names exists, and each name a script
 imports from ``agent_runtimes`` exists — the scripts themselves are run by
 the tests (``test_the_shield_examples.py``).

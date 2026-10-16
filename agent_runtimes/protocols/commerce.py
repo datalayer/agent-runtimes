@@ -28,7 +28,7 @@ def digest(what: Any) -> str:
 
 def operation_classes(protocol: str) -> dict[str, str]:
     """Each operation's action class (F-10) for Rules (R-05), as agentspecs classes
-    a protocol's tools (``protocol-tools/<protocol>.yaml``, AGENT_PROTOCOLS PR-54).
+    a protocol's tools (``protocol-tools/<protocol>.yaml``, PR-54).
 
     The table names the gateway's tools (``ucp_search``, ``acp_complete``): an
     operation is the tool's name without its connection's prefix. A commerce

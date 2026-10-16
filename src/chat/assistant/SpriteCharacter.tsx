@@ -4,7 +4,7 @@
  */
 
 /**
- * A character one brings, played (LOOP T-26): the frames of a character file
+ * A character one brings, played (T-26): the frames of a character file
  * read by `formats` — clippy.js or Microsoft Agent — drawn from its sprite
  * sheet and stepped as the character authored them, its branches included,
  * the animation chosen by the state the stage acts (T-22). Nothing plays for

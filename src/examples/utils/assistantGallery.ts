@@ -4,7 +4,7 @@
  */
 
 /**
- * What the floating assistant's gallery shows (LOOP T-21 to T-27): every
+ * What the floating assistant's gallery shows (T-21 to T-27): every
  * state a character acts (T-22), and stepped aside (T-27), with the balloon
  * each one says — the agent's latest saying (T-23), an approval to answer,
  * or that it is paused. Static data only: no agent, no server.

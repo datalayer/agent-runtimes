@@ -34,7 +34,7 @@ export const CHAT_VIEW_MODES: readonly ChatViewModeOption[] = [
   { mode: 'floating', label: 'Full-height popup' },
   { mode: 'floating-small', label: 'Floating popup' },
   { mode: 'floating-draggable', label: 'Floating draggable' },
-  // A character on the page that speaks in a balloon (LOOP T-21).
+  // A character on the page that speaks in a balloon (T-21).
   { mode: 'assistant', label: 'Floating assistant' },
   { mode: 'sidebar', label: 'Sidebar panel' },
 ];
@@ -42,7 +42,7 @@ export const CHAT_VIEW_MODES: readonly ChatViewModeOption[] = [
 /**
  * Why the assistant is greyed out, for its tooltip: it is drawn by the
  * floating chat (`ChatFloating`); a layout that places the chat itself, as
- * the page layout does, has no character to show (LOOP T-21).
+ * the page layout does, has no character to show (T-21).
  */
 export const ASSISTANT_NEEDS_A_FLOATING_CHAT =
   'The assistant is drawn by the floating chat, not by this layout';

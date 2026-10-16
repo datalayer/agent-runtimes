@@ -228,7 +228,7 @@ def test_woken_by_a_message_it_reads_sorts_and_drafts_alone_and_asks_before_send
     assert "Message ID: m4" in seen[0] and "Message ID: m1" in seen[0]
     assert box.message("m1").labels == ("UNREAD", "Newsletters")
     # It drafted the reply alone; the send waited for the person, the draft whole.
-    # Each says who wrote it, closed with its byline (LOOP I-10): nobody opened
+    # Each says who wrote it, closed with its byline (I-10): nobody opened
     # the session, so on its own.
     reply = signed(REPLY, "Written by 📬 Inbox Triage, on its own.")
     assert reply.endswith("Eric\n\nWritten by 📬 Inbox Triage, on its own.")

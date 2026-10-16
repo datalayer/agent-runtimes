@@ -4,7 +4,7 @@
  */
 
 /**
- * The two inputs of the nine (LOOP P-20) that `@datalayer/primer-rjsf` does
+ * The two inputs of the nine (P-20) that `@datalayer/primer-rjsf` does
  * not draw itself, as rjsf widgets a form's uiSchema names (`ui:widget`):
  *
  * - `switch` — a `boolean` as Primer's toggle switch;

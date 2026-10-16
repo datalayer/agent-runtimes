@@ -3,7 +3,7 @@
 
 """What keeps a deployment on its runtime answers its owner alone, and asks again safely.
 
-PAP_DATALAYER's release gates, round 19 (decided 14 October 2026):
+the release gates, round 19 (decided 14 October 2026):
 
 - ai-agents' keeper makes a kept runtime's agent with ``POST /api/v1/agents``
   (`deployments.create_agent`). When the answer is lost and it asks again, the

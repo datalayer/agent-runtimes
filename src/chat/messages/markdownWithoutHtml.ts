@@ -4,7 +4,7 @@
  */
 
 /**
- * Markdown without markup (STUDIO D-22): what every renderer of an agent's
+ * Markdown without markup (D-22): what every renderer of an agent's
  * words hands Streamdown, so that no markup a model or an application writes
  * reaches the page.
  *

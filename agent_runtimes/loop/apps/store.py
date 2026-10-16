@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's file, between the Studio and a repository (LOOP S-04).
+"""An application's file, between the Studio and a repository (S-04).
 
 `pull` writes the Appspec the Studio keeps — the text its builder wrote,
 comments included (F-09) — and `push` saves a file back the way the Studio's
@@ -9,7 +9,7 @@ own save does: the version left behind is kept as an `appversion` item, and a
 changed specification is the next version; the same one is not.
 
 An application written in Python keeps its ``app.py`` in its item, beside
-the Appspec it builds (LOOP P-10, decided 2026-10-06): ``code`` —
+the Appspec it builds (P-10, decided 2026-10-06): ``code`` —
 ``{"file": "app.py", "text": ...}`` — saved by ``push`` of the file,
 versioned with the spec (a changed file is the next version, and the one
 left behind keeps its own), written back by ``pull``, and read by the

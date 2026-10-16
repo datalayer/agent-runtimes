@@ -3,7 +3,7 @@
 
 """A narrowed token's approvals (a Preview's, held to its application) are read
 at ai-agents one by one: its ``/ws`` takes no narrowed token (fail closed,
-PAP_DATALAYER release gates), and a Preview's tool call waited on an approval
+the release gates), and a Preview's tool call waited on an approval
 the person had already given until it timed out (round 23, on r1).
 """
 

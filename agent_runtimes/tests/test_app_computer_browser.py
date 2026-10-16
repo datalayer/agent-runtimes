@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The browser of an application's computer (LOOP R-23).
+"""The browser of an application's computer (R-23).
 
 *Browse* on, its agent is given a browser in the runtime's container: it
 opens a page, reads it, takes a screenshot, clicks and types where a

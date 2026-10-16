@@ -1111,7 +1111,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         # A visitor's turn has nobody to ask: a call that waits for a person
         # is refused in the visitor's sentence and the run goes on — deferred,
         # it ended an A2A task whose run takes no `DeferredToolRequests`
-        # (Disaster Assessment's *Storm* on the home page, STUDIO H-03).
+        # (Disaster Assessment's *Storm* on the home page, H-03).
         from agent_runtimes.loop.apps.rules import ASK_FIRST
         from agent_runtimes.loop.apps.visitors import in_visitor_turn, visitor_refusal
 

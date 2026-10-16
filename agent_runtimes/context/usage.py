@@ -91,7 +91,7 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
                 part_kind = getattr(part, "part_kind", None)
                 part_dict["part_kind"] = part_kind
 
-                # A tool's display (REACTOR_UI RU-1): the model view is the
+                # A tool's display (RU-1): the model view is the
                 # content, as JSON; the whole display is kept beside it for
                 # the page a reloaded history draws.
                 metadata = getattr(part, "metadata", None)

@@ -46,7 +46,7 @@ _BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
 
 
 class _Failures(dict[str, str]):
-    """Why each server failed, a credential never kept in it (LOOP R-19).
+    """Why each server failed, a credential never kept in it (R-19).
 
     What a start failed with is answered by the routes and said to whoever
     configured the agent: an error that echoes a command line with its
@@ -171,7 +171,7 @@ class MCPLifecycleManager:
                 logger.warning(
                     f"Environment variable '{var_name}' not found or empty during expansion"
                 )
-            # Used by the tool, never shown to the model (LOOP R-19).
+            # Used by the tool, never shown to the model (R-19).
             hold_expansion(value, var_name, env_value)
             return env_value
 
@@ -241,7 +241,7 @@ class MCPLifecycleManager:
         """
         # If user provides a command, use their config entirely. Its args and
         # env keep their `${VAR}`: they are expanded as the server starts, so
-        # a secret never sits in the config the routes answer (LOOP R-19).
+        # a secret never sits in the config the routes answer (R-19).
         if user_config:
             expanded = dict(user_config)
             if isinstance(expanded.get("command"), str):
@@ -461,7 +461,7 @@ class MCPLifecycleManager:
 
                 if config.transport == "streamable-http" and config.url:
                     # Its command runs as a local HTTP process, reached at its
-                    # url (STUDIO W-02: Gmail, whose every request carries a
+                    # url (W-02: Gmail, whose every request carries a
                     # token IAM minted for whom the run acts for).
                     return await self._start_http_process_server(
                         server_id, config, env, expanded_args
@@ -641,7 +641,7 @@ class MCPLifecycleManager:
         """Start a server's command as a local HTTP process, reached at its url.
 
         Nothing is asked of it here: a server that opens what each request's
-        token says (Gmail, STUDIO W-02) answers nobody without one, so its
+        token says (Gmail, W-02) answers nobody without one, so its
         tools are listed by each run's own toolset
         (`google_workspace.toolset_for_the_run`), never by the process's.
         """
@@ -736,7 +736,7 @@ class MCPLifecycleManager:
         every turn after: Disaster Assessment's `earthdata` started 11 ms
         before the runtime's key was in its environment, its header expanded
         empty, and the deployment answered without its tools for hours
-        (STUDIO H-03, 2026-10-10). The turn that finds it stopped goes on
+        (H-03, 2026-10-10). The turn that finds it stopped goes on
         without it; the next one finds it running.
 
         Returns

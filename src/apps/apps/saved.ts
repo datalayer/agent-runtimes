@@ -4,7 +4,7 @@
  */
 
 /**
- * Approve and save (LOOP R-24): what an application wants to keep, shown
+ * Approve and save (R-24): what an application wants to keep, shown
  * before it is kept. The runtime asks every `save_to_space` call on the
  * approvals path with the title and the whole text; an approvals card shows
  * them, with *Approve and save* and *Decline* in place of *Approve* and

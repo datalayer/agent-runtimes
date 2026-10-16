@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's notifications go through the channels it names (LOOP R-37).
+"""An application's notifications go through the channels it names (R-37).
 
 When a rule or a Gate asks a person through the tool-approval path, the
 channels of the application's ``notifications`` are told — through ai-agents,

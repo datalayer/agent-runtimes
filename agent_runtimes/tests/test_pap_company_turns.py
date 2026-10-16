@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""An application that is a company personal agents work with (PAP_DATALAYER B-04).
+"""An application that is a company personal agents work with (B-04).
 
 Asked through the company service, a declared operation is proposed, never
 made; made only in the turn its confirmation was redeemed for, with the
@@ -199,7 +199,7 @@ ISSUER = "https://prod1.datalayer.run/api/iam/v1/pap/agents/01ERRAND"
 def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_granted() -> (
     None
 ):
-    # Found on r1, 13 October 2026 (AGENT_PROTOCOLS PR-13): never told, the business
+    # Found on r1, 13 October 2026 (PR-13): never told, the business
     # answered a person who had signed in and granted profile:read that nobody had.
     for_person = {
         "pact": {
@@ -229,7 +229,7 @@ def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_g
 
 
 def test_under_profile_read_a_business_is_told_the_persons_handle_and_name() -> None:
-    # Decided 2026-10-13 (AGENT_PROTOCOLS PR-13): profile:read tells a PACT business the
+    # Decided 2026-10-13 (PR-13): profile:read tells a PACT business the
     # person's handle and display name, as ai-agents sends them; never without that grant.
     profile = {"handle": "ada", "name": "Ada Lovelace"}
     granted = {

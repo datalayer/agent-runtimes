@@ -5,7 +5,7 @@
 
 /**
  * A public application in the element, for a visitor without an account
- * (STUDIO D-07, R-30).
+ * (D-07, R-30).
  *
  * `<datalayer-app app="…">` with no token names a public application. The
  * element reads what it is without anybody's credentials, as the landing's

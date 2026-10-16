@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """An assistant with tools — Chainlit's cookbook ``anthropic-functions-streaming``,
-rebuilt with LOOP's API (LOOP P-27).
+rebuilt with LOOP's API (P-27).
 
 Chainlit declares two tools to Claude — a hard-coded weather and a
 calculator — streams each answer, runs a tool in a ``tool`` step when the
@@ -13,7 +13,7 @@ Here: each tool is an ``@app.tool``, declared in the Appspec, its parameters
 from its typed arguments, and **decided by the application's rules** on
 every call (both only read); the agent loops, streams and keeps the history
 itself, and each call is a ``tool`` step of the conversation — in this
-process as on a runtime (LOOP P-33) — and an entry of the record. Nothing of
+process as on a runtime (P-33) — and an entry of the record. Nothing of
 Chainlit's loop is the developer's to write.
 """
 
@@ -30,7 +30,7 @@ app = Application(
     agent=AGENT,
     description="A helpful assistant with a weather and a calculator.",
     instructions="You are a helpful assistant. Use your tools for the weather and for arithmetic.",
-    # Its interface (AGENTIC_UI R8): the conversation.
+    # Its interface (R8): the conversation.
     ui=[{"plugin": "chat"}],
 )
 

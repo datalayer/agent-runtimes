@@ -11,7 +11,7 @@ implements of PAP on ``protocols.description`` and declares the one point the
 runtime adds between a company service and the application it asks:
 
 - ``pap.company.operationTickets``: where a perform turn's one-use ticket is
-  redeemed for the operation the person confirmed (PAP_DATALAYER B-04). The
+  redeemed for the operation the person confirmed (B-04). The
   default is Datalayer's company service (ai-agents); a local company
   (:class:`agent_runtimes.pap.PapCompanyCapability`) contributes its own
   tickets at a lower order on the runtime's platform.

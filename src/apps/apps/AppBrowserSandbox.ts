@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's code in the page's sandbox (STUDIO E-11): the tool its
+ * An application's code in the page's sandbox (E-11): the tool its
  * agent runs its code with when it turns in the page — `execute_code`,
  * Python in this browser — and its documents put there before its first run
  * (`browserSandbox`).

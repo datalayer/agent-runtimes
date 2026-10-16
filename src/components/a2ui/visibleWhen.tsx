@@ -121,12 +121,12 @@ export const datalayerCatalog = new Catalog<ReactComponentImplementation>(
 
 /**
  * Datalayer's catalog narrowed to the components named — what the enabled
- * plugins contribute as blocks (LOOP R-01b, `loop.canvas.block`), so that an
+ * plugins contribute as blocks (R-01b, `loop.canvas.block`), so that an
  * application's page draws what its Canvas can place and nothing else. Under
  * the same id; a name the catalog does not draw is an error.
  *
  * `own` are the renderers of the components the application's developer
- * wrote (LOOP P-17, `customImplementations`): drawn for that application's
+ * wrote (P-17, `customImplementations`): drawn for that application's
  * page alone, each behind `visible_when` as the catalog's are. One that
  * takes the name of a component of the catalog is an error.
  */
@@ -167,7 +167,7 @@ export function catalogOfBlocks(
 
 /**
  * Datalayer's whole catalog with the components an application's developer
- * wrote (LOOP P-17): what its answers and the elements its code shows are
+ * wrote (P-17): what its answers and the elements its code shows are
  * drawn with (P-04, P-18). Datalayer's catalog itself when it wrote none.
  */
 export function catalogWithOwn(

@@ -401,7 +401,7 @@ def build_capabilities_from_agent_spec(
             if isinstance(datalayer_overrides, dict):
                 override = datalayer_overrides.get("memory_agent_id")
                 # An application's memory: per person, shared as they allow
-                # (LOOP R-18, R-35, R-36).
+                # (R-18, R-35, R-36).
                 if datalayer_overrides.get("app_memory"):
                     app_memory_key = str(override or "").strip()
                     if not app_memory_key:

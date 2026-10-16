@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript of a scene (LOOP A-06): what happens in it, as lines, in
+ * The transcript of a scene (A-06): what happens in it, as lines, in
  * the order it happened — *Sales: …*, *Sales → Accounting: …*,
  * *Accounting → Odoo: odoo_accounting_aged_balance* — each with its time.
  *

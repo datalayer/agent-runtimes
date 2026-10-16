@@ -4,7 +4,7 @@
  */
 
 /**
- * `<datalayer-app>`'s attributes, read without a DOM (LOOP D-07, D-08,
+ * `<datalayer-app>`'s attributes, read without a DOM (D-07, D-08,
  * D-11, T-13): the four modes and the chat each floats in, what the host may
  * override and in what order, the snippet the *Ship* tab copies, and the
  * theme the element carries inside.

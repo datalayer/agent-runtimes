@@ -172,7 +172,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             mode="json", by_alias=True
         ):
             spec.pop("pap")
-        # PACT, commerce, signed fetch and A2A's extensions the same way (AGENT_PROTOCOLS PI-01, PR-02, EX-11).
+        # PACT, commerce, signed fetch and A2A's extensions the same way (PI-01, PR-02, EX-11).
         for block in ("pact", "commerce", "signed_fetch", "a2a"):
             if block in spec and spec[block] == type(getattr(app, block))().model_dump(
                 mode="json", by_alias=True
@@ -222,7 +222,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 if (signs := actions_module.server_tool_signs(server, name))
             },
         }
-    # The agent protocols' tools (AGENT_PROTOCOLS PR-54): by protocol, the
+    # The agent protocols' tools (PR-54): by protocol, the
     # connection prefix its connections take and what each tool can do.
     protocols = {
         identity: {
@@ -569,7 +569,7 @@ def _drop_nulls(value: Any) -> Any:
 
 
 def generate_schema_typescript_code() -> str:
-    """The Appspec's JSON Schema, for the editors of the page (LOOP S-01, S-02).
+    """The Appspec's JSON Schema, for the editors of the page (S-01, S-02).
 
     Taken from the agentspecs the catalogue is generated from, so that what
     an editor completes and explains is what the spec accepts.

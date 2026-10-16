@@ -4,7 +4,7 @@
  */
 
 /**
- * Scenes (agentspecs `scenes`, `schema: loop.scene/v1`, LOOP A-11): a team,
+ * Scenes (agentspecs `scenes`, `schema: loop.scene/v1`, A-11): a team,
  * staged. The team says who is on stage; the scene says what happens there —
  * the setting, the script, the stage directions, the audience, the rehearsal
  * and where it plays.
@@ -91,7 +91,7 @@ export type SceneAnswerKind =
   | 'map'
   | 'file'
   | 'image'
-  /** The sources it read, as cards that open (STUDIO H-02). */
+  /** The sources it read, as cards that open (H-02). */
   | 'sources'
   /** A choice as buttons that answer the application. */
   | 'choice'
@@ -191,7 +191,7 @@ export interface SceneRehearsalBeatSpec {
   within: string;
 }
 
-/** A transcript recorded once, played when the scene cannot play live (LOOP H-08). */
+/** A transcript recorded once, played when the scene cannot play live (H-08). */
 export interface SceneRecordingSpec {
   path: string;
   taken: string;
@@ -217,7 +217,7 @@ export interface ScenePlayedBeatSpec {
 
 /**
  * What came of the last rehearsal `loop scenes rehearse --cloud` played
- * (LOOP A-14): kept beside the specs in `<id>/rehearsal.json`, written by the
+ * (A-14): kept beside the specs in `<id>/rehearsal.json`, written by the
  * command and never by hand. A scene is *Live* when it `passed`; one that did
  * not says so with `says`.
  */
@@ -244,7 +244,7 @@ export interface SceneDeploymentSpec {
 }
 
 /** Specification for a scene: a team, staged. */
-/** Somebody on a scripted scene: a person, an application, a company (PAP_DATALAYER X-02). */
+/** Somebody on a scripted scene: a person, an application, a company (X-02). */
 export interface SceneActorSpec {
   id: string;
   /** The name the audience sees. */
@@ -296,7 +296,7 @@ export interface SceneSpec {
   version: string;
   /**
    * `team`: a team staged, live; `scripted`: actors and lines written out,
-   * played as written, with no team, cast or script (PAP_DATALAYER X-02).
+   * played as written, with no team, cast or script (X-02).
    */
   kind: 'team' | 'scripted';
   /** The tab's name. */

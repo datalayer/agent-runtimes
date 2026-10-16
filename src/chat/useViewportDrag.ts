@@ -28,7 +28,7 @@ export interface ViewportDragOptions {
   /**
    * Keep the whole box inside the viewport, not only a margin of it: the
    * floating assistant's character, whose balloon and conversation open
-   * from where it stands (LOOP T-23).
+   * from where it stands (T-23).
    */
   whole?: boolean;
 }

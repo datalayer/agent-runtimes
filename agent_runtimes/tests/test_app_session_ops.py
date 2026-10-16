@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """What a session says to its page besides its messages, as ``reactor.ui``
-ops on its ui socket (REACTOR_UI RU-3, RU-W): a message's author (``meta``),
+ops on its ui socket (RU-3, RU-W): a message's author (``meta``),
 a message removed (``remove``), a step (a display, shown as it starts and
 ends, its output patched in as it streams), an element in a side panel or on
 a page (a display that says where it shows, a ``remove`` closing it), and a
@@ -140,6 +140,6 @@ async def test_the_session_says_steps_elements_authors_and_windows_as_ops() -> N
 
 
 def test_no_loop_step_element_message_or_window_name_is_left() -> None:
-    """The readers' and the producers' old names are gone (REACTOR_UI RU-3)."""
+    """The readers' and the producers' old names are gone (RU-3)."""
     for name in ("LOOP_MESSAGE", "LOOP_STEP", "LOOP_ELEMENT", "LOOP_WINDOW", "step_of"):
         assert not hasattr(sessions, name), name

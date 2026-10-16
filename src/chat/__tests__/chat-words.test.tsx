@@ -4,7 +4,7 @@
  */
 
 /**
- * The chat's own words in the person's language (LOOP P-26): a French page
+ * The chat's own words in the person's language (P-26): a French page
  * reads a French chat — its send button, its tool cards and lines, its
  * approvals, its balloon — a host's language wins over the browser's, and a
  * language the chat is not said in reads English.

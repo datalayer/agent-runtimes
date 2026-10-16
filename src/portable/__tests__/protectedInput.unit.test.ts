@@ -4,7 +4,7 @@
  */
 
 /**
- * A mediated sign-in's form (MOBILE M-039): read with the page's one-use
+ * A mediated sign-in's form (M-039): read with the page's one-use
  * ticket, sent once, nothing typed in an error.
  *
  * @module portable/__tests__/protectedInput

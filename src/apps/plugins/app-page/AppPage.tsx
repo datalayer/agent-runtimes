@@ -8,16 +8,16 @@
  * the workspace's own renderer (`InlineSurface`), fed by the chat's current
  * turn and its conversation, its buttons — and a Chat block's message, a File
  * upload's files — answered through the chat's controls, what the page did
- * going with the chat's run to the application's session (LOOP R-04).
+ * going with the chat's run to the application's session (R-04).
  *
  * It draws the blocks the workspace's plugins contribute to the Canvas's
  * palette (`loop.canvas.block`, R-01b) and nothing else, so that what the
  * Canvas can place and what the page can draw are one list: a page that
  * uses a block no enabled plugin contributes says so, in place of the page.
- * The components its developer wrote (LOOP P-17) are among them, contributed
+ * The components its developer wrote (P-17) are among them, contributed
  * by its own plugin (`app-components`) with their renderers.
  *
- * A widget's page written in its code (LOOP P-05) runs in a session of its
+ * A widget's page written in its code (P-05) runs in a session of its
  * own, beside the conversation: as an input changes, the page sends them all
  * to the session's `page` action and shows what its code answered at
  * `/outputs/<name>`, in place — no message is sent (`./pageRun`).

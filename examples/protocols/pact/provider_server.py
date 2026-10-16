@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Example Air served on localhost, for a personal agent in another language (AGENT_PROTOCOLS EX-06).
+"""Example Air served on localhost, for a personal agent in another language (EX-06).
 
 The Provider of ``personal_agent.py`` (``agent_runtimes.protocols.pact.provider``)
 over real HTTP, so the TypeScript personal agent (``src/protocols/pact``) talks

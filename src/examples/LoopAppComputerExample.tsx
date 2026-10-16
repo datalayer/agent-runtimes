@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's computer, beside its page (LOOP R-23).
+ * An application's computer, beside its page (R-23).
  *
  * An application whose browse, files and shell are on, drawn as the Studio's Preview
  * draws it — `AppRenderer` with its `sidebar` — on the Local target: its

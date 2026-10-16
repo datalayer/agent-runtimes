@@ -45,7 +45,7 @@ app = Application(
     ),
 )
 
-# The company role (`pap.company`, the typed builder of PAP_DATALAYER S-04).
+# The company role (`pap.company`, the typed builder of S-04).
 app.as_company(
     # A personal agent may ask before the person signs in.
     signed_out=True,

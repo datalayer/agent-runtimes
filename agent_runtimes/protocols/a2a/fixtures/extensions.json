@@ -1,5 +1,5 @@
 {
-  "description": "An A2A Agent Card's extensions (capabilities.extensions) and what both languages read of it: extensions_of / extensionsOf, find_extension / findExtension, unsupported_required / unsupportedRequired; and cards both refuse (AGENT_PROTOCOLS PR-02, PR-51, EX-09).",
+  "description": "An A2A Agent Card's extensions (capabilities.extensions) and what both languages read of it: extensions_of / extensionsOf, find_extension / findExtension, unsupported_required / unsupportedRequired; and cards both refuse (PR-02, PR-51, EX-09).",
   "card": {
     "name": "Example Shop",
     "capabilities": {

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Approve and save: a result an application keeps, written as a page of a Space (LOOP R-24).
+"""Approve and save: a result an application keeps, written as a page of a Space (R-24).
 
 An application whose Appspec grants it a Space to write (`permissions.spaces`,
 ``access: write``) is given one tool, ``save_to_space``: a title and the text
@@ -22,11 +22,11 @@ it wants to keep, in markdown. Nothing is written before a person saw it:
   one; a retry after a failure, by the model or by the person, keeps one page.
 
 It writes with the token of the run: a deployment's application principal,
-which the Space was shared with when it was deployed (LOOP I-13); a
+which the Space was shared with when it was deployed (I-13); a
 Preview's person. A visitor without an account only reads (R-30): the call is
 refused before anybody is asked.
 
-**What it writes says who wrote it** (LOOP I-10). The page ends with its
+**What it writes says who wrote it** (I-10). The page ends with its
 byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on its
 own.* when nobody opened the session (R-16) — and the document's metadata
 names the application (its id, uid, name and face), its deployment, the
@@ -63,7 +63,7 @@ APPROVE_AND_SAVE = "approve_and_save"
 
 #: Why a save is not asked: the Space it names is not granted to write, and
 #: the tool refuses it by itself — nobody is asked to approve what cannot be
-#: written (LOOP R-25).
+#: written (R-25).
 SPACE_NOT_GRANTED = "space_not_granted"
 
 #: The longest text saved, in characters: all of it is shown before it is.
@@ -166,7 +166,7 @@ def authorship(
 
 
 def signature(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
-    """Who wrote it, in a sentence (LOOP I-10): its face and name, and *on its
+    """Who wrote it, in a sentence (I-10): its face and name, and *on its
     own* when nobody was there — or the person it wrote for, by name, when it
     is known (the user the host's server signed, D-21, or who opened it).
     """

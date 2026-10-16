@@ -62,7 +62,7 @@ export type A2ASpansOptions = {
    * Who presses the buttons of what the peer shows: a request carrying a
    * pressed button's action (`loop.action` in its message's metadata) is
    * theirs, not the asker's — the person (`You`) on a page that draws the
-   * surfaces (STUDIO H-02). Unsaid, every request is the asker's.
+   * surfaces (H-02). Unsaid, every request is the asker's.
    */
   pressedBy?: string;
 };
@@ -313,7 +313,7 @@ class ResponseRecorder {
     // An `append` chunk adds to what came; one that is not says the artifact
     // whole — the runtime's last chunk carries the whole answer again. Added
     // to it, an answer said in one chunk (a visitor's refusal) was written
-    // twice in the transcript (STUDIO H-03, 2026-10-10).
+    // twice in the transcript (H-03, 2026-10-10).
     chunk.text = update.append ? chunk.text + text : text;
     chunk.events.push(message);
     if (update.append && !update.lastChunk) {

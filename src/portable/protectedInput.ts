@@ -4,7 +4,7 @@
  */
 
 /**
- * Mediated sign-in (PAP_DATALAYER P-03, MOBILE M-039): a personal agent signs
+ * Mediated sign-in (P-03, M-039): a personal agent signs
  * the person in at a company that asks for what only the person knows — a
  * name and a password, or a code the company sent them. The person types it
  * on a page of their own Datalayer client, signed in to Datalayer; it goes

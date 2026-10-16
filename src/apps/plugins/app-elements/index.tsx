@@ -5,13 +5,13 @@
 
 /**
  * `app-elements` — what an application's code opens beside the
- * conversation (LOOP P-18): `session.show(..., where="panel")` a side panel,
+ * conversation (P-18): `session.show(..., where="panel")` a side panel,
  * `where="page"` a page of its own over the workspace, each closed by the
  * code (`session.close`) or by the person. Inline, an element is a message,
  * which the chat draws (P-04); this plugin draws the other two.
  *
  * The chat keeps what is open (`chat/base/loopElement`), from the session's
- * ui socket (REACTOR_UI RU-3, RU-W); this plugin draws it from the
+ * ui socket (RU-3, RU-W); this plugin draws it from the
  * workspace's root slot, positioned against the workspace, so that nothing
  * is laid out while nothing is open. It also contributes the renderer of
  * what the code asks (`QuestionView`, RU-4), drawn under the message that

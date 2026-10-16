@@ -189,7 +189,7 @@ async def test_an_orchestrator_delegates_to_two_harness_workers_and_gets_their_d
     home = tmp_path_factory.mktemp("shield-home")
     import subprocess
 
-    # The Shield's policy beside the work: decision 5's default, as `setup` writes it.
+    # The Shield's policy beside the work: the platform's default, as `setup` writes it.
     subprocess.run(
         [shield, "policy", "init", str(review_space / "agent-shield.yaml")],
         check=True,

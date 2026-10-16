@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A notebook's panel as the ACP client of a shielded harness (SHIELD SH-49).
+"""A notebook's panel as the ACP client of a shielded harness (SH-49).
 
 A browser opens a websocket with no header of its own, so the panel says who
 it is in a message — ``authenticate`` with methodId ``bearer`` and the

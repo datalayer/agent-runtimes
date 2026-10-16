@@ -1,5 +1,5 @@
 {
-  "description": "Every Reactor contribution point of this protocol's plugin, in both languages (AGENT_PROTOCOLS \u00a73.1). test_protocols_reactor_points.py and src/protocols/reactorPoints.unit.test.ts hold each language to this file. A point whose `extension` is true is an extension the protocol defines; its contributions are implementations of it. `default` is the contribution id of the plugin's own default (order 100), null when a host must contribute one. `resolution` is `single` (the lowest order answers; two at the same order fail closed) or `all` (every contribution is used).",
+  "description": "Every Reactor contribution point of this protocol's plugin, in both languages test_protocols_reactor_points.py and src/protocols/reactorPoints.unit.test.ts hold each language to this file. A point whose `extension` is true is an extension the protocol defines; its contributions are implementations of it. `default` is the contribution id of the plugin's own default (order 100), null when a host must contribute one. `resolution` is `single` (the lowest order answers; two at the same order fail closed) or `all` (every contribution is used).",
   "plugin": {
     "python": "agent-runtimes.protocols.pap",
     "typescript": "@datalayer/agent-runtimes/protocols/pap"
@@ -20,7 +20,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "Python only: a runtime's perform turn redeems its ticket here (PAP_DATALAYER B-04). Datalayer's company service by default; a local PapCompanyCapability contributes its own tickets. A TypeScript runtime performs no company operation, so the point is not declared there."
+      "note": "Python only: a runtime's perform turn redeems its ticket here (B-04). Datalayer's company service by default; a local PapCompanyCapability contributes its own tickets. A TypeScript runtime performs no company operation, so the point is not declared there."
     }
   ],
   "sdk": "PAP's own points (pap.*, pap.company.*) are the SDK's plugins', listed in personal-agent-protocol's protocol/reactor-points.json; they are registered on the PAP Reactor each personal agent or company builds."

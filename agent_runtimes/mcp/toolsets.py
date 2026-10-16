@@ -146,7 +146,7 @@ def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
 
     Returns:
         List of dicts with toolset info (type, id, command/url)
-        Note: a credential in its args is withheld whole (LOOP R-19).
+        Note: a credential in its args is withheld whole (R-19).
     """
     manager = get_mcp_lifecycle_manager()
     info = []
@@ -160,7 +160,7 @@ def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
         if hasattr(server, "command"):
             server_info["command"] = server.command
         if hasattr(server, "args"):
-            # A credential is withheld whole, never a part of it (LOOP R-19):
+            # A credential is withheld whole, never a part of it (R-19):
             # a secret the runtime holds, what looks like one, and any long
             # string, likely a token or a cookie.
             from agent_runtimes.guardrails.credentials import WITHHELD, redact

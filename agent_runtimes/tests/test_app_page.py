@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A widget's page written in its code (LOOP P-05): ``@app.page``, its inputs
+"""A widget's page written in its code (P-05): ``@app.page``, its inputs
 and outputs declared as values, run again as an input changes.
 """
 

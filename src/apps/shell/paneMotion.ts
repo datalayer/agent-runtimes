@@ -4,7 +4,7 @@
  */
 
 /**
- * A pane opening, at the theme's pace (LOOP T-10): the third of the three
+ * A pane opening, at the theme's pace (T-10): the third of the three
  * things that move — a message arriving, a status changing, a pane opening.
  *
  * Read from the theme's tokens, `--theme-motion-pane` and

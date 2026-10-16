@@ -50,7 +50,7 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
-      # The build makes the `<datalayer-app>` embed too (STUDIO D-08), as the
+      # The build makes the `<datalayer-app>` embed too (D-08), as the
       # release does: it prints every file's size and fails over the initial
       # load's budget (vite.embed.config.ts), so a pull request sees what it costs.
       - name: Check the embed bundle

@@ -347,7 +347,7 @@ class RecordsContract:
     async def test_two_attempts_at_one_artifact_are_one_record_with_two_provenances(
         self,
     ) -> None:
-        """Conformance scenario 13 in miniature (decision 4).
+        """Conformance scenario 13 in miniature.
 
         Nothing is overwritten and nothing is dropped: the second attempt's
         provenance is kept, and the committed version stays committed.

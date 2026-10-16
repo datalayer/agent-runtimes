@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Only the secrets its specs declare reach a runtime (LOOP R-19, decided 2026-10-07).
+"""Only the secrets its specs declare reach a runtime (R-19, decided 2026-10-07).
 
 A runtime is no longer given the account's whole set of secrets. What it is
 given is what the specs it is configured from **declare**, read off them:

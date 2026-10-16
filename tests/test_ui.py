@@ -29,7 +29,7 @@ def test_an_agent_spec_names_its_ui_and_an_older_key_is_refused() -> None:
         Agentspec.model_validate({**base, "ui": "a2ui"}).model_dump(by_alias=True)["ui"]
         == "a2ui"
     )
-    # `ui_plugin` (and the UI extension before it) is `ui` (AGENT_PROTOCOLS PS-03): never read.
+    # `ui_plugin` (and the UI extension before it) is `ui` (PS-03): never read.
     for old in ("ui_plugin", "uiPlugin", "ui_extension", "uiExtension"):
         with pytest.raises(ValidationError, match="says `ui`"):
             Agentspec.model_validate({**base, old: "a2ui"})

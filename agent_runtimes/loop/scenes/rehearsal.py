@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene's rehearsal: each beat played and compared to its expected shape (LOOP A-14).
+"""A scene's rehearsal: each beat played and compared to its expected shape (A-14).
 
 A scene spec's ``rehearsal`` says, per beat, the shape its transcript must
 take (``lines``, in the transcript's own grammar: *You → Sales*, *Accounting

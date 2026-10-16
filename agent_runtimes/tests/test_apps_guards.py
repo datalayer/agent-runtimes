@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's checks, executed (LOOP R-06): built-ins, Guards and Gates."""
+"""An application's checks, executed (R-06): built-ins, Guards and Gates."""
 
 import json
 from typing import Any

@@ -4,7 +4,7 @@
  */
 
 /**
- * The sign-in card as a display (REACTOR_UI RU-1), drawn as the chat draws it.
+ * The sign-in card as a display (RU-1), drawn as the chat draws it.
  *
  * A tool that starts a sign-in answers with a `PapSignIn` display
  * (`application/vnd.datalayer.pap.sign-in+json`). Agent Runtimes gives the

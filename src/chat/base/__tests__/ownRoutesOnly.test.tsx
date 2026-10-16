@@ -5,7 +5,7 @@
 
 /**
  * A chat whose runtime answers only the application's own routes
- * (OwnRoutesOnly, PAP_DATALAYER's release gates, round 19) — a deployment's,
+ * (OwnRoutesOnly, the release gates, round 19) — a deployment's,
  * kept always on or launched by its hosted page, or the visitors' — opens
  * neither the monitoring stream (`/tool-approvals/ws`: an application's
  * session asks its approvals in the conversation, over its ui socket) nor

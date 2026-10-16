@@ -495,7 +495,7 @@ def main_callback(
             chat_args.append("--no-codemode")
         if suggestions:
             chat_args.extend(["--suggestions", suggestions])
-        # Where the agent runs (LOOP L-01, L-02, L-06).
+        # Where the agent runs (L-01, L-02, L-06).
         if local:
             chat_args.append("--local")
         if cloud:

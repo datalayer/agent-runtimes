@@ -185,7 +185,7 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
-  /** Commands listed while `/` is typed, before the prompt's own (LOOP P-19). Lexical only. */
+  /** Commands listed while `/` is typed, before the prompt's own (P-19). Lexical only. */
   promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this page loaded, oldest first.

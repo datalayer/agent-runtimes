@@ -276,7 +276,7 @@ export class DevelopmentCredentials<P> implements HostCredentials<P> {
   }
 }
 
-/** One of an application's starters (SLACK S-104): the words shown, and the message it suggests asking. */
+/** One of an application's starters (S-104): the words shown, and the message it suggests asking. */
 export type Starter = Readonly<{ label: string; message: string }>;
 
 /** Where an application's starters are read, as one linked person of one installation. */
@@ -294,7 +294,7 @@ const currentAppSchema = z.object({
 });
 
 /**
- * An application's starters (SLACK S-104), read from its runtime as the
+ * An application's starters (S-104), read from its runtime as the
  * linked person: the host credential exchange (no place: what is suggested
  * is private to them), then `GET /api/v1/apps/current` beside the session
  * API it answers. A runtime that does not answer starters is refused.

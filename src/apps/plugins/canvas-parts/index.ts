@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent's toolbox, contributed (LOOP C-20): one plugin per source of
+ * The agent's toolbox, contributed (C-20): one plugin per source of
  * parts — the servers of the catalogue a connection reaches, its skills, its
  * models, and the rules, tests and events an agent answers to — each
  * contributing to `loop.canvas.part`. The toolbox is what the enabled
@@ -74,7 +74,7 @@ const partsPlugin = (
   });
 
 /**
- * The catalogue's harnesses as the agent (SHIELD SH-43): each harness an
+ * The catalogue's harnesses as the agent (SH-43): each harness an
  * agent program over ACP behind the Shield, offered by the catalogue agent
  * that runs on it — dropped on the surface, it is the application's agent.
  * A harness no agent of the catalogue runs yet is offered off, and says so;
@@ -250,7 +250,7 @@ export const EVENT_PARTS: CanvasPartContribution[] = [
   },
 ];
 
-/** Each protocol of the catalogue (AGENT_PROTOCOLS PS-04): a planned one offered, not enabled. */
+/** Each protocol of the catalogue (PS-04): a planned one offered, not enabled. */
 export const PROTOCOL_PARTS: CanvasPartContribution[] = listProtocolSpecs().map(
   protocol => ({
     id: `protocol:${protocol.id}`,
@@ -263,7 +263,7 @@ export const PROTOCOL_PARTS: CanvasPartContribution[] = listProtocolSpecs().map(
 );
 
 /**
- * Each UI plugin of the catalogue (AGENTIC_UI R8): a part of the agent's
+ * Each UI plugin of the catalogue (R8): a part of the agent's
  * interface, dropped on it, then exposed through a renderer it may be.
  */
 export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
@@ -276,7 +276,7 @@ export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
   enabled: true,
 }));
 
-/** Datalayer's characters for its floating assistant, dropped on the agent (AGENT_PROTOCOLS PS-05). */
+/** Datalayer's characters for its floating assistant, dropped on the agent (PS-05). */
 export const CHARACTER_PARTS: CanvasPartContribution[] =
   ASSISTANT_CHARACTERS.map(character => ({
     id: `character:${character.id}`,

@@ -139,7 +139,7 @@ def _convert_to_chat_messages(
                     )
                 elif part_kind == "tool-return":
                     # Tool return - create a tool message. A result that
-                    # carried a display (REACTOR_UI RU-1) reaches the page as
+                    # carried a display (RU-1) reaches the page as
                     # it did live: the model view with the display in `_meta`.
                     display = part.get("display")
                     if display is not None:

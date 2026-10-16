@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Commands, modes and profiles in the composer (LOOP P-19, P-20).
+"""Commands, modes and profiles in the composer (P-19, P-20).
 
 An application declares slash commands (``interface.commands``) and mode
 switches (``interface.modes``). The page lists the commands when ``/`` is
@@ -38,7 +38,7 @@ def command_prompt(command: AppCommandSpec, words: str = "") -> str:
 @dataclass(frozen=True)
 class ReactorCommandRun:
     """What answers a command of the composer that runs a Reactor command
-    (LOOP P-35): ``app.command(name, description, run=<command id>)``.
+    (P-35): ``app.command(name, description, run=<command id>)``.
 
     Called as any command its code answers, ``(session, words)``: the
     command runs on the session's platform with the words typed after it,
@@ -131,7 +131,7 @@ def mode_effect(app: AppSpec, chosen: Optional[Mapping[str, Any]] = None) -> Mod
 def profile_choice(
     app: AppSpec, chosen: Optional[str] = None
 ) -> Optional[AppProfileSpec]:
-    """The profile a conversation is with (LOOP P-20): the one chosen, else the
+    """The profile a conversation is with (P-20): the one chosen, else the
     first; None for an application without profiles.
 
     Raises

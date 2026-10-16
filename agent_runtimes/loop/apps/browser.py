@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The browser of an application's computer (LOOP R-23).
+"""The browser of an application's computer (R-23).
 
 When its permissions turn *browse* on, its agent opens pages in a headless
 Chromium that runs in the runtime's own container — the image installs the

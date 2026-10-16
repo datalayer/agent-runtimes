@@ -5,7 +5,7 @@
 
 /**
  * The runtime routes a page calls besides an application's own, and when it
- * does not (PAP_DATALAYER's release gates, decided 14 October 2026).
+ * does not (the release gates, decided 14 October 2026).
  *
  * A runtime that serves a deployment — kept always on, or launched by its
  * hosted page — and the visitors' runtime answer only the application's own

@@ -8,7 +8,7 @@ title: MCP and A2A, what is implemented
 The two transport protocols an agent uses with the world, as agent-runtimes
 implements them today, in both languages, as a client and as a server; and
 the gaps against their latest specifications. Inventory taken on 2026-10-12
-from the code (AGENT_PROTOCOLS PR-01); it moves with the change that moves a
+from the code (PR-01); it moves with the change that moves a
 row.
 
 ## Versions
@@ -75,7 +75,7 @@ both languages.
 | Security | bearer | the card's Bearer scheme; an application's route gated (`loop/apps/a2a.py`); signed requests verified (Web Bot Auth) | bearer |
 | Extensions | the orchestration extension's routes | `A2A-Extensions` negotiated, required extensions checked; card extensions from the A2A plugin's points and the Appspec ([Agent protocols](./agent-protocols#a2a-card-extensions)) | `A2A-Extensions` header |
 
-### A harness over A2A (SHIELD SH-15)
+### A harness over A2A (SH-15)
 
 An application whose agent is a [harness](../harnesses/transports#a2a-sh-15--built)
 (Claude Code, Codex, any ACP agent) is served by the same worker, plus: its

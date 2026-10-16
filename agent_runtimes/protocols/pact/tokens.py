@@ -1,8 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT's JWTs: the personal-agent JWT signed by the host's key (§3.2), and the checks
-a Provider makes of it and of a delegation token (§5.4, §5.5).
+"""PACT's JWTs: the personal-agent JWT signed by the host's key, and the checks
+a Provider makes of it and of a delegation token.
 
 The personal agent never holds a key: the JWT is signed by an
 :class:`~agent_runtimes.protocols.web_bot_auth.HttpSigner` whose algorithm is
@@ -18,7 +18,7 @@ import time
 import uuid
 from typing import Any, Mapping
 
-#: The claims a personal-agent JWT lives at most, and the skew a Provider allows (§3.2).
+#: The claims a personal-agent JWT lives at most, and the skew a Provider allows.
 MAX_LIFETIME = 300
 LIFETIME = 120
 CLOCK_SKEW = 30
@@ -83,7 +83,7 @@ def verify_personal_agent_jwt(
     jwks: Mapping[str, Any],
     now: int | None = None,
 ) -> dict[str, Any]:
-    """A Provider's check of a personal-agent JWT (§3.2); :class:`PermissionError` when it fails."""
+    """A Provider's check of a personal-agent JWT; :class:`PermissionError` when it fails."""
     import jwt
 
     try:
@@ -117,7 +117,7 @@ def verify_delegation_token(
     client_id: str,
     jwks: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """A delegation token's checks (§5.4, §5.5): signature, ``aud``, ``exp``, ``client_id``."""
+    """A delegation token's checks: signature, ``aud``, ``exp``, ``client_id``."""
     import jwt
 
     try:
@@ -150,7 +150,7 @@ def verify_delegation_token(
 def verify_receipt(
     receipt: Mapping[str, Any], *, jwks: Mapping[str, Any]
 ) -> dict[str, Any]:
-    """A receipt's JWS checked against the Provider's keys, its claims the ones signed (§5.6)."""
+    """A receipt's JWS checked against the Provider's keys, its claims the ones signed."""
     import jwt
 
     jws = receipt.get("jws")

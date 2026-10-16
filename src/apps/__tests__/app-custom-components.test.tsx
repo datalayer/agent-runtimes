@@ -4,7 +4,7 @@
  */
 
 /**
- * Components a developer writes (LOOP P-17): declared in the Appspec,
+ * Components a developer writes (P-17): declared in the Appspec,
  * reviewed as agentspecs reviews them, listed with the catalog for that
  * application alone, contributed by its own plugin, and drawn in a sandboxed
  * frame of no origin — its module fetched without credentials and checked

@@ -4,7 +4,7 @@
  */
 
 /**
- * The composer's toolbar, as a screen reader meets it (LOOP H-21): every
+ * The composer's toolbar, as a screen reader meets it (H-21): every
  * control named by what it is, none named for having nothing to offer — the
  * MCP and skills dots are not drawn when the agent has neither — and the
  * dots that pulse stand still under reduced motion.

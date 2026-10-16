@@ -39,7 +39,7 @@ import pytest  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Each test starts with the sessions' ui hub empty (REACTOR_UI RU-W).
+    """Each test starts with the sessions' ui hub empty (RU-W).
 
     The hub numbers and keeps each session's ops for the page's socket; a
     test reading them must not read another test's under the same uid.
@@ -149,7 +149,7 @@ def _ai_inference_not_asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _ai_agents_not_asked_for_previews() -> Iterator[None]:
-    """No test asks the real ai-agents for a Preview's token (LOOP R-25).
+    """No test asks the real ai-agents for a Preview's token (R-25).
 
     A Preview a person opens runs with their token narrowed to the Spaces its
     application is granted, asked of ai-agents; without this, a test opening
@@ -186,7 +186,7 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _ai_agents_not_asked_for_code() -> Iterator[None]:
-    """No test asks the real ai-agents for a deployment's code (LOOP R-14).
+    """No test asks the real ai-agents for a deployment's code (R-14).
 
     The agent of a deployment is made with the code of the version it runs,
     read from ai-agents (`GET /apps/deployments/{uid}/code`); without this, a

@@ -45,7 +45,7 @@ export const SIDEBAR_WIDTH = 420;
  * The generic graph plugin, which the loop's own adapter wraps: by its name
  * (`GraphPlugin.name`), not its module — importing `@datalayer/reactor-graph`
  * for a string would bring ECharts to every workspace with this panel, and
- * to every one built by the preset, embedded applications too (STUDIO D-08).
+ * to every one built by the preset, embedded applications too (D-08).
  * `plugins-panel.test` holds it to the plugin's own name.
  */
 export const REACTOR_GRAPH_PLUGIN_NAME = '@datalayer/reactor-graph';

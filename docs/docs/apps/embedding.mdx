@@ -82,7 +82,7 @@ The element looks in three places and uses the first one it finds:
    page in an iframe that sizes itself to the page and raises `decision` and
    `token-expired` events on the element. A chat, widget or worker read with
    its token is drawn on the page.
-4. **A public application, without a token** (LOOP D-07): `app` names an
+4. **A public application, without a token** (D-07): `app` names an
    example Datalayer keeps warm for visitors (`web-research`,
    `customer-interview`) or an application at its address
    (`app="demo-accounting"`) that its owner lets anybody open. The element
@@ -190,7 +190,7 @@ apply.
   application's rules on every tool call. It needs a visitor Datalayer
   knows: the launch uses the signed-in user's credentials. A floating mode
   says so to a visitor who is not signed in, and launches nothing.
-- **On the visitors' runtime** (a public `app` with no token, LOOP D-07,
+- **On the visitors' runtime** (a public `app` with no token, D-07,
   R-30): nothing is launched; the runtime kept warm beside ai-agents answers
   a visitor's token for the application, in every mode. `AppEmbed` takes it
   as `visitors` (`{ url, app, inferenceUrl }`, the renderer's
@@ -228,19 +228,19 @@ its spend limit. The element reads the application with the token and raises
 - The app embed token is issued by Spacer on prod1 (naming its deployment
   since 15 October 2026).
 - The token reads the application, asks a decision's typed questions, and
-  **runs a session of its deployment** (LOOP R-20): on the host's own
+  **runs a session of its deployment** (R-20): on the host's own
   agent-runtimes server (`server`), the element hands the visit's token to
   the conversation, and the server lets it into a live embedded deployment
   of that application only — as its principal, each visit apart, only
   reading (see [An embed's visitor](./session-api.mdx#an-embeds-visitor)).
   It never launches a Datalayer runtime: a runtime is launched with a
-  person's credentials, and one kept by each deployment waits (LOOP R-33).
+  person's credentials, and one kept by each deployment waits (R-33).
   Without a `server`, a **private** chat, widget or worker runs embedded
   only for a visitor signed in to Datalayer; for any other visitor, the
   element says why it cannot run, and launches nothing. A **public** one
-  runs for any visitor on the visitors' runtime (LOOP D-07, above).
+  runs for any visitor on the visitors' runtime (D-07, above).
 - Allowed origins per deployment (`deployment.embedded.origins`) are not yet
-  enforced on the server (LOOP D-12).
+  enforced on the server (D-12).
 
 ## After a reload
 
@@ -346,13 +346,13 @@ const chosen = embedAssistantCharacter(appspec);
 ## The page and the application, talking
 
 An embedded application can read what the page passes it, call functions of
-the page, and tell the page what it did (LOOP D-10). What it may read and
+the page, and tell the page what it did (D-10). What it may read and
 call is named in its Appspec, under `deployment.embedded.host`, and each is
 a tool its agent calls — `host_context` for the values, `host_<name>` for a
 function — decided by the rule that names it, as any tool of the
 application is.
 
-Underneath, the page is a Reactor plugin of its own (REACTOR_UI RU-7,
+Underneath, the page is a Reactor plugin of its own (RU-7,
 `hostPlugin`): each function is a **command** of it, `host.<name>`
 (`host.context` for the values), and its **agent tools** bundle (`host`)
 names them for the agent as `host_<name>` and `host_context`. The chat turns
@@ -432,7 +432,7 @@ In React, `AppEmbed` takes the same as `host`:
 What the page passes as `user` is a claim: anybody's page can say anything,
 and so can anybody who opens the browser's console on it. An application
 that acts in each of your users' names, or shows data that is theirs, takes
-only a user **your server** signed (LOOP D-21):
+only a user **your server** signed (D-21):
 
 ```yaml
 deployment:
@@ -511,7 +511,7 @@ not end the conversation, and a new one goes with the next session.
 ### Window messages
 
 An application written in Python also talks to the page outside the
-conversation, with **window messages** (LOOP P-25):
+conversation, with **window messages** (P-25):
 
 - **Out.** Its code's `await session.send_window_message(data)` — anything
   JSON writes — is raised on the element as `window-message`
@@ -568,7 +568,7 @@ against a runtime (see *Not done yet*).
 
 ### One suite, two mounts
 
-The embed and the hosted page pass the same end-to-end suite (LOOP D-15):
+The embed and the hosted page pass the same end-to-end suite (D-15):
 `e2e/mounts.spec.ts`, run with `npm run test:e2e` in the system Chrome, one
 page at a time. Its two mounts are the landing's hosted page of an address
 (`/apps/<slug>`) and the element on the host page above, each running the

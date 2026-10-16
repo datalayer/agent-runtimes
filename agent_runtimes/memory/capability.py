@@ -69,7 +69,7 @@ class MemoryCapability(AbstractCapability[Any]):
         When given, asked at each run and each tool call why nothing may be
         read from memory or written to it, in a sentence the tools answer;
         '' when it may — an application's memory in a conversation of a
-        visitor who is not signed in (LOOP R-18, R-36).
+        visitor who is not signed in (R-18, R-36).
     """
 
     backend: BaseMemoryBackend = field(default_factory=EphemeralMemory)

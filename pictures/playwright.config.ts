@@ -4,7 +4,7 @@
  */
 
 /**
- * Pictures as tests (LOOP T-16): the four reference screens in every theme
+ * Pictures as tests (T-16): the four reference screens in every theme
  * and mode, and the floating assistant's states, captured headless in the
  * system Chrome and compared with the baselines in `pictures/baselines/`.
  *

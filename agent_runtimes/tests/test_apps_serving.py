@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps run --web` (LOOP P-08): an application served on this machine in
+"""`loop apps run --web` (P-08): an application served on this machine in
 the embed's page, and built again when its file changes — the page told to
 reload, or why the change was refused while the application runs on as it was.
 """

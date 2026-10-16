@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Threads (LOOP P-24): what an application's code names its conversation —
+"""Threads (P-24): what an application's code names its conversation —
 ``session.title``, ``session.tags``, ``session.metadata`` — kept as a
 ``thread`` entry of its record; ``@app.feedback`` hearing a person's word on
 an answer; and a person's threads and a thread's feedback read from

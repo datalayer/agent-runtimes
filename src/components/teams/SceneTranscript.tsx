@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript of a scene, drawn (LOOP A-06): the lines
+ * The transcript of a scene, drawn (A-06): the lines
  * {@link transcriptOfSpans} or {@link transcriptOfRecord} built, each with
  * its time, who speaks or acts and to whom, and the words or the tool —
  * and *Copy as text*, which copies them with their times

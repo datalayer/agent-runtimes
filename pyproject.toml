@@ -25,10 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    # An application is a Reactor plugin on a PluginPlatform (LOOP P-35):
+    # An application is a Reactor plugin on a PluginPlatform (P-35):
     # its contributions, its extension, its commands and routes.
     # `reactor.ui` (1.1.0): a tool's display, its model view for the model and
-    # its wire for the page (REACTOR_UI RU-1); 1.1.1 (unreleased): the ui
+    # its wire for the page (RU-1); 1.1.1 (unreleased): the ui
     # channel's WebSocket, `reactor.ui.ws` (RU-W).
     "datalayer_reactor>=1.3.0",
     # PAP is a runtime protocol capability, not an example-only dependency.
@@ -38,20 +38,20 @@ dependencies = [
     # display, read back here for its model view (the `ui` extra).
     # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
     # tested against (Sessions, Device Sign-In, conversations, Operations,
-    # the reference company of PapCompanyCapability; AGENT_PROTOCOLS PR-03).
+    # the reference company of PapCompanyCapability; PR-03).
     "personal-agent-protocol[ui]>=0.24.0,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
-    # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
-    # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
-    # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SHIELD SH-50).
-    # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SHIELD SH-60).
-    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SHIELD SH-74).
+    # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
+    # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
+    # An Appspec's `a2a` extensions (PR-02): an older one refuses the field.
+    # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SH-50).
+    # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SH-60).
+    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
     # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
-    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VOICE VO-16).
+    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
     "agentspecs>=0.0.110",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
@@ -63,7 +63,7 @@ dependencies = [
     # even a patch bump, hence the one-release-wide pin until then); the
     # field-name constants it exports are the ones 0.0.3 made public.
     "agent-teams>=1.0.0,<2",
-    # Agent Shield: the Shield's engine (decision 14) —
+    # Agent Shield: the Shield's engine —
     # the policy model and `decide`, the ACP channel and proxy, the audit
     # vocabulary, the SaaS client. agent-runtimes hosts it; it never imports
     # agent-runtimes. Distribution `datalayer-agent-shield`, import `agent_shield`
@@ -71,8 +71,8 @@ dependencies = [
     # channel and proxy, the policy, the register, the audit), published from
     # the v0.1.1 tag on 15 October 2026.
     # 0.1.6: agent_shield.conformance and agent_shield.report, the evidence map and the
-    # conformance report ai-agents serves (SHIELD SH-61, SH-62).
-    # 0.2.0: the authorizer port, the PAP classes and the company role (SHIELD SH-74, SH-70, SH-71).
+    # conformance report ai-agents serves (SH-61, SH-62).
+    # 0.2.0: the authorizer port, the PAP classes and the company role (SH-74, SH-70, SH-71).
     # 0.2.4: agent_shield.acp.credential (SH-33: the lending the adapter reuses), a terminal's
     # output pushed while it runs (SH-13, SH-16), the audit's credential shapes fixed.
     "datalayer-agent-shield>=0.2.4,<0.3",
@@ -83,13 +83,13 @@ dependencies = [
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
     "croniter",
-    # Web Bot Auth's signature bases (AGENT_PROTOCOLS PR-20): RFC 9651
+    # Web Bot Auth's signature bases (PR-20): RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.
     "http-sfv>=0.9.9,<0.10",
     # UCP's own Pydantic models, generated against the 2026-08-25 schemas
-    # (AGENT_PROTOCOLS PR-30): 0.5.x is that version.
+    # (PR-30): 0.5.x is that version.
     "ucp-sdk>=0.5.0,<0.6",
-    # PACT's JWTs and receipts are verified with it (AGENT_PROTOCOLS PR-12).
+    # PACT's JWTs and receipts are verified with it (PR-12).
     "PyJWT[crypto]>=2.10",
     # A component placed from Python (`Application.component`) is checked
     # against its JSON Schema, as its properties form checks it.
@@ -146,7 +146,7 @@ dependencies = [
     "typer>=0.16.0",
     "urllib3>=2.6.3",
     # The DevTools protocol of the browser on an application's computer
-    # (LOOP R-23, `loop/apps/browser.py`).
+    # (R-23, `loop/apps/browser.py`).
     "websockets>=13",
 ]
 dynamic = ["version"]
@@ -215,7 +215,7 @@ acp = [
 # or when `loop` runs on Datalayer, the person's token hears and says on
 # Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
 # espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
-# the person on their own machine, never in a browser bundle (decision 1;
+# the person on their own machine, never in a browser bundle (
 # the register's notes, VO-01).
 voice = [
     "sounddevice>=0.5.0",
@@ -223,7 +223,7 @@ voice = [
     "kokoro-onnx>=0.6.1,<0.7",
 ]
 ui = [
-    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SHIELD SH-10)
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
@@ -274,7 +274,7 @@ examples = [
 ]
 cli = [
     # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
-    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SHIELD SH-10)
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
@@ -283,7 +283,7 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
-    # `loop apps package` builds an application's wheel (LOOP P-29).
+    # `loop apps package` builds an application's wheel (P-29).
     "build",
     "hatchling",
 ]
@@ -299,7 +299,7 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
-# An application's agent written with another framework (LOOP P-23,
+# An application's agent written with another framework (P-23,
 # `app.agent`): its runs become the session's steps, its tool calls decided by
 # the application's rules. Opt-in and out of `all`: each brings a framework of
 # its own, and `app.agent` refuses one that is missing with the extra to install.

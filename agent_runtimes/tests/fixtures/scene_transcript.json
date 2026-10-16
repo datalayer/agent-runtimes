@@ -1,5 +1,5 @@
 {
-  "$comment": "The transcript's grammar (LOOP A-06): the spans the Agent Inspector reads, and the lines they give. Read by src/components/teams/__tests__/sceneTranscriptFixture.test.ts (transcriptOfSpans, the reference) and agent_runtimes/tests/test_scenes_transcript.py (its Python twin), so both agree on every line.",
+  "$comment": "The transcript's grammar (A-06): the spans the Agent Inspector reads, and the lines they give. Read by src/components/teams/__tests__/sceneTranscriptFixture.test.ts (transcriptOfSpans, the reference) and agent_runtimes/tests/test_scenes_transcript.py (its Python twin), so both agree on every line.",
   "members": [
     {
       "id": "sales",

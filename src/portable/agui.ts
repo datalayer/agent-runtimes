@@ -24,7 +24,7 @@ export const RUN_CUT_SHORT =
 
 /**
  * The name of `reactor.ui` (Reactor's `AGUI_NAME`): its ops come over the
- * conversation's ui socket, never a run stream (REACTOR_UI RU-W). Held here
+ * conversation's ui socket, never a run stream (RU-W). Held here
  * so that a reader of a run needs no Reactor module; a test holds it to
  * Reactor's.
  */
@@ -32,7 +32,7 @@ export const REACTOR_UI_NAME = 'reactor.ui';
 
 /** What the page says when a `reactor.ui` op comes on a run stream. */
 export const UI_ON_RUN =
-  'A reactor.ui op came on the run stream: it comes over the ui socket (REACTOR_UI RU-W).';
+  'A reactor.ui op came on the run stream: it comes over the ui socket (RU-W).';
 
 /** What is said when the `fetch` given cannot read a response as it streams. */
 export const NOT_STREAMING =

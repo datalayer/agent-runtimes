@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""UCP 2026-08-25: shop at the test merchant, buy once approved (AGENT_PROTOCOLS PR-30 to PR-32, PR-53)."""
+"""UCP 2026-08-25: shop at the test merchant, buy once approved (PR-30 to PR-32, PR-53)."""
 
 from __future__ import annotations
 

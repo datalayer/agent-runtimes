@@ -9,8 +9,8 @@ the mapping table: create or attach is ``session/new`` or ``session/load``, a
 delegation and a steer are ``session/prompt``, progress is session updates,
 an approval is a permission request, and a cancel is ``session/cancel``.
 
-An ACP session is a projection of an execution, never the other way round
-(decision 6). Nothing here keeps a connection between operations: each
+An ACP session is a projection of an execution, never the other way round.
+Nothing here keeps a connection between operations: each
 one connects, does its work and closes, so the adapter survives the step
 boundaries of the durable worker it will run inside (O1-03). The session
 identifier on the attempt is what makes that possible, and it is why every
@@ -30,7 +30,7 @@ session update, no checkpoint, no pause, no resume, no session close, and no
 artifact — a turn's answer is registered as one artifact and file edits stay
 tool-call content until O1-10 commits them. All of it is in
 ``ACP_CAPABILITIES`` and reaches the execution as the first observation of a
-dispatch (decision 5's rule, applied to the other protocol).
+dispatch (the same reporting rule, applied to the other protocol).
 
 An agent that declares the Datalayer orchestration extension at initialize,
 under ``agentCapabilities._meta.datalayer.extensions``, gets three of them

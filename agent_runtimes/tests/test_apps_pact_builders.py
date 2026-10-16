@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT in the Loop Python surface (AGENT_PROTOCOLS PI-01, DOC-03).
+"""PACT in the Loop Python surface (PI-01, DOC-03).
 
 `app.business_connection` writes the `pact` block the Spec and the Studio's
 *Add a business* write, and lists `pact` among the protocols: the
@@ -80,7 +80,7 @@ def test_no_audience_no_connection() -> None:
 
 
 def test_as_business_writes_the_business_and_lists_pact() -> None:
-    """AGENT_PROTOCOLS PR-13 (decided 2026-10-13): the application as a PACT business."""
+    """PR-13 (decided 2026-10-13): the application as a PACT business."""
     app = Application("air-desk", "chat", agent="example-blank:0.0.1")
     agent = {
         "issuer": "https://agent.example/pact",

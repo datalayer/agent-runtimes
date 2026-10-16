@@ -92,7 +92,7 @@ describe('the Datalayer target', () => {
   });
 
   it('allocates nothing for a deployment kept on a runtime of its own', () => {
-    // LOOP R-33: the agent was made there from the deployment record as its
+    // R-33: the agent was made there from the deployment record as its
     // runtime started; the page talks to it, and allocates nothing more.
     const bridge = read('DatalayerAgentBridge.tsx');
     expect(bridge).toContain('agentsConfig?.datalayerKept');
@@ -101,7 +101,7 @@ describe('the Datalayer target', () => {
     expect(read('plugin.ts')).toContain('datalayerKept?: { url: string }');
   });
 
-  it('has a visitor’s agent made before the page follows the runtime (STUDIO D-15)', () => {
+  it('has a visitor’s agent made before the page follows the runtime (D-15)', () => {
     // An application at its address has no agent on the visitors' runtime
     // until a visitor opens it, and the runtime holds no plugin of it until
     // then: the runtime is reported only once the agent is made, and its
@@ -141,7 +141,7 @@ describe('addressing the agent', () => {
       'agentServerOf(workspace.sandbox, workspace.serverUrl)',
     );
     expect(chat).toContain('${agentServerUrl}/api/v1/ag-ui/');
-    // An application's agent, through its session API (LOOP R-04).
+    // An application's agent, through its session API (R-04).
     expect(chat).toContain('${agentServerUrl}/api/v1/apps/agents/');
     // And nothing still reaches for the host's URL directly.
     expect(chat).not.toContain('${workspace.serverUrl}/api/v1/');

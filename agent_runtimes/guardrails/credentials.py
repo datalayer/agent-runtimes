@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Credentials are never shown to the model (LOOP R-19).
+"""Credentials are never shown to the model (R-19).
 
 A connection uses a stored secret through the tool: the runtime holds the
 secret (an environment variable, a value a configure gave it, the header an
@@ -340,7 +340,7 @@ def _redacted_tool(tool: ToolDefinition) -> ToolDefinition:
 
 
 class CredentialsWithheldCapability(AbstractCapability[Any]):
-    """Nothing the model reads holds a credential (LOOP R-19).
+    """Nothing the model reads holds a credential (R-19).
 
     - **a tool's result and its error** are redacted as the tool returns,
       before anything else reads them — the other capabilities, the record,

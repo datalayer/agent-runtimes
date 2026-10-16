@@ -400,7 +400,7 @@ export interface InputPromptLexicalProps {
   mentionableAgents?: MentionableAgent[];
   /**
    * Commands listed while `/` is typed, before the prompt's own: an
-   * application's (LOOP P-19).
+   * application's (P-19).
    */
   promptCommands?: PromptCommand[];
 }
@@ -504,7 +504,7 @@ export function InputPromptLexical({
         {/* `/` for commands, beside `@` for agents. Always mounted: its own
             list is fixed, so unlike the mentions there is no host that might
             have nothing to offer; a host's commands (an application's,
-            LOOP P-19) come first. */}
+            P-19) come first. */}
         <CommandPlugin
           commands={
             promptCommands?.length

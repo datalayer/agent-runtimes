@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who is calling an application's routes (LOOP R-32).
+"""Who is calling an application's routes (R-32).
 
 A runtime's routes carried no authentication of their own: access rested on
 the address. An application's route now verifies the caller before anything
@@ -18,7 +18,7 @@ conversation costs one call and a revoked token stops within minutes.
 A visitor without an account holds a token ai-inference minted for them,
 naming the visitor and the one application it is for: it is what
 ai-inference's ``/anonymous/whoami`` accepts, and only the visitors' runtime
-answers it (LOOP R-30, `agent_runtimes.loop.apps.visitors`), which in turn
+answers it (R-30, `agent_runtimes.loop.apps.visitors`), which in turn
 answers nobody signed in.
 
 A host — Datalayer's Slack app, an editor, a desktop app — holds no person's
@@ -49,7 +49,7 @@ import jwt
 #: The audience of an app embed token (`datalayer_common.authn.app_embed`).
 APP_EMBED_AUDIENCE = "datalayer:app:embed"
 
-#: What an embed token names when it runs a session of its application (LOOP R-20).
+#: What an embed token names when it runs a session of its application (R-20).
 SESSION_SCOPE = "session"
 
 #: The audience of a host token (`datalayer_common.authn.app_host`).
@@ -82,16 +82,16 @@ class Caller:
     app_uid: str = ""
     #: For an embed: the visit its token was issued for — the host's, kept
     #: across the tokens it renews, else the token's own id — so that one
-    #: visitor of the host's page never reaches another's session (LOOP R-20).
+    #: visitor of the host's page never reaches another's session (R-20).
     visit: str = ""
     #: For an embed: what its token names it may do — `read`, `decide`,
-    #: `session` — and nothing else (LOOP R-20).
+    #: `session` — and nothing else (R-20).
     scopes: Tuple[str, ...] = ()
     #: For a host: the one deployment its token was issued for; its
     #: installation is its ``visit``.
     deployment_uid: str = ""
     #: For a person: their name, as their verified token's profile says it
-    #: (`person_name`); ``""`` when it says none — never their uid (LOOP I-10).
+    #: (`person_name`); ``""`` when it says none — never their uid (I-10).
     name: str = ""
 
 
@@ -155,7 +155,7 @@ def person_name(claims: Dict[str, Any]) -> str:
     ``firstName``, ``lastName``); ``""`` when it says none.
 
     Read once IAM accepted the token: its claims are then IAM's own. What
-    signs for a person (LOOP I-10) names them by this, or not at all.
+    signs for a person (I-10) names them by this, or not at all.
     """
     user = claims.get("user")
     if not isinstance(user, dict):
@@ -263,7 +263,7 @@ class CallerVerifier:
             agent = str(claims.get("agent_uid") or "")
             if agent and agent == str(claims.get("sub") or ""):
                 # A principal's own token — an application's, as a deployment
-                # acts (LOOP I-03) — is nobody's: never let through as a person.
+                # acts (I-03) — is nobody's: never let through as a person.
                 caller = Caller(
                     kind="principal",
                     uid=agent,

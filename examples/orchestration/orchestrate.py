@@ -15,7 +15,7 @@ make and the thing it prints at the end.
 What the run does, in the order a control plane does it:
 
 1. Resolve the worker the descriptor names, and read back what it turned out
-   to be able to do (decision 5 requires a reduction to be
+   to be able to do (the design requires a reduction to be
    reported on the execution rather than hidden, so the first observation of
    every dispatch is the adapter's capability report).
 2. Create the execution under the delegating command's idempotency key, with
@@ -25,7 +25,7 @@ What the run does, in the order a control plane does it:
    plane decision and never something an adapter observes.
 4. Dispatch, and record every observation as canonical state — which is the
    seam: adapters report, the control plane decides.
-5. Arbitrate the commit. The first attempt to reach commit wins (decision 4).
+5. Arbitrate the commit. The first attempt to reach commit wins.
 
 Nothing here is protocol-specific except one dictionary from a protocol to
 its adapter, which is what a registry is.

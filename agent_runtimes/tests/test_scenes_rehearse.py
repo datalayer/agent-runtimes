@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop scenes` (LOOP A-14): a scripted scene — fake members answering fixed
+"""`loop scenes` (A-14): a scripted scene — fake members answering fixed
 lines over the catalogue's ``sales-and-accounting`` scene spec — rehearsed
 to a pass, a fail with what differed, and a *not run* with why; the command's
 words and exit codes. No live call: the members are pydantic-ai agents on a
@@ -562,7 +562,7 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
         in result.output
     )
     listed = json.loads(runner.invoke(scenes_command.app, ["ls", "--json"]).output)
-    # The teams staged live: a scripted scene is played as written on its page (PAP_DATALAYER X-02).
+    # The teams staged live: a scripted scene is played as written on its page (X-02).
     assert [scene["id"] for scene in listed] == sorted(
         scene_id
         for scene_id, scene in scenes.SCENE_CATALOGUE.items()

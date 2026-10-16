@@ -158,7 +158,7 @@ export function createA2uiSurfacePlugin(
     );
   }
 
-  // What an application's answer shows (REACTOR_UI RU-2): its buttons press
+  // What an application's answer shows (RU-2): its buttons press
   // what the display offered, through the workspace's chat.
   function Answer({ display }: RendererProps): JSX.Element {
     return <AnswerShowsView display={display} send={send} />;

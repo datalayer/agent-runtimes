@@ -279,7 +279,7 @@ class TestTheApplicationsRules:
 
 
 class TestTheComponents:
-    """STUDIO H-02: components of the catalog beside the answer, as an A2UI surface."""
+    """H-02: components of the catalog beside the answer, as an A2UI surface."""
 
     def test_the_sources_a_table_a_chart_and_a_choice_are_the_catalogs(self) -> None:
         surface = formats.surface_of_components(

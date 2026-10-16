@@ -4,7 +4,7 @@
  */
 
 /**
- * The tools an embedded application is given for its host page (LOOP D-10),
+ * The tools an embedded application is given for its host page (D-10),
  * by name: `host_context` for the values the page passes, `host_<name>` for
  * each function it offers. Apart from `embed/hostBridge`, which calls the
  * page, so that the checks read them as a pure module.
@@ -23,12 +23,12 @@ export const hostTool = (name: string): string => `host_${name}`;
 /** How a value or a function of the host is named. */
 export const HOST_NAME = /^[a-z][a-z0-9_]{0,62}$/;
 
-/** What the page's word on its visitor may be worth (LOOP D-21). */
+/** What the page's word on its visitor may be worth (D-21). */
 export const HOST_USERS: readonly AppHostUser[] = ['claimed', 'signed'];
 
 /**
  * Whether a session is opened only for a user the host's server signed
- * (LOOP D-21): `deployment.embedded.host.user: signed`.
+ * (D-21): `deployment.embedded.host.user: signed`.
  */
 export function signedUser(bridge: AppHostBridgeSpec | undefined): boolean {
   return bridge?.user === 'signed';

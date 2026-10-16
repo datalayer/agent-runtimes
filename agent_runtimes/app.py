@@ -554,7 +554,7 @@ async def _create_and_register_cli_agent(
             agent_id,
         )
 
-    # Credentials are never shown to the model (LOOP R-19): last, so it
+    # Credentials are never shown to the model (R-19): last, so it
     # wraps every tool call innermost and reads every request last.
     from .guardrails.credentials import credentials_withheld
 
@@ -1428,7 +1428,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         else:
             logger.info("Agent Node mode disabled (use --node to enable)")
 
-        # The visitors' runtime (LOOP R-30): the examples it keeps warm, their
+        # The visitors' runtime (R-30): the examples it keeps warm, their
         # agents made through its own API once it listens.
         from .loop.apps.visitors import loopback_url, visitors_runtime, warm
 
@@ -1517,7 +1517,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         except Exception as e:
             logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
-        # Stop the browsers of applications' computers (LOOP R-23).
+        # Stop the browsers of applications' computers (R-23).
         from .loop.apps.browser import close_browsers
 
         await close_browsers()
@@ -1535,8 +1535,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # One gate (PAP_DATALAYER's release gates, decided 14 October 2026): the
-    # visitors' runtime (LOOP R-30), and a runtime that serves a deployment —
+    # One gate (the release gates, decided 14 October 2026): the
+    # visitors' runtime (R-30), and a runtime that serves a deployment —
     # kept always on, or launched by a hosted page — answer anybody but the
     # pod itself only on the application's own routes, websockets and the
     # dynamic AG-UI and A2A mounts included. Inside CORS, so that a page reads
@@ -1582,10 +1582,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
     # Which of an application's plugins this runtime holds, followed by the
-    # page's plugin of the same name (LOOP F-15).
+    # page's plugin of the same name (F-15).
     app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
-    # An application's computer, shown where the person is (LOOP R-23).
+    # An application's computer, shown where the person is (R-23).
     app.include_router(computer_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Serve every runtime member of every scene over A2A, on local runtimes (LOOP A-15).
+"""Serve every runtime member of every scene over A2A, on local runtimes (A-15).
 
 The scenes of the catalogue (``agent_runtimes.specs.scenes``) cast members
 that run on a runtime: Accounting, Month-end close, Crop monitoring, Disaster

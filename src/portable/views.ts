@@ -60,7 +60,7 @@ export type QuestionCardProps = {
 };
 
 /**
- * A protocol display under its tool row (MOBILE M-037): what it shows is
+ * A protocol display under its tool row (M-037): what it shows is
  * `displayLine`'s and the display's own — a coding agent's `diff` as a
  * unified diff in the file's language (`unifiedDiffLines`), its `terminal`
  * as the command and the output kept; what the person does goes out
@@ -78,7 +78,7 @@ export type ProtocolDisplayProps = {
   onSignedIn: (words: string) => void;
   /**
    * Open a Direct Conversation under the conversation a company answered in
-   * (`portable/direct`, MOBILE M-038); absent where none can be opened.
+   * (`portable/direct`, M-038); absent where none can be opened.
    */
   onOpenDirect?: (company: string, conversationId: string) => void;
 };

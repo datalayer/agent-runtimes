@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The UI plugins an application is drawn with (AGENTIC_UI R8), one mapping in two languages.
+"""The UI plugins an application is drawn with (R8), one mapping in two languages.
 
 agentspecs' ``ui_for`` and agent-runtimes' ``uiFor`` (``src/apps/apps/appspec.ts``)
 are held to the same cases, the fixture ``fixtures/app_ui.json``, which the

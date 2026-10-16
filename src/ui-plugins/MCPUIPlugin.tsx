@@ -7,7 +7,7 @@
  * MCP-UI plugin for chat component.
  * Renders MCP UI protocol messages and resources.
  *
- * What it never draws (STUDIO D-22): the markup of a resource (`text/html`)
+ * What it never draws (D-22): the markup of a resource (`text/html`)
  * and a UI element built from a tool's props. Either is markup a server or a
  * model supplies, and the chat may sit on the platform's origin, where people
  * are signed in: each is refused in a sentence, in place, with no fallback.
@@ -64,7 +64,7 @@ export interface MCPUIMessage {
 }
 
 /**
- * What the chat says in place of the MCP UI's markup (STUDIO D-22).
+ * What the chat says in place of the MCP UI's markup (D-22).
  */
 export const MCP_UI_NOT_DRAWN = {
   html: 'This answer carries a page of HTML from its MCP server. It is not drawn here: no markup from a server or a model reaches this page.',

@@ -4,7 +4,7 @@
  */
 
 /**
- * A visitor's token for the visitors' runtime (LOOP R-30): asked of
+ * A visitor's token for the visitors' runtime (R-30): asked of
  * ai-inference for one application, the tab's visitor kept so that a new
  * token is the same visitor, and a refusal said in ai-inference's sentence.
  */
@@ -108,7 +108,7 @@ const TOKEN_URL =
 const AGENT_URL =
   'https://r1.datalayer.run/api/runtime-visitors/api/v1/apps/visitors/agent';
 
-describe("a visitor's agent (STUDIO D-15)", () => {
+describe("a visitor's agent (D-15)", () => {
   it('is the one the runtime names: an example by its id, an address by at-<slug>', () => {
     expect(visitorAgentOf('web-research')).toBe('web-research');
     expect(visitorAgentOf('at:d15-visitors')).toBe('at-d15-visitors');

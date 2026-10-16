@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant (LOOP T-21, T-22, T-25): what its character acts
+ * The floating assistant (T-21, T-22, T-25): what its character acts
  * out, and the characters Datalayer ships.
  */
 

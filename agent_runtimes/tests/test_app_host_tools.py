@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The host page's tools, on the runtime's side (LOOP D-10).
+"""The host page's tools, on the runtime's side (D-10).
 
 The page runs `host_<name>` and `host_context`: the agent is handed them as
 frontend tools (an AG-UI run's `tools`, an `ExternalToolset`), and a call of

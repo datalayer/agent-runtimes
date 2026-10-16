@@ -38,7 +38,7 @@ agents:
 
 A *scene* — agents arranged with their roles, their shared context and
 their interactions, as Datalayer's Studio shows them — is a team and
-nothing else (LOOP A-04, agentspecs 0.0.60). What the team model says of a
+nothing else (A-04, agentspecs 0.0.60). What the team model says of a
 scene:
 
 - **One member is allowed; none is not.** An agent working alone with its
@@ -71,7 +71,7 @@ download writes), `odoo-accounting` is not.
 
 ## The transcript
 
-What happens in a scene, as lines, in the order it happened (LOOP A-06):
+What happens in a scene, as lines, in the order it happened (A-06):
 
 ```
 12:00:00  You → Sales: Give me the aged receivables as of today, by customer.
@@ -141,7 +141,7 @@ scripted scene gives the expected lines (`sceneTranscript.test.tsx`).
 
 ## Rehearsal
 
-A scene spec's `rehearsal` (agentspecs `scenes/`, LOOP A-14) says, per
+A scene spec's `rehearsal` (agentspecs `scenes/`, A-14) says, per
 beat, the shape the transcript must take — in the grammar above, `You →
 Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
 `Accounting: a table`, `Sales: words` — the words the answer must and must
@@ -336,7 +336,7 @@ answers over A2A at an address that names its slug, not a runtime:
 https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/
 ```
 
-ai-agents keeps the deployment on a runtime of its own (LOOP R-33). Each
+ai-agents keeps the deployment on a runtime of its own (R-33). Each
 time it launches that runtime, it makes the deployment's agent there and
 then asks the runtime to serve it over A2A, with a card that names the
 stable address (`PUT /api/v1/apps/a2a`, below). What is asked at the stable
@@ -492,7 +492,7 @@ const notebookArea = useRef<HTMLDivElement>(null);
 
 ### Components in answers
 
-The other format is components of the catalog (STUDIO H-02):
+The other format is components of the catalog (H-02):
 `application/json+a2ui`, A2UI's media type. The scenes' members on a runtime
 name it after Markdown and the notebook (agentspecs 0.0.64):
 
@@ -608,7 +608,7 @@ the peer calls), then `answered` (with what it gave besides words) or
 ## The team as a graph
 
 `components/teams` draws a team and runs it in a page — a team of two, or a
-team of N (LOOP A-08). It is not in the components barrel, because it brings
+team of N (A-08). It is not in the components barrel, because it brings
 React Flow:
 
 ```tsx
@@ -883,7 +883,7 @@ asked, said and did), *Stop the turn*, *About*, and *Send away*.
 
 `ScenesExample` (the Apps group) puts the catalogue's scenes in tabs
 (`listSceneSpecs`), each its face and its name. The tab chosen is drawn from
-its scene spec (`sceneStageOf`, LOOP A-15): its `assumes` line under the
+its scene spec (`sceneStageOf`, A-15): its `assumes` line under the
 tabs; its graph and its transcript behind *Graph · Transcript*
 (`SceneView`); its members standing where its stage directions put them
 (`positions`), the balloon of `opens_first` open; the script's cues as the

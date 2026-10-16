@@ -4,7 +4,7 @@
  */
 
 /**
- * The preset per kind (LOOP R-01, R-01b, R-02): which plugins an
+ * The preset per kind (R-01, R-01b, R-02): which plugins an
  * application's kind needs and how its workspace is laid out — a chat, a
  * widget or a worker as its agent, its page and the Canvas's blocks; a
  * decision as the page its host draws, in a workspace without a
@@ -166,7 +166,7 @@ describe('a decision, on the workspace', () => {
 });
 
 /**
- * The UI plugins (AGENTIC_UI R8) a workspace mounts for an application: its
+ * The UI plugins (R8) a workspace mounts for an application: its
  * preset's plugins and the workspace's own (`loopPlugins`) as its layout
  * says, each read as the UI spec it registers under — once per application,
  * source or UI when the spec says so (`<plugin>-<id>`).

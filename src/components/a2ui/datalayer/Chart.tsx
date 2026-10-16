@@ -4,7 +4,7 @@
  */
 
 /**
- * Chart (LOOP C-18): the points an application publishes, drawn as a bar, a
+ * Chart (C-18): the points an application publishes, drawn as a bar, a
  * line, an area or a scatter — one field along the bottom, one measured, a
  * series apart for each value of a third. Drawn with ECharts, the chart
  * library agent-runtimes already draws its usage and context charts with,
@@ -26,7 +26,7 @@ import { ownImplementation, type OwnCommon } from './implementation';
 
 /**
  * ECharts, fetched when a chart is first drawn: the catalogue is in every
- * surface (and in the embed, STUDIO D-08), a chart only in some.
+ * surface (and in the embed, D-08), a chart only in some.
  */
 const loadECharts = () => import('echarts-for-react');
 const chartRefused = (error: Error) => (

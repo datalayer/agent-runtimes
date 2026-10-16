@@ -4,7 +4,7 @@
  */
 
 /**
- * The components of Datalayer's own a renderer draws (LOOP C-18), without
+ * The components of Datalayer's own a renderer draws (C-18), without
  * the renderers: what a host that does not draw — the Studio's tests, a
  * checker — reads to know that a component of the catalog is drawn. The
  * renderers' module refuses to load when it and the catalog disagree.

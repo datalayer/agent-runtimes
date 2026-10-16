@@ -158,7 +158,7 @@ export interface ChatMessage {
 
   /**
    * What the message shows besides its words: the displays sent under it
-   * (`reactor.ui`, REACTOR_UI RU-2), in the order they came; each drawn by
+   * (`reactor.ui`, RU-2), in the order they came; each drawn by
    * the renderer a plugin contributed for its type.
    */
   displays?: Display[];

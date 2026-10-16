@@ -4,7 +4,7 @@
  */
 
 /**
- * A small character of our own in the clippy.js shape (LOOP T-26), for the
+ * A small character of our own in the clippy.js shape (T-26), for the
  * floating assistant's gallery: an `agent.js` and a `map.png` sprite sheet
  * of ten 48×48 cells, read through the same reader a person's files go
  * through (`readClippyCharacter`). It is a test sprite drawn for Datalayer —

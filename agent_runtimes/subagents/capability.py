@@ -174,7 +174,7 @@ def _build_subagent_capabilities(
                 )
             )
 
-    # Credentials are never shown to its model either (LOOP R-19).
+    # Credentials are never shown to its model either (R-19).
     from ..guardrails.credentials import credentials_withheld
 
     return credentials_withheld(capabilities)

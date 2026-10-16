@@ -16,7 +16,7 @@ is also its AG-UI thread and the session its record is kept under in
 ai-agents, so what the page shows, what the runtime ran and what the record
 says are one thing. Who opened it — a person the runtime verified — is sent
 with each of its entries (`opened_by`), so that they can download and delete
-their own conversations with it later (LOOP R-31); a session nobody opened, or
+their own conversations with it later (R-31); a session nobody opened, or
 opened by an embed's visitor or the machine itself, names nobody.
 
 The routes live in `agent_runtimes/routes/apps.py`, beside `configure`,
@@ -49,10 +49,10 @@ is not there or runs no application.
   the person talking to it, for what they let this deployment do in their
   name, and a token from it naming the application (fifteen minutes, kept by
   person and deployment). A person who has not let it, at its address, gets
-  the gateway's refusal in its sentence (LOOP I-04).
+  the gateway's refusal in its sentence (I-04).
 - **A Preview's session** runs as the **person**: the agent was made without a
   deployment, its model called on the runtime's own token. It is **held to
-  its application's Space grants** (LOOP R-25, decided 2026-10-06), as its
+  its application's Space grants** (R-25, decided 2026-10-06), as its
   deployments are: as it opens, and on each request, the runtime asks
   ai-agents with the person's token (`POST /api/ai-agents/v1/apps/{app_uid}/preview-token`,
   with the `permissions` of the Appspec it runs) for a token of theirs
@@ -67,7 +67,7 @@ is not there or runs no application.
   an application not saved on Datalayer is not previewed with a person's
   token: it has no grants to hold it to. A Preview the machine itself opens
   (`localhost`, no token) runs as that machine, as before. **The Datalayer MCP
-gateway's own tools are held the same way** (STUDIO R-25,
+gateway's own tools are held the same way** (R-25,
 `gateway_toolsets_of_the_run` in `agent_runtimes.loop.apps.principal`, used
 by the AG-UI and Vercel AI transports): a session's run reaches the gateway
 as the application — a deployment with its principal's token, or the
@@ -89,7 +89,7 @@ itself); somebody else's is *not found*.
 
 ## An embed's visitor
 
-An **embed token** (LOOP R-20) — the capability its owner's server is issued
+An **embed token** (R-20) — the capability its owner's server is issued
 for one application, for each visit of the host's page — runs a session of
 that application **as it is deployed**, and nothing beyond:
 
@@ -106,7 +106,7 @@ that application **as it is deployed**, and nothing beyond:
 - **On the sites its owner allows.** The runtime says the page's origin, as
   the visitor's browser sent it (`Origin`), to ai-agents
   (`X-Datalayer-Embed-Origin`) when it asks whether to open the session and
-  for the principal's token (LOOP D-12): an embedded deployment is opened
+  for the principal's token (D-12): an embedded deployment is opened
   only for a page of a site its owner listed under *Ship*, and on no site
   while none is listed (`403`, in ai-agents' sentence). Each page is asked
   about apart.
@@ -119,7 +119,7 @@ that application **as it is deployed**, and nothing beyond:
   feedback is about its own session only. It configures nothing and reads no
   memories (`403`).
 
-- **Who its user is, when it matters** (LOOP D-21). An application whose
+- **Who its user is, when it matters** (D-21). An application whose
   Appspec says `deployment.embedded.host.user: signed` opens a session of its
   deployment only with a token the host's server signed naming its user —
   HS256 with the deployment's secret, `sub`, `name`, `exp` at most an hour
@@ -135,7 +135,7 @@ that application **as it is deployed**, and nothing beyond:
 On Datalayer, a runtime is launched with a person's credentials, which an
 embed token never stands for: an embed's visitor reaches a session where an
 agent-runtimes server already runs the deployment — the host's own
-(`server`), or, once each deployment keeps a runtime (LOOP R-33), that one.
+(`server`), or, once each deployment keeps a runtime (R-33), that one.
 
 ## Who may open a deployment
 
@@ -156,7 +156,7 @@ below, where ai-agents is asked with no token.
 ## Visitors without an account
 
 A visitor who is not signed in talks to an application on **the visitors'
-runtime** (LOOP R-30): the runtime image the pools run, kept running for
+runtime** (R-30): the runtime image the pools run, kept running for
 everybody without an account, started with `AGENT_RUNTIMES_VISITORS` — the
 examples it keeps warm, each one's agent made through its own API as it
 starts, under the example's id. No sandbox, no user, nobody's token. Every
@@ -209,15 +209,15 @@ as `GET` says it — then the turn's events.
 
 | Route | What it does |
 | --- | --- |
-| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, profile?, session?, woken_by?}`; `profile` the one it is with (LOOP P-20), the first when unsaid, 422 for one the application does not have. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). Woken for one person's own source — an event whose details name the `person` whose mailbox a message arrived in and their `grant` (STUDIO W-03) — the request carries that person's token naming the application in `X-Datalayer-Acting-Token`, minted by the scheduler from the grant for this one wake: the runtime holds it where a person's own session's would be, so the session's Gmail and gateway servers in the person's name find it as any session's do; 422 without it, for a token not minted for that person from that grant or ended, and for one given to a session not woken for a person — never run with the owner's or the principal's token in its place. |
+| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, profile?, session?, woken_by?}`; `profile` the one it is with (P-20), the first when unsaid, 422 for one the application does not have. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). Woken for one person's own source — an event whose details name the `person` whose mailbox a message arrived in and their `grant` (W-03) — the request carries that person's token naming the application in `X-Datalayer-Acting-Token`, minted by the scheduler from the grant for this one wake: the runtime holds it where a person's own session's would be, so the session's Gmail and gateway servers in the person's name find it as any session's do; 422 without it, for a token not minted for that person from that grant or ended, and for one given to a session not woken for a person — never run with the owner's or the principal's token in its place. |
 | `POST /sessions/{uid}/messages` | **Message**: `{text}`. The next turn — or the answer to what the application asked. |
-| `POST /sessions/{uid}/press` | **Press** what the session offered (REACTOR_UI RU-5): Reactor's `UiAction`, `{action, display_id, token, payload, idempotency_id?}` — an action its code declares (`@app.action`), offered on the application's own display (`app`, with the token `GET` and `loop.session` say under `actions`) or on a display its code showed. Checked before anything runs: a token minted for another display, action or session is a **403**; an action its code does not declare, a payload its model refuses (*'save' was pressed with what it does not take — quote: Field required.*) or a field it does not name (*— secret: not one of its fields.*), a **422**; an application without code offers nothing (422). Then its `@app.action` runs as a turn, given the model. What a press carries is its code's, never said to the model. The page presses up the [ui socket](#the-ui-socket) instead. |
-| `POST /sessions/{uid}/page` | **A widget's page** run on its inputs (LOOP P-05): `{inputs}`, checked against its form, each with its default for the rest — refused with 422 and the sentence (*“Its page's inputs” was sent what its fields refuse: seats: 0 is less than the minimum of 1.*; *The page of Quote has no input colour: its inputs are seats, plan.*), and with 422 for an application with no page of its code — then its `@app.page` runs and its outputs come back as a `CUSTOM` event named `loop.page`, `{inputs, outputs}`. Not a turn of the conversation: nothing is said in it. |
-| `POST /agents/{agent}/files` | **Upload a file** of a conversation (REACTOR_UI RU-6): its bytes as the body, `X-Reactor-Scope` its thread, `X-Reactor-File-Name` its name; answers its ref, `{ref, name, media_type, size, url}`. 400 without its scope or name, 401 a token refused, 404 another's conversation, 413 larger than 25 MB. See [Files](#files). |
+| `POST /sessions/{uid}/press` | **Press** what the session offered (RU-5): Reactor's `UiAction`, `{action, display_id, token, payload, idempotency_id?}` — an action its code declares (`@app.action`), offered on the application's own display (`app`, with the token `GET` and `loop.session` say under `actions`) or on a display its code showed. Checked before anything runs: a token minted for another display, action or session is a **403**; an action its code does not declare, a payload its model refuses (*'save' was pressed with what it does not take — quote: Field required.*) or a field it does not name (*— secret: not one of its fields.*), a **422**; an application without code offers nothing (422). Then its `@app.action` runs as a turn, given the model. What a press carries is its code's, never said to the model. The page presses up the [ui socket](#the-ui-socket) instead. |
+| `POST /sessions/{uid}/page` | **A widget's page** run on its inputs (P-05): `{inputs}`, checked against its form, each with its default for the rest — refused with 422 and the sentence (*“Its page's inputs” was sent what its fields refuse: seats: 0 is less than the minimum of 1.*; *The page of Quote has no input colour: its inputs are seats, plan.*), and with 422 for an application with no page of its code — then its `@app.page` runs and its outputs come back as a `CUSTOM` event named `loop.page`, `{inputs, outputs}`. Not a turn of the conversation: nothing is said in it. |
+| `POST /agents/{agent}/files` | **Upload a file** of a conversation (RU-6): its bytes as the body, `X-Reactor-Scope` its thread, `X-Reactor-File-Name` its name; answers its ref, `{ref, name, media_type, size, url}`. 400 without its scope or name, 401 a token refused, 404 another's conversation, 413 larger than 25 MB. See [Files](#files). |
 | `GET /files/{scope}/{ref}` | **A file by its signed url**, as an attachment: no token, the signature is the permission; 403 once expired or for another file. |
-| `WS /ui` | **The ui channel** (REACTOR_UI RU-W): one WebSocket per conversation, Reactor's `reactor.ui.ws`. See [The ui socket](#the-ui-socket). |
-| `POST /sessions/{uid}/window` | **A window message** from the page the application sits in (LOOP P-25): `{data}`, anything JSON writes. A Python application's `@app.window` runs on it, as a turn; what it tells the page back (`session.send_window_message`) is a `reactor.ui` **window** op on the session's ui socket (`{v: 1, op: "window", scope, body: {name: "message", args: {data}}}`, REACTOR_UI RU-3, RU-W), not on this stream; a window op of any other name is refused by the page. Refused with 422 for an application whose code reads none (*Help Desk reads no window message: its code has no @app.window.*), 409 while it answers or waits. Not a turn of the conversation. |
-| `PUT /sessions/{uid}/settings` | **Settings change**: `{values}`, checked against the application's settings — the JSON Schema of a form (LOOP C-16), with the check a Form's values get (*“Its settings” was sent what its fields refuse: tone: 'Loud' is not one of ['Plain', 'Warm'].*; *There is no field nope.*) — and kept. The settings a start or a run carries (`settings`, `forwardedProps.loop.settings`) are checked the same way, refused with 422. |
+| `WS /ui` | **The ui channel** (RU-W): one WebSocket per conversation, Reactor's `reactor.ui.ws`. See [The ui socket](#the-ui-socket). |
+| `POST /sessions/{uid}/window` | **A window message** from the page the application sits in (P-25): `{data}`, anything JSON writes. A Python application's `@app.window` runs on it, as a turn; what it tells the page back (`session.send_window_message`) is a `reactor.ui` **window** op on the session's ui socket (`{v: 1, op: "window", scope, body: {name: "message", args: {data}}}`, RU-3, RU-W), not on this stream; a window op of any other name is refused by the page. Refused with 422 for an application whose code reads none (*Help Desk reads no window message: its code has no @app.window.*), 409 while it answers or waits. Not a turn of the conversation. |
+| `PUT /sessions/{uid}/settings` | **Settings change**: `{values}`, checked against the application's settings — the JSON Schema of a form (C-16), with the check a Form's values get (*“Its settings” was sent what its fields refuse: tone: 'Loud' is not one of ['Plain', 'Warm'].*; *There is no field nope.*) — and kept. The settings a start or a run carries (`settings`, `forwardedProps.loop.settings`) are checked the same way, refused with 422. |
 | `POST /sessions/{uid}/stop` | **Stop**: what runs is cancelled, a Python application's `stop` runs, the session waits to be resumed. Answers the session, as JSON. |
 | `POST /sessions/{uid}/resume` | **Resume** a stopped session; or, with `{agent}`, one this runtime no longer holds, from its record. |
 | `POST /sessions/{uid}/end` | **End**: what runs is cancelled, a Python application's `end` runs, and the runtime no longer holds the session. Answers the session, `ended`, as JSON. Its record stays. |
@@ -268,7 +268,7 @@ refused (409), as is anything but `resume` on a stopped session.
   code reacts, through an `AppHost` whose channel is the session.
   `session.send` and `session.stream` are `TEXT_MESSAGE_*` events,
   `session.step` is `STEP_STARTED` and `STEP_FINISHED`, each followed by the
-  step's **display** (`reactor.ui`, REACTOR_UI RU-3), a `show` op on the
+  step's **display** (`reactor.ui`, RU-3), a `show` op on the
   session's [ui socket](#the-ui-socket), its display of type
   `application/vnd.datalayer.loop.step+json`, its id the step's, its `data`
   `{name, kind, parent_id, input, output, error, started_at, ended_at}` —
@@ -291,7 +291,7 @@ refused (409), as is anything but `resume` on a stopped session.
   about a message the run stream has not brought yet waits for it.
   What an answer shows besides its text (`session.send(text, show=[...],
   data={...})`) follows its message as a **display** (`reactor.ui`,
-  REACTOR_UI RU-2): a `show` op on the socket, its scope the session's uid,
+  RU-2): a `show` op on the socket, its scope the session's uid,
   its display an `AnswerShows` (`application/vnd.datalayer.loop.answer+json`,
   id `<message id>-shows`) whose `text` says the components by kind and
   words, and whose `data` holds `message_id`, `title` and `surface`, the
@@ -326,7 +326,7 @@ refused (409), as is anything but `resume` on a stopped session.
   registry, once; a run naming a press nobody checked, or carrying a
   display's press itself, is refused with 422 — and so is any run carrying
   `forwardedProps.loop.action`: a page's block sends a message, its files
-  and its settings, never an action of its own (REACTOR_UI RU-5).
+  and its settings, never an action of its own (RU-5).
   Each action is **typed**: `@app.action(name, payload=Model)` writes the
   model's JSON Schema in the Appspec (`interface.actions`), the press is
   checked against it — a payload it refuses, or a field it does not name,
@@ -337,11 +337,11 @@ refused (409), as is anything but `resume` on a stopped session.
   token}`), for a page's block or a client of the session API
   (`POST …/press`). Nothing pressed is ever said to the model.
   An element its code opens beside the conversation (`session.show(...,
-  where="panel")` or `where="page"`, LOOP P-18) is its `AnswerShows`
+  where="panel")` or `where="page"`, P-18) is its `AnswerShows`
   display shown the same way, its `data.where` `"panel"` or `"page"` (an
   answer's is `"inline"`) and its `data.title` its title, its buttons
   offered the same way — shown again whole when it changes, and a
-  **remove** op of its id when its code closes it (REACTOR_UI RU-3).
+  **remove** op of its id when its code closes it (RU-3).
   The `app-elements` plugin draws a panel on the workspace's trailing edge
   and a page over it, each with its own Close; a resume shows again what is
   open.
@@ -352,7 +352,7 @@ What a session shows besides its text — what its answers show, its steps,
 its elements, its messages' authors and removals, its window messages —
 travels on one WebSocket per conversation, `WS /api/v1/apps/ui`, beside the
 run stream, which carries the conversation's text, AG-UI's steps by name and
-tool calls only (REACTOR_UI RU-W). It is Reactor's `reactor.ui.ws` over the
+tool calls only (RU-W). It is Reactor's `reactor.ui.ws` over the
 sessions' hub (`sessions.UI_HUB`), which numbers and keeps each session's ops.
 
 - **Hello first.** The page's first frame is `{t: "hello", token, scope,
@@ -379,7 +379,7 @@ runtime through the same ingress as the session API.
 ## Files
 
 A file reaches a session three ways, each limited by what asked for it
-(LOOP P-21), and refused with 422 in a sentence when it does not fit — the
+(P-21), and refused with 422 in a sentence when it does not fit — the
 sentence the page says before it sends, said again here for a client that
 went around the page:
 
@@ -398,7 +398,7 @@ went around the page:
   names no `uploads` takes none (*Desk takes no file sent with a message:
   its Appspec names none it takes (interface.uploads).*).
 
-A file's bytes never ride in a run or a press (REACTOR_UI RU-6): the page
+A file's bytes never ride in a run or a press (RU-6): the page
 uploads each first — `POST /agents/{agent}/files`, Reactor's upload, the
 bytes as the body, the conversation's thread in `X-Reactor-Scope`, the name
 in `X-Reactor-File-Name`, the caller's token as for every route — and gets
@@ -436,7 +436,7 @@ What is taken is the session's:
 ## When the application asks
 
 When the code asks the person something, the stream ends on the question
-(REACTOR_UI RU-4): the question in words as a message, its **display** under
+(RU-4): the question in words as a message, its **display** under
 that message on the [ui socket](#the-ui-socket) — an `ask` op of a
 `QuestionShown` (`application/vnd.datalayer.loop.question+json`, id
 `<message id>-ask`, `data` `{message_id, kind, prompt, options, accept,
@@ -465,7 +465,7 @@ waits is not an answer (409, what it waits for).
 Anything else while it waits is refused with what it waits for: *Report from a
 File is waiting for an answer: Which file? (a file: .csv)*.
 
-A test that is a conversation (`tests.cases[].turns`, STUDIO E-01) is played
+A test that is a conversation (`tests.cases[].turns`, E-01) is played
 on these routes, as a person on its page would: the session opened under the
 test's name (`session`, the record it is kept under) — with its first turn as
 the `opener` when that turn says something — then, for each turn once the one
@@ -499,7 +499,7 @@ token renewed for the same visit. Like every other route, it answers
 else. Unlike resume, it changes nothing: the session stays open, and the
 next AG-UI run on its thread carries on from it.
 
-This is what an embedded application uses after its page reloads (LOOP D-13,
+This is what an embedded application uses after its page reloads (D-13,
 [Embedding](./embedding.mdx#after-a-reload)): the element keeps the
 session's uid in the page's storage, reads the conversation with the visit's
 token, and the chat draws it again and continues the thread.
@@ -575,7 +575,7 @@ besides the message:
 ```
 
 `modes` says the option of each of the application's modes the person is in
-(LOOP P-19); unsaid, each stays where it was, else on its default or first
+(P-19); unsaid, each stays where it was, else on its default or first
 option. A mode or an option the application does not have is refused with
 422 (*The mode Depth has no option 'deep'.*). The options' `instructions` are
 told to the agent for that run, besides its own — set by the runtime around
@@ -584,7 +584,7 @@ message from a request — and the `model` one of them names is run on, for
 that run. A Python application reads them as `session.modes`, and
 `session.agent` is told them.
 
-`profile` says the profile the conversation is with (LOOP P-20): its
+`profile` says the profile the conversation is with (P-20): its
 `instructions` are told before the modes', and its `model` is run unless a
 mode names one. Unsaid, the conversation is with the first. Once a
 conversation has a profile it keeps it: another is refused with 409 (*This
@@ -594,7 +594,7 @@ application reads it as `session.profile`; `GET` says it as `profile`.
 
 `settings` are the values the page holds. When they changed since the last
 run, a Python application's `@app.settings` runs on them before the message
-does (LOOP P-20); the agent of a spec is told them in words.
+does (P-20); the agent of a spec is told them in words.
 
 This is what the chat of an application's page speaks: `ChatView` addresses an
 application's agent here rather than at `/api/v1/ag-ui/{agent}/`, and the
@@ -603,7 +603,7 @@ embed's floating chat too. The page's buttons go with the chat's own run
 conversation and in the page's `/status`, `/answer` and `/output`. The page
 still handles only the buttons its kind does (`send`, `run`, `upload`, `stop`,
 `new`), each a message with its files and settings — never an action of its
-own (REACTOR_UI RU-5); an action of a Python application's code is pressed
+own (RU-5); an action of a Python application's code is pressed
 with the token its session offered, up the ui socket, or `POST …/press`.
 
 ## What is verified, and what is not
@@ -633,7 +633,7 @@ refused for an application whose code reads none. A widget's page
 `loop.page` event, nothing said in the conversation, its inputs refused with
 422 in a sentence, and refused for an application with no page of its code.
 The page side is tested with vitest
-(`app-page`, `app-page-blocks`, `app-page-code`, `embed-element`, `loopStep`, `loopElement`, `answer-action`, `answer-displays`, `app-uploads`, `loopWindow`, `embed-session`). The ops besides a message's text — an author, a removal, a step streamed and ended, an element opened and closed, a window message — are one fixture beside the run's events, `agent_runtimes/tests/fixtures/app_session_ops.json`, which `test_app_session_ops.py` holds the session to and `appSessionOps.test.ts` draws, the socket's ops arriving before the run's text. The socket itself (`test_app_ui_socket.py`): hello, ops replayed and numbered, presses checked and answered on their tab, two tabs, a resume, every refusal (4400, 4401, 4403); `test_app_answer_displays.py` a press run once by the run naming it. Files as refs (REACTOR_UI RU-6): `test_app_uploads.py` a file uploaded, named by its ref, fetched by its signed url (a tampered one 403), an upload without its scope or name 400, one too large 413; `test_app_sessions.py` a run carrying bytes refused, another conversation's ref 404, a file question answered by a press of its ref (another conversation's 404, the question still waiting); `test_app_questions.py` a file question offering `reactor.answer`, bytes in the press, another's file and a kind not asked refused; vitest `uiFiles` (the page's files uploaded, the run naming refs) and `app-questions` (a file chosen, uploaded, its ref pressed). Typed actions (`test_app_typed_actions.py`, REACTOR_UI RU-5): what the session offers on `app`, a press run as its model, every refusal (a field missing, a field not named, a payload to an action taking none, a forged token, an undeclared action, another display), nothing pressed said to the model, a run carrying an action refused, an application without code offering none, a press of `app` up the socket run by the run naming it.
+(`app-page`, `app-page-blocks`, `app-page-code`, `embed-element`, `loopStep`, `loopElement`, `answer-action`, `answer-displays`, `app-uploads`, `loopWindow`, `embed-session`). The ops besides a message's text — an author, a removal, a step streamed and ended, an element opened and closed, a window message — are one fixture beside the run's events, `agent_runtimes/tests/fixtures/app_session_ops.json`, which `test_app_session_ops.py` holds the session to and `appSessionOps.test.ts` draws, the socket's ops arriving before the run's text. The socket itself (`test_app_ui_socket.py`): hello, ops replayed and numbered, presses checked and answered on their tab, two tabs, a resume, every refusal (4400, 4401, 4403); `test_app_answer_displays.py` a press run once by the run naming it. Files as refs (RU-6): `test_app_uploads.py` a file uploaded, named by its ref, fetched by its signed url (a tampered one 403), an upload without its scope or name 400, one too large 413; `test_app_sessions.py` a run carrying bytes refused, another conversation's ref 404, a file question answered by a press of its ref (another conversation's 404, the question still waiting); `test_app_questions.py` a file question offering `reactor.answer`, bytes in the press, another's file and a kind not asked refused; vitest `uiFiles` (the page's files uploaded, the run naming refs) and `app-questions` (a file chosen, uploaded, its ref pressed). Typed actions (`test_app_typed_actions.py`, RU-5): what the session offers on `app`, a press run as its model, every refusal (a field missing, a field not named, a payload to an action taking none, a forged token, an undeclared action, another display), nothing pressed said to the model, a run carrying an action refused, an application without code offering none, a press of `app` up the socket run by the run naming it.
 
 A Preview held to its grants (`agent_runtimes/tests/test_app_preview_grants.py`):
 its token asked with the person's, for the Spaces of the Appspec it runs; each

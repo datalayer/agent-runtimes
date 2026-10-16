@@ -5,7 +5,7 @@
 
 /**
  * An application's page, as data: what it publishes to its surface by path,
- * what it takes from it, and what a button on it does (LOOP R-01, R-01b,
+ * what it takes from it, and what a button on it does (R-01, R-01b,
  * C-04).
  *
  * A chat, a widget or a worker runs as its conversation. Its page is its
@@ -17,7 +17,7 @@
  * answer stopped, the conversation started over. Nothing here is a server
  * API: what a button did besides its message — the block's action, the files
  * given, the settings — goes with the chat's own run to the application's
- * session (LOOP R-04, `forwardedProps.loop`), which puts a file where the
+ * session (R-04, `forwardedProps.loop`), which puts a file where the
  * application reads it; a setting also reaches a written application in the
  * words of its message.
  *
@@ -528,7 +528,7 @@ export type GivenFile = {
  * cannot go: what was given is not files as File upload gives them, or one
  * is larger than a session takes. What becomes of each — put in the
  * application's sandbox, or its text in the message — is the session's to
- * decide (LOOP R-04).
+ * decide (R-04).
  */
 export function givenFiles(
   files: unknown,
@@ -635,9 +635,9 @@ function formValuesOf(
  * What the page did besides its message, for the session API: the files
  * given with it, the settings it holds. Sent with the chat's own run (AG-UI's
  * `forwardedProps.loop`), so that what it answers streams in the
- * conversation (LOOP R-04). A block sends a message, never an action of its
+ * conversation (R-04). A block sends a message, never an action of its
  * own: an action of the application's code is pressed with the token its
- * session offered, up the ui socket (REACTOR_UI RU-5).
+ * session offered, up the ui socket (RU-5).
  */
 export type AppPageLoop = {
   files?: GivenFile[];

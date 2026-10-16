@@ -226,7 +226,7 @@ export function ChatInline({
   const [input, setInput] = useState('');
   // AI state
   const [aiState, setAiState] = useState<ChatInlineState>('initial');
-  // The one-shot conversation (MOBILE M-030): `reduceConversation`'s, as in
+  // The one-shot conversation (M-030): `reduceConversation`'s, as in
   // ChatBase and on the phone; the response is its newest assistant message.
   const [conversation, setConversation] = useState<ConversationState>(() =>
     emptyConversation(BROWSER_LIMITS),

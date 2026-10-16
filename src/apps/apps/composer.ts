@@ -4,7 +4,7 @@
  */
 
 /**
- * Commands, modes and profiles in the composer (LOOP P-19, P-20), as rules:
+ * Commands, modes and profiles in the composer (P-19, P-20), as rules:
  * what a command sends, which option of each mode a run is in, which profile
  * a conversation is with and what it offers. agentspecs' own
  * (`command_prompt`, `AppInterface.mode_choice`, `mode_effect`,
@@ -81,7 +81,7 @@ export function modeChoice(
 }
 
 /**
- * The profile a conversation is with (LOOP P-20): the one chosen, else the
+ * The profile a conversation is with (P-20): the one chosen, else the
  * first; undefined for an application without profiles. One it does not have
  * is refused, in a sentence, as the runtime refuses it.
  */

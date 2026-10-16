@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A local UCP test merchant, *Example Store* (AGENT_PROTOCOLS PR-32, EX-04).
+"""A local UCP test merchant, *Example Store* (PR-32, EX-04).
 
 A Starlette application of the REST binding of UCP ``2026-08-25``, shaped
 after the specification's own examples: its profile at ``/.well-known/ucp``,

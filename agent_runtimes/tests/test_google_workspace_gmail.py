@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Gmail, reached in the name of whom a deployed application acts for (STUDIO W-02).
+"""Gmail, reached in the name of whom a deployed application acts for (W-02).
 
 The catalogue's `google-workspace` server runs as a local HTTP process in its
 external OAuth provider mode; each run of a deployment's agent reaches it with

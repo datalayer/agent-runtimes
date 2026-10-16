@@ -4,7 +4,7 @@
  */
 
 /**
- * The feedback strip above an application's prompt (LOOP V-18): once an
+ * The feedback strip above an application's prompt (V-18): once an
  * answer is in, a thumb up or down and a comment, kept in the application's
  * record under the conversation it was about.
  *
@@ -139,7 +139,7 @@ export function AppFeedback({
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           {FEEDBACK_WORDS.ask}
         </Text>
-        {/* Reactions in the theme (LOOP T-06, T-17): line icons in the
+        {/* Reactions in the theme (T-06, T-17): line icons in the
             ink, the chosen one on a quiet ground — no colour, no fill.
             Named on the button itself, and pressed when chosen (P-24): a
             tooltip-label would name it only through a hidden element. */}

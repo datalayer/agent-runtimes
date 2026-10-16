@@ -4,7 +4,7 @@
  */
 
 /**
- * Protocol displays from the stream (MOBILE M-037): the PAP SDK's displays as
+ * Protocol displays from the stream (M-037): the PAP SDK's displays as
  * the runtime sends them beside a tool's result, read strictly; anything
  * that does not read is `unknown` with its text — never a partial card.
  *
@@ -269,7 +269,7 @@ describe('protocol displays (M-037)', () => {
     );
   });
 
-  it('reads a coding agent’s diff and draws it as a unified diff in the file’s language (SHIELD SH-16)', () => {
+  it('reads a coding agent’s diff and draws it as a unified diff in the file’s language (SH-16)', () => {
     const { diff } = shieldDisplayFixtures();
     const read = protocolDisplayOf(diff);
     expect(read).toEqual({

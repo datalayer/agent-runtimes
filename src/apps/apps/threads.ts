@@ -4,7 +4,7 @@
  */
 
 /**
- * A thread opened from a person's history, to go on with it (LOOP P-24).
+ * A thread opened from a person's history, to go on with it (P-24).
  *
  * A thread is a session of an application: its uid is the conversation's
  * AG-UI thread. Opened again, its conversation is read from the runtime the
@@ -40,7 +40,7 @@ export function deploymentOfPayload(
 
 /**
  * The thread a deployment's chat opens on when its host gave none: a new one,
- * `id` (PAP_DATALAYER's release gates, found on r1, 14 October 2026).
+ * `id` (the release gates, found on r1, 14 October 2026).
  *
  * A deployment's agent serves every visitor, and what its runtime holds in
  * memory is the last run's, whoever ran it: drawn as the page's

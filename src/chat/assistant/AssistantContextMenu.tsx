@@ -4,7 +4,7 @@
  */
 
 /**
- * The assistant's own menu (LOOP T-27): right-click the character — or
+ * The assistant's own menu (T-27): right-click the character — or
  * Shift+F10 or the ContextMenu key while it has the focus, or a long press on
  * a touch screen — and a menu opens where the pointer is, with what applies
  * to this agent on this page: inspect it, open the conversation, the

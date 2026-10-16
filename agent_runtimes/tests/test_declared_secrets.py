@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Only the secrets its specs declare reach a runtime (LOOP R-19, decided 2026-10-07).
+"""Only the secrets its specs declare reach a runtime (R-19, decided 2026-10-07).
 
 The account gives a runtime three sentinels: one its MCP server declares, one
 its skill declares, and one nothing declares. The undeclared one never reaches

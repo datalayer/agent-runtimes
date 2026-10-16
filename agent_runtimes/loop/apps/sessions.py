@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session API: an application's sessions over the wire (LOOP R-04).
+"""The session API: an application's sessions over the wire (R-04).
 
 The lifecycle — start, message, press, settings change, stop and
 resume — for the sessions of an application whose agent runs on this
@@ -32,7 +32,7 @@ refused anything else, in a sentence. A file asked by an application's code
 (``session.ask(FileQuestion(...))``) is answered by a file given — before or
 after it is asked.
 
-The actions of its code are typed (REACTOR_UI RU-5): each declared with the
+The actions of its code are typed (RU-5): each declared with the
 model of its payload (``interface.actions``), pressable only with a token
 this session minted — on a display its code showed, or on the application's
 own (`APP_DISPLAY`, `LiveSession.offered`) — checked before its code runs,
@@ -40,13 +40,13 @@ and never said to the model.
 
 What the code shows besides its text — what its answers show, its steps,
 its elements, its messages' authors, its window messages — is said as
-``reactor.ui`` ops on the session's ui socket (`UI_HUB`, REACTOR_UI RU-W),
+``reactor.ui`` ops on the session's ui socket (`UI_HUB`, RU-W),
 and the presses of what they offer come up it, checked, each waiting for the
 run that names it (``forwardedProps.loop.press``).
 
 When the code asks the person something, the stream ends on the question —
 the question in words, its display on the ui socket (an ``ask`` op offering
-``reactor.answer``, REACTOR_UI RU-4), and ``RUN_FINISHED`` whose result is
+``reactor.answer``, RU-4), and ``RUN_FINISHED`` whose result is
 ``{asking}`` — and the session
 waits: a press of what it offered answers it (a message, text or a choice,
 from a client of the session API; a settings change, a form), a file given
@@ -203,7 +203,7 @@ def _file_name(name: str) -> str:
 
 
 def owner_of(caller: Caller) -> Tuple[str, str, str]:
-    """Who a file uploaded is kept for (REACTOR_UI RU-6): the caller, as a
+    """Who a file uploaded is kept for (RU-6): the caller, as a
     session tells its own apart (`LiveSession.answers_to`).
     """
     return (caller.kind, caller.uid, caller.visit)
@@ -212,8 +212,7 @@ def owner_of(caller: Caller) -> Tuple[str, str, str]:
 def given_files(
     raw: Any, *, scope: str, owner: Tuple[str, str, str]
 ) -> List[UploadedFile]:
-    """The files a run names, by the refs their upload answered (REACTOR_UI
-    RU-6): each read back from `UI_FILES`, for whoever uploaded it in this
+    """The files a run names, by the refs their upload answered (RU-6): each read back from `UI_FILES`, for whoever uploaded it in this
     conversation. A file's bytes never ride in the run.
 
     Raises
@@ -425,18 +424,18 @@ def _new_id() -> str:
 _CODE: Dict[Tuple[str, str], Any] = {}
 
 #: The applications whose code this process was given to run, beside the
-#: catalogue's (LOOP P-25), by id and version.
+#: catalogue's (P-25), by id and version.
 _SERVED: Dict[Tuple[str, str], Any] = {}
 
 #: The code a deployment's agent on this runtime was given to run, by the
-#: agent's id (LOOP R-14): the ``app.py`` of the version it runs, carried by
+#: agent's id (R-14): the ``app.py`` of the version it runs, carried by
 #: the deployment and accepted by the create route in its principal's name.
 _AGENT_CODE: Dict[str, Any] = {}
 
 
 def serve_code(application: Any) -> None:
     """Run an application's code on this runtime: its sessions, at its id and
-    version, are reacted to by it (LOOP P-25, ``app.mount``).
+    version, are reacted to by it (P-25, ``app.mount``).
     """
     spec = application.spec
     _SERVED[(spec.id, spec.version)] = application
@@ -444,7 +443,7 @@ def serve_code(application: Any) -> None:
 
 def serve_agent_code(agent_id: str, application: Any) -> None:
     """Run an application's code for the sessions of one agent of this
-    runtime (LOOP R-14): the deployment's ``app.py``, as the create route
+    runtime (R-14): the deployment's ``app.py``, as the create route
     accepted it; ``None`` forgets it (the agent deleted).
     """
     if application is None:
@@ -500,7 +499,7 @@ def code_of(app: AppSpec, agent_id: str = "") -> Any:
     return _CODE[key]
 
 
-#: The display a session offers its code's actions on (REACTOR_UI RU-5): the
+#: The display a session offers its code's actions on (RU-5): the
 #: application itself, its actions declared in its Appspec — what a page's
 #: block or a client of the session API presses with their tokens, as a
 #: button of a display its code showed presses what that display offered.
@@ -522,8 +521,8 @@ def _step_value(value: Any) -> Any:
     return value if len(said) <= STEP_VALUE_LIMIT else said[:STEP_VALUE_LIMIT]
 
 
-#: The display type of a step of an application's code (LOOP P-16,
-#: REACTOR_UI RU-3).
+#: The display type of a step of an application's code (P-16,
+#: RU-3).
 STEP_DISPLAY_TYPE = "application/vnd.datalayer.loop.step+json"
 
 
@@ -531,7 +530,7 @@ STEP_DISPLAY_TYPE = "application/vnd.datalayer.loop.step+json"
 class StepShown(Display):
     """A step of an application's code, as the page draws it: shown as it
     starts and again as it ends (a ``show`` of the same id), its output
-    patched in as it streams (LOOP P-31). Its id is the step's.
+    patched in as it streams (P-31). Its id is the step's.
     """
 
     name: str
@@ -568,7 +567,7 @@ class StepShown(Display):
         )
 
 
-#: The display type of what an application's code asks (REACTOR_UI RU-4).
+#: The display type of what an application's code asks (RU-4).
 QUESTION_DISPLAY_TYPE = "application/vnd.datalayer.loop.question+json"
 
 
@@ -577,7 +576,7 @@ class QuestionShown(Display):
     """What the code asks, under the message that asks it in words: shown by
     an ``ask`` op, offering ``reactor.answer`` — the choice as buttons, the
     words as a field, a form as its fields, a file as the ref its upload
-    answered (REACTOR_UI RU-6). Answered, it says what answered it and offers
+    answered (RU-6). Answered, it says what answered it and offers
     nothing.
     """
 
@@ -625,13 +624,13 @@ def answer_in_words(question: Question, answer: Any) -> str:
     return str(answer)
 
 
-#: The window op that hands the page a message of the code's (LOOP P-25):
+#: The window op that hands the page a message of the code's (P-25):
 #: ``{data}``, what ``session.send_window_message(data)`` said.
 WINDOW_MESSAGE = "message"
 
 
 def _shows_id(message_id: str) -> str:
-    """The display of what a message shows (REACTOR_UI RU-2)."""
+    """The display of what a message shows (RU-2)."""
     return f"{message_id}-shows"
 
 
@@ -653,11 +652,11 @@ class LiveSession:
     recorder: AppRecorder
     settings: Dict[str, Any] = field(default_factory=dict)
     modes: Dict[str, str] = field(default_factory=dict)
-    """The option of each of its modes the person is in (LOOP P-19), as the last run said."""
+    """The option of each of its modes the person is in (P-19), as the last run said."""
     profile: str = ""
-    """The profile the conversation is with (LOOP P-20); ``""`` until one is said, then kept."""
+    """The profile the conversation is with (P-20); ``""`` until one is said, then kept."""
     user: Optional[HostUser] = None
-    """Embedded, the user the host's server signed (LOOP D-21): who `host_context` says, and its code's user."""
+    """Embedded, the user the host's server signed (D-21): who `host_context` says, and its code's user."""
     state: str = "open"
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
@@ -683,18 +682,18 @@ class LiveSession:
     _ui_actions: Optional[ActionRegistry] = field(default=None, init=False, repr=False)
     _presses: Dict[str, UiAction] = field(default_factory=dict, init=False, repr=False)
     _asked: Optional[QuestionShown] = field(default=None, init=False, repr=False)
-    """The question waiting, as the page was shown it (REACTOR_UI RU-4)."""
+    """The question waiting, as the page was shown it (RU-4)."""
     """Presses checked on the ui socket, waiting for the run that runs them (RU-W)."""
     _sent_settings: Dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _streamed: Dict[str, List[str]] = field(
         default_factory=dict, init=False, repr=False
     )
     _elements: Dict[str, Shown] = field(default_factory=dict, init=False, repr=False)
-    """The elements open in a side panel or on a page (LOOP P-18): drawn again on a resume."""
+    """The elements open in a side panel or on a page (P-18): drawn again on a resume."""
     _steps: Dict[str, Step] = field(default_factory=dict, init=False, repr=False)
-    """The steps running, by id, with what they streamed so far (LOOP P-31)."""
+    """The steps running, by id, with what they streamed so far (P-31)."""
     _said: Optional[Dict[str, str]] = field(default=None, init=False, repr=False)
-    """What its code said in a turn recorded as a run of its own (LOOP R-14), by message id."""
+    """What its code said in a turn recorded as a run of its own (R-14), by message id."""
 
     # --- what the session is -----------------------------------------------------
 
@@ -757,7 +756,7 @@ class LiveSession:
                 spend_limit=deployment_spend_limit(app_instance_of(self.agent_id)),
             )
             unavailable = None
-        except Exception as refused:  # noqa: BLE001 - said, not hidden: nothing is decided (decision 11)
+        except Exception as refused:  # noqa: BLE001 - said, not hidden: nothing is decided
             policies, unavailable = [], str(refused)
         return {
             "uid": self.uid,
@@ -783,7 +782,7 @@ class LiveSession:
             session_rules().add(self.uid, rule_from(data))
         except SessionRuleRefused as refused:
             raise SessionRefused(422, str(refused)) from None
-        except Exception as refused:  # noqa: BLE001 - IAM unreadable: nothing is tightened under nothing (decision 11)
+        except Exception as refused:  # noqa: BLE001 - IAM unreadable: nothing is tightened under nothing
             raise SessionRefused(503, str(refused)) from None
         return self.rules_in_force()
 
@@ -835,7 +834,7 @@ class LiveSession:
 
     def thread(self) -> List[Dict[str, Any]]:
         """The conversation as AG-UI messages, as a snapshot says it: what a
-        page reloaded draws again (LOOP D-13).
+        page reloaded draws again (D-13).
         """
         return [
             message.model_dump(mode="json", by_alias=True, exclude_none=True)
@@ -847,7 +846,7 @@ class LiveSession:
         if caller.kind == "local":
             return True
         # An embed's visitors are one owner's token each: told apart by the
-        # visit their token was issued for (LOOP R-20).
+        # visit their token was issued for (R-20).
         return (caller.kind, caller.uid, caller.visit) == (
             self.opened_by.kind,
             self.opened_by.uid,
@@ -919,7 +918,7 @@ class LiveSession:
 
         ``wraps_run``: the turn is framed by ``RUN_STARTED`` and ``RUN_FINISHED``
         here — the code's turns; an agent's run frames its own. ``counts``: it
-        is one of a visitor's turns (LOOP R-30) — opening with nothing to
+        is one of a visitor's turns (R-30) — opening with nothing to
         say is not.
         """
         from ag_ui.core import RunErrorEvent, RunFinishedEvent, RunStartedEvent
@@ -956,13 +955,13 @@ class LiveSession:
             )
 
             # It remembers for whoever opened the session, each person apart,
-            # a visitor not signed in nothing (LOOP R-18, R-36).
+            # a visitor not signed in nothing (R-18, R-36).
             remember_for(self.opened_by, token)
             # A visitor's turn calls its models with their own token, and
-            # reads only (LOOP R-30); anybody else's with what it always did.
+            # reads only (R-30); anybody else's with what it always did.
             use_turn_token(token if visitor else "")
             # An embed's visitor is nobody the platform knows: their turn
-            # only reads, and asks nobody, as a visitor's (LOOP R-20).
+            # only reads, and asks nobody, as a visitor's (R-20).
             if self.opened_by.kind == "embed":
                 enter_visitor_run(f"embed:{self.opened_by.visit}")
             cancelled = False
@@ -996,7 +995,7 @@ class LiveSession:
                 if not cancelled:
                     # The stream ends once the turn is on the record: a
                     # scheduler stopping the runtime as it ends loses
-                    # nothing (LOOP R-14).
+                    # nothing (R-14).
                     await self.recorder.settled(self.uid)
                 self._end_stream()
 
@@ -1032,7 +1031,7 @@ class LiveSession:
         elif isinstance(event, Message):
             # A message delivered again under its id is that message changed:
             # it is written again whole, under the same id, which a page
-            # draws in place of what it said (LOOP P-15).
+            # draws in place of what it said (P-15).
             if self._streamed.pop(event.id, None) is None:
                 self.emit(TextMessageStartEvent(message_id=event.id, role="assistant"))
                 if event.text:
@@ -1047,8 +1046,8 @@ class LiveSession:
             }
             if event.components:
                 # What it shows: a display under the message, its buttons
-                # offered with the tokens this session minted (LOOP P-04,
-                # REACTOR_UI RU-2).
+                # offered with the tokens this session minted (P-04,
+                # RU-2).
                 shown = self._answer_shows(
                     _shows_id(event.id),
                     event.id,
@@ -1058,14 +1057,14 @@ class LiveSession:
                 )
                 self.show_op(ShowOp(scope=self.uid, id=shown.id, body=shown))
                 kept["shows"] = shown.model_dump(mode="json")
-                # And on the run's record, as the answer is (LOOP P-04).
+                # And on the run's record, as the answer is (P-04).
                 self.recorder.start(self.uid)
                 self.recorder.shown(
                     event.id, event.author, event.components, event.data
                 )
             if event.author != self.app.name:
                 kept["name"] = event.author
-                # Who said it, a fact about the message (LOOP P-15).
+                # Who said it, a fact about the message (P-15).
                 self.show_op(
                     MetaOp(scope=self.uid, id=event.id, body={"author": event.author})
                 )
@@ -1081,10 +1080,10 @@ class LiveSession:
             self.messages = [
                 said for said in self.messages if said.get("id") != event.message_id
             ]
-            # The message goes, and what it showed with it (LOOP P-15).
+            # The message goes, and what it showed with it (P-15).
             self.show_op(RemoveOp(scope=self.uid, id=event.message_id))
         elif isinstance(event, StepDelta):
-            # A step's output as it comes (LOOP P-31): its output so far
+            # A step's output as it comes (P-31): its output so far
             # patched in — any credential in it withheld (R-19) — which the
             # chat draws in place.
             running = self._steps.get(event.step_id)
@@ -1109,11 +1108,11 @@ class LiveSession:
                 self.emit(StepFinishedEvent(step_name=event.name))
             # AG-UI's step is its name: what the chat shows of it — its
             # kind, the step it is nested in, its input, output or error —
-            # is its display beside it (LOOP P-16, REACTOR_UI RU-3).
+            # is its display beside it (P-16, RU-3).
             shown = StepShown.of(event).wire()
             self.show_op(ShowOp(scope=self.uid, id=shown.id, body=shown))
         elif isinstance(event, Shown):
-            # A side panel or a page of its own, opened or changed (LOOP P-18).
+            # A side panel or a page of its own, opened or changed (P-18).
             self._elements[event.id] = event
             self.show_op(self._element_op(event))
         elif isinstance(event, WindowMessage):
@@ -1141,7 +1140,7 @@ class LiveSession:
             # The person spoke over the agent: a client playing its voice stops it.
             self.emit(CustomEvent(name=VOICE_INTERRUPTED_EVENT, value={}))
         elif isinstance(event, PageShown):
-            # A widget's page, shown in place for its inputs (LOOP P-05).
+            # A widget's page, shown in place for its inputs (P-05).
             self.emit(
                 CustomEvent(
                     name=LOOP_PAGE,
@@ -1154,12 +1153,12 @@ class LiveSession:
 
     def show_op(self, op: UiOp) -> None:
         """Say a ``reactor.ui`` op to the page: on the session's ui socket,
-        numbered and kept for a resume (REACTOR_UI RU-W). The run stream
+        numbered and kept for a resume (RU-W). The run stream
         carries the conversation's text only.
         """
         UI_HUB.emit(op)
 
-    # --- what its answers offer (REACTOR_UI RU-2) -----------------------------------
+    # --- what its answers offer (RU-2) -----------------------------------
 
     def _actions(self) -> ActionRegistry:
         """The actions of its code, each pressable only where a display offered it.
@@ -1173,10 +1172,10 @@ class LiveSession:
                     f"{self.app.name} has no code here: nothing offers an action."
                 )
             registry = ActionRegistry(secrets.token_bytes(32))
-            # Each typed by the model its code declares (REACTOR_UI RU-5).
+            # Each typed by the model its code declares (RU-5).
             for name, model in self.host.app.action_payloads.items():
                 registry.register(name, model, self._run_pressed, plugin=self.app.id)
-            # What answers what its code asks (REACTOR_UI RU-4): taken by the
+            # What answers what its code asks (RU-4): taken by the
             # run that names the press, never dispatched.
             registry.register(
                 ANSWER_ACTION, Answer, self._never_dispatched, plugin=self.app.id
@@ -1196,7 +1195,7 @@ class LiveSession:
         await self.host.action(self.session, context.action, payload)
 
     def offered(self) -> List[Dict[str, Any]]:
-        """What the session offers of its code's actions (REACTOR_UI RU-5): each
+        """What the session offers of its code's actions (RU-5): each
         action its Appspec declares, on the application's own display, with
         the token this session minted — what a page's block or a client of
         the session API presses. None for an application without code.
@@ -1215,7 +1214,7 @@ class LiveSession:
         ]
 
     def check_press(self, press: UiAction) -> UiAction:
-        """A press checked before anything runs (REACTOR_UI RU-2, RU-5): offered
+        """A press checked before anything runs (RU-2, RU-5): offered
         to this session on that display (403), an action its code declares
         (422), with what it takes (422, each field and why). An answer is
         checked against its question when the run takes it.
@@ -1277,7 +1276,7 @@ class LiveSession:
 
     def press_up(self, caller: Caller, press: UiAction) -> Dict[str, str]:
         """A press of something a display offered, come up the ui socket
-        (REACTOR_UI RU-W): checked — offered to this session, on that display
+        (RU-W): checked — offered to this session, on that display
         (403 not offered, 422 unknown) — and kept for the run that runs it,
         which names it (``forwardedProps.loop.press``). Nothing runs here.
         """
@@ -1316,7 +1315,7 @@ class LiveSession:
         future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
         self._answer = future
         # Asked in words in the conversation, and as a display under those
-        # words that answers it (REACTOR_UI RU-4): its choices as buttons, its
+        # words that answers it (RU-4): its choices as buttons, its
         # fields as a form, each press of it the answer.
         said = Message(_new_id(), self.uid, question_in_words(question), self.app.name)
         await self.deliver(said)
@@ -1334,7 +1333,7 @@ class LiveSession:
             )
         )
         self.state = "waiting"
-        # Its record says it waits: whoever opened it is told (MOBILE M-023).
+        # Its record says it waits: whoever opened it is told (M-023).
         self.recorder.start(self.uid)
         self.recorder.asked(self.uid, question_of(question).get("kind", ""))
         self._end_stream()
@@ -1398,7 +1397,7 @@ class LiveSession:
                 profile=self.profile or None,
             )
             # Its code's session is with a profile from now on: the first,
-            # when none was said (LOOP P-20).
+            # when none was said (P-20).
             self.profile = self.session.profile or ""
 
     def open(
@@ -1411,7 +1410,7 @@ class LiveSession:
     ) -> AsyncIterator[str]:
         """Start: the session's record begins, the code's ``start`` runs, then the opener.
 
-        A session a schedule woke (LOOP R-14) runs, in the opener's place, the
+        A session a schedule woke (R-14) runs, in the opener's place, the
         handler its code declared for that schedule, when it declared one: the
         trigger's prompt is what its agent is asked otherwise.
         """
@@ -1443,7 +1442,7 @@ class LiveSession:
     async def _scheduled_code(self, name: str, opener: str) -> None:
         """Run the handler its code declared for a schedule, recorded as a run.
 
-        No agent's run frames it, so nothing else records it (LOOP R-14): it
+        No agent's run frames it, so nothing else records it (R-14): it
         is kept as the agent's runs are, and as a framework's turn is — the
         run begun, the turn (what woke it, what its code said), its output,
         or how it stopped — and its steps, as its code's steps always are.
@@ -1480,7 +1479,7 @@ class LiveSession:
 
     def _woken_schedule(self, woken_by: Optional[Mapping[str, Any]]) -> Optional[str]:
         """The schedule of its code a tick woke it for, by the trigger's position
-        among the application's triggers (LOOP R-14); ``None`` when no schedule
+        among the application's triggers (R-14); ``None`` when no schedule
         woke it, it has no code, or its code declared no schedule there.
 
         Refused when the tick names no position, or when the trigger the
@@ -1512,7 +1511,7 @@ class LiveSession:
         self, text: str, parts: Sequence[Mapping[str, Any]] = ()
     ) -> List[Dict[str, Any]]:
         """The conversation with the person's next message — and the files a
-        model is given whole with it (LOOP P-21).
+        model is given whole with it (P-21).
         """
         content: Any = (
             [{"type": "text", "text": text}, *[dict(part) for part in parts]]
@@ -1533,7 +1532,7 @@ class LiveSession:
 
     async def _code_turn(self, asked: str, work: Callable[[], Awaitable[Any]]) -> None:
         """Run what its code does with a person's message, kept as a turn
-        (LOOP P-24): what they asked and what its code said.
+        (P-24): what they asked and what its code said.
 
         The agent its code runs keeps its own turn as its run ends (the
         record's capability), and then none is added here; a code that
@@ -1559,7 +1558,7 @@ class LiveSession:
             recorder.turned(asked, "\n\n".join(text for text in said.values() if text))
 
     async def _files_code(self, text: str, given: List[UploadedFile]) -> None:
-        """Give the code files sent without being asked (LOOP P-21): its
+        """Give the code files sent without being asked (P-21): its
         ``file``, given them and the words; without one, the words go to its
         ``message`` and the files wait for what it asks.
         """
@@ -1586,7 +1585,7 @@ class LiveSession:
 
     async def _press_code(self, press: UiAction, given: List[UploadedFile]) -> None:
         """A press of what was offered, for the code: its `@app.action`, run
-        through the registry that offered it (REACTOR_UI RU-2, RU-5), which
+        through the registry that offered it (RU-2, RU-5), which
         answers a retry of the same press once.
 
         The files given with it answer what the code asks for a file, now or
@@ -1599,7 +1598,7 @@ class LiveSession:
         await self._actions().dispatch(self.opened_by, self.uid, press)
 
     async def _page_code(self, inputs: Mapping[str, Any]) -> None:
-        """Run its page on its inputs (LOOP P-05)."""
+        """Run its page on its inputs (P-05)."""
         if self.session is None:
             await self._open_code()
         assert self.session is not None
@@ -1609,7 +1608,7 @@ class LiveSession:
         self, press: UiAction, *, run_id: str = "", head: str = ""
     ) -> AsyncIterator[str]:
         """The question waiting, answered by a press of what it offered
-        (``reactor.answer``, REACTOR_UI RU-4): checked against what was asked
+        (``reactor.answer``, RU-4): checked against what was asked
         before the code goes on; the person's words are the conversation's.
         """
         question, asked = self._question, self._asked
@@ -1619,8 +1618,7 @@ class LiveSession:
             raise SessionRefused(409, "That question is no longer asked.")
         given = Answer.model_validate(press.payload).value
         if isinstance(question, FileQuestion):
-            # A file is answered by the ref its upload answered (REACTOR_UI
-            # RU-6): read back for whoever uploaded it, here.
+            # A file is answered by the ref its upload answered (RU-6): read back for whoever uploaded it, here.
             [given] = given_files(
                 [given], scope=self.uid, owner=owner_of(self.opened_by)
             )
@@ -1683,7 +1681,7 @@ class LiveSession:
     ) -> AsyncIterator[str]:
         """A press, checked (`check_press`), run as a turn: an answer to the
         question waiting (``reactor.answer``), else the `@app.action` it
-        pressed with its typed payload (REACTOR_UI RU-5). Nothing pressed is
+        pressed with its typed payload (RU-5). Nothing pressed is
         ever said to the model.
 
         Files given with it are the session's: they answer what the code asks
@@ -1707,7 +1705,7 @@ class LiveSession:
     def run_page(
         self, inputs: Mapping[str, Any], *, head: str = ""
     ) -> AsyncIterator[str]:
-        """Run its page on its inputs (LOOP P-05): checked against its form
+        """Run its page on its inputs (P-05): checked against its form
         first — refused with the sentence — then its ``@app.page``, its
         outputs a ``loop.page`` event. Not a turn of the conversation.
         """
@@ -1746,7 +1744,7 @@ class LiveSession:
 
         With a shell, every file is put in its sandbox. Without one, a text
         file goes in the message; an image, a recording or a PDF goes to the
-        model as it is (LOOP P-21); anything else is refused.
+        model as it is (P-21); anything else is refused.
         """
         shell = bool(self.app.permissions.computer.shell)
         words: List[str] = []
@@ -1771,7 +1769,7 @@ class LiveSession:
         return "\n\n".join(words), whole
 
     def _choose_profile(self, chosen: Any) -> None:
-        """The profile a run names (LOOP P-20): taken when none was said yet,
+        """The profile a run names (P-20): taken when none was said yet,
         kept after — a conversation keeps the profile it started with.
         """
         if chosen is None or chosen == "":
@@ -1796,7 +1794,7 @@ class LiveSession:
         self, changed: Mapping[str, Any], work: Callable[[], Awaitable[None]]
     ) -> None:
         """The settings the page changed, told to its code first (``settings``,
-        LOOP P-20), then the turn.
+        P-20), then the turn.
         """
         if changed:
             if self.session is None:
@@ -1846,7 +1844,7 @@ class LiveSession:
         )
 
     def window_message(self, data: Any, *, head: str = "") -> AsyncIterator[str]:
-        """A message from the page the application sits in (LOOP P-25): its
+        """A message from the page the application sits in (P-25): its
         code's ``window`` runs on it, as a turn, streamed — what it sends back
         with ``session.send_window_message`` a ``loop.window`` event.
 
@@ -1883,7 +1881,7 @@ class LiveSession:
 
     async def end(self) -> None:
         """End: what runs is cancelled, the code's ``end`` runs, and the
-        runtime no longer holds the session (LOOP P-14).
+        runtime no longer holds the session (P-14).
 
         Its record stays: it is resumed from it, as any session this runtime
         no longer holds.
@@ -1899,7 +1897,7 @@ class LiveSession:
         _forget_rules(self.uid)
 
     async def logout(self) -> None:
-        """The person signed out: the code's ``logout`` runs, then the session ends (LOOP P-14)."""
+        """The person signed out: the code's ``logout`` runs, then the session ends (P-14)."""
         await self._close()
         if self.host is not None and self.session is not None:
             await self.host.logout(self.session)
@@ -1936,7 +1934,7 @@ class LiveSession:
             """The turn."""
             self.emit(MessagesSnapshotEvent(messages=_snapshot(self.messages)))
             # What its messages showed, and what was open beside the
-            # conversation, shown again on the socket (LOOP P-18, RU-W).
+            # conversation, shown again on the socket (P-18, RU-W).
             for message in self.messages:
                 display = message.get("shows")
                 if display:
@@ -1974,7 +1972,7 @@ class LiveSession:
 
     def run_token(self, bearer: str) -> str:
         """The token a run of the session carries: the request's, but in a
-        Preview a person opened (LOOP R-25) theirs narrowed to the Spaces and
+        Preview a person opened (R-25) theirs narrowed to the Spaces and
         the companies its application is granted, held for it
         (`principal.ensure_preview_token`) — and without one the run is
         refused, never run with theirs.
@@ -2003,11 +2001,11 @@ class LiveSession:
         """Run the agent on an AG-UI input, its events streamed and its answer kept.
 
         ``instructions`` are told to the agent for this run besides its own —
-        the modes the person is in (LOOP P-19): set by the runtime, never read
+        the modes the person is in (P-19): set by the runtime, never read
         from the request, whose system messages the agent does not take.
 
         A Preview's run carries the person's token narrowed to the Spaces its
-        application is granted, in place of theirs (LOOP R-25): every tool of
+        application is granted, in place of theirs (R-25): every tool of
         the run reaches those Spaces and no other. Their own token is kept
         beside it for what the runtime does for them that is not a Space —
         reading the application's documents (`record.own_token_for`).
@@ -2108,8 +2106,8 @@ class LiveSession:
 
         ``forwardedProps.loop`` says what the page did besides the message: the
         settings it holds (``settings``), the option of each mode the person is
-        in (``modes``, LOOP P-19), the files given (``files``), and a press
-        checked on the ui socket (``press``, REACTOR_UI RU-W) — never an
+        in (``modes``, P-19), the files given (``files``), and a press
+        checked on the ui socket (``press``, RU-W) — never an
         action of its own (RU-5).
 
         The modes' instructions are told to the agent for this run, and the
@@ -2134,7 +2132,7 @@ class LiveSession:
                 )
             except InvalidAnswer as wrong:
                 raise SessionRefused(422, str(wrong)) from None
-            # What changed since the last run: its code is told (LOOP P-20).
+            # What changed since the last run: its code is told (P-20).
             changed = {
                 key: value
                 for key, value in updated.items()
@@ -2157,7 +2155,7 @@ class LiveSession:
         )
         if "action" in loop:
             # A page's block says a message, its files and its settings; a
-            # button presses what was offered, up the ui socket (REACTOR_UI RU-5).
+            # button presses what was offered, up the ui socket (RU-5).
             raise SessionRefused(
                 422,
                 "A run carries no action: a page's block sends a message, and a "
@@ -2165,14 +2163,14 @@ class LiveSession:
                 "it with forwardedProps.loop.press.",
             )
         if "press" in loop:
-            # Checked on the socket (REACTOR_UI RU-W): the run says which, and
+            # Checked on the socket (RU-W): the run says which, and
             # nothing else.
             return self.pressed(
                 self._take_press(loop.get("press")), files=files, run_id=run_id
             )
         if self.state == "waiting":
             # The chat answers by pressing what the question offered — a file
-            # by the ref its upload answered (REACTOR_UI RU-4, RU-6).
+            # by the ref its upload answered (RU-4, RU-6).
             raise SessionRefused(409, self._waiting_for())
         # Files given: what its Appspec takes, or its page's File upload asks for (P-21).
         refused = given_refused(self.app, files)
@@ -2215,12 +2213,12 @@ class LiveSession:
                 content = [{"type": "text", "text": content}, *parts]
             said = [*messages[:-1], {**last, "content": content}] if words else messages
             # What the page answered `host_context`, its `user` the one the
-            # host's server signed (LOOP D-21): never what the page says.
+            # host's server signed (D-21): never what the page says.
             if reads_user(self.app):
                 said = signed_host_context(said, self.user)
             self.messages = [dict(m) for m in said]
             # The profile the conversation is with, and the modes the person
-            # is in, for this run only (LOOP P-19, P-20).
+            # is in, for this run only (P-19, P-20).
             effect = run_effect(self.app, self.profile or None, self.modes)
             run = {
                 "state": None,
@@ -2241,7 +2239,7 @@ class LiveSession:
 def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
     """The conversation as AG-UI messages, for a snapshot: its text only.
 
-    What a message showed is said on the ui socket (REACTOR_UI RU-W), shown
+    What a message showed is said on the ui socket (RU-W), shown
     again from the hub, and again by a resume.
     """
     from ag_ui.core import AssistantMessage, UserMessage
@@ -2268,12 +2266,12 @@ def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
 
 _SESSIONS: Dict[str, LiveSession] = {}
 
-#: The ui channel of every session of this runtime (REACTOR_UI RU-W): each
+#: The ui channel of every session of this runtime (RU-W): each
 #: session's ops, numbered and kept, for the page's WebSocket
 #: (``/api/v1/apps/ui``, `agent_runtimes.routes.apps`).
 UI_HUB = UiHub()
 
-#: The files the pages of this runtime's sessions uploaded (REACTOR_UI RU-6):
+#: The files the pages of this runtime's sessions uploaded (RU-6):
 #: by conversation and ref, for whoever uploaded them, each with a signed url
 #: (``/api/v1/apps/files``, `agent_runtimes.routes.apps`).
 UI_FILES = UiFiles(secrets.token_bytes(32), max_file=MAX_FILE_BYTES)
@@ -2286,7 +2284,7 @@ MAX_PRESSES = 16
 
 
 def _forget_rules(session: str) -> None:
-    """The person's rules of a session go with it (SHIELD decision 7)."""
+    """The person's rules of a session go with it."""
     from agent_runtimes.guardrails.session_rules import session_rules
 
     session_rules().forget(session)
@@ -2352,7 +2350,7 @@ def _agent_maker(agent_id: str) -> Callable[[Session], AppAgent]:
             capabilities=[],
             toolsets=list(adapter._get_runtime_toolsets()),
             # A model its modes choose is called as the agent's own is: through
-            # its provider, naming the instance it serves (STUDIO R-09).
+            # its provider, naming the instance it serves (R-09).
             inference_provider=stored.get("inference_provider") or None,
             app_instance=dict(stored.get("app_instance") or {}) or None,
         )
@@ -2376,7 +2374,7 @@ def new_session(
 ) -> LiveSession:
     """A session of an application's agent on this runtime, kept by uid.
 
-    ``user`` is the user the host's server signed, embedded (LOOP D-21,
+    ``user`` is the user the host's server signed, embedded (D-21,
     `host_user_of`): verified before it is made.
 
     Raises
@@ -2406,10 +2404,10 @@ def new_session(
         deployment_uid=str(instance.get("deployment_uid") or ""),
         version=int(instance.get("version") or 0),
     )
-    # Who opened it, on its record (LOOP R-31): a person the runtime
+    # Who opened it, on its record (R-31): a person the runtime
     # verified; an embed's visitor or one not signed in is nobody known.
     # A host's person opened it as themselves.
-    # By name too, when their token says it: who it signs for (LOOP I-10).
+    # By name too, when their token says it: who it signs for (I-10).
     recorder.opened(
         uid,
         opened_by.uid if opened_by.kind in ("person", "host") else "",

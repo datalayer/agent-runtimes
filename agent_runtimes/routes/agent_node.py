@@ -137,7 +137,7 @@ def set_runtime_credentials(
 ) -> dict[str, str | None]:
     """Persist UI-supplied credentials so the sync loop can pick them up."""
     cleaned_token = (token or "").strip() or None
-    # Used by the runtime, never shown to the model (LOOP R-19).
+    # Used by the runtime, never shown to the model (R-19).
     hold(cleaned_token)
     cleaned_url = (runtimes_url or "").strip().rstrip("/") or None
     changed = False

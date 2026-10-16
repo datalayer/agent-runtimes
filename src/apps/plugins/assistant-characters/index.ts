@@ -5,7 +5,7 @@
 
 /**
  * Datalayer's own characters for the floating assistant, contributed
- * (LOOP T-24, T-25): the paper clip, the wizard, the cat and the L👀P eyes.
+ * (T-24, T-25): the paper clip, the wizard, the cat and the L👀P eyes.
  * Disabled, they leave the catalogue; another plugin may contribute others.
  *
  * @module apps/plugins/assistant-characters
@@ -59,7 +59,7 @@ export const AssistantCharactersPlugin: ReactorPlugin<
 });
 
 /**
- * A plugin contributing one character (LOOP T-24, T-26): a character a
+ * A plugin contributing one character (T-24, T-26): a character a
  * person brought — a `.acs` or a clippy.js character read in their page —
  * offered beside the contributed ones under the id it is chosen by. The
  * character stays in the page: the plugin only says it is there.

@@ -4,7 +4,7 @@
  */
 
 /**
- * A link in a message (LOOP T-06): underlined in every theme, coloured as
+ * A link in a message (T-06): underlined in every theme, coloured as
  * the theme says through `--theme-message-link` — the accent, or plain in
  * `loop` — and the accent where no theme says anything.
  */

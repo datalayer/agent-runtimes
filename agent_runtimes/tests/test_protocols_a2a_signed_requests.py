@@ -3,7 +3,7 @@
 
 # ruff: noqa: F811 - `state` is test_apps_a2a's fixture, imported to be used by name.
 
-"""An application's A2A route verifies agents that sign their requests (AGENT_PROTOCOLS PR-23)."""
+"""An application's A2A route verifies agents that sign their requests (PR-23)."""
 
 from __future__ import annotations
 

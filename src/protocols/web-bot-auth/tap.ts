@@ -5,7 +5,7 @@
 
 /**
  * Visa's Trusted Agent Protocol as a profile over Web Bot Auth
- * (AGENT_PROTOCOLS PR-24) — the twin of
+ * (PR-24) — the twin of
  * `agent_runtimes.protocols.web_bot_auth.tap`.
  *
  * **Draft.** Built on 2026-10-13 from Visa's public *Merchant

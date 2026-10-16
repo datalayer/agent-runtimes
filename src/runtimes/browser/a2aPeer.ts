@@ -373,7 +373,7 @@ export type AskA2APeerOptions = {
  * completed is thrown, with what the peer said.
  */
 /**
- * What a peer that refused said, in its own sentence (STUDIO H-25): the A2A
+ * What a peer that refused said, in its own sentence (H-25): the A2A
  * client throws an HTTP refusal as `HTTP error … : 429 . Response:
  * {"detail": "…"}`, which a balloon would draw as it is — the route's
  * sentence (a visitor's limit, a paused deployment) is its `detail`.

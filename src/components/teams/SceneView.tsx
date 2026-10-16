@@ -6,7 +6,7 @@
 /**
  * A scene on a page: its graph (`A2ATeamGraph`) and its transcript
  * ({@link SceneTranscript}), one shown at a time behind a *Graph · Transcript*
- * toggle (LOOP A-06). The graph stays mounted while the transcript shows, so
+ * toggle (A-06). The graph stays mounted while the transcript shows, so
  * that what its members were doing is still there when it comes back.
  *
  * The lines come from the Agent Inspector's tracer the graph's members

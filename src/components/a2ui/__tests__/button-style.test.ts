@@ -4,7 +4,7 @@
  */
 
 /**
- * An answer's Button is the theme's filled button (STUDIO P-04, T-30): its
+ * An answer's Button is the theme's filled button (P-04, T-30): its
  * fill and its label are Primer's primary-button properties, which a theme
  * and an application's accent set together — and its label, a Text, is not
  * painted in the surface's ink (a dark label on Spatial's dark accent).

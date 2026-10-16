@@ -1067,7 +1067,7 @@ class VercelAITransport(BaseTransport):
         )
         # A deployment's agent acts as its application's principal: its token
         # is asked for again, with this request's, when it runs out, and
-        # without one nothing runs (LOOP I-03).
+        # without one nothing runs (I-03).
         from ..loop.apps.principal import (
             PrincipalTokenMissing,
             deployment_of,
@@ -1112,7 +1112,7 @@ class VercelAITransport(BaseTransport):
                     model,
                     "datalayer",
                     # Attributed to the application the agent serves, as
-                    # its own model is (LOOP R-09).
+                    # its own model is (R-09).
                     app_instance=app_instance_of(self._agent_id),
                 )
             except Exception as exc:
@@ -1399,7 +1399,7 @@ class VercelAITransport(BaseTransport):
                 runtime_toolsets = self._get_runtime_toolsets()
                 # The Datalayer MCP gateway is reached as the application,
                 # never with the process's key: a deployment as its principal
-                # (LOOP I-03), its servers in each user's name with the token of
+                # (I-03), its servers in each user's name with the token of
                 # the person talking to it (I-04), a Preview with its run's
                 # token, narrowed to its granted Spaces (R-25).
                 from ..loop.apps.principal import gateway_toolsets_of_the_run

@@ -4,7 +4,7 @@
  */
 
 /**
- * `useChat` holds its conversation as `reduceConversation`'s (MOBILE M-030):
+ * `useChat` holds its conversation as `reduceConversation`'s (M-030):
  * an adapter's events, the page's tool results and an inference provider's
  * deltas are read by the shared reducer, and the store's messages are drawn
  * from it.

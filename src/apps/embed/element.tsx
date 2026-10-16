@@ -5,7 +5,7 @@
 
 /**
  * `<datalayer-app>`: an application in another product's page, as one
- * script tag and one element (LOOP D-08), in the mode its Appspec says
+ * script tag and one element (D-08), in the mode its Appspec says
  * (D-07), its theme isolated from the host's and overridable in the three
  * ways that matter (T-13, D-11).
  *
@@ -19,7 +19,7 @@
  * 2. an Appspec at an address (`spec="https://…/support-desk.yaml"`);
  * 3. an application on Datalayer (`app`), read with its embed token
  *    (`token`), or — with no token — a public one read as a visitor
- *    without an account reads it (STUDIO D-07, R-30, `visitorApp`): an
+ *    without an account reads it (D-07, R-30, `visitorApp`): an
  *    example Datalayer keeps warm for visitors, or an application at its
  *    address that its owner lets anybody talk to. The conversation then
  *    runs on the visitors' runtime with a visitor's token the chat mints
@@ -36,19 +36,19 @@
  * drawn in it, so nothing of the application's styles reaches the page and
  * nothing of the page's reaches the application.
  *
- * The page and the application talk (LOOP D-10), for the names its Appspec
+ * The page and the application talk (D-10), for the names its Appspec
  * gives under `deployment.embedded.host`: the page sets `element.context`
  * (`{ user, page, …its own }`), which its agent reads with `host_context`,
  * and `element.functions` (`{ open_ticket: async args => … }`), which its
  * agent calls as `host_open_ticket`, each as the rule naming it decides; the
  * element raises `message` when the application has answered and `action`
  * when it called a function of the page, beside `decision` and
- * `token-expired`. Who its user is, when it matters (LOOP D-21): the page
+ * `token-expired`. Who its user is, when it matters (D-21): the page
  * sets `user-token` (or `element.userToken`) to the token its server signed
  * naming the user, sent with every run of an application that says
  * `user: signed`.
  *
- * Window messages (LOOP P-25), on the host's own server: the element raises
+ * Window messages (P-25), on the host's own server: the element raises
  * `window-message` (`detail.data`) when the application's code tells the page
  * something outside the conversation (`session.send_window_message`), and
  * `element.postWindowMessage(data)` hands the page's to its `@app.window`.
@@ -56,7 +56,7 @@
  * On the host's server (`server`) with the visit's embed token, the
  * session the application opens is kept in the page's `localStorage`, under
  * the application and the visit its token names, and picked up again after
- * the page reloads — its conversation drawn again (LOOP D-13); a token
+ * the page reloads — its conversation drawn again (D-13); a token
  * renewed for the visit redraws the application on the same session.
  * `resume="false"` keeps nothing in the page's storage.
  *
@@ -221,7 +221,7 @@ export async function readEmbeddedApp({
   if (spec.kind === 'decision') {
     return { kind: 'frame', src: frameSrcOf(origin, app, token) };
   }
-  // The visit runs the deployment its token names, and no other (decision 16):
+  // The visit runs the deployment its token names, and no other:
   // a token naming none is refused before anything is drawn.
   if (!embedTokenDeployment(token)) {
     return { kind: 'said', text: EMBED_TOKEN_NAMES_NO_DEPLOYMENT };
@@ -312,7 +312,7 @@ export function defineDatalayerAppElement(
     }
 
     /**
-     * Post a window message to the application (LOOP P-25): its code's
+     * Post a window message to the application (P-25): its code's
      * `@app.window` reads it, and what it answers is raised as
      * `window-message` events. Refused, in a sentence, before its
      * conversation has started or off the host's own server.
@@ -358,7 +358,7 @@ export function defineDatalayerAppElement(
     }
 
     /**
-     * The token the host's server signed naming its user (LOOP D-21), the
+     * The token the host's server signed naming its user (D-21), the
      * `user-token` attribute's: what an application that says `user: signed`
      * opens its session with. Set it to hand a new one over.
      */

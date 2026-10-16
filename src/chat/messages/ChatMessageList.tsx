@@ -101,14 +101,13 @@ export interface ChatMessageListProps {
   /** All display items (messages + tool calls) */
   displayItems: DisplayItem[];
   /**
-   * How a message's display presses what it offered (REACTOR_UI RU-4, RU-W):
+   * How a message's display presses what it offered (RU-4, RU-W):
    * the chat sends it up the conversation's ui socket. Absent, its
    * displays offer nothing to press.
    */
   actOn?: (display: Display) => UiAct;
   /**
-   * How a message's display uploads a file the person chose (REACTOR_UI
-   * RU-6): its ref, to press with. Absent, nothing is uploaded.
+   * How a message's display uploads a file the person chose (RU-6): its ref, to press with. Absent, nothing is uploaded.
    */
   upload?: UiUpload;
   /** Whether the agent is loading */
@@ -1225,9 +1224,9 @@ export function ChatMessageList({
               p={compact ? 1 : 2}
               px={compact ? 2 : 2}
               overflowX="auto"
-              // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
+              // The theme's bubble (T-03, T-06): today's 6px elsewhere.
               borderRadius="bubble"
-              // A message arriving, at the theme's pace (LOOP T-10): no
+              // A message arriving, at the theme's pace (T-10): no
               // motion in a theme that sets none, nor when motion is reduced.
               animation="chatMessageArrive var(--theme-motion-message) var(--theme-motion-easing) both"
               reducedMotion={{ animation: 'none' }}
@@ -1324,7 +1323,7 @@ export function ChatMessageList({
                 />
               )}
             </Box>
-            {/* What it shows besides its words (REACTOR_UI RU-2): each
+            {/* What it shows besides its words (RU-2): each
                 display drawn by its type's renderer, else its text. */}
             {message.displays?.length ? (
               <Box

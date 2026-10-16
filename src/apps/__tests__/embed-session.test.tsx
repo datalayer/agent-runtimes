@@ -5,7 +5,7 @@
 
 /**
  * An embedded application's conversation, picked up again after the host's
- * page reloads (LOOP D-13): the session kept under the application and the
+ * page reloads (D-13): the session kept under the application and the
  * visit its token names — in the page's storage unless the host opts out,
  * in memory always — asked for again on the server that holds it, drawn
  * again; one gone or refused is forgotten and said once.
@@ -428,7 +428,7 @@ describe('AppEmbed', () => {
   });
 });
 
-describe('window messages, between the page and the application (LOOP P-25)', () => {
+describe('window messages, between the page and the application (P-25)', () => {
   it('are posted to the session the chat goes on with, and what its code answers is raised on the page', async () => {
     const events: Array<{ type: string; detail: unknown }> = [];
     let post: WindowPost | null = null;
@@ -468,7 +468,7 @@ describe('window messages, between the page and the application (LOOP P-25)', ()
       expect.objectContaining({ method: 'POST' }),
     );
     // What its code answers comes on the conversation's ui socket, which
-    // the chat hands on (REACTOR_UI RU-W): raised as any window message.
+    // the chat hands on (RU-W): raised as any window message.
     expect(events).toEqual([]);
     await act(async () => tellLoopWindow({ seen: '/cart' }));
     await act(async () => tellLoopWindow({ open: 'invoice' }));

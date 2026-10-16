@@ -4,7 +4,7 @@
  */
 
 /**
- * UI plugins and UI renderers (AGENTIC_UI R8): two catalogues, and what an
+ * UI plugins and UI renderers (R8): two catalogues, and what an
  * agent spec names — UI plugins, each with a renderer it may be exposed
  * through.
  */

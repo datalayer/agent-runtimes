@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Code where plain words are not enough: `@app.tool`, `@app.check`, `@app.test` (LOOP P-06)."""
+"""Code where plain words are not enough: `@app.tool`, `@app.check`, `@app.test` (P-06)."""
 
 import json
 from pathlib import Path

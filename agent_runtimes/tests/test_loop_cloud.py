@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """``loop`` on Datalayer: what the cloud offers, attaching, refusals, and the
-slash commands reading the cloud runtime (LOOP L-01, L-02, L-04, L-06, L-07).
+slash commands reading the cloud runtime (L-01, L-02, L-04, L-06, L-07).
 
 The Datalayer API is a fake client; the cloud runtime is a small Starlette
 application behind the real relay, so every request a slash command makes
@@ -308,7 +308,7 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
         "example-simple", reconnect=False, can_ask=False, minutes=5, app_spec=app
     )
     try:
-        # Its connections' secrets given at launch (LOOP R-19).
+        # Its connections' secrets given at launch (R-19).
         assert datalayer.created["app_spec"] == app
     finally:
         started.relay.stop()

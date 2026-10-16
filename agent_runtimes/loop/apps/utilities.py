@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Small conveniences for an application's code (LOOP P-15).
+"""Small conveniences for an application's code (P-15).
 
 `run_sync` runs blocking code without stopping the session's other work;
 `cache` keeps what a function answered, for every session of this process.

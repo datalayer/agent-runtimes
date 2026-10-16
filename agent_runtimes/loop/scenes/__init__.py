@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenes played from Python (LOOP A-14): the transcript, the stage, the rehearsal.
+"""Scenes played from Python (A-14): the transcript, the stage, the rehearsal.
 
 - `agent_runtimes.loop.scenes.transcript`: the transcript's grammar in
   Python, the twin of the page's ``sceneTranscript.ts``;

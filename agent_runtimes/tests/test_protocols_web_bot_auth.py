@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Web Bot Auth against the draft's vectors, and end to end (AGENT_PROTOCOLS PR-20 to PR-23, PR-51, PR-53)."""
+"""Web Bot Auth against the draft's vectors, and end to end (PR-20 to PR-23, PR-51, PR-53)."""
 
 from __future__ import annotations
 

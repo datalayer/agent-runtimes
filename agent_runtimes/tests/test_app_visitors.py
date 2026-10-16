@@ -505,7 +505,7 @@ def test_a_visitor_is_let_in_to_a_deployment_as_nobody() -> None:
     assert asked == [("dep-1", "")]
 
 
-# --- a visitor's page, before it follows the application (STUDIO D-15) ------------------
+# --- a visitor's page, before it follows the application (D-15) ------------------
 
 
 @pytest.fixture()

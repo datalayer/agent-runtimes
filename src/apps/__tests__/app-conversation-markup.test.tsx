@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's conversation draws no markup (STUDIO D-22): what a model
+ * An application's conversation draws no markup (D-22): what a model
  * writes as HTML in its markdown is shown as the text it is, and the MCP
  * UI's markup — a resource of HTML, an element built from a tool's props —
  * is refused in a sentence, in place.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The transcript's grammar in Python (LOOP A-06, A-14): the twin of
+"""The transcript's grammar in Python (A-06, A-14): the twin of
 ``sceneTranscript.ts`` gives the fixture's lines — the same fixture the
 TypeScript test reads (``agent_runtimes/tests/fixtures/scene_transcript.json``).
 """
@@ -96,7 +96,7 @@ def test_a_finished_run_is_read_the_same_way(fixture: Dict[str, Any]) -> None:
     assert [
         line_text(line) for line in transcript_of_record(entries, member)
     ] == without["lines"]
-    # Kept without its outputs either: the run's end says no words (PAP_DATALAYER R-01).
+    # Kept without its outputs either: the run's end says no words (R-01).
     bare = record["without_outputs"]
     entries = [record["entries"][index] for index in bare["entries"]]
     assert [line_text(line) for line in transcript_of_record(entries, member)] == bare[

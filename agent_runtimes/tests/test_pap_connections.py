@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""The companies an application works with as a personal agent (PAP_DATALAYER ADR-1, B-02, B-03).
+"""The companies an application works with as a personal agent (ADR-1, B-02, B-03).
 
 Each is the gateway's `pap` toolset for that company, reached in the
 person's name, its tools named with the company; the Rules decide them by
@@ -208,7 +208,7 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
     )
     pap_connections.remember_agent("agent-4", spec)
     # Whatever rule would ask first, the runtime does not: the gateway asks the
-    # person with the company's own terms, once (PAP_DATALAYER R-04, R-05).
+    # person with the company's own terms, once (R-04, R-05).
     harness = Harness(spec)
     args = {"operation_ref": "op_1", "revision": 1}
     # *Ask me first* reaches the gateway, whatever the model sent: no approval
@@ -241,7 +241,7 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
 
 
 def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
-    """AGENT_PROTOCOLS PR-54: the runtime's table is agentspecs' `protocol-tools`,
+    """PR-54: the runtime's table is agentspecs' `protocol-tools`,
     generated — the gateway reads the same — and every commerce operation too."""
     from agentspecs.actions import protocol_tool_classes, protocol_tool_names
 
@@ -267,7 +267,7 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
 
 
 def business() -> AppSpec:
-    """Travel Desk: a person's agent at Example Air over PACT (AGENT_PROTOCOLS PI-20)."""
+    """Travel Desk: a person's agent at Example Air over PACT (PI-20)."""
     return APP_CATALOGUE["travel-desk"].model_copy(deep=True)
 
 
@@ -336,7 +336,7 @@ def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
 
 
 def shop() -> AppSpec:
-    """Shopping Desk: a person's agent at Example Store over UCP (AGENT_PROTOCOLS PI-20)."""
+    """Shopping Desk: a person's agent at Example Store over UCP (PI-20)."""
     spec = APP_CATALOGUE["shopping-desk"].model_copy(deep=True)
     # Example Outfitters only read: a connection that reads buys nothing.
     store, outfitters = spec.commerce.merchants
@@ -415,7 +415,7 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
 
 
 def reader() -> AppSpec:
-    """Signed Reader: pages read at Example Verifier, each request signed (AGENT_PROTOCOLS EX-11)."""
+    """Signed Reader: pages read at Example Verifier, each request signed (EX-11)."""
     return APP_CATALOGUE["signed-reader"].model_copy(deep=True)
 
 

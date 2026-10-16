@@ -25,7 +25,7 @@ module.exports = {
   markdown: {
     format: 'detect',
     mermaid: true,
-    // A link to a page that does not exist fails the build (LOOP G-10).
+    // A link to a page that does not exist fails the build (G-10).
     hooks: {
       onBrokenMarkdownLinks: 'throw',
     },

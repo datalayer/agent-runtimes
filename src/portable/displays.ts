@@ -5,7 +5,7 @@
 
 /**
  * The protocol displays a run's tool results carry, read strictly for any
- * renderer (MOBILE M-037, REACTOR_UI RU-1): the page's half of a tool result
+ * renderer (M-037, RU-1): the page's half of a tool result
  * — `_meta["reactor.ui/display"]`, as the runtime's AG-UI stream sends it
  * beside the model's view — decoded into what a card draws.
  *

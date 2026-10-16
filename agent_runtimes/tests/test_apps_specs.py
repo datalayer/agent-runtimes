@@ -418,7 +418,7 @@ class TestTheGenerator:
 
 
 def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """STUDIO E-06, E-11: an Appspec's samples, published with it by Datalayer
+    """E-06, E-11: an Appspec's samples, published with it by Datalayer
     — Quote Calculator's price list, a decision's alternatives — are in the
     generated catalogue, and a runtime given the application keeps them."""
     from agentspecs.apps import dump_app
@@ -438,7 +438,7 @@ def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
 
 
 def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """STUDIO E-01: a test gives its application text files with what it asks
+    """E-01: a test gives its application text files with what it asks
     — Report from a File's CSVs — in the generated catalogue, kept by a runtime;
     a case in words alone has none."""
     from agentspecs.apps import dump_app
@@ -464,7 +464,7 @@ def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
 
 
 def test_a_test_s_conversation_is_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """STUDIO E-01: a test that is a conversation — Customer Interview's, which
+    """E-01: a test that is a conversation — Customer Interview's, which
     answer its consent and press its actions — is in the generated catalogue,
     turn by turn, and kept by a runtime; a case of one message has none."""
     from agentspecs.apps import dump_app

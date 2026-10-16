@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent's toolbox as a contribution point (LOOP C-20), beside the
+ * The agent's toolbox as a contribution point (C-20), beside the
  * Canvas's palette of blocks (`canvasBlocks`, C-12): kept apart so that
  * reading the toolbox loads the reactor and the catalogue, and nothing of the
  * workspace.
@@ -28,10 +28,10 @@ export type CanvasPartKind =
   | 'character';
 
 /**
- * A part of an agent the Canvas may place (LOOP C-20): a connection to a
+ * A part of an agent the Canvas may place (C-20): a connection to a
  * server of the catalogue, a skill, a model, a rule, a test, an event, a
  * protocol it speaks, a UI its answers render in, the character it shows
- * (AGENT_PROTOCOLS PS-04, PS-05) —
+ * (PS-04, PS-05) —
  * contributed by the plugin of what it comes from. The toolbox is what the
  * enabled plugins contribute here, and nothing else: a plugin disabled takes
  * its parts off it, as it takes its blocks off the palette.
@@ -46,7 +46,7 @@ export type CanvasPartContribution = {
   says: string;
   emoji?: string;
   /**
-   * The harness it runs on, for an agent part (SHIELD SH-43): the catalogue
+   * The harness it runs on, for an agent part (SH-43): the catalogue
    * harness's id, whose terms, credential and what it honours the Properties
    * panel reads from `specs/harnesses`.
    */

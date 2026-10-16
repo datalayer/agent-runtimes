@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's two plugins, named once (LOOP F-15, F-16): the page's
+ * An application's two plugins, named once (F-15, F-16): the page's
  * plugin is `loop-app-<id>`, as its runtime's is, and requires it; the page's
  * plugins are delivered as one extension of that name; the page follows what
  * its runtime holds, and a run in the browser alone is never blank. Written

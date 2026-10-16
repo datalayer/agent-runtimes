@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Universal Commerce Protocol, ``2026-08-25`` (AGENT_PROTOCOLS PR-30 to PR-32).
+"""The Universal Commerce Protocol, ``2026-08-25`` (PR-30 to PR-32).
 
 A shopping client over the REST binding, read through ``ucp-sdk``'s models
 (:mod:`.client`); UCP as a Reactor plugin whose approver, payment instruments,
@@ -34,7 +34,7 @@ from .client import (
 )
 
 #: Each operation's action class (F-10), for Rules (R-05): agentspecs'
-#: ``protocol-tools/ucp.yaml`` (AGENT_PROTOCOLS PR-54).
+#: ``protocol-tools/ucp.yaml`` (PR-54).
 ACTION_CLASSES = operation_classes("ucp")
 
 __all__ = [

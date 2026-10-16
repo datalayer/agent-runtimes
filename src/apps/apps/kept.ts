@@ -4,7 +4,7 @@
  */
 
 /**
- * What an application keeps, said before the first message (LOOP R-31).
+ * What an application keeps, said before the first message (R-31).
  *
  * A hosted or embedded application tells whoever uses it what its record
  * keeps of the conversation — what its `record.include` names — and for how

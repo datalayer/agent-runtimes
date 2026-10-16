@@ -4,9 +4,7 @@
  */
 
 /**
- * An element of an application's code in a side panel or on a page (LOOP
- * P-18): a display that says it shows in a panel or on a page (REACTOR_UI
- * RU-3), kept for whoever draws it.
+ * An element of an application's code in a side panel or on a page (P-18): a display that says it shows in a panel or on a page (RU-3), kept for whoever draws it.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';

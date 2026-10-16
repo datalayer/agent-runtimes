@@ -3,13 +3,13 @@
 
 """Components of the catalog, checked: what an application places and shows.
 
-One catalog for the three flavors (LOOP P-04, C-15): a component a Python
+One catalog for the three flavors (P-04, C-15): a component a Python
 application places on its surface (``app.ui.table(...)``) or shows with an
 answer (``session.send(text, show=[session.ui.table(...)])``) is a component
 the Canvas places, its properties checked against the same JSON Schema.
 
 An answer's components are drawn as an A2UI surface of their own, under the
-message they came with: an `AnswerShows` display (REACTOR_UI RU-2).
+message they came with: an `AnswerShows` display (RU-2).
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ ANSWER_CATALOG_ID = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.
 def _spec_of(
     component: str, own: Sequence[AppCustomComponentSpec]
 ) -> Optional[ComponentSpec]:
-    """A component of the catalog, or of the application's own (LOOP P-17), by name."""
+    """A component of the catalog, or of the application's own (P-17), by name."""
     spec = get_component(component)
     if spec is not None:
         return spec
@@ -151,7 +151,7 @@ def _children_of(node: Mapping[str, Any]) -> List[str]:
 
 def placer(own: Sequence[AppCustomComponentSpec]) -> Callable[..., Dict[str, Any]]:
     """`component_node` for an application: the catalog's components and those
-    its developer wrote (LOOP P-17), each checked against its JSON Schema.
+    its developer wrote (P-17), each checked against its JSON Schema.
     """
 
     def place(id: str, component: str, **properties: Any) -> Dict[str, Any]:
@@ -164,7 +164,7 @@ def answer_components(
     show: Sequence[Mapping[str, Any]], own: Sequence[AppCustomComponentSpec] = ()
 ) -> tuple[Dict[str, Any], ...]:
     """What an answer shows, checked: nodes of the catalog, or of the
-    components the application's developer wrote (``own``, LOOP P-17).
+    components the application's developer wrote (``own``, P-17).
 
     A property bound to a path (a Table's ``rows``, a Chart's ``points``)
     reads the answer's own data (``session.send(..., data={...})``).
@@ -308,14 +308,14 @@ def answer_text(title: str, nodes: Sequence[Mapping[str, Any]]) -> str:
     return f"{title} showed " + ", ".join(said) if said else f"{title} showed nothing"
 
 
-#: The display type of what an answer shows (REACTOR_UI RU-2).
+#: The display type of what an answer shows (RU-2).
 ANSWER_DISPLAY_TYPE = "application/vnd.datalayer.loop.answer+json"
 
 
 @display_type(ANSWER_DISPLAY_TYPE, version=1)
 class AnswerShows(Display):
     """What an answer of an application's code shows, under its message: a
-    display, drawn by the page's A2UI surface plugin (REACTOR_UI RU-2).
+    display, drawn by the page's A2UI surface plugin (RU-2).
 
     Its buttons press the actions it offers, each with the token the session
     minted for this display (``actions``); a press of anything else is refused.
@@ -328,7 +328,7 @@ class AnswerShows(Display):
     title: str
     where: Literal["inline", "panel", "page"] = "inline"
     """Under its message, or an element in a side panel or on a page of its
-    own (LOOP P-18, REACTOR_UI RU-3)."""
+    own (P-18, RU-3)."""
     surface: Annotated[Dict[str, Any], audience("page")]
     """``{surfaceId, catalogId, title, messages}``: the A2UI surface (`answer_surface`)."""
     summary: str

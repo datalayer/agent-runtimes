@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant's characters as contributions (LOOP T-24): the
+ * The floating assistant's characters as contributions (T-24): the
  * catalogue is what the enabled plugins contribute, and an application names
  * one by id.
  */

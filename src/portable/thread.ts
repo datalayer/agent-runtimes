@@ -6,7 +6,7 @@
 /**
  * A person's conversation with an application, read again: the person-facing
  * projection of a session's thread, and the thread opened from the runtime
- * that holds it — or resumed from its record (LOOP P-24, D-13, R-04).
+ * that holds it — or resumed from its record (P-24, D-13, R-04).
  *
  * The web chat (`ChatView`, an embed after its page reloads) and Datalayer
  * Mobile open a thread with these, so that what a person reads of their own
@@ -32,7 +32,7 @@ export const THREAD_WORDS = {
  * was said and answered, in words. A turn a personal agent asked is shown
  * without what the runtime told the application before the person's words
  * (`askedOf`, decided 2026-10-14). What its messages showed comes on the
- * conversation's ui socket (REACTOR_UI RU-W), never here: a `reactor.ui`
+ * conversation's ui socket (RU-W), never here: a `reactor.ui`
  * activity in a thread is refused.
  */
 export function messagesOfThread(messages: unknown): ChatMessage[] {
@@ -52,7 +52,7 @@ export function messagesOfThread(messages: unknown): ChatMessage[] {
     };
     if (role === 'activity' && activityType === REACTOR_UI_NAME) {
       throw new Error(
-        `Activity ${String(id)}: what a message showed comes on the ui socket (REACTOR_UI RU-W)`,
+        `Activity ${String(id)}: what a message showed comes on the ui socket (RU-W)`,
       );
     }
     if (

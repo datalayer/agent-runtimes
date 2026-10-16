@@ -21,13 +21,13 @@ Python and TypeScript, and a local Provider for tests and examples.
 
 ## The two profiles
 
-- **Identity** (§2–4, §6): every request but the card carries a
+- **Identity** (§2–4): every request but the card carries a
   personal-agent JWT — ES256, `iss` the platform, `sub` a stable opaque id
   for the person (never an address), `aud` the Provider's audience, valid
   120 seconds — signed by the host's key through `pact.signer`. The
   conversation goes on in its `contextId`; resending a `messageId` is a safe
   retry.
-- **Delegated** (§5), when the Brand's card offers it: the agent asks for
+- **Delegated**, when the Brand's card offers it: the agent asks for
   scopes on the card only; the person signs in **at the Brand** (RFC 8628
   device code: the Brand's link and code, never a login of the agent's) and
   approves some of them; the agent reads back what was granted, sends the
@@ -110,7 +110,7 @@ brand = PactBrand(
     audience="https://desk.example/a2a/desk",
     signer=signer,            # ES256, the Provider's key (an HttpSigner)
     jwks=published_keys,      # its public keys, what the metadata names
-    issuers=registered,       # IssuerKeys: the personal agents it accepts (§3.1)
+    issuers=registered,       # IssuerKeys: the personal agents it accepts
     store=store,              # BrandStore: grants, contexts, replies
     agent=desk,               # BrandAgent: answers a BrandTurn with a BrandAnswer
     verification_uri="https://desk.example/device",  # where the person signs in

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A session woken for one person's own source reads it in their name (STUDIO W-03).
+"""A session woken for one person's own source reads it in their name (W-03).
 
 A message in a person's mailbox wakes a session nobody opened, run by the
 scheduler on the owner's key. With that key IAM would list what the owner

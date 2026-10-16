@@ -5,7 +5,7 @@
 
 /**
  * A public application in the element, for a visitor without an account
- * (STUDIO D-07, R-30): an example kept warm or an address open to visitors
+ * (D-07, R-30): an example kept warm or an address open to visitors
  * run on the visitors' runtime with a visitor's token for it; a decision
  * framed; a private address, one that reaches its owner's connections, or
  * an example not kept, said in one sentence naming the embed token.

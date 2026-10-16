@@ -38,7 +38,7 @@ describe('the modes', () => {
     expect(draggable?.label).toBe('Floating draggable');
   });
 
-  it('name the assistant after what it is (LOOP T-21)', () => {
+  it('name the assistant after what it is (T-21)', () => {
     const assistant = CHAT_VIEW_MODES.find(
       option => option.mode === 'assistant',
     );

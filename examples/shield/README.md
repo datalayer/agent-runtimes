@@ -83,7 +83,7 @@ until interrupted, for the web chat below.
 
 `proxy_from_python.py` is the ACP client an editor would be, in front of
 `agent-shield run -- <the fake agent>`: Datalayer's default policy
-(decision 5) in an `agent-shield.yaml`, an audit file of its own. An edit
+in an `agent-shield.yaml`, an audit file of its own. An edit
 inside the workspace is *do it* — the agent's permission request never
 reaches the client; a `git push` is *ask me first* — the question reaches the
 client, which says no; a read outside the workspace is refused in a sentence.
@@ -95,7 +95,7 @@ python proxy_from_python.py
 
 ```text
 Workspace  /tmp/shield-example-_az6jl6a
-Policy     Datalayer's default (decision 5)
+Policy     Datalayer's default
 
 Connected  agent-shield 0.2.0
 

@@ -1,5 +1,5 @@
 {
-  "profile": "Visa Trusted Agent Protocol, agent-recognition signature (AGENT_PROTOCOLS PR-24)",
+  "profile": "Visa Trusted Agent Protocol, agent-recognition signature (PR-24)",
   "status": "draft",
   "sources": [
     "https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications",

@@ -92,7 +92,7 @@ def transcribe(
     return json.loads(done.stdout.strip().splitlines()[-1])
 
 
-#: Spoken turns timed on the server (VO-47, decision 18): a 3 s fixture and the
+#: Spoken turns timed on the server (VO-47): a 3 s fixture and the
 #: e2e suite's 9 s question, each heard ``TURN_RUNS`` times told its language.
 TURNS = {
     "3s": VOICE_TESTS / "fixtures" / "en-6930-75918-0013.flac",
@@ -129,7 +129,7 @@ def measure_server(
     The service's own engines (faster-whisper 8-bit, Moonshine through
     onnxruntime) on the CPU with ``threads`` threads, told the language, one
     clip at a time: what it heard and how long it took; then a 3 s and a 9 s
-    English turn, each heard ``TURN_RUNS`` times (decision 18).
+    English turn, each heard ``TURN_RUNS`` times.
     """
     for model in voices.SPEECH_MODEL_CATALOGUE.values():
         if model["task"] != "stt" or model["where"] != ["server"]:

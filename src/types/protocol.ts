@@ -67,7 +67,7 @@ export interface ProtocolConfig {
   /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
   configEndpoint?: string;
   /**
-   * The ui channel's WebSocket (`ws://` or `wss://`, REACTOR_UI RU-W): an
+   * The ui channel's WebSocket (`ws://` or `wss://`, RU-W): an
    * application's session says on it what its messages show, its steps, its
    * elements, its authors and its window messages, and takes the presses of
    * what they offered. Set for an application's agent; one connection per
@@ -76,7 +76,7 @@ export interface ProtocolConfig {
   uiSocket?: string;
   /**
    * Where a file of a conversation is uploaded before the run or the press
-   * that names it (REACTOR_UI RU-6): Reactor's upload, the bytes as the body,
+   * that names it (RU-6): Reactor's upload, the bytes as the body,
    * the conversation's thread its scope. A run carries the ref it answers,
    * never the bytes. Set for an application's agent.
    */
@@ -91,7 +91,7 @@ export interface ProtocolConfig {
   appSessions?: string;
   /**
    * The runtime answers only the application's own routes (OwnRoutesOnly,
-   * PAP_DATALAYER's release gates): it serves a deployment — kept always on,
+   * the release gates): it serves a deployment — kept always on,
    * launched by a hosted page for it — or is the visitors' runtime. Nothing
    * outside them is opened: not the monitoring stream (an application's
    * session asks its approvals in the conversation, over `uiSocket`), not

@@ -4,7 +4,7 @@
  */
 
 /**
- * Profiles, starters by category and the nine inputs (LOOP P-20), and an
+ * Profiles, starters by category and the nine inputs (P-20), and an
  * application in the person's language (P-26): read and written as
  * agentspecs says them, checked as it checks them, offered in the composer
  * and the empty chat, applied to a run.
@@ -125,7 +125,7 @@ const contributed = (
     (item: { point?: unknown }) => item.point === point,
   ) as Array<{ value: Record<string, any> }>;
 
-describe('profiles, starters and settings (LOOP P-20)', () => {
+describe('profiles, starters and settings (P-20)', () => {
   it('are read and written as the spec says them', () => {
     const { app, problems } = parseAppspec(DESK);
     expect(problems).toEqual([]);
@@ -277,7 +277,7 @@ describe('profiles, starters and settings (LOOP P-20)', () => {
   });
 });
 
-describe('an application in the person’s language (LOOP P-26)', () => {
+describe('an application in the person’s language (P-26)', () => {
   it('picks the first language a person prefers that it has, else its own', () => {
     expect(pickLanguage(['en', 'fr', 'pt-BR'], ['fr-CA', 'en'])).toBe('fr');
     expect(pickLanguage(['en', 'pt-BR'], ['pt'])).toBe('pt-BR');

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A local Agentic Commerce test seller, *Example Outfitters* (AGENT_PROTOCOLS PR-43, EX-05).
+"""A local Agentic Commerce test seller, *Example Outfitters* (PR-43, EX-05).
 
 The REST binding of the Agentic Commerce Protocol ``2026-04-17``: its
 discovery document at ``/.well-known/acp.json``, and checkout sessions —

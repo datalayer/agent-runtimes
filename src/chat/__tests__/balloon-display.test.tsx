@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant's two balloon displays (LOOP T-23): `history`, a
+ * The floating assistant's two balloon displays (T-23): `history`, a
  * peek closed and the whole conversation open, counted in its header;
  * `current`, only what is said or done now, *Now* on it, nothing to scroll.
  * Either way a tool call is said in plain words — "Using list_invoices…",

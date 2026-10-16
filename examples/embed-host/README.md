@@ -1,7 +1,7 @@
 # A host page for the embed
 
 A plain page on an origin of its own that embeds a Datalayer application with
-one script tag and one `<datalayer-app>` element (STUDIO D-07, D-08, D-10):
+one script tag and one `<datalayer-app>` element (D-07, D-08, D-10):
 the page passes its `context`, offers one function (`open_ticket`) and logs
 every event the element raises (`message`, `action`, `decision`,
 `token-expired`, `window-message`).

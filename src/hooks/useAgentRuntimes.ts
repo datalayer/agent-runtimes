@@ -111,7 +111,7 @@ export interface UseAgentOptions {
    */
   runtimeConnection?: AgentRuntimeConnectionOptions;
   /**
-   * The application the runtime is launched for (STUDIO R-19): its Appspec,
+   * The application the runtime is launched for (R-19): its Appspec,
    * and the saved application and deployment it runs for. Sent with the
    * launch, as `RuntimesClient.create` sends it in Python, so the runtime is
    * given the secrets its connections declare before its agent is made.

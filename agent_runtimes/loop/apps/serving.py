@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application served on this machine, with hot reload (LOOP P-08).
+"""An application served on this machine, with hot reload (P-08).
 
 ``loop apps run app.py --web`` serves an application as ``app.mount`` serves
-one in a FastAPI of one's own (LOOP P-25): its page — the embed, the renderer
+one in a FastAPI of one's own (P-25): its page — the embed, the renderer
 of the hosted page, of the Studio's Preview and of a host's page — the
 session API and its code under ``/app``, its agent on a runtime in this
 process. Nothing of it is a second renderer.

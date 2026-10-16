@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Embedding from Python (LOOP P-25): an application mounted into a FastAPI of
+"""Embedding from Python (P-25): an application mounted into a FastAPI of
 one's own — its page, its session API and its code under one path — and
 window messages between the application and the page it sits in.
 """
@@ -135,7 +135,7 @@ def test_the_mount_serves_the_page_the_session_api_and_the_developers_own_routes
     )
     assert answer_of(started) == "You said Hi."
     # What its code tells the page: a window op on the session's ui socket,
-    # not a message, not on the run (REACTOR_UI RU-3, RU-W).
+    # not a message, not on the run (RU-3, RU-W).
     assert not [e for e in started if e.get("name") == "reactor.ui"]
     [window] = [
         frame.op

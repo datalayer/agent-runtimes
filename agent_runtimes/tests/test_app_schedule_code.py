@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A ``@app.schedule`` handler's code runs on a tick (LOOP R-14).
+"""A ``@app.schedule`` handler's code runs on a tick (R-14).
 
 The platform's scheduler wakes a deployment by the position of its trigger
 among the application's triggers; on the runtime it opens a session of the
@@ -871,7 +871,7 @@ def test_a_kept_runtimes_code_keeps_each_turn_and_takes_feedback(
     remote: TestClient,  # noqa: F811 - the fixture
     answers_itself: bool,
 ) -> None:
-    """LOOP P-24, drilled 2026-10-08: a hosted Python application on its kept
+    """P-24, drilled 2026-10-08: a hosted Python application on its kept
     runtime, whose code answered with no model, showed *0 turns* after three
     questions and was not found by the words asked; its page's feedback was
     refused, *This runtime runs no application.* Each question is now a turn
@@ -961,7 +961,7 @@ def test_the_runtimes_application_is_its_kept_agents(
 ) -> None:
     """The agents route keeps the application an agent is made for, as
     `/apps/configure` does its own: a kept runtime answers what its
-    application is (LOOP P-24), several say which is meant, and an agent
+    application is (P-24), several say which is meant, and an agent
     deleted takes it away."""
     from agent_runtimes.routes import apps as routes
     from agent_runtimes.routes.acp import _agents

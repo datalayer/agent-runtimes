@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Forms an application asks with, checked again when they arrive (LOOP C-16).
+"""Forms an application asks with, checked again when they arrive (C-16).
 
 What an application needs from a person — a quote's parameters, an approval's
 reason — is a Form block on its surface: the JSON Schema of its fields. The
 page draws it with ``@datalayer/primer-rjsf`` and sends nothing the schema
 refuses. What it sends is its action's payload, which the runtime checks
 against the model the action of its code declares (``@app.action(name,
-payload=Model)``, REACTOR_UI RU-5) before its code runs.
+payload=Model)``, RU-5) before its code runs.
 
 An application's settings are a form of the same kind (``interface.settings``):
 the values a run is given and a deployment set, checked against that schema
