@@ -9,13 +9,17 @@ result that carried a display reaches the model as the display's model view
 ``metadata``. pydantic-ai's Vercel AI stream sends the page the model's output
 only; this one sends the page that output with ``_meta["reactor.ui/display"]``
 beside it — the shape ``resolveToolResult`` (``@datalayer/reactor/ui``) reads.
+
+An agent whose answers may be heard has its voice said right after the
+start: a ``data-voice.settings`` data part (VOICE.md VO-36, the twin of
+AG-UI's ``voice.settings``).
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from pydantic_ai.messages import FunctionToolResultEvent
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
@@ -30,6 +34,17 @@ __all__ = ["DisplayVercelAIAdapter", "DisplayVercelAIEventStream"]
 @dataclass
 class DisplayVercelAIEventStream(VercelAIEventStream[Any, Any]):
     """Vercel AI's event stream, with a tool's display beside its output."""
+
+    #: The running agent's voice, said at the run's start (VO-36); None, nothing said.
+    voice: Optional[dict[str, Any]] = None
+
+    async def before_stream(self) -> AsyncIterator[Any]:
+        async for chunk in super().before_stream():
+            yield chunk
+        if self.voice:
+            from ..voice import data_part_of, settings_event  # noqa: PLC0415
+
+            yield data_part_of(settings_event(self.voice))
 
     async def handle_function_tool_result(
         self, event: FunctionToolResultEvent
@@ -52,9 +67,12 @@ class DisplayVercelAIAdapter(VercelAIAdapter[Any, Any]):
     """Vercel AI's adapter, streaming with :class:`DisplayVercelAIEventStream`."""
 
     def build_event_stream(self) -> DisplayVercelAIEventStream:
+        from ..voice import voice_of_agent  # noqa: PLC0415
+
         return DisplayVercelAIEventStream(
             self.run_input,
             accept=self.accept,
             sdk_version=self.sdk_version,
             server_message_id=self.server_message_id,
+            voice=voice_of_agent(self.agent),
         )

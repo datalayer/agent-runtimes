@@ -25,6 +25,7 @@ from contextlib import contextmanager
 from typing import Any, AsyncIterator, Iterator
 
 from starlette.applications import Starlette
+from starlette.responses import Response
 
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities, set_request_user_jwt
@@ -139,6 +140,60 @@ async def watch_run_stream(
         )
         closing = json.dumps({"type": "RUN_ERROR", "message": message})
         yield f"data: {closing}\n\n".encode("utf-8")
+
+
+async def hear_client_audio(
+    body: Any, authorization: str | None
+) -> tuple[dict[str, Any], bytes] | Response | None:
+    """
+    An AG-UI run whose newest user message carries audio, heard (VOICE.md VO-28).
+
+    The audio is heard by ai-agents' speech service with the caller's own
+    token; the message becomes its transcript, marked spoken in
+    ``forwardedProps.voice`` and for the record (``hear``).
+
+    Parameters
+    ----------
+    body : Any
+        The run's JSON body.
+    authorization : str | None
+        The request's ``Authorization`` header.
+
+    Returns
+    -------
+    tuple[dict[str, Any], bytes] | Response | None
+        The heard body and its bytes; a 422 saying why the audio could not be
+        heard; or ``None`` when the run carries no audio.
+    """
+    if not isinstance(body, dict):
+        return None
+    import httpx  # noqa: PLC0415
+    from starlette.responses import JSONResponse  # noqa: PLC0415
+
+    from ..voice import hear  # noqa: PLC0415
+    from ..voice.protocol_audio import (  # noqa: PLC0415
+        AudioNotHeard,
+        hear_agui_messages,
+    )
+
+    header = authorization or ""
+    token = header[7:].strip() if header.lower().startswith("bearer ") else ""
+    try:
+        heard_body, spoken = await hear_agui_messages(body, token=token)
+    except AudioNotHeard as refused:
+        return JSONResponse({"detail": str(refused)}, status_code=422)
+    except httpx.HTTPError as error:
+        return JSONResponse(
+            {
+                "detail": "The audio could not be heard: Datalayer's speech "
+                f"service did not answer ({type(error).__name__})."
+            },
+            status_code=502,
+        )
+    if spoken is None:
+        return None
+    hear(spoken)
+    return heard_body, json.dumps(heard_body).encode("utf-8")
 
 
 @contextmanager
@@ -326,6 +381,15 @@ class AGUITransport(BaseTransport):
                     # Read the body once and cache it
                     body_bytes = await request.body()
                     body = json.loads(body_bytes)
+                    # Audio a protocol client sent is heard first, and the
+                    # message is its transcript (VOICE.md VO-28).
+                    heard = await hear_client_audio(
+                        body, request.headers.get("authorization")
+                    )
+                    if isinstance(heard, Response):
+                        return heard
+                    if heard is not None:
+                        body, body_bytes = heard
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")

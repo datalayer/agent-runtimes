@@ -14,16 +14,25 @@ as it always has (§5). It knows three things more:
   as text, with ``metadata.input == "voice"`` (VO-27), and the record keeps
   the turn marked spoken — the words, never the sound (VO-29);
 - **that answers may be heard** (`VoiceCapability`): instructions telling the
-  agent to write what reads well aloud (VO-44). It changes no tool and no rule.
+  agent to write what reads well aloud (VO-44). It changes no rule; it gives
+  the agent one tool, ``say_aloud``, for a short line heard and not written.
+
+Over AG-UI it says two things only the runtime knows, as custom events
+(VO-35): ``voice.settings`` — the voice and language of the running
+application — at a run's start, and ``voice.say`` — a short line the agent
+wants heard, not written (*One moment*), shown as a caption. Nothing else:
+the page transcribes and speaks, and AG-UI carries text.
 """
 
 from __future__ import annotations
 
 import contextvars
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Optional
 
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.messages import ToolReturn
+from pydantic_ai.toolsets import FunctionToolset
 
 from agent_runtimes.specs.voices import get_voice_spec, voice_for, voice_speaks
 
@@ -33,6 +42,20 @@ VOICE_INSTRUCTIONS = (
     "sentence, as you write them. Write short sentences. Prefer a sentence to a table "
     "or a list when a sentence will do. Say numbers, units and links in words where "
     "it matters to a listener, and never rely on formatting alone to carry meaning."
+)
+
+#: The custom events voice adds to AG-UI (VO-35), and nothing else.
+VOICE_SAY_EVENT = "voice.say"
+VOICE_SETTINGS_EVENT = "voice.settings"
+
+#: The longest line `say_aloud` says: a line, never an answer.
+SAY_ALOUD_MAX_CHARACTERS = 200
+
+SAY_ALOUD_DESCRIPTION = (
+    "Say a short line aloud that the person hears and does not read, such as "
+    "'One moment, I am looking that up.' before a long step. It is shown as a "
+    "caption while it is said. Never use it for the answer itself, which is "
+    f"written as usual. At most {SAY_ALOUD_MAX_CHARACTERS} characters."
 )
 
 
@@ -135,22 +158,92 @@ def settings_of(voice: Any) -> Dict[str, Any]:
     }
 
 
+def say_aloud_event(line: str, settings: Mapping[str, Any]) -> Any:
+    """`voice.say` (VO-35): a line to hear, with the voice and language it is said in."""
+    from ag_ui.core import CustomEvent
+
+    said = " ".join(str(line or "").split())
+    if not said:
+        raise ValueError("say_aloud needs a line to say.")
+    if len(said) > SAY_ALOUD_MAX_CHARACTERS:
+        raise ValueError(
+            f"say_aloud says a line of at most {SAY_ALOUD_MAX_CHARACTERS} "
+            f"characters, not {len(said)}: write the answer instead."
+        )
+    return CustomEvent(
+        name=VOICE_SAY_EVENT,
+        value={
+            "text": said,
+            "voice": settings.get("voice", ""),
+            "language": settings.get("language", ""),
+        },
+    )
+
+
+def data_part_of(event: Any) -> Any:
+    """A voice custom event as a Vercel AI data part, `data-voice.say` (VO-36)."""
+    from pydantic_ai.ui.vercel_ai.response_types import DataChunk
+
+    return DataChunk(type=f"data-{event.name}", data=event.value)
+
+
+def settings_event(settings: Mapping[str, Any]) -> Any:
+    """`voice.settings` (VO-35): the running application's voice, said at a run's start."""
+    from ag_ui.core import CustomEvent
+
+    return CustomEvent(name=VOICE_SETTINGS_EVENT, value=dict(settings))
+
+
 @dataclass
 class VoiceCapability(AbstractCapability[Any]):
-    """Answers that may be heard: the agent writes for the ear as well (VO-44)."""
+    """Answers that may be heard: the agent writes for the ear as well (VO-44).
+
+    It gives the agent ``say_aloud`` for a short line heard, not written
+    (`voice.say`, VO-35), and carries the voice resolved against the
+    catalogue, which AG-UI says at a run's start (`voice.settings`).
+    """
 
     language: str = ""
+    settings: Dict[str, Any] = field(default_factory=dict)
 
     def get_instructions(self) -> str:
         if self.language:
             return f"{VOICE_INSTRUCTIONS} Speak in the language {self.language}."
         return VOICE_INSTRUCTIONS
 
+    def get_toolset(self) -> FunctionToolset[Any]:
+        settings = dict(self.settings)
+        toolset: FunctionToolset[Any] = FunctionToolset()
+
+        def say_aloud(line: str) -> ToolReturn:
+            event = say_aloud_event(line, settings)
+            # AG-UI takes the custom event, Vercel AI the data part (VO-36).
+            return ToolReturn(
+                return_value="Said aloud.", metadata=[event, data_part_of(event)]
+            )
+
+        toolset.add_function(say_aloud, description=SAY_ALOUD_DESCRIPTION)
+        return toolset
+
 
 def _capability_of(settings: Dict[str, Any]) -> Optional[VoiceCapability]:
     if not settings["enabled"] or settings["output"] == "off":
         return None
-    return VoiceCapability(language=settings["language"])
+    return VoiceCapability(language=settings["language"], settings=settings)
+
+
+def voice_of_agent(agent: Any) -> Optional[Dict[str, Any]]:
+    """The voice settings of an agent whose answers may be heard, from its `VoiceCapability`; None otherwise."""
+    from pydantic_ai.capabilities.abstract import leaf_capabilities
+
+    root = getattr(agent, "_root_capability", None)
+    if root is None:
+        wrapped = getattr(agent, "wrapped", None)
+        return voice_of_agent(wrapped) if wrapped is not None else None
+    for capability in leaf_capabilities(root):
+        if isinstance(capability, VoiceCapability) and capability.settings:
+            return dict(capability.settings)
+    return None
 
 
 def voice_capability(app: Any) -> Optional[VoiceCapability]:
@@ -164,9 +257,16 @@ def agent_voice_capability(agent_spec: Any) -> Optional[VoiceCapability]:
 
 
 __all__ = [
+    "SAY_ALOUD_MAX_CHARACTERS",
     "SpokenInput",
     "VOICE_INSTRUCTIONS",
+    "VOICE_SAY_EVENT",
+    "VOICE_SETTINGS_EVENT",
     "VoiceCapability",
+    "data_part_of",
+    "say_aloud_event",
+    "settings_event",
+    "voice_of_agent",
     "agent_voice_capability",
     "hear",
     "heard",

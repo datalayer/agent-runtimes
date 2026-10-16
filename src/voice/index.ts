@@ -21,6 +21,7 @@ export * from './pinned';
 export * from './capture';
 export * from './hearing';
 export * from './serverHearing';
+export * from './sayAloud';
 export * from './handsFree';
 export { HandsFree, type HandsFreeProps } from './HandsFree';
 export * from './speaker';

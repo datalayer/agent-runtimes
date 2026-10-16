@@ -3,8 +3,10 @@
 
 """Voice on the runtime's side (VOICE.md VO-27, VO-29, VO-44, VO-45)."""
 
+import json
 from typing import Any
 
+import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
@@ -309,3 +311,144 @@ def test_the_generator_refuses_a_voice_the_catalogue_does_not_have():
                 )
             ]
         )
+
+
+# ---------------------------------------------------------------------------
+# What only the runtime knows, said over the protocols (VO-35, VO-36)
+# ---------------------------------------------------------------------------
+
+
+def _speaking_agent(line: str) -> Agent:
+    """An application's agent whose answers are heard: its model says ``line`` aloud, then answers."""
+    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
+
+    async def answer(messages: list[ModelMessage], info: AgentInfo):
+        if len(messages) == 1:
+            yield {
+                0: DeltaToolCall(
+                    name="say_aloud",
+                    json_args=json.dumps({"line": line}),
+                    tool_call_id="call-say",
+                )
+            }
+        else:
+            yield "It is mild in Paris today."
+
+    voiced = voice_capability(
+        app({"enabled": True, "output": "always", "language": "en-US"})
+    )
+    assert voiced is not None
+    return Agent(FunctionModel(stream_function=answer), capabilities=[voiced])
+
+
+def _agui_input() -> Any:
+    from ag_ui.core import RunAgentInput, UserMessage
+
+    return RunAgentInput(
+        thread_id="t1",
+        run_id="r1",
+        state=None,
+        messages=[UserMessage(id="u1", content="What is the weather in Paris?")],
+        tools=[],
+        context=[],
+        forwarded_props=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_ag_ui_says_the_voice_at_the_run_s_start_and_a_line_to_hear():
+    """VO-35: `voice.settings` right after RUN_STARTED, `voice.say` from the agent's say_aloud; the text stays text."""
+    from ag_ui.core import CustomEvent
+
+    from agent_runtimes.transports.agui_displays import DisplayAGUIAdapter
+
+    adapter = DisplayAGUIAdapter(
+        agent=_speaking_agent("One moment, I am looking that up."),
+        run_input=_agui_input(),
+    )
+    events = [event async for event in adapter.run_stream()]
+    kinds = [event.type.value for event in events]
+    assert kinds[0] == "RUN_STARTED" and kinds[1] == "CUSTOM"
+    assert events[1].name == "voice.settings"
+    assert events[1].value == {
+        "enabled": True,
+        "input": "push_to_talk",
+        "output": "always",
+        "voice": "kokoro-af-heart",
+        "language": "en-US",
+        "where": "auto",
+    }
+    (said,) = [
+        event
+        for event in events
+        if isinstance(event, CustomEvent) and event.name == "voice.say"
+    ]
+    assert said.value == {
+        "text": "One moment, I am looking that up.",
+        "voice": "kokoro-af-heart",
+        "language": "en-US",
+    }
+    # Nothing else is voice's: no audio, and the answer is text.
+    assert [e.name for e in events if isinstance(e, CustomEvent)] == [
+        "voice.settings",
+        "voice.say",
+    ]
+    assert "TEXT_MESSAGE_CONTENT" in kinds
+
+
+@pytest.mark.asyncio
+async def test_an_agent_without_a_voice_says_nothing_of_voice():
+    from ag_ui.core import CustomEvent
+
+    from agent_runtimes.transports.agui_displays import DisplayAGUIAdapter
+
+    adapter = DisplayAGUIAdapter(
+        agent=Agent(TestModel(custom_output_text="Hello.")), run_input=_agui_input()
+    )
+    events = [event async for event in adapter.run_stream()]
+    assert not [e for e in events if isinstance(e, CustomEvent)]
+
+
+@pytest.mark.asyncio
+async def test_vercel_ai_says_the_same_as_data_parts():
+    """VO-36: `data-voice.settings` after the start, `data-voice.say` beside the tool's output."""
+    from pydantic_ai.messages import FunctionToolResultEvent, ToolReturnPart
+    from pydantic_ai.ui.vercel_ai.response_types import DataChunk, StartChunk
+
+    from agent_runtimes.transports.vercel_displays import DisplayVercelAIEventStream
+    from agent_runtimes.voice import data_part_of, say_aloud_event
+
+    settings = voice_settings(app({"enabled": True, "output": "always"}))
+    stream = DisplayVercelAIEventStream(None, voice=settings)
+    started = [chunk async for chunk in stream.before_stream()]
+    assert isinstance(started[0], StartChunk)
+    assert started[1] == DataChunk(type="data-voice.settings", data=settings)
+    event = say_aloud_event("One moment.", settings)
+    part = ToolReturnPart(
+        "say_aloud",
+        "Said aloud.",
+        tool_call_id="c1",
+        metadata=[event, data_part_of(event)],
+    )
+    chunks = [
+        chunk
+        async for chunk in stream.handle_function_tool_result(
+            FunctionToolResultEvent(part)
+        )
+    ]
+    (said,) = [c for c in chunks if isinstance(c, DataChunk)]
+    assert said.type == "data-voice.say" and said.data["text"] == "One moment."
+    silent = DisplayVercelAIEventStream(None)
+    assert [type(c) for c in [c async for c in silent.before_stream()]] == [StartChunk]
+
+
+def test_say_aloud_says_a_line_never_an_answer():
+    from agent_runtimes.voice import SAY_ALOUD_MAX_CHARACTERS, say_aloud_event
+
+    settings = {"voice": "kokoro-ff-siwis", "language": "fr-FR"}
+    assert say_aloud_event("  Un   instant. ", settings).value["text"] == "Un instant."
+    with pytest.raises(ValueError, match="needs a line"):
+        say_aloud_event("   ", settings)
+    with pytest.raises(ValueError, match=f"at most {SAY_ALOUD_MAX_CHARACTERS}"):
+        say_aloud_event("x" * (SAY_ALOUD_MAX_CHARACTERS + 1), settings)

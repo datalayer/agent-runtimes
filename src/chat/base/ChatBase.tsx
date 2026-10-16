@@ -51,7 +51,7 @@ import {
   getThemeConfig,
   useSystemColorMode,
 } from '@datalayer/primer-addons';
-import { AlertIcon, PersonIcon } from '@primer/octicons-react';
+import { AlertIcon, PersonIcon, UnmuteIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
 import { useCoreStore } from '@datalayer/core';
@@ -148,6 +148,7 @@ import { settledVoice } from '../../voice/chatVoice';
 import { useVoiceSettings } from '../../voice/useVoiceSettings';
 import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
 import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
+import { lineToSay, type VoiceActivity } from '../../voice/sayAloud';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
@@ -2582,6 +2583,10 @@ function ChatBaseInner({
     recorderRef.current = null;
   }
   const inspectAnswerRef = useRef('');
+  // A line the agent says aloud, from a run's `voice.say` (VOICE.md VO-35).
+  const voiceSayRef = useRef<((activity: VoiceActivity) => void) | undefined>(
+    undefined,
+  );
   const handleRespondRef = useRef<
     ((toolCallId: string, result: unknown) => Promise<void>) | null
   >(null);
@@ -3800,6 +3805,9 @@ function ChatBaseInner({
           // What the server says besides the conversation's text comes on
           // the ui socket (REACTOR_UI RU-W); the run's own — `loop.session`
           // among them — are the conversation's.
+          if (event.activity) {
+            voiceSayRef.current?.(event.activity);
+          }
           read();
           break;
 
@@ -3989,6 +3997,30 @@ function ChatBaseInner({
     ownVoice.speaker,
   );
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
+  /*
+   * A line the agent wants heard, not written (VO-35): a caption while the
+   * run goes on, said by the speaker where answers are said by themselves.
+   */
+  const [voiceSaid, setVoiceSaid] = useState('');
+  voiceSayRef.current = activity => {
+    const line = lineToSay(activity);
+    if (!line) {
+      return;
+    }
+    setVoiceSaid(line);
+    if (settled?.output === 'always') {
+      if (onReadAloud) {
+        onReadAloud(line);
+      } else {
+        ownVoice.speaker?.say(line);
+      }
+    }
+  };
+  useEffect(() => {
+    if (!isLoading) {
+      setVoiceSaid('');
+    }
+  }, [isLoading]);
   // Answers spoken over, hands-free (VOICE.md VO-13): marked *interrupted*.
   const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -5018,11 +5050,32 @@ function ChatBaseInner({
       </Text>
     ) : null;
 
+  // The line said aloud, written as it is said: captions always (VO-65).
+  const voiceSayCaption = voiceSaid ? (
+    <Text
+      aria-live="polite"
+      sx={{
+        fontSize: 0,
+        fontStyle: 'italic',
+        color: 'fg.muted',
+        maxWidth: 260,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 1,
+      }}
+      data-voice-say=""
+    >
+      <UnmuteIcon size={12} aria-label="Said aloud" />
+      {voiceSaid}
+    </Text>
+  ) : null;
+
   const inputToolbar = showInput ? (
     <InputPrompt
       footerExtras={
-        voiceRefused ? (
+        voiceRefused || voiceSayCaption ? (
           <>
+            {voiceSayCaption}
             {voiceRefused}
             {voiceControl}
           </>
