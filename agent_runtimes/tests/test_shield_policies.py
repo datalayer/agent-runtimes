@@ -245,7 +245,7 @@ class TestManagedFromIam:
         assert str(refused.value) == (
             "The harness 'fake' is refused: The Shield cannot read its policy from IAM at https://iam.test "
             "(IAM at https://iam.test could not be reached (timed out)) and it holds no copy: no unexpired "
-            "policy is held, so nothing is decided (SHIELD decision 11)."
+            "policy is held, so nothing is decided."
         )
 
     def test_without_a_token_and_without_iams_url_the_runtime_is_unmanaged_and_quiet(
