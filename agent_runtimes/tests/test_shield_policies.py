@@ -16,6 +16,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Dict, Iterator, List
 
 import pytest
@@ -831,6 +832,57 @@ class TestTheModelBudget:
         agent = Agent(FunctionModel(_model), capabilities=[free])
         for _ in range(3):
             await agent.run("fine")  # no model limit anywhere: every request is done
+
+    def test_a_request_through_ai_inference_is_priced_at_the_catalogues_list_price(
+        self,
+    ) -> None:
+        """The runtime calls ai-inference as an OpenAI-compatible model named
+        by the catalogue's id; genai-prices cannot place it under ``openai``,
+        and every second request of a kept deployment was refused as unpriced
+        (r1, 16 October 2026). The catalogue's price is the one ai-inference
+        meters the call with."""
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+        from pydantic_ai.usage import RequestUsage
+
+        from agent_runtimes.guardrails.shield_budget import catalogue_usd
+
+        through_ai_inference = OpenAIChatModel(
+            "bedrock:us.anthropic.claude-sonnet-4-6",
+            provider=OpenAIProvider(
+                base_url="https://ai-inference.example/v1", api_key="k"
+            ),
+        )
+        usage = RequestUsage(input_tokens=1_000_000, output_tokens=100_000)
+        assert catalogue_usd(through_ai_inference, usage) == pytest.approx(3.3 + 1.65)
+        direct = SimpleNamespace(
+            model_name="us.anthropic.claude-sonnet-4-6", system="bedrock"
+        )
+        assert catalogue_usd(direct, usage) == pytest.approx(3.3 + 1.65)
+        assert (
+            catalogue_usd(
+                SimpleNamespace(model_name="nobody:priced", system="x"), usage
+            )
+            is None
+        )
+        assert catalogue_usd(None, usage) is None
+
+    @pytest.mark.asyncio
+    async def test_a_catalogue_model_is_held_to_a_spend_limit_request_after_request(
+        self,
+    ) -> None:
+        class CatalogueModel(FunctionModel):
+            @property
+            def model_name(self) -> str:
+                return "bedrock:us.anthropic.claude-sonnet-4-6"
+
+        spend = Policy(scope="team", limits=Limits(spend=Threshold(soft=100, hard=200)))
+        budget = ShieldBudgetCapability(policies=lambda: [spend], session=lambda: "s")
+        agent = Agent(CatalogueModel(_model), capabilities=[budget])
+        for _ in range(3):
+            await agent.run("one")  # priced each time: never refused as unpriced
+        state = budget.state_of("s")
+        assert state.unpriced == "" and state.usd_pending > 0
 
     @pytest.mark.asyncio
     async def test_each_session_has_its_own_budget(self) -> None:

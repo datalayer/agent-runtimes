@@ -14,9 +14,14 @@ the same path a Rule asks on), and a refusal ends the run in the sentence;
 past a **hard** threshold the run ends in a sentence that says what would let
 it go on — a cheaper model, a wider budget, a person's word. After the
 response, what it spent is counted: its tokens from the response's usage,
-its credits from the model's price (``genai-prices``, as pydantic-ai prices
-it); a model whose price is unknown cannot be held to a spend limit and the
-next request says so rather than spending unmeasured.
+its credits from the model's price — the model catalogue's list price
+(agentspecs, the one ai-inference meters every call with) for a catalogue
+model, ``genai-prices`` (as pydantic-ai prices it) for any other; a model
+whose price is unknown cannot be held to a spend limit and the next request
+says so rather than spending unmeasured. A call through ai-inference is an
+OpenAI-compatible call genai-prices cannot place (found on r1, 16 October
+2026: ``us.anthropic.claude-sonnet-4-6`` under ``openai``), so the catalogue
+is read first.
 
 The state is per session — ``record.current_session()`` names the one the run
 belongs to on a runtime — so a session's budget is its own, and gone with it.
@@ -45,7 +50,12 @@ from agent_runtimes.guardrails.common import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["BudgetState", "ShieldBudgetCapability", "ShieldBudgetExceeded"]
+__all__ = [
+    "BudgetState",
+    "ShieldBudgetCapability",
+    "ShieldBudgetExceeded",
+    "catalogue_usd",
+]
 
 #: One credit is one hundredth of a USD (STUDIO's pricing, 100 credits a USD).
 CREDITS_PER_USD = 100
@@ -55,6 +65,33 @@ MODEL_REQUEST = "model_request"
 
 #: How many runs a session remembers the count of, for the reconciliation.
 RUNS_REMEMBERED = 256
+
+
+def catalogue_usd(model: Any, usage: Any) -> Optional[float]:
+    """A request at Datalayer's list price, in USD; ``None`` for a model the catalogue does not price.
+
+    The model catalogue (agentspecs ``models/``) is where ai-inference reads the
+    price it meters a call with, by the catalogue's id (``bedrock:…``) — the
+    id a runtime calls ai-inference with. A model called directly names its
+    provider apart (``system``), so its catalogue id is tried as
+    ``<system>:<name>`` too.
+    """
+    name = str(getattr(model, "model_name", "") or "")
+    if not name:
+        return None
+    from agentspecs.models import get_model
+
+    system = str(getattr(model, "system", "") or "")
+    candidates = [name] + ([f"{system}:{name}"] if system and ":" not in name else [])
+    for candidate in candidates:
+        spec = get_model(candidate)
+        if spec is not None and spec.pricing is not None:
+            return int(getattr(usage, "input_tokens", 0) or 0) / 1e6 * float(
+                spec.pricing.input_usd_per_million
+            ) + int(getattr(usage, "output_tokens", 0) or 0) / 1e6 * float(
+                spec.pricing.output_usd_per_million
+            )
+    return None
 
 
 class ShieldBudgetExceeded(GuardrailBlockedError):
@@ -196,8 +233,10 @@ class ShieldBudgetCapability(AbstractCapability[Any]):
         )
         credits = 0
         try:
-            priced = response.cost()
-            state.usd_pending += float(priced.total_price)
+            usd = catalogue_usd(getattr(ctx, "model", None), usage)
+            if usd is None:
+                usd = float(response.cost().total_price)
+            state.usd_pending += usd
         except LookupError:
             # A model nobody priced: the next request says so when a spend limit holds.
             state.unpriced = str(getattr(response, "model_name", "") or "the model")
