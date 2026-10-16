@@ -5,7 +5,7 @@
 """
 Generate Python and TypeScript code from the YAML policy specifications.
 
-One YAML per policy under ``agentspecs/policies`` (SHIELD.md SH-50, §6.7):
+One YAML per policy under ``agentspecs/policies`` (SH-50):
 the Shield's policy document under the catalogue's fields. The document's
 schema is the ``agent-shield`` package's, carried by agentspecs verbatim
 (``policies/shield-policy.schema.json``); each document is validated against
@@ -78,7 +78,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Policy Catalog.",
         "",
-        "The Shield's policy documents the platform ships or shows (SHIELD.md SH-50):",
+        "The Shield's policy documents the platform ships or shows (SH-50):",
         "each a catalogue entry whose ``policy`` is a document of ``agent_shield.policy``.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
@@ -150,7 +150,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * Policy Catalog.",
         " *",
-        " * The Shield's policy documents the platform ships or shows (SHIELD.md SH-50).",
+        " * The Shield's policy documents the platform ships or shows (SH-50).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",

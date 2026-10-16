@@ -52,7 +52,11 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     await expect(state).toHaveAttribute('data-hands-free-state', 'speaking', {
       timeout: 120_000,
     });
-    expect(syntheses.length).toBeGreaterThan(0);
+    // *Speaking…* shows while the first sentence's voice is being made (it
+    // no longer shows *Listening…* then), so its answer is waited for.
+    await expect
+      .poll(() => syntheses.length, { timeout: 30_000 })
+      .toBeGreaterThan(0);
     const saying = page.locator('[data-voice-saying]').first();
     await expect(saying).toHaveAttribute('aria-current', 'true');
     // The question plays again while the answer is said: barge-in stops the

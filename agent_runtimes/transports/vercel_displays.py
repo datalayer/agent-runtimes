@@ -11,8 +11,7 @@ only; this one sends the page that output with ``_meta["reactor.ui/display"]``
 beside it — the shape ``resolveToolResult`` (``@datalayer/reactor/ui``) reads.
 
 An agent whose answers may be heard has its voice said right after the
-start: a ``data-voice.settings`` data part (VOICE.md VO-36, the twin of
-AG-UI's ``voice.settings``).
+start: a ``data-voice.settings`` data part (VO-36, the twin of AG-UI's ``voice.settings``).
 """
 
 from __future__ import annotations

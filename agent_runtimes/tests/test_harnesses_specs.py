@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The harnesses catalogue (SHIELD.md SH-01) as agent-runtimes reads it.
+"""The harnesses catalogue (SH-01) as agent-runtimes reads it.
 
 An agent program driven over ACP, generated from agentspecs 0.0.100. An
 agent spec names one with `harness:` beside `pydantic-ai` and `vercel-ai`;

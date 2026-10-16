@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application written in Python (LOOP §10, P-02).
+"""An application written in Python (P-02).
 
 An `Application` is an Appspec and the code that reacts to its sessions::
 
@@ -187,7 +187,7 @@ EVENTS = (
     # What a person said of an answer, once kept (LOOP P-24).
     "feedback",
     # What the person said, heard by the same engines as a page's or `loop`'s,
-    # and their speaking over the agent (LOOP P-22, VOICE.md VO-46).
+    # and their speaking over the agent (P-22, VO-46).
     "audio",
     "interrupted",
     "end",
@@ -1700,7 +1700,7 @@ class Application:
         return self._on("logout", handler)
 
     def audio(self, handler: Handler) -> Handler:
-        """React to what the person said (LOOP P-22, VOICE.md VO-46):
+        """React to what the person said (P-22, VO-46):
         ``handler(session, heard)``, a `HeardSpeech` — its words, language,
         the model that heard it and where.
 
@@ -1714,7 +1714,7 @@ class Application:
         return self._on("audio", handler)
 
     def interrupted(self, handler: Handler) -> Handler:
-        """React to the person speaking over the agent (VOICE.md VO-46, VO-13):
+        """React to the person speaking over the agent (VO-46, VO-13):
         ``handler(session)``, once what was running is stopped and its voice
         with it.
         """
@@ -2877,7 +2877,7 @@ class AppHost:
         token: Optional[str] = None,
         hearing: Optional[Any] = None,
     ) -> HeardSpeech:
-        """The person spoke (LOOP P-22, VOICE.md VO-46): the sound, in chunks,
+        """The person spoke (P-22, VO-46): the sound, in chunks,
         heard as one turn, then ``audio`` runs with what was heard — or, without
         one, the words are the person's message, marked spoken.
 
@@ -2921,7 +2921,7 @@ class AppHost:
         return heard
 
     async def interrupt(self, session: Session) -> None:
-        """The person spoke over the agent (VOICE.md VO-46, VO-13): what runs is
+        """The person spoke over the agent (VO-46, VO-13): what runs is
         cancelled, the page told to stop the voice, then ``interrupted`` runs.
         """
         self._open(session)

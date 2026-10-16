@@ -6,7 +6,7 @@
  */
 
 /**
- * The host's agent client over the session API (plans/DISCORD.md DC-004):
+ * The host's agent client over the session API (DC-004):
  * the exchange, a turn run once by its event id, the session mapped to the
  * thread through the injected `HostShape`, the stream reduced. Ported from
  * the Slack service, over a Discord-like shape.
@@ -217,7 +217,7 @@ describe('the host agent client', () => {
     expect(turn.run.id).toBe('t1');
   });
 
-  it("sends the shape's provenance on the turn itself, as the contract's optional request (DISCORD §4.3)", async () => {
+  it("sends the shape's provenance on the turn itself, as the contract's optional request", async () => {
     const provenance = (
       contracts.external_turn as unknown as {
         optional_request: { provenance: Record<string, unknown> };
@@ -362,7 +362,7 @@ describe('the host agent client', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("maps the session again with the shape's target as the speaker, or says nothing binds (DISCORD §3.2)", async () => {
+  it("maps the session again with the shape's target as the speaker, or says nothing binds", async () => {
     const session = shape.sessionUidOf(request);
     const { calls, fetchImplementation } = wire({
       [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>

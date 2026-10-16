@@ -4,7 +4,7 @@
  */
 
 /**
- * A coding agent behind the Shield, in the web chat (SHIELD §4.3, SH-16; SH-23).
+ * A coding agent behind the Shield, in the web chat (SH-16, SH-23).
  *
  * The chat talks AG-UI to a local runtime whose agent is a harness: what the
  * agent changed is drawn as a **diff** in the file's language, what it ran

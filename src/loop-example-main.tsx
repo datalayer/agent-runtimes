@@ -7,7 +7,7 @@
  * Entry point for the workspace example.
  *
  * Owns the providers, as every entry point does — the workspace mounts none of
- * its own (§3.5).
+ * its own.
  *
  * @module apps-example-main
  */

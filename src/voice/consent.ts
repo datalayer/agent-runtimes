@@ -5,7 +5,7 @@
 
 /**
  * The person's yes to the microphone, asked once per application before the
- * browser's own prompt (VOICE.md VO-61), and remembered where the page keeps
+ * browser's own prompt (VO-61), and remembered where the page keeps
  * its preferences. A page without storage asks again next time.
  *
  * @module voice/consent

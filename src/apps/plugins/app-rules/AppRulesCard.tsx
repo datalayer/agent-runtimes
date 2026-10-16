@@ -204,7 +204,7 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
 }
 
 /**
- * The rules of the running session (SHIELD §6.3, SH-54): what decides it now,
+ * The rules of the running session (SH-54): what decides it now,
  * the rules the person added, and a rule to add — in force at once, gone with
  * the session, never below the organization's.
  */

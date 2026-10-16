@@ -300,7 +300,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
             id: msg.id,
             role: msg.role,
             parts,
-            // How a message was heard, when it was said (VOICE.md VO-27):
+            // How a message was heard, when it was said (VO-27):
             // the runtime keeps the turn marked spoken.
             ...(msg.role === 'user' && msg.metadata?.input === 'voice'
               ? { metadata: msg.metadata }
@@ -827,7 +827,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
               ) {
                 // What the server says besides the conversation's text, as
                 // AG-UI's custom events say it: `data-voice.say`, a line the
-                // agent says aloud, and `data-voice.settings` (VOICE.md VO-36).
+                // agent says aloud, and `data-voice.settings` (VO-36).
                 this.emit({
                   type: 'activity',
                   activity: { type: event.type, data: event.data },

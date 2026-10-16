@@ -65,7 +65,7 @@ Stop = Callable[[Observation], bool]
 class Ending(str, Enum):
     """How the worker's turn finishes, in terms neither protocol owns.
 
-    ``REJECTED`` and ``FAILED`` are deliberately separate: section 13 asks
+    ``REJECTED`` and ``FAILED`` are deliberately separate: the conformance scenarios ask
     for a worker refusing before it accepts (scenario 3) and one that
     disappeared after accepting (scenario 4) to be told apart, and it is the
     error code and its ``retryable`` that tell them apart. ``WORKING`` never
@@ -720,7 +720,7 @@ def require_acknowledgement(
     """
     Skip when the adapter declared it can never reach this milestone.
 
-    Section 6.3's milestones are the half of decision 5's reduction that is
+    The milestones are the half of decision 5's reduction that is
     easiest to fake, so a scenario about one of them is skipped rather than
     quietly rewritten to assert something weaker. The reason is the
     adapter's: a reduction that is about a milestone names it in quotes.

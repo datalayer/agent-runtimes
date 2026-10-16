@@ -194,7 +194,7 @@ export type LoopPresetOptions = {
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
-  /** Its voice, when it has one (VOICE.md): the chat's `voice`. */
+  /** Its voice, when it has one: the chat's `voice`. */
   voice?: ChatPluginConfig['voice'];
   /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
   thread?: ResumedThread;
@@ -370,8 +370,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // *Sign in at a company*, where the gateway's `pap_sign_in` answers: its
     // own renderer and binding, beside the surfaces rather than inside them.
     PapSignInPlugin,
-    // A coding agent's diff and terminal, where its tool results carry them
-    // (SHIELD §4.3): two renderers, no binding — the display says what it is.
+    // A coding agent's diff and terminal, where its tool results carry them:
+    // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not

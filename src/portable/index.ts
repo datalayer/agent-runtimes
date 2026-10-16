@@ -173,7 +173,7 @@ export {
   replyAuthor,
   type ActionClass,
   type ProtocolDisplay,
-  // A coding agent's diff and terminal (SHIELD §4.3, SH-16).
+  // A coding agent's diff and terminal (SH-16).
   DIFF_LINES_LIMIT,
   SHIELD_DIFF_TYPE,
   SHIELD_TERMINAL_TYPE,

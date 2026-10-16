@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the speech models heard of the recorded fixtures, against their baselines (VOICE.md VO-50, VO-51).
+"""What the speech models heard of the recorded fixtures, against their baselines (VO-50, VO-51).
 
 `scripts/voice/measure.py` runs the models — the browser's speech-to-text
 on the fixtures, the server's voices said and heard back — and writes what

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Authority across the chain (SHIELD.md §2.4, SH-33).
+"""Authority across the chain (SH-33).
 
 A run delegated with an execution's credential (``_meta.datalayer.credential``
 over ACP, ``metadata.datalayer.credential`` over A2A, ORCHESTRATOR O1-17) lends
@@ -11,7 +11,7 @@ spawns, which reaches MCP through the servers its parent was lent, is held to
 the execution's manifest at the gateway: a read-only manifest stops its write.
 A later turn under another authority does not run on servers lent with the
 first. The gateway here is a stand-in that decides by the bearer as the real
-one decides by the credential's manifest; the r1 drill is the plan's.
+one decides by the credential's manifest; the r1 drill is done apart.
 """
 
 from __future__ import annotations

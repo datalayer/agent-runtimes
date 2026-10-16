@@ -10,8 +10,8 @@
  * clippy.js reader a person's files go through.
  *
  * Nothing of them is in this repository: clippy.js's licence covers its code
- * only, and the characters, their names and their drawings are Microsoft's
- * (§6.9). The page fetches them when asked and keeps them in memory.
+ * only, and the characters, their names and their drawings are Microsoft's.
+ * The page fetches them when asked and keeps them in memory.
  *
  * The package ships each character as ES modules: `agent.mjs` exports the
  * character's data, `map.mjs` its sprite sheet as a data URL. Both are read as

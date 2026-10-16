@@ -6,7 +6,7 @@
  */
 
 /**
- * Typed approval renderers (SLACK S-302; plans/DISCORD.md DC-004, §3.6):
+ * Typed approval renderers (S-302, DC-004):
  * a complete action or *Review in Datalayer*. Ported from the Slack service;
  * each host tests its own card on top.
  */
@@ -93,7 +93,7 @@ describe('typed approval renderers', () => {
     },
   );
 
-  it('decides mail only: a send that is not mail fails closed (SLACK §15, 5)', () => {
+  it('decides mail only: a send that is not mail fails closed', () => {
     expect(
       renderApproval(
         of({

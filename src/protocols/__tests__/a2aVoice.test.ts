@@ -4,7 +4,7 @@
  */
 
 /**
- * A2A's voice, read by the page (VOICE.md VO-36): the runtime says the
+ * A2A's voice, read by the page (VO-36): the runtime says the
  * agent's voice in its first working status message's `metadata.voice.settings`
  * and each `say_aloud` line in `metadata.voice.say`; the adapter hands each to
  * the chat as an activity, as AG-UI's custom events are, and the chat says the

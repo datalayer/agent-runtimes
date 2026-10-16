@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Audio over ACP (VOICE.md VO-28).
+Audio over ACP (VO-28).
 
 The runtime says ``promptCapabilities.audio: true``; an ``AudioContentBlock``
 in a ``session/prompt`` is heard by the speech service with the connection's

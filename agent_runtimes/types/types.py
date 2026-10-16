@@ -469,7 +469,7 @@ class HarnessTermsSpec(BaseModel):
 
 
 class HarnessSkillsSpec(BaseModel):
-    """Where the Shield writes an application's skills for a harness (SHIELD §4.10)."""
+    """Where the Shield writes an application's skills for a harness."""
 
     format: str = Field(..., description="skill-md, or none")
     dir: str = Field(
@@ -487,8 +487,8 @@ class HarnessHonoursSpec(BaseModel):
 
 
 class PolicySpec(BaseModel):
-    """A Shield policy document the platform ships or shows (`agentspecs/policies`,
-    SHIELD.md SH-50): the catalogue's fields around a document of
+    """A Shield policy document the platform ships or shows (`agentspecs/policies`, SH-50):
+    the catalogue's fields around a document of
     `agent_shield.policy`, whose schema agentspecs carries verbatim.
     """
 
@@ -505,8 +505,8 @@ class PolicySpec(BaseModel):
 
 
 class StandardSpec(BaseModel):
-    """A standard a conformance report answers (`agentspecs/standards`,
-    SHIELD.md SH-60, §6.9): its version, domains and controls, each control
+    """A standard a conformance report answers (`agentspecs/standards`, SH-60):
+    its version, domains and controls, each control
     carried whole — id, title, application, cadence, evidence items,
     crosswalks — so a screen names nothing by hand.
     """
@@ -545,7 +545,7 @@ class StandardSpec(BaseModel):
 
 
 class HarnessRegisterEntry(BaseModel):
-    """The register's line for a harness (SHIELD §3.3): what was checked, and where."""
+    """The register's line for a harness: what was checked, and where."""
 
     adapter: str = Field(default="", description="The adapter or binary")
     version: str = Field(default="", description="The version pinned")
@@ -559,8 +559,8 @@ class HarnessRegisterEntry(BaseModel):
 
 
 class HarnessSpec(BaseModel):
-    """An agent program driven over the Agent Client Protocol (`agentspecs/harnesses`,
-    SHIELD.md SH-01). An agent spec's `harness:` names one beside `pydantic-ai`
+    """An agent program driven over the Agent Client Protocol (`agentspecs/harnesses`, SH-01).
+    An agent spec's `harness:` names one beside `pydantic-ai`
     and `vercel-ai`.
     """
 
@@ -599,7 +599,7 @@ def harness_problems(
     Nothing for a builtin harness. Otherwise: a harness the catalogue does not
     know, `custom` in the shared catalogue, a `model:` the harness does not
     take, `subagents:` when it has its own, `skills:` when it reads none
-    (SHIELD.md SH-01: refused at load, in a sentence).
+    (SH-01: refused at load, in a sentence).
 
     Parameters
     ----------
@@ -1820,7 +1820,7 @@ class SubAgentsConfig(BaseModel):
     )
 
 
-#: The closed vocabulary of delegable work (ORCHESTRATOR.md, O2-07).
+#: The closed vocabulary of delegable work (O2-07).
 #:
 #: `agents.discover --capability notebook.validate` has to match something,
 #: and free text does not match: two specs saying "analysis" and "analyse"
@@ -1868,7 +1868,7 @@ class AgentCapability(BaseModel):
     simply a tag: an orchestrator choosing between two workers that both claim
     `data.analyse` needs to know which of them accepts a notebook reference
     and which returns one. They name context-reference kinds and artifact
-    types, the vocabularies of sections 5.3 and 5.4.
+    types, the vocabularies of the context manifest and the artifacts.
     """
 
     id: str = Field(
@@ -1891,7 +1891,7 @@ class AgentCapability(BaseModel):
         default_factory=list,
         description=(
             "Context reference kinds it accepts — notebook, document, dataset, "
-            "file, sandbox (section 5.3). Empty means it was not stated, which "
+            "file, sandbox. Empty means it was not stated, which "
             "is not the same as accepting nothing."
         ),
     )
@@ -1899,7 +1899,7 @@ class AgentCapability(BaseModel):
         default_factory=list,
         description=(
             "Artifact types it produces — notebook, report, dataset, file, "
-            "cell_output, structured (section 5.4)."
+            "cell_output, structured."
         ),
     )
     tags: List[str] = Field(
@@ -1941,7 +1941,7 @@ class AgentCapability(BaseModel):
 
 
 class AppVoiceSpec(BaseModel):
-    """An application's voice (VOICE.md VO-41): off unless said.
+    """An application's voice (VO-41): off unless said.
 
     What is said becomes a message and what is heard is the answer the
     conversation shows; `voice` is an id of the voice catalogue
@@ -2180,7 +2180,7 @@ class Agentspec(BaseModel):
     delegable: List[AgentCapability] = Field(
         default_factory=list,
         description=(
-            "What work this agent can be delegated (ORCHESTRATOR.md, O2-07). "
+            "What work this agent can be delegated (O2-07). "
             "`protocol` below says how it is reached; this says what it is "
             "worth reaching it for. Empty means the spec has not said, and "
             "discovery reports that rather than guessing from tags. "
@@ -2313,8 +2313,8 @@ class Agentspec(BaseModel):
     voice: Optional[AppVoiceSpec] = Field(
         default=None,
         description=(
-            "Its voice, for an agent that is not an application (VOICE.md "
-            "VO-41): the fields an Appspec says under `interface.voice`."
+            "Its voice, for an agent that is not an application "
+            "(VO-41): the fields an Appspec says under `interface.voice`."
         ),
     )
 
@@ -3820,7 +3820,7 @@ class TeamSpec(BaseModel):
     #:
     #: Every value here names a protocol for which no adapter is registered
     #: yet: `datalayer` is the durable control plane of
-    #: PLAN_ORCHESTRATOR.md O1-01, `a2a` and `acp` its two adapters (O0-06,
+    #: O1-01, `a2a` and `acp` its two adapters (O0-06,
     #: O0-07). The field is an intention until one of them lands, and the
     #: literal type is what keeps it from naming a protocol nobody is
     #: building — it used to be a free string defaulting to `datalayer`,

@@ -578,7 +578,7 @@ async def forward_approval_to_ai_agents(
 
     Called from ``ToolApprovalManager.request_and_wait`` so that approvals
     created via the inline ``ToolsGuardrailCapability`` path are visible in
-    remote UI panels (e.g. the ToolApprovals view in datalayer/ui) that poll
+    remote UI panels (e.g. the landing's Tool Approvals view) that poll
     the ai-agents service rather than the local agent-runtimes endpoints.
     """
     if not user_jwt_token:
@@ -594,7 +594,7 @@ async def forward_approval_to_ai_agents(
         ai_agents_url = ai_agents_url.rstrip("/")
         remote_approval_id: str | None = None
         # The session whose turn asks it: a host mapping that session is
-        # delivered it (plans/SLACK.md §4.3, 3).
+        # delivered it.
         from agent_runtimes.loop.apps.record import current_session
 
         session_uid = current_session()

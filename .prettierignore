@@ -42,5 +42,5 @@ tsconfig.tsbuildinfo
 *.generated.*
 *.auto.*
 
-# Byte-identical to ai-agents tests/fixtures/hosts/contracts.json (plans/DISCORD.md DC-004, DC-006)
+# Byte-identical to ai-agents tests/fixtures/hosts/contracts.json (DC-004, DC-006)
 src/portable/hosts/contracts.json

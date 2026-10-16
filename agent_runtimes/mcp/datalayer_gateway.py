@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Datalayer MCP gateway, as one run reaches it (ORCHESTRATOR.md, O1-17).
+"""The Datalayer MCP gateway, as one run reaches it (O1-17).
 
 An agent that selected the Datalayer MCP server reaches the gateway through a
 process started once, with the runtime's own key. A run that carries an

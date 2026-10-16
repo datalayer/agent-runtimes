@@ -4,7 +4,7 @@
  */
 
 /**
- * What the runtime says of voice over the protocols (VOICE.md VO-35, VO-36):
+ * What the runtime says of voice over the protocols (VO-35, VO-36):
  * `voice.say` read as a line to hear and caption — from AG-UI's custom
  * events and Vercel AI's data parts alike, nothing else taken for it.
  */

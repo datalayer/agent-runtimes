@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A report document back out as Markdown and CSV (BENCHMARK.md, B4-08).
+"""A report document back out as Markdown and CSV (B4-08).
 
 What people wrote and what the runs produced read in the order they are in
 the document, each block knowing whether it is evidence; the CSV keeps the

@@ -4,14 +4,14 @@
  */
 
 /**
- * Dead letters (SLACK §9, S-405; DISCORD DC-403): jobs that failed five
+ * Dead letters (S-405, DC-403): jobs that failed five
  * times. By default an operator sees their metadata and a hash of their
  * payload — never the words of a prompt or a delivery. Replaying puts one
  * back to work, once. Reading a payload is privileged: a dead job's only, it
  * needs a reason, is recorded in `<prefix>_payload_access` and audited, and
  * its credentials are still redacted. Every replay is kept in
  * `<prefix>_job_replays` with who asked. Moved from the Slack service
- * (plans/DISCORD.md DC-004); each service keeps only the bin that opens its
+ * (DC-004); each service keeps only the bin that opens its
  * database and calls `runDeadLettersCli`.
  *
  * @module portable/hosts/deadLetters

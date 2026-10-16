@@ -4,8 +4,8 @@
  */
 
 /**
- * What a person may choose for their voice (VOICE.md VO-14, VO-21, VO-25,
- * VO-30), from the catalogue: the languages a voice speaks and the device
+ * What a person may choose for their voice (VO-14, VO-21, VO-25, VO-30),
+ * from the catalogue: the languages a voice speaks and the device
  * hears, the voices of each, the speeds and loudnesses offered, and when
  * answers are heard. Read by the composer's menu (`VoiceMenu`) and by a
  * settings page, so both offer the same.

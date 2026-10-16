@@ -4,7 +4,7 @@
 
 """Record what ``loop`` refuses of a scene, for every editor of a scene to be held to it.
 
-plans/STUDIO.md S-10: one validation over the three — what the spec editor
+S-10: one validation over the three — what the spec editor
 refuses, the stage refuses and ``loop`` refuses, in the same words. The
 browser's half is ``src/apps/apps/sceneChecks.ts``; this script
 writes down what agentspecs itself says of the same scenes, and
@@ -645,7 +645,7 @@ def main() -> int:
         recorded.append({"name": case["name"], "yaml": case["yaml"], "says": says})
 
     table = {
-        "says": "What `loop` refuses of a scene, recorded from agentspecs (plans/STUDIO.md S-10).",
+        "says": "What `loop` refuses of a scene, recorded from agentspecs (S-10).",
         "recordedWith": "scripts/record-scene-checks.py",
         "cases": recorded,
     }

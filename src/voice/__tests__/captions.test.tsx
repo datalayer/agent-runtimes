@@ -4,7 +4,7 @@
  */
 
 /**
- * Captions always (VOICE.md VO-65): the sentence being said marked in the
+ * Captions always (VO-65): the sentence being said marked in the
  * open conversation, not by colour alone — the answer that holds it marked
  * `aria-current` and `data-voice-saying`, the sentence underlined in place
  * through the CSS Custom Highlight API, which jsdom lacks (stood in here).

@@ -12,7 +12,7 @@
  * array, so it cannot lie about how many plugins there are.
  *
  * Not part of the workspace itself — the workspace has one navigation element
- * and no settings tree (§3.5). This belongs to the examples that demonstrate it.
+ * and no settings tree. This belongs to the examples that demonstrate it.
  *
  * @module apps/shell/PluginToggles
  */

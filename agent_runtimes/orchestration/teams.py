@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A catalogued team, as the control plane runs it (ORCHESTRATOR.md, O2-09).
+"""A catalogued team, as the control plane runs it (O2-09).
 
 A team's run is a tree of executions. Its root is the supervisor's, and each
 member runs as a child of it. Every one of them is bound by an agent id naming

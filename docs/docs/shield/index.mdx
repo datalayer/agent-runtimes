@@ -10,7 +10,7 @@ description: The boundary, the audit and the trace around any agent a Datalayer 
 
 # The Shield
 
-A harness — Claude Code, Codex, any agent that speaks the Agent Client Protocol — runs **inside** a Datalayer runtime, and the runtime is its Shield: the pod's boundary, the gateway's tools, the Rules and the record around it. This page says what the Shield does today — the boundary, the audit, the trace, the policies with their limits and the session's rules — as built (read again on 16 October 2026, agent-runtimes 1.5.42; SHIELD.md Phase 2, SH-30, SH-31, SH-32, SH-34, SH-35, SH-50, SH-51, SH-54), with the [examples](#examples) that run it. The harness itself and the transports it is served over are on [the harnesses page](../harnesses/) and [its transports](../harnesses/transports).
+A harness — Claude Code, Codex, any agent that speaks the Agent Client Protocol — runs **inside** a Datalayer runtime, and the runtime is its Shield: the pod's boundary, the gateway's tools, the Rules and the record around it. This page says what the Shield does today — the boundary, the audit, the trace, the policies with their limits and the session's rules — as built (read again on 16 October 2026, agent-runtimes 1.5.42, Phase 2, SH-30, SH-31, SH-32, SH-34, SH-35, SH-50, SH-51, SH-54), with the [examples](#examples) that run it. The harness itself and the transports it is served over are on [the harnesses page](../harnesses/) and [its transports](../harnesses/transports).
 
 ## The boundary: what a pod can reach
 
@@ -67,7 +67,7 @@ Proved locally through the A2A face with the ACP SDK's fake agent: one trace id 
 
 ## The policies: three levels, from IAM
 
-The Shield decides with **three documents of one schema** (agentspecs' `policies/` kind, the `agent-shield` package's schema carried verbatim), strictest first, the first decision winning (SHIELD.md §6.3):
+The Shield decides with **three documents of one schema** (agentspecs' `policies/` kind, the `agent-shield` package's schema carried verbatim), strictest first, the first decision winning:
 
 1. the **organization's** (and its teams'), written in IAM as the `shield` rule of the organization's policy layer (`PUT /mcp-policies/organization/{uid}` with `{"shield": {...}}`), validated by the Shield's own model — a team's refused when it would permit more than its organization's, in the engine's sentences;
 2. the **application's** Rules, read into the `team` scope (`guardrails/shield_policy.py`);
@@ -91,7 +91,7 @@ The caller is the session's (its bearer, as every session route). A harness sess
 
 ## Can an agent go around the Shield? The drills
 
-SHIELD.md's decisive question: **can the agent reach a protected resource without passing through the enforcement layer?** Seven ways round were tried (SH-37), each with the ACP SDK's fake agent (no model key), each refused and recorded somewhere a person can read it:
+The Shield's decisive question: **can the agent reach a protected resource without passing through the enforcement layer?** Seven ways round were tried (SH-37), each with the ACP SDK's fake agent (no model key), each refused and recorded somewhere a person can read it:
 
 | The way round | Where it was tried | Refused by | Recorded in |
 |---|---|---|---|

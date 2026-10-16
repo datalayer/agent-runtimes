@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The word error rate of what a model heard (VOICE.md VO-51), with `jiwer`.
+"""The word error rate of what a model heard (VO-51), with `jiwer`.
 
 Both sides are read the same way before they are compared: lower case, the
 ligatures written out (``œ`` as ``oe``), hyphens and apostrophes as spaces,

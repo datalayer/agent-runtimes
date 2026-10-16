@@ -16,8 +16,8 @@ into its workspace in its own format, and serves it over every protocol the
 runtime serves — A2A, AG-UI, the session API, the embed. The harness has no
 face of its own and reaches nothing the runtime did not lend.
 
-This page says what is built today and what is not. The plan is `SHIELD.md`
-in the landing's `plans/`; the boxes named below are its. The Shield's engine
+This page says what is built today and what is not; the boxes named below
+(SH-…) are the Shield's work items. The Shield's engine
 is the `datalayer-agent-shield` package, documented on its own site,
 [agent-shield.datalayer.tech](https://agent-shield.datalayer.tech): the
 standalone proxy (`agent-shield run`), the server (`agent-shield serve`, the
@@ -114,7 +114,7 @@ side). Nothing runs pydantic-ai in a refused harness's place.
 
 ## The register (built: SH-04's part in agentspecs)
 
-`agentspecs/harnesses/register.yaml` is the register of SHIELD §3.3: every
+`agentspecs/harnesses/register.yaml` is the register: every
 harness of the catalogue with its adapter, the version pinned, its licence,
 the agent's terms, the credential it takes, whether serving it to third
 parties is permitted, its tier restrictions and the binaries it needs — each
@@ -161,7 +161,7 @@ with the run's credential, never a key of the harness's own
 ([transports](./transports)). A harness that reloads no session is started
 over after a restart, and says so. A mode such as `bypassPermissions` changes
 what the harness asks, never what the Shield decides: the Shield decides
-every action whether or not the harness asked (SHIELD §6.2).
+every action whether or not the harness asked.
 
 ## The adapter (built: SH-10's adapter, SH-11, SH-12's runtime side, SH-13, SH-18, SH-19's `loop`; 15 October 2026)
 
@@ -183,7 +183,7 @@ what needs the runtime.
   refused when unset), runs `initialize` (protocol version 1, `fs` and
   `terminal` on) and refuses what the spec asked that the agent did not
   advertise (`loadSession`).
-- **The events** (§4.1's table): `agent_message_chunk` → `text`;
+- **The events**: `agent_message_chunk` → `text`;
   `agent_thought_chunk` → `thought`; `tool_call` → `tool_call` with `kind`,
   `status`, `arguments`, `awaiting: approval` while pending, the policy's
   sentence; `tool_call_update` → `tool_call` (in progress, with its displays)
@@ -193,7 +193,7 @@ what needs the runtime.
   reason. A malformed update, or an action a policy leaves to the person, ends
   the turn with a sentence (`[Shield] …` as text, `done` with `stop_reason:
   refusal` and the sentence).
-- **Permissions are Rules** (§4.5, SH-12). ACP's `kind` is classed by the
+- **Permissions are Rules** (SH-12). ACP's `kind` is classed by the
   package's one table (`agent_shield.policy.class_of`: `other` → write, fail
   closed; the table-driven test both ways is `test_acp_agent.py`). The policies
   in force are the application's Rules on classes read into a `team`-scope
@@ -205,15 +205,15 @@ what needs the runtime.
   "always" picks `allow_always`, a session rule gone with the session; *leave
   it to me* answers `reject_once` with the sentence; a turn cancelled while it
   waits answers `cancelled`. A Rule of the application is never loosened by a
-  session rule (§6.3).
-- **Files and terminals** (§4.6, SH-13): `fs/read_text_file`,
+  session rule.
+- **Files and terminals** (SH-13): `fs/read_text_file`,
   `fs/write_text_file` and `terminal/*` are answered by the runtime against
   the workspace, each a tool row (`Read README.md — do it`, kind `read`;
   `Write hello.txt — do it`, kind `edit`, the diff as its display; `Run …`,
   kind `execute`, the terminal as its display, its output and exit kept) and a
   decision; a path outside the workspace is refused in a sentence before any
   rule.
-- **The record** (§4.8, SH-18): the Shield's audit rows are the
+- **The record** (SH-18): the Shield's audit rows are the
   application's record — a `decision` for what a policy decided, a `tool_call`
   for what was done (the diff as its hash and size), an `approval` for what
   the person answered, the `turn` and the run's end — kept as
@@ -246,7 +246,7 @@ all on the ACP SDK's fake agent (`tests/fixtures/acp_fake_agent.py`,
 agent-shield's): the only Anthropic key at hand has no credit, so Claude
 Code's first live turn through the adapter waits on a funded key.
 
-## The key, from IAM (built: §6.1's declared secrets; 1.5.32, 15 October 2026)
+## The key, from IAM (built: the declared secrets, 1.5.32, 15 October 2026)
 
 An agent on a catalogue harness declares the harness spec's `requires.secrets`
 (Claude Code's `ANTHROPIC_API_KEY`) as the runtime's own

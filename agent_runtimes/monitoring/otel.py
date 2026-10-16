@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """OTEL capability hooks for pydantic-ai lifecycle events, and the
-orchestration trace (PLAN_ORCHESTRATOR.md, section 10, O0-11).
+orchestration trace (O0-11).
 
 Two things share this module because they share one telemetry path. The
 capability hooks below emit an agent run's counters and histograms through
@@ -11,7 +11,7 @@ execution tree one trace. Both resolve the account the same way — from the
 request's own JWT — because spans and metrics that landed under different
 accounts would be two stories about the same work.
 
-What the orchestration half is for, in section 10's words: one trace across
+What the orchestration half is for, in a sentence: one trace across
 the complete execution tree, carrying root, parent, execution, attempt,
 agent, session and protocol identifiers. There is a span per execution and a
 span per attempt, and every canonical event the store appends is added to
@@ -209,7 +209,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
 
 
 # ---------------------------------------------------------------------------
-# One trace across the execution tree (section 10, O0-11)
+# One trace across the execution tree (O0-11)
 # ---------------------------------------------------------------------------
 
 #: The service the orchestration spans are emitted under. The adapters and
@@ -222,7 +222,7 @@ ORCHESTRATION_SERVICE = "agent-runtimes"
 EXECUTION_SPAN = "orchestration.execution"
 ATTEMPT_SPAN = "orchestration.attempt"
 
-#: Section 10's correlation identifiers, in its order. They live under
+#: The correlation identifiers, in their order. They live under
 #: ``orchestration.`` rather than reusing the ``agent.id`` and ``session.id``
 #: the agent tracer already emits, because an orchestration ``agentId`` is a
 #: descriptor and a ``sessionId`` is a protocol handle: joining them to a
@@ -288,7 +288,7 @@ def account_attributes() -> dict[str, str]:
 
 def correlation_of(event: ExecutionEvent) -> dict[str, str]:
     """
-    Section 10's identifiers, read off the event the store already stamped.
+    The correlation identifiers, read off the event the store already stamped.
 
     Parameters
     ----------
@@ -365,7 +365,7 @@ def current_trace() -> Trace:
 
 def command_with_trace(command: CommandT) -> CommandT:
     """
-    The command, carrying the trace it belongs to (section 10, 6.2).
+    The command, carrying the trace it belongs to.
 
     Every command is stamped, mutating or not, because a read that is part
     of a tree's story belongs in the tree's trace too. A command that
@@ -438,7 +438,7 @@ def restored(trace: Trace | None) -> Iterator[None]:
 @contextmanager
 def execution_span(execution: Execution) -> Iterator[Any]:
     """
-    The span one execution's life happens inside (section 10).
+    The span one execution's life happens inside.
 
     Opened by whoever owns that life: ``OrchestrationWorkflow`` from Phase 1
     (O1-03), the conformance harness before it. The execution's own
@@ -641,7 +641,7 @@ def _recording() -> bool:
 
 
 class TraceContextMiddleware:
-    """Continue the trace a caller sent (W3C ``traceparent``) into the request (SHIELD §6.8, SH-51).
+    """Continue the trace a caller sent (W3C ``traceparent``) into the request (SH-51).
 
     Nothing instruments the server itself, so without this an A2A or AG-UI
     request arrives with a ``traceparent`` header nobody reads, fasta2a

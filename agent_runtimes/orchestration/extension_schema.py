@@ -19,7 +19,7 @@ Only what is actually on the wire is described. Three fields the specification
 proposes — `acknowledgement`, `attempt`, `contextManifest` — are deliberately
 absent, because a schema that described them would tell an implementer to
 expect fields nothing sends. Two joined the wire with a harness served over A2A
-(SHIELD §4.2, SH-15): a worker's artifact carries `artifactProvenance` in its
+(SH-15): a worker's artifact carries `artifactProvenance` in its
 metadata, and a task waiting on an approval carries `approvalRequest` on its
 `input-required` status message, which the orchestrator answers on the same
 task with `approval`.

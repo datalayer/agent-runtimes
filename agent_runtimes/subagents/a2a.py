@@ -16,7 +16,7 @@ same ``agent.subagent`` events an in-process subagent produces, with
 ``transport: "a2a"`` on them so a reader can tell the two apart.
 
 A run the orchestration control plane dispatched takes no child this way
-(ORCHESTRATOR.md, 19.8 decision 2, O2-06): it asks the control plane for one
+(O2-06): it asks the control plane for one
 (``request_child``), which resolves, authorizes and dispatches it inside the
 tree's budget and depth, and resolving, launching or relaying to an agent
 itself is refused (``ChildNotRequested``).
@@ -162,7 +162,7 @@ def refuse_in_an_orchestrated_run(what: str) -> None:
 
     Such a run asks for its children (``request_child``). An agent it
     resolved, launched or relayed to itself would be a child the tree's
-    budget and depth never saw (19.8, decision 2).
+    budget and depth never saw (decision 2).
 
     Parameters
     ----------
@@ -572,7 +572,7 @@ class RelayOutcome:
     """What the remote agent said with its final status: the reason, when it failed."""
     metadata: dict[str, Any] | None = None
     """The final status message's metadata: which limit of a delegated model
-    budget stopped the run, when one did (ORCHESTRATOR.md, O1-07)."""
+    budget stopped the run, when one did (O1-07)."""
 
     @property
     def output(self) -> str:
@@ -708,7 +708,7 @@ async def relay_a2a_task(
     """Send ``task`` to the remote agent and republish its run; return its answer.
 
     ``metadata`` goes on the message: what an orchestrated delegation carries
-    beside the objective, its model budget (ORCHESTRATOR.md, O1-07).
+    beside the objective, its model budget (O1-07).
 
     Refused inside a run the control plane dispatched, which asks for its
     children instead (O2-06).

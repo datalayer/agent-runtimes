@@ -175,7 +175,7 @@ export interface ChatMessageListProps {
    */
   renderMessageFooter?: (message: ChatMessage) => ReactNode;
   /**
-   * The answer a sentence is being said from (VOICE.md VO-65): its row is
+   * The answer a sentence is being said from (VO-65): its row is
    * marked `aria-current` and `data-voice-saying`, with a bar beside it —
    * the sentence itself is underlined by `useSaidSentence`.
    */
@@ -1296,7 +1296,7 @@ export function ChatMessageList({
                         wordBreak: 'break-word',
                       }}
                     >
-                      {/* Said aloud: a small microphone, and its name (VOICE.md VO-27). */}
+                      {/* Said aloud: a small microphone, and its name (VO-27). */}
                       {message.metadata?.input === 'voice' ? (
                         <Box
                           as="span"

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-``@app.audio`` (LOOP P-22, VOICE.md VO-46).
+``@app.audio`` (P-22, VO-46).
 
 A turn's sound comes in chunks and is heard by the engines a page's and
 ``loop --voice``'s are — here, else by Datalayer's speech service — then

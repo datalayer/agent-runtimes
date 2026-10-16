@@ -293,12 +293,12 @@ export function pageProblems(app: AppSpec): string[] {
 }
 
 /** What the spec says of itself that the tolerant reader lets through. */
-/** What was said aloud is kept 30 days at most (VOICE.md VO-63, decision 10): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
+/** What was said aloud is kept 30 days at most (VO-63, decision 10): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
 export const AUDIO_KEPT_DAYS_AT_MOST = 30;
 
 /**
- * agentspecs' refusals of an application keeping audio (VOICE.md VO-42,
- * VO-63), in its sentences: never public, only when it listens, and never
+ * agentspecs' refusals of an application keeping audio (VO-42, VO-63),
+ * in its sentences: never public, only when it listens, and never
  * kept longer than 30 days — by `record.keep_for`, or by the Track its
  * `checks.track` names, whose retention wins.
  */
@@ -915,8 +915,8 @@ const ENUMS = {
     'sources',
     'outputs',
     'feedback',
-    // agentspecs' RecordItem whole: audio (VOICE.md VO-42, VO-63, refused by
-    // keptAudioProblems unless allowed), a harness's diffs and terminals (SHIELD §6.4).
+    // agentspecs' RecordItem whole: audio (VO-42, VO-63, refused by keptAudioProblems unless allowed),
+    // a harness's diffs and terminals.
     'audio',
     'diffs',
     'terminals',
@@ -1096,7 +1096,7 @@ export function documentShapeProblems(document: unknown): string[] {
         'names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`',
       );
     }
-    // Its voice (VOICE.md VO-41, VO-12).
+    // Its voice (VO-41, VO-12).
     mapping(ui.voice, 'interface.voice', voice => {
       oneOf(voice.input, ENUMS.voiceInput, 'interface.voice.input');
       oneOf(voice.output, ENUMS.voiceOutput, 'interface.voice.output');

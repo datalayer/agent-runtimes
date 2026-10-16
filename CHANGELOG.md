@@ -4,7 +4,7 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
-Each version names the LOOP boxes it carries (the plan's ids, as its commits
+Each version names the LOOP boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
 ## 1.5.52
@@ -41,7 +41,7 @@ DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agen
 
 SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
 
-- **A host decides mail only** (S-302, decided by the user: SLACK §15, 5): the shared host kit's `renderApproval` keeps the mail renderer alone; reads and writes join `DATALAYER_ONLY`, and a send is mail only when its tool's name says so (`MAIL_WORDS`, `contracts.json` `presentation.mail_words`; `host_decidable` is `["send"]`, byte-identical to ai-agents').
+- **A host decides mail only** (S-302, decided by the user): the shared host kit's `renderApproval` keeps the mail renderer alone; reads and writes join `DATALAYER_ONLY`, and a send is mail only when its tool's name says so (`MAIL_WORDS`, `contracts.json` `presentation.mail_words`; `host_decidable` is `["send"]`, byte-identical to ai-agents').
 
 ## 1.5.47
 
@@ -70,7 +70,7 @@ VOICE, 16 October 2026 (agentspecs 0.0.108):
 - **Audio over A2A and ACP** (VO-28, VO-36): an A2A audio file part heard by the speech service with the caller's token before the task is made (`HearA2AAudio`), a card naming no input modes lists the audio types, the agent's voice and its `say_aloud` lines in status messages' `metadata.voice`; ACP's `promptCapabilities.audio: true` and its `AudioContentBlock` heard before the turn; the Vercel AI page reads `data-voice.*` parts.
 - **`@app.audio`** (VO-46, LOOP P-22): `host.audio` hears a turn's sound in chunks, `@app.audio(session, HeardSpeech)` or the words as the message, marked spoken; `session.say(text)`; `host.interrupt` and `@app.interrupted`.
 - **Voice at the terminal** (VO-16, VO-15): Kokoro says answers on the machine when the `voice` extra (now with `kokoro-onnx`) and the pinned model are there; `python -m agent_runtimes.voice.store` fills the store from Datalayer's CDN, hash-checked; a line said at `loop`'s prompt is sent with how it was heard (`forwardedProps.voice`), and the AG-UI endpoint marks the run spoken.
-- **`where: auto`** (§5): `AutoHearing` chooses the device or the server per press, moving to the server when the device's model does not load and back to the device when the server refuses a press.
+- **`where: auto`**: `AutoHearing` chooses the device or the server per press, moving to the server when the device's model does not load and back to the device when the server refuses a press.
 - **Moonshine base measured on the server** (VO-47): `measure.py --server` runs the speech service's own engines and times a 3 s and a 9 s turn; `moonshine-base-en-server` in the catalogue, not switched to.
 - **e2e**: the hands-free case on its own fixture (`voice-hands-free.spec.ts`), the detection case reading the WebSocket stream.
 
@@ -131,10 +131,10 @@ Every reader of the policies in force keeps a managed runtime polling IAM (SHIEL
 
 ## 1.5.36
 
-On agentspecs 0.0.103 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the policy side (SH-50, SH-31, SH-32, SH-54, SH-35), documented at `docs/docs/shield`.
+On agentspecs 0.0.103 and `datalayer-agent-shield` 0.1.2. Shield Phase 2, the policy side (SH-50, SH-31, SH-32, SH-54, SH-35), documented at `docs/docs/shield`.
 
-- **Managed from IAM** (§6.7, SH-50; decisions 10 and 11): `guardrails/managed_policies.py` pulls the organization's and the teams' Shield documents for the account from IAM (`GET /mcp-policies/shield/accounts/{uid}`, the runtime's token, `DATALAYER_IAM_URL`), keeps them until the `expires` IAM stamped, and polls every thirty seconds while an agent listens — a change an administrator saves reaches a running harness within a minute (`ACPAgent.replace_policies`, every open session). **Fail closed**: a managed runtime whose documents cannot be read and hold no unexpired copy refuses the harness at creation in a sentence naming IAM, and refuses every further action of a running one until IAM answers; a token without `DATALAYER_IAM_URL` is refused, never run unmanaged. A runtime with no token (the terminal's `loop`, a test) is unmanaged: the application's Rules and decision 5's default alone. `policies_in_force(app, lent, token=)` is the one builder; the `harnesses` section is honoured (`harness_refusal`: a harness the organization does not admit, or a `platform` credentials rule this runtime cannot keep, decision 3).
-- **Three levels, nothing loosening below the organization's** (§6.3, SH-31): IAM's documents first, the Appspec's Rules as the `team` scope, decision 5's default as the session's; proved in every order.
+- **Managed from IAM** (SH-50, decisions 10 and 11): `guardrails/managed_policies.py` pulls the organization's and the teams' Shield documents for the account from IAM (`GET /mcp-policies/shield/accounts/{uid}`, the runtime's token, `DATALAYER_IAM_URL`), keeps them until the `expires` IAM stamped, and polls every thirty seconds while an agent listens — a change an administrator saves reaches a running harness within a minute (`ACPAgent.replace_policies`, every open session). **Fail closed**: a managed runtime whose documents cannot be read and hold no unexpired copy refuses the harness at creation in a sentence naming IAM, and refuses every further action of a running one until IAM answers; a token without `DATALAYER_IAM_URL` is refused, never run unmanaged. A runtime with no token (the terminal's `loop`, a test) is unmanaged: the application's Rules and decision 5's default alone. `policies_in_force(app, lent, token=)` is the one builder; the `harnesses` section is honoured (`harness_refusal`: a harness the organization does not admit, or a `platform` credentials rule this runtime cannot keep, decision 3).
+- **Three levels, nothing loosening below the organization's** (SH-31): IAM's documents first, the Appspec's Rules as the `team` scope, decision 5's default as the session's; proved in every order.
 - **The model budget and the spend limit, soft then hard** (SH-32): `guardrails/shield_budget.py`, a capability on every application's agent — before each model request `agent_shield.policy.decide_budget` against `limits.model_tokens` and `limits.spend` of the policies in force (read at every request); past a soft threshold the person is asked once through the tool approvals, past a hard one the run ends in a sentence saying what would let it go on; what each response spent counted from its usage and its price (a model nobody priced cannot be held to a spend limit, said on the next request); per session.
 - **A rule on a running session** (SH-54, decision 7): `GET|POST /apps/sessions/{uid}/rules`, `DELETE /apps/sessions/{uid}/rules/{name}` — a person adds or tightens a Shield rule on a session from the panel, in force at once (a harness session reads it at every decision through the Shield's own state; a pydantic-ai session's calls are tightened in `AppRulesCapability.decide`, *Your rule for this session “…”*), gone with the session, refused in a sentence when it would permit more than the organization's documents; `GET` answers the policies in force strictest first, the session's rules, and the sentence when nothing can be decided.
 - **The conformance table** (SH-35): the same action over MCP, A2A, ACP, AG-UI and the embed gets the same answer from the one agent.
@@ -142,10 +142,10 @@ On agentspecs 0.0.103 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the
 
 ## 1.5.35
 
-On agentspecs 0.0.102 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the audit and the trace (SH-34, SH-51; the pod's boundary of SH-30 is the Operator's, services operator 1.0.94).
+On agentspecs 0.0.102 and `datalayer-agent-shield` 0.1.2. Shield Phase 2, the audit and the trace (SH-34, SH-51; the pod's boundary of SH-30 is the Operator's, services operator 1.0.94).
 
-- **The Shield's audit in the record** (§6.4, SH-34): `RecordAudit` writes every Shield row in A-01's vocabulary extended with ACP's kinds — a tool call the policy decided as a `decision` (kind, class, path or command, verdict, rule, scope, who decided), what was done as a `tool_call` (a read with its path and bytes, a write with its diff's hash and size, a terminal with its command and exit, a completion named after its call), a person's answer as an `approval` with what was chosen, a limit reached and a refusal as `decision`s, the session's and the turn's events and the plan as `step`s. A diff is kept whole only when `record.include` names `diffs` (agentspecs 0.0.102), a terminal's output only when it names `terminals`; otherwise hash and size, command and exit (`INCLUDED_BY`). Every row is redacted at the row (`agent_shield.audit.redacted_row`) before it is kept, logged, recorded or counted. The landing's record kinds take `step`.
-- **One trace across the chain** (§6.8, SH-51): `TraceContextMiddleware` makes a request's `traceparent` its span (a request without one opens none); the harness's turn is a `shield.turn` span under it with the audit's rows as its events and counts (`shield.actions`, `shield.decisions`, `shield.refusals`, `shield.limits`, drawn by the OTEL service's *Shield* dashboard); the harness is handed the context in the prompt's `_meta.traceparent`; the lent gateway gets it as a header of the HTTP server and, over the stdio shim, per call of the current turn (`lent_stdio.carry`, read per request). Proved through the A2A face with the fake agent: one trace id on the turn, in the harness's `_meta` and on the shim's header. Docs: `docs/docs/shield`.
+- **The Shield's audit in the record** (SH-34): `RecordAudit` writes every Shield row in A-01's vocabulary extended with ACP's kinds — a tool call the policy decided as a `decision` (kind, class, path or command, verdict, rule, scope, who decided), what was done as a `tool_call` (a read with its path and bytes, a write with its diff's hash and size, a terminal with its command and exit, a completion named after its call), a person's answer as an `approval` with what was chosen, a limit reached and a refusal as `decision`s, the session's and the turn's events and the plan as `step`s. A diff is kept whole only when `record.include` names `diffs` (agentspecs 0.0.102), a terminal's output only when it names `terminals`; otherwise hash and size, command and exit (`INCLUDED_BY`). Every row is redacted at the row (`agent_shield.audit.redacted_row`) before it is kept, logged, recorded or counted. The landing's record kinds take `step`.
+- **One trace across the chain** (SH-51): `TraceContextMiddleware` makes a request's `traceparent` its span (a request without one opens none); the harness's turn is a `shield.turn` span under it with the audit's rows as its events and counts (`shield.actions`, `shield.decisions`, `shield.refusals`, `shield.limits`, drawn by the OTEL service's *Shield* dashboard); the harness is handed the context in the prompt's `_meta.traceparent`; the lent gateway gets it as a header of the HTTP server and, over the stdio shim, per call of the current turn (`lent_stdio.carry`, read per request). Proved through the A2A face with the fake agent: one trace id on the turn, in the harness's `_meta` and on the shim's header. Docs: `docs/docs/shield`.
 
 ## 1.5.34
 
@@ -159,9 +159,9 @@ On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1. 1.5.31 and 1.5.32 were
 
 - **A Claude Code Agent** (`example-harness-claude-code`, agentspecs 0.0.101): the first catalogue agent on a harness, off in the shared catalogue because it needs the account's own `ANTHROPIC_API_KEY`; what the r1 drill of SHIELD SH-10 runs.
 
-- **A harness's declared secrets reach its process** (SHIELD.md §6.1, SH-10): an agent on a catalogue harness declares the harness spec's `requires.secrets` (Claude Code's `ANTHROPIC_API_KEY`) as the runtime's, so the companion fetches them from IAM for `configure-from-spec` and the harness is given them by name — and an account without them is refused in a sentence, as for an MCP server's. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
+- **A harness's declared secrets reach its process** (SH-10): an agent on a catalogue harness declares the harness spec's `requires.secrets` (Claude Code's `ANTHROPIC_API_KEY`) as the runtime's, so the companion fetches them from IAM for `configure-from-spec` and the harness is given them by name — and an account without them is refused in a sentence, as for an MCP server's. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
 
-- **A harness as a Datalayer agent** (SHIELD.md SH-10, on SH-01 and SH-11): `harness: claude-code` (or `codex`, `gemini-cli`, `goose`, `opencode`, `openhands`, `fast-agent`) in an agent spec is served by `ACPAgent(BaseAgent)` — the `agent-shield` package's proxy with the runtime as its face: the pinned adapter launched over stdio from `~/.agent-shield/harnesses/<id>@<version>` or the PATH, never fetched; `initialize` with `fs` and `terminal` on; every `session/update` an event of the runtime's; a malformed update or a refused action ending the turn in a sentence; `DELETE /agents/{id}` ending the process. Registered on `acp`, `a2a` and `ag-ui`; `vercel-ai` refused. The Studio's side (`src/runtimes/variants.ts`, `checkAppspec`) offers such an agent the Datalayer runtimes and never the page; `custom` stays refused in the shared catalogue. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
+- **A harness as a Datalayer agent** (SH-10, on SH-01 and SH-11): `harness: claude-code` (or `codex`, `gemini-cli`, `goose`, `opencode`, `openhands`, `fast-agent`) in an agent spec is served by `ACPAgent(BaseAgent)` — the `agent-shield` package's proxy with the runtime as its face: the pinned adapter launched over stdio from `~/.agent-shield/harnesses/<id>@<version>` or the PATH, never fetched; `initialize` with `fs` and `terminal` on; every `session/update` an event of the runtime's; a malformed update or a refused action ending the turn in a sentence; `DELETE /agents/{id}` ending the process. Registered on `acp`, `a2a` and `ag-ui`; `vercel-ai` refused. The Studio's side (`src/runtimes/variants.ts`, `checkAppspec`) offers such an agent the Datalayer runtimes and never the page; `custom` stays refused in the shared catalogue. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **Permissions as Rules** (SH-12): `session/request_permission` decided by the application's Rules read into a team-scope policy (`guardrails/shield_policy.py`) above the default — *do it* answered, *ask me first* raised through the tool approvals, *always* a session rule, `cancelled` on a cancelled turn.
 - **Files and terminals against the workspace** (SH-13): `fs/*` and `terminal/*` answered inside `AGENT_RUNTIMES_WORKSPACE_ROOT`, each a tool row with its diff or terminal display and a decision in the record; a path outside refused.
 - **Sessions and the record** (SH-18): the Shield's audit written to the application's record; the harness's session kept in the protocol state store and loaded when the harness advertises it, a start-over said otherwise.
@@ -169,7 +169,7 @@ On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1. 1.5.31 and 1.5.32 were
 
 ## 1.5.32
 
-Tagged minutes before 1.5.33, which carries it: a harness's declared secrets reach its process (SHIELD §6.1, SH-10).
+Tagged minutes before 1.5.33, which carries it: a harness's declared secrets reach its process (SH-10).
 
 ## 1.5.31
 
@@ -179,18 +179,18 @@ Tagged minutes before 1.5.33, which carries it: SH-10's Studio side — a catalo
 
 On agentspecs 0.0.99. (1.5.29 was tagged and did not publish: its build refused an unused import; this carries it.)
 
-- **`loop --voice` and `--speak`** (VOICE.md VO-15, VO-16, VO-17): `/voice`, `Ctrl`+`T` its shortcut, listens with the machine's microphone (the `voice` extra, sounddevice) and puts the words on the prompt line; `--speak` says each answer; heard on the machine with faster-whisper and the pinned `whisper-small`, else on Datalayer's servers with the person's token; no microphone, no extra or no token refused in a sentence. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
+- **`loop --voice` and `--speak`** (VO-15, VO-16, VO-17): `/voice`, `Ctrl`+`T` its shortcut, listens with the machine's microphone (the `voice` extra, sounddevice) and puts the words on the prompt line; `--speak` says each answer; heard on the machine with faster-whisper and the pinned `whisper-small`, else on Datalayer's servers with the person's token; no microphone, no extra or no token refused in a sentence. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
 
-- **Hands-free and barge-in** (VOICE.md VO-12, VO-13): where an Appspec's voice says `input: hands_free`, *Talk with it* beside the microphone — a turn sent by itself after 700 ms of silence, the answer said as it is written, listening on, the state shown at all times; speaking over the agent stops its voice and its run, the answer marked *interrupted*. No longer refused by `checkAppspec`. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
-- `<datalayer-app>` reads a visitor's address at ai-agents' address, not Spacer's (found on datalayer.ai, VOICE.md VO-18).
+- **Hands-free and barge-in** (VO-12, VO-13): where an Appspec's voice says `input: hands_free`, *Talk with it* beside the microphone — a turn sent by itself after 700 ms of silence, the answer said as it is written, listening on, the state shown at all times; speaking over the agent stops its voice and its run, the answer marked *interrupted*. No longer refused by `checkAppspec`. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
+- `<datalayer-app>` reads a visitor's address at ai-agents' address, not Spacer's (found on datalayer.ai, VO-18).
 - The voice catalogue of agentspecs 0.0.98 (`whisper-small` for spoken turns on the server, VO-47); `measure.py --server` measures the server's models on the fixtures.
 
 ## 1.5.28
 
 On agentspecs 0.0.97.
 
-- **Heard on Datalayer's servers from the page** (VOICE.md VO-34, VO-14, §5): `ServerHearing` — the browser's VAD finds the speech, the speech service's Whisper large-v3-turbo writes it (`POST /api/ai-agents/v1/speech/transcriptions`). Used where an Appspec's voice says `where: server`, where it says `auto` and no model in the browser hears the language (`hearingPlace`), and where the person chose *Detect the language I speak* (`detectLanguage`); asked apart from the device's consent. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
-- **`<datalayer-app>` runs the deployment its embed token names** (VOICE.md decision 16): no `deployment` attribute; a token naming none is refused in a sentence before anything is drawn; the chat's voice sends no deployment of the page's. [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding)
+- **Heard on Datalayer's servers from the page** (VO-34, VO-14): `ServerHearing` — the browser's VAD finds the speech, the speech service's Whisper large-v3-turbo writes it (`POST /api/ai-agents/v1/speech/transcriptions`). Used where an Appspec's voice says `where: server`, where it says `auto` and no model in the browser hears the language (`hearingPlace`), and where the person chose *Detect the language I speak* (`detectLanguage`); asked apart from the device's consent. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
+- **`<datalayer-app>` runs the deployment its embed token names** (decision 16): no `deployment` attribute; a token naming none is refused in a sentence before anything is drawn; the chat's voice sends no deployment of the page's. [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding)
 - The voice catalogue of agentspecs 0.0.97 (`whisper-large-v3-turbo`, on the server only).
 - The floating assistant leaves its corner's words free (REVIEWS Q-08); pictures in CI on a pull request (REVIEWS Q-09).
 
@@ -247,7 +247,7 @@ On agentspecs 0.0.96.
 
 On agentspecs 0.0.96.
 
-- **Voice in the chat** (VOICE.md): the microphone in an application's own composer, dictation into the input as it is heard, stopped on silence; spoken answers and Read aloud through the speech service, a long answer said whole; Stop speaking in an application's composer; a person's own voice settings; voice for visitors and embeds; `hands_free` refused until VO-12.
+- **Voice in the chat**: the microphone in an application's own composer, dictation into the input as it is heard, stopped on silence; spoken answers and Read aloud through the speech service, a long answer said whole; Stop speaking in an application's composer; a person's own voice settings; voice for visitors and embeds; `hands_free` refused until VO-12.
 - **Each example in Python** (`APP_PYTHON`): its own `app.py`, or the one `loop apps eject` writes from its spec.
 
 ## 1.5.19
@@ -256,7 +256,7 @@ On agentspecs 0.0.95.
 
 - **A kept organization deployment's keeper routes answer its administrators** (PAP_DATALAYER, decided 2026-10-14): an organization owner counts as the deployment's owner, asked of IAM's memberships; refused when IAM cannot be asked.
 - **A deployment's page asks its runtime only the application's own routes**: no `/runtime/status`, no `DELETE /agents/{id}`, no `/configure/models`.
-- **Speech models kept under their provider** (VOICE.md VO-48): `<provider>/<model id>/<path>`, in the browser store and the pinning tools.
+- **Speech models kept under their provider** (VO-48): `<provider>/<model id>/<path>`, in the browser store and the pinning tools.
 
 ## 1.5.18
 
@@ -264,7 +264,7 @@ On agentspecs 0.0.94 and personal-agent-protocol 0.24.0.
 
 - **A deployment's runtime answers only the application's own routes** (PAP_DATALAYER release gates, decided 2026-10-14): every generic and admin route answers 404 for an agent serving a deployment; the deployment page calls only those it answers (Stop through `/apps/sessions/{uid}/stop`, no monitoring stream, no sandbox socket, no model switch); the keeper's routes answer the deployment's owner alone, and its retry finds the agent it created.
 - **Applications' UI plugins** (AGENTIC_UI R8): `uiFor`/`uiOf`, the same mapping as agentspecs' `ui_for`, held by a shared fixture; a blank application starts with its kind's plugins; a bare id in `ui` is refused.
-- **Voice** (VOICE.md): an agent spec's own `voice:`, Read aloud on request in the floating chat, the speech models' descriptions.
+- **Voice**: an agent spec's own `voice:`, Read aloud on request in the floating chat, the speech models' descriptions.
 - **Catalogue entries read by id**, never through version-named constants.
 
 - **A signed fetch** (AGENT_PROTOCOLS EX-11, decided 2026-10-13; agentspecs 69c5da3): an application's `signed_fetch.sites[]` (`AppSignedFetchSpec`, Python and TypeScript, read and written, refused unless `web-bot-auth` is listed) are each one server of the gateway's `signed-fetch` toolset (`/mcp?only=signed-fetch&signed-fetch-site=<domain>`), in the person's name, its one tool `signed_fetch` a `read` under the Rules; a Preview names them as its token is asked for. *Signed Reader* in the catalogue — [Web Bot Auth](https://agent-runtimes.datalayer.tech/docs/protocols/web-bot-auth#in-an-application-a-signed-fetch).
@@ -445,7 +445,7 @@ The ui channel on Reactor 1.2.0 (`reactor.ui`): a page and a runtime of this rel
 
 ## 1.3.112
 
-- **Agent protocols as Reactor plugins** (AGENT_PROTOCOLS §3.1): the `agent-protocols` Reactor Extension delivers one plugin each for MCP, A2A, Web Bot Auth, UCP, ACP and PACT, in Python and TypeScript; each protocol's extensions are contribution points of its plugin (`<protocol>.extension.*`), held by its `reactor-points.json` and table-driven tests. Web Bot Auth signs and verifies (the draft's vectors byte for byte) and every A2A route refuses a bad or replayed signature; UCP and ACP checkouts become exact proposals spent once; PACT's personal-agent side with a local provider. Examples under `examples/protocols/`, docs under *Protocols*.
+- **Agent protocols as Reactor plugins**: the `agent-protocols` Reactor Extension delivers one plugin each for MCP, A2A, Web Bot Auth, UCP, ACP and PACT, in Python and TypeScript; each protocol's extensions are contribution points of its plugin (`<protocol>.extension.*`), held by its `reactor-points.json` and table-driven tests. Web Bot Auth signs and verifies (the draft's vectors byte for byte) and every A2A route refuses a bad or replayed signature; UCP and ACP checkouts become exact proposals spent once; PACT's personal-agent side with a local provider. Examples under `examples/protocols/`, docs under *Protocols*.
 - **Personal Agent Protocol in the Studio**: the sign-in card as a display (`DisplayMCPToolset`), the company role's MCP server and registered agents (agentspecs 0.0.77), and the Order Desk and Exchange Desk examples.
 - **Avatars kept prefixed** (agentspecs 0.0.78, now required): an Appspec's avatar is `emoji:…` or `@datalayer/icons-react:…`, checked in TypeScript too.
 - The applications catalogue writes PAP keys in TypeScript's names and leaves a default `pap` block out.
@@ -620,7 +620,7 @@ What changed for the people who build and use applications since 1.3.93 (the ver
 
 ## 1.3.64
 
-- Voice, its first phases (VOICE.md V0 and V1; agentspecs 0.0.39) ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)).
+- Voice, its first phases (V0 and V1, agentspecs 0.0.39) ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)).
   - **Push-to-talk in the composer.** Hold the microphone or `Ctrl`+`Space`, speak and let go (VO-10). A click starts and the next click stops; `Esc` cancels. The speech is found by Silero VAD and heard in the page, Moonshine for English and Whisper for French (VO-14), with transformers.js.
   - **Pinned models.** They come from Datalayer's origin only (`modelsUrl`, VO-49), each file checked against the SHA-256 the catalogue pins before it is read.
   - **What is said goes in the composer**, marked as said: `metadata.input: "voice"` with its language, model and where it ran, a small microphone on the message, and `forwardedProps.voice` over AG-UI (VO-27). The record keeps the turn as its transcript, marked `spoken` (VO-29).

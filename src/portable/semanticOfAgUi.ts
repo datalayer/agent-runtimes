@@ -15,7 +15,7 @@
  * A question is read from `RUN_FINISHED.result.asking` only: the run stream
  * carries no `loop.ask` event (that is the record's word, `record.py`).
  *
- * Moved from the Slack service (plans/DISCORD.md DC-005, SLACK S-205).
+ * Moved from the Slack service (DC-005, S-205).
  *
  * @module portable/semanticOfAgUi
  */

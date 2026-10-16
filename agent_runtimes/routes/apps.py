@@ -39,7 +39,7 @@ no token. On the visitors' runtime (LOOP R-30,
 `agent_runtimes.loop.apps.visitors`) a visitor without an account, and only
 one, holding a token for the one application they talk to.
 
-An application is a Reactor plugin here as in the page (LOOP §5.4): the
+An application is a Reactor plugin here as in the page: the
 runtime reads applications from the ``loop.app`` contribution point, and
 decides their tool calls with what extends their contribution
 (`agent_runtimes.loop.apps.plugins`).
@@ -875,7 +875,7 @@ async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, A
     """Which application the runtime runs, and the first messages it offers.
 
     ``starters`` are the application's own (``interface.starters``): what a
-    host — @Datalayer's Home in Slack (plans/SLACK.md S-104) — suggests asking,
+    host — @Datalayer's Home in Slack (S-104) — suggests asking,
     each with the words it shows and the message it sends.
     """
     app = authorized.app
@@ -1008,7 +1008,7 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
 # session: what the chat of an application's page sends.
 
 
-#: The most a turn's provenance takes, serialized (plans/DISCORD.md §4.3).
+#: The most a turn's provenance takes, serialized.
 PROVENANCE_LIMIT_BYTES = 1024
 
 
@@ -1022,8 +1022,8 @@ class TurnPlace(BaseModel):
 
 
 class TurnProvenance(BaseModel):
-    """Where a host's turn comes from (plans/DISCORD.md §4.3, §4.4; SLACK
-    S-204): the host's kind, the place, its thread and message — other
+    """Where a host's turn comes from (S-204):
+    the host's kind, the place, its thread and message — other
     people's words arrive marked with where they were said. Kept with the
     turn: a retry naming another provenance is another request (409).
     """
@@ -1083,11 +1083,11 @@ class StartSessionRequest(BaseModel):
         max_length=255,
         description=(
             "The host's own id for the turn (a Slack event id): with or without an "
-            "`Idempotency-Key`, a retry answers the original session and turn (plans/SLACK.md §4.3)"
+            "`Idempotency-Key`, a retry answers the original session and turn"
         ),
     )
     provenance: Optional[TurnProvenance] = Field(
-        None, description="Where a host's turn comes from (plans/DISCORD.md §4.3)"
+        None, description="Where a host's turn comes from"
     )
 
     _provenance = field_validator("provenance")(_provenance_within_limit)
@@ -1103,7 +1103,7 @@ class SessionMessageRequest(BaseModel):
         description="The host's own id for the turn: a retry answers the original turn",
     )
     provenance: Optional[TurnProvenance] = Field(
-        None, description="Where a host's turn comes from (plans/DISCORD.md §4.3)"
+        None, description="Where a host's turn comes from"
     )
 
     _provenance = field_validator("provenance")(_provenance_within_limit)
@@ -1124,7 +1124,7 @@ class SessionSettingsRequest(BaseModel):
 
 
 class SessionRuleRequest(BaseModel):
-    """A rule a person adds to a running session (SHIELD §6.3, SH-54): the Shield's rule shape.
+    """A rule a person adds to a running session (SH-54): the Shield's rule shape.
 
     ``name`` and ``decision`` (``allow``, ``ask``, ``deny``) with what it
     names: ``classes`` (read, write, send, buy, delete, execute), ``kinds``
@@ -1213,7 +1213,7 @@ async def _acts_as(
 
     deployment = deployment_of(instance)
     if caller.kind == "host":
-        # A host's person (plans/SLACK.md §4.3): the one deployment its host
+        # A host's person: the one deployment its host
         # token was issued for, opened to them as to anybody, its principal
         # acting — never a Preview, never another deployment.
         if not deployment or deployment != caller.deployment_uid:
@@ -1426,7 +1426,7 @@ IDEMPOTENCY_HEADER = "Idempotency-Key"
 def _turn_key(
     caller: Caller, request: Request, external_event_id: str
 ) -> Optional[str]:
-    """What names an external turn for its caller, or None (plans/SLACK.md §4.3, 2)."""
+    """What names an external turn for its caller, or None."""
     from agent_runtimes.loop.apps.external_turns import TurnConflict, key_of
 
     try:
@@ -1504,7 +1504,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     _given_in_their_name(request, body, instance, bearer or "")
     # Who its user is, embedded, when it takes only one its host signed (D-21).
     user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
-    # A host's retry is answered the original session and turn (plans/SLACK.md §4.3, 2).
+    # A host's retry is answered the original session and turn.
     turn_key = _turn_key(authorized.caller, request, body.external_event_id)
     asked = body.model_dump(exclude={"user_token"})
     if turn_key:
@@ -1665,7 +1665,7 @@ async def session_page(uid: str, body: SessionPageRequest, request: Request) -> 
 
 @router.get("/sessions/{uid}/rules")
 async def session_rules_in_force(uid: str, request: Request) -> Dict[str, Any]:
-    """What decides this session now (SHIELD §6.3): the policies in force,
+    """What decides this session now: the policies in force,
     strictest first — the organization's from IAM, the application's, the
     session's — and the rules the person added to it; ``unavailable`` the
     sentence when no policy can be read (decision 11).
@@ -1991,7 +1991,7 @@ async def session_agui(agent: str, request: Request) -> Any:
     forwarded = body.get("forwardedProps")
     loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
     # A message the person said: its transcript is the message, and the
-    # record keeps it marked spoken (VOICE.md VO-27, VO-29).
+    # record keeps it marked spoken (VO-27, VO-29).
     hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
     try:
         live = session_of(thread)

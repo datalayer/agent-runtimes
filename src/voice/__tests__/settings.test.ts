@@ -4,7 +4,7 @@
  */
 
 /**
- * A person's own voice settings (VOICE.md VO-30) and what the chat's voice
+ * A person's own voice settings (VO-30) and what the chat's voice
  * becomes once they are taken into account (VO-14 the language, VO-25 the
  * voice, the rate and the volume).
  */

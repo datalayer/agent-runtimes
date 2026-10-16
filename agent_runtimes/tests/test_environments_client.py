@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The environments client, against what the registry routes answered (PLAN_ENV.md, E1-18).
+"""The environments client, against what the registry routes answered (E1-18).
 
 ``environments_registry_recorded.json`` holds what each E1-01 route of Runtimes
 was sent and answered, recorded from the service's own in-memory app. A
@@ -289,7 +289,7 @@ def test_a_stale_if_match_raises_the_412_and_its_body() -> None:
         {"etag": '"102"'},
     )
     assert error.correlation_id and str(error) == record["body"]["message"]
-    # A request's own code, not one of the section 10 taxonomy.
+    # A request's own code, not one of the error taxonomy.
     assert error.error_code is None
     assert isinstance(error, RuntimeError)
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Skills and instructions lent to a harness in its own format (SHIELD §4.10, SH-21).
+"""Skills and instructions lent to a harness in its own format (SH-21).
 
 Datalayer's skills are Python compositions of MCP tools (``agent-skills``,
 run through the skills toolset); a harness reads skills as folders with a
@@ -19,11 +19,11 @@ the Appspec.
 
 What is written is **read-only to the agent**: a write or an edit of these
 paths is refused by the Shield in a sentence (:meth:`ACPAgent.decide`), and a
-skill the harness writes elsewhere is a file write of §4.6 — shown, decided,
+skill the harness writes elsewhere is a file write — shown, decided,
 recorded, never promoted to the catalogue. A skill the Appspec names that the
 catalogue does not have, or has disabled, is refused at load; so is a skill
 on a harness that reads none. A skill's declared secrets are never written
-here: they reach the harness through the declared-secrets path (§6.1).
+here: they reach the harness through the declared-secrets path.
 """
 
 from __future__ import annotations
@@ -353,7 +353,7 @@ def write_lent_files(
     Parameters
     ----------
     workspace : Path
-        The harness's workspace (§4.6).
+        The harness's workspace.
     harness : HarnessSpec
         The harness: where its skills go, what its instructions file is named.
     app : AppSpec

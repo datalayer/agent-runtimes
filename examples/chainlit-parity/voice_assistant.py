@@ -11,7 +11,7 @@ user's message with its audio, answers with a model, speaks the answer with
 ElevenLabs, and plays it.
 
 **The gap.** LOOP has no live microphone: the composer takes no audio stream,
-and no handler hears one (voice is set aside, plans/VOICE.md). What LOOP does
+and no handler hears one (voice is set aside). What LOOP does
 take is a **voice note** — an audio file sent with a message (``@app.file``,
 ``audio/*`` in the Appspec's uploads, P-21) — and that is what this rebuild
 answers: transcribed with Whisper in a ``tool`` step as Chainlit does,

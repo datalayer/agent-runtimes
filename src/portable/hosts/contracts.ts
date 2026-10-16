@@ -8,8 +8,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
 /**
- * The generic Datalayer host contracts (plans/SLACK.md §4.3, plans/DISCORD.md
- * §4.3), as ai-agents answers them, for every chat host (Slack, Discord).
+ * The generic Datalayer host contracts, as ai-agents answers them, for every chat host (Slack, Discord).
  * These shapes are shared with ai-agents through `contracts.json`, beside
  * this file and byte-identical to ai-agents' `tests/fixtures/hosts/`, which
  * both sides test. A delivery's `target` stays opaque here: each host
@@ -224,8 +223,7 @@ export function deliveryOfOutbox(item: unknown): HostDelivery {
 /**
  * Whether a host may offer Approve and Reject: only what the server says a
  * host may decide, in a version the hosts render, shown whole, pending, with
- * no secret field. Anything else gets *Review in Datalayer* (SLACK §2 rule 6,
- * DISCORD §2 rule 6). Each host also checks the card fits its own limits.
+ * no secret field. Anything else gets *Review in Datalayer*. Each host also checks the card fits its own limits.
  */
 export function hostMayDecide(presentation: ApprovalPresentation): boolean {
   return (

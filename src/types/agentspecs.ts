@@ -185,7 +185,7 @@ export interface UiChoice {
   renderer?: string;
 }
 
-/** The layer of an agent's visit a protocol answers (AGENT_PROTOCOLS §1). */
+/** The layer of an agent's visit a protocol answers. */
 export type ProtocolLayer =
   'transport' | 'consent' | 'identity' | 'commerce' | 'ui';
 
@@ -218,7 +218,7 @@ export interface ProtocolSpec {
   appspecBlock?: 'pap' | 'pact' | 'a2a' | 'signed_fetch';
 }
 
-/** How a harness is launched and driven over ACP (SHIELD.md §3.1). */
+/** How a harness is launched and driven over ACP. */
 export interface HarnessAcpSpec {
   /** The executable, as the runtime image has it. */
   command: string;
@@ -237,13 +237,13 @@ export interface HarnessAcpSpec {
 
 /**
  * An agent program driven over the Agent Client Protocol
- * (`agentspecs/harnesses`, SHIELD.md SH-01). An agent spec's `harness:` names
+ * (`agentspecs/harnesses`, SH-01). An agent spec's `harness:` names
  * one beside `pydantic-ai` and `vercel-ai`; the Datalayer runtime serves it
  * through its ACP adapter, `ACPAgent` (SHIELD SH-10), never the browser.
  */
 /**
- * A Shield policy document the platform ships or shows (`agentspecs/policies`,
- * SHIELD.md SH-50): the catalogue's fields around a document of
+ * A Shield policy document the platform ships or shows (`agentspecs/policies`, SH-50):
+ * the catalogue's fields around a document of
  * `@datalayer/agent-shield`'s `Policy`, whose schema agentspecs carries verbatim.
  */
 export interface PolicySpec {
@@ -275,7 +275,7 @@ export interface PolicySpec {
       admit?: string[];
       credentials?: 'account' | 'platform' | 'either';
     };
-    /** The classes that need an authorizer's allow beside the Rules (SHIELD §6.11). */
+    /** The classes that need an authorizer's allow beside the Rules. */
     authorize?: Array<'read' | 'write' | 'send' | 'buy' | 'delete' | 'execute'>;
     /** The standalone Shield's decision point: exactly one of these. */
     authorizer?: {
@@ -331,8 +331,8 @@ export interface StandardControl {
 }
 
 /**
- * A standard a conformance report answers (`agentspecs/standards`, SHIELD.md
- * SH-60, §6.9): its version, domains and controls, carried whole.
+ * A standard a conformance report answers (`agentspecs/standards`, SH-60):
+ * its version, domains and controls, carried whole.
  */
 export interface StandardSpec {
   id: string;
@@ -392,14 +392,14 @@ export interface HarnessSpec {
   acp?: HarnessAcpSpec;
   /** What it needs in the pod: secrets as ids of the env-vars catalogue, executables. */
   requires: { secrets: string[]; binaries: string[] };
-  /** The terms it is served under, as the register says them (§3.3). */
+  /** The terms it is served under, as the register says them. */
   terms: {
     servedToThirdParties:
       'api_key_only' | 'permitted' | 'refused' | 'organizations_own';
     licence: string;
     tierRestrictions?: string;
   };
-  /** Where the Shield writes an application's skills for it (§4.10). */
+  /** Where the Shield writes an application's skills for it. */
   skills: { format: 'skill-md' | 'none'; dir: string };
   /** What of an agent spec it can honour; the rest is refused at load. */
   honours: { model: boolean; subagents: boolean };
@@ -1221,7 +1221,7 @@ export interface AppPageSpec {
 }
 
 /**
- * An application's voice (VOICE.md VO-41), off unless said: whether a person
+ * An application's voice (VO-41), off unless said: whether a person
  * may talk to it, whether its answers are heard, with which voice of the
  * catalogue (`specs/voices`), in which language (BCP 47) and where its
  * speech runs.
@@ -1720,7 +1720,7 @@ export interface Agentspec {
   /** User-facing objective for the agent */
   goal?: string;
   /**
-   * What work this agent can be delegated (ORCHESTRATOR.md, O2-07).
+   * What work this agent can be delegated (O2-07).
    *
    * `protocol` below says how a client and an agent talk; this says what it
    * is worth handing the agent. Ids come from a closed vocabulary, because
@@ -1782,7 +1782,7 @@ export interface Agentspec {
   /** Subagent delegation configuration. */
   subagents?: SubAgentsConfig;
   /**
-   * Its voice, for an agent that is not an application (VOICE.md VO-41):
+   * Its voice, for an agent that is not an application (VO-41):
    * the fields an Appspec says under `interface.voice`; absent when unsaid.
    */
   voice?: AppVoiceSpec;

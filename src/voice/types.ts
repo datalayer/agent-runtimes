@@ -4,7 +4,7 @@
  */
 
 /**
- * Voice in the page (VOICE.md §6): what the chat needs to listen and speak.
+ * Voice in the page: what the chat needs to listen and speak.
  *
  * The packages that hear — transformers.js for Moonshine and Whisper, and
  * vad-web for Silero VAD — are given by the host page (`VoiceEngines`), each

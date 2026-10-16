@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An execution's model budget, on the way to its worker and back (ORCHESTRATOR.md, O1-07).
+"""An execution's model budget, on the way to its worker and back (O1-07).
 
 The control plane does not count a worker's tokens. It hands the execution's
 limits to the worker with the delegation — ``delegation_meta``, which both

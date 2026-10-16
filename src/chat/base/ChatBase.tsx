@@ -2587,7 +2587,7 @@ function ChatBaseInner({
     recorderRef.current = null;
   }
   const inspectAnswerRef = useRef('');
-  // A line the agent says aloud, from a run's `voice.say` (VOICE.md VO-35).
+  // A line the agent says aloud, from a run's `voice.say` (VO-35).
   const voiceSayRef = useRef<((activity: VoiceActivity) => void) | undefined>(
     undefined,
   );
@@ -3975,7 +3975,7 @@ function ChatBaseInner({
   // ========================================================================
   // handleSend
   // ========================================================================
-  // Voice (VOICE.md V1): what was said and put in the composer, until sent.
+  // Voice (V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
   // The person's own settings, followed as the voice menu changes them (VO-30).
@@ -4029,7 +4029,7 @@ function ChatBaseInner({
       setVoiceSaid('');
     }
   }, [isLoading]);
-  // Answers spoken over, hands-free (VOICE.md VO-13): marked *interrupted*.
+  // Answers spoken over, hands-free (VO-13): marked *interrupted*.
   const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -4057,7 +4057,7 @@ function ChatBaseInner({
       // AG-UI's: what goes with the run besides the conversation — an
       // application's page says there what it did (LOOP R-04).
       forwardedPropsGiven?: Record<string, unknown>,
-      // How the message was heard, when it was said (VOICE.md VO-27).
+      // How the message was heard, when it was said (VO-27).
       spokenGiven?: SpokenMetadata,
     ) => {
       const messageContent = (messageOverride ?? input).trim();
@@ -4943,7 +4943,7 @@ function ChatBaseInner({
   shownItemsRef.current = welcomedItems;
   const saidId = saidMessageId(welcomedItems, sentenceSaid);
   /*
-   * *Read aloud* under each answer the agent has finished (VOICE.md VO-21),
+   * *Read aloud* under each answer the agent has finished (VO-21),
    * when the host reads answers aloud on request.
    */
   const writingId =

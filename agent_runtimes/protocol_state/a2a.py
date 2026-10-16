@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-A2A tasks that outlive the runtime (ORCHESTRATOR.md, O1-11).
+A2A tasks that outlive the runtime (O1-11).
 
 ``fasta2a`` keeps tasks in a dictionary and hands work to the worker through
 an in-process stream. A runtime that restarted therefore answered

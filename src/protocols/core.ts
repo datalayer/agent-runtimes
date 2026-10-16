@@ -4,8 +4,8 @@
  */
 
 /**
- * The agent protocols, each a Reactor Plugin (AGENT_PROTOCOLS §3.1, decided
- * 2026-10-12) — the TypeScript twin of `agent_runtimes.protocols`.
+ * The agent protocols, each a Reactor Plugin (decided 2026-10-12)
+ * — the TypeScript twin of `agent_runtimes.protocols`.
  *
  * Every protocol is a Plugin declaring its Contribution Points
  * (`<protocol>.<point>`), its defaults contributed at order 100 that a host

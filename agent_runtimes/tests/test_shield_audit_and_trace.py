@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's audit in the record and its trace across the chain (SHIELD.md SH-34, SH-51, SH-37).
+"""The Shield's audit in the record and its trace across the chain (SH-34, SH-51, SH-37).
 
 Every Shield row reaches the application's record in A-01's vocabulary
 extended with ACP's kinds; a diff is whole only when the record names

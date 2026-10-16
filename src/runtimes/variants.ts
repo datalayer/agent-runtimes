@@ -97,7 +97,7 @@ export const CUSTOM_HARNESS = 'custom';
  * Why no variant runs an agent on this harness, in a sentence, or undefined
  * when one does.
  *
- * A harness of the catalogue (`agentspecs/harnesses`, SHIELD.md SH-01) — Claude
+ * A harness of the catalogue (`agentspecs/harnesses`, SH-01) — Claude
  * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is served
  * by the Datalayer runtime through its ACP adapter (`ACPAgent`, SHIELD SH-10):
  * the runtime launches the harness as its subprocess, so the runtime's

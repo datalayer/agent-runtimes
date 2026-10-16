@@ -4,8 +4,8 @@
  */
 
 /**
- * What an editor refuses of a scene is what `loop` refuses (plans/STUDIO.md
- * S-10): every sentence of `sceneChecks` is agentspecs' own, in agentspecs'
+ * What an editor refuses of a scene is what `loop` refuses (S-10):
+ * every sentence of `sceneChecks` is agentspecs' own, in agentspecs'
  * order, each one at a time as agentspecs stops where it stops.
  *
  * The table is not written by hand. `scripts/record-scene-checks.py` runs

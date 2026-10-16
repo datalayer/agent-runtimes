@@ -283,7 +283,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    */
   language?: string;
   /**
-   * Where its voice runs, as its host knows it (VOICE.md VO-49): the speech
+   * Where its voice runs, as its host knows it (VO-49): the speech
    * service's origin and the token it is asked with, and the browser's
    * models (Datalayer's CDN when unsaid). Given, an application whose
    * `interface.voice` is on has the microphone in its composer and its

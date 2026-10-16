@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Voice over A2A (VOICE.md VO-28, VO-36).
+Voice over A2A (VO-28, VO-36).
 
 An audio file part is heard through the speech service with the caller's
 token before the task is made, and marked spoken; the agent card says it

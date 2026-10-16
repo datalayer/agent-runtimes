@@ -11,7 +11,7 @@
  * Their final shapes, as idempotent statements: a service applies them
  * before its own migrations, every time. TypeScript strings, since the npm
  * tarball ships no `.sql`. Moved from the Slack service's migrations 001,
- * 004 and 007 (plans/DISCORD.md DC-004).
+ * 004 and 007 (DC-004).
  *
  * @module portable/hosts/schema
  */

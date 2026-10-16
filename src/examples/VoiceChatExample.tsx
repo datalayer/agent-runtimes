@@ -4,7 +4,7 @@
  */
 
 /**
- * A voice chat with the floating assistant (VOICE.md V1).
+ * A voice chat with the floating assistant (V1).
  *
  * Click the microphone and speak: the words are written in the composer as
  * they are heard — Moonshine for English, Whisper for French, Silero VAD

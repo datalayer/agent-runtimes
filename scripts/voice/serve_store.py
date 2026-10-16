@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Serve the pinned store to a page on this machine, as Datalayer's origin serves it (VOICE.md VO-49).
+"""Serve the pinned store to a page on this machine, as Datalayer's origin serves it (VO-49).
 
     python scripts/voice/serve_store.py --store ~/.cache/voice-work/store [--port 8770]
 

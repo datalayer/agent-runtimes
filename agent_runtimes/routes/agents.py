@@ -1413,7 +1413,7 @@ async def _harness_agent_of(
     Its permissions are raised through the runtime's tool approvals with the
     caller's token (SH-12); its record is the application's (SH-18); its
     sessions are kept in the protocol state store so a restarted runtime
-    loads them (§4.8). What refuses it — an adapter not installed, a
+    loads them. What refuses it — an adapter not installed, a
     declared secret missing, no workspace, an agent that lacks what its spec
     asked — is a 422 in a sentence.
     """
@@ -1441,7 +1441,7 @@ async def _harness_agent_of(
             recorder=recorder,
             approvals=ToolApprovalManager(approval_config),
             # The caller's token: what a run carrying none of its own reaches
-            # the lent gateway toolsets with (SHIELD §4.4, SH-14).
+            # the lent gateway toolsets with (SH-14).
             credential=approval_config.user_jwt_token or "",
             name=request.name,
             description=request.description or "",
@@ -3508,7 +3508,7 @@ async def delete_agent(
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.
 
-    # What the agent holds — a harness's process (SHIELD §4.8) — ends with it.
+    # What the agent holds — a harness's process — ends with it.
     try:
         await _agents[agent_id][0].cleanup()
     except Exception as e:

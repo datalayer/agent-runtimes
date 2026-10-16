@@ -23,7 +23,7 @@ answers nobody signed in.
 
 A host — Datalayer's Slack app, an editor, a desktop app — holds no person's
 token: it exchanged its installation's key and a linked user for a **host
-token** naming that person and one deployment (plans/SLACK.md §4.3). It is
+token** naming that person and one deployment. It is
 what ai-agents' ``/apps/hosts/whoami`` accepts, which checks that the
 installation, the link and the deployment's allowance still stand; it is
 remembered for a minute at most, so that a revocation stops it within one.
@@ -88,7 +88,7 @@ class Caller:
     #: `session` — and nothing else (LOOP R-20).
     scopes: Tuple[str, ...] = ()
     #: For a host: the one deployment its token was issued for; its
-    #: installation is its ``visit`` (plans/SLACK.md §4.3).
+    #: installation is its ``visit``.
     deployment_uid: str = ""
     #: For a person: their name, as their verified token's profile says it
     #: (`person_name`); ``""`` when it says none — never their uid (LOOP I-10).
@@ -309,7 +309,7 @@ class CallerVerifier:
 
     async def _host(self, token: str, claims: Dict[str, Any]) -> Caller:
         """A host token, asked of ai-agents, which issued it and keeps what it
-        rests on (plans/SLACK.md §4.3): remembered a minute at most.
+        rests on: remembered a minute at most.
         """
         key = (hashlib.sha256(token.encode()).hexdigest(), "host")
         remembered = self._verified.get(key)

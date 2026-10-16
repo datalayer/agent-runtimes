@@ -112,7 +112,7 @@ def _evaluate_pass_rate_threshold(
 
 
 # ---------------------------------------------------------------------------
-# The LLM judge (BENCHMARK.md, B2-12)
+# The LLM judge (B2-12)
 # ---------------------------------------------------------------------------
 
 #: What a judge may call the way a task failed. A closed list, so the task

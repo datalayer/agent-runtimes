@@ -4,7 +4,7 @@
  */
 
 /**
- * Voice, in the browser, driven (VOICE.md VO-53): Chrome plays a fixture into
+ * Voice, in the browser, driven (VO-53): Chrome plays a fixture into
  * its microphone (`--use-file-for-fake-audio-capture`), and the composer of
  * an application's Preview on the landing hears it — the browser's models
  * read from Datalayer's CDN with its own CORS header (VO-49), the words

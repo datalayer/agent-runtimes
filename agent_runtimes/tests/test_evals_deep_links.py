@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The links a report embeds and the CLI prints, pinned (BENCHMARK.md B0-04, B4-08).
+"""The links a report embeds and the CLI prints, pinned (B0-04, B4-08).
 
 A Markdown report lives in a pull request for months. Its links point at the
 pages people use — the benchmark and the run — on the deployment

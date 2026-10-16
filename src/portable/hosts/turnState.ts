@@ -8,7 +8,7 @@
  * answer so far, the tools, the status line, the approvals waited on, the
  * question it ends on, and how it ended. Each host renders it in its own
  * blocks (Slack's Block Kit, Discord's components); nothing here is a
- * host's. Moved from the Slack service (plans/DISCORD.md DC-004).
+ * host's. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/turnState
  */

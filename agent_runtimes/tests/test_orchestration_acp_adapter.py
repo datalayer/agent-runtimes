@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the ACP binding (PLAN_ORCHESTRATOR.md, sections 7.4, O0-07).
+"""Tests for the ACP binding (O0-07).
 
 The same execution that ran through A2A runs through ACP with no
 orchestration logic changed: a session is opened, a turn is prompted, its
@@ -357,7 +357,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_session_reaches_the_attempt_and_the_binding(self):
-        """A session is a projection of the execution (19.8, decision 6).
+        """A session is a projection of the execution (decision 6).
 
         The identifier has to be on the attempt or the next step cannot
         load it, and O1-11 moves session ownership behind this store.
@@ -615,7 +615,7 @@ class TestOtherOperations:
         """A new session would be a different conversation.
 
         Silently opening one and calling it the same execution is exactly
-        the substitution the plan's trust boundary is written against.
+        the substitution the trust boundary is written against.
         """
         channel = FakeChannel(script=SPEC_UPDATES)
         store = InMemoryExecutionStore()
@@ -641,7 +641,7 @@ class TestOtherOperations:
 
     @pytest.mark.asyncio
     async def test_re_attaching_replays_the_session_and_admits_what_is_unknown(self):
-        """Section 6.4: a lost lease is unknown, not failed.
+        """Delivery: a lost lease is unknown, not failed.
 
         ACP puts a turn's outcome on the prompt response, and that response
         went to the connection that was lost, so subscribe reports the

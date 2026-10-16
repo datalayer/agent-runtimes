@@ -39,7 +39,7 @@ type Surface = SurfaceModel<ReactComponentImplementation>;
  * A2UI's basic catalog draws from inherited `--a2ui-*` custom properties, so a
  * surface follows the workspace's theme by inheriting rather than by being
  * told — which is what keeps a generated surface from being the one light card
- * in a dark workspace (§3.6).
+ * in a dark workspace.
  */
 const INHERIT_THEME: CSSProperties = {
   ['--a2ui-color-surface' as never]: 'var(--bgColor-muted)',

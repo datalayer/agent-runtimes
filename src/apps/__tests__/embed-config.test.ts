@@ -214,7 +214,7 @@ describe('the snippet', () => {
   });
 });
 
-describe('an application that listens, embedded (VOICE.md VO-18)', () => {
+describe('an application that listens, embedded (VO-18)', () => {
   it('says in its snippet that the page must allow the microphone', () => {
     const snippet = embedSnippetOf({
       origin: 'https://datalayer.app',

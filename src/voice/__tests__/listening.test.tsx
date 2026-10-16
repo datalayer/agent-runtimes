@@ -4,8 +4,8 @@
  */
 
 /**
- * The microphone in the composer, as people expect it (VOICE.md VO-10,
- * VO-11): clicked, it listens, the words go in the box as they are heard,
+ * The microphone in the composer, as people expect it (VO-10, VO-11):
+ * clicked, it listens, the words go in the box as they are heard,
  * and it stops at a second click or once the person stops speaking; held,
  * it stops when let go. Never sent: the box is the person's. And a chat's
  * voice from its spec, its answers said by the speech service.

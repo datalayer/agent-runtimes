@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Idempotent external turns (plans/SLACK.md §4.3, 2; §2 rule 8).
+"""Idempotent external turns.
 
 A host delivers what its users say at least once: Slack retries an event it
 thinks was not received, a worker that crashed takes its job again. The

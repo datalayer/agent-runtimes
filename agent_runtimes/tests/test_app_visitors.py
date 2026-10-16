@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Signed-out sessions, on the visitors' runtime (plans/LOOP.md, R-30).
+"""Signed-out sessions, on the visitors' runtime (R-30).
 
 Through the real routes, in process, on agents made as the create route makes
 them: one visitor never reads, drives or lists another's session on the same

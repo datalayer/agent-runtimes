@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A lent gateway toolset over stdio, the credential held here (SHIELD §4.4, SH-14).
+"""A lent gateway toolset over stdio, the credential held here (SH-14).
 
 A harness that advertises no ``mcpCapabilities.http`` cannot be given the
 gateway's toolset as an HTTP server with a bearer header; it is given this
@@ -89,7 +89,7 @@ def hold(name: str, url: str, token: str, *, base: Path | None = None) -> str:
 
 def carry(handle: str, traceparent: str | None, *, base: Path | None = None) -> None:
     """
-    Carry the turn's trace to the shim: the ``traceparent`` it sends the gateway from now on (SHIELD §6.8, SH-51).
+    Carry the turn's trace to the shim: the ``traceparent`` it sends the gateway from now on (SH-51).
 
     The shim is one process for the session, so what it sends per call is
     read from the handle at each call; the runtime writes the current turn's

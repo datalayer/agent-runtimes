@@ -231,7 +231,7 @@ def register_a2a_agent(
     )
 
     # A harness's card: its skills from the harness spec, and what it answers
-    # in besides words — diffs and the plan (SHIELD §4.2, SH-15).
+    # in besides words — diffs and the plan (SH-15).
     harness = getattr(agent, "harness", None)
     if harness is not None:
         if not card.skills:
@@ -307,7 +307,7 @@ def register_a2a_agent(
                 yield
 
         # What the card publishes is what the A2A plugin's extension points
-        # hold (AGENT_PROTOCOLS §3.1, PR-02): Datalayer's orchestration and
+        # hold (PR-02): Datalayer's orchestration and
         # face by default, then what the card itself declares.
         from ..protocols import protocols_platform
         from ..protocols.a2a import CardContext, card_extensions
@@ -354,7 +354,7 @@ def register_a2a_agent(
         _a2a_agents[agent_id] = registration
 
         # Audio a caller sends is heard once the gate admits it, before the
-        # task is made (VOICE.md VO-28): the agent sees its transcript.
+        # task is made (VO-28): the agent sees its transcript.
         from ..voice.protocol_audio import HearA2AAudio
 
         heard_app = HearA2AAudio(a2a_app) if hears_audio else a2a_app

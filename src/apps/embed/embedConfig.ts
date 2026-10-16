@@ -68,7 +68,7 @@ export const EMBED_ATTRIBUTES = {
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
 
 /**
- * The deployment an embed token names (VOICE.md decision 16): the embedded
+ * The deployment an embed token names (decision 16): the embedded
  * deployment its owner's server asked it for. Read without vouching for it —
  * the services that take the token verify it — and the only place the
  * element learns its deployment: it takes no attribute for one.
@@ -91,7 +91,7 @@ export function embedTokenDeployment(token: string): string | undefined {
   }
 }
 
-/** What an embed token naming no deployment is told (VOICE.md decision 16). */
+/** What an embed token naming no deployment is told (decision 16). */
 export const EMBED_TOKEN_NAMES_NO_DEPLOYMENT =
   'datalayer-app: the embed token names no deployment. Your server asks for one naming the application’s embedded deployment: POST …/api/spacer/v1/apps/<id>/embed-token with {"deployment": "<its uid>"}.';
 
@@ -122,7 +122,7 @@ export type EmbedFloatingView = 'floating-small' | 'panel' | 'assistant';
  * The four modes (D-07), and the chat they float in: a **bubble** is the
  * round button that opens a popup — the copilot pattern; a **panel** is the
  * conversation at the page's right edge, at full height; the **assistant** is
- * the character that speaks in a balloon (§6.9). **Inline** has no chat of
+ * the character that speaks in a balloon. **Inline** has no chat of
  * its own to float: the application, its page and its conversation, sit in
  * the host's page where the element is.
  */
@@ -348,7 +348,7 @@ export type EmbedSnippetOptions = {
   theme?: EmbedColorMode;
   font?: string;
   /**
-   * Its voice listens (VOICE.md VO-18, `embedListens`): the snippet says that
+   * Its voice listens (VO-18, `embedListens`): the snippet says that
    * the page's `Permissions-Policy` must allow the microphone, which the
    * element asks for in the page itself.
    */

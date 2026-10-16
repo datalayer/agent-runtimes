@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An organization's own harness, served through the same adapter and Shield (SHIELD.md SH-46).
+"""An organization's own harness, served through the same adapter and Shield (SH-46).
 
 Drilled on the ACP SDK's fake agent as the organization's own command: read
 from its organization's catalogue (IAM stood in for), validated with its

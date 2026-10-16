@@ -36,7 +36,7 @@ export interface IRuntimeOptions {
    * Environment name
    *
    * A platform environment by its name, or an environment somebody built,
-   * named `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+   * named `<account-handle>/<name>` or by its uid (D-2).
    */
   environmentName: string;
   /**

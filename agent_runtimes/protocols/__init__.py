@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The agent protocols, each a Reactor Plugin (AGENT_PROTOCOLS §3.1, decided 2026-10-12).
+"""The agent protocols, each a Reactor Plugin (decided 2026-10-12).
 
 In Reactor's terms: every protocol an agent runtime speaks — MCP, A2A, Web
 Bot Auth, and the ones to come (UCP, ACP as ``agentic_commerce``, PACT) — is

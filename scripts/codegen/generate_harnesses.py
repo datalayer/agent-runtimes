@@ -5,10 +5,10 @@
 """
 Generate Python and TypeScript code from the YAML harness specifications.
 
-One YAML per harness under ``agentspecs/harnesses`` (SHIELD.md SH-01, §3.1):
+One YAML per harness under ``agentspecs/harnesses`` (SH-01):
 an agent program driven over the Agent Client Protocol, how it is launched,
 what it needs, what it honours of an agent spec, and the terms it is served
-under. ``register.yaml`` beside them is the register (SH-04, §3.3): a harness
+under. ``register.yaml`` beside them is the register (SH-04): a harness
 without an entry is refused here as it is in agentspecs.
 
 Usage:
@@ -104,7 +104,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Harness Catalog.",
         "",
-        "An agent program driven over the Agent Client Protocol (SHIELD.md SH-01).",
+        "An agent program driven over the Agent Client Protocol (SH-01).",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -234,7 +234,7 @@ def generate_typescript_code(
         "/**",
         " * Harness Catalog.",
         " *",
-        " * An agent program driven over the Agent Client Protocol (SHIELD.md SH-01).",
+        " * An agent program driven over the Agent Client Protocol (SH-01).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",

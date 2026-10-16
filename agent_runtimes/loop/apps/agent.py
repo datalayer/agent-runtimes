@@ -225,7 +225,7 @@ def app_capabilities(
         AppRecordCapability(recorder=recorder),
         *(given or []),
     ]
-    # Answers that may be heard are written for the ear too (VOICE.md VO-44).
+    # Answers that may be heard are written for the ear too (VO-44).
     from agent_runtimes.voice import voice_capability
 
     voicing = voice_capability(app)

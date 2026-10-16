@@ -4,8 +4,8 @@
  */
 
 /**
- * The microphone of a composer whose text its host holds (VOICE.md VO-10,
- * VO-11): `ChatBase`'s own, and the workspace's (an application's page,
+ * The microphone of a composer whose text its host holds (VO-10, VO-11):
+ * `ChatBase`'s own, and the workspace's (an application's page,
  * whose composer is a plugin of its own). What the box held when the
  * microphone opened stays; the words heard go after it as they come, and the
  * whole of what was heard replaces them once it stops. Put there for the
@@ -92,7 +92,7 @@ export function ComposerVoice({
   answers = false,
 }: ComposerVoiceProps): JSX.Element | null {
   // In the browser, or on Datalayer's servers where the application, the
-  // language or the person's detection asks for it (§5, VO-14, VO-34).
+  // language or the person's detection asks for it (VO-14, VO-34).
   const place = hearingPlace(voice);
   const hearing = useMemo((): Hearing | undefined => {
     if (voice.input === 'off') {
@@ -106,7 +106,7 @@ export function ComposerVoice({
           detect: voice.detect,
         })
       : undefined;
-    // `where: auto` (§5): the device when it hears the language and its model
+    // `where: auto`: the device when it hears the language and its model
     // loads, the server otherwise — and back to the device when the server
     // refuses (a visitor's day spent).
     if (server && !voice.detect && (voice.where ?? 'auto') === 'auto') {

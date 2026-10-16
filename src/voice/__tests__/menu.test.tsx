@@ -4,7 +4,7 @@
  */
 
 /**
- * The person's voice menu (VOICE.md VO-14, VO-21, VO-25, VO-30): what it
+ * The person's voice menu (VO-14, VO-21, VO-25, VO-30): what it
  * offers from the catalogue, the choice kept and heard at once by every chat
  * on the page, and the words in the box greyed until final (VO-11).
  */

@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation by voice, hands-free (VOICE.md VO-12, VO-13): the states,
+ * A conversation by voice, hands-free (VO-12, VO-13): the states,
  * the turn ended by the silence and sent by itself, the answer spoken over.
  * The microphone and the hearing are stand-ins built on the real
  * interfaces (`Capture`, `Hearing`).

@@ -204,7 +204,7 @@ describe('the portable entry', () => {
   });
 });
 
-describe('the hosts entry (plans/DISCORD.md §4.2, DC-004)', () => {
+describe('the hosts entry (DC-004)', () => {
   const portable = join(__dirname, '..', 'portable');
   const folder = join(portable, 'hosts');
   const reached = reachedFrom(join(folder, 'index.ts'));

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Rules of an application, read into the Shield's policy (SHIELD §4.5, §6.2, §6.3).
+"""The Rules of an application, read into the Shield's policy.
 
 The engine is the ``agent-shield`` package's — ``agent_shield.policy``: the
 document, the classes, *first decision wins*, the stateful limits — and
@@ -265,7 +265,7 @@ def deployment_said(
 
 def datalayer_default() -> Policy:
     """
-    Decision 5's default as Datalayer runs it (SHIELD §6.11).
+    Decision 5's default as Datalayer runs it.
 
     The classes the platform writes relationships for need the authorizer's
     allow beside the Rules: ``send`` and ``buy``, and in a managed runtime pod

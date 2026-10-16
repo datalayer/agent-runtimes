@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an artifact becomes on the platform (PLAN_ORCHESTRATOR.md, O1-10).
+"""What an artifact becomes on the platform (O1-10).
 
 A worker's artifact is registered with a summary and a content hash; its body
 is what the adapter saw — a turn's text, an A2A artifact's parts. Writing it

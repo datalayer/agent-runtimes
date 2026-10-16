@@ -291,7 +291,7 @@ class WindowMessage:
 
 @dataclass(frozen=True)
 class Said:
-    """A line the application says aloud (VOICE.md VO-46): ``session.say``.
+    """A line the application says aloud (VO-46): ``session.say``.
 
     Heard where the person listens — the page says it with the application's
     voice, as it says an agent's ``voice.say`` (VO-35) — and captioned; it
@@ -306,7 +306,7 @@ class Said:
 
 @dataclass(frozen=True)
 class Interrupted:
-    """The person spoke over the agent (VOICE.md VO-46, VO-13): its voice stops."""
+    """The person spoke over the agent (VO-46, VO-13): its voice stops."""
 
     session_id: str
 
@@ -1328,7 +1328,7 @@ class Session:
         await self.channel.deliver(Closed(element_id, self.id))
 
     async def say(self, text: str) -> Said:
-        """Say a short line aloud (LOOP P-22, VOICE.md VO-46): ``await
+        """Say a short line aloud (P-22, VO-46): ``await
         session.say("One moment, I am looking that up.")``, at most 200
         characters, with the application's voice (``interface.voice``).
 

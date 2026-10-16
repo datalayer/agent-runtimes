@@ -82,7 +82,7 @@ class MockDataTransfer {
 (global as any).DataTransfer = MockDataTransfer;
 
 // Mock window.matchMedia. A test that runs in node (`@vitest-environment
-// node`, the portable host code: plans/DISCORD.md §4.2) has no window.
+// node`, the portable host code) has no window.
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

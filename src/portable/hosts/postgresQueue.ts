@@ -9,7 +9,7 @@
  * five attempts, an ingress claim and its job kept in one transaction. Its
  * tables are `<prefix>_jobs`, `<prefix>_event_claims` and
  * `<prefix>_job_replays` (`hostSchemaSql`). Moved from the Slack service
- * (plans/DISCORD.md DC-004).
+ * (DC-004).
  *
  * @module portable/hosts/postgresQueue
  */
@@ -58,7 +58,7 @@ export class PostgresWorkQueue<T> implements WorkQueue<T> {
       );
       return true;
     }
-    // The idempotency key and its job in one transaction (§7.1, 4).
+    // The idempotency key and its job in one transaction.
     const client = await this.database.connect();
     try {
       await client.query('BEGIN');

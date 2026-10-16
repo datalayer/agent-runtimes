@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The pinned-file store of the speech models (VOICE.md VO-03, VO-48, VO-49).
+"""The pinned-file store of the speech models (VO-03, VO-48, VO-49).
 
 Every file of every speech model of the catalogue, laid out as
 ``<store>/<provider>/<model id>/<path>`` — as Datalayer's storage keeps them,

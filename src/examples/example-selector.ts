@@ -357,7 +357,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     () => import('./ProtocolUcpCheckoutExample'),
     'A UCP checkout at a test store in the page: the exact purchase proposed, approved on a card once, bought once.',
   ),
-  // The Shield (SHIELD.md SH-23): a coding agent behind it, and its policy's types.
+  // The Shield (SH-23): a coding agent behind it, and its policy's types.
   makeEntry(
     'ShieldHarnessExample',
     () => import('./ShieldHarnessExample'),

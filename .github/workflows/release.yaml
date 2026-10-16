@@ -94,8 +94,8 @@ jobs:
             echo "::warning::dist/lite-service-worker.js is missing: @datalayer/jupyter-react does not ship dist/lite-service-worker.ts"
           fi
 
-      # What Node services and phones take of the package (lib/portable and
-      # lib/portable/hosts, plans/DISCORD.md §4.2): held to their folders and
+      # What Node services and phones take of the package (lib/portable and lib/portable/hosts):
+      # held to their folders and
       # tested on the tagged commit. build.yaml runs vitest on main and pull
       # requests only, and a release is tagged from a branch.
       - name: Test the portable entries

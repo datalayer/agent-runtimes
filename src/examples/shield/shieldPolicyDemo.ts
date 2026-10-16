@@ -6,7 +6,7 @@
 /// <reference types="vite/client" />
 
 /**
- * What `ShieldPolicyExample` draws, as data (SHIELD §5.1, SH-53; SH-23).
+ * What `ShieldPolicyExample` draws, as data (SH-53, SH-23).
  *
  * `@datalayer/agent-shield` is the Shield's TypeScript: the policy
  * document's types generated from the schema the Python package publishes,
@@ -126,7 +126,7 @@ export function classRows(
   });
 }
 
-/** ACP's tool kinds and the class each is decided as (§4.5). */
+/** ACP's tool kinds and the class each is decided as. */
 export function kindRows(
   shield: AgentShieldPolicyModule,
 ): Array<{ kind: string; actionClass: string }> {

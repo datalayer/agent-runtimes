@@ -83,7 +83,7 @@ runs_app = typer.Typer(
 )
 launches_app = typer.Typer(
     name="launches",
-    help="Launches: one submission of a benchmark across its experiments (BENCHMARK.md, B2-03).",
+    help="Launches: one submission of a benchmark across its experiments (B2-03).",
     pretty_exceptions_show_locals=False,
 )
 live_app = typer.Typer(
@@ -717,7 +717,7 @@ def evals_run(
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
     """Run a benchmark: import the spec if needed, one experiment per subject,
-    validate, launch, and follow the launch (BENCHMARK.md, B2-15).
+    validate, launch, and follow the launch (B2-15).
 
     On the cloud the platform executes the launch on a pool of sandboxes as
     you, grades it, and keeps the evidence; the command exits 0 when the

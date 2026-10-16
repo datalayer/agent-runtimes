@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Audio from a protocol client, heard through the speech service (VOICE.md VO-28)."""
+"""Audio from a protocol client, heard through the speech service (VO-28)."""
 
 import base64
 import json

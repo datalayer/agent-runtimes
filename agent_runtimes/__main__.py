@@ -376,7 +376,7 @@ def main_callback(
         "--harness",
         help=(
             "Run a harness of the catalogue (claude-code, codex, …) on this machine "
-            "over ACP, in the directory you run from (SHIELD.md §4.9); "
+            "over ACP, in the directory you run from; "
             "`loop harnesses` lists them."
         ),
     ),
@@ -385,14 +385,14 @@ def main_callback(
         "--voice",
         help=(
             "Listen with this machine's microphone (chat mode): Ctrl+T or /voice "
-            "starts and stops, the words go on the prompt line (VOICE.md VO-15; "
+            "starts and stops, the words go on the prompt line (VO-15; "
             "needs agent-runtimes[voice])."
         ),
     ),
     speak: bool = typer.Option(
         False,
         "--speak",
-        help="Say the answers through this machine's speaker (chat mode, VOICE.md VO-15).",
+        help="Say the answers through this machine's speaker (chat mode, VO-15).",
     ),
 ) -> None:
     """Main callback to handle global options."""
@@ -539,7 +539,7 @@ except Exception as exc:  # noqa: BLE001
 
 @app.command("harnesses")
 def harnesses_command() -> None:
-    """List the harnesses of the catalogue, each with its terms (SHIELD.md §4.9).
+    """List the harnesses of the catalogue, each with its terms.
 
     A harness — Claude Code, Codex, Gemini CLI, goose, OpenCode, OpenHands,
     or any program speaking the Agent Client Protocol — runs on this machine

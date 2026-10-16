@@ -97,7 +97,7 @@ export default function DocumentView({
     <Box height="100%" minHeight={0}>
       <EphemeralDocument
         // The entry point owns the theme; a second provider here would fight
-        // it over BaseStyles and font tokens (§3.5, §3.6).
+        // it over BaseStyles and font tokens.
         inheritTheme
         documentId={documentId}
         content={opening}

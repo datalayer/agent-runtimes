@@ -4,7 +4,7 @@
  */
 
 /**
- * An answer as it is heard (VOICE.md VO-20): read as plain words, the way
+ * An answer as it is heard (VO-20): read as plain words, the way
  * the balloon reads it (T-23), and cut into sentences as it is written, so
  * that the first one is said before the answer is finished.
  *

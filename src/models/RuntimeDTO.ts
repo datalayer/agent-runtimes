@@ -63,7 +63,7 @@ export interface CreateRuntimeRequest {
   environment: {
     /**
      * A platform environment by its name, or a user environment as
-     * `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+     * `<account-handle>/<name>` or by its uid (D-2).
      */
     name: string;
     /**

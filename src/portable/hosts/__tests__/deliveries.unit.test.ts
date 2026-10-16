@@ -6,7 +6,7 @@
  */
 
 /**
- * Deliveries to a host (plans/DISCORD.md DC-004, §3.8): the signed webhook,
+ * Deliveries to a host (DC-004): the signed webhook,
  * the outbox poller, and a delivery handled once then acknowledged.
  */
 

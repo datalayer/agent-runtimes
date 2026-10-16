@@ -780,7 +780,7 @@ describe('reading an application on Datalayer with its token', () => {
     });
   });
 
-  it('runs the deployment its token names, and refuses a token naming none (VOICE.md decision 16)', async () => {
+  it('runs the deployment its token names, and refuses a token naming none (decision 16)', async () => {
     expect(
       embedTokenDeployment(tokenNaming({ deployment_uid: '01K?>_dep' })),
     ).toBe('01K?>_dep');

@@ -1,5 +1,5 @@
 {
-  "about": "Recorded fixtures of the voice checks (VOICE.md VO-50): 16 kHz mono FLAC, with what was said. LibriSpeech test-clean and Multilingual LibriSpeech (French test), both CC BY 4.0: attribution in `sources`. Phrases recorded by the team, with consent, are not here yet: they need people.",
+  "about": "Recorded fixtures of the voice checks (VO-50): 16 kHz mono FLAC, with what was said. LibriSpeech test-clean and Multilingual LibriSpeech (French test), both CC BY 4.0: attribution in `sources`. Phrases recorded by the team, with consent, are not here yet: they need people.",
   "sources": {
     "librispeech": "LibriSpeech ASR corpus, test-clean — Vassil Panayotov, Guoguo Chen, Daniel Povey, Sanjeev Khudanpur (2015), https://www.openslr.org/12, CC BY 4.0. Read speech from LibriVox audiobooks.",
     "mls": "Multilingual LibriSpeech, French test — Vineel Pratap, Qiantong Xu, Anuroop Sriram, Gabriel Synnaeve, Ronan Collobert (2020), https://www.openslr.org/94, CC BY 4.0. Read speech from LibriVox audiobooks."

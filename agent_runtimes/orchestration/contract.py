@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The contract every `ExecutionStore` keeps (PLAN_ORCHESTRATOR.md, O0-04 and O1-02).
+"""The contract every `ExecutionStore` keeps (O0-04 and O1-02).
 
 The Phase 0 store tests, written once against the port rather than against
 the in-memory store, so the Solr store of the control plane runs exactly the
@@ -347,7 +347,7 @@ class RecordsContract:
     async def test_two_attempts_at_one_artifact_are_one_record_with_two_provenances(
         self,
     ) -> None:
-        """Conformance scenario 13 in miniature (19.8, decision 4).
+        """Conformance scenario 13 in miniature (decision 4).
 
         Nothing is overwritten and nothing is dropped: the second attempt's
         provenance is kept, and the committed version stays committed.

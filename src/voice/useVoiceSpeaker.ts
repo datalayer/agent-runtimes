@@ -4,7 +4,7 @@
  */
 
 /**
- * A chat's speaker (VOICE.md VO-20, VO-21, VO-33): its answers said by
+ * A chat's speaker (VO-20, VO-21, VO-33): its answers said by
  * Datalayer's speech service — `POST /api/ai-agents/v1/speech/syntheses` on
  * ai-agents, `datalayer-speech` — while its voice's `output` is not `off`.
  * One for `ChatFloating` and for `ChatBase` alone, so that a chat given a

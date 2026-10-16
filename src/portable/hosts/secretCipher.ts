@@ -6,10 +6,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 /**
- * Secrets at rest (SLACK §9, DISCORD §9): AES-256-GCM, each value bound to
+ * Secrets at rest: AES-256-GCM, each value bound to
  * what it belongs to (its associated data, an installation's key), with the
  * key's version kept beside it. Moved from the Slack service
- * (plans/DISCORD.md DC-004).
+ * (DC-004).
  *
  * @module portable/hosts/secretCipher
  */

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the adapter port (PLAN_ORCHESTRATOR.md, O0-05).
+"""Tests for the adapter port (O0-05).
 
 The port's job is to make two mistakes impossible: an adapter that answers
 as though it had done something it cannot do, and an adapter whose reduced
@@ -303,7 +303,7 @@ class TestUnsupportedOperations:
 
     @pytest.mark.asyncio
     async def test_the_reduction_is_reported_on_the_execution(self):
-        """19.8, decision 5: reported, not hidden.
+        """Decision 5: reported, not hidden.
 
         The first thing a dispatch says is what it cannot do, so the answer
         to "why did this execution never checkpoint?" is on the execution.

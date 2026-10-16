@@ -4,8 +4,8 @@
  */
 
 /**
- * The conversation's components, as one contract for every renderer (MOBILE
- * §4.1–4.2, M-032): the props each one takes, and what each says — to the
+ * The conversation's components, as one contract for every renderer (M-032):
+ * the props each one takes, and what each says — to the
  * eye and to a screen reader — computed here once, so that a native renderer
  * (Datalayer Mobile's `.native` views) and the web's draw the same rows with
  * the same words and states, over `reduceConversation`'s state.
@@ -63,7 +63,7 @@ export type QuestionCardProps = {
  * A protocol display under its tool row (MOBILE M-037): what it shows is
  * `displayLine`'s and the display's own — a coding agent's `diff` as a
  * unified diff in the file's language (`unifiedDiffLines`), its `terminal`
- * as the command and the output kept (SHIELD §4.3); what the person does goes out
+ * as the command and the output kept; what the person does goes out
  * through the host — a sign-in page opened outside the conversation, an
  * operation answered where approvals are, *I have signed in* said as their
  * next message. Nothing is answered from the card itself.

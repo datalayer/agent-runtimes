@@ -204,7 +204,7 @@ def test_a_subagent_by_reference_declares_what_its_agentspec_does() -> None:
 
 
 def test_an_agent_on_a_harness_declares_the_key_its_harness_requires() -> None:
-    # SHIELD §6.1: the harness spec's declared secrets reach the process from
+    # The harness spec's declared secrets reach the process from
     # IAM through the companion, so a runtime made for a Claude Code agent is
     # given ANTHROPIC_API_KEY — and refused when the account has none.
     coder = Agentspec(id="r19-coder", name="coder", harness="claude-code")

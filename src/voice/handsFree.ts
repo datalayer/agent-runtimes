@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation by voice, hands-free (VOICE.md VO-12, VO-13): what the
+ * A conversation by voice, hands-free (VO-12, VO-13): what the
  * composer is doing at every moment, and when a turn ends or the person
  * speaks over the agent. Pure: the component (`HandsFree`) keeps the
  * microphone and the clock, this decides.

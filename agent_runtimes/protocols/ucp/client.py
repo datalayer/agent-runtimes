@@ -8,7 +8,7 @@ over the REST binding, every response read through ``ucp-sdk`` 0.5.0's
 Pydantic models (generated from the same schemas). A purchase is never one
 call: :meth:`UcpClient.propose_completion` turns a ``ready_for_complete``
 checkout into an exact, revisioned :class:`CheckoutProposal`; only an
-approved proposal is completed, once (§3: one approval model), and the
+approved proposal is completed, once (one approval model), and the
 payment instrument comes from the host — never from the model.
 
 Every request carries ``UCP-Agent: profile="<the agent's profile>"``, a

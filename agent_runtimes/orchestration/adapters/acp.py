@@ -1,23 +1,23 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ACP binding, client side (PLAN_ORCHESTRATOR.md, sections 7.4, O0-07).
+"""The ACP binding, client side (O0-07).
 
 Datalayer is the client here and the coding agent is the worker, which is
 the opposite of the ACP route this repository already serves. The mapping is
-the plan's table: create or attach is ``session/new`` or ``session/load``, a
+the mapping table: create or attach is ``session/new`` or ``session/load``, a
 delegation and a steer are ``session/prompt``, progress is session updates,
 an approval is a permission request, and a cancel is ``session/cancel``.
 
 An ACP session is a projection of an execution, never the other way round
-(19.8, decision 6). Nothing here keeps a connection between operations: each
+(decision 6). Nothing here keeps a connection between operations: each
 one connects, does its work and closes, so the adapter survives the step
 boundaries of the durable worker it will run inside (O1-03). The session
 identifier on the attempt is what makes that possible, and it is why every
 observation that learns one carries it back.
 
-A harness's file edits come back as artifacts (SHIELD SH-45, §4.2's mapping
-on the client side): every ``diff`` content of the turn's tool calls —
+A harness's file edits come back as artifacts (SH-45, the mapping on the client side):
+every ``diff`` content of the turn's tool calls —
 ``{path, oldText, newText}`` — is registered once per file at the turn's end
 as a ``text/x-diff`` artifact named by its path, the unified diff hashed in
 its provenance, as the A2A worker publishes them; a file changed twice is
@@ -30,7 +30,7 @@ session update, no checkpoint, no pause, no resume, no session close, and no
 artifact — a turn's answer is registered as one artifact and file edits stay
 tool-call content until O1-10 commits them. All of it is in
 ``ACP_CAPABILITIES`` and reaches the execution as the first observation of a
-dispatch (19.8, decision 5's rule, applied to the other protocol).
+dispatch (decision 5's rule, applied to the other protocol).
 
 An agent that declares the Datalayer orchestration extension at initialize,
 under ``agentCapabilities._meta.datalayer.extensions``, gets three of them
@@ -43,7 +43,7 @@ kept is read as a pause; and a resume is a new attempt whose prompt names it.
 The second is what carries the connection. The ``ACPChannel`` port below is
 the narrow surface this adapter needs — request, notify, respond, listen,
 close — and its one implementation, ``ShieldChannel``, is built on the
-``agent-shield`` package's client-side channels (SHIELD.md §5.1, SH-02): the
+``agent-shield`` package's client-side channels (SH-02): the
 **stdio** channel, which launches a local agent as a subprocess (what 7.4
 asked for), and the **WebSocket** channel, both over the official ``acp`` SDK
 0.7. An endpoint ``stdio:<command line>`` launches; a ``ws://`` or ``wss://``
@@ -52,7 +52,7 @@ endpoint connects. The client this adapter was first built on
 against the installed SDK) is no longer under it; the ``loop connect -t acp``
 command still uses that client and is its only caller.
 
-The trace (section 10, O0-11) goes on the connection's headers, because a
+The trace (O0-11) goes on the connection's headers, because a
 WebSocket has no per-message header to stamp and the ``httpx`` instrumentation
 that carries it for A2A never sees this socket. Since every operation opens
 its own connection, each carries the context of whatever asked for it.
@@ -247,7 +247,7 @@ ACP_CAPABILITIES = AdapterCapabilities(
         "leaves open; this adapter opens a connection per operation, so "
         "each one carries the context of whatever asked for it, and an "
         "agent that ignores the header is a broken link in the tree's "
-        "trace rather than a second trace (section 10, O0-11).",
+        "trace rather than a second trace (O0-11).",
     ),
 )
 
@@ -869,7 +869,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         lost. Loading the session replays the conversation, so the work done
         while we were away is visible as updates, but whether the turn ended
         and why is not. The execution stays where it is and the control
-        plane reconciles — which is exactly section 6.4's instruction to
+        plane reconciles — which is exactly the delivery rules' instruction to
         treat a lost lease as unknown rather than as a failure.
 
         Parameters
@@ -1215,7 +1215,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         ``httpx`` instrumentation that carries it for A2A never sees this
         socket. ``with_trace`` is the injector this repository already uses
         for outgoing calls, so there is one place that decides what a
-        traceparent looks like on the wire (section 10, O0-11).
+        traceparent looks like on the wire (O0-11).
 
         Parameters
         ----------
@@ -1257,7 +1257,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         _SessionRefused
             When the attempt names a session the agent cannot load. Opening
             a new one instead would be a different conversation under the
-            same execution, which is the kind of quiet substitution the plan
+            same execution, which is the kind of quiet substitution the design
             is written to prevent.
         """
         if attempt.session_id:

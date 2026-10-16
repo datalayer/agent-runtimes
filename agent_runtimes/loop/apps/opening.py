@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who may hold a session of a deployment (plans/LOOP.md, D-02).
+"""Who may hold a session of a deployment (D-02).
 
 A hosted deployment says who may open it — only its owner, the people they
 invite, their organization, anyone with the link, everyone — and ai-agents

@@ -221,8 +221,8 @@ export async function readEmbeddedApp({
   if (spec.kind === 'decision') {
     return { kind: 'frame', src: frameSrcOf(origin, app, token) };
   }
-  // The visit runs the deployment its token names, and no other (VOICE.md
-  // decision 16): a token naming none is refused before anything is drawn.
+  // The visit runs the deployment its token names, and no other (decision 16):
+  // a token naming none is refused before anything is drawn.
   if (!embedTokenDeployment(token)) {
     return { kind: 'said', text: EMBED_TOKEN_NAMES_NO_DEPLOYMENT };
   }
@@ -672,7 +672,7 @@ export function defineDatalayerAppElement(
             // A public application for a visitor without an account: on the
             // visitors' runtime, with a visitor's token (D-07, R-30).
             {...(source.visitors ? { visitors: source.visitors } : {})}
-            // Its voice, when its Appspec says one (VOICE.md VO-18): ai-agents'
+            // Its voice, when its Appspec says one (VO-18): ai-agents'
             // speech service; the microphone needs the page's
             // Permissions-Policy to allow it.
             speech={this.speech}

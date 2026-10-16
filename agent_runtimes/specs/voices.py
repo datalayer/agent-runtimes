@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 """
-The voice catalogue (VOICE.md VO-40): voices and speech models.
+The voice catalogue (VO-40): voices and speech models.
 
 This file is AUTO-GENERATED from agentspecs (voices, speech-models).
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

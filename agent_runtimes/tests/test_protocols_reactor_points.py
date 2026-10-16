@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Every protocol plugin held to its ``reactor-points.json`` (AGENT_PROTOCOLS §3.1, PR-50).
+"""Every protocol plugin held to its ``reactor-points.json`` (PR-50).
 
 For each point of each protocol: exported under the id the file says,
 declared by the plugin the file names, its default contributed at order

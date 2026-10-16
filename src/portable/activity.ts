@@ -27,7 +27,7 @@ export type RecordKind =
   | 'feedback'
   /** A turn of a conversation: what was asked, what it answered (V-16). */
   | 'turn'
-  /** What it did, step by step (P-16); a harness's session, turn and plan events (SHIELD §6.4). */
+  /** What it did, step by step (P-16); a harness's session, turn and plan events. */
   | 'step'
   /** What one of its channels was sent, or why not: `{channel, event, delivery, detail}` (R-37). */
   | 'notification';

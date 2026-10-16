@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications as Reactor plugins, on the runtime's side (LOOP §5.4, F-12, F-13).
+"""Applications as Reactor plugins, on the runtime's side (F-12, F-13).
 
 An application runs as two Reactor plugins of one name, ``loop-app-<id>``
 (LOOP F-15): the page's (`defineAppPlugin`, in `src/apps/apps/AppRenderer.tsx`)
@@ -78,7 +78,7 @@ REACTIONS: Tuple[str, ...] = (
     "logout",
     # A widget's page, run on its inputs (LOOP P-05).
     "page",
-    # What the person said, heard; and their speaking over the agent (VOICE.md VO-46).
+    # What the person said, heard; and their speaking over the agent (VO-46).
     "audio",
     "interrupted",
     "action",

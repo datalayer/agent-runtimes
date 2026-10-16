@@ -4,7 +4,7 @@
  */
 
 /**
- * Voice in the page (VOICE.md V1): answers cut into what is said, models
+ * Voice in the page (V1): answers cut into what is said, models
  * read only as pinned, hearing with a stand-in built on the real packages'
  * shapes, the speaker's refusals, and the assistant speaking with its voice.
  */

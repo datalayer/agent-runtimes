@@ -2,8 +2,7 @@
 
 [PACT](https://github.com/openpactprotocol/openpactprotocol) 1.0 (Decagon,
 Instinct; published 2026-10-06), both profiles, against a local Provider with
-one Brand, *Example Air*, in one process with no network (example EX-06 of
-`plans/AGENT_PROTOCOLS.md`).
+one Brand, *Example Air*, in one process with no network (example EX-06).
 
 ```bash
 python examples/protocols/pact/personal_agent.py

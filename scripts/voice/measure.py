@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Measure the speech models on the recorded fixtures (VOICE.md VO-05, VO-51, VO-52).
+"""Measure the speech models on the recorded fixtures (VO-05, VO-51, VO-52).
 
     python scripts/voice/measure.py --store ~/.cache/voice-work/store
 

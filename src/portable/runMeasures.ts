@@ -4,7 +4,7 @@
  */
 
 /**
- * How a streamed turn went, measured without its words (MOBILE M-036, §10):
+ * How a streamed turn went, measured without its words (M-036):
  * the time to its first streamed token, to its complete answer, how long a
  * Stop took, the category of a stream that failed, and how often a lost
  * stream was read back. Never a prompt, an answer, a tool's arguments or an

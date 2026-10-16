@@ -4,7 +4,7 @@
  */
 
 /**
- * What a coding agent ran (SHIELD §4.3, SH-16): the command in the header,
+ * What a coding agent ran (SH-16): the command in the header,
  * the output kept after the terminal was released, and how it ended — the
  * exit code, or *running* while it runs. What it reads is
  * `portable/displays`' (`protocolDisplayOf`), the phone's contract too.

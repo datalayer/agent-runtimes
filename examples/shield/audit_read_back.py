@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the Shield wrote in the application's record, read back (SHIELD §6.4, SH-34; SH-23 d).
+"""What the Shield wrote in the application's record, read back (SH-34, SH-23 d).
 
 The runtime's harness agent (``ACPAgent``) on the fake agent, with the
 application's recorder (``AppRecorder``) — the one a shipped application's

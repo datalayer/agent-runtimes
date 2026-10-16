@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's proxy, driven from Python (SHIELD §5.2, SH-23 b).
+"""The Shield's proxy, driven from Python (SH-23 b).
 
 ``agent-shield run -- <an ACP agent>`` stands in front of the agent as an ACP
 agent itself; this script is the ACP client an editor would be. It starts the

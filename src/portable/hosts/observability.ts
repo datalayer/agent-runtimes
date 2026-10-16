@@ -6,12 +6,11 @@
 import { createHash } from 'node:crypto';
 
 /**
- * Logs, audit events and traces without secrets or words (SLACK §9, §12.2;
- * DISCORD §9, §12.2): every routine line is JSON whose fields pass `redact`;
+ * Logs, audit events and traces without secrets or words: every routine line is JSON whose fields pass `redact`;
  * host and Datalayer ids are pseudonymous (`pseudonym`), so a trace can be
  * followed `host event → job → installation hash → session → host message`
  * without naming an installation, a person or what they wrote. Moved from
- * the Slack service (plans/DISCORD.md DC-004).
+ * the Slack service (DC-004).
  *
  * @module portable/hosts/observability
  */

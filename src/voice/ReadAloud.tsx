@@ -4,7 +4,7 @@
  */
 
 /**
- * *Read aloud*, under an answer (VOICE.md VO-21, `on_request`): the answer,
+ * *Read aloud*, under an answer (VO-21, `on_request`): the answer,
  * read as plain words and cut into sentences, given to the speaker — what it
  * was saying stops first. The press is the gesture a browser plays sound
  * after.

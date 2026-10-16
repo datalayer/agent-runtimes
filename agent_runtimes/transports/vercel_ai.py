@@ -119,7 +119,7 @@ def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
 def _extract_eval_binding(prompt: str) -> tuple[str | None, str | None, str | None]:
     """The experiment, evalset and case a prompt names on its own lines
     (`experiment_id=`, `evalset_id=`, `case_id=`): what binds the live event
-    to the experiment the platform evaluates it for (BENCHMARK.md, B2-13).
+    to the experiment the platform evaluates it for (B2-13).
     """
     experiment_id: str | None = None
     evalset_id: str | None = None
@@ -1039,7 +1039,7 @@ class VercelAITransport(BaseTransport):
             sdk_version = body.get("sdkVersion") or body.get("sdk_version")
 
             # A message the person said: its transcript is the message, its
-            # UI message's metadata says how it was heard (VOICE.md VO-27).
+            # UI message's metadata says how it was heard (VO-27).
             from ..voice import hear, spoken_of_vercel_body
 
             hear(spoken_of_vercel_body(body))

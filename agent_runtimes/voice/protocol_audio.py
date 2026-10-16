@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Audio sent by a protocol client, heard through the speech service (VOICE.md VO-28).
+"""Audio sent by a protocol client, heard through the speech service (VO-28).
 
-On the web the page transcribes and the runtime sees text (§5). A protocol
+On the web the page transcribes and the runtime sees text. A protocol
 client may send the sound itself — AG-UI's ``AudioInputContent`` in a user
 message (``{"type": "audio", "source": {"type": "data", "value": <base64>,
 "mime_type": "audio/wav"}}``), or an A2A file part of an audio type

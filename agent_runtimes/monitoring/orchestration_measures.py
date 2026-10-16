@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What orchestration is judged by, counted (PLAN_ORCHESTRATOR.md, section 16, O1-14).
+"""What orchestration is judged by, counted (O1-14).
 
-Section 16 names the measures. The first six are taken here: the share of
+The measures are named; the first six are taken here: the share of
 executions that complete after the control plane lost sight of their worker,
 duplicate executions and duplicate artifacts, the share that recover when the
 worker itself is lost, how long a worker takes to accept delegated work, how
@@ -94,7 +94,7 @@ WORKER_LOST = "worker_lost"
 #: nobody renewed, a stream that broke.
 LOST_SIGHT = frozenset({ErrorCode.LEASE_EXPIRED, ErrorCode.WORKER_UNREACHABLE})
 
-#: The milestones at or past a worker taking responsibility (section 6.3).
+#: The milestones at or past a worker taking responsibility.
 ACCEPTED_OR_LATER = frozenset(
     ACKNOWLEDGEMENT_ORDER[ACKNOWLEDGEMENT_ORDER.index(AcknowledgementKind.ACCEPTED) :]
 )
@@ -103,7 +103,7 @@ ACCEPTED_OR_LATER = frozenset(
 PASSED = "passed"
 FAILED = "failed"
 #: Every test of the scenario was skipped because the binding declared it
-#: cannot do what the scenario needs: a reduction, not a failure (19.8, 5).
+#: cannot do what the scenario needs: a reduction, not a failure.
 REDUCED = "reduced"
 
 #: From the least to the most telling: one failed test fails the scenario.
@@ -317,7 +317,7 @@ def recovery_of(events: Iterable[ExecutionEvent]) -> str:
     """
     What a settled execution had to recover from, read off its events.
 
-    The two causes section 16 keeps apart. A worker lost is an execution that
+    The two causes the measures keep apart. A worker lost is an execution that
     moved because of it — retried on a new attempt, or failed with the error
     that says its worker could not be found or reached. A disconnect is the
     control plane losing sight of a worker that may well still have the work:
@@ -475,7 +475,7 @@ def artifacts_committed(
 @_quietly
 def conformance_scenario(*, scenario: str, binding: str, outcome: str) -> None:
     """
-    What one section 13 scenario came to against one binding.
+    What one conformance scenario came to against one binding.
 
     Parameters
     ----------
@@ -549,7 +549,7 @@ def conformance_rate(
     outcomes: Mapping[tuple[str, str], str],
 ) -> dict[str, ConformanceTally]:
     """
-    Section 16's cross-framework conformance rate, per binding.
+    The cross-framework conformance rate, per binding.
 
     Parameters
     ----------

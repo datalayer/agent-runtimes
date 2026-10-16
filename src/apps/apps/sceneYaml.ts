@@ -17,7 +17,7 @@
  * scene's checks over what it reads (`sceneTextProblems`).
  *
  * Moved from the landing's Studio on 2026-10-10 with `sceneChecks.ts`
- * (plans/STUDIO.md S-10), so that every shell editing a scene reads and writes
+ * (S-10), so that every shell editing a scene reads and writes
  * it alike. Pure: no React, no network.
  *
  * @module apps/apps/sceneYaml

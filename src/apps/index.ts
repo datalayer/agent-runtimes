@@ -7,7 +7,7 @@
  * The LOOP workspace: contracts, shell, and the plugins that come with it.
  *
  * A host embeds the workspace through this surface — never by deep import — so
- * what is public is a decision rather than an accident of file layout (§3.5).
+ * what is public is a decision rather than an accident of file layout.
  *
  * @module apps
  */

@@ -4,8 +4,8 @@
  */
 
 /**
- * Answers heard, from Datalayer's speech service (VOICE.md VO-20, VO-33,
- * decision 1): each sentence is sent to ai-agents as soon as it is written
+ * Answers heard, from Datalayer's speech service (VO-20, VO-33, decision 1):
+ * each sentence is sent to ai-agents as soon as it is written
  * and played as soon as its audio arrives, one after the other, while the
  * next ones are being made. The level of what plays moves the assistant's
  * mouth (VO-23). Nothing is kept: each sentence's audio is dropped once played.

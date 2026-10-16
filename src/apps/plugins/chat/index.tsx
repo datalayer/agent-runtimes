@@ -145,7 +145,7 @@ export type ChatPluginConfig = {
    */
   showTokenUsage?: boolean;
   /**
-   * Its voice (VOICE.md VO-10, VO-20, VO-49): a microphone in the composer,
+   * Its voice (VO-10, VO-20, VO-49): a microphone in the composer,
    * the words written in it as they are heard, and the answers said by
    * Datalayer's speech service — an application's `interface.voice`
    * (`chatVoiceOf`). None unless said.

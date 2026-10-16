@@ -4,13 +4,13 @@
  */
 
 /**
- * Which application a host's turn runs (SLACK §8, S-202; DISCORD §8): the
+ * Which application a host's turn runs (S-202): the
  * thread's own, else an explicit choice, else the one chosen for the
  * thread's next session, else the channel's, else the installation's
  * default; then that application allowed here and in this kind of
  * conversation. Datalayer's exchange checks the person may open it at every
  * turn: nothing here authorizes alone. The host says each refusal in its own
- * words. Moved from the Slack service (plans/DISCORD.md DC-004).
+ * words. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/resolution
  */

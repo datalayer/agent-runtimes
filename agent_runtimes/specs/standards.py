@@ -3,7 +3,7 @@
 """
 Standard Catalog.
 
-The standards a conformance report answers (SHIELD.md SH-60, §6.9): each a
+The standards a conformance report answers (SH-60): each a
 catalogue entry carrying the standard's domains and controls whole.
 
 This file is AUTO-GENERATED from YAML specifications.

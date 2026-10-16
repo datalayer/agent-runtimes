@@ -4,8 +4,8 @@
  */
 
 /**
- * What a coding agent changed in one file, as a unified diff (SHIELD §4.3,
- * SH-16): the path and the count in the header, each line signed and
+ * What a coding agent changed in one file, as a unified diff (SH-16):
+ * the path and the count in the header, each line signed and
  * coloured, the file's language on the block for a highlighter. What it
  * reads is `portable/displays`' (`protocolDisplayOf`, `unifiedDiffLines`),
  * so the phone draws the same thing from the same contract.

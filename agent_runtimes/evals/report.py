@@ -189,7 +189,7 @@ def _analysis_heatmap(
 ) -> dict[str, Any]:
     """A grid of pass rates: one row per experiment, one column per run.
 
-    `BENCHMARK.md` section 12.2 asks for "recent-run heatmaps" beside the
+    The benchmark design asks for "recent-run heatmaps" beside the
     pairwise deltas, and a heatmap is the one shape that shows a regression
     that only some experiments had — a column that darkens across every row is
     the benchmark, a cell that darkens alone is that experiment.
@@ -210,7 +210,7 @@ def _analysis_heatmap(
 def _analysis_pairwise(name: str, pairs: list[dict[str, Any]]) -> dict[str, Any]:
     """Every experiment against every other, as candidate against baseline.
 
-    Section 12.2 fixes the direction and it is not a detail: **A is the
+    The benchmark design fixes the direction and it is not a detail: **A is the
     candidate, B is the baseline, and the delta is `A - B`**. A positive delta
     is the candidate ahead. Two readers who disagree about the sign of a delta
     are two readers who disagree about whether a change helped, so the
@@ -3874,13 +3874,13 @@ def build_eval_report_lexical(
     run: Optional[dict[str, Any]] = None,
     cases: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
-    """The report as a serialized Lexical editor state (BENCHMARK.md, B3-03)."""
+    """The report as a serialized Lexical editor state (B3-03)."""
     from agent_runtimes.evals.lexical import build_eval_report_lexical as _build
 
     return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)
 
 
-#: What a review decision is called in a report (BENCHMARK.md, B4-03).
+#: What a review decision is called in a report (B4-03).
 DECISION_KIND_LABELS = {
     "accepted_regression": "Accepted regression",
     "expected_change": "Expected change",

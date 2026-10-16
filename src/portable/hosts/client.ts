@@ -4,8 +4,7 @@
  */
 
 /**
- * The ai-agents host client every chat host calls (moved from the Slack
- * service, plans/DISCORD.md DC-004).
+ * The ai-agents host client every chat host calls (moved from the Slack service, DC-004).
  *
  * @module portable/hosts/client
  */
@@ -59,8 +58,7 @@ export type BoundHost = Readonly<{
 }>;
 
 /**
- * The generic host routes of ai-agents (plans/SLACK.md §4.3, plans/DISCORD.md
- * §4.3) a host calls besides the credential exchange: as the installation,
+ * The generic host routes of ai-agents a host calls besides the credential exchange: as the installation,
  * with its key in `X-Datalayer-Host-Key`, or as a person, with the host token
  * the exchange answered. Any host speaks them.
  */
@@ -102,7 +100,7 @@ export class DatalayerHostClient {
     return schema.parse(body);
   }
 
-  /** Bind the installation its owner set up, with the code their browser carried (§3.1). */
+  /** Bind the installation its owner set up, with the code their browser carried. */
   async bind(input: {
     code: string;
     externalId: string;
@@ -171,8 +169,8 @@ export class DatalayerHostClient {
   }
 
   /**
-   * The host's own administration (plans/DISCORD.md DC-106,
-   * `/datalayer-admin`): pause, resume or one channel's rule, for the host
+   * The host's own administration (DC-106, `/datalayer-admin`):
+   * pause, resume or one channel's rule, for the host
    * user linked to the installation's owner; Datalayer refuses anyone else
    * (403), whatever their role in the host.
    */

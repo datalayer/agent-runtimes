@@ -119,8 +119,8 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
-   * The words in the box are still being heard by the microphone (VOICE.md
-   * VO-11): shown greyed, in italics, until they are final.
+   * The words in the box are still being heard by the microphone (VO-11):
+   * shown greyed, in italics, until they are final.
    */
   interim?: boolean;
   /**

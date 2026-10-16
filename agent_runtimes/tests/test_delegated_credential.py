@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The credential a delegation hands its worker, for the run (ORCHESTRATOR.md, O1-17).
+"""The credential a delegation hands its worker, for the run (O1-17).
 
 The control plane puts the execution's token beside the model budget; the
 worker takes it out of the message before anything keeps the message, holds it

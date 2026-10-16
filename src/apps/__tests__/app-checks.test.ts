@@ -462,7 +462,7 @@ describe('the instant checks', () => {
     ).toContain('interface.balloon: is one of history, current.');
   });
 
-  it('takes hands-free, built 15 October 2026, and refuses a way to talk that is not one (VOICE.md VO-12)', () => {
+  it('takes hands-free, built 15 October 2026, and refuses a way to talk that is not one (VO-12)', () => {
     const said = (voice: unknown) =>
       checkAppspec({ ...BASE, interface: { voice } }).problems;
     for (const input of ['push_to_talk', 'hands_free']) {
@@ -480,7 +480,7 @@ describe('the instant checks', () => {
     );
   });
 
-  it('refuses kept audio as agentspecs does: public, not listening, kept over 30 days (VOICE.md VO-42, VO-63)', () => {
+  it('refuses kept audio as agentspecs does: public, not listening, kept over 30 days (VO-42, VO-63)', () => {
     const listening = { voice: { enabled: true, input: 'push_to_talk' } };
     const said = (extra: Record<string, unknown>) =>
       checkAppspec({ ...BASE, interface: listening, ...extra }).problems;

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Checkpoints that outlive their process, kept per execution (ORCHESTRATOR.md, O2-05).
+"""Checkpoints that outlive their process, kept per execution (O2-05).
 
 The in-memory and file stores keep a conversation's checkpoints for the process
 that made them. An execution that is paused and resumed — by another process of

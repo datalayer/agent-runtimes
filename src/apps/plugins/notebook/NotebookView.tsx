@@ -214,7 +214,7 @@ export default function NotebookView({
         */
         nbformat={opening}
         // The entry point owns the theme; a second provider here would fight
-        // it over BaseStyles and font tokens (§3.5, §3.6).
+        // it over BaseStyles and font tokens.
         inheritTheme
         notebookId={notebookId}
         serviceManager={browserManager}

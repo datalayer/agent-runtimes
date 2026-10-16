@@ -2,7 +2,7 @@
 
 The [Universal Commerce Protocol](https://ucp.dev) `2026-08-25` against a
 local test merchant, *Example Store*, in one process with no network
-(example EX-04 of `plans/AGENT_PROTOCOLS.md`).
+(example EX-04).
 
 ```bash
 python examples/protocols/ucp/shopping.py --yes

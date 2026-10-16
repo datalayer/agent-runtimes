@@ -4,7 +4,7 @@
  */
 
 /**
- * Vercel AI's voice data parts, read by the page (VOICE.md VO-36): the
+ * Vercel AI's voice data parts, read by the page (VO-36): the
  * runtime streams `data-voice.settings` after the start and `data-voice.say`
  * beside `say_aloud`'s output; the adapter hands each to the chat as an
  * activity, as AG-UI's custom events are, and the chat says the line.

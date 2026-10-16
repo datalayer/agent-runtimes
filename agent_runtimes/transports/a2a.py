@@ -45,8 +45,8 @@ class A2ATransport(BaseTransport):
     It is deliberately not an orchestrator. It does not choose a worker,
     delegate to one, aggregate results across several, or negotiate
     capabilities: those are the orchestration control plane's, and the
-    canonical model they will speak lives in `datalayer_core.orchestration`
-    (PLAN_ORCHESTRATOR.md). This docstring used to claim task delegation,
+    canonical model they will speak lives in `datalayer_core.orchestration`.
+    This docstring used to claim task delegation,
     result aggregation and capability negotiation, none of which the class
     has ever done, and a docstring that describes a design rather than a
     class is how somebody comes to depend on a feature that is not there.
@@ -371,7 +371,7 @@ def _short(value: Any, limit: int = 2000) -> str:
     return text if len(text) <= limit else text[:limit] + "…"
 
 
-# -- a harness served over A2A (SHIELD §4.2, SH-15) ---------------------------------------
+# -- a harness served over A2A (SH-15) ---------------------------------------
 
 #: The media type of a diff artifact, one per file the harness changed.
 DIFF_MEDIA_TYPE = "text/x-diff"
@@ -515,7 +515,7 @@ def plan_artifact(artifact_id: str, steps: list[dict[str, Any]]) -> "Artifact":
 
 def harness_card_skills(harness: Any) -> list[dict[str, Any]]:
     """
-    The agent card's skills for a harness, from its spec (§4.2).
+    The agent card's skills for a harness, from its spec.
 
     Parameters
     ----------
@@ -587,7 +587,7 @@ class A2AApprovals:
     """
     The runtime's approvals over A2A: ``input-required`` carrying ``approvalRequest``, answered on the same task.
 
-    The harness's *ask me first* (SHIELD §4.5) reaches an A2A caller as a
+    The harness's *ask me first* reaches an A2A caller as a
     status ``input-required`` whose message says the sentence and the options
     in words, and carries the orchestration extension's ``approvalRequest
     {toolCall, options, expiresAt}`` (ORCHESTRATOR 7.2) in its metadata. The
@@ -1020,7 +1020,7 @@ class A2AWorker(_FastA2AWorker):
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
                 # An approval a harness asks for is raised on this task as
-                # `input-required`, and answered on it (SHIELD §4.2, SH-15).
+                # `input-required`, and answered on it (SH-15).
                 "approvals": A2AApprovals(self, task_id, context_id),
             },
         )
@@ -1030,7 +1030,7 @@ class A2AWorker(_FastA2AWorker):
         final_output: str | None = None
         canceled = False
         # A harness's plan, one artifact replaced as it progresses, and its
-        # diffs, one artifact per file (SHIELD §4.2); reasoning is never an
+        # diffs, one artifact per file; reasoning is never an
         # artifact (decision 8): a `thought` event is not published at all.
         plan_id = f"plan-{task_id}"
         plan: Artifact | None = None
@@ -1079,7 +1079,7 @@ class A2AWorker(_FastA2AWorker):
                         Part(data={"tool_call": called}),
                     )
                     # A harness's tool call says its kind, title and status in
-                    # the status message's metadata (SHIELD §4.2).
+                    # the status message's metadata.
                     titled = _harness_call_meta(event.data)
                     if titled:
                         said["metadata"] = titled
@@ -1290,7 +1290,7 @@ SAY_ALOUD_TOOL = "say_aloud"
 
 def voice_settings_message(context_id: str, settings: dict[str, Any]) -> "Message":
     """
-    The voice of an agent whose answers may be heard, as an A2A status message (VOICE.md VO-36).
+    The voice of an agent whose answers may be heard, as an A2A status message (VO-36).
 
     AG-UI says it as the ``voice.settings`` custom event; A2A in the message's
     ``metadata.voice.settings``, its one data part saying the same.
@@ -1317,7 +1317,7 @@ def voice_say_message(
     context_id: str, line: str, settings: dict[str, Any]
 ) -> "Message":
     """
-    A line the agent says aloud (``say_aloud``) as an A2A status message (VOICE.md VO-36).
+    A line the agent says aloud (``say_aloud``) as an A2A status message (VO-36).
 
     AG-UI says it as the ``voice.say`` custom event; A2A as the line in a
     text part, captioned, with ``metadata.voice.say`` naming the voice and

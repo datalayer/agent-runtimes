@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A host's turns: its person, its deployment, each turn once (plans/SLACK.md §4.3).
+"""A host's turns: its person, its deployment, each turn once.
 
 A host — Datalayer's Slack app, an editor, a desktop app — runs a session with
 the host token ai-agents exchanged for its installation's key and a linked
@@ -330,7 +330,7 @@ CONTRACTS = json.loads(
 def test_a_turn_carries_its_provenance_as_the_contract_says(
     runtime: Runtime, remote: TestClient, hosted: Any
 ) -> None:
-    """plans/DISCORD.md §4.3, §4.4 (SLACK S-204): the turn itself carries
+    """S-204: the turn itself carries
     where it comes from, at most 1 KiB, and a retry naming another
     provenance is another request."""
     turn = CONTRACTS["external_turn"]

@@ -7,7 +7,7 @@ One loop, several front-ends. What a command *is* lives here; how it is drawn
 belongs to whichever front-end is driving — a prompt_toolkit terminal, the
 browser workspace, a JupyterLab panel.
 
-The lifecycle, written in Python (LOOP §10, P-30)::
+The lifecycle, written in Python (P-30)::
 
     from agent_runtimes import loop
 

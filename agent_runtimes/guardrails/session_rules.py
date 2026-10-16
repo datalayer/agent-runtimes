@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Rules a person adds to a running session (SHIELD §6.3, SH-54; decision 7's scope).
+"""Rules a person adds to a running session (SH-54, decision 7's scope).
 
 From the session panel — the page's Rules card, the phone's, the terminal — a
 person **adds or tightens** a rule on a session while it runs: in force at

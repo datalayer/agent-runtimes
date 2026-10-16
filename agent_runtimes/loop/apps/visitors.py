@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Signed-out sessions, on the visitors' runtime (plans/LOOP.md, R-30).
+"""Signed-out sessions, on the visitors' runtime (R-30).
 
 A visitor without an account talks to an application written as a spec on a
 runtime kept warm for everybody without one: the runtime image the pools run, started with

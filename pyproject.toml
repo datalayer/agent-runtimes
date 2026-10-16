@@ -56,14 +56,14 @@ dependencies = [
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
-    # each re-declaring its own copy of the same strings (ORCHESTRATOR.md,
-    # O3-02). Unconditional, not under the `a2a` extra below: delegation
+    # each re-declaring its own copy of the same strings (O3-02).
+    # Unconditional, not under the `a2a` extra below: delegation
     # metadata is read on the ACP path too. 1.0.0 is the first release under
     # semver proper (the 0.0.x releases made no compatibility promise across
     # even a patch bump, hence the one-release-wide pin until then); the
     # field-name constants it exports are the ones 0.0.3 made public.
     "agent-teams>=1.0.0,<2",
-    # Agent Shield: the Shield's engine (plans/SHIELD.md §5.1, decision 14) —
+    # Agent Shield: the Shield's engine (decision 14) —
     # the policy model and `decide`, the ACP channel and proxy, the audit
     # vocabulary, the SaaS client. agent-runtimes hosts it; it never imports
     # agent-runtimes. Distribution `datalayer-agent-shield`, import `agent_shield`
@@ -78,7 +78,7 @@ dependencies = [
     "datalayer-agent-shield>=0.2.4,<0.3",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
-    # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0;
+    # the environments client is typed with (D-14), in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
@@ -98,11 +98,11 @@ dependencies = [
     # reported it, arrived in 1.2.2.
     # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable
     # descriptor: `from_agentspec` reads the contract and gives it an A2A
-    # endpoint (ORCHESTRATOR.md, O2-07). Below it, every capability query
+    # endpoint (O2-07). Below it, every capability query
     # answers nothing.
     # 1.2.8 sends a secret's value as it is, with no marker and nothing to
     # decode: one representation end to end, which is what
-    # `datalayer secrets create` writes with (PLAN_ENVS.md E3-05).
+    # `datalayer secrets create` writes with (E3-05).
     "datalayer-core>=1.2.12",
     "fastapi",
     "filelock>=3.20.3",
@@ -202,13 +202,13 @@ a2a = [
 # It was imported and declared nowhere — the same defect O0-17 found in
 # ai-agents, and with the same failure: a dependency reached for at the
 # moment of doing the work is missing in every deployment that did not
-# happen to have it. The durable worker runs both adapters (19.8), so it is
+# happen to have it. The durable worker runs both adapters, so it is
 # `agent-runtimes[a2a,acp]` that it needs, and neither extra is optional
 # there.
 acp = [
     "agent-client-protocol>=0.7.1",
 ]
-# Voice at the terminal (VOICE.md VO-16): the microphone and speaker of the
+# Voice at the terminal (VO-16): the microphone and speaker of the
 # machine, faster-whisper to hear and Kokoro to say answers here; never a
 # default dependency. `python -m agent_runtimes.voice.store` fills the store
 # (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
@@ -336,7 +336,7 @@ test = [
     "typing-extensions>=4.15.0",
     # The build hook's own test imports it (test_agent_pages).
     "hatchling",
-    # The word error rate of the voice checks (VOICE.md VO-51).
+    # The word error rate of the voice checks (VO-51).
     "jiwer>=4.0.0",
     # A notebook an application writes analyses in pandas and charts in
     # matplotlib; its test runs one (test_output_formats).
@@ -362,7 +362,7 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
 # The agent protocols, each a Reactor plugin, delivered together as the
-# `agent-protocols` Reactor Extension (AGENT_PROTOCOLS §3.1): a host that
+# `agent-protocols` Reactor Extension: a host that
 # discovers extensions gets MCP, A2A, Web Bot Auth, PACT, UCP and Agentic
 # Commerce, each with its points (PAP's plugins are the PAP SDK's own).
 [project.entry-points."datalayer.reactor.extensions"]

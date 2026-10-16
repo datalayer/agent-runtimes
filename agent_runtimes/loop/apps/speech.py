@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application hears (LOOP P-22, VOICE.md VO-46): ``@app.audio``.
+"""What an application hears (P-22, VO-46): ``@app.audio``.
 
 A turn's sound comes in chunks and is heard by the engines a page's and
 ``loop --voice``'s are: a WAV recording on this machine when the pinned

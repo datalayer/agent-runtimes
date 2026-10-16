@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An organization's own harness, served on the runtime (SHIELD.md SH-46, decision 4).
+"""An organization's own harness, served on the runtime (SH-46, decision 4).
 
 The shared catalogue's ``custom`` harness names no command; an organization
 names one in its own catalogue — IAM's organization document, beside its own

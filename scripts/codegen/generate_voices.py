@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Generate the voice catalogue (VOICE.md VO-40) in Python and TypeScript.
+Generate the voice catalogue (VO-40) in Python and TypeScript.
 
 Read through ``agentspecs.speech``, which refuses a voice or a model whose
 licence the register does not allow: what is generated has passed it.
@@ -74,7 +74,7 @@ def generate_python_code(
             "# Copyright (c) 2025-2026 Datalayer, Inc.",
             "# Distributed under the terms of the Modified BSD License.",
             '"""',
-            "The voice catalogue (VOICE.md VO-40): voices and speech models.",
+            "The voice catalogue (VO-40): voices and speech models.",
             "",
             "This file is AUTO-GENERATED from agentspecs (voices, speech-models).",
             "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -143,7 +143,7 @@ def generate_typescript_code(
             " */",
             "",
             "/**",
-            " * The voice catalogue (VOICE.md VO-40): voices and speech models.",
+            " * The voice catalogue (VO-40): voices and speech models.",
             " *",
             " * This file is AUTO-GENERATED from agentspecs (voices, speech-models).",
             " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -246,7 +246,7 @@ def generate_typescript_code(
             "",
             "/**",
             " * The speech-to-text model for a language, on the device: Moonshine where it",
-            " * hears it, Whisper otherwise (VOICE.md decision 3).",
+            " * hears it, Whisper otherwise (decision 3).",
             " */",
             "export function transcriberFor(language: string): SpeechModelSpec | undefined {",
             "  const base = language.split('-')[0];",

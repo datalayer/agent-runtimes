@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's Python examples, run (SHIELD.md SH-23, REVIEWS G-10).
+"""The Shield's Python examples, run (SH-23, G-10).
 
 ``examples/shield`` is what the harnesses pages and the README point a reader
 at; each script is run here as the README runs it — its own process, on the

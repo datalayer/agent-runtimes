@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A checkpoint that outlives its process, kept per execution (ORCHESTRATOR.md, O2-05).
+"""A checkpoint that outlives its process, kept per execution (O2-05).
 
 Each store here is a fresh object over the same SQLite file, the way a
 restarted process — or another process of the same runtime — reads it.

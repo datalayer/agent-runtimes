@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""The runtime's authorizer, subject and lent-tool classes for the Shield (SHIELD §6.10, §6.11; SH-70, SH-72, SH-75).
+"""The runtime's authorizer, subject and lent-tool classes for the Shield (SH-70, SH-72, SH-75).
 
 On Datalayer the Shield never holds OpenFGA's address: the runtime hands it
 ``agent_shield.saas.IamAuthorizer`` — IAM's AuthZen route, asked with the
@@ -34,7 +34,7 @@ from agent_runtimes.loop.apps import pap_connections
 logger = logging.getLogger(__name__)
 
 #: The classes Datalayer's default session document needs an authorizer's allow for
-#: (§6.11) everywhere: a connection granted at a company (``send``, ``buy``).
+#: everywhere: a connection granted at a company (``send``, ``buy``).
 DATALAYER_AUTHORIZE: tuple[str, ...] = ("send", "buy")
 
 #: And in a runtime pod's workspace, where the platform writes the relationship at

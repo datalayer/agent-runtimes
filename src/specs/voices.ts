@@ -4,7 +4,7 @@
  */
 
 /**
- * The voice catalogue (VOICE.md VO-40): voices and speech models.
+ * The voice catalogue (VO-40): voices and speech models.
  *
  * This file is AUTO-GENERATED from agentspecs (voices, speech-models).
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -631,7 +631,7 @@ export function voiceFor(language: string): VoiceSpec | undefined {
 
 /**
  * The speech-to-text model for a language, on the device: Moonshine where it
- * hears it, Whisper otherwise (VOICE.md decision 3).
+ * hears it, Whisper otherwise (decision 3).
  */
 export function transcriberFor(language: string): SpeechModelSpec | undefined {
   const base = language.split('-')[0];

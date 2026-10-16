@@ -961,7 +961,7 @@ class AgentClient(
         List all available environments.
 
         The platform's, then the user environments of the caller and of its
-        organizations (PLAN_ENV.md, E1-01), every page of them.
+        organizations (E1-01), every page of them.
 
         Parameters
         ----------
@@ -1106,8 +1106,7 @@ class AgentClient(
         environment : str, optional
             Environment type (e.g., "ai-agents-env"). Type of resources needed
             (cpu, gpu, etc.). A user environment is named through the same
-            argument, as ``<account-handle>/<name>`` or by its uid (PLAN_ENV.md,
-            D-2).
+            argument, as ``<account-handle>/<name>`` or by its uid (D-2).
         version : Optional[Union[int, str]], optional
             The version of a user environment to launch: its number, or a
             version uid. Without one the promoted version launches (E1-19).
@@ -1124,12 +1123,11 @@ class AgentClient(
             a Volume attachment mounts its Volume.
         from_snapshot_uid : Optional[str], optional
             The uid of the snapshot to restore into the runtime, when the caller
-            holds the uid rather than the name (a benchmark task's sandbox is
-            restored from the snapshot its result names, BENCHMARK.md B3-05).
+            holds the uid rather than the name (a benchmark task's sandbox is restored from the snapshot its result names, B3-05).
             ``snapshot_name`` looks the uid up by name; this skips the lookup.
         parent_reservation_uid : Optional[str], optional
-            The execution tree the runtime is metered against (ORCHESTRATOR.md,
-            O1-07): its reservation gets no more than the tree has left.
+            The execution tree the runtime is metered against (O1-07):
+            its reservation gets no more than the tree has left.
         app_spec : Optional[dict[str, Any]], optional
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made
@@ -1146,7 +1144,7 @@ class AgentClient(
             # What a second costs is READ FROM THE LISTING, never written
             # here: a platform entry carries its pool's rate, and a user
             # environment the rate of the size class its promoted version
-            # names (PLAN_ENV.md, D-4, E1-19).
+            # names (D-4, E1-19).
             burning_rate, size_class = entry.burning_rate, entry.size_class
         else:
             # Somebody else's published version is in nobody's listing but

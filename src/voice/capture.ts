@@ -4,7 +4,7 @@
  */
 
 /**
- * The microphone, for one press (VOICE.md VO-10, VO-62): opened by a
+ * The microphone, for one press (VO-10, VO-62): opened by a
  * gesture, shown while open, closed when the press ends or is cancelled.
  * What it heard is kept in memory only, until it is transcribed.
  *

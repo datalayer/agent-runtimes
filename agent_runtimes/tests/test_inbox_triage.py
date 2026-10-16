@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Inbox triage, end to end, on a mailbox of example mail (LOOP §8.6, W-01 to W-07).
+"""Inbox triage, end to end, on a mailbox of example mail (W-01 to W-07).
 
 The catalogue's Appspec, its rules, its record and Gmail's tools — under the
 names and with the arguments the Google Workspace server gives them — served

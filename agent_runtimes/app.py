@@ -1200,7 +1200,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
 
-        # A harness named by `loop --harness` (SHIELD §4.9): its agent made
+        # A harness named by `loop --harness`: its agent made
         # at startup through the create route, as any agent is, so the
         # Shield decides its actions and a refusal is the route's sentence.
         harness_id = os.environ.get("AGENT_RUNTIMES_HARNESS")
@@ -1545,7 +1545,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
     app.add_middleware(OwnRoutesOnly)
 
-    # A caller's trace continued into the request (SHIELD §6.8, SH-51):
+    # A caller's trace continued into the request (SH-51):
     # inside OwnRoutesOnly, so a refused request opens no span.
     from .monitoring.otel import TraceContextMiddleware
 

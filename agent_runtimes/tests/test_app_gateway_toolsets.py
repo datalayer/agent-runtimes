@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's run reaches the Datalayer MCP gateway as the application (plans/STUDIO.md, R-25).
+"""An application's run reaches the Datalayer MCP gateway as the application (R-25).
 
 A session's run goes through the agent's AG-UI app, which reached the gateway
 with the runtime's key: whatever its launcher may reach. An application's run

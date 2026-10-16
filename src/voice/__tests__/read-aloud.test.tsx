@@ -4,7 +4,7 @@
  */
 
 /**
- * *Read aloud* (VOICE.md VO-21, `on_request`): under each answer the agent
+ * *Read aloud* (VO-21, `on_request`): under each answer the agent
  * has finished, a button that reads that answer from its start — what was
  * being said stops first.
  */

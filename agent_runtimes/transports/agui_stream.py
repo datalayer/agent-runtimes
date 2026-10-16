@@ -176,7 +176,7 @@ async def agui_events(
                     message_id=str(uuid.uuid4()),
                     tool_call_id=call_id,
                     # `_meta["reactor.ui/display"]` beside the result, as the
-                    # page reads every protocol display (SHIELD §4.3, SH-16).
+                    # page reads every protocol display (SH-16).
                     content=json.dumps(
                         {
                             key: data[key]

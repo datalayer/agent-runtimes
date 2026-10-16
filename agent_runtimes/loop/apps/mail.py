@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A mailbox for a worker that sorts mail (plans/LOOP.md §8.6: Inbox triage).
+"""A mailbox for a worker that sorts mail (Inbox triage).
 
 Inbox triage reaches mail through Gmail's tools, as the catalogue's Google
 Workspace server serves them (`google-workspace__search_gmail_messages`…).

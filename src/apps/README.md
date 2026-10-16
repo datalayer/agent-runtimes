@@ -259,7 +259,7 @@ const isReady = useSignalValue(ready);
 ## Rules the shell holds you to
 
 - **No providers.** The entry point owns the theme, the router and the query
-  client; a plugin that mounts its own fights the host. See §3.5 of the plan.
+  client; a plugin that mounts its own fights the host.
 - **Theme through the tokens.** Colours come from the Primer tokens the host set;
   no plugin reads `prefers-color-scheme` itself.
 - **Keep the entry light.** Anything a plugin's `index` imports lands in the

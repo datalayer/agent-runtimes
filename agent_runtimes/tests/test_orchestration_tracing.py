@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""One trace across the tree (PLAN_ORCHESTRATOR.md, section 10, O0-11).
+"""One trace across the tree (O0-11).
 
 A two-level delegation has to read as one trace: the parent's span, the
 child's span under it, one span per attempt below that, and every canonical
-event on whichever of those was current. The identifiers of section 10 are
+event on whichever of those was current. The correlation identifiers are
 what make a span placeable afterwards, and they are read off the event the
 store already stamped rather than computed a second time.
 
@@ -187,10 +187,10 @@ class TestTheTree:
         assert span.attributes["orchestration.protocol"] == "a2a"
 
     def test_a_child_with_a_session_carries_all_seven(self, monkeypatch):
-        """Section 10 asks for seven, and a child mid-dispatch knows them all.
+        """Seven are asked for, and a child mid-dispatch knows them all.
 
         Asserting against the declared tuple rather than a list written out
-        here is what makes an identifier added to section 10 fail this test
+        here is what makes an identifier added to the correlation identifiers fail this test
         instead of quietly never being emitted.
         """
         parent = an_execution(execution_id="exec_parent")

@@ -45,7 +45,7 @@ export const getExampleGroup = (id: string): string => {
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
   // The other agent protocols' examples: signed requests, commerce (AGENT_PROTOCOLS EX-10).
   if (id.startsWith('Protocol')) return 'Agent protocols';
-  // The Shield: a coding agent behind it, and its policy (SHIELD.md SH-23).
+  // The Shield: a coding agent behind it, and its policy (SH-23).
   if (id.startsWith('Shield')) return 'Shield';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';

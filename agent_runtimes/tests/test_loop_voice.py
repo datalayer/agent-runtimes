@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice at the terminal (VOICE.md VO-15, VO-16, VO-17): ``loop --voice`` and
+"""Voice at the terminal (VO-15, VO-16, VO-17): ``loop --voice`` and
 ``/voice``, where what is said is heard, and the refusals in a sentence. The
 microphone, the speaker and the speech service are stand-ins on the real
 shapes; nothing here needs sounddevice.
@@ -594,7 +594,7 @@ def _whisper_here(tmp_path: Path, monkeypatch) -> None:
 def test_on_datalayer_what_is_said_is_heard_and_said_there_whatever_is_here(
     tmp_path, monkeypatch
 ):
-    """VO-16, LOOP §10.2: `loop --cloud` hears and speaks on Datalayer, even with the extra and the store here."""
+    """VO-16: `loop --cloud` hears and speaks on Datalayer, even with the extra and the store here."""
     _kokoro_here(tmp_path, monkeypatch)
     _whisper_here(tmp_path, monkeypatch)
     assert voice.Hearing(models_dir=tmp_path, token="t0k").where == "local"

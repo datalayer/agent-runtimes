@@ -198,7 +198,7 @@ class EvalsMixin:
         account_uid: Optional[str] = None,
     ) -> dict[str, Any]:
         """What an experiment can run: the subject kinds, which execute, and
-        the models AI Inference offers (BENCHMARK.md, B2-11).
+        the models AI Inference offers (B2-11).
         """
         return self._evals_request(
             "/subjects",
@@ -494,7 +494,7 @@ class EvalsMixin:
             account_uid=account_uid,
         )
 
-    # --- Launches (BENCHMARK.md, B2-03, B2-07, B2-15) ---
+    # --- Launches (B2-03, B2-07, B2-15) ---
 
     def _launch_body(
         self,

@@ -11,7 +11,7 @@ beside it — the shape ``resolveToolResult`` (``@datalayer/reactor/ui``) reads.
 The model's message keeps the model view alone.
 
 An agent whose answers may be heard has its voice said right after
-``RUN_STARTED``: a ``voice.settings`` custom event (VOICE.md VO-35).
+``RUN_STARTED``: a ``voice.settings`` custom event (VO-35).
 """
 
 from __future__ import annotations

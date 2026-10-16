@@ -139,7 +139,7 @@ class TerminalChannel:
             if title:
                 self.console.print(f"[dim]▹ {title}, closed.[/dim]", highlight=False)
         elif isinstance(event, Said):
-            # A line said aloud (VOICE.md VO-46): captioned here.
+            # A line said aloud (VO-46): captioned here.
             self.console.print("[dim]said aloud:[/dim] ", end="")
             self.console.print(event.text, markup=False, highlight=False)
         elif isinstance(event, Interrupted):

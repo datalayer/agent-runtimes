@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The A2A binding (PLAN_ORCHESTRATOR.md, sections 7.1, O0-06).
+"""The A2A binding (O0-06).
 
-Standard A2A first: the mapping is the one in the plan's table — an
+Standard A2A first: the mapping is the one in the mapping table — an
 execution is a Task, an objective is a Message, a status is a task status,
 an output is an Artifact, a cancel is a task cancellation — and a worker
 that has never heard of Datalayer is expected to work. What travels in the
@@ -18,11 +18,11 @@ would be a second set of those decisions, and they would diverge; so the
 the ``agent.subagent`` phases to whatever the parent was already listening
 to, and it turns the same phases into canonical observations.
 
-What a plain A2A worker does not get is 19.8's fifth decision, and it is
+What a plain A2A worker does not get is the fifth decision, and it is
 declared in ``A2A_CAPABILITIES`` rather than discovered:
 
 - No acceptance acknowledgement. A2A's ``submitted`` says an endpoint took
-  the message; section 6.3 exists because that is not a worker taking
+  the message; the acknowledgement milestones exist because that is not a worker taking
   responsibility. This adapter reports ``received`` there and never
   ``accepted``.
 - No checkpoint, no steering, no pause, no resume, no terminate. A2A has
@@ -45,7 +45,7 @@ routes its card names, on the worker's own origin; and a task that ends
 ``canceled`` naming the checkpoint it kept is read as a pause, not a
 cancellation.
 
-The trace (section 10, O0-11) is carried the only way standard A2A leaves
+The trace (O0-11) is carried the only way standard A2A leaves
 open: a ``traceparent`` header on the HTTP requests the relay makes, which
 reaches them because the attempt span instruments ``httpx`` rather than
 because this module reaches into a client it does not own. A worker that
@@ -166,7 +166,7 @@ _NO_CHECKPOINTED = (
     "checkpoint, so recovery here is a retry and not a resume."
 )
 
-#: 19.8's fifth decision as data: created, assigned, running, completed,
+#: the fifth decision as data: created, assigned, running, completed,
 #: failed, cancelled, artifacts and cancellation, and nothing else.
 A2A_CAPABILITIES = AdapterCapabilities(
     protocol=AgentProtocol.A2A,
@@ -209,7 +209,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
             "that never heard of Datalayer does not serve it",
         ),
     ),
-    #: Never 'accepted': see the module docstring and section 6.3.
+    #: Never 'accepted': see the module docstring.
     acknowledgements=frozenset(
         {
             AcknowledgementKind.RECEIVED,
@@ -232,7 +232,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
         "The trace reaches the worker as a traceparent header on the HTTP "
         "requests, not in the A2A message, so a worker that reads only the "
         "message body shows as a broken link rather than a second trace "
-        "(section 10, O0-11).",
+        "(O0-11).",
     ),
 )
 
@@ -330,7 +330,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         Returns
         -------
         AdapterCapabilities
-            19.8's fifth decision.
+            the fifth decision.
         """
         return A2A_CAPABILITIES
 
@@ -946,7 +946,7 @@ class A2AWorkerAdapter(WorkerAdapter):
             return await relay_a2a_task(
                 remote,
                 objective_prompt(execution, attempt),
-                # One tree, one A2A context: the plan's table maps context
+                # One tree, one A2A context: the mapping table maps context
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
@@ -1161,7 +1161,7 @@ def _extension_route(worker: ResolvedWorker, name: str) -> str | None:
     Where the worker's card says an operation of the extension is asked.
 
     The card comes from the worker, so what it names is not followed to
-    anywhere else (section 9): only a path is taken, and it is joined to the
+    anywhere else: only a path is taken, and it is joined to the
     origin the worker was resolved at, so the token the request carries
     never goes to a host a card chose.
 
@@ -1283,7 +1283,7 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     if not seen.acknowledged:
         # The first status of any kind is the endpoint saying it has the
         # message. That is 'received', and on standard A2A it is the only
-        # acknowledgement there is (19.8, decision 5).
+        # acknowledgement there is (decision 5).
         seen.acknowledged = True
         observations.append(
             Observation.acknowledged(

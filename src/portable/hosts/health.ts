@@ -4,13 +4,12 @@
  */
 
 /**
- * Liveness and readiness (SLACK §10, S-101; DISCORD §10): `/healthz` says the
+ * Liveness and readiness (S-101): `/healthz` says the
  * process answers; `/readyz` says it can take durable work now — its store
  * and its queue answer — and never asks the host or Datalayer, so a
  * transient outage of either does not take the pods out of service: accepted
  * work waits in the queue instead. And the window a signed host request's
- * timestamp must fall in. Moved from the Slack service (plans/DISCORD.md
- * DC-004).
+ * timestamp must fall in. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/health
  */
@@ -102,7 +101,7 @@ export function healthServer(checks: ReadinessChecks): Server {
   });
 }
 
-/** How far a signed host request's timestamp may be from now, either way (SLACK §7.1, 1; DISCORD §7.1, 1). */
+/** How far a signed host request's timestamp may be from now, either way. */
 export const REQUEST_WINDOW_SECONDS = 5 * 60;
 
 /**

@@ -5,7 +5,7 @@
 
 /**
  * A person's voice settings, as a React state that follows every change —
- * the composer's menu, a settings page, another tab (VOICE.md VO-30).
+ * the composer's menu, a settings page, another tab (VO-30).
  *
  * @module voice/useVoiceSettings
  */

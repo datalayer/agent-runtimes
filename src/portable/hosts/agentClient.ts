@@ -7,10 +7,10 @@
  * A chat host's turns on Datalayer: the host credential exchange, a turn
  * started or sent on the deployment's session API (idempotent by the host's
  * event id), its AG-UI stream reduced to semantic events, and its session
- * mapped to the host's thread so approvals and completions are delivered
- * (SLACK §4.3, DISCORD §4.3). What is the host's own (its thread key, the
+ * mapped to the host's thread so approvals and completions are delivered.
+ * What is the host's own (its thread key, the
  * session uid, the place, the delivery target, its words) is injected as a
- * `HostShape`. Moved from the Slack service (plans/DISCORD.md DC-004).
+ * `HostShape`. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/agentClient
  */
@@ -66,8 +66,7 @@ export interface AgentClient<P> {
 
 /**
  * Maps a session to its host place again, once the place changed after the
- * turn started (plans/DISCORD.md §3.2: Discord's answer thread exists only
- * once the answer is shown, so the target is PUT again with it).
+ * turn started (Discord's answer thread exists only once the answer is shown, so the target is PUT again with it).
  */
 export interface SessionBinder<P> {
   /** Whether the session was mapped: `false` where nothing binds (development's credentials). */
@@ -79,7 +78,7 @@ export type Place = Readonly<{ kind: 'channel' | 'direct'; id: string }>;
 
 /**
  * Where a turn comes from, as the session API takes it on the turn itself
- * (`provenance`, plans/DISCORD.md §4.3, §4.4; at most 1 KiB): the host's
+ * (`provenance`, at most 1 KiB): the host's
  * kind, the place, the thread and the message.
  */
 export type TurnProvenance = Readonly<{
@@ -128,7 +127,7 @@ export type HostKeyLookup<P> = (
 ) => Promise<string | undefined>;
 
 /**
- * The host credential exchange (SLACK §4.3, 1): the installation's key and
+ * The host credential exchange: the installation's key and
  * the host user it speaks for, exchanged at ai-agents for a fifteen-minute
  * host token of the linked person and one deployment.
  */
@@ -368,9 +367,9 @@ export async function* agUiEventsOf(
 
 /**
  * The host's Datalayer client: a turn is started or sent on the deployment's
- * session API (idempotent by the host's event id, SLACK §4.3, 2), its AG-UI
+ * session API (idempotent by the host's event id), its AG-UI
  * stream reduced to semantic events, and its session mapped to the host's
- * thread so that approvals and completions are delivered (§4.3, 3).
+ * thread so that approvals and completions are delivered.
  */
 /** A refusal's `detail` when the answer is FastAPI's JSON, its status alone otherwise. */
 async function refusalDetailOf(response: Response): Promise<string> {

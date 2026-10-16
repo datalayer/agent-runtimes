@@ -5,8 +5,7 @@
 
 /**
  * Every protocol plugin held to its `reactor-points.json`, the same files
- * `agent_runtimes/tests/test_protocols_reactor_points.py` reads (AGENT_PROTOCOLS
- * §3.1): exported under its id, declared by its plugin, its default
+ * `agent_runtimes/tests/test_protocols_reactor_points.py` reads: exported under its id, declared by its plugin, its default
  * contributed at order 100 (or none), replaced by a lower order, gone with
  * the host's plugin, and two at the same winning order failing closed.
  */

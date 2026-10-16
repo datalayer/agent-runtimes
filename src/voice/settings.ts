@@ -4,7 +4,7 @@
  */
 
 /**
- * A person's own voice settings (VOICE.md VO-30), and what a chat's voice is
+ * A person's own voice settings (VO-30), and what a chat's voice is
  * once they are taken into account (VO-14, VO-25).
  *
  * An application says what voice it wants — `interface.voice` in its spec,
@@ -35,7 +35,7 @@ export const RATE_RANGE = { min: 0.5, max: 2, default: 1 } as const;
 export const VOLUME_RANGE = { min: 0, max: 1, default: 1 } as const;
 /**
  * How much longer than usual the person pauses before they are done
- * (VOICE.md VO-69): the silence that stops a microphone clicked on, and the
+ * (VO-69): the silence that stops a microphone clicked on, and the
  * one that ends a hands-free turn, times this.
  */
 export const PAUSE_RANGE = { min: 1, max: 4, default: 1 } as const;

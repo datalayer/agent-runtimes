@@ -7,7 +7,7 @@
  * The clock a host's rate limiter waits on: the system's, or a test's fake.
  * Each host keeps its own limiter (Slack's method spacing, Discord's
  * buckets), since what a 429 says differs by host. Moved from the Slack
- * service (plans/DISCORD.md DC-004).
+ * service (DC-004).
  *
  * @module portable/hosts/rateLimit
  */

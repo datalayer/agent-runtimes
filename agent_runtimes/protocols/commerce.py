@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What every commerce protocol shares (AGENT_PROTOCOLS §3, *one approval model*).
+"""What every commerce protocol shares (*one approval model*).
 
 A purchase over UCP or the Agentic Commerce Protocol is never one call: the
 checkout becomes an exact, revisioned :class:`CheckoutProposal`, the person

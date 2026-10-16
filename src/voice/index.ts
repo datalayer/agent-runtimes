@@ -4,7 +4,7 @@
  */
 
 /**
- * Voice: agents that listen and speak (VOICE.md).
+ * Voice: agents that listen and speak.
  *
  * Push-to-talk heard on the device (Moonshine, Whisper, Silero VAD, from
  * Datalayer's origin and as pinned), answers spoken by Datalayer's speech
@@ -90,7 +90,7 @@ export interface ChatVoice {
   /** ai-agents, whose speech service says the answers, and hears where the browser does not. */
   speechUrl?: string;
   /**
-   * Where what is said is heard (§5): `device`, the browser; `server`,
+   * Where what is said is heard: `device`, the browser; `server`,
    * Datalayer's speech service; `auto`, the default, the browser where a
    * model there hears the language, else the server. The Appspec's
    * `interface.voice.where`.

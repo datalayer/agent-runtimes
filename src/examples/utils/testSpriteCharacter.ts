@@ -8,7 +8,7 @@
  * floating assistant's gallery: an `agent.js` and a `map.png` sprite sheet
  * of ten 48×48 cells, read through the same reader a person's files go
  * through (`readClippyCharacter`). It is a test sprite drawn for Datalayer —
- * no file of Microsoft's is in the repository (§6.9).
+ * no file of Microsoft's is in the repository.
  *
  * Its animations carry the names the Office characters use, so the reader's
  * `stateAnimations` gives every state of the assistant one of its own:

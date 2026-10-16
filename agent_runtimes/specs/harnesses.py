@@ -3,7 +3,7 @@
 """
 Harness Catalog.
 
-An agent program driven over the Agent Client Protocol (SHIELD.md SH-01).
+An agent program driven over the Agent Client Protocol (SH-01).
 
 This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

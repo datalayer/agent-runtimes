@@ -67,7 +67,7 @@ class TestItIsWrittenToTheProtocol:
 
 
 class TestARuntimeOfAnExecutionTree:
-    """The tree a runtime is metered against reaches Runtimes (ORCHESTRATOR.md, O1-07)."""
+    """The tree a runtime is metered against reaches Runtimes (O1-07)."""
 
     def _posted(self, **kwargs: Any) -> dict[str, Any]:
         transport = _Transport(_Response(payload={"success": True, "runtime": {}}))

@@ -4,8 +4,8 @@
  */
 
 /**
- * What every commerce protocol shares (AGENT_PROTOCOLS §3, one approval
- * model) — the twin of `agent_runtimes.protocols.commerce`. A purchase over
+ * What every commerce protocol shares (one approval model)
+ * — the twin of `agent_runtimes.protocols.commerce`. A purchase over
  * UCP or the Agentic Commerce Protocol is an exact, revisioned
  * {@link CheckoutProposal}, approved by the person through the host's
  * {@link CheckoutApprover} (contributed to each plugin's `<protocol>.approver`),

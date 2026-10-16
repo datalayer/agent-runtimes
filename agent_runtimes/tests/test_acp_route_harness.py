@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""ACP in, ACP out (SHIELD.md §4.7, SH-17): the runtime's ACP server driving a harness.
+"""ACP in, ACP out (SH-17): the runtime's ACP server driving a harness.
 
 An IDE connects to the runtime's ACP endpoint and gets the fake harness: its
 ``session/new`` opens the adapter's session in the runtime's workspace (the

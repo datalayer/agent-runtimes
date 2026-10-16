@@ -4,8 +4,8 @@
  */
 
 /**
- * What only the runtime knows of voice, as it says it over AG-UI (VOICE.md
- * VO-35) and Vercel AI (VO-36): `voice.settings` — the running application's
+ * What only the runtime knows of voice, as it says it over AG-UI (VO-35)
+ * and Vercel AI (VO-36): `voice.settings` — the running application's
  * voice and language, at a run's start — and `voice.say` — a short line the
  * agent wants heard and not written (*One moment*), shown as a caption while
  * it is said. The chat reads `voice.say` from a run's custom events

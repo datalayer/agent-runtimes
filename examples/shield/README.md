@@ -2,7 +2,7 @@
 
 Examples of a coding agent — Claude Code, Codex, any agent speaking the
 [Agent Client Protocol](https://agentclientprotocol.com) — run behind the
-Shield (`plans/SHIELD.md` §4, §5.2, §6; box SH-23). Each runs on a **fake
+Shield (box SH-23). Each runs on a **fake
 agent** first: the ACP SDK agent the tests drill every harness on
 ([`agent_runtimes/tests/fixtures/acp_fake_agent.py`](../../agent_runtimes/tests/fixtures/acp_fake_agent.py)),
 which needs no model and no key. What a prompt makes it do: `edit` asks to

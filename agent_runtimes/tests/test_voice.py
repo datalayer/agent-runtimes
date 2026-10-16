@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice on the runtime's side (VOICE.md VO-27, VO-29, VO-44, VO-45)."""
+"""Voice on the runtime's side (VO-27, VO-29, VO-44, VO-45)."""
 
 import json
 from typing import Any

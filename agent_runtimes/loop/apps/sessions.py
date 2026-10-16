@@ -3,7 +3,7 @@
 
 """The session API: an application's sessions over the wire (LOOP R-04).
 
-The lifecycle of §10 — start, message, press, settings change, stop and
+The lifecycle — start, message, press, settings change, stop and
 resume — for the sessions of an application whose agent runs on this
 runtime, each streamed as the AG-UI events the chat already reads. The routes
 are `agent_runtimes.routes.apps`'; this module is what they drive.
@@ -715,7 +715,7 @@ class LiveSession:
         """Whether its application's code reacts to it."""
         return self.host is not None
 
-    # --- the rules while running (SHIELD §6.3, SH-54) --------------------------------
+    # --- the rules while running (SH-54) --------------------------------
 
     def _shield(self) -> Any:
         """The harness this session's agent runs on, when it is one (an ``ACPAgent``)."""
@@ -1125,7 +1125,7 @@ class LiveSession:
                 )
             )
         elif isinstance(event, Said):
-            # A line said aloud (VOICE.md VO-46): the page says and captions
+            # A line said aloud (VO-46): the page says and captions
             # it as it does an agent's `voice.say` (VO-35).
             self.emit(
                 CustomEvent(
@@ -2408,7 +2408,7 @@ def new_session(
     )
     # Who opened it, on its record (LOOP R-31): a person the runtime
     # verified; an embed's visitor or one not signed in is nobody known.
-    # A host's person opened it as themselves (plans/SLACK.md §4.3).
+    # A host's person opened it as themselves.
     # By name too, when their token says it: who it signs for (LOOP I-10).
     recorder.opened(
         uid,

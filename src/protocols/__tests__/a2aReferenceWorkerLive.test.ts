@@ -6,7 +6,7 @@
 /**
  * `A2AAdapter` against a real, separately-running
  * `agent_teams.a2a.reference_worker` process — a genuine cross-process,
- * cross-language drill, not a mock of either side (ORCHESTRATOR.md, O3-03,
+ * cross-language drill, not a mock of either side (O3-03,
  * closing the one gap its own note named: "not proven end to end against
  * a live, running reference worker, because no reference worker exists
  * yet" — O3-04 built one, this is that drill).

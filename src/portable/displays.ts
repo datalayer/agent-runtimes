@@ -23,7 +23,7 @@
  *   where the conversation stands — participation.
  * - **A handoff** (`pap_handoff`'s answer): handed to the company's people,
  *   or why not.
- * - **A diff** (`…shield.diff+json`, SHIELD §4.3): what a coding agent
+ * - **A diff** (`…shield.diff+json`): what a coding agent
  *   changed in one file — its path, what it held, what it holds now, the
  *   file's language — drawn as a unified diff (`unifiedDiffLines`).
  * - **A terminal** (`…shield.terminal+json`): what it ran — the command, the
@@ -447,7 +447,7 @@ export const replyAuthor = (
     ? `${company}, one of its people`
     : `${company}, its agent`;
 
-// -- a diff and a terminal (SHIELD §4.3, SH-16) ------------------------------------
+// -- a diff and a terminal (SH-16) ------------------------------------
 
 const countLines = (value: string): number =>
   value === '' ? 0 : value.split('\n').length - (value.endsWith('\n') ? 1 : 0);

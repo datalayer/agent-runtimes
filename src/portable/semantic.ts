@@ -11,7 +11,7 @@
  * (`__tests__/semantic.unit.test.ts`) and by the runtime that emits the
  * events (`agent_runtimes/tests/test_semantic_events_contract.py`).
  *
- * Moved from the Slack service (plans/DISCORD.md DC-005, SLACK S-004, S-205).
+ * Moved from the Slack service (DC-005, S-004, S-205).
  *
  * @module portable/semantic
  */

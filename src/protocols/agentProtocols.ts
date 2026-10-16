@@ -6,7 +6,7 @@
 /**
  * The `agent-protocols` Reactor Extension: the protocol plugins, delivered
  * together. An Extension only groups plugins for delivery; it has no
- * lifecycle and contributes nothing (AGENT_PROTOCOLS §3.1).
+ * lifecycle and contributes nothing.
  *
  * @module protocols/agentProtocols
  */

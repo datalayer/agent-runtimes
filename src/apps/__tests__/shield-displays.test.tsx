@@ -5,7 +5,7 @@
 
 /**
  * A coding agent's diff and terminal are drawn by the web chat where its
- * tool results carry them (SHIELD §4.3, SH-16): the result's
+ * tool results carry them (SH-16): the result's
  * `_meta["reactor.ui/display"]`, as the runtime sends it over AG-UI, resolved
  * by the embedded display's type whatever the tool is called.
  */

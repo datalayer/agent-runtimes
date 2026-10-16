@@ -237,7 +237,7 @@ class AGUIClient:
             tools: Optional tool definitions for the agent.
             identities: Optional OAuth identities for tool authentication.
             forwarded_props: What goes with the run besides the conversation:
-                ``voice``, how a spoken message was heard (VOICE.md VO-27).
+                ``voice``, how a spoken message was heard (VO-27).
 
         Yields:
             AGUIEvent objects for each SSE event.

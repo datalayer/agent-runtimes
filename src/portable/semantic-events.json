@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The semantic agent events a chat host renders (Slack, Discord: plans/DISCORD.md DC-005, plans/SLACK.md S-004, S-205), and the AG-UI events of agent-runtimes' session API (agent_runtimes/routes/apps.py, agent_runtimes/loop/apps/sessions.py, agent_runtimes/loop/apps/external_turns.py) each reduces to. src/portable/semanticOfAgUi.ts reduces every case (src/portable/__tests__/semantic.unit.test.ts); agent_runtimes/tests/test_semantic_events_contract.py holds the cases to what the runtime emits.",
+  "about": "The semantic agent events a chat host renders (Slack, Discord:  DC-005, S-004, S-205), and the AG-UI events of agent-runtimes' session API (agent_runtimes/routes/apps.py, agent_runtimes/loop/apps/sessions.py, agent_runtimes/loop/apps/external_turns.py) each reduces to. src/portable/semanticOfAgUi.ts reduces every case (src/portable/__tests__/semantic.unit.test.ts); agent_runtimes/tests/test_semantic_events_contract.py holds the cases to what the runtime emits.",
   "kinds": [
     "text",
     "progress",

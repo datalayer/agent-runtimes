@@ -150,7 +150,7 @@ class CliTux:
             extra_suggestions: Additional suggestions provided via --suggestions flag
             startup_message: Optional startup summary line shown right after banner
             where: Where the agent runs when it is not this machine, in words
-            voice: Listen with this machine's microphone, Ctrl+T to start and stop (VOICE.md VO-15)
+            voice: Listen with this machine's microphone, Ctrl+T to start and stop (VO-15)
             speak: Say the answers through this machine's speaker (VO-15)
                 (a cloud runtime on Datalayer, reached through ``server_url``)
         """
@@ -186,12 +186,12 @@ class CliTux:
         )
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
-        # Voice at the terminal (VOICE.md VO-15): the microphone on Ctrl+T,
+        # Voice at the terminal (VO-15): the microphone on Ctrl+T,
         # the answers said with --speak; made on first use.
         self.voice = voice
         self.speak = speak
         self._voice_session: Any = None
-        # How the next message was said, sent with it (VOICE.md VO-15, VO-27).
+        # How the next message was said, sent with it (VO-15, VO-27).
         self._spoken_line: Optional[Dict[str, str]] = None
 
         # Initialize slash commands. The registry is the source of truth —
@@ -609,7 +609,7 @@ class CliTux:
         if self._voice_session is None:
             from agent_runtimes.voice.cli import Hearing, Speaker, VoiceSession
 
-            # On Datalayer (`--cloud`), heard and said there (VO-16, LOOP §10.2).
+            # On Datalayer (`--cloud`), heard and said there (VO-16).
             on_datalayer = bool(self.where)
             self._voice_session = VoiceSession(
                 hearing=Hearing(on_datalayer=on_datalayer),

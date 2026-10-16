@@ -356,7 +356,7 @@ def _run_agent_runtime_server(
             sandbox_variant = agent_spec.sandbox_variant
 
     if os.environ.get("AGENT_RUNTIMES_HARNESS"):
-        # A harness (SHIELD §4.9): the runtime makes its agent at startup
+        # A harness: the runtime makes its agent at startup
         # from the catalogue, named `chat`; no library agent, no codemode.
         os.environ["AGENT_RUNTIMES_AGENT_NAME"] = DEFAULT_RUNTIME_AGENT_NAME
         serve_server(
@@ -1231,13 +1231,13 @@ def main_callback(
         help=(
             "Run a harness of the catalogue (claude-code, codex, …) on this machine "
             "over ACP, in the directory you run from, with decision 5's policy and "
-            "the record in the terminal (SHIELD.md §4.9); `loop harnesses` lists them."
+            "the record in the terminal; `loop harnesses` lists them."
         ),
     ),
     voice: bool = typer.Option(
         False,
         "--voice",
-        help="Listen with this machine's microphone: Ctrl+T (or /voice) starts and stops, the words go on the prompt line (VOICE.md VO-15; needs agent-runtimes[voice]).",
+        help="Listen with this machine's microphone: Ctrl+T (or /voice) starts and stops, the words go on the prompt line (VO-15, needs agent-runtimes[voice]).",
     ),
     speak: bool = typer.Option(
         False,
@@ -1283,13 +1283,13 @@ def main_callback(
         _show_version()
         raise typer.Exit(0)
 
-    # A harness runs on this machine, in this directory (SHIELD §4.9):
+    # A harness runs on this machine, in this directory:
     # resolved here, before anything starts, so a refusal is a sentence in
     # this terminal rather than a runtime that never answers.
     if harness:
         if cloud or runtime or agentspec_id:
             raise typer.BadParameter(
-                "--harness runs on this machine, in this directory (SHIELD §4.9): "
+                "--harness runs on this machine, in this directory: "
                 "drop --cloud, --runtime and --agentspec-id."
             )
         try:
@@ -2004,7 +2004,7 @@ def _prepare_harness(harness_id: str) -> None:
 
 @app.command()
 def harnesses() -> None:
-    """List the harnesses of the catalogue, each with its terms (SHIELD.md §4.9).
+    """List the harnesses of the catalogue, each with its terms.
 
     A harness is a coding agent — Claude Code, Codex, Gemini CLI, goose,
     OpenCode, OpenHands — or any program speaking the Agent Client Protocol,

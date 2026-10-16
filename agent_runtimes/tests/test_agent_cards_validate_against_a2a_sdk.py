@@ -4,7 +4,7 @@
 """Every card `to_agent_card()` writes validates against a real, independent
 A2A client — not `fasta2a`, which Datalayer already depends on and already
 shapes to its own needs, but `a2a-sdk`, the project's own reference
-implementation (ORCHESTRATOR.md, O4-01, section 7.1).
+implementation (O4-01).
 
 Found on 2026-09-12, evaluating O4-01's own claim ("a catalogued agentspec is
 consumable by a third-party A2A client with no Datalayer dependency"): it

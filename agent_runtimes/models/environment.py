@@ -6,7 +6,7 @@ Environment models for Datalayer.
 
 Provides data structures for environment management in Datalayer environments:
 the entries of the environments listing, and the records of the registry of
-user environments (PLAN_ENV.md, section 9). A version's specification, its
+user environments. A version's specification, its
 states and its capability reports are the canonical models of
 ``code_sandboxes.environments`` (D-14). A trial answers the runtime it
 launched, snake_case as ``POST /runtimes`` answers one (E1-14).
@@ -88,7 +88,7 @@ class EnvironmentModel(BaseModel):
         return f"EnvironmentModel(name='{self.name}', title='{self.title}')"
 
 
-# -- The registry (PLAN_ENV.md, section 9) ---------------------------------------
+# -- The registry ---------------------------------------
 
 
 class _RegistryRecord(BaseModel):
@@ -204,7 +204,7 @@ class EnvironmentBuildRecord(_RegistryRecord):
     region: str
     attempt: int = 1
     #: What this build is for: ``build``, or ``resolve`` — a build that stops
-    #: once the version has its lock (PLAN_ENVS.md E1-26). A build recorded
+    #: once the version has its lock (E1-26). A build recorded
     #: before the term existed has none, and every one of them is a build.
     kind: str = "build"
     idempotency_key: str = ""
@@ -397,7 +397,7 @@ class _RuntimeAnswer(BaseModel):
 
 
 class LaunchedEnvironmentArtifact(_RuntimeAnswer):
-    """The artifact a runtime was started from, as its answer names it (section 7.6, E1-11)."""
+    """The artifact a runtime was started from, as its answer names it (E1-11)."""
 
     uid: str = ""
     variant: str = ""

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the Phase 0 execution store (PLAN_ORCHESTRATOR.md, O0-04).
+"""Tests for the Phase 0 execution store (O0-04).
 
 What is being proved is not that a dictionary can hold a record. It is that
 the rules live in one place: the lifecycle decides a state change, an

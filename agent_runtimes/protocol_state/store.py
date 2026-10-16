@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Where a runtime keeps what its protocols promised (ORCHESTRATOR.md, O1-11).
+Where a runtime keeps what its protocols promised (O1-11).
 
 An A2A task a client was given the id of, and an ACP session a client can
 load again, outlive the process that served them: they are records here, not

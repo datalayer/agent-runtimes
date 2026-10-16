@@ -6,16 +6,16 @@
 import type { ApprovalPresentation } from './contracts';
 
 /**
- * Typed approval renderers (plans/SLACK.md §2 rule 6, S-302; plans/DISCORD.md
- * §3.6). A host offers Approve and Reject only when a renderer that knows the
+ * Typed approval renderers (S-302).
+ * A host offers Approve and Reject only when a renderer that knows the
  * tool proves that every material argument is shown: each argument the server
  * presented is named by the renderer, or the card fails closed. An unknown
  * tool, an argument the renderer does not know, an attachment, and every
  * action that is not mail (reads, writes, other sends, destructive, financial,
- * publishing, executing) are reviewed in Datalayer (SLACK §15, 5, decided by
- * the user on 16 October 2026: mail only). They render ai-agents' presentation v1, a different input
+ * publishing, executing) are reviewed in Datalayer (decided by the user on 16 October 2026: mail only).
+ * They render ai-agents' presentation v1, a different input
  * from `../approvals.ts` and `../approvalCard.ts`. Moved from the Slack
- * service (plans/DISCORD.md DC-004).
+ * service (DC-004).
  *
  * @module portable/hosts/approvalRenderers
  */
@@ -41,8 +41,7 @@ type Renderer = Readonly<{
 
 /**
  * Action classes that are decided in Datalayer only: every class but `send`,
- * since only mail is decided in a host (decided by the user on 16 October
- * 2026, SLACK §15, 5).
+ * since only mail is decided in a host (decided by the user on 16 October 2026).
  */
 export const DATALAYER_ONLY = new Set<ApprovalPresentation['action_class']>([
   'read',
@@ -166,7 +165,7 @@ const mail: Renderer = {
   },
 };
 
-/** Everything but mail: shown, decided only in Datalayer (§15, 5). */
+/** Everything but mail: shown, decided only in Datalayer. */
 const datalayerOnly: Renderer = {
   name: 'datalayer-only',
   matches: presentation => DATALAYER_ONLY.has(presentation.action_class),

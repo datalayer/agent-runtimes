@@ -519,7 +519,7 @@ def build_capabilities_from_agent_spec(
         )
 
     # Answers that may be heard are written for the ear too: an agent spec's
-    # own voice (VOICE.md VO-41, VO-44); an application's is joined by
+    # own voice (VO-41, VO-44); an application's is joined by
     # app_capabilities.
     from ..voice import agent_voice_capability
 

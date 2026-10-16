@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""UCP as a Reactor plugin (AGENT_PROTOCOLS §3.1, PR-30 to PR-32).
+"""UCP as a Reactor plugin (PR-30 to PR-32).
 
 Points it declares:
 

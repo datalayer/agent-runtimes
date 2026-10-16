@@ -2,7 +2,7 @@
 
 Ada asks her application, *Atlas*, one question — *where is my jacket order,
 and when do I fly?* — whose answer is at two businesses speaking two
-consent protocols (example EX-07 of `plans/AGENT_PROTOCOLS.md`):
+consent protocols (example EX-07):
 
 - **Manzanita Outfitters**, a company over the
   [Personal Agent Protocol](https://personal-agent-protocol.datalayer.tech)

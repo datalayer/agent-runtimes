@@ -4,7 +4,7 @@
  */
 
 /**
- * The PAP examples of K-01 to K-07 (plans/PAP.md K-09), drawn: each view
+ * The PAP examples of K-01 to K-07 (K-09), drawn: each view
  * replays its redacted trace, every step reachable with *Next step*, each
  * step's title, summary and channel shown in turn, and the parties named.
  */

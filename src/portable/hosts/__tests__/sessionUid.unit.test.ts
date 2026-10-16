@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** One host thread, one session uid (plans/DISCORD.md DC-004, §4.3). */
+/** One host thread, one session uid (DC-004). */
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';

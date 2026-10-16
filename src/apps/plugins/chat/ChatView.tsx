@@ -194,11 +194,11 @@ type ChatControls = {
   newChat: () => void;
   /** The conversation the next message goes to (AG-UI's thread). */
   thread: () => string;
-  /** Stops the agent's voice: the chat's own speaker (VOICE.md VO-10). */
+  /** Stops the agent's voice: the chat's own speaker (VO-10). */
   stopSpeaking?: () => void;
-  /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it (VOICE.md VO-13). */
+  /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it (VO-13). */
   voiceLevel?: () => number;
-  /** Marks the answer spoken over *interrupted* (VOICE.md VO-13). */
+  /** Marks the answer spoken over *interrupted* (VO-13). */
   markInterrupted: () => void;
 };
 
@@ -371,7 +371,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [busy, setBusy] = useState(false);
   const [sendReady, setSendReady] = useState(false);
-  // The agent's voice speaks (VOICE.md VO-10): the composer's *Stop speaking*.
+  // The agent's voice speaks (VO-10): the composer's *Stop speaking*.
   const [speaking, setSpeaking] = useState(false);
   const [presenceTool, setPresenceTool] = useState<PresenceTool>({
     open: false,
@@ -592,7 +592,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         return hostClosedRef.current;
       }
       // Said into the composer, then sent: how it was heard rides on the
-      // run, and the chat marks the message spoken (VOICE.md VO-27).
+      // run, and the chat marks the message spoken (VO-27).
       const spoken = spokenRef.current;
       spokenRef.current = undefined;
       const forwardedProps = runForwardedProps(
@@ -1466,7 +1466,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [draft, setDraft] = useState('');
   /*
-   * Its voice (VOICE.md VO-10, VO-11, VO-49): the microphone in the
+   * Its voice (VO-10, VO-11, VO-49): the microphone in the
    * workspace's composer, which this view holds — the words written in it as
    * they are heard. The chat speaks its answers itself (`voice` below).
    */
@@ -1635,7 +1635,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   /*
    * Its voice asked of the speech service as this chat speaks to its runtime
-   * (VOICE.md VO-37, VO-19): the host's token, else this one — a visitor's,
+   * (VO-37, VO-19): the host's token, else this one — a visitor's,
    * an embed's or the person's; an embed's names its deployment (decision 16).
    */
   const askedVoice = useMemo(
@@ -2348,8 +2348,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // or one opened from the person's history (P-24).
               key={chatThread?.id}
               thread={chatThread}
-              // Its voice, when its host gives one (an application's
-              // `interface.voice`, VOICE.md VO-49): the microphone in the
+              // Its voice, when its host gives one (an application's `interface.voice`, VO-49):
+              // the microphone in the
               // composer, its answers heard.
               voice={askedVoice}
               // The header says why, beside the title, for the same reason the

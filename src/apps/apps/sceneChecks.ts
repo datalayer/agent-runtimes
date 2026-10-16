@@ -4,7 +4,7 @@
  */
 
 /**
- * One validation of a scene (plans/STUDIO.md S-10), said in agentspecs' own
+ * One validation of a scene (S-10), said in agentspecs' own
  * sentences: what the spec editor refuses, the stage refuses and `loop`
  * refuses, in the same words wherever a person meets them.
  *
@@ -44,8 +44,8 @@
  *
  * It lives in agent-runtimes beside the application's checks (`checks.ts`),
  * so that every shell that edits a scene — the Studio, and agent-runtimes' own —
- * refuses the same things in the same words (plans/STUDIO.md S-10; moved from
- * the landing 2026-10-10). `__tests__/scene-checks.test.ts` holds it to what
+ * refuses the same things in the same words (S-10, moved from the landing 2026-10-10).
+ * `__tests__/scene-checks.test.ts` holds it to what
  * agentspecs itself says, sentence for sentence.
  *
  * @module apps/apps/sceneChecks

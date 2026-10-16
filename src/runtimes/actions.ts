@@ -100,7 +100,7 @@ export async function createRuntime(
    *
    * Without one this is, byte for byte, the request every runtime has been
    * launched with since before user environments existed, and the platform
-   * resolves the promoted version itself (PLAN_ENV.md, §7.6, D-2, E1-11).
+   * resolves the promoted version itself (D-2, E1-11).
    */
   const environment: Record<string, unknown> = {
     name: options.environmentName,

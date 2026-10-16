@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Teams of harnesses (SHIELD.md SH-45): an orchestrator delegating to two harness workers.
+"""Teams of harnesses (SH-45): an orchestrator delegating to two harness workers.
 
 The ``coding-agents`` team of the catalogue — Claude Code writes, Codex
 reviews — run on the ACP SDK's fake agent standing in for both programs (no

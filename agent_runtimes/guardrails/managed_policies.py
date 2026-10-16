@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's policies from IAM, on a runtime (SHIELD §6.7, SH-50; decisions 10 and 11).
+"""The Shield's policies from IAM, on a runtime (SH-50, decisions 10 and 11).
 
 A Datalayer runtime is **managed**: the organization's and the teams' Shield
 documents are IAM's, pulled for the account the runtime runs under
@@ -9,7 +9,7 @@ documents are IAM's, pulled for the account the runtime runs under
 /mcp-policies/shield/accounts/{account_uid}`` with the runtime's token),
 kept until their ``expires``, and polled every thirty seconds while any
 agent of the runtime listens — so a change an administrator saves reaches a
-running harness within a minute. **Pushed too** (§6.7): while it watches, a
+running harness within a minute. **Pushed too**: while it watches, a
 managed runtime holds a socket to ai-agents' ``/ws`` (the one the approvals
 ride, authenticated with the same token, so it sits on the account's own
 channel) and, told ``shield_policy_changed`` — IAM tells ai-agents at every

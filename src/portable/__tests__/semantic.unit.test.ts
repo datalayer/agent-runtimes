@@ -6,7 +6,7 @@
  */
 
 /**
- * The semantic agent events contract, version 1 (plans/DISCORD.md DC-005):
+ * The semantic agent events contract, version 1 (DC-005):
  * every case of `semantic-events.json` reduced through `semanticOf`, the
  * kinds held to the file's, and an answer's tables and citations read. The
  * runtime's side is `agent_runtimes/tests/test_semantic_events_contract.py`.

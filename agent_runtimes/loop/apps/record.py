@@ -104,7 +104,7 @@ INCLUDED_BY = {
     "turn": "conversations",
     # What the application did, step by step: with its actions (LOOP P-16).
     "step": "actions",
-    # A harness's edits whole, and its terminals' output (SHIELD §6.4, SH-34):
+    # A harness's edits whole, and its terminals' output (SH-34):
     # each is a hash and a size, or a command and an exit, unless named.
     "diff": "diffs",
     "terminal": "terminals",
@@ -618,7 +618,7 @@ class AppRecorder:
         Kept under ``conversations``; it says whether the application let its
         conversations suggest tests then (``record.suggest_tests``). A turn
         the person said aloud is kept as its transcript, marked ``spoken``
-        with how it was heard — never the sound (VOICE.md VO-29).
+        with how it was heard — never the sound (VO-29).
         """
         asked = redact(asked.strip())[:TURN_LIMIT]
         if not asked:

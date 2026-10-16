@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** Logs without secrets or words (plans/DISCORD.md DC-004, §9). */
+/** Logs without secrets or words (DC-004). */
 
 import { describe, expect, it } from 'vitest';
 import {

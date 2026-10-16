@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's agent acts as its application's principal (plans/LOOP.md, I-03).
+"""A deployment's agent acts as its application's principal (I-03).
 
 A deployed application is somebody of its own on the platform: a service
 principal, whose token names it, its owner, the deployment it acts for, and

@@ -4,7 +4,7 @@
  */
 
 /**
- * Hearing on the device (VOICE.md VO-10, VO-14, decision 3): what was said
+ * Hearing on the device (VO-10, VO-14, decision 3): what was said
  * in one press, kept to its speech by Silero VAD and transcribed by the
  * catalogue's model for the language — Moonshine for English, Whisper for
  * French — in the page, with transformers.js. The audio never leaves the
@@ -52,7 +52,7 @@ export interface HeardSoFar {
 }
 
 /**
- * What hears a press, wherever it runs (§5): in the page (`DeviceHearing`)
+ * What hears a press, wherever it runs: in the page (`DeviceHearing`)
  * or on Datalayer's servers (`ServerHearing`).
  */
 export interface Hearing {

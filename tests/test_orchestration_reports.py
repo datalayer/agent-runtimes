@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The live report of an execution (PLAN_ORCHESTRATOR.md, O1-15).
+"""The live report of an execution (O1-15).
 
 The document is the goal, one execution tree node that names the execution
 and nothing it did, and room for notes. The report is one artifact per

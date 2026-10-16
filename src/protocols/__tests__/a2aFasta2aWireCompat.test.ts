@@ -6,8 +6,7 @@
 /**
  * `A2AAdapter` against the wire shape `fasta2a`-based workers actually send
  * — not the `kind`-discriminated shape the current A2A specification
- * defines and this file was originally written against (ORCHESTRATOR.md,
- * O3-03).
+ * defines and this file was originally written against (O3-03).
  *
  * `fasta2a.schema.SendMessageResult` and `StreamResponse` wrap every
  * result in a named key (`{ task }`, `{ statusUpdate }`, `{ message }`,
@@ -21,7 +20,7 @@
  * real Datalayer A2A worker was ever rendered.
  *
  * Every fixture below is copied from a real run of
- * `agent_teams.a2a.reference_worker` (ORCHESTRATOR.md O3-04), not
+ * `agent_teams.a2a.reference_worker` (O3-04), not
  * hand-idealized — the same worker
  * `a2aOrchestrationExtension.test.ts`'s negotiation claims are checked
  * against.

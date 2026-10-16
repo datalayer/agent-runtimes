@@ -249,7 +249,7 @@ def cancel_all_prompts() -> int:
     return count
 
 
-# -- ACP in, ACP out (SHIELD §4.7, SH-17) --------------------------------------------------
+# -- ACP in, ACP out (SH-17) --------------------------------------------------
 
 
 class PermissionRelay:
@@ -560,7 +560,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
         websocket.headers.get("authorization"),
         websocket.headers.get("x-external-token"),
     )
-    # The IDE's answers to a harness's permissions (SHIELD §4.7, SH-17).
+    # The IDE's answers to a harness's permissions (SH-17).
     relay = PermissionRelay(websocket)
 
     try:
@@ -945,7 +945,7 @@ async def _handle_new_session(
         getattr(agent, "workspace", None) if hasattr(agent, "harness") else None
     )
     if harness_workspace is not None:
-        # ACP in, ACP out (SHIELD §4.7, decision 6): the harness's session is
+        # ACP in, ACP out (decision 6): the harness's session is
         # the adapter's, in the runtime's workspace, lent the application's
         # connections; the IDE's cwd and mcpServers are not what it gets.
         logger.info(
@@ -1024,7 +1024,7 @@ async def _handle_prompt(
         logger.info(f"ACP: Using model from request metadata: {model}")
 
     # Audio the client sent is heard first, with the connection's token, and
-    # the prompt is its transcript, marked spoken (VOICE.md VO-28).
+    # the prompt is its transcript, marked spoken (VO-28).
     from ..voice import hear
     from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
 
@@ -1122,7 +1122,7 @@ async def _handle_prompt(
     context_metadata["steer_run"] = session_id
     if relay is not None:
         # A harness's *ask me first* reaches this IDE with the same options,
-        # and nothing a Rule already decided does (SHIELD §4.7, SH-17).
+        # and nothing a Rule already decided does (SH-17).
         context_metadata["approvals"] = RelayApprovals(relay, session_id)
 
     context = AgentContext(
@@ -1504,7 +1504,7 @@ def _convert_event_to_session_update(
         call_id = str(call.get("id") or call.get("tool_call_id") or uuid.uuid4())
         if "kind" in call:
             # A harness's tool call, relayed as it was said: its kind, its
-            # status, its locations, its displays (SHIELD §4.7).
+            # status, its locations, its displays.
             update = {
                 "toolCallId": call_id,
                 "title": str(call.get("name") or ""),

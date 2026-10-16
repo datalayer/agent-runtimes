@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A harness served over A2A (SHIELD.md §4.2, SH-15), on the ACP SDK's fake agent.
+"""A harness served over A2A (SH-15), on the ACP SDK's fake agent.
 
 The worker publishes the harness's plan as one artifact replaced as it
 progresses, each file it changed as a ``text/x-diff`` artifact named by its
@@ -443,7 +443,7 @@ async def test_one_trace_from_the_a2a_caller_to_the_harness_and_the_lent_gateway
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SHIELD §6.8, SH-51: the caller's ``traceparent`` is the turn's trace, the harness's ``_meta.traceparent``, and the shim's header.
+    """SH-51: the caller's ``traceparent`` is the turn's trace, the harness's ``_meta.traceparent``, and the shim's header.
 
     What the A2A face establishes on the request (`TraceContextMiddleware`,
     tested on its own) is what `InMemoryBroker.run_task` captures for the

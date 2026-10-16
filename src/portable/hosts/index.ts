@@ -9,7 +9,7 @@
  * semantic events a turn is reduced to, approval renderers, deliveries, the
  * turn's state, application resolution, the durable queue, quotas, secrets
  * at rest, observability, dead letters, health, the shared schema and the
- * forbidden-graph gate (plans/DISCORD.md §4.2, DC-004, DC-005).
+ * forbidden-graph gate (DC-004, DC-005).
  *
  * Imported as `@datalayer/agent-runtimes/lib/portable/hosts`, and only by a
  * Node service, which bundles it with esbuild. It reaches `src/portable/` and

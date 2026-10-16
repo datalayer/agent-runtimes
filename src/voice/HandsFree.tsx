@@ -4,8 +4,8 @@
  */
 
 /**
- * *Talk with it*: a conversation by voice, hands-free (VOICE.md VO-12,
- * VO-13), beside the composer's microphone where the application's voice
+ * *Talk with it*: a conversation by voice, hands-free (VO-12, VO-13),
+ * beside the composer's microphone where the application's voice
  * says `input: hands_free`.
  *
  * On, the microphone stays open. The words are written in the composer as

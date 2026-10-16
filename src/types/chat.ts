@@ -888,20 +888,20 @@ export interface ChatBaseProps {
        */
       thread: () => string;
       /**
-       * Stops the agent's voice (VOICE.md VO-10): the chat's own speaker,
+       * Stops the agent's voice (VO-10): the chat's own speaker,
        * for a host whose composer holds the microphone and *Stop speaking*.
        * Absent while its answers are not heard.
        */
       stopSpeaking?: () => void;
       /**
-       * How loud the chat's speaker plays now, 0 to 1 (VOICE.md VO-13): a
+       * How loud the chat's speaker plays now, 0 to 1 (VO-13): a
        * host's hands-free gates barge-in on it. Absent while its answers
        * are not heard by a speaker that gives a level.
        */
       voiceLevel?: () => number;
       /**
-       * Marks the answer the person spoke over *interrupted* (VOICE.md
-       * VO-13), for a host whose composer holds the microphone.
+       * Marks the answer the person spoke over *interrupted* (VO-13),
+       * for a host whose composer holds the microphone.
        */
       markInterrupted: () => void;
     } | null,
@@ -909,7 +909,7 @@ export interface ChatBaseProps {
 
   /**
    * Reports whether the agent's voice is speaking, for a host that draws the
-   * composer and so its *Stop speaking* (VOICE.md VO-10).
+   * composer and so its *Stop speaking* (VO-10).
    */
   onSpeakingChange?: (speaking: boolean) => void;
 
@@ -1291,7 +1291,7 @@ export interface ChatBaseProps {
   trailingContent?: ReactNode;
 
   /**
-   * Its voice (VOICE.md V1): a microphone in the composer, push-to-talk,
+   * Its voice (V1): a microphone in the composer, push-to-talk,
    * what is said heard on the device and put in the composer — or sent, with
    * *Send what I say* — marked as spoken (VO-27).
    */
@@ -1302,7 +1302,7 @@ export interface ChatBaseProps {
 
   /**
    * The sentence the host's speaker is saying, marked in the conversation
-   * (VOICE.md VO-65); a chat that speaks for itself marks its own.
+   * (VO-65); a chat that speaks for itself marks its own.
    */
   voiceSentence?: string;
 
@@ -1312,13 +1312,13 @@ export interface ChatBaseProps {
   /**
    * How loud the host's speaker plays now, between 0 and 1 (`useVoiceSpeaker`'s
    * `level`): hands-free's barge-in counts speech only above what the answer's
-   * own sound can leave in the microphone (VOICE.md VO-13). A chat that speaks
+   * own sound can leave in the microphone (VO-13). A chat that speaks
    * for itself reads its own.
    */
   voiceLevel?: () => number;
 
   /**
-   * Reads an answer aloud (VOICE.md VO-21): given, each answer the agent has
+   * Reads an answer aloud (VO-21): given, each answer the agent has
    * finished writing has a *Read aloud* under it, which calls it with the
    * answer's text.
    */

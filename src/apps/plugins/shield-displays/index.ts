@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-shield-displays` — a coding agent's *diff* and
- * *terminal*, drawn where its tool results carry them (SHIELD §4.3, SH-16).
+ * *terminal*, drawn where its tool results carry them (SH-16).
  *
  * The runtime sends each beside the tool's result in
  * `_meta["reactor.ui/display"]`, as every protocol display travels

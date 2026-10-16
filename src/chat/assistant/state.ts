@@ -34,7 +34,7 @@ export interface AssistantMoment {
   /** The answer is arriving: words are being written. */
   speaking?: boolean;
   /**
-   * Its answer is being heard: sound is playing (VOICE.md VO-22). It speaks
+   * Its answer is being heard: sound is playing (VO-22). It speaks
    * while the audio plays, even after the text has ended.
    */
   voicing?: boolean;

@@ -109,7 +109,7 @@ def remember_for(caller: Any, token: str) -> None:
     if kind == "local" or (kind == "person" and uid and uid == identity.user_uid):
         who = Rememberer(user_id=identity.user_id, token=token)
     elif kind in ("person", "host") and uid:
-        # A host's person is that person, through a host (plans/SLACK.md §4.3).
+        # A host's person is that person, through a host.
         who = Rememberer(user_id=uid, token=token)
     elif kind == "embed":
         who = Rememberer(withheld=EMBEDDED)

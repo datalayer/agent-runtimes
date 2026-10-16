@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /voice — listen with the microphone, Ctrl+T to start and to stop (VOICE.md VO-15)."""
+"""Slash command: /voice — listen with the microphone, Ctrl+T to start and to stop (VO-15)."""
 
 from __future__ import annotations
 

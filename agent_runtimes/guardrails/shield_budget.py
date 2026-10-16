@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The model budget and the spend limit, soft then hard, on every model request (SHIELD §6.3, SH-32, SH-54).
+"""The model budget and the spend limit, soft then hard, on every model request (SH-32, SH-54).
 
 The limits are the Shield's — ``limits.model_tokens`` (the budget, in tokens)
 and ``limits.spend`` (credits, 100 a USD) of the policies in force: the

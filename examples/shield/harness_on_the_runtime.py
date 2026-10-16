@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A coding agent behind the Shield, on the local runtime (SHIELD §4.9, SH-23 a).
+"""A coding agent behind the Shield, on the local runtime (SH-23 a).
 
 What ``loop --harness <id>`` starts, started here in the same way: the
 runtime's server on this machine, the harness made at startup through the

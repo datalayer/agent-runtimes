@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's connections in the name of who uses it (plans/LOOP.md, I-04).
+"""A deployment's connections in the name of who uses it (I-04).
 
 The gateway's servers an application reaches in each user's name are reached
 with the token of the person talking to it, which IAM mints from what they let

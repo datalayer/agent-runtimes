@@ -6,7 +6,7 @@
  */
 
 /**
- * The forbidden graph (SLACK S-005; plans/DISCORD.md DC-004, §4.2): a
+ * The forbidden graph (S-005, DC-004): a
  * lockfile's and an installed production graph, and an esbuild bundle's
  * metafile. Ported from the Slack service, with the bundle gate added.
  */

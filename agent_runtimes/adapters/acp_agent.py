@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A harness as a Datalayer agent: ``ACPAgent(BaseAgent)`` on ``agent_shield.acp`` (SHIELD §3.2, SH-10).
+"""A harness as a Datalayer agent: ``ACPAgent(BaseAgent)`` on ``agent_shield.acp`` (SH-10).
 
 A **harness** — Claude Code, Codex, any program speaking the Agent Client
 Protocol — is launched in the runtime as a subprocess over stdio and driven
@@ -9,10 +9,10 @@ as the runtime drives its own agents: ``initialize`` launches it from its
 spec and negotiates (protocol version 1, the client's ``fs`` and ``terminal``
 capabilities on, answered here); ``stream`` opens or loads a session in the
 workspace, prompts, and turns every ``session/update`` into the runtime's
-``StreamEvent``s (§4.1's table); ``cleanup`` cancels and ends the process.
+``StreamEvent``s (the event table); ``cleanup`` cancels and ends the process.
 
 The engine is the ``agent-shield`` package's, hosted and never copied
-(§5.1, decision 14): this class **is** a :class:`agent_shield.acp.proxy.ShieldProxy`
+(decision 14): this class **is** a :class:`agent_shield.acp.proxy.ShieldProxy`
 whose outer face is a Datalayer agent instead of an ACP client — the same
 inner client classes the harness's tool calls, decides them by the policies
 (the application's Rules, then decision 5's default), answers ``fs/*`` and
@@ -22,9 +22,9 @@ inner client classes the harness's tool calls, decides them by the policies
 - the mapping of the package's neutral events onto ``StreamEvent``s;
 - ``session/request_permission`` raised through the runtime's tool approvals
   (Waiting for you, ai-agents ``/ws``, ``GET /tool-approvals/{id}``), the
-  person's answer handed back to the harness (§4.5, SH-12); a turn cancelled
+  person's answer handed back to the harness (SH-12); a turn cancelled
   while it waits answers ``cancelled``;
-- the Shield's audit written to the application's record (§4.8, §6.4, SH-18);
+- the Shield's audit written to the application's record (SH-18);
 - ``session/load`` when the harness advertises it, the replay compared with
   the record; otherwise a start-over said in a sentence, never pretended.
 
@@ -122,13 +122,13 @@ RUNTIME_CLIENT_INFO = Implementation(
     name="agent-runtimes", title="Datalayer Agent Runtimes", version=__version__
 )
 
-#: Where a harness's workspace is: the runtime's own (SHIELD §4.6). The same
+#: Where a harness's workspace is: the runtime's own. The same
 #: variable the runtime's codemode workspace reads; ``loop --harness`` sets it
 #: to the directory it runs in.
 WORKSPACE_VARIABLE = "AGENT_RUNTIMES_WORKSPACE_ROOT"
 
 #: The kind the protocol state store keeps a harness's session under, so a
-#: runtime restarted finds the session to load (§4.8).
+#: runtime restarted finds the session to load.
 HARNESS_SESSION_KIND = "harness_session"
 
 #: Said to the person as the harness's own message, as the proxy says it.
@@ -148,7 +148,7 @@ def launch_command(harness: HarnessSpec, *, home: Path | None = None) -> list[st
     """The command that launches ``harness`` here, resolved; a refusal when nothing can.
 
     An adapter the spec launches through ``npx -y <package>@<version>`` is
-    never fetched at first run (SHIELD §5): it is looked for where
+    never fetched at first run: it is looked for where
     ``agent-shield setup --harness <id>`` installs it
     (``~/.agent-shield/harnesses/<id>@<version>/node_modules/.bin``) and
     then on the PATH, where the runtime image installs it at build (SH-05).
@@ -278,7 +278,7 @@ def advertised_problems(harness: HarnessSpec, answer: InitializeResponse) -> lis
     return problems
 
 
-# -- MCP, lent through the gateway (§4.4, SH-14) ------------------------------------------
+# -- MCP, lent through the gateway (SH-14) ------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -347,7 +347,7 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
         if query is None:
             raise HarnessRefused(
                 f"The connection {server_id!r} is not a toolset of the Datalayer MCP "
-                "gateway: a harness is lent the gateway's toolsets only (SHIELD §4.4)."
+                "gateway: a harness is lent the gateway's toolsets only."
             )
         lent.append(
             LentToolset(
@@ -355,8 +355,8 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
                 url=f"{gateway_url()}?{query}" if query else gateway_url(),
             )
         )
-    # The companies the application works with as a personal agent (SHIELD §6.10,
-    # SH-70): each a gateway toolset of its protocol at that company
+    # The companies the application works with as a personal agent (SH-70):
+    # each a gateway toolset of its protocol at that company
     # (``?only=pap&pap-company=<domain>``), reached with the execution credential
     # as any other — the harness calls pap_sign_in, pap_ask, pap_propose as tools
     # and never speaks PAP; custody, identity and the record are the gateway's.
@@ -375,7 +375,7 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
 
 
 class RecordAudit:
-    """The Shield's audit rows as the application's record (SHIELD §6.4, SH-18, SH-34).
+    """The Shield's audit rows as the application's record (SH-18, SH-34).
 
     The proxy writes one row per decision, action and answer, in the
     package's vocabulary (A-01's with ACP's kinds); here each becomes an
@@ -563,7 +563,7 @@ class RecordAudit:
             return
         if event == "display":
             # The diff or the terminal a tool result carried, as the page
-            # draws it (SH-16): whole only when the record names it (§6.4).
+            # draws it (SH-16): whole only when the record names it.
             recorder.add(
                 "tool_call",
                 f"{title}: shown",
@@ -706,12 +706,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._name = name or harness.name
         self._description = description or harness.description
         #: The gateway toolsets the application connects, lent at each
-        #: session with the run's credential (§4.4); nothing without one.
+        #: session with the run's credential; nothing without one.
         self.lent = list(lent)
         #: The caller's token, kept for a run that carries none of its own.
         self.credential = credential
         self._handles: list[str] = []
-        #: The skills and instructions written for it (§4.10), read-only to it.
+        #: The skills and instructions written for it, read-only to it.
         self.lent_files = lent_files or LentFiles()
         self.approvals = approvals
         self.recorder = recorder
@@ -747,10 +747,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: given the managed documents, the full set in force.
         self.policy_maker: Callable[[list[Policy]], list[Policy]] | None = policy_maker
         self._stop_listening: Callable[[], None] | None = None
-        # The authorizer and the subject (SHIELD §6.11, SH-72, SH-75): IAM's AuthZen
+        # The authorizer and the subject (SH-72, SH-75): IAM's AuthZen
         # route with the run's credential, the deployment or the account the run
         # acts as; the lent tools of a company classed by agentspecs' table, the
-        # companies named so that a fetch to one is refused (§6.10).
+        # companies named so that a fetch to one is refused.
         from agent_runtimes.guardrails import shield_authorizer  # noqa: PLC0415
 
         self.companies: list[str] = list(companies)
@@ -825,13 +825,13 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     @property
     def workspace(self) -> Path:
-        """The workspace the harness runs in (SHIELD §4.6)."""
+        """The workspace the harness runs in."""
         assert self.pinned_workspace is not None
         return self.pinned_workspace.root
 
     def get_tools(self) -> list[ToolDefinition]:
         """No tools of its own: a harness's native tools are its own, the lent ones the gateway's."""
-        # The harness's native tools are its own (§4.6); the lent ones are the gateway's.
+        # The harness's native tools are its own; the lent ones are the gateway's.
         return []
 
     @property
@@ -1006,7 +1006,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     async def _traced_prompt(
         self, prompt: str, acp_session: str, runtime_session: str
     ) -> PromptResponse:
-        """The turn as a span of the trace the face arrived on (§6.8, SH-51).
+        """The turn as a span of the trace the face arrived on (SH-51).
 
         A child of whatever is current — the A2A or AG-UI request's span,
         which carries the caller's ``traceparent`` — so one trace runs from
@@ -1029,7 +1029,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                     carry(handle, traceparent)
             return await ShieldProxy.prompt(self, [text_block(prompt)], acp_session)
 
-    # -- sessions (§4.8) -----------------------------------------------------------------
+    # -- sessions -----------------------------------------------------------------
 
     async def _session_for(
         self, context: AgentContext, queue: asyncio.Queue[Any]
@@ -1055,7 +1055,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
         kept = known or await self._kept_session(runtime_session)
         # What the session is lent: the gateway's toolsets with the run's
-        # credential, in the shape the harness takes (§4.4, SH-14).
+        # credential, in the shape the harness takes (SH-14).
         servers = self._lent_servers(self._bearer_of(context))
         if kept and self.loads_sessions:
             # The agent replays what it kept; the queue holds it for the comparison.
@@ -1127,7 +1127,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         await self._keep_session(runtime_session, acp_session)
         return acp_session, [_said(sentence)] if sentence else []
 
-    # -- what was written for it is read-only to it (§4.10, SH-21) ------------------------------
+    # -- what was written for it is read-only to it (SH-21) ------------------------------
 
     def decide(
         self, session: SessionState, action: Action, *, count_as: str | None = None
@@ -1155,7 +1155,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
         return ShieldProxy.decide(self, session, action, count_as=count_as)
 
-    # -- MCP lent (§4.4, SH-14) ----------------------------------------------------------------
+    # -- MCP lent (SH-14) ----------------------------------------------------------------
 
     @property
     def lends_over_http(self) -> bool:
@@ -1171,7 +1171,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         ``metadata`` ``datalayer.credential``, O1-17): the narrowest authority
         the run holds, so the lent MCP — and every sub-agent the harness
         spawns, which reaches MCP through the servers it was lent — is held
-        to that execution's manifest at the gateway (SHIELD §2.4, SH-33).
+        to that execution's manifest at the gateway (SH-33).
         Else a deployment's principal, else the run's, else the caller's.
         """
         from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
@@ -1211,7 +1211,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         if not bearer:
             raise HarnessRefused(
                 f"{self.harness.name} is lent {names}, and this run carries no credential "
-                "to reach the gateway with: nothing is lent without one (SHIELD §4.4)."
+                "to reach the gateway with: nothing is lent without one."
             )
         if self.lends_over_http:
             # Lent with the bearer as the Shield lends a credential
@@ -1223,8 +1223,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         type="http",
                         name=item.name,
                         url=item.url,
-                        # The trace the session opens on, to the gateway
-                        # (§6.8): a harness that honours `_meta.traceparent`
+                        # The trace the session opens on, to the gateway:
+                        # a harness that honours `_meta.traceparent`
                         # sends its own per turn; one that does not sends this.
                         headers=[
                             HttpHeader(name=name, value=value)
@@ -1372,7 +1372,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return None
 
     def _events_of(self, event: Event, session_id: str) -> list[StreamEvent]:
-        """Map one neutral event onto the runtime's ``StreamEvent``(s) (§4.1's table)."""
+        """Map one neutral event onto the runtime's ``StreamEvent``(s) (the event table)."""
         if isinstance(event, TextDelta):
             return [StreamEvent(type="text", data=event.text)]
         if isinstance(event, ThoughtDelta):
@@ -1431,7 +1431,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 for terminal_id in terminal_ids:
                     self._terminal_commands[terminal_id] = own_command
             if event.status in ("completed", "failed"):
-                # The page's display of the result (§4.3, SH-16): the diff,
+                # The page's display of the result (SH-16): the diff,
                 # or the terminal with its output kept after release.
                 shown = self._shown.pop(event.tool_call_id, displays)
                 terminals = [
@@ -1547,7 +1547,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         # are never handed up by `normalize`: nothing is guessed into a row.
         raise RuntimeError(f"no StreamEvent for the harness event {event.event!r}")
 
-    # -- permissions (§4.5, SH-12) -------------------------------------------------------------
+    # -- permissions (SH-12) -------------------------------------------------------------
 
     async def _person_answers(
         self,
@@ -1682,7 +1682,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         )
         await self.tell(
             session_id,
-            "answering a harness's question is not built (SHIELD §4.1, elicitation): it was declined.",
+            "answering a harness's question is not built (elicitation): it was declined.",
         )
         return {"action": "decline"}
 
@@ -1775,7 +1775,7 @@ def harness_agent(
     ----------
     credential : str
         The caller's token, which a run that carries none of its own reaches
-        the gateway with (§4.4).
+        the gateway with.
 
     Raises
     ------
@@ -1823,7 +1823,7 @@ def harness_agent(
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
     lent_names = [item.name for item in lent]
-    # The policies in force (§6.7, SH-50): IAM's documents for the account —
+    # The policies in force (SH-50): IAM's documents for the account —
     # fail closed, in a sentence naming IAM, when none can be read —, the
     # application's Rules, decision 5's default; the harness admitted by them.
     try:
@@ -1842,9 +1842,9 @@ def harness_agent(
     if refused is not None:
         raise HarnessRefused(refused)
     # The application's skills and instructions, in the harness's format,
-    # before it starts (§4.10, SH-21).
+    # before it starts (SH-21).
     lent_files = write_lent_files(root, harness, app, lent_names)
-    # The sidecar bridge (SHIELD §5, SH-40): with the pod's `datalayer-harnesses`
+    # The sidecar bridge (SH-40): with the pod's `datalayer-harnesses`
     # container beside this one, the harness runs there, reached over the
     # WebSocket channel at `<url>/acp/<harness>`; the Shield here decides the
     # same. Without it, the adapter is launched in this container.

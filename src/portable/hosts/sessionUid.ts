@@ -5,8 +5,7 @@
 
 /**
  * One host thread is one Datalayer session: its uid, derived from where the
- * thread is, so that a retry names it again (SLACK §2 rule 2, DISCORD §2
- * rule 2). Moved from the Slack service (plans/DISCORD.md DC-004).
+ * thread is, so that a retry names it again. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/sessionUid
  */

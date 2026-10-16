@@ -6,7 +6,7 @@
  */
 
 /**
- * Quotas before costly work (plans/DISCORD.md DC-004, DC-402): the rules,
+ * Quotas before costly work (DC-004, DC-402): the rules,
  * the memory store, and what the Postgres store asks of its connection
  * (Slack's Postgres run, on a real database, covers the rest).
  */

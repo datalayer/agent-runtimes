@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice at the terminal, for ``loop --voice`` (VOICE.md VO-15, VO-16, VO-17).
+"""Voice at the terminal, for ``loop --voice`` (VO-15, VO-16, VO-17).
 
 The microphone and the speaker are this machine's, through ``sounddevice``
 (MIT, PortAudio), installed with the ``voice`` extra —
@@ -20,7 +20,7 @@ service (``POST /speech/syntheses``, 16-bit PCM), and played here. The store
 is filled from Datalayer's CDN, hash-checked: ``python -m
 agent_runtimes.voice.store`` (VO-16).
 
-When ``loop`` runs its agent **on Datalayer** (``--cloud``, LOOP §10.2), what
+When ``loop`` runs its agent **on Datalayer** (``--cloud``), what
 is said is heard and answers are said **on Datalayer's servers** with the
 person's token, whatever this machine has. Only what the catalogue says runs
 on the machine (``where: machine``) is run here, and Kokoro is first asked to

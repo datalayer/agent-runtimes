@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The generic host contracts of plans/SLACK.md §4.3 and plans/DISCORD.md §4.3, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and agent-runtimes (src/portable/hosts, read by the Slack and Discord adapters from lib/portable/hosts): each side's tests check its half against this file.",
+  "about": "The generic host contracts of the chat hosts, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and agent-runtimes (src/portable/hosts, read by the Slack and Discord adapters from lib/portable/hosts): each side's tests check its half against this file.",
   "headers": {
     "host_key": "X-Datalayer-Host-Key",
     "signature": "X-Datalayer-Signature",
@@ -416,7 +416,7 @@
     }
   },
   "discord": {
-    "about": "Discord's forms of the generic contracts (plans/DISCORD.md §4.3): the installation is <application_id>:<guild_id>, a member is their snowflake, a thread is sent as its parent channel, the session uid is hostSessionUid(\"discord\", [application, guild, channel, thread]).",
+    "about": "Discord's forms of the generic contracts: the installation is <application_id>:<guild_id>, a member is their snowflake, a thread is sent as its parent channel, the session uid is hostSessionUid(\"discord\", [application, guild, channel, thread]).",
     "application_id": "123456789012345678",
     "guild_id": "234567890123456789",
     "bind_request": {

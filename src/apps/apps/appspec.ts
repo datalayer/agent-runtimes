@@ -977,7 +977,7 @@ function parseSurface(data: Data): AppSurfaceSpec {
   };
 }
 
-/** An application's voice (VOICE.md VO-41): off unless said. */
+/** An application's voice (VO-41): off unless said. */
 export const DEFAULT_VOICE: AppVoiceSpec = {
   enabled: false,
   input: 'push_to_talk',

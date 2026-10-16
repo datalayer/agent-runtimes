@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** Secrets at rest (plans/DISCORD.md DC-004; ported from the Slack service). */
+/** Secrets at rest (DC-004, ported from the Slack service). */
 
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';

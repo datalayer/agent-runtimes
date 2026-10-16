@@ -4,7 +4,7 @@
  */
 
 /**
- * Hearing on Datalayer's servers (VOICE.md VO-34, VO-14, §5): where a chat's
+ * Hearing on Datalayer's servers (VO-34, VO-14): where a chat's
  * voice hears, the recording the speech service is sent, what comes back,
  * and the person's choice to have their language detected.
  */
@@ -50,7 +50,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('Where a chat hears', () => {
   const url = 'https://r1.example';
-  it('in the browser unless the server is named and asked for (§5)', () => {
+  it('in the browser unless the server is named and asked for', () => {
     expect(hearingPlace({ language: 'en-US' })).toBe('device');
     expect(hearingPlace({ language: 'en-US', speechUrl: url })).toBe('device');
     expect(

@@ -4,8 +4,8 @@
  */
 
 /**
- * A chat's voice, from what an application or an agent says of it (VOICE.md
- * VO-41, VO-49): the `voice` a host gives `ChatBase`, `ChatFloating` or an
+ * A chat's voice, from what an application or an agent says of it (VO-41, VO-49):
+ * the `voice` a host gives `ChatBase`, `ChatFloating` or an
  * application's workspace, with Datalayer's places filled in — the browser's
  * models from Datalayer's CDN, the packages that hear loaded on first use.
  *

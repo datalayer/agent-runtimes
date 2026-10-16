@@ -12,7 +12,7 @@ given is what the specs it is configured from **declare**, read off them:
 - each skill its agent runs — the skill's ``envvars``;
 - a subagent the agent *is* by reference (``ref``), the same, read off that
   agentspec;
-- the harness its agent runs on (``harness: claude-code``, SHIELD §6.1) — the
+- the harness its agent runs on (``harness: claude-code``) — the
   harness spec's ``requires.secrets`` (Claude Code's ``ANTHROPIC_API_KEY``),
   given to the harness's process by name and to nothing else of the runtime's
   (``adapters.acp_agent.harness_environment``), never to the sandbox;

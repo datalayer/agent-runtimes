@@ -146,7 +146,7 @@ async def hear_client_audio(
     body: Any, authorization: str | None
 ) -> tuple[dict[str, Any], bytes] | Response | None:
     """
-    An AG-UI run whose newest user message carries audio, heard (VOICE.md VO-28).
+    An AG-UI run whose newest user message carries audio, heard (VO-28).
 
     The audio is heard by ai-agents' speech service with the caller's own
     token; the message becomes its transcript, marked spoken in
@@ -198,7 +198,7 @@ async def hear_client_audio(
 
 def mark_spoken(body: Any) -> None:
     """
-    Say, for the run this body starts, whether its message was said (VOICE.md VO-27).
+    Say, for the run this body starts, whether its message was said (VO-27).
 
     ``forwardedProps.voice`` is how a client that heard the person itself —
     the page, ``loop --voice`` — says so: ``{"input": "voice", "language",
@@ -401,7 +401,7 @@ class AGUITransport(BaseTransport):
                     body_bytes = await request.body()
                     body = json.loads(body_bytes)
                     # Audio a protocol client sent is heard first, and the
-                    # message is its transcript (VOICE.md VO-28).
+                    # message is its transcript (VO-28).
                     heard = await hear_client_audio(
                         body, request.headers.get("authorization")
                     )

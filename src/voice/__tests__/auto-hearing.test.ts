@@ -4,7 +4,7 @@
  */
 
 /**
- * `where: auto` (VOICE.md §5): the page chooses where each press is heard —
+ * `where: auto`: the page chooses where each press is heard —
  * on the device when a model there hears the language and loads, on the
  * speech service otherwise, and back to the device when the service refuses
  * a press (a visitor's day spent).

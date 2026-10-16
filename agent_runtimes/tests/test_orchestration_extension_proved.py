@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Proved over both protocols: paused before a restart, resumed from the checkpoint (ORCHESTRATOR.md, O2-05).
+"""Proved over both protocols: paused before a restart, resumed from the checkpoint (O2-05).
 
 Nothing is stood in for between the adapters and the model. agent-runtimes'
 own A2A and ACP routes are served on a socket, in front of a pydantic-ai agent

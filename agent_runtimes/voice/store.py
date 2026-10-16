@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The speech models on this machine, for ``loop --voice`` (VOICE.md VO-16).
+"""The speech models on this machine, for ``loop --voice`` (VO-16).
 
 The machine's store is laid out as the speech service's,
 ``<store>/<provider>/<model id>/<path>`` (``DATALAYER_SPEECH_MODELS_DIR``,

@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice on the runtime's side (VOICE.md §7): what it knows, never audio.
+"""Voice on the runtime's side: what it knows, never audio.
 
 On the web the page listens, transcribes and speaks; the runtime sees text,
-as it always has (§5). It knows three things more:
+as it always has. It knows three things more:
 
 - **an application's voice** (`voice_settings`): the block of its Appspec,
   resolved against the voice catalogue — the voice it speaks with and the

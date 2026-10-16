@@ -6,7 +6,7 @@
 /**
  * A conversation with one row of every kind, and a question waiting: the
  * fixture every renderer of `portable/views` is tested against — the web's
- * and Datalayer Mobile's (MOBILE §4.2) — so that a change of a row's words or
+ * and Datalayer Mobile's — so that a change of a row's words or
  * states is caught once.
  *
  * @module portable/fixtures
@@ -18,7 +18,7 @@ import { RUN_END_WORDS } from './records';
 /** A fresh copy of the fixture conversation. */
 /**
  * A coding agent's diff and terminal, as the runtime sends them beside a tool
- * result (`_meta["reactor.ui/display"]`, SHIELD §4.3, SH-16): what the phone
+ * result (`_meta["reactor.ui/display"]`, SH-16): what the phone
  * draws for MOBILE M-037, read by `protocolDisplayOf`.
  */
 export function shieldDisplayFixtures(): {

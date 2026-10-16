@@ -4,7 +4,7 @@
  */
 
 /**
- * A rule a person adds to a running session (SHIELD.md §6.3, SH-54): the
+ * A rule a person adds to a running session (SH-54): the
  * session API's `/apps/sessions/{uid}/rules`, read and written from the
  * Rules card beside the page, and the words it says.
  *
@@ -125,8 +125,7 @@ export function sessionRuleInWords(rule: SessionRule): string {
 /**
  * Decision 5's file and shell rules, offered on a running session in the
  * Shield's own words: each one a rule a person adds as it stands, and the
- * runtime refuses one that would loosen what the organization says
- * (SHIELD §6.2, §6.3).
+ * runtime refuses one that would loosen what the organization says.
  */
 export const FILE_AND_SHELL_RULES: readonly SessionRule[] = [
   {

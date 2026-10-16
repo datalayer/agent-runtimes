@@ -3,7 +3,7 @@
 """
 Policy Catalog.
 
-The Shield's policy documents the platform ships or shows (SHIELD.md SH-50):
+The Shield's policy documents the platform ships or shows (SH-50):
 each a catalogue entry whose ``policy`` is a document of ``agent_shield.policy``.
 
 This file is AUTO-GENERATED from YAML specifications.

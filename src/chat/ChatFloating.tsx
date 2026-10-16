@@ -327,7 +327,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
   contextMenu?: readonly AssistantMenuItem[];
 
   /**
-   * Its voice (VOICE.md V1): push-to-talk in the composer, heard on the
+   * Its voice (V1): push-to-talk in the composer, heard on the
    * device; with `output: 'always'`, its answers said by Datalayer's speech
    * service as they are written, the assistant's mouth moving with the sound
    * and its balloon showing the sentence being said.
@@ -558,7 +558,7 @@ export function ChatFloating({
   // the balloon draws them with the chat's components.
   const [ownHistory, setOwnHistory] = useState<readonly DisplayItem[]>([]);
   /*
-   * Its voice (VOICE.md V1): the answers said by the speech service, as
+   * Its voice (V1): the answers said by the speech service, as
    * they are written (VO-20), the state following the sound (VO-22).
    */
   const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);

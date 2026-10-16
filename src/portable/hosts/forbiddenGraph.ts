@@ -4,14 +4,14 @@
  */
 
 /**
- * What may never reach a host service's production code (SLACK §4.2, S-005;
- * DISCORD §4.2): Jupyter, JupyterLab, Lumino, Datalayer's Jupyter packages,
+ * What may never reach a host service's production code (S-005):
+ * Jupyter, JupyterLab, Lumino, Datalayer's Jupyter packages,
  * React, Primer, Reactor and the other host services. Checked over the
  * service's source imports, its esbuild bundle's module graph
  * (`forbiddenInBundle`, over the metafile) and the installed graph of the
  * bundle's externals (`npm ls --omit=dev --omit=peer --all`). Pure functions:
  * each service reads its files and runs them. Moved from the Slack service
- * (plans/DISCORD.md DC-004).
+ * (DC-004).
  *
  * @module portable/hosts/forbiddenGraph
  */
@@ -173,7 +173,7 @@ export type BundleMetafile = {
 const PORTABLE = /(^|\/)agent-runtimes\/lib\/portable\//;
 
 /**
- * What a service's esbuild bundle may hold (DISCORD §4.2): its own sources,
+ * What a service's esbuild bundle may hold: its own sources,
  * and agent-runtimes' `lib/portable` (by its real path: the monorepo's
  * workspace link resolves to `ai/agent-runtimes/lib/portable/…`). Every
  * other module is a package's, and refused; every external is a `node:`

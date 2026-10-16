@@ -4,7 +4,7 @@
  */
 
 /**
- * The composer's voice menu (VOICE.md VO-14, VO-21, VO-25, VO-30): beside
+ * The composer's voice menu (VO-14, VO-21, VO-25, VO-30): beside
  * the microphone, what a person chooses for themselves — the language they
  * speak and hear, when answers are heard, the voice, its speed and loudness,
  * how long they pause before they are done (VO-69), *Send what I say*, the

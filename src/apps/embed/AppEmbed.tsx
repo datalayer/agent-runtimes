@@ -17,7 +17,7 @@
  * - **panel** — the conversation at the right edge of the page, at full
  *   height;
  * - **assistant** — the application's character on the page, speaking in a
- *   balloon (§6.9): the one its Appspec names (`interface.assistant`), else
+ *   balloon: the one its Appspec names (`interface.assistant`), else
  *   the paper clip, looked up in what is contributed — Datalayer's four and
  *   the host's own plugins (T-24); an id nothing contributes is said, never
  *   replaced.
@@ -143,7 +143,7 @@ export type AppEmbedProps = {
    */
   visitors?: DatalayerVisitors;
   /**
-   * Where its voice runs (VOICE.md VO-18): Datalayer's speech service and
+   * Where its voice runs (VO-18): Datalayer's speech service and
    * the browser's models, in every mode, when its Appspec's `interface.voice`
    * is on — the microphone in its composer, its answers heard, asked with
    * the conversation's own token. None, it is drawn without a voice.

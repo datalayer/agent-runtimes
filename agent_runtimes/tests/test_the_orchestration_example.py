@@ -197,7 +197,7 @@ class TestBothRunsEndTheSameWay:
         self, runs: list[Any]
     ) -> None:
         """
-        Section 6.3's acknowledgements, which are what a caller waits on.
+        The acknowledgements, which are what a caller waits on.
 
         Parameters
         ----------
@@ -258,7 +258,7 @@ class TestWhatTheExecutionRecords:
             artifact = run.artifacts[0]
             assert artifact.status.value == "committed"
             assert len(artifact.provenance) == 1
-            # Section 5.4: an output points back at what it was made from.
+            # Artifacts: an output points back at what it was made from.
             assert artifact.provenance[0].source_references == [
                 "datalayer:notebook/nb-quarterly-revenue@3"
             ]

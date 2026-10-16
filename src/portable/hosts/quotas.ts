@@ -4,11 +4,11 @@
  */
 
 /**
- * Quotas before costly work (SLACK §9, S-404; DISCORD DC-402): questions an
+ * Quotas before costly work (S-404, DC-402): questions an
  * hour per person, installation (a Slack workspace, a Discord server),
  * organization and application, taken atomically before a turn starts at
  * Datalayer. A refusal says which limit and when it resets. Moved from the
- * Slack service (plans/DISCORD.md DC-004).
+ * Slack service (DC-004).
  *
  * @module portable/hosts/quotas
  */

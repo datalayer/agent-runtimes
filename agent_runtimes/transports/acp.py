@@ -163,7 +163,7 @@ class ACPTransport(BaseTransport):
             load_session=False,
             prompt_capabilities=PromptCapabilities(
                 image=False,
-                # Heard by the speech service before the turn (VOICE.md VO-28).
+                # Heard by the speech service before the turn (VO-28).
                 audio=True,
                 embedded_context=True,
             ),
@@ -316,7 +316,7 @@ class ACPTransport(BaseTransport):
             context = AgentContext(session_id=session_id)
 
         # Audio blocks are heard by the speech service with the session's
-        # token, the prompt their transcript (VOICE.md VO-28).
+        # token, the prompt their transcript (VO-28).
         from ..voice import hear
         from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
 

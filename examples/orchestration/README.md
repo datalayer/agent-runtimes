@@ -1,6 +1,6 @@
 # One Objective, Two Protocols, One Code Path
 
-The proof-of-concept scenario of `PLAN_ORCHESTRATOR.md` (O0-13).
+The proof-of-concept scenario of orchestration (O0-13).
 
 A parent asks for a notebook to be analysed and delegates the work twice:
 once to a worker that speaks **A2A** and once to a worker that speaks **ACP**.
@@ -32,20 +32,20 @@ Both runs go through the same five steps, in the order a control plane does
 them:
 
 1. **Resolve the worker** the descriptor names, and read back what it turned
-   out to be able to do. Decision 5 of section 19.8 requires a reduced
+   out to be able to do. Decision 5 requires a reduced
    guarantee to be _reported on the execution_ rather than hidden, so the
    first observation of every dispatch is the adapter's capability report —
    which is why the output says, in the adapter's own words, that A2A has no
    steer and ACP has no pause.
 2. **Create the execution** under the delegating command's idempotency key,
    with the notebook named as `datalayer:notebook/<uid>@<version>` rather
-   than copied into the prompt. Section 2 asks for context by reference, so
+   than copied into the prompt. Context is passed by reference, so
    that two workers analysing "the notebook" are demonstrably analysing the
    same version of it.
 3. **Record the attempt and assign it.** Choosing a worker is a control-plane
    decision and never something an adapter observes.
 4. **Dispatch**, recording every observation as canonical state. This is the
-   seam of section 4: adapters report, the control plane decides. No adapter
+   seam: adapters report, the control plane decides. No adapter
    in this example ever names a canonical state.
 5. **Arbitrate the commit.** The first attempt to reach commit wins
    (decision 4).

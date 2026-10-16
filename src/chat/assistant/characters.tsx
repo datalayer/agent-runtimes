@@ -7,7 +7,7 @@
  * Datalayer's own characters for the floating assistant (LOOP T-25): drawn
  * for LOOP and owned by Datalayer, in the spirit of the Office Assistant —
  * a paper clip of our own, a wizard, a cat and the L👀P eyes. The characters
- * of Office are Microsoft's and are never bundled (§6.9); a person loads
+ * of Office are Microsoft's and are never bundled; a person loads
  * one they hold the rights to (T-26).
  *
  * Each drawing names its moving parts with classes the stage animates by

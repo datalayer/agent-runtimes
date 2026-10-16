@@ -6,7 +6,7 @@
 /**
  * Standard Catalog.
  *
- * The standards a conformance report answers (SHIELD.md SH-60, §6.9).
+ * The standards a conformance report answers (SH-60).
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

@@ -28,7 +28,7 @@ import { HealthCheck } from '@datalayer/core/lib/models/HealthCheck';
 export interface CreateRuntimeOptions {
   /**
    * A platform environment by its name, or an environment somebody built,
-   * named `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+   * named `<account-handle>/<name>` or by its uid (D-2).
    */
   environmentName: string;
   /**
@@ -175,7 +175,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
               name: environmentName,
               // Additive: without it this is the request runtimes have always
               // been created with, and the platform resolves the promoted
-              // version itself (§7.6, E1-11).
+              // version itself (E1-11).
               ...(environmentVersion !== undefined && environmentVersion !== ''
                 ? { version: environmentVersion }
                 : {}),

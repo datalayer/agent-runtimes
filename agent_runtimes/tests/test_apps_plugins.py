@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications as Reactor plugins on the runtime (LOOP §5.4, F-12, F-13)."""
+"""Applications as Reactor plugins on the runtime (F-12, F-13)."""
 
 from __future__ import annotations
 

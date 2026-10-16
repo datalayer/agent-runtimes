@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``ACPAgent``: a harness as a Datalayer agent (SHIELD.md SH-10 to SH-13, SH-18).
+"""``ACPAgent``: a harness as a Datalayer agent (SH-10 to SH-13, SH-18).
 
 Every drill runs against the ACP SDK's own fake agent
 (``fixtures/acp_fake_agent.py``, agent-shield's): the only Anthropic key at
@@ -242,7 +242,7 @@ class TestLaunchingAndNegotiating:
 class TestEveryUpdateKind:
     pytestmark = pytest.mark.asyncio
 
-    """§4.1's table, one row at a time, on the fake agent."""
+    """The event table, one row at a time, on the fake agent."""
 
     async def test_text_thought_and_done(self, workspace: Path) -> None:
         agent = an_agent(workspace)
@@ -440,7 +440,7 @@ class TestEveryUpdateKind:
 
 
 class TestTheDisplays:
-    """SHIELD §4.3, SH-16: a diff and a terminal beside the result, as the page reads every display."""
+    """SH-16: a diff and a terminal beside the result, as the page reads every display."""
 
     @pytest.mark.asyncio
     async def test_an_edit_carries_its_diff_for_the_page_and_the_record(
@@ -553,7 +553,7 @@ class TestTheDisplays:
 class TestPermissionsAreRules:
     pytestmark = pytest.mark.asyncio
 
-    """§4.5, SH-12: do it, ask me first, leave it to me; allow_always a session rule."""
+    """SH-12: do it, ask me first, leave it to me; allow_always a session rule."""
 
     async def test_a_flagged_command_asks_and_the_persons_yes_is_handed_back(
         self, workspace: Path
@@ -632,7 +632,7 @@ class TestPermissionsAreRules:
                 "Write hello.txt",
             ]
             # And a rule of the application's (team scope) is never loosened
-            # by a session rule (§6.3): it decides first.
+            # by a session rule: it decides first.
             agent.policies[:] = [Policy(scope="team", rules=[asks]), tightened]
             (workspace / "hello.txt").unlink()
             await turn(agent, "edit", session="t")
@@ -781,7 +781,7 @@ class TestKindsAreClasses:
 class TestSessionsAndTheRecord:
     pytestmark = pytest.mark.asyncio
 
-    """§4.8, SH-18: the session kept, loaded when advertised, a start-over said."""
+    """SH-18: the session kept, loaded when advertised, a start-over said."""
 
     async def test_one_runtime_session_is_one_harness_session(
         self, workspace: Path
@@ -894,7 +894,7 @@ def connecting(*servers: str) -> SimpleNamespace:
 
 
 class TestMcpLentThroughTheGateway:
-    """SHIELD §4.4, SH-14: ``session/new.mcpServers`` is how a harness gets tools, never a credential."""
+    """SH-14: ``session/new.mcpServers`` is how a harness gets tools, never a credential."""
 
     GATEWAY = "https://mcp.datalayer.run/mcp"
 
@@ -1146,7 +1146,7 @@ def an_app(**overrides: Any) -> SimpleNamespace:
 
 
 class TestSkillsLentInTheHarnessFormat:
-    """SHIELD §4.10, SH-21: the catalogue's enabled skills as SKILL.md folders, the Appspec as the instructions file."""
+    """SH-21: the catalogue's enabled skills as SKILL.md folders, the Appspec as the instructions file."""
 
     def test_the_skills_are_written_in_the_harness_format_read_only(
         self, tmp_path: Path
@@ -1350,7 +1350,7 @@ async def test_claude_code_live(tmp_path: Path) -> None:
     assert (tmp_path / "hello.txt").exists()
 
 
-# -- the sidecar bridge (SHIELD §5, SH-40) -------------------------------------------------
+# -- the sidecar bridge (SH-40) -------------------------------------------------
 
 
 def test_the_sidecar_url_is_read_from_the_environment_and_must_be_a_websocket_one():
@@ -1388,7 +1388,7 @@ def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
 
 
 class TestPapThroughTheShield:
-    """SHIELD §6.10, SH-70, SH-72: the companies an application works with are lent
+    """SH-70, SH-72: the companies an application works with are lent
     as the gateway's ``pap`` toolset; their tools classed by agentspecs' table and
     naming the company; the run's subject and IAM's authorizer on the Shield.
     """
@@ -1550,7 +1550,7 @@ class TestPapThroughTheShield:
         document = datalayer_default()
         assert document.scope == "session" and document.authorize == ["send", "buy"]
         assert policies_of(None, [])[-1].authorize == ["send", "buy"]
-        # With no authorizer on the Shield a send is refused, never let through (§6.11).
+        # With no authorizer on the Shield a send is refused, never let through.
         from agent_shield.policy import Action, Context, decide
 
         refused = decide(

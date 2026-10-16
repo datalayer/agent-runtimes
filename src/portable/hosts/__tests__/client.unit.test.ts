@@ -6,7 +6,7 @@
  */
 
 /**
- * The host client's administration call (plans/DISCORD.md DC-106): the
+ * The host client's administration call (DC-106): the
  * contract's request with the host key, and Datalayer's refusal of anyone
  * but the linked owner said as a `HostRefusedError`.
  */

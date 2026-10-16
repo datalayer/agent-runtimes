@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's connections in the name of who uses it (plans/LOOP.md, I-04).
+"""A deployment's connections in the name of who uses it (I-04).
 
 An application's connection may act in the name of each person who uses it
 (`as: user`) rather than its owner's. Its principal's token never reaches such

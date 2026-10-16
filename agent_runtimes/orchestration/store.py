@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where executions live in Phase 0 (PLAN_ORCHESTRATOR.md, O0-04).
+"""Where executions live in Phase 0 (O0-04).
 
 An ``ExecutionStore`` holds the executions, their attempts, their events,
 their acknowledgements and their artifacts, and it is the only place any of
@@ -112,7 +112,7 @@ class ExecutionConflict(ExecutionStoreError):
     """Two things that cannot both be true of one execution.
 
     Raised when an execution identifier is reused, and when an idempotency
-    key comes back with a different intent behind it: section 6.4 wants the
+    key comes back with a different intent behind it: delivery wants the
     second delivery of a delegation to find the first execution, and a key
     reused for different work is a caller's mistake, not a second execution.
     """
@@ -522,7 +522,7 @@ class ExecutionStore(ABC):
         Create an execution, or find the one this command already created.
 
         Duplicate delivery is ordinary — a client retries, a queue
-        redelivers, a person clicks twice (section 6.4) — so a key that has
+        redelivers, a person clicks twice — so a key that has
         been seen returns the execution it made. The same key behind
         different work is a conflict: the caller has reused a key, and
         answering with an execution that is not the one it asked for would
@@ -674,7 +674,7 @@ class ExecutionStore(ABC):
         self, acknowledgement: Acknowledgement
     ) -> Acknowledgement:
         """
-        Record one milestone of section 6.3, and put it on the event stream.
+        Record one acknowledgement milestone, and put it on the event stream.
 
         Parameters
         ----------
@@ -700,7 +700,7 @@ class ExecutionStore(ABC):
         Registering an artifact identifier twice adds the second attempt's
         provenance to the one record rather than replacing it, and a record
         that is already committed is never demoted by a later registration:
-        the first attempt to commit wins (19.8, decision 4). Deciding which
+        the first attempt to commit wins (decision 4). Deciding which
         of two artifacts supersedes the other is O0-10's, on the canonical
         model, where the rule can be stated once for every store.
 
@@ -727,7 +727,7 @@ class ExecutionStore(ABC):
 
         ``commit_artifacts`` in ``core`` decides — the first attempt to
         commit wins, and a later one's artifacts are kept and superseded
-        (19.8, decision 4). This is where the decision is stored, said on the
+        (decision 4). This is where the decision is stored, said on the
         event stream and counted (O1-14). Durable's commit step and the O0-13
         example both call it, so a commit is written in one place rather than
         once per caller.
@@ -780,10 +780,10 @@ class ExecutionStore(ABC):
         """
         Say that whoever watched an attempt lost sight of it and is asking again.
 
-        Section 10 records recoveries, and a re-attach is one. A process that
+        The trace records recoveries, and a re-attach is one. A process that
         picks a run up after the one watching it died, or a watch that ended
         before its attempt did, otherwise leaves nothing in the execution's
-        history, and section 16's share of executions completing after a
+        history, and the share of executions completing after a
         disconnect could not count it (O1-14).
 
         Parameters
@@ -816,7 +816,7 @@ class ExecutionStore(ABC):
         """
         Turn one adapter observation into canonical state and one event.
 
-        This is the seam of section 4: adapters report, the control plane
+        This is the seam: adapters report, the control plane
         decides. Until the control plane exists (O1-01) this is where the
         deciding happens, so both adapters and the conformance harness go
         through the same code rather than each having its own idea of what a
@@ -1143,7 +1143,7 @@ class ExecutionStore(ABC):
         Keep the protocol's own identifiers, which are what a re-attach needs.
 
         A session or a task identifier learnt mid-stream is the only way a
-        later step finds the work again (section 6.4, scenario 4), and it is
+        later step finds the work again (scenario 4), and it is
         a projection: the execution is authoritative, the handle is how the
         protocol currently spells it.
 
@@ -1199,10 +1199,10 @@ def _same_intent(existing: Execution, requested: Execution) -> bool:
 
     The session on the binding is left out of the comparison, and that is
     the whole subtlety here. A session is a projection the store stamps once
-    the worker answers with one (section 5.2), so a redelivery that arrives
+    the worker answers with one, so a redelivery that arrives
     after the first dispatch has opened a session names no session — and
     refusing it as different work would refuse precisely the late
-    redelivery section 6.4 is written about. What makes two deliveries the
+    redelivery the delivery rules are written about. What makes two deliveries the
     same intent is the worker asked for, the objective, and the parent.
 
     Parameters

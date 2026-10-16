@@ -6,7 +6,7 @@
 /**
  * Transcribe WAV files with a speech-to-text model of the catalogue, as the
  * browser runs it: transformers.js, the same ONNX files, read from the
- * pinned store (VOICE.md VO-05, VO-51). Prints one JSON line.
+ * pinned store (VO-05, VO-51). Prints one JSON line.
  *
  *   node scripts/voice/transcribe.mjs <store> <model id> <language> <file.wav>...
  *

@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A rule tightened on a running session (SHIELD §6.3, SH-54; SH-23 c).
+"""A rule tightened on a running session (SH-54, SH-23 c).
 
 A person adds a rule to a session while it runs; it holds from the next
 action, for that session only, and only ever tightens. This script runs the

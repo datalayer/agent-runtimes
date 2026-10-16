@@ -44,7 +44,7 @@ export type ICodeSandboxEnvironmentOption = {
   group?: string;
   /**
    * The version this choice launches, written as it reads — `v3`. Only an
-   * environment somebody built has one (PLAN_ENV.md, E1-19).
+   * environment somebody built has one (E1-19).
    */
   version?: string;
   /** The size class it runs on, which is what prices it (D-4). */

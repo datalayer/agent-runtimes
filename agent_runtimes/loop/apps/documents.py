@@ -7,7 +7,7 @@ An Appspec's ``contents`` names its documents by their Home Folder paths. A
 Maker gives each one on the Build tab of its page (*What it knows*): Contents
 reads it there into passages, keeps them beside its objects, and searches them
 with Solr's text search — the documents never leave the platform and no
-embedding is computed (R-29, decided in §17 of the plan).
+embedding is computed (R-29).
 
 Its agent is given one tool, ``search_documents``: a question in, the passages
 that answer it best out, each with its document and where in it (*page 3*,

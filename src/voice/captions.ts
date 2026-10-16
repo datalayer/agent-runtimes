@@ -4,7 +4,7 @@
  */
 
 /**
- * Captions always (VOICE.md VO-65): the sentence being said is marked in the
+ * Captions always (VO-65): the sentence being said is marked in the
  * open conversation, not by colour alone. The answer that holds it is marked
  * `aria-current` and `data-voice-saying` with a bar beside it; the sentence
  * itself is underlined in place through the CSS Custom Highlight API, which

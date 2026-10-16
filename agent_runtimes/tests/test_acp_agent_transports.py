@@ -103,7 +103,7 @@ class TestAGUI:
             r["display"] and r["display"][0]["display"] == "diff" for r in results
         )
         # The page's display beside the result, as every protocol display
-        # travels (SHIELD §4.3, SH-16).
+        # travels (SH-16).
         shown = [r["_meta"]["reactor.ui/display"] for r in results if "_meta" in r]
         assert shown and all(
             s["type"] == "application/vnd.datalayer.shield.diff+json" for s in shown

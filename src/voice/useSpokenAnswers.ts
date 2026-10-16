@@ -4,8 +4,8 @@
  */
 
 /**
- * The answers of a conversation, heard as they are written (VOICE.md VO-20,
- * VO-21): the newest answer of the agent is cut into sentences as it grows,
+ * The answers of a conversation, heard as they are written (VO-20, VO-21):
+ * the newest answer of the agent is cut into sentences as it grows,
  * and each is given to the speaker as soon as it is complete. The answers
  * already there when voice was turned on are not read.
  *

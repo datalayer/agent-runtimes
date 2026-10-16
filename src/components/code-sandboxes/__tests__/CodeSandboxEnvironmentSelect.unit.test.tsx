@@ -4,7 +4,7 @@
  */
 
 /**
- * What the environment dropdown shows a person (PLAN_ENV.md, E1-19).
+ * What the environment dropdown shows a person (E1-19).
  *
  * The list the rules produce, drawn: three headings in the order they should
  * read — what is yours, your organizations', the platform's — each entry with

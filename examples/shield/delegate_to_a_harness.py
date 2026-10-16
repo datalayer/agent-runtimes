@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An orchestrator delegates to a coding agent over A2A and reads the diff (SHIELD §4.2, SH-15; SH-23 e).
+"""An orchestrator delegates to a coding agent over A2A and reads the diff (SH-15, SH-23 e).
 
 A harness on the runtime is served over A2A like any agent, plus: its plan
 as an artifact replaced as it progresses, each file it changed as a

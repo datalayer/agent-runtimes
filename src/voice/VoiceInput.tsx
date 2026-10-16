@@ -4,8 +4,7 @@
  */
 
 /**
- * The microphone in the composer (VOICE.md VO-10, VO-11, VO-61, VO-62, VO-65
- * to VO-68).
+ * The microphone in the composer (VO-10, VO-11, VO-61, VO-62, VO-65 to VO-68).
  *
  * Clicked, it listens: the words are written in the composer as they are
  * heard (`onInterim`), and it stops at a second click, or once the person

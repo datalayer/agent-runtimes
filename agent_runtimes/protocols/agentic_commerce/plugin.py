@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Agentic Commerce Protocol as a Reactor plugin (AGENT_PROTOCOLS §3.1, PR-40 to PR-43).
+"""The Agentic Commerce Protocol as a Reactor plugin (PR-40 to PR-43).
 
 Points it declares:
 

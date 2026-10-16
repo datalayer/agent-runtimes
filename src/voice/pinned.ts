@@ -4,8 +4,8 @@
  */
 
 /**
- * The browser's models, from Datalayer's origin and as pinned (VOICE.md
- * VO-49, VO-03): every file a model is made of is fetched from the models'
+ * The browser's models, from Datalayer's origin and as pinned (VO-49, VO-03):
+ * every file a model is made of is fetched from the models'
  * origin, laid out as the pinned store is (`<provider>/<model id>/<path>`), and its
  * SHA-256 checked against the catalogue before anything reads it. A file
  * that is not the one pinned is refused; nothing is asked of another origin.

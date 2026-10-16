@@ -4,7 +4,7 @@
  */
 
 /**
- * Hearing on Datalayer's servers (VOICE.md VO-34, VO-14, §5): what was said
+ * Hearing on Datalayer's servers (VO-34, VO-14): what was said
  * in one press, kept to its speech by Silero VAD in the page, then sent as a
  * WAV recording to the speech service's `POST /speech/transcriptions`, where
  * Whisper hears it — small for a spoken turn, large-v3-turbo past one
@@ -78,7 +78,7 @@ export interface HearingAsked {
 }
 
 /**
- * Where a chat's voice hears (§5): in the browser unless the speech service
+ * Where a chat's voice hears: in the browser unless the speech service
  * is named and the person asked for detection, the application says
  * `server`, or it says `auto` and no model in the browser hears the language.
  */
@@ -514,7 +514,7 @@ export const MOVED_TO_SERVER =
   "This device could not load its model: what you say will be heard on Datalayer's servers instead. Press the microphone again to agree.";
 
 /**
- * `where: auto` (§5): each press heard on the device when a model there
+ * `where: auto`: each press heard on the device when a model there
  * hears the language and loads, on the speech service otherwise.
  *
  * The device's model failing to load moves the hearing to the server, and

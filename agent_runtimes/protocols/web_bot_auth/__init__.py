@@ -15,7 +15,7 @@ RFC 9421 HTTP Message Signatures:
   :class:`WebBotAuthMiddleware` verify an agent's request, with freshness
   and replay checks.
 
-The protocol is a Reactor plugin (:mod:`.plugin`, AGENT_PROTOCOLS §3.1): the
+The protocol is a Reactor plugin (:mod:`.plugin`): the
 host's signer, the nonce store and each ``Signature-Agent`` type's key
 discovery are its contribution points.
 

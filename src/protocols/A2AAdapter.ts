@@ -128,7 +128,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
   /**
    * Whether the connected agent's card advertised the Datalayer
-   * orchestration extension (ORCHESTRATOR.md, O3-03). Set once, from
+   * orchestration extension (O3-03). Set once, from
    * `connect()`'s card fetch: neither side infers support from a
    * successful message (the extension's own negotiation rule), so this is
    * the one place that decides it, and every request either activates the
@@ -161,7 +161,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
       // fetching it here 404s against every real worker, silently, since
       // a missing card is caught below and connect() still "succeeds" —
       // found live, against agent_teams.a2a.reference_worker
-      // (ORCHESTRATOR.md O3-04), not assumed: `supportsOrchestrationExtension`
+      // (O3-04), not assumed: `supportsOrchestrationExtension`
       // stayed false against a worker whose card plainly advertised it.
       const agentUrl = this.a2aConfig.agentUrl || this.a2aConfig.baseUrl;
       const wellKnownUrl = new URL(
@@ -538,7 +538,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
       console.log('[A2AAdapter] Status update:', state, 'final:', task.final);
 
       // The agent's voice and the lines it says aloud, in a working status
-      // message's metadata (VOICE.md VO-36): activities the chat says and
+      // message's metadata (VO-36): activities the chat says and
       // captions, as AG-UI's `voice.settings` and `voice.say` custom events.
       const voice = task.status?.message?.metadata?.voice;
       if (voice?.settings) {

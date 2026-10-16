@@ -310,7 +310,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
 
 def check_voices(specs: List[tuple[str, Dict[str, Any]]]) -> None:
-    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VOICE.md VO-41)."""
+    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VO-41)."""
     from agentspecs.apps import agent_voice_problems
 
     problems = [
@@ -369,7 +369,7 @@ BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
 
 
 def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
-    """Every harness of the catalogue (`agentspecs/harnesses`, SHIELD.md SH-01), by id."""
+    """Every harness of the catalogue (`agentspecs/harnesses`, SH-01), by id."""
     harnesses: dict[str, dict[str, Any]] = {}
     for yaml_file in sorted((specs_dir.parent / "harnesses").glob("*.yaml")):
         if yaml_file.name == "register.yaml":

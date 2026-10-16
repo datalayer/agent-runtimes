@@ -4,13 +4,12 @@
  */
 
 /**
- * Datalayer's deliveries to a chat host (SLACK §4.3, 3; DISCORD §3.8): the
+ * Datalayer's deliveries to a chat host: the
  * signed webhook ai-agents pushes to, the outbox read when a push was
  * missed, and each delivery handled once then acknowledged. What a delivery
  * shows is the host's own (its `DeliveryHandler`); where its installations
  * and claims are kept is its store, seen here as a `DeliverySink` and a
- * `DeliveryClaimStore`. Moved from the Slack service (plans/DISCORD.md
- * DC-004).
+ * `DeliveryClaimStore`. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/deliveries
  */

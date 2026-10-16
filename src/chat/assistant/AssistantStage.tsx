@@ -653,8 +653,8 @@ export interface AssistantStageProps {
    */
   decide?: DecisionAsker;
   /**
-   * How loud its voice is now, between 0 and 1, while it is heard (VOICE.md
-   * VO-23): the mouth opens with the sound, in three openings, instead of
+   * How loud its voice is now, between 0 and 1, while it is heard (VO-23):
+   * the mouth opens with the sound, in three openings, instead of
    * the talking loop. Still, for a reader who asks for reduced motion.
    */
   mouthLevel?: () => number;
