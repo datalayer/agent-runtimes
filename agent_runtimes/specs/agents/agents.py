@@ -9009,8 +9009,8 @@ WORKER_GITHUB_AGENT_SPEC_0_0_1 = Agentspec(
             summary="My open pull requests",
         ),
         AgentSuggestion(
-            text="Create an issue for a bug I found in datalayer/ui",
-            summary="File an issue in datalayer/ui",
+            text="Create an issue for a bug I found in datalayer/core",
+            summary="File an issue in datalayer/core",
         ),
         AgentSuggestion(
             text="Show recent commits on the main branch", summary="Recent main commits"

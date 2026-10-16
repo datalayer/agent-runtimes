@@ -40,7 +40,7 @@ export const SCENE_SCHEMA: JsonSchema = {
     AppVerified: {
       additionalProperties: false,
       description:
-        'What was verified, and how, each in a sentence a person reads (LOOP E-14).\n\nAn example says it on its card and on its page: what was tried live,\nwhat runs on recorded data instead, and what is not verified yet. Said\nby whoever tried it; nothing here is computed.',
+        'What was verified, and how, each in a sentence a person reads (E-14).\n\nAn example says it on its card and on its page: what was tried live,\nwhat runs on recorded data instead, and what is not verified yet. Said\nby whoever tried it; nothing here is computed.',
       properties: {
         live: {
           description: 'What was tried live, where and when',
@@ -629,7 +629,7 @@ export const SCENE_SCHEMA: JsonSchema = {
     SceneRecording: {
       additionalProperties: false,
       description:
-        'A transcript recorded once, played when the scene cannot play live (LOOP H-08).',
+        'A transcript recorded once, played when the scene cannot play live (H-08).',
       properties: {
         path: {
           description:
@@ -912,7 +912,7 @@ export const SCENE_SCHEMA: JsonSchema = {
           $ref: '#/$defs/TeamProtocol',
           default: 'a2a',
           description:
-            'The protocol it is asked over: `a2a` to an agent or an application, `mcp` to a server',
+            'The protocol it is asked over: `a2a` to an agent, an application or a harness, `acp` to a harness, `mcp` to a server',
         },
       },
       required: ['member'],
@@ -928,7 +928,7 @@ export const SCENE_SCHEMA: JsonSchema = {
     },
     TeamProtocol: {
       description: 'How one member talks to another.',
-      enum: ['a2a', 'mcp'],
+      enum: ['a2a', 'mcp', 'acp'],
       title: 'TeamProtocol',
       type: 'string',
     },

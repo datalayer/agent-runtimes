@@ -105,7 +105,7 @@ SPEECH_MODEL_CATALOGUE: Dict[str, Dict[str, Any]] = {
         "id": "moonshine-base-en-server",
         "version": "0.0.1",
         "name": "Moonshine Base (English, server)",
-        "description": "Speech to text on Datalayer's servers, in English: Useful Sensors' Moonshine Base (61M parameters), the same 8-bit ONNX export the browser runs, run by onnxruntime on the CPU with a greedy decoder. Its encoder is as long as the speech, with no 30-second window: it hears spoken turns in English, about seven times faster than Whisper small (decision 18).",
+        "description": "Speech to text on Datalayer's servers, in English: Useful Sensors' Moonshine Base (61M parameters), the same 8-bit ONNX export the browser runs, run by onnxruntime on the CPU with a greedy decoder. Its encoder is as long as the speech, with no 30-second window: it hears spoken turns in English, about seven times faster than Whisper small.",
         "provider": "usefulsensors",
         "task": "stt",
         "engine": "onnxruntime",

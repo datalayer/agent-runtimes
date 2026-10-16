@@ -52,7 +52,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppA2A: {
       additionalProperties: false,
       description:
-        "A2A: what the application's Agent Card says beside its name and skill (AGENT_PROTOCOLS PR-02).",
+        "A2A: what the application's Agent Card says beside its name and skill (PR-02).",
       properties: {
         extensions: {
           description:
@@ -70,7 +70,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppA2AExtension: {
       additionalProperties: false,
       description:
-        "An A2A extension the application's Agent Card advertises (A2A 1.0\n*Extensions*, AGENT_PROTOCOLS PR-02), beside the runtime's own.\n\nNamed by its URI, as `capabilities.extensions` writes it; its params are\npublished on the card as they are, so they never hold a credential.\nDatalayer's own extensions (orchestration, the face) are the runtime's,\nnever declared here.",
+        "An A2A extension the application's Agent Card advertises (A2A 1.0\n*Extensions*, PR-02), beside the runtime's own.\n\nNamed by its URI, as `capabilities.extensions` writes it; its params are\npublished on the card as they are, so they never hold a credential.\nDatalayer's own extensions (orchestration, the face) are the runtime's,\nnever declared here.",
       properties: {
         uri: {
           description:
@@ -106,7 +106,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppAction: {
       additionalProperties: false,
       description:
-        'An action of its code a person presses (`@app.action`, REACTOR_UI RU-5).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
+        'An action of its code a person presses (`@app.action`, RU-5).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
       properties: {
         name: {
           description: 'Its name, as its button presses it',
@@ -169,7 +169,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         code: {
           description:
-            'Checks written in its code (`@app.check`), each run at its stage (LOOP P-06)',
+            'Checks written in its code (`@app.check`), each run at its stage (P-06)',
           items: {
             $ref: '#/$defs/AppCodeCheck',
           },
@@ -183,7 +183,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppCodeCheck: {
       additionalProperties: false,
       description:
-        "A check written in the application's code (LOOP P-06): `@app.check`.\n\nRun at its stage beside the built-in checks and the catalogue's Guards;\nwhat it refuses is said in its own sentence. Without its file nothing\nruns it, and validation says so.",
+        "A check written in the application's code (P-06): `@app.check`.\n\nRun at its stage beside the built-in checks and the catalogue's Guards;\nwhat it refuses is said in its own sentence. Without its file nothing\nruns it, and validation says so.",
       properties: {
         name: {
           description: 'The function of its code that checks, by name',
@@ -209,7 +209,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppCommand: {
       additionalProperties: false,
       description:
-        "A slash command the user picks in the composer (LOOP P-19).\n\nTyping `/` lists the application's commands; picking one sends its\n`prompt`, `{input}` replaced by the words typed after the command.",
+        "A slash command the user picks in the composer (P-19).\n\nTyping `/` lists the application's commands; picking one sends its\n`prompt`, `{input}` replaced by the words typed after the command.",
       properties: {
         name: {
           description:
@@ -239,7 +239,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppCommerce: {
       additionalProperties: false,
       description:
-        'Commerce: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01).',
+        'Commerce: the merchants it shops at for each person (PI-01).',
       properties: {
         merchants: {
           description:
@@ -257,7 +257,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppCommerceMerchant: {
       additionalProperties: false,
       description:
-        "A merchant the application shops at for each person, over UCP or ACP (AGENT_PROTOCOLS PI-01).\n\nDecided 2026-10-13: test merchants only, with no real payment — a\npurchase is always asked of the person first (*Ask me first*, PI-21),\nas the exact checkout, and made at most once; Datalayer's gateway pays\nwith a test instrument and refuses any merchant it does not know as a\ntest one. Named by its domain (its profile at `/.well-known/ucp`, or\n`/.well-known/acp.json`), always in each person's own name. No\ncredential is ever part of a spec.",
+        "A merchant the application shops at for each person, over UCP or ACP (PI-01).\n\nDecided 2026-10-13: test merchants only, with no real payment — a\npurchase is always asked of the person first (*Ask me first*, PI-21),\nas the exact checkout, and made at most once; Datalayer's gateway pays\nwith a test instrument and refuses any merchant it does not know as a\ntest one. Named by its domain (its profile at `/.well-known/ucp`, or\n`/.well-known/acp.json`), always in each person's own name. No\ncredential is ever part of a spec.",
       properties: {
         id: {
           description: 'Stable within the application: `example-store`',
@@ -416,7 +416,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppCustomComponent: {
       additionalProperties: false,
       description:
-        "A component the developer writes (LOOP P-17), an A2UI component of this\napplication only: the catalog grows for it, it does not open.\n\nReviewed like any component of the catalog — its properties a JSON\nSchema, what it shows and sends bindings into the page's data — and drawn\nin a sandboxed frame of no origin, its module loaded from `source` and\nnothing else: what it is given is its properties and data, and what it\ngives back is what it sends.",
+        "A component the developer writes (P-17), an A2UI component of this\napplication only: the catalog grows for it, it does not open.\n\nReviewed like any component of the catalog — its properties a JSON\nSchema, what it shows and sends bindings into the page's data — and drawn\nin a sandboxed frame of no origin, its module loaded from `source` and\nnothing else: what it is given is its properties and data, and what it\ngives back is what it sends.",
       properties: {
         name: {
           description:
@@ -458,7 +458,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         source: {
           description:
-            "Its module, a built ES module whose default export draws it (`export default function (root, {props, send})`): an address over `https://`, or `http://localhost` while it is written; or a file of the application's folder, by its path in it (`gauge.js`), packaged with the application and served by the server its package is installed beside (LOOP P-29)",
+            "Its module, a built ES module whose default export draws it (`export default function (root, {props, send})`): an address over `https://`, or `http://localhost` while it is written; or a file of the application's folder, by its path in it (`gauge.js`), packaged with the application and served by the server its package is installed beside (P-29)",
           title: 'Source',
           type: 'string',
         },
@@ -669,7 +669,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         commands: {
           description:
-            'Slash commands the user picks in the composer: typing `/` lists them (LOOP P-19)',
+            'Slash commands the user picks in the composer: typing `/` lists them (P-19)',
           items: {
             $ref: '#/$defs/AppCommand',
           },
@@ -678,7 +678,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         modes: {
           description:
-            'Mode switches in the composer: the option picked goes with every run, its instructions told to the agent and its model run on (LOOP P-19)',
+            'Mode switches in the composer: the option picked goes with every run, its instructions told to the agent and its model run on (P-19)',
           items: {
             $ref: '#/$defs/AppMode',
           },
@@ -687,7 +687,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         actions: {
           description:
-            'The actions of its code a person presses (`@app.action`, REACTOR_UI RU-5), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
+            'The actions of its code a person presses (`@app.action`, RU-5), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
           items: {
             $ref: '#/$defs/AppAction',
           },
@@ -696,7 +696,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         profiles: {
           description:
-            'Several assistants in one application, two at least: the person picks one before the conversation starts — the first unless they do — and keeps it to the end; its instructions, model and starters go with every run (LOOP P-20). None when unsaid',
+            'Several assistants in one application, two at least: the person picks one before the conversation starts — the first unless they do — and keeps it to the end; its instructions, model and starters go with every run (P-20). None when unsaid',
           items: {
             $ref: '#/$defs/AppProfile',
           },
@@ -715,7 +715,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            "What the user may set: the JSON Schema of a form, an object of named fields, each with its `title` and its `default` (LOOP C-16). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card, its values go with every run and are checked by the runtime against the same schema. None when unsaid",
+            "What the user may set: the JSON Schema of a form, an object of named fields, each with its `title` and its `default` (C-16). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card, its values go with every run and are checked by the runtime against the same schema. None when unsaid",
           title: 'Settings',
         },
         settings_ui: {
@@ -730,13 +730,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            "How the settings' fields are drawn, as `@datalayer/primer-rjsf` reads a uiSchema: by field name, its `ui:` options — `ui:widget` one of `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`, `textarea`, `date`, `checkboxes`, `tags` — and `ui:order` (LOOP P-20). Each field's own widget when unsaid",
+            "How the settings' fields are drawn, as `@datalayer/primer-rjsf` reads a uiSchema: by field name, its `ui:` options — `ui:widget` one of `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`, `textarea`, `date`, `checkboxes`, `tags` — and `ui:order` (P-20). Each field's own widget when unsaid",
           title: 'Settings Ui',
         },
         language: {
           default: 'en',
           description:
-            'The language its own words are in, as BCP 47 tags it (`en`, `fr`, `pt-BR`) (LOOP P-26)',
+            'The language its own words are in, as BCP 47 tags it (`en`, `fr`, `pt-BR`) (P-26)',
           title: 'Language',
           type: 'string',
         },
@@ -745,7 +745,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             $ref: '#/$defs/AppTranslation',
           },
           description:
-            "What a person reads of it in other languages, by BCP 47 tag: its name, welcome, starters and their categories, settings, commands, modes and profiles. The page shows the person's language when it has it, else its own words (LOOP P-26)",
+            "What a person reads of it in other languages, by BCP 47 tag: its name, welcome, starters and their categories, settings, commands, modes and profiles. The page shows the person's language when it has it, else its own words (P-26)",
           title: 'Translations',
           type: 'object',
         },
@@ -760,7 +760,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            'What a person may send in the composer without being asked — images, files, audio — by kind, each with its largest size, and how many at once (LOOP P-21). None when unsaid: the composer offers no attachment, and a file sent with a message is refused',
+            'What a person may send in the composer without being asked — images, files, audio — by kind, each with its largest size, and how many at once (P-21). None when unsaid: the composer offers no attachment, and a file sent with a message is refused',
         },
         components: {
           description:
@@ -773,7 +773,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         custom_components: {
           description:
-            "Components its developer wrote (LOOP P-17), of this application only: each named, its props a JSON Schema, its module's address; placed, shown and drawn as the catalog's own",
+            "Components its developer wrote (P-17), of this application only: each named, its props a JSON Schema, its module's address; placed, shown and drawn as the catalog's own",
           items: {
             $ref: '#/$defs/AppCustomComponent',
           },
@@ -803,7 +803,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            "A widget's page written in its code (`@app.page`, LOOP P-05): its inputs as a form, its outputs as values; run again as an input changes, its outputs shown in place. None when unsaid",
+            "A widget's page written in its code (`@app.page`, P-05): its inputs as a form, its outputs as values; run again as an input changes, its outputs shown in place. None when unsaid",
         },
         assistant: {
           anyOf: [
@@ -863,7 +863,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppMode: {
       additionalProperties: false,
       description:
-        'A mode switch in the composer (LOOP P-19): the person picks one of its options.',
+        'A mode switch in the composer (P-19): the person picks one of its options.',
       properties: {
         id: {
           description: 'Its id, the key a run says its option under',
@@ -907,7 +907,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppModeOption: {
       additionalProperties: false,
       description:
-        'One position of a mode switch (LOOP P-19): what the agent is told, the model it runs on.',
+        'One position of a mode switch (P-19): what the agent is told, the model it runs on.',
       properties: {
         id: {
           description: 'Its id, what a run says it is in',
@@ -998,7 +998,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPact: {
       additionalProperties: false,
       description:
-        'PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01), and\nwhether it answers as one (PR-13).',
+        'PACT: the businesses it asks for each person (PI-01), and\nwhether it answers as one (PR-13).',
       properties: {
         connections: {
           description: 'Businesses, over PACT',
@@ -1019,7 +1019,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPactBusiness: {
       additionalProperties: false,
       description:
-        "The application answers as a PACT business (AGENT_PROTOCOLS PR-13, PI-32; decided 2026-10-13).\n\nPublished at its deployment's own address: its A2A Agent Card names\nDatalayer as the Provider and the application's owner as the Brand; its\nA2A interface verifies each personal-agent JWT against a registered\nissuer's keys (§3.1); with `scopes`, a person delegates to a personal agent\nthrough the Provider's device-code sign-in — their Datalayer sign-in — and\nevery answer under their delegation carries a signed receipt (§5).",
+        "The application answers as a PACT business (PR-13, PI-32; decided 2026-10-13).\n\nPublished at its deployment's own address: its A2A Agent Card names\nDatalayer as the Provider and the application's owner as the Brand; its\nA2A interface verifies each personal-agent JWT against a registered\nissuer's keys; with `scopes`, a person delegates to a personal agent\nthrough the Provider's device-code sign-in — their Datalayer sign-in — and\nevery answer under their delegation carries a signed receipt.",
       properties: {
         enabled: {
           default: false,
@@ -1059,7 +1059,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPactConnection: {
       additionalProperties: false,
       description:
-        "A business the application asks for each person, over PACT 1.0 (AGENT_PROTOCOLS PI-01).\n\nThe Brand is named by its domain — its Agent Card is at\n`https://<brand>/.well-known/agent-card.json` (PACT §2.1) — and its\nProvider's `audience`, which the Provider assigns at registration and\nthe personal-agent JWT carries (§3.1). Always in each person's own name:\nPACT acts for a person. No credential is ever part of a spec.",
+        "A business the application asks for each person, over PACT 1.0 (PI-01).\n\nThe Brand is named by its domain — its Agent Card is at\n`https://<brand>/.well-known/agent-card.json` (PACT §2.1) — and its\nProvider's `audience`, which the Provider assigns at registration and\nthe personal-agent JWT carries. Always in each person's own name:\nPACT acts for a person. No credential is ever part of a spec.",
       properties: {
         id: {
           description: 'Stable within the application: `support`',
@@ -1099,7 +1099,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPactRegisteredAgent: {
       additionalProperties: false,
       description:
-        'A personal agent the business accepts (PACT 1.0 §3.1): its issuer, and where its keys are.\n\nRegistered by the Maker, as `pap.company.registered_agents` (AGENT_PROTOCOLS PR-13,\ndecided 2026-10-13): a personal-agent JWT is verified against the keys of a registered\nissuer only, and any other is refused.',
+        'A personal agent the business accepts (PACT 1.0 §3.1): its issuer, and where its keys are.\n\nRegistered by the Maker, as `pap.company.registered_agents` (PR-13,\ndecided 2026-10-13): a personal-agent JWT is verified against the keys of a registered\nissuer only, and any other is refused.',
       properties: {
         issuer: {
           description: "The personal agent's `iss`, an HTTPS URL",
@@ -1119,7 +1119,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPage: {
       additionalProperties: false,
       description:
-        "A widget's page written in its code (LOOP P-05): `@app.page`.\n\nIts inputs are a form, drawn on the page; as one changes, the function\nof its code runs again on them and the page shows what it returned, in\nplace. Without its file nothing runs it, and validation says so.",
+        "A widget's page written in its code (P-05): `@app.page`.\n\nIts inputs are a form, drawn on the page; as one changes, the function\nof its code runs again on them and the page shows what it returned, in\nplace. Without its file nothing runs it, and validation says so.",
       properties: {
         function: {
           description: 'The function of its code that runs the page',
@@ -1174,7 +1174,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPageOutput: {
       additionalProperties: false,
       description:
-        'One thing a page shows for its inputs (LOOP P-05): a value, drawn with a component.',
+        'One thing a page shows for its inputs (P-05): a value, drawn with a component.',
       properties: {
         name: {
           description:
@@ -1192,7 +1192,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         component: {
           default: 'Text',
           description:
-            "What draws it: `Text` (words, unless said), `Image` (an address), `Table` (rows) or `Chart` (points), or a component of the application's own (`interface.custom_components`, LOOP P-17), its value what it shows first",
+            "What draws it: `Text` (words, unless said), `Image` (an address), `Table` (rows) or `Chart` (points), or a component of the application's own (`interface.custom_components`, P-17), its value what it shows first",
           title: 'Component',
           type: 'string',
         },
@@ -1211,7 +1211,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPair: {
       additionalProperties: false,
       description:
-        "One of a pair of examples, a PACT business and the personal agent that asks it\n(AGENT_PROTOCOLS PR-13, E-02; decided 2026-10-13).\n\nA personal agent's issuer is its own application's, known only once a copy\nexists: when a person has copied both of a pair, the Studio registers the\npersonal agent's copy with the business's copy (`pact.business.registered_agents`)\nand points the personal agent at the business's own domain.",
+        "One of a pair of examples, a PACT business and the personal agent that asks it\n(PR-13, E-02; decided 2026-10-13).\n\nA personal agent's issuer is its own application's, known only once a copy\nexists: when a person has copied both of a pair, the Studio registers the\npersonal agent's copy with the business's copy (`pact.business.registered_agents`)\nand points the personal agent at the business's own domain.",
       properties: {
         id: {
           description: "The pair's id, the same on both of its applications",
@@ -1230,7 +1230,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPap: {
       additionalProperties: false,
       description:
-        'Personal Agent Protocol: the companies it works with, and whether it is one.\n\nA `pap` block names the profile it is written for (PAP_DATALAYER S-03): one\nDatalayer speaks, or it is refused in a sentence. An application without the\nblock has none.',
+        'Personal Agent Protocol: the companies it works with, and whether it is one.\n\nA `pap` block names the profile it is written for (S-03): one\nDatalayer speaks, or it is refused in a sentence. An application without the\nblock has none.',
       properties: {
         profile: {
           anyOf: [
@@ -1266,7 +1266,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapCompany: {
       additionalProperties: false,
       description:
-        'The application is a company personal agents work with (PAP_DATALAYER S-01, U-04).',
+        'The application is a company personal agents work with (S-01, U-04).',
       properties: {
         enabled: {
           default: false,
@@ -1334,7 +1334,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapConnection: {
       additionalProperties: false,
       description:
-        'A company the application works with as a Personal Agent (PAP_DATALAYER S-01).\n\nThe company is named by its domain, the discovery input, and nothing else:\nits endpoints, issuer and metadata are what discovery verifies and are kept\nby the deployment, never here, and no credential is ever part of a spec.\n`access` and `as` mean what they mean for every connection.',
+        'A company the application works with as a Personal Agent (S-01).\n\nThe company is named by its domain, the discovery input, and nothing else:\nits endpoints, issuer and metadata are what discovery verifies and are kept\nby the deployment, never here, and no credential is ever part of a spec.\n`access` and `as` mean what they mean for every connection.',
       properties: {
         id: {
           description: 'Stable within the application: `orders`',
@@ -1398,7 +1398,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapOperation: {
       additionalProperties: false,
       description:
-        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (PAP_DATALAYER B-04, Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.\nAn operation that `allows` instead gives a standing permission once the\nperson confirms it (R-07): it calls no tool, and is asked for through the\napplication's API or its server for agents.",
+        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (B-04, Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.\nAn operation that `allows` instead gives a standing permission once the\nperson confirms it (R-07): it calls no tool, and is asked for through the\napplication's API or its server for agents.",
       properties: {
         action: {
           description:
@@ -1454,7 +1454,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapStanding: {
       additionalProperties: false,
       description:
-        "An operation whose effect is a standing permission (PAP_DATALAYER R-07, the Ledgerly pattern).\n\nConfirmed by the person, it is recorded as the approval in advance they\nwould give in Datalayer: this application may confirm, at the company of\none of its own connections and in the person's account there, operations\nof that class whose terms stay within these limits, so many times, for so\nmany days — and the person reads it back and withdraws it there.",
+        "An operation whose effect is a standing permission (R-07, the Ledgerly pattern).\n\nConfirmed by the person, it is recorded as the approval in advance they\nwould give in Datalayer: this application may confirm, at the company of\none of its own connections and in the person's account there, operations\nof that class whose terms stay within these limits, so many times, for so\nmany days — and the person reads it back and withdraws it there.",
       properties: {
         connection: {
           description:
@@ -1557,7 +1557,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppProfile: {
       additionalProperties: false,
       description:
-        "One of several assistants in one application (LOOP P-20): a variant of its agent.\n\nThe person picks a profile before the conversation starts, and keeps it to\nthe end: its instructions are told to the agent on top of the\napplication's in every run, its model run in place of the application's\n(a mode's model wins over it), and its starters offered in place of the\napplication's.",
+        "One of several assistants in one application (P-20): a variant of its agent.\n\nThe person picks a profile before the conversation starts, and keeps it to\nthe end: its instructions are told to the agent on top of the\napplication's in every run, its model run in place of the application's\n(a mode's model wins over it), and its starters offered in place of the\napplication's.",
       properties: {
         id: {
           description: 'Its id, what a conversation says it is with',
@@ -1756,7 +1756,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppSamples: {
       additionalProperties: false,
       description:
-        "What it is tried on before it is anybody's (STUDIO E-06, E-11).\n\nPublished with it by Datalayer and read only: what a visitor without an\naccount tries it on, in the browser.",
+        "What it is tried on before it is anybody's (E-06, E-11).\n\nPublished with it by Datalayer and read only: what a visitor without an\naccount tries it on, in the browser.",
       properties: {
         documents: {
           description:
@@ -1805,7 +1805,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppSignedFetch: {
       additionalProperties: false,
       description:
-        'Signed fetch: the sites it reads pages of, signed with its Web Bot Auth key (AGENT_PROTOCOLS EX-11).',
+        'Signed fetch: the sites it reads pages of, signed with its Web Bot Auth key (EX-11).',
       properties: {
         sites: {
           description:
@@ -1823,7 +1823,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppSignedFetchSite: {
       additionalProperties: false,
       description:
-        "A website the application reads pages of, each request signed (AGENT_PROTOCOLS EX-11).\n\nDecided 2026-10-13: a *signed fetch* names exact sites, an allow-list.\nDatalayer's gateway reads a page there with `GET` only, on its safe\negress path (public addresses only), each request signed with the\napplication's own Web Bot Auth key and recorded; reading is under the\napplication's Rules like any read. Named by its domain: no other host is\nreached, and no credential is ever part of a spec.",
+        "A website the application reads pages of, each request signed (EX-11).\n\nDecided 2026-10-13: a *signed fetch* names exact sites, an allow-list.\nDatalayer's gateway reads a page there with `GET` only, on its safe\negress path (public addresses only), each request signed with the\napplication's own Web Bot Auth key and recorded; reading is under the\napplication's Rules like any read. Named by its domain: no other host is\nreached, and no credential is ever part of a spec.",
       properties: {
         id: {
           description: 'Stable within the application: `example-verifier`',
@@ -1862,8 +1862,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     AppSpendLimit: {
       additionalProperties: false,
-      description:
-        'The most one purchase may cost at a merchant (AGENT_PROTOCOLS PI-22).',
+      description: 'The most one purchase may cost at a merchant (PI-22).',
       properties: {
         amount: {
           description: 'At most this much, as written: `50`, `12.50`',
@@ -1897,7 +1896,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         category: {
           default: '',
           description:
-            'The heading it is offered under: the starters of one category are shown together, those without one first (LOOP P-20)',
+            'The heading it is offered under: the starters of one category are shown together, those without one first (P-20)',
           title: 'Category',
           type: 'string',
         },
@@ -1967,7 +1966,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppTestCase: {
       additionalProperties: false,
       description:
-        "An example of what the application should do, in plain words.\n\nA case is one message (`ask`) or a short conversation (`turns`): what\nthe person says, chooses and presses, in order, each after the\napplication answered the turn before — and what it should do is judged\non the whole conversation.\n\nWhen plain words are not enough, its code decides it (LOOP P-06): `code`\nnames the function of the application's `app.py` that is given the\nconversation and says whether it passed — `@app.test` writes it. `expect`\nstill says it in words: without its file, the case is judged by them.",
+        "An example of what the application should do, in plain words.\n\nA case is one message (`ask`) or a short conversation (`turns`): what\nthe person says, chooses and presses, in order, each after the\napplication answered the turn before — and what it should do is judged\non the whole conversation.\n\nWhen plain words are not enough, its code decides it (P-06): `code`\nnames the function of the application's `app.py` that is given the\nconversation and says whether it passed — `@app.test` writes it. `expect`\nstill says it in words: without its file, the case is judged by them.",
       properties: {
         ask: {
           default: '',
@@ -2106,7 +2105,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     AppTheme: {
       additionalProperties: false,
-      description: 'The theme an application runs in by default (LOOP T-30).',
+      description: 'The theme an application runs in by default (T-30).',
       properties: {
         variant: {
           $ref: '#/$defs/ThemeVariant',
@@ -2134,7 +2133,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppTool: {
       additionalProperties: false,
       description:
-        "A tool of the application's own, written in its code (LOOP P-06): `@app.tool`.\n\nIts agent calls it as any tool; the rules decide each call by what it\n`does` — a rule may name it, by its name alone — and the Canvas lists it.\nWithout its file the agent is not given it.",
+        "A tool of the application's own, written in its code (P-06): `@app.tool`.\n\nIts agent calls it as any tool; the rules decide each call by what it\n`does` — a rule may name it, by its name alone — and the Canvas lists it.\nWithout its file the agent is not given it.",
       properties: {
         name: {
           description: 'Its name: what the agent calls, and a rule names',
@@ -2173,7 +2172,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppTranslation: {
       additionalProperties: false,
       description:
-        "What a person reads of an application, in another language (LOOP P-26).\n\nEach part is keyed by what names it in the spec: a starter by its label,\na category by its words, a setting by its field, a command by its name,\na mode and a profile by their ids. What is not translated is shown in\nthe spec's own words; what is translated is shown, never sent, but a\nstarter's message — the agent is written to in the person's language.",
+        "What a person reads of an application, in another language (P-26).\n\nEach part is keyed by what names it in the spec: a starter by its label,\na category by its words, a setting by its field, a command by its name,\na mode and a profile by their ids. What is not translated is shown in\nthe spec's own words; what is translated is shown, never sent, but a\nstarter's message — the agent is written to in the person's language.",
       properties: {
         name: {
           default: '',
@@ -2290,8 +2289,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     AppUploadKind: {
       additionalProperties: false,
-      description:
-        'A kind of file a person may send, and how large (LOOP P-21).',
+      description: 'A kind of file a person may send, and how large (P-21).',
       properties: {
         type: {
           description:
@@ -2318,7 +2316,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppUploads: {
       additionalProperties: false,
       description:
-        'What a person may send in the composer without being asked (LOOP P-21): images, files, audio.\n\nA file of a kind it does not name, larger than its kind takes, or one too\nmany is refused, in a sentence — by the page before it is sent, and by the\nruntime when it is sent all the same.',
+        'What a person may send in the composer without being asked (P-21): images, files, audio.\n\nA file of a kind it does not name, larger than its kind takes, or one too\nmany is refused, in a sentence — by the page before it is sent, and by the\nruntime when it is sent all the same.',
       properties: {
         kinds: {
           description: 'The kinds of file it takes, each with its largest size',
@@ -2345,7 +2343,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppVerified: {
       additionalProperties: false,
       description:
-        'What was verified, and how, each in a sentence a person reads (LOOP E-14).\n\nAn example says it on its card and on its page: what was tried live,\nwhat runs on recorded data instead, and what is not verified yet. Said\nby whoever tried it; nothing here is computed.',
+        'What was verified, and how, each in a sentence a person reads (E-14).\n\nAn example says it on its card and on its page: what was tried live,\nwhat runs on recorded data instead, and what is not verified yet. Said\nby whoever tried it; nothing here is computed.',
       properties: {
         live: {
           description: 'What was tried live, where and when',
@@ -2378,7 +2376,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppVoice: {
       additionalProperties: false,
       description:
-        'Its voice (VOICE.md VO-41): whether it listens, whether it speaks, with which voice, in which language.\n\nOff unless said. What is said becomes a message, and what is heard is the\nanswer the conversation shows: the text stays the truth.',
+        'Its voice (VO-41): whether it listens, whether it speaks, with which voice, in which language.\n\nOff unless said. What is said becomes a message, and what is heard is the\nanswer the conversation shows: the text stays the truth.',
       properties: {
         enabled: {
           default: false,
@@ -2425,7 +2423,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     BalloonDisplay: {
       description:
-        "How a floating assistant's balloon shows the conversation (LOOP T-23).",
+        "How a floating assistant's balloon shows the conversation (T-23).",
       enum: ['history', 'current'],
       title: 'BalloonDisplay',
       type: 'string',
@@ -2439,14 +2437,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     CheckStage: {
       description:
-        'Where a check of its code runs (LOOP P-06), as the built-in checks do (R-06).',
+        'Where a check of its code runs (P-06), as the built-in checks do (R-06).',
       enum: ['answer', 'tool_call'],
       title: 'CheckStage',
       type: 'string',
     },
     CommerceProtocol: {
-      description:
-        'The commerce protocol a merchant is reached over (AGENT_PROTOCOLS PI-01).',
+      description: 'The commerce protocol a merchant is reached over (PI-01).',
       enum: ['ucp', 'acp'],
       title: 'CommerceProtocol',
       type: 'string',
@@ -2500,7 +2497,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     HostBridge: {
       additionalProperties: false,
       description:
-        "What the host page and the application say to each other (LOOP D-10).\n\nThe values of the host it reads (`context`: `user`, `page`, or a name of\nthe host's own), through the tool `host_context`; the functions of the\nhost it may call, each through `host_<name>`. Every one of these tools is\ndecided by a rule that names it, as any tool is: one no rule names is\nleft to the person.\n\nWho its user is (`user`, LOOP D-21): what the page says (`claimed`), or\nonly what the host's server signed (`signed`) — a short token, HS256\nwith the deployment's secret, naming `sub`, `name` and `exp` at most an\nhour away. An application that acts in each user's name, or shows data\nthat is theirs, says `signed`.",
+        "What the host page and the application say to each other (D-10).\n\nThe values of the host it reads (`context`: `user`, `page`, or a name of\nthe host's own), through the tool `host_context`; the functions of the\nhost it may call, each through `host_<name>`. Every one of these tools is\ndecided by a rule that names it, as any tool is: one no rule names is\nleft to the person.\n\nWho its user is (`user`, D-21): what the page says (`claimed`), or\nonly what the host's server signed (`signed`) — a short token, HS256\nwith the deployment's secret, naming `sub`, `name` and `exp` at most an\nhour away. An application that acts in each user's name, or shows data\nthat is theirs, says `signed`.",
       properties: {
         context: {
           description:
@@ -2532,7 +2529,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     HostFunction: {
       additionalProperties: false,
       description:
-        "A function of the host page the application's agent may call (LOOP D-10).",
+        "A function of the host page the application's agent may call (D-10).",
       properties: {
         name: {
           description:
@@ -2557,8 +2554,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       type: 'object',
     },
     HostUser: {
-      description:
-        "What the host page's word on its visitor is worth (LOOP D-21).",
+      description: "What the host page's word on its visitor is worth (D-21).",
       enum: ['claimed', 'signed'],
       title: 'HostUser',
       type: 'string',
@@ -2597,7 +2593,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     PairRole: {
       description:
-        'Which side of a pair of examples an application is (AGENT_PROTOCOLS PR-13).',
+        'Which side of a pair of examples an application is (PR-13).',
       enum: ['business', 'personal_agent'],
       title: 'PairRole',
       type: 'string',
@@ -2655,8 +2651,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       type: 'string',
     },
     ThemeVariant: {
-      description:
-        "A theme of Datalayer's, as Appearance names it (LOOP T-30).",
+      description: "A theme of Datalayer's, as Appearance names it (T-30).",
       enum: [
         'datalayer',
         'spatial',
@@ -2715,7 +2710,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     VoiceInput: {
       description:
-        'How a person talks to the application (VOICE.md VO-10, VO-12).\n\n`push_to_talk`: the microphone in the composer, clicked or held.\n`hands_free`: a conversation by voice — the composer offers *Talk with\nit*; a turn ends after a short silence and is sent, the answer is said,\nand listening goes on; speaking over the agent stops its voice (VO-13).\nHands-free implies answers said as they are written (`output: always`).',
+        'How a person talks to the application (VO-10, VO-12).\n\n`push_to_talk`: the microphone in the composer, clicked or held.\n`hands_free`: a conversation by voice — the composer offers *Talk with\nit*; a turn ends after a short silence and is sent, the answer is said,\nand listening goes on; speaking over the agent stops its voice (VO-13).\nHands-free implies answers said as they are written (`output: always`).',
       enum: ['off', 'push_to_talk', 'hands_free'],
       title: 'VoiceInput',
       type: 'string',
@@ -2728,7 +2723,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     VoiceWhere: {
       description:
-        "Where its speech runs: in the person's browser, on Datalayer's servers, or the better of the two (§5).",
+        "Where its speech runs: in the person's browser, on Datalayer's servers, or the better of the two.",
       enum: ['auto', 'device', 'server'],
       title: 'VoiceWhere',
       type: 'string',
@@ -2852,7 +2847,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     protocols: {
       description:
-        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact`, `signed_fetch` and `a2a` blocks, and each merchant of `commerce`, are refused unless their protocol is listed, and a planned protocol only while it is not offered',
+        'The agent protocols it speaks, ids of the protocols catalogue (PS-02): its `pap`, `pact`, `signed_fetch` and `a2a` blocks, and each merchant of `commerce`, are refused unless their protocol is listed, and a planned protocol only while it is not offered',
       items: {
         type: 'string',
       },

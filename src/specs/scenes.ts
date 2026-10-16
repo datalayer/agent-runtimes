@@ -26,7 +26,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
   icon: 'globe',
   emoji: '🛰️',
   kind: 'team',
-  team: 'crop-monitoring:0.0.1',
+  team: 'crop-monitoring:0.0.2',
   entry: 'crop-monitoring',
   cast: [
     {
@@ -351,7 +351,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
   icon: 'alert',
   emoji: '🚨',
   kind: 'team',
-  team: 'disaster-assessment:0.0.1',
+  team: 'disaster-assessment:0.0.2',
   entry: 'event-response',
   cast: [
     {
@@ -794,7 +794,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   icon: 'calendar',
   emoji: '📒',
   kind: 'team',
-  team: 'month-end-close:0.0.1',
+  team: 'month-end-close:0.0.2',
   entry: 'month-end-close',
   cast: [
     {
@@ -1974,7 +1974,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   icon: 'people',
   emoji: '🤝',
   kind: 'team',
-  team: 'sales-and-accounting:0.0.1',
+  team: 'sales-and-accounting:0.0.2',
   entry: 'sales',
   cast: [
     {

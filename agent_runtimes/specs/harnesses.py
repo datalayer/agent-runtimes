@@ -193,7 +193,7 @@ FAST_AGENT_HARNESS_0_0_1 = HarnessSpec(
         terms_source="https://github.com/evalstate/fast-agent/blob/main/LICENSE",
         credential="The provider's key fast-agent is given (ANTHROPIC_API_KEY, OPENAI_API_KEY or HF_TOKEN); ANTHROPIC_API_KEY declared",
         binaries="uv (uvx), Python 3.12 to 3.15 (requires_python on PyPI)",
-        note="A framework, not a coding agent (SHIELD §2.5): each agent it defines is an ACP mode; the client's MCP servers are attached; sessions are listed. Launched with uvx fast-agent-acp (docs/docs/acp/index.md); reads skills from .fast-agent/skills, .agents/skills and .claude/skills; its default prompt reads AGENTS.md.",
+        note="A framework, not a coding agent: each agent it defines is an ACP mode; the client's MCP servers are attached; sessions are listed. Launched with uvx fast-agent-acp (docs/docs/acp/index.md); reads skills from .fast-agent/skills, .agents/skills and .claude/skills; its default prompt reads AGENTS.md.",
     ),
 )
 
