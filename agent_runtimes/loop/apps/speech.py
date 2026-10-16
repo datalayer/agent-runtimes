@@ -16,8 +16,9 @@ from __future__ import annotations
 import asyncio
 import io
 import wave
+from collections.abc import AsyncIterable, Iterable
 from dataclasses import dataclass
-from typing import Any, AsyncIterable, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 from ...voice import SpokenInput
 
@@ -39,9 +40,9 @@ class HeardSpeech:
 async def _joined(chunks: Union[bytes, Iterable[bytes], AsyncIterable[bytes]]) -> bytes:
     if isinstance(chunks, (bytes, bytearray)):
         return bytes(chunks)
-    if hasattr(chunks, "__aiter__"):
-        return b"".join([bytes(chunk) async for chunk in chunks])  # type: ignore[union-attr]
-    return b"".join(bytes(chunk) for chunk in chunks)  # type: ignore[union-attr]
+    if isinstance(chunks, AsyncIterable):
+        return b"".join([bytes(chunk) async for chunk in chunks])
+    return b"".join(bytes(chunk) for chunk in chunks)
 
 
 def _pcm16_of_wav(sound: bytes) -> bytes:
