@@ -12,6 +12,17 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - **The Shield's examples** (SHIELD SH-23): `examples/shield/` — a coding agent on the local runtime as `loop --harness` starts it, the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff; each on the fake agent with no key, its output in the README, run by `test_the_shield_examples.py` and held by `check_examples.py` (which now checks example folders: every script named in the README, every import existing). In the examples app, *Shield Harness* (the web chat on a harness runtime: diffs, terminals, the approval banner) and *Shield Policy* (`@datalayer/agent-shield`'s types and `describeDecision`). [Examples](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **The harnesses and Shield pages brought to what is built** (SH-20, SH-38, SH-06): the mapping tables as built, what each harness honours, the policies, the record, the trace, session rules, the budget. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses), [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
 
+## 1.5.43
+
+SHIELD Phase 3, 16 October 2026 (agentspecs 0.0.107, agent-shield 0.2.1):
+
+- **A deployment's spend limit per session** (SH-32): `kept_payload(spend_limit=)` carries the keeper's limit in `app_instance.spend_limit`; `policies_of(spend_limit=)` adds a `team` document with `limits.spend`, soft at the keeper's warning share (0.8), hard at the limit; the budget capability's `said` hook tells the deployment's limit, held here per session, from the keeper's day in the sentence (`deployment_said`).
+- **Teams of harnesses** (SH-45): a team member may be a harness (`TeamAgentspec.harness`, links `over: acp`), registered by its harness and bound over ACP when asked over acp, else A2A; the ACP orchestration adapter registers each file a turn changed as a `text/x-diff` artifact and opens sessions in an absolute workspace (ACP's `cwd`); the `coding-agents` team; drilled on the fake agent (the Coder over A2A, the Reviewer over ACP behind `agent-shield run`).
+- **An organization's own harness** (SH-46): `guardrails/organization_harnesses.py` — an `org-…` harness read from IAM for the application's organization, validated with its register entry, served only once the policies admit `<id>@<the reviewed command's digest>`; `harness_agent(organization_uid=)`.
+- **The listed tier** (SH-57): a listed harness refused *listed, not drilled yet* in `harness_agent`, `loop --harness` and `harness_problems`; `LISTED_HARNESSES` in the TypeScript catalogue.
+- **The Studio** (SH-43): the toolbox's Agents (`CanvasPartKind` `agent`, `AGENT_PARTS`); the Rules card's session rules in decision 5's file and shell words and its file-and-shell rules to add.
+- **The ACP route for a notebook's panel** (SH-49): `authenticate` with `methodId: bearer` and the token in `_meta.token`; `session/new` on a harness says the workspace in `_meta.datalayer.workspace`.
+
 ## 1.5.41
 
 A test-order fix of 1.5.40's warning (the unmanaged runtime says so once per source of policies); nothing else. SHIELD SH-50.
