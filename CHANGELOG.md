@@ -7,7 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## Unreleased
+## 1.5.46
+
+DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **The semantic events and their AG-UI reduction in `src/portable`** (DC-005, moved from the Slack service): `semantic.ts` (the eleven kinds, `answerParts`), `semanticOfAgUi.ts` (`semanticOf`, `turnOf`, `askQuestionOf`) and `semantic-events.json`, held to what the runtime emits by `test_semantic_events_contract.py`: a question is read from `RUN_FINISHED.result.asking` only (no `loop.ask` on the run stream), and no `loop.turn` says `stopped`.
+- **The chat-host kit in `src/portable/hosts`** (DC-004), imported as `@datalayer/agent-runtimes/lib/portable/hosts`: the ai-agents host contracts and `contracts.json`, the host client, `HttpAgentClient` over an injected `HostShape`, `hostSessionUid`, approval renderers and `hostMayDecide`, deliveries, `TurnState`, `resolveApplication`, the Postgres queue and quotas under a table prefix, `SecretCipher`, observability, dead letters, health, the shared schema (`hostSchemaSql`) and `forbiddenInBundle`. Slack runs on it; Discord will.
+- **The portable walker test** reads side-effect imports, `import()` and `require()`, refuses DOM globals, and holds the hosts entry to `src/portable`, `src/portable/hosts`, `zod`, `node:crypto` and `node:http`. The release workflow runs the portable tests and checks the tarball carries the hosts entry and both contracts.
 
 SHIELD, 16 October 2026:
 

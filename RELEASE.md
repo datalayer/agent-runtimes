@@ -5,17 +5,19 @@
 A pushed tag `vX.Y.Z` publishes `agent-runtimes` to PyPI and `@datalayer/agent-runtimes` to npm, through [`.github/workflows/release.yaml`](.github/workflows/release.yaml). No token is stored: both registries trust that workflow (trusted publishing, OIDC).
 
 1. Bump the version to `X.Y.Z` in `package.json`. The Python version is the same number: `hatch-nodejs-version` reads it from `package.json` and writes `agent_runtimes/_version.py` (`__version__ = VERSION = 'X.Y.Z'`) at build time, so after a local build both say `X.Y.Z`. The file is generated and not committed.
-2. Merge the bump to `main`.
-3. Tag the merged commit on `main` and push the tag:
+2. Add the release's entry to `CHANGELOG.md`, commit both on the working branch (`feat/app-avatar` today), and push it.
+3. Tag the pushed head of that branch and push the tag. Releases are cut from the branch, not from `main`; the tag must carry the `v` (`release.yaml` triggers on `v*` only, and a bare tag publishes nothing):
 
    ```bash
-   git checkout main && git pull
+   git pull --rebase && git push
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
 
+4. Check the published packages: `npm view @datalayer/agent-runtimes@X.Y.Z version` and `pip index versions agent-runtimes`. A service that pins the release (Slack's and Discord's `config.agentRuntimesVersion`) moves to it only once its tarball is on npm.
+
 What the workflow does:
 
-- **build**: checks that the tag matches `package.json`; installs with `npm install --workspaces --include-workspace-root`; builds with `npm run build`, which writes `lib/` for npm and the Vite app in `dist/` for the wheel; builds the `<datalayer-app>` embed with `npm run build:embed` into `dist-embed/` (the script `datalayer-app.js`, the module `datalayer-app-main.js`, its lazy `chunks/`, `assets/` and `datalayer-app.css`), which prints every file's size and fails when the initial load is over its gzip budget (`vite.embed.config.ts`), and which the npm package carries; packs `@datalayer/agent-runtimes` with `npm pack` and checks the bundle is in the tarball; builds the sdist and the wheel with `python -m build`. The hatch build hook copies `dist/` into `agent_runtimes/static/dist`, so the wheel serves the frontend. The build job then checks that the generated `_version.py` matches the tag and that the wheel contains `agent_runtimes/static/dist/index.html`, and uploads both packages as artifacts.
+- **build**: checks that the tag matches `package.json`; installs with `npm install --workspaces --include-workspace-root`; builds with `npm run build`, which writes `lib/` for npm and the Vite app in `dist/` for the wheel; builds the `<datalayer-app>` embed with `npm run build:embed` into `dist-embed/` (the script `datalayer-app.js`, the module `datalayer-app-main.js`, its lazy `chunks/`, `assets/` and `datalayer-app.css`), which prints every file's size and fails when the initial load is over its gzip budget (`vite.embed.config.ts`), and which the npm package carries; runs the portable entries' tests (`src/__tests__/portable.unit.test.ts`, `src/portable/__tests__`, `src/portable/hosts/__tests__`); packs `@datalayer/agent-runtimes` with `npm pack` and checks the embed bundle, `lib/portable/hosts/index.js`, `lib/portable/hosts/contracts.json` and `lib/portable/semantic-events.json` are in the tarball; builds the sdist and the wheel with `python -m build`. The hatch build hook copies `dist/` into `agent_runtimes/static/dist`, so the wheel serves the frontend. The build job then checks that the generated `_version.py` matches the tag and that the wheel contains `agent_runtimes/static/dist/index.html`, and uploads both packages as artifacts.
 - **pypi**: publishes the sdist and the wheel with `pypa/gh-action-pypi-publish`, in the `pypi` environment, with `id-token: write`.
 - **npm**: in the `npm` environment, with `id-token: write`, upgrades npm to the latest version (trusted publishing needs npm 11.5.1 or later), then runs `npm publish <tarball> --access public --provenance`.
 
