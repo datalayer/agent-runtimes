@@ -85,6 +85,7 @@ from agent_shield.tracing import observe, trace_headers, turn_span
 from agent_runtimes._version import __version__
 from agent_runtimes.guardrails.managed_policies import runtime_policies
 from agent_runtimes.guardrails.session_rules import session_rules
+from agent_runtimes.guardrails.shield_authorizer import companies_of
 from agent_runtimes.guardrails.shield_policy import (
     VERDICT_BEHAVIOUR,
     PolicyUnavailable,
@@ -97,7 +98,6 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalRejectedError,
     ToolApprovalTimeoutError,
 )
-from agent_runtimes.guardrails.shield_authorizer import companies_of
 from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
 from agent_runtimes.mcp.lent_stdio import carry, hold, release
 from agent_runtimes.types import HarnessSpec
@@ -1702,8 +1702,6 @@ def harness_agent(
         installed, a declared secret missing, no workspace, or a connection
         its spec's ``acp.mcp`` refuses — each in a sentence.
     """
-    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
-
     from agentspecs.harnesses import listed_refusal
 
     from agent_runtimes.guardrails.organization_harnesses import (
@@ -1713,6 +1711,7 @@ def harness_agent(
         organization_harness,
         read_organization_harnesses,
     )
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
 
     harness = HARNESS_CATALOGUE.get(harness_id)
     admitted_as = ""

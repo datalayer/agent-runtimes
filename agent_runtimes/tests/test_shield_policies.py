@@ -851,9 +851,12 @@ class TestTheModelBudget:
 
 
 class TestTheDeploymentsSpendLimit:
-    """A deployment's spend limit, handed by ai-agents' keeper in its instance,
-    held for each session as a ``team`` document's ``limits.spend`` and said
-    apart from the keeper's day (SH-32)."""
+    """
+    A deployment's spend limit, handed by ai-agents' keeper in its instance.
+
+    Held for each session as a ``team`` document's ``limits.spend`` and said
+    apart from the keeper's day (SH-32).
+    """
 
     def test_it_is_a_team_document_soft_at_the_keepers_warning_share(self) -> None:
         from agent_runtimes.guardrails.shield_policy import (

@@ -264,9 +264,15 @@ def deployment_said(
 
 
 def datalayer_default() -> Policy:
-    """Decision 5's default as Datalayer runs it (SHIELD §6.11): the classes the
-    platform writes relationships for need the authorizer's allow beside the Rules."""
-    from agent_runtimes.guardrails.shield_authorizer import DATALAYER_AUTHORIZE  # noqa: PLC0415
+    """
+    Decision 5's default as Datalayer runs it (SHIELD §6.11).
+
+    The classes the platform writes relationships for need the authorizer's
+    allow beside the Rules.
+    """
+    from agent_runtimes.guardrails.shield_authorizer import (
+        DATALAYER_AUTHORIZE,  # noqa: PLC0415
+    )
 
     document = default_policy()
     document.authorize = list(DATALAYER_AUTHORIZE)

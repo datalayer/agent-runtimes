@@ -46,7 +46,9 @@ def runtime_subject(credential: str, deployment_uid: str = "") -> Subject:
     """Who the run acts as: the deployment named, else the token's account, else local."""
     if deployment_uid:
         return Subject(type="deployment", id=deployment_uid)
-    from agent_runtimes.guardrails.managed_policies import account_of_token  # noqa: PLC0415
+    from agent_runtimes.guardrails.managed_policies import (
+        account_of_token,  # noqa: PLC0415
+    )
 
     account = account_of_token(credential) if credential else ""
     return Subject(type="account", id=account or "local")
@@ -62,7 +64,9 @@ def deployment_of_token(credential: str) -> str:
     if len(parts) != 3:
         return ""
     try:
-        claims = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4)))
+        claims = json.loads(
+            base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
+        )
     except (ValueError, binascii.Error):
         return ""
     if not isinstance(claims, dict):
@@ -73,8 +77,11 @@ def deployment_of_token(credential: str) -> str:
 
 
 def runtime_authorizer(credential: str) -> Optional[Any]:
-    """IAM's authorizer with the run's credential, or ``None`` (said) when no IAM is named:
-    every class a policy lists under ``authorize:`` is then refused — never a fail-open."""
+    """
+    Answer IAM's authorizer with the run's credential, or ``None`` (said) when no IAM is named.
+
+    Every class a policy lists under ``authorize:`` is then refused — never a fail-open.
+    """
     iam_url = (os.environ.get(IAM_URL_VARIABLE) or "").strip().rstrip("/")
     if not iam_url or not credential:
         logger.warning(
