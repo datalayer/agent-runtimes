@@ -1025,7 +1025,8 @@ class TurnProvenance(BaseModel):
     """Where a host's turn comes from (plans/DISCORD.md §4.3, §4.4; SLACK
     S-204): the host's kind, the place, its thread and message — other
     people's words arrive marked with where they were said. Kept with the
-    turn: a retry naming another provenance is another request (409)."""
+    turn: a retry naming another provenance is another request (409).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
