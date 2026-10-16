@@ -336,7 +336,7 @@ class Speaker:
         return folder
 
     def _voice_and_language(self) -> tuple[str, str]:
-        """Kokoro's own name for the voice, and the language it says it in."""
+        """Return Kokoro's own name for the voice, and the language it says it in."""
         from agent_runtimes.specs.voices import VOICE_CATALOGUE  # noqa: PLC0415
 
         spec = VOICE_CATALOGUE.get(self.voice)

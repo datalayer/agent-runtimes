@@ -1472,25 +1472,39 @@ class TestPapThroughTheShield:
         assert authorizer.url == "https://prod1.datalayer.run/api/iam/v1/authz/evaluate"
         assert shield_authorizer.runtime_authorizer("") is None
 
-    def test_a_runtime_pods_workspace_needs_the_authorizer_too(self, monkeypatch) -> None:
+    def test_a_runtime_pods_workspace_needs_the_authorizer_too(
+        self, monkeypatch
+    ) -> None:
         """In a managed runtime pod the operator wrote the launch's relationship
         (SH-75): reading, writing and running a command there are authorized."""
         from agent_runtimes.guardrails.shield_policy import datalayer_default
 
-        monkeypatch.setenv("AGENT_RUNTIMES_WORKSPACE_ROOT", "/mnt/shared-agent/workspace/")
+        monkeypatch.setenv(
+            "AGENT_RUNTIMES_WORKSPACE_ROOT", "/mnt/shared-agent/workspace/"
+        )
         monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")
         monkeypatch.delenv("DATALAYER_SHIELD_AUTHORIZE_WORKSPACE", raising=False)
-        assert datalayer_default().authorize == ["read", "write", "execute", "send", "buy"]
+        assert datalayer_default().authorize == [
+            "read",
+            "write",
+            "execute",
+            "send",
+            "buy",
+        ]
         monkeypatch.setenv("DATALAYER_SHIELD_AUTHORIZE_WORKSPACE", "off")
         assert datalayer_default().authorize == ["send", "buy"]
         monkeypatch.delenv("DATALAYER_SHIELD_AUTHORIZE_WORKSPACE")
         monkeypatch.setenv("AGENT_RUNTIMES_WORKSPACE_ROOT", "/home/me/project")
         assert datalayer_default().authorize == ["send", "buy"]
-        monkeypatch.setenv("AGENT_RUNTIMES_WORKSPACE_ROOT", "/mnt/shared-agent/workspace")
+        monkeypatch.setenv(
+            "AGENT_RUNTIMES_WORKSPACE_ROOT", "/mnt/shared-agent/workspace"
+        )
         monkeypatch.delenv("DATALAYER_IAM_URL")
         assert datalayer_default().authorize == ["send", "buy"]
 
-    def test_datalayers_default_needs_the_authorizer_for_send_and_buy(self, monkeypatch) -> None:
+    def test_datalayers_default_needs_the_authorizer_for_send_and_buy(
+        self, monkeypatch
+    ) -> None:
         from agent_runtimes.guardrails.shield_policy import (
             datalayer_default,
             policies_of,

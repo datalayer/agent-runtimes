@@ -278,7 +278,7 @@ def test_loop_voice_and_speak_reach_the_chat(monkeypatch):
 
 
 class Prompted:
-    """prompt_toolkit's session, as `show_prompt` uses it: the line given back as typed."""
+    """Stand in for prompt_toolkit's session, as `show_prompt` uses it: the line given back as typed."""
 
     def __init__(self, typed: Any = None) -> None:
         self.typed = typed
@@ -459,7 +459,7 @@ def test_the_store_s_defaults_are_datalayer_s_cdn_and_the_two_machine_models(
 
 
 class StandInKokoro:
-    """kokoro-onnx's `Kokoro`, as the speaker calls it: a short tone per sentence."""
+    """Stand in for kokoro-onnx's `Kokoro`, as the speaker calls it: a short tone per sentence."""
 
     made: list[tuple[str, str]] = []
 
