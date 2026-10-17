@@ -18,17 +18,101 @@ import { PROBES, landingUrl } from './global-setup';
 export const fixture = (name: string): string =>
   fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
+/**
+ * A hosted address to drive instead of the Studio's Preview (VO-53):
+ * `/apps/<slug>`, opened by a visitor without an account, the voice turned
+ * on for the page alone. The application's own page is lighter than the
+ * Studio's, so the browser's own model hears inside the memory a test is
+ * given there.
+ */
+export const voiceAddress = (): string => process.env.E2E_VOICE_ADDRESS || '';
+
 export const unreachable =
   process.env[PROBES.landing] ||
-  (!process.env.E2E_STATE
-    ? 'E2E_STATE names no signed-in storage state: the Preview needs a person.'
-    : !process.env.E2E_VOICE_APP
-      ? 'E2E_VOICE_APP names no application to preview.'
-      : '');
+  (voiceAddress()
+    ? ''
+    : !process.env.E2E_STATE
+      ? 'E2E_STATE names no signed-in storage state: the Preview needs a person (or name a hosted address, E2E_VOICE_ADDRESS).'
+      : !process.env.E2E_VOICE_APP
+        ? 'E2E_VOICE_APP names no application to preview.'
+        : '');
+
+/** The voice an Appspec says, as its JSON writes it (`interface.voice`). */
+export interface VoiceSaid {
+  input: 'push_to_talk' | 'hands_free';
+  output: 'off' | 'on_request' | 'always';
+  where: 'auto' | 'device' | 'server';
+}
+
+/**
+ * The page the voice is driven on, open and its composer shown: the
+ * application's Preview in the Studio, signed in; or, with
+ * `E2E_VOICE_ADDRESS`, its hosted address as a visitor, its voice turned on
+ * for the page alone in the answer that address is read from. Nothing of
+ * the application is changed: writes are refused in the browser.
+ */
+export async function openVoice(
+  page: Page,
+  context: BrowserContext,
+  voice: VoiceSaid,
+): Promise<void> {
+  await context.route('**/api/**', route =>
+    ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
+      ? route.abort()
+      : route.continue(),
+  );
+  // The notebook's Python in the browser is not needed to talk, and the
+  // page stays inside the memory a test is given.
+  await context.route(
+    /pyodide|jupyterlite|lite-service-worker|\.whl(\?|$)/,
+    route => route.abort(),
+  );
+  const slug = voiceAddress();
+  if (slug) {
+    // Registered last, so tried first: the address's answer, with a voice.
+    await context.route(
+      url =>
+        url.pathname.endsWith(
+          `/apps/deployments/at/${encodeURIComponent(slug)}`,
+        ),
+      async route => {
+        const response = await route.fetch();
+        const read = (await response.json()) as {
+          spec?: { interface?: Record<string, unknown> };
+        };
+        if (read.spec) {
+          read.spec.interface = {
+            ...read.spec.interface,
+            voice: { enabled: true, voice: '', language: 'en', ...voice },
+          };
+        }
+        await route.fulfill({ response, json: read });
+      },
+    );
+    await page.goto(`${landingUrl()}/apps/${encodeURIComponent(slug)}`);
+    return;
+  }
+  await page.goto(
+    `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
+  );
+  const card = page.locator('#app-voice');
+  await expect(card).toBeVisible({ timeout: 180_000 });
+  if (
+    !['on', 'true'].includes((await card.getAttribute('data-app-voice')) ?? '')
+  ) {
+    await card.locator('input[type=checkbox]').click();
+  }
+  if (voice.input === 'hands_free') {
+    // The page's own choice, never saved: hands-free, answers always said.
+    await card.getByLabel('Talking to it').selectOption('hands_free');
+  }
+  await page.locator('text=Compose >> visible=true').first().click();
+}
 
 /** The browser, its fake microphone playing `wav` over and over. */
 export const hearing = (wav: string) => ({
-  storageState: process.env.E2E_STATE || undefined,
+  // A visitor at a hosted address has no account.
+  storageState: voiceAddress() ? undefined : process.env.E2E_STATE || undefined,
   permissions: ['microphone'],
   launchOptions: {
     executablePath: process.env.E2E_CHROME || '/usr/bin/google-chrome',
@@ -72,16 +156,6 @@ export async function talkWith(
 ): Promise<Talk> {
   const runs: string[] = [];
   const syntheses: number[] = [];
-  await context.route('**/api/**', route =>
-    ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
-      ? route.abort()
-      : route.continue(),
-  );
-  // The notebook's Python in the browser is not needed to talk.
-  await context.route(
-    /pyodide|jupyterlite|lite-service-worker|\.whl(\?|$)/,
-    route => route.abort(),
-  );
   // Heard on Datalayer's servers as it is said (the person's *Detect the
   // language I speak*): the browser runs only the VAD, and the Studio's
   // page stays inside the memory a test is given — with the browser's own
@@ -140,19 +214,11 @@ export async function talkWith(
       syntheses.push(response.status());
     }
   });
-  await page.goto(
-    `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
-  );
-  const card = page.locator('#app-voice');
-  await expect(card).toBeVisible({ timeout: 180_000 });
-  if (
-    !['on', 'true'].includes((await card.getAttribute('data-app-voice')) ?? '')
-  ) {
-    await card.locator('input[type=checkbox]').click();
-  }
-  // The page's own choice, never saved: hands-free, answers always said.
-  await card.getByLabel('Talking to it').selectOption('hands_free');
-  await page.locator('text=Compose >> visible=true').first().click();
+  await openVoice(page, context, {
+    input: 'hands_free',
+    output: 'always',
+    where: onDevice ? 'device' : 'server',
+  });
   const toggle = page.locator('[data-hands-free-toggle]').first();
   await expect(toggle).toBeEnabled({ timeout: 120_000 });
   await toggle.click();

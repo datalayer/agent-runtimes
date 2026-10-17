@@ -4,7 +4,7 @@
  */
 
 /**
- * One end-to-end suite, two mounts (STUDIO D-15): the hosted page of an
+ * One end-to-end suite, two mounts (D-15): the hosted page of an
  * application on the landing (`/apps/<slug>`) and the `<datalayer-app>`
  * element on a host page of another origin (`examples/embed-host`), each
  * running the same cases, in the system Chrome.

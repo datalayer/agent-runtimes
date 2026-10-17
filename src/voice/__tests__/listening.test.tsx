@@ -156,7 +156,7 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     container.remove();
   });
 
-  function draw(silenceMs = 800) {
+  function draw(silenceMs = 800, disabled = false) {
     const hearing = new DeviceHearing(
       'https://models.example/speech',
       engines(['Open', 'the', 'notebook.']),
@@ -168,6 +168,7 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
           language="en-US"
           consentKey="listening-test"
           silenceMs={silenceMs}
+          disabled={disabled}
           onInterim={words => interim.push(words)}
           onTranscript={transcript => transcripts.push(transcript)}
         />,
@@ -250,6 +251,20 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     expect(state()).toBe('idle');
     expect(interim[interim.length - 1]).toBe('');
     expect(transcripts).toHaveLength(0);
+  });
+
+  it('turned off, is drawn under its tooltip still, marked unavailable, and does not listen (VO-53)', async () => {
+    // A disabled button is not interactive to Primer's Tooltip, which threw
+    // and took a visitor's page down when the microphone mounted early.
+    const mic = draw(800, true);
+    expect(mic.getAttribute('aria-disabled')).toBe('true');
+    expect(mic.hasAttribute('disabled')).toBe(false);
+    await act(async () => {
+      press(mic, 'pointerdown');
+      press(mic, 'pointerup');
+    });
+    expect(state()).toBe('idle');
+    expect(openMicrophone).not.toHaveBeenCalled();
   });
 
   it('says so in a sentence when the microphone is refused', async () => {

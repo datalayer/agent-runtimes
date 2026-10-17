@@ -5,7 +5,7 @@
 
 /**
  * The embed and the hosted page pass the same suite: one set of cases, two
- * mounts (STUDIO D-15).
+ * mounts (D-15).
  *
  * The **hosted** mount is an application at its address on the landing,
  * `/apps/<slug>`, read by a visitor without an account. The **element**
@@ -90,7 +90,7 @@ const MOUNTS: Mount[] = [
     name: 'the element on a host page',
     unreachable: notReachable(PROBES.bundle, PROBES.hostPage),
     // The same application as the hosted page when an address is named
-    // (STUDIO D-15: an `at:` address's agent, made as the element opens);
+    // (D-15: an `at:` address's agent, made as the element opens);
     // else an example the visitors' runtime keeps warm.
     openAnswering: page =>
       page

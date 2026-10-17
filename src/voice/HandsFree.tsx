@@ -317,9 +317,20 @@ export function HandsFree({
           variant={on ? 'primary' : 'invisible'}
           aria-pressed={on}
           aria-label={on ? 'Stop talking with it' : 'Talk with it'}
-          disabled={disabled}
+          // `aria-disabled`, never `disabled`: Primer's Tooltip throws for
+          // a trigger that is not interactive (VO-53).
+          aria-disabled={disabled || undefined}
           data-hands-free-toggle=""
-          onClick={() => (on ? turnOff() : turnOn())}
+          onClick={() => {
+            if (disabled) {
+              return;
+            }
+            if (on) {
+              turnOff();
+            } else {
+              turnOn();
+            }
+          }}
         >
           {HANDS_FREE_WORDS.off}
         </Button>

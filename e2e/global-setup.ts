@@ -4,8 +4,7 @@
  */
 
 /**
- * What the suite can reach, probed once before any browser opens (STUDIO
- * D-15): the landing, the embed bundle it serves, the visitors' runtime and
+ * What the suite can reach, probed once before any browser opens (D-15): the landing, the embed bundle it serves, the visitors' runtime and
  * each address. The answers go to the workers through the environment, so
  * that a mount nothing serves skips at collection, with a sentence, and
  * opens no browser.

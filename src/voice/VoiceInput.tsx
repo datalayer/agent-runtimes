@@ -337,6 +337,8 @@ export function VoiceInput({
   useEffect(() => () => capture.current?.cancel(), []);
 
   const listening = state === 'listening';
+  // Not to be pressed: turned off, or the words still being heard.
+  const inert = disabled || state === 'hearing';
   const label = listening
     ? clicked
       ? 'Listening — click to stop'
@@ -393,10 +395,14 @@ export function VoiceInput({
           aria-pressed={listening}
           size="small"
           variant={listening ? 'danger' : 'invisible'}
-          disabled={disabled || state === 'hearing'}
+          // Unavailable as `aria-disabled`, never `disabled`: Primer's
+          // Tooltip throws for a trigger that is not interactive (a disabled
+          // button is not), which took a visitor's whole page down when the
+          // microphone mounted before its conversation was ready (VO-53).
+          aria-disabled={inert || undefined}
           data-voice-mic=""
           onPointerDown={event => {
-            if (event.button !== 0) {
+            if (inert || event.button !== 0) {
               return;
             }
             pressedAt.current = Date.now();
@@ -407,6 +413,9 @@ export function VoiceInput({
             }
           }}
           onPointerUp={() => {
+            if (inert) {
+              return;
+            }
             // Held: letting go stops. A click: it goes on until the next
             // one, or until the person stops speaking.
             if (
@@ -423,6 +432,9 @@ export function VoiceInput({
             // Enter or Space on the focused button toggles, for the keyboard (VO-66).
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
+              if (inert) {
+                return;
+              }
               if (stateRef.current === 'listening') {
                 void stop();
               } else {
