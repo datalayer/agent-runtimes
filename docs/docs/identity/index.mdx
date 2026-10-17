@@ -35,7 +35,7 @@ Agent identity is more complex than traditional application identity because:
             ▼                    ▼                       ▼
      ┌──────────────┐     ┌──────────────┐       ┌──────────────┐
      │   GitHub     │     │   Gmail      │       │  Skills &    │
-     │   API        │     │   API        │       │  Code Mode   │
+     │   API        │     │   API        │       │  Codemode   │
      └──────────────┘     └──────────────┘       └──────────────┘
 ```
 
@@ -116,24 +116,26 @@ When the agent invokes a Kaggle MCP tool, the runtime:
 
 **Use case**: Internal agents communicating within your organization's infrastructure.
 
-For workload-to-workload identity within a trust domain, use [SPIFFE](https://spiffe.io) (Secure Production Identity Framework for Everyone):
+Agent Runtimes does not ship a SPIFFE/SPIRE integration (an earlier version of this page showed an `agent_runtimes.identity.SPIFFEIdentity` class that never existed). Between agents, identity is carried by OAuth tokens instead:
+
+- an agent that launches a sub-agent hands it a **narrower token delegated from its own** (RFC 8693 token exchange), so what the sub-agent does is attributed to the chain that launched it;
+- an agent with nobody at the keyboard gets **its own machine token** (Type 4 below).
 
 ```python
-from agent_runtimes.identity import SPIFFEIdentity
+from agent_runtimes.mcp.auth.machine import exchange_for_subagent
+from agent_runtimes.mcp.auth.oauth import discover
 
-# Agent obtains its SVID (SPIFFE Verifiable Identity Document)
-identity = SPIFFEIdentity()
-svid = await identity.get_x509_svid()
-
-# Use SVID for mutual TLS with other agents
-async with identity.create_secure_channel("spiffe://acme.com/agents/data-processor") as channel:
-    response = await channel.request({"action": "process_data", "payload": data})
+metadata = await discover("https://mcp.example.com/mcp")
+# `parent_token` is the OAuthToken this agent holds.
+child_token = await exchange_for_subagent(
+    parent_token,
+    metadata,
+    audience="https://mcp.example.com/mcp",
+    scope="notebooks:read",  # can only narrow; read the response's scope
+)
 ```
 
-SPIFFE provides:
-- **Automatic identity**: No static credentials—workloads receive short-lived certificates
-- **Zero-trust**: Every request is authenticated via mutual TLS
-- **Cross-platform**: Works with Kubernetes, VMs, bare metal
+[SPIFFE](https://spiffe.io) remains a good fit for workload identity in your own infrastructure, outside Agent Runtimes.
 
 ### Type 4: Service Account Access
 
@@ -142,21 +144,29 @@ SPIFFE provides:
 For server-to-server communication where no user is involved, use the OAuth 2.1 Client Credentials flow:
 
 ```python
-from agent_runtimes.identity import ServiceCredentials
+import os
 
-# Configure service account
-service = ServiceCredentials(
-    client_id=os.getenv("ANALYTICS_CLIENT_ID"),
-    client_secret=os.getenv("ANALYTICS_CLIENT_SECRET"),
-    token_endpoint="https://auth.example.com/oauth/token",
-    scopes=["analytics:read"]
+from agent_runtimes.mcp.auth.machine import ClientCredentials, MachineTokenProvider
+from agent_runtimes.mcp.auth.oauth import discover
+
+# A secret or a private key (private_key_jwt, RFC 7523), never both.
+credentials = ClientCredentials(
+    client_id=os.environ["ANALYTICS_CLIENT_ID"],
+    client_secret=os.environ["ANALYTICS_CLIENT_SECRET"],
+    scope="analytics:read",
+)
+metadata = await discover("https://analytics.example.com/mcp")
+service = MachineTokenProvider(
+    credentials=credentials,
+    metadata=metadata,
+    resource="https://analytics.example.com/mcp",  # the token's audience (RFC 8707)
 )
 
-# Agent uses service token (auto-refreshed)
+# The token is fetched on first use and again once it expires; no refresh token is kept.
 @agent.tool
 async def get_metrics(ctx: RunContext) -> dict:
-    token = await service.get_token()
-    # Use token for API calls
+    headers = {"Authorization": await service.authorization()}
+    # Use headers for API calls; on a 401, call service.forget() and retry once.
 ```
 
 ## Provider Setup Guides
@@ -254,18 +264,21 @@ VITE_KAGGLE_API_TOKEN=your-api-key-from-kaggle-json
 ```
 
 ```tsx
-import { AgentRuntimeFormExample } from '@datalayer/agent-runtimes';
+import { useEffect } from 'react';
+import { useIdentity } from '@datalayer/agent-runtimes';
 
-// Token auto-connects on component mount
-<AgentRuntimeFormExample
-  identityProviders={{
-    kaggle: {
-      type: 'token',
-      token: import.meta.env.VITE_KAGGLE_API_TOKEN,
-      displayName: 'Kaggle',
-    },
-  }}
-/>
+// The token connects once, on mount. (The `AgentRuntimeFormExample` this page
+// used to show is gone; `useIdentity().connectWithToken` is what it called.)
+function KaggleFromEnv() {
+  const { connectWithToken, isConnected } = useIdentity();
+  useEffect(() => {
+    const token = import.meta.env.VITE_KAGGLE_API_TOKEN;
+    if (token && !isConnected('kaggle')) {
+      connectWithToken('kaggle', token, { displayName: 'Kaggle' });
+    }
+  }, [connectWithToken, isConnected]);
+  return null;
+}
 ```
 
 For the backend (Python):
@@ -708,19 +721,17 @@ The OAuth 2.1 implementation consists of the following components:
 
 ```
 agent_runtimes/
-  identity/
-    __init__.py
-    oauth/
-      client.py          # OAuth client implementation
-      tokens.py          # Token storage and refresh
-      pkce.py            # PKCE utilities
-      discovery.py       # Authorization server metadata (RFC 8414)
-      dcr.py             # Dynamic Client Registration (RFC 7591)
-    providers/
-      github.py          # GitHub OAuth configuration
-      google.py          # Google/Gmail OAuth configuration
-      kaggle.py          # Kaggle OAuth configuration
-      generic.py         # Generic OAuth provider
+  mcp/auth/
+    oauth.py             # discover (RFC 8414/9728), register_client (RFC 7591),
+                         # authorization_url + PKCE, exchange_code, refresh_token, revoke
+    cimd.py              # Client ID Metadata Document, preferred over DCR when supported
+    machine.py           # ClientCredentials, MachineTokenProvider (client_credentials,
+                         # private_key_jwt), exchange_for_subagent (RFC 8693)
+    tokens.py            # OAuthToken and its storage
+  routes/
+    identity.py          # /oauth/token (code exchange with the provider secret), /oauth/userinfo
+    mcp_auth.py          # The MCP authorization flow (start, callback, status)
+src/identity/            # React: useIdentity, IdentityConnect, dcr.ts, pkce.ts, OAuthCallback
 ```
 
 #### Token Storage
@@ -728,35 +739,30 @@ agent_runtimes/
 Tokens must be stored securely with:
 - **Encryption at rest**: AES-256 encryption for stored tokens
 - **User scoping**: Tokens are always associated with a specific user
-- **Automatic refresh**: Background refresh before expiration
+- **Automatic refresh**: Refreshed at use, shortly before expiration
 - **Revocation support**: Clear tokens on user logout or revocation
 
+In `agent_runtimes/mcp/auth/tokens.py`, a store keeps one user's tokens per MCP server; `get_token_store()` picks the tier (memory, the OS keyring, or the Datalayer platform's secrets):
+
 ```python
-class TokenStore:
-    """Secure token storage with automatic refresh."""
-    
-    async def store_token(
-        self,
-        user_id: str,
-        provider: str,
-        token: OAuthToken,
-    ) -> None:
-        """Store encrypted token for user."""
-        
-    async def get_token(
-        self,
-        user_id: str,
-        provider: str,
-    ) -> OAuthToken | None:
-        """Get token, refreshing if needed."""
-        
-    async def revoke_token(
-        self,
-        user_id: str,
-        provider: str,
-    ) -> None:
-        """Revoke and delete token."""
+from typing import Optional, Protocol
+
+from agent_runtimes.mcp.auth.tokens import OAuthToken
+
+
+class TokenStore(Protocol):
+    """Somewhere durable to keep one user's MCP credentials."""
+
+    name: str
+
+    def available(self) -> bool: ...
+    def get(self, server_id: str) -> Optional[OAuthToken]: ...
+    def put(self, server_id: str, token: OAuthToken) -> None: ...
+    def delete(self, server_id: str) -> None: ...
+    def list_servers(self) -> tuple[str, ...]: ...
 ```
+
+Refreshing is done at use: a token within a minute of expiry is refreshed with `agent_runtimes.mcp.auth.oauth.refresh_token` before the call.
 
 #### Dynamic Client Registration
 
@@ -765,22 +771,19 @@ For MCP servers the agent hasn't seen before, the frontend implements [RFC 7591]
 The backend Python equivalent:
 
 ```python
-from agent_runtimes.identity.dcr import (
-    discover_authorization_server,
-    register_client,
-    get_or_create_dynamic_client,
-)
+from agent_runtimes.mcp.auth.oauth import discover, register_client
 
-# Discover and register with a new OAuth provider
-async def connect_to_new_provider(issuer_url: str) -> DynamicClient:
-    """Register with an OAuth provider discovered at runtime."""
-    return await get_or_create_dynamic_client(
-        issuer_url=issuer_url,
-        client_name="My AI Agent",
-        redirect_uris=["http://localhost:3000/oauth/callback"],
-        scopes=["openid", "profile"],
+# Discover the authorization server that protects an MCP server, then register.
+async def connect_to_new_server(server_url: str) -> tuple[str, str | None]:
+    """Returns (client_id, client_secret); the secret is None for a public client."""
+    metadata = await discover(server_url)
+    return await register_client(
+        metadata,
+        redirect_uri="http://localhost:3000/oauth/callback",
     )
 ```
+
+When the authorization server supports Client ID Metadata Documents, `register_client` returns this deployment's published client URL instead of registering a new client.
 
 ### Type 2: MCP Authorization Integration
 
@@ -916,16 +919,18 @@ Instead use:
 The Agent Runtimes React components support OAuth flows out of the box:
 
 ```tsx
-import { ChatBase, useOAuthConnect } from '@datalayer/agent-runtimes';
+import { ChatBase, useIdentity } from '@datalayer/agent-runtimes';
 
 function AgentChat() {
-  const { connect, isConnecting, connectedProviders } = useOAuthConnect();
-  
+  // `useIdentity` replaces the older `useOAuthConnect` hook.
+  const { connect, connectWithPopup, connectedProviders, identities } =
+    useIdentity();
+
   return (
     <div>
       {/* Show connection status */}
       <div className="providers">
-        <button 
+        <button
           onClick={() => connect('github')}
           disabled={connectedProviders.includes('github')}
         >
@@ -935,12 +940,13 @@ function AgentChat() {
           Connect Kaggle
         </button>
       </div>
-      
-      {/* Chat component handles authorization-required responses */}
+
+      {/* Tokens of connected identities reach the tools that need them */}
       <ChatBase
-        onAuthorizationRequired={({ provider, authUrl }) => {
-          // Open OAuth popup
-          window.open(authUrl, 'oauth', 'width=600,height=800');
+        connectedIdentities={identities}
+        onAuthorizationRequired={async (provider, scopes) => {
+          const identity = await connectWithPopup(provider, scopes);
+          return identity.token?.accessToken ?? null;
         }}
       />
     </div>
@@ -959,7 +965,7 @@ Agent Runtimes supports two types of programmatic tool execution:
 | Execution Type | Description | Use Case |
 |----------------|-------------|----------|
 | **Skills** | Standalone Python scripts executed via `SandboxExecutor` | Predefined, reusable automation scripts |
-| **Code Mode** | Dynamic Python code executed via `CodeModeExecutor` | Ad-hoc code that composes MCP tools |
+| **Codemode** | Dynamic Python code executed via `CodeModeExecutor` | Ad-hoc code that composes MCP tools |
 
 Both execution environments automatically receive OAuth tokens as environment variables when identities are connected.
 
@@ -1017,7 +1023,7 @@ Backend (Python):
                                  sandbox with env      sandbox with env
                                            │                     │
                               ┌────────────▼────────┐ ┌──────────▼──────────┐
-                              │ Skill Script        │ │ Code Mode Script    │
+                              │ Skill Script        │ │ Codemode Script    │
                               │ (GITHUB_TOKEN env)  │ │ (GITHUB_TOKEN env)  │
                               └─────────────────────┘ └─────────────────────┘
 ```
@@ -1084,7 +1090,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### Code Mode Example
+### Codemode Example
 
 Code executed via the `execute_code` tool also receives identity tokens:
 
@@ -1179,7 +1185,7 @@ sandbox.start()
 executor = SandboxExecutor(sandbox)
 ```
 
-#### Code Mode Executor
+#### Codemode Executor
 
 ```python
 from agent_codemode.composition.executor import CodeModeExecutor
@@ -1209,7 +1215,7 @@ The `CodeModeExecutor` calls `get_identity_env()` at the start of each `execute(
 - **Context variables are request-scoped** - they're cleared after the request completes
 - **Execution isolation**:
   - Skills: Each execution gets a fresh subprocess with only the needed tokens
-  - Code Mode: Tokens are injected into the sandbox's environment for each `execute()` call
+  - Codemode: Tokens are injected into the sandbox's environment for each `execute()` call
 - **No persistent storage** - tokens are not written to disk during execution
 :::
 
@@ -1253,6 +1259,67 @@ DEBUG:agent_runtimes.context.identities:Set request identities for providers: ['
 DEBUG:agent_codemode.composition.executor:Injecting identity env vars: ['GITHUB_TOKEN', 'GOOGLE_ACCESS_TOKEN']
 DEBUG:agent_codemode.composition.executor:execute() called with code length=256
 ```
+
+## An application's own identity
+
+Everything above is about acting with a *person's* credentials. An
+application deployed on Datalayer also has an identity of its own, which other
+companies' servers read when it reaches them through the agent protocols
+([Agent protocols](../protocols/agent-protocols)). Its keys are kept by
+Datalayer's IAM in Vault transit: no runtime, gateway or model ever holds one.
+
+### Its stable `client_id`
+
+When an application is shipped, ai-agents names its identity at IAM
+(`POST /api/iam/v1/pap/agents/<app>`, the service scope
+`pap-agents:register`). From then on two public documents answer, cached five
+minutes:
+
+| Address | What it is |
+| --- | --- |
+| `<IAM>/api/iam/v1/pap/agents/<app>/agent.json` | its client metadata (PAP §4.1); this URL is its `client_id` |
+| `<IAM>/api/iam/v1/pap/agents/<app>/jwks.json` | its client key's public versions (ES256, Vault transit), every live one |
+
+The same key signs its PACT personal-agent JWT (issuer
+`<IAM>/api/iam/v1/pap/agents/<app>`, `sub` per person, `exp` at most 300
+seconds; [PACT](../protocols/pact)). Its owner rotates it (a new version signs
+from then on; `jwks.json` lists every version still live) or
+withdraws it through ai-agents (`POST /api/ai-agents/v1/pap/agents/<app>/rotate`,
+`…/withdraw`); deleting the application erases it.
+
+### Signed outbound requests
+
+Every request the MCP gateway sends for an application to another company's
+server — the `pap` and `pact` toolsets' calls — carries a Web Bot Auth
+signature (`Signature`, `Signature-Input`, `Signature-Agent`;
+[Web Bot Auth](../protocols/web-bot-auth)). The gateway builds the signature
+base; IAM signs it with the application's own `ed25519` key in Vault transit
+(`POST /api/iam/v1/agents/<app>/web-bot-auth/sign`, the gateway's scope
+`web-bot-auth:sign`, only a base tagged `web-bot-auth` under the current key);
+the key is created on first use. Requests to IAM, to Datalayer's own services
+(`*.svc`) or over plain http are not signed.
+
+In code outside Datalayer the signer is a contribution of the Web Bot Auth
+plugin (`web_bot_auth.signer`): a callable that signs bytes, never a key in
+the runtime.
+
+### Its key directory
+
+The request names where its keys are:
+
+```text
+Signature-Agent: sig1="<IAM>/api/iam/v1/agents/<app>/web-bot-auth/jwks.json";type=jwks_uri
+```
+
+a JWK Set, public, reading it creates nothing (`404 No such agent` for an
+application that never signed). Datalayer uses the draft's `jwks_uri` form
+because one origin serves many applications; an agent that owns its origin
+publishes the draft's well-known directory instead
+(`/.well-known/http-message-signatures-directory`, signed as its Appendix B
+says: `directory_body`, `sign_directory_response`). A website checks a
+request with `verify_request` / `verifyRequest` and a nonce store, as
+[Web Bot Auth](../protocols/web-bot-auth#verifying-as-a-website) shows;
+operators check one from outside as the clouder IAM page says.
 
 ## Emerging Standards
 

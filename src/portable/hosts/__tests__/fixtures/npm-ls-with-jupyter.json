@@ -1,0 +1,21 @@
+{
+  "name": "@datalayer/slack",
+  "dependencies": {
+    "@slack/bolt": {
+      "version": "5.1.0",
+      "dependencies": { "express": { "version": "5.0.0" } }
+    },
+    "@datalayer/agent-runtimes": {
+      "version": "1.5.44",
+      "dependencies": {
+        "@datalayer/jupyter-react": {
+          "version": "2.0.0",
+          "dependencies": {
+            "@jupyterlab/services": { "version": "7.0.0" },
+            "react-dom": { "version": "19.0.0" }
+          }
+        }
+      }
+    }
+  }
+}

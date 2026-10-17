@@ -115,25 +115,19 @@ export function PromptStacks({
             key={stack.id}
             data-prompt-stack={stack.id}
             aria-disabled={isDisabled || undefined}
-            sx={{
-              ...(stack.layout === 'block'
-                ? null
-                : {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: stack.gap ?? 2,
-                  }),
-              px: stack.px ?? 2,
-              py: stack.py ?? 1,
-              ...(stack.pt === undefined ? null : { pt: stack.pt }),
-              ...(stack.pb === undefined ? null : { pb: stack.pb }),
-              minHeight: stack.minHeight,
-              ...(stack.bordered
-                ? { borderTop: '1px solid', borderColor: 'border.default' }
-                : null),
-              ...(stack.subtle ? { bg: 'canvas.subtle' } : null),
-              ...(isDisabled ? { opacity: 0.5, pointerEvents: 'none' } : null),
-            }}
+            px={stack.px ?? 2}
+            py={stack.py ?? 1}
+            minHeight={stack.minHeight}
+            display={stack.layout === 'block' ? undefined : 'flex'}
+            alignItems={stack.layout === 'block' ? undefined : 'center'}
+            gap={stack.layout === 'block' ? undefined : (stack.gap ?? 2)}
+            pt={stack.pt === undefined ? undefined : stack.pt}
+            pb={stack.pb === undefined ? undefined : stack.pb}
+            borderTop={stack.bordered ? '1px solid' : undefined}
+            borderColor={stack.bordered ? 'border.default' : undefined}
+            bg={stack.subtle ? 'canvas.subtle' : undefined}
+            opacity={isDisabled ? 0.5 : undefined}
+            pointerEvents={isDisabled ? 'none' : undefined}
           >
             {stack.content}
           </Box>

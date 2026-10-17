@@ -44,7 +44,7 @@ DECKS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
         "decks_present",
         "decks_print",
     ],
-    icon="project",
+    icon="@primer/octicons-react:project",
     emoji="🃏",
 )
 
@@ -63,7 +63,7 @@ JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
         "runCell",
         "executeCode",
     ],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -75,7 +75,7 @@ JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "propose"],
     enabled=True,
     toolset=["readCell", "readAllCells", "proposeCellUpdate", "runCell"],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -87,7 +87,7 @@ JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "read"],
     enabled=True,
     toolset=["readCell", "readAllCells"],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -99,7 +99,7 @@ JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "jupyter-server"],
     enabled=True,
     toolset="all",
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -111,7 +111,7 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "document", "lexical", "drawing", "diagram"],
     enabled=True,
     toolset="all",
-    icon="file",
+    icon="@primer/octicons-react:file",
     emoji="📄",
 )
 

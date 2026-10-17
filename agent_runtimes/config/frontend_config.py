@@ -12,8 +12,13 @@ import logging
 from typing import Any
 
 from agent_runtimes.mcp.tools import tools_to_builtin_list
-from agent_runtimes.models import create_default_models
-from agent_runtimes.specs.models import DEFAULT_MODEL
+from agent_runtimes.models.offered import (
+    DECISIONS_NOTE,
+    decision_rows,
+    model_rows,
+    models_source,
+)
+from agent_runtimes.specs.models import DEFAULT_MODEL, list_chat_models
 from agent_runtimes.types import (
     AIModelRuntime,
     FrontendConfig,
@@ -28,6 +33,8 @@ async def get_frontend_config(
     mcp_servers: list[MCPServer] | None = None,
     models: list[AIModelRuntime] | None = None,
     disable_tool_approvals: bool = False,
+    model_ids: list[str] | None = None,
+    inference_provider: str | None = None,
 ) -> FrontendConfig:
     """
     Build frontend configuration.
@@ -35,7 +42,11 @@ async def get_frontend_config(
     Args:
         tools: List of available tools (dictionaries with 'name' and 'description')
         mcp_servers: List of configured MCP servers
-        models: Custom model configurations (if None, uses defaults)
+        models: Custom model configurations (if None, built from ``model_ids``)
+        model_ids: The models to offer — an agent's own (its ``model`` and
+            ``model_additionals``); the catalogue's chat models when None
+        inference_provider: Where those models' inference goes (``local`` or
+            ``datalayer``); the runtime's when None
 
     Returns:
         FrontendConfig with all configuration data
@@ -49,8 +60,23 @@ async def get_frontend_config(
 
     # Use provided models or create defaults
     if models is None:
-        models = create_default_models(tool_ids)
-        logger.info(f"Created default model with {len(tool_ids)} associated tools")
+        ids = (
+            model_ids
+            if model_ids is not None
+            else [model.id for model in list_chat_models()]
+        )
+        models = model_rows(ids, tool_ids, inference_provider)
+    source, note = models_source(inference_provider)
+    # The typed-decision models, apart: listed, never a model to switch to.
+    decisions = [
+        AIModelRuntime(
+            id=row["id"],
+            name=row["name"],
+            is_available=row["available"],
+            unavailable_reason=row["reason"],
+        )
+        for row in decision_rows(inference_provider)
+    ]
 
     # Create response
     config = FrontendConfig(
@@ -59,6 +85,10 @@ async def get_frontend_config(
         builtin_tools=builtin_tools,
         mcp_servers=mcp_servers or [],
         disable_tool_approvals=disable_tool_approvals,
+        models_source=source,
+        models_note=note,
+        decision_models=decisions,
+        decisions_note=DECISIONS_NOTE,
     )
 
     logger.info(f"Built frontend config with {len(builtin_tools)} builtin_tools")

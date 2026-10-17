@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The A2A binding (PLAN_ORCHESTRATOR.md, sections 7.1, O0-06).
+"""The A2A binding (O0-06).
 
-Standard A2A first: the mapping is the one in the plan's table — an
+Standard A2A first: the mapping is the one in the mapping table — an
 execution is a Task, an objective is a Message, a status is a task status,
 an output is an Artifact, a cancel is a task cancellation — and a worker
 that has never heard of Datalayer is expected to work. What travels in the
@@ -18,11 +18,11 @@ would be a second set of those decisions, and they would diverge; so the
 the ``agent.subagent`` phases to whatever the parent was already listening
 to, and it turns the same phases into canonical observations.
 
-What a plain A2A worker does not get is 19.8's fifth decision, and it is
+What a plain A2A worker does not get is the fifth decision, and it is
 declared in ``A2A_CAPABILITIES`` rather than discovered:
 
 - No acceptance acknowledgement. A2A's ``submitted`` says an endpoint took
-  the message; section 6.3 exists because that is not a worker taking
+  the message; the acknowledgement milestones exist because that is not a worker taking
   responsibility. This adapter reports ``received`` there and never
   ``accepted``.
 - No checkpoint, no steering, no pause, no resume, no terminate. A2A has
@@ -45,7 +45,7 @@ routes its card names, on the worker's own origin; and a task that ends
 ``canceled`` naming the checkpoint it kept is read as a pause, not a
 cancellation.
 
-The trace (section 10, O0-11) is carried the only way standard A2A leaves
+The trace (O0-11) is carried the only way standard A2A leaves
 open: a ``traceparent`` header on the HTTP requests the relay makes, which
 reaches them because the attempt span instruments ``httpx`` rather than
 because this module reaches into a client it does not own. A worker that
@@ -166,7 +166,7 @@ _NO_CHECKPOINTED = (
     "checkpoint, so recovery here is a retry and not a resume."
 )
 
-#: 19.8's fifth decision as data: created, assigned, running, completed,
+#: the fifth decision as data: created, assigned, running, completed,
 #: failed, cancelled, artifacts and cancellation, and nothing else.
 A2A_CAPABILITIES = AdapterCapabilities(
     protocol=AgentProtocol.A2A,
@@ -209,7 +209,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
             "that never heard of Datalayer does not serve it",
         ),
     ),
-    #: Never 'accepted': see the module docstring and section 6.3.
+    #: Never 'accepted': see the module docstring.
     acknowledgements=frozenset(
         {
             AcknowledgementKind.RECEIVED,
@@ -225,14 +225,14 @@ A2A_CAPABILITIES = AdapterCapabilities(
         "took the message, not that a worker took responsibility (6.3).",
         _NO_CHECKPOINTED,
         "No lease: an attempt that loses its stream is re-attached by "
-        "polling tasks/get, which is decision 5's 'no lease beyond polling'.",
+        "polling tasks/get, which is the 'no lease beyond polling' rule.",
         "The objective and its context references travel as one text part, "
         "not as a structured DataPart (7.1); the structured form arrives "
         "with the extension package (O3-02).",
         "The trace reaches the worker as a traceparent header on the HTTP "
         "requests, not in the A2A message, so a worker that reads only the "
         "message body shows as a broken link rather than a second trace "
-        "(section 10, O0-11).",
+        "(O0-11).",
     ),
 )
 
@@ -330,7 +330,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         Returns
         -------
         AdapterCapabilities
-            19.8's fifth decision.
+            the fifth decision.
         """
         return A2A_CAPABILITIES
 
@@ -469,7 +469,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # the task itself may not have broken at all. Check over a
                 # fresh, short `tasks/get` before declaring the worker
                 # unreachable — the same recovery `subscribe` already does
-                # after a restart (decision 5's "no lease beyond polling"),
+                # after a restart (the "no lease beyond polling" rule),
                 # reused here because a dropped long-lived connection is
                 # that same situation, just discovered inside the same
                 # attempt instead of a later one. Found live, 2026-09-14: a
@@ -515,7 +515,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         """
         Re-attach to a task already dispatched, by polling ``tasks/get``.
 
-        This is the whole of decision 5's "no lease beyond polling", and the
+        This is the whole of the "no lease beyond polling" rule, and the
         recovery path of conformance scenario 4. The first poll reports
         where the task stands as progress rather than as a state change: an
         execution that was running before the disconnect is still running,
@@ -577,7 +577,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         *own* streaming connection drops mid-task. Declaring the worker
         unreachable on a broken stream without checking first turns a
         connection hiccup into a fabricated task failure — this is
-        decision 5's "no lease beyond polling" either way.
+        the "no lease beyond polling" rule either way.
 
         The first poll reports where the task stands as progress rather
         than as a state change: a task that was running before the stream
@@ -946,7 +946,7 @@ class A2AWorkerAdapter(WorkerAdapter):
             return await relay_a2a_task(
                 remote,
                 objective_prompt(execution, attempt),
-                # One tree, one A2A context: the plan's table maps context
+                # One tree, one A2A context: the mapping table maps context
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
@@ -1161,7 +1161,7 @@ def _extension_route(worker: ResolvedWorker, name: str) -> str | None:
     Where the worker's card says an operation of the extension is asked.
 
     The card comes from the worker, so what it names is not followed to
-    anywhere else (section 9): only a path is taken, and it is joined to the
+    anywhere else: only a path is taken, and it is joined to the
     origin the worker was resolved at, so the token the request carries
     never goes to a host a card chose.
 
@@ -1283,7 +1283,7 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     if not seen.acknowledged:
         # The first status of any kind is the endpoint saying it has the
         # message. That is 'received', and on standard A2A it is the only
-        # acknowledgement there is (19.8, decision 5).
+        # acknowledgement there is.
         seen.acknowledged = True
         observations.append(
             Observation.acknowledged(
@@ -1372,6 +1372,14 @@ def _notebook_part(raw: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _claimed_provenance(raw: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """The ``artifactProvenance`` a worker put on an artifact's metadata, when it did."""
+    meta = raw.get("metadata")
+    ours = meta.get("datalayer") if isinstance(meta, Mapping) else None
+    claimed = ours.get("artifactProvenance") if isinstance(ours, Mapping) else None
+    return claimed if isinstance(claimed, Mapping) else None
+
+
 def _task_artifacts(
     task: Mapping[str, Any], execution: Execution, attempt: Attempt
 ) -> list[tuple[Artifact, str]]:
@@ -1408,11 +1416,31 @@ def _task_artifacts(
         # whether it arrived on the stream or from tasks/get.
         text = notebook if notebook is not None else _artifact_text(raw)
         body = text.encode("utf-8")
+        digest = f"sha256:{hashlib.sha256(body).hexdigest()}"
         if notebook is not None:
             cells = len((notebook_of(notebook) or {}).get("cells") or [])
             summary = f"A notebook of {cells} cells"
         else:
             summary = text if len(text) <= 200 else text[:200] + "…"
+        # What the worker claims of it (the extension's `artifactProvenance`,
+        # SH-15): the hash is computed here from the body received, and
+        # a claim that differs is said rather than taken.
+        claimed = _claimed_provenance(raw)
+        if claimed and claimed.get("contentHash") not in (None, digest):
+            summary = (
+                f"{summary} (the worker's content hash {claimed['contentHash']} "
+                f"differs from the body's {digest})"
+            )
+        # The part's own media type, when it says one: a harness's diff is
+        # `text/x-diff`, named by its path.
+        media_type = next(
+            (
+                str(part["media_type"])
+                for part in raw.get("parts") or []
+                if isinstance(part, dict) and part.get("media_type") and "text" in part
+            ),
+            "text/plain",
+        )
         registered.append(
             (
                 Artifact(
@@ -1427,7 +1455,7 @@ def _task_artifacts(
                     name=str(raw.get("name") or "artifact"),
                     media_type=NOTEBOOK_MEDIA_TYPE
                     if notebook is not None
-                    else "text/plain",
+                    else media_type,
                     size_bytes=len(body),
                     provenance=[
                         ArtifactProvenance(
@@ -1439,7 +1467,7 @@ def _task_artifacts(
                                 reference.uri
                                 for reference in execution.context.references
                             ],
-                            content_hash=f"sha256:{hashlib.sha256(body).hexdigest()}",
+                            content_hash=digest,
                             trace_id=trace_id_of(execution.trace.traceparent),
                         )
                     ],

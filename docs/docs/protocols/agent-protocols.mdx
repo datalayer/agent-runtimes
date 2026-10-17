@@ -1,0 +1,185 @@
+---
+sidebar_position: 20
+title: Agent protocols as plugins
+---
+
+# Agent protocols as plugins
+
+Besides the runtime protocols a client uses to talk to an agent (AG-UI,
+Vercel AI, ACP, A2A), an agent speaks **agent protocols** with the world:
+how it calls tools and other agents (MCP, A2A), who it is (Web Bot Auth),
+what a person consented to (PAP, PACT), how it buys (UCP, ACP — the
+*Agentic Commerce Protocol*, named `agentic_commerce` in code so it never
+collides with the Agent Client Protocol). The map is
+[poppy.md/compare](https://poppy.md/compare).
+
+## The map
+
+[poppy.md/compare](https://poppy.md/compare) reads an agent's visit to a
+business as four questions, top to bottom: which agent is this (identity),
+has the person let it act and how far (consent), how it talks and calls
+tools (transport), how it buys (commerce).
+
+| Layer | Protocol | Published by | In agent-runtimes | Libraries reused |
+| --- | --- | --- | --- | --- |
+| Transport | MCP, Model Context Protocol | Anthropic | client, Python ([MCP and A2A](./mcp-and-a2a#mcp)) | `mcp`, `fastmcp`, pydantic-ai |
+| Transport | A2A, Agent2Agent | Google, now the Linux Foundation | server (Python) and client (both) ([MCP and A2A](./mcp-and-a2a#a2a)) | `fasta2a`, `@a2a-js/sdk` |
+| Consent | PAP, Personal Agent Protocol | Sierra, Meta | both roles, through the PAP SDK ([Personal Agent Protocol](../integrations/personal-agent-protocol)) | `personal-agent-protocol`, `@datalayer/personal-agent-protocol` |
+| Consent | PACT, Personal Agent Consent & Trust | Decagon, Instinct | the personal agent, both languages; a local Provider ([PACT](./pact), [PAP and PACT](./pap-and-pact)) | PyJWT, `cryptography`, `jose` |
+| Identity | Web Bot Auth | IETF draft (Cloudflare and others) | signing, the key directory, verifying ([Web Bot Auth](./web-bot-auth)) | `http-sfv`, `cryptography`; Cloudflare's `web-bot-auth` |
+| Identity | TAP, Trusted Agent Protocol | Visa | a draft profile over Web Bot Auth, from Visa's public documentation, not confirmed by Visa ([TAP](./web-bot-auth#tap-a-draft-profile)) | Cloudflare's `http-message-sig` |
+| Commerce | UCP, Universal Commerce Protocol | Google, with Shopify and retailers | the shopper, a test merchant ([UCP](./ucp)) | `ucp-sdk`, `@ucp-js/sdk` |
+| Commerce | ACP, Agentic Commerce Protocol | OpenAI, Stripe | the buyer, a test seller ([Agentic Commerce](./agentic-commerce)) | clients generated from its JSON Schema |
+
+## Every protocol is a Reactor plugin
+
+In [Reactor](https://github.com/datalayer/reactor)'s terms:
+
+- every protocol is a **Plugin**, in Python and in TypeScript, with a
+  manifest and the **Contribution Points** it declares, named
+  `<protocol>.<point>`: its stores, its signer, its egress;
+- its defaults are **Contributions** at order 100; a host replaces one by
+  contributing at a lower order (on Datalayer: IAM custody, the MCP
+  gateway's egress, Vault transit signing);
+- **every extension a protocol defines is a Contribution Point of its
+  plugin**, `<protocol>.extension.<name>`; an implementation of the
+  extension is a Contribution to it, and the protocol negotiates what it
+  offers from what is contributed there;
+- the **`agent-protocols` Reactor Extension** groups the plugins for
+  delivery (Python entry point `datalayer.reactor.extensions`), and decides
+  nothing;
+- each plugin says what it is on `protocols.description`.
+
+```python
+from agent_runtimes.protocols import build_protocols_reactor, list_protocols
+
+platform = build_protocols_reactor(plugins=[(host_manifest, host_plugin)])
+for protocol in list_protocols(platform):
+    print(protocol.id, protocol.version, protocol.roles, protocol.points)
+```
+
+```ts
+import { buildProtocolsReactor } from '@datalayer/agent-runtimes/lib/protocols/agentProtocols';
+import { listProtocols } from '@datalayer/agent-runtimes/lib/protocols/core';
+
+const reactor = buildProtocolsReactor([hostPlugin]);
+listProtocols(reactor);
+```
+
+## What is implemented
+
+| Protocol | Plugin | Version implemented | Points |
+| --- | --- | --- | --- |
+| MCP | `agent-runtimes.protocols.mcp` | Python `mcp` 2.1: 2026-07-28; TypeScript SDK 1.32: 2025-11-25 | none yet: its optional capabilities and extensions become `mcp.extension.*` when the client and server read them from contributions — [what is implemented](./mcp-and-a2a#mcp) |
+| A2A | `agent-runtimes.protocols.a2a` | 1.0 | `a2a.extension.orchestration`, `a2a.extension.face` (Datalayer's), `a2a.extension.other` (any, by URI) — [what is implemented](./mcp-and-a2a#a2a) |
+| Web Bot Auth | `agent-runtimes.protocols.web-bot-auth` | draft-ietf-webbotauth-httpsig-protocol-00 | `web_bot_auth.signer`, `web_bot_auth.nonceStore`, `web_bot_auth.extension.{directory,jwks_uri,cimd}` — [its page](./web-bot-auth) |
+| PAP | `agent-runtimes.protocols.pap`; its own points are the PAP SDK's plugins' (`pap.*`, `pap.company.*`), on the PAP Reactor each personal agent or company builds | 0.1 | `pap.company.operationTickets` (Python: where a perform turn redeems its ticket; Datalayer's company service by default, a local `PapCompanyCapability`'s own) — see [Personal Agent Protocol](../integrations/personal-agent-protocol) |
+| UCP | `agent-runtimes.protocols.ucp` | 2026-08-25 | `ucp.approver`, `ucp.paymentInstruments`, `ucp.proposalStore`, `ucp.extension.{fulfillment,discount,buyer_consent}` — [its page](./ucp) |
+| Agentic Commerce (ACP) | `agent-runtimes.protocols.agentic-commerce` | 2026-04-17 | `agentic_commerce.approver`, `.paymentData`, `.credentials`, `.proposalStore`, `agentic_commerce.extension.{discount,other}` — [its page](./agentic-commerce) |
+| PACT | `agent-runtimes.protocols.pact` | 1.0 | `pact.signer`, `pact.delegationStore`, `pact.receiptStore`, `pact.extension.delegated` — [its page](./pact) |
+
+Each protocol's points are listed in its `reactor-points.json` beside its
+Python package; a table-driven test in each language holds the plugin to
+it: exported under its id, declared by the plugin, its default at order 100
+(or none), replaced by a lower order, gone with its plugin, two at the same
+winning order failing closed.
+
+## Conformance
+
+Each protocol is checked in both languages against the same fixtures, so the
+two packages cannot drift apart:
+
+| Protocol | Shared fixture | Python | TypeScript | Secrets never seen by a model |
+| --- | --- | --- | --- | --- |
+| Web Bot Auth | `web_bot_auth/fixtures/vectors.json`: the draft's Ed25519 vectors E.2.1, E.2.2, E.2.3, reproduced byte for byte | `test_protocols_web_bot_auth.py` | `webBotAuth.unit.test.ts` | the private key: never in a header, the directory or a repr |
+| TAP (draft) | `web_bot_auth/fixtures/tap.json`: a browsing and a paying request under the RFC 9421 Ed25519 test key, computed here (Visa publishes none) | `test_protocols_web_bot_auth_tap.py` | `tap.unit.test.ts` (Cloudflare's `http-message-sig`) | — |
+| UCP 2026-08-25 | `ucp/fixtures/checkout.json`: a checkout and its revision digest | `test_protocols_ucp.py` (against the test merchant) | `ucp.unit.test.ts` | the payment token |
+| Agentic Commerce 2026-04-17 | `agentic_commerce/fixtures/session.json`: a session, the discovery document, the revision digest | `test_protocols_agentic_commerce.py` (against the test seller) | `agenticCommerce.unit.test.ts` | the payment token and the seller bearer |
+| PACT 1.0 | `pact/fixtures/card.json`: a Brand's card and how it is read | `test_protocols_pact.py` (against the local Provider) | `pact.unit.test.ts` | the device code and the delegation token |
+| PAP and PACT in one task | — | `test_protocols_pap_and_pact.py` (the PAP SDK's demo world and the local Provider) | — | both user codes and the delegation token, and any compact JWT |
+| A2A 1.0 extensions | `a2a/fixtures/extensions.json`: a card's extensions, the one found, those required and not supported, and cards both refuse | `test_protocols_a2a_extensions.py`, `test_protocols_a2a_signed_requests.py` | `a2aExtensions.unit.test.ts` | — |
+| Every protocol's journey | — | `test_protocols_secrets.py`: every logger at DEBUG and every URL requested | — | the payment tokens, the seller's bearer, the device code and the delegation token, the private key: in no log line and no URL (MCP's and A2A's: `test_credentials_never_shown.py`, `test_delegated_credential.py`) |
+| Every plugin | its `reactor-points.json`; its entry in the agentspecs catalogue and the version it says | `test_protocols_reactor_points.py` | `reactorPoints.unit.test.ts` | — |
+| MCP | `mcp/fixtures/session.json`: one server's answers on the wire (tools, calls, a refusal, a resource, a prompt) and what a client reads from each, the specification's defaults for missing tool annotations | `test_protocols_mcp.py` (the `mcp` SDK's types and its `Client` at the fixture's server), `test_protocols_mcp_two_languages.py` (the TypeScript `McpClient` at the Python server over Streamable HTTP, 2025-11-25 agreed) | `mcpClient.unit.test.ts` (`@modelcontextprotocol/sdk`'s schemas and a server of the SDK in memory), `mcpServer.integration.test.ts` | `test_credentials_never_shown.py` |
+
+## Examples
+
+Every example runs locally, in one process, with no network and no model,
+against a local test counterpart; none needs an account.
+
+| Example | Command | Shows | Page |
+| --- | --- | --- | --- |
+| EX-01, EX-02 | `python examples/protocols/web_bot_auth/signed_agent.py` | signed requests, the key directory, replay refused, rotation | [Web Bot Auth](./web-bot-auth#example) |
+| EX-03 | `python examples/protocols/a2a/card_extensions.py` | card extensions published and negotiated | below |
+| EX-04 | `python examples/protocols/ucp/shopping.py --yes` | a UCP purchase approved once | [UCP](./ucp#example) |
+| EX-05 | `python examples/protocols/agentic_commerce/checkout.py --yes` | an ACP checkout approved once | [Agentic Commerce](./agentic-commerce#example) |
+| EX-06 | `python examples/protocols/pact/personal_agent.py` | a personal agent at a Brand, both profiles | [PACT](./pact#examples) |
+| EX-07 | `python examples/protocols/pap_and_pact/app.py` | a PAP company and a PACT Brand, one record | [PAP and PACT](./pap-and-pact) |
+| EX-08 | `loop apps protocols agentspecs/agentspecs/apps/accounting.yaml` | what the runtime speaks, and what an application uses | below |
+| EX-09 | the fixtures of *Conformance* above | the same bytes in both languages | above |
+| EX-10 | `EXAMPLE=ProtocolSignedRequestsExample npm run dev`, `EXAMPLE=ProtocolUcpCheckoutExample npm run dev` | the gallery's *Agent protocols*: a request signed in the browser, a UCP checkout approved on a card | [Web Bot Auth](./web-bot-auth#in-the-browser), [UCP](./ucp#in-the-browser) |
+
+`loop apps protocols [APP]` (and `GET /api/v1/protocols`, `listProtocols()`
+in TypeScript) prints each plugin's description — name, id, version, layer,
+roles, state — and, given an Appspec or an `app.py`, marks what the
+application uses with a sentence each: the MCP servers it reaches, the PAP
+companies it works with or that it is a company, the PACT Brands it is a
+personal agent at, the A2A card extensions it publishes:
+
+```text
+· Agent2Agent (a2a) 1.0 — transport, client, server, implemented
+· Agentic Commerce Protocol (agentic_commerce) 2026-04-17 — commerce, buyer, partial
+● Model Context Protocol (mcp) 2026-07-28 — transport, client, server, implemented
+    it reaches 1 connection(s): odoo-accounting:0.0.1
+· Personal Agent Consent & Trust (pact) 1.0 — consent, personal-agent, provider, partial
+· Universal Commerce Protocol (ucp) 2026-08-25 — commerce, shopper, partial
+· Web Bot Auth (…) (web_bot_auth) draft-ietf-webbotauth-httpsig-protocol-00 — identity, signer, verifier, directory, implemented
+```
+
+Each description also names its entry in the agentspecs protocols catalogue
+(`agentspecs/protocols`; `catalogue`: `web-bot-auth`, `acp`…), and
+implements the version the catalogue says (both held by
+`test_protocols_reactor_points.py` and `reactorPoints.unit.test.ts`). Studio's
+Protocols page (`/agentspecs/protocols`) reads `GET /api/v1/protocols` of a
+runtime of the person's against the catalogue: which protocols that runtime
+speaks, in which version and roles, and which the catalogue lists that it does
+not describe.
+
+## A2A card extensions
+
+What an agent card publishes under `capabilities.extensions` is what the A2A
+plugin's extension points hold, then what the card itself declares
+(`A2AAgentCard.extensions`); a URI published twice is refused. A client
+negotiates with an agent from the same contributions: it activates the
+extensions of the card it implements, and refuses to call an agent that
+requires one it does not.
+
+```python
+from agent_runtimes.protocols.a2a import negotiate_extensions
+
+activated = negotiate_extensions(card, platform)  # ValueError if a required one is missing
+```
+
+`examples/protocols/a2a/card_extensions.py` shows a card's extensions
+published from the plugin's points, a third party's extension added by its
+own plugin, and a client refusing an agent that requires one it lacks.
+
+An application declares its own extensions in its Appspec, under `a2a`;
+the runtime publishes them on the application's card after its own
+(orchestration, the face), in the order written:
+
+```yaml
+a2a:
+  extensions:
+    - uri: https://shop.example/extensions/gift-wrap/v1
+      description: Wraps an order as a gift.
+      required: false
+      params:
+        papers: [red, gold]
+```
+
+An extension is named by an `https://` URL or a `urn:`; Datalayer's own
+(`https://datalayer.ai/extensions/…`) are the runtime's and refused here.
+The params are published as they are, so a name that looks like a
+credential (`token`, `api_key`, `password`, …) is refused: a card is
+public. See the [Appspec reference](https://agentspecs.datalayer.tech/apps/reference) (`a2a`).

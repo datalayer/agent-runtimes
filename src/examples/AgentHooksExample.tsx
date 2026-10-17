@@ -20,8 +20,8 @@ import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentHooksPlugin } from '../loop/plugins/agent-hooks';
+import { LoopEmbed } from '../apps';
+import { AgentHooksPlugin } from '../apps/plugins/agent-hooks';
 
 setupPrimerPortals();
 
@@ -33,7 +33,7 @@ const AgentHooksExample: React.FC = () => {
   const plugins = useMemo(() => [AgentHooksPlugin], []);
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <LoopEmbed
           // The examples Vite server has no /api proxy; the page origin would
           // send agent creation to port 3000 and fail loudly.

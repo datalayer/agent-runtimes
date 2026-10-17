@@ -68,7 +68,7 @@ import {
   size,
   useFloating,
 } from '@floating-ui/react-dom';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { ChatInline, type ChatInlineProtocolConfig } from '../chat/ChatInline';
 
 // Margin from editor edges
@@ -370,19 +370,21 @@ export function ChatInlinePlugin({
   return createPortal(
     <Box
       ref={setFloating}
-      sx={{
-        pointerEvents: 'auto',
-        zIndex: 50,
-        position: strategy,
-        top: 0,
-        left: editor._rootElement
+      pointerEvents="auto"
+      zIndex={50}
+      position={strategy}
+      top={0}
+      left={
+        editor._rootElement
           ? editor._rootElement.getBoundingClientRect().left + MARGIN_X
-          : 0,
-        transform: `translate3d(0, ${Math.round(y)}px, 0)`,
-        width: editor._rootElement
+          : 0
+      }
+      transform={`translate3d(0, ${Math.round(y)}px, 0)`}
+      width={
+        editor._rootElement
           ? editor._rootElement.getBoundingClientRect().width - MARGIN_X * 2
-          : 'auto',
-      }}
+          : 'auto'
+      }
     >
       <ChatInline
         selectedText={effectiveText}

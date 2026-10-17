@@ -24,17 +24,23 @@ import {
   CommentDiscussionIcon,
   DeviceMobileIcon,
   GrabberIcon,
+  PaperclipIcon,
   SidebarExpandIcon,
   type Icon,
 } from '@primer/octicons-react';
 import type { ChatViewMode } from '../../types/chat';
-import { CHAT_VIEW_MODES, SIDEBAR_NEEDS_MOUNT_POINT } from '../viewModes';
+import {
+  ASSISTANT_NEEDS_A_FLOATING_CHAT,
+  CHAT_VIEW_MODES,
+  SIDEBAR_NEEDS_MOUNT_POINT,
+} from '../viewModes';
 
 /** The drawing of each mode. */
 export const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
   floating: CommentDiscussionIcon,
   'floating-small': DeviceMobileIcon,
   'floating-draggable': GrabberIcon,
+  assistant: PaperclipIcon,
   sidebar: SidebarExpandIcon,
 };
 
@@ -45,6 +51,12 @@ export type ChatViewModeToggleProps = {
   onChange: (mode: ChatViewMode) => void;
   /** Modes shown greyed out: the sidebar, when the host has no mount point. */
   disabledModes?: readonly ChatViewMode[];
+  /**
+   * The modes offered, in `CHAT_VIEW_MODES` order whatever order they are
+   * given in: all of them when unsaid. A host that places only some of them
+   * — the workspace: its sidebar, or the assistant over it — leaves the rest out.
+   */
+  modes?: readonly ChatViewMode[];
   /** Where the tooltips open. Above by default; below for a control at the top of its window. */
   tooltipDirection?: 'n' | 's';
 };
@@ -53,23 +65,25 @@ export function ChatViewModeToggle({
   value,
   onChange,
   disabledModes = [],
+  modes,
   tooltipDirection = 'n',
 }: ChatViewModeToggleProps): JSX.Element {
+  const offered = modes
+    ? CHAT_VIEW_MODES.filter(option => modes.includes(option.mode))
+    : CHAT_VIEW_MODES;
   return (
     <Box
       role="group"
       aria-label="Display mode"
       data-chat-view-mode-toggle=""
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        bg: 'neutral.muted',
-        borderRadius: '6px',
-        p: '2px',
-        gap: '1px',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      bg="neutral.muted"
+      borderRadius="6px"
+      p="2px"
+      gap="1px"
     >
-      {CHAT_VIEW_MODES.map(({ mode, label }) => {
+      {offered.map(({ mode, label }) => {
         const ModeIcon = VIEW_MODE_ICONS[mode];
         const selected = value === mode;
         /* Greyed rather than left out: the person sees the mode exists, and
@@ -81,7 +95,9 @@ export function ChatViewModeToggle({
             text={
               disabled && mode === 'sidebar'
                 ? `${label} — ${SIDEBAR_NEEDS_MOUNT_POINT}`
-                : label
+                : disabled && mode === 'assistant'
+                  ? `${label} — ${ASSISTANT_NEEDS_A_FLOATING_CHAT}`
+                  : label
             }
             direction={tooltipDirection}
           >
@@ -96,27 +112,27 @@ export function ChatViewModeToggle({
                   onChange(mode);
                 }
               }}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 26,
-                height: 24,
-                borderRadius: '4px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.45 : 1,
-                bg: selected ? 'canvas.default' : 'transparent',
-                boxShadow: selected ? 'shadow.small' : 'none',
-                color: selected ? 'fg.default' : 'fg.muted',
-                transition: 'all 0.15s ease',
-                '&:hover': disabled
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              width={26}
+              height={24}
+              borderRadius="4px"
+              border="none"
+              cursor={disabled ? 'not-allowed' : 'pointer'}
+              opacity={disabled ? 0.45 : 1}
+              bg={selected ? 'canvas.default' : 'transparent'}
+              boxShadow={selected ? 'shadow.small' : 'none'}
+              color={selected ? 'fg.default' : 'fg.muted'}
+              transition="all 0.15s ease"
+              hover={
+                disabled
                   ? {}
                   : {
                       color: 'fg.default',
                       bg: selected ? 'canvas.default' : 'neutral.subtle',
-                    },
-              }}
+                    }
+              }
             >
               <ModeIcon size={14} />
             </Box>

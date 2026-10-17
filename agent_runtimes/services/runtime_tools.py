@@ -13,7 +13,7 @@ import importlib
 import logging
 from typing import Callable, List
 
-from agent_runtimes.specs.tools import ToolSpec, get_tool_spec
+from agent_runtimes.specs.backend_tools import BackendToolSpec, get_backend_tool_spec
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def _tool_name_to_identifier(tool_name: str) -> str:
     return tool_name.replace("-", "_")
 
 
-def _resolve_python_tool(spec: ToolSpec) -> Callable[..., object] | None:
+def _resolve_python_tool(spec: BackendToolSpec) -> Callable[..., object] | None:
     runtime = getattr(spec, "runtime", None)
     if runtime is None:
         logger.warning("Tool '%s' does not define runtime metadata; skipping", spec.id)
@@ -65,7 +65,7 @@ def tools_requiring_approval_ids(tool_ids: List[str]) -> list[str]:
     """Return enabled tool IDs that require approval."""
     required: list[str] = []
     for tool_id in tool_ids:
-        spec: ToolSpec | None = get_tool_spec(tool_id)
+        spec: BackendToolSpec | None = get_backend_tool_spec(tool_id)
         if spec is None or not spec.enabled:
             continue
         if bool(getattr(spec, "requires_approval", False) or spec.approval == "manual"):
@@ -92,7 +92,7 @@ def register_agent_tools(
         agent_id: Runtime agent identifier (unused, kept for API compat).
         runtime_name: Optional pod name (unused, kept for API compat).
         disable_tool_approvals: When true, force all runtime tools to
-            ``requires_approval=False`` even if their ToolSpec is marked
+            ``requires_approval=False`` even if their BackendToolSpec is marked
             manual/approval-required.
 
     Returns:
@@ -109,9 +109,11 @@ def register_agent_tools(
     tool_plain = getattr(agent, "tool_plain")
 
     for tool_id in tool_ids:
-        spec: ToolSpec | None = get_tool_spec(tool_id)
+        spec: BackendToolSpec | None = get_backend_tool_spec(tool_id)
         if spec is None:
-            logger.warning("Tool '%s' not found in TOOL_CATALOG; skipping", tool_id)
+            logger.warning(
+                "Tool '%s' not found in BACKEND_TOOL_CATALOG; skipping", tool_id
+            )
             continue
         if not spec.enabled:
             logger.info("Tool '%s' is disabled; skipping", tool_id)

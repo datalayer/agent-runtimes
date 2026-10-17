@@ -1,0 +1,95 @@
+{
+  "description": "Every Reactor contribution point of this protocol's plugin, in both languages. test_protocols_reactor_points.py and src/protocols/reactorPoints.unit.test.ts hold each language to this file. A point whose `extension` is true is an extension the protocol defines; its contributions are implementations of it. `default` is the contribution id of the plugin's own default (order 100), null when a host must contribute one. `resolution` is `single` (the lowest order answers; two at the same order fail closed) or `all` (every contribution is used).",
+  "plugin": {
+    "python": "agent-runtimes.protocols.agentic-commerce",
+    "typescript": "@datalayer/agent-runtimes/protocols/agentic-commerce"
+  },
+  "points": [
+    {
+      "id": "agentic_commerce.approver",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:APPROVERS",
+      "typescript": "AgenticCommerceApprovers",
+      "contract": "CheckoutApprover",
+      "members": [
+        "approve"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "The same approver a host gives ucp.approver: one approval model."
+    },
+    {
+      "id": "agentic_commerce.paymentData",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:PAYMENT_DATA",
+      "typescript": "AgenticCommercePaymentData",
+      "contract": "PaymentData",
+      "members": [
+        "payment_data"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "A delegated payment token from custody; a model never sees one."
+    },
+    {
+      "id": "agentic_commerce.credentials",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:CREDENTIALS",
+      "typescript": "AgenticCommerceCredentials",
+      "contract": "SellerCredentials",
+      "members": [
+        "bearer"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "The agent's bearer with each seller, held by the host."
+    },
+    {
+      "id": "agentic_commerce.proposalStore",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:PROPOSAL_STORES",
+      "typescript": "AgenticCommerceProposalStores",
+      "contract": "ProposalStore",
+      "members": [
+        "take"
+      ],
+      "default": {
+        "python": "memory",
+        "typescript": "memory"
+      },
+      "resolution": "single",
+      "tenant": null,
+      "extension": false
+    },
+    {
+      "id": "agentic_commerce.extension.discount",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:DISCOUNT",
+      "typescript": "AgenticCommerceDiscountExtensions",
+      "contract": "AgenticCommerceExtension",
+      "members": [
+        "name"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "note": "rfc.discount_extension: declared in capabilities.extensions when contributed."
+    },
+    {
+      "id": "agentic_commerce.extension.other",
+      "python": "agent_runtimes.protocols.agentic_commerce.plugin:OTHER",
+      "typescript": "AgenticCommerceOtherExtensions",
+      "contract": "AgenticCommerceExtension",
+      "members": [
+        "name"
+      ],
+      "default": null,
+      "resolution": "all",
+      "tenant": null,
+      "extension": true,
+      "note": "Any other extension, by the name sellers declare."
+    }
+  ]
+}

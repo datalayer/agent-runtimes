@@ -11,7 +11,7 @@
  * inside the Datalayer app and, later, inside a JupyterLab panel, each bringing
  * providers of its own.
  *
- * @module loop-main
+ * @module apps-main
  */
 
 // `@jupyter-widgets` assigns to a bare `__webpack_public_path__` at module
@@ -34,8 +34,8 @@ import type { JSX } from 'react';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Box } from '@primer/react';
 import {
+  Box,
   DatalayerThemeProvider,
   setupPrimerPortals,
   themeConfigs,
@@ -43,16 +43,16 @@ import {
   useThemeStore,
 } from '@datalayer/primer-addons';
 import { configurePlugin } from '@datalayer/reactor';
-import { LoopWorkspace } from './loop/shell/LoopWorkspace';
-import { ChatPlugin } from './loop/plugins/chat';
-import { A2uiPlugin } from './loop/plugins/a2ui';
-import { AgentspecsPlugin } from './loop/plugins/agentspecs';
-import { AgentsPlugin } from './loop/plugins/agents';
-import { ModelsPlugin } from './loop/plugins/models';
-import { DocumentPlugin } from './loop/plugins/document';
-import { NotebookPlugin } from './loop/plugins/notebook';
+import { LoopWorkspace } from './apps/shell/LoopWorkspace';
+import { ChatPlugin } from './apps/plugins/chat';
+import { A2uiPlugin } from './apps/plugins/a2ui';
+import { AgentspecsPlugin } from './apps/plugins/agentspecs';
+import { AgentsPlugin } from './apps/plugins/agents';
+import { ModelsPlugin } from './apps/plugins/models';
+import { DocumentPlugin } from './apps/plugins/document';
+import { NotebookPlugin } from './apps/plugins/notebook';
 import { internalQueryClient } from './utils';
-import type { SandboxSnapshot } from './loop/core';
+import type { SandboxSnapshot } from './apps/core';
 
 // `src/index.css` is the Vite starter template's stylesheet: it sets
 // `body { display: flex; place-items: center }`, which shrink-wraps #root to
@@ -155,7 +155,7 @@ function LoopPage(): JSX.Element {
       themeStyles={themeConfig.themeStyles}
     >
       <QueryClientProvider client={internalQueryClient}>
-        <Box sx={{ height: '100vh', overflow: 'hidden' }}>
+        <Box height="100vh" overflow="hidden">
           {session ? (
             <LoopWorkspace
               serverUrl={session.serverUrl}

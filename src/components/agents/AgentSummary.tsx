@@ -7,50 +7,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { strip } from '@datalayer/core/lib/utils';
+import {
+  isCreatingAgent,
+  type AgentSummaryData,
+} from '../../portable/runtimes';
 
-export interface AgentSummaryData {
-  agentName: string;
-  location: string;
-  specId?: string;
-  /**
-   * The framework turning this agent's loop, as its spec declares it —
-   * `pydantic-ai` server-side, `vercel-ai` in the page.
-   */
-  harness?: string;
-  /**
-   * The runtime variant the host chose: `<location>-<harness>`.
-   *
-   * Shown next to the harness rather than instead of it, because they answer
-   * different questions and can disagree: the harness is what the spec asked
-   * for, the variant is what it actually got.
-   */
-  variant?: string;
-  status?: string;
-  baseUrl?: string;
-  sandboxBaseUrl?: string;
-  agentId?: string;
-  isReady?: boolean;
-  error?: string;
-}
+// The summary and when an agent is being created are the portable contract every client reads (M-014b).
+export type { AgentSummaryData } from '../../portable/runtimes';
 
 export interface AgentSummaryProps {
   summary: AgentSummaryData | null;
   title?: string;
 }
-
-/**
- * Statuses that represent an agent actively being created/started. The spinner
- * only shows for these; app-navigation states ("selected", "switching") and
- * settled states ("ready", "running", ...) never spin.
- */
-const CREATING_STATUSES = new Set([
-  'creating',
-  'starting',
-  'launching',
-  'connecting',
-  'pending',
-  'resuming',
-]);
 
 const MAX_AGENT_NAME_LENGTH = 32;
 
@@ -141,13 +109,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
     return null;
   }
 
-  const normalizedStatus = (summary.status || '').toLowerCase();
-  // Only show the spinner while the agent is genuinely being created: it is not
-  // ready, has no id yet, and its status is an active creation/startup state.
-  const isCreating =
-    !summary.isReady &&
-    !summary.agentId &&
-    CREATING_STATUSES.has(normalizedStatus);
+  // Only show the spinner while the agent is genuinely being created.
+  const isCreating = isCreatingAgent(summary);
   const hasError = Boolean(summary.error);
   // The agent is optional: some examples run only a code sandbox. Show the
   // agent status when there is an agent (or one is being created).
@@ -159,7 +122,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   return (
     <Box
       ref={badgeRef}
-      sx={{ position: 'relative' }}
+      position="relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -167,34 +130,30 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
         as="button"
         type="button"
         title={badgeLabel}
-        sx={{
-          px: 2,
-          py: '6px',
-          maxWidth: 280,
-          minWidth: 0,
-          border: '1px solid',
-          borderColor: hasError ? 'danger.emphasis' : 'border.default',
-          borderRadius: 2,
-          bg: hasError ? 'danger.subtle' : 'canvas.default',
-          color: hasError ? 'danger.fg' : 'fg.default',
-          fontSize: 0,
-          cursor: 'default',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-        }}
+        px={2}
+        py="6px"
+        maxWidth={280}
+        minWidth={0}
+        border="1px solid"
+        borderColor={hasError ? 'danger.emphasis' : 'border.default'}
+        borderRadius={2}
+        bg={hasError ? 'danger.subtle' : 'canvas.default'}
+        color={hasError ? 'danger.fg' : 'fg.default'}
+        fontSize={0}
+        cursor="default"
+        display="flex"
+        alignItems="center"
+        gap={1}
       >
         {isCreating && <Spinner size="small" sx={{ width: 12, height: 12 }} />}
         {hasError && <span aria-hidden>⚠</span>}
         <Box
           as="span"
-          sx={{
-            display: 'block',
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          display="block"
+          minWidth={0}
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
         >
           {badgeLabelShort}
         </Box>
@@ -202,39 +161,36 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
 
       {isHovering && (
         <Box
-          sx={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            ...(opensLeftward ? { right: 0 } : { left: 0 }),
-            width: OVERLAY_WIDTH,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.overlay',
-            boxShadow: 'shadow.large',
-            zIndex: 120,
-            fontSize: 0,
-            color: 'fg.default',
-          }}
+          position="absolute"
+          top="calc(100% + 8px)"
+          width={OVERLAY_WIDTH}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.overlay"
+          boxShadow="shadow.large"
+          zIndex={120}
+          fontSize={0}
+          color="fg.default"
+          right={opensLeftward ? 0 : undefined}
+          left={opensLeftward ? undefined : 0}
         >
-          <Box sx={{ mb: 1, fontWeight: 600 }}>{title}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Name: {summary.agentName}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Location: {summary.location}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Spec: {summary.specId || '—'}</Box>
-          <Box sx={{ color: 'fg.muted' }}>
-            Harness: {summary.harness || '—'}
+          <Box mb={1} fontWeight={600}>
+            {title}
           </Box>
-          <Box sx={{ color: 'fg.muted' }}>
-            Variant: {summary.variant || '—'}
-          </Box>
-          <Box sx={{ color: 'fg.muted' }}>
+          <Box color="fg.muted">Name: {summary.agentName}</Box>
+          <Box color="fg.muted">Location: {summary.location}</Box>
+          <Box color="fg.muted">Spec: {summary.specId || '—'}</Box>
+          <Box color="fg.muted">Harness: {summary.harness || '—'}</Box>
+          <Box color="fg.muted">Variant: {summary.variant || '—'}</Box>
+          <Box color="fg.muted">
             Status: {isCreating ? 'creating' : summary.status || '—'}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Agent base URL: {summary.baseUrl || '—'}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Code sandbox base URL:{' '}
             {summary.sandboxBaseUrl ? (
               <Box
@@ -242,7 +198,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={summary.sandboxBaseUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {summary.sandboxBaseUrl}
               </Box>
@@ -251,13 +208,11 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             )}
           </Box>
           <Box
-            sx={{
-              color: 'fg.muted',
-              wordBreak: 'break-all',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
+            color="fg.muted"
+            wordBreak="break-all"
+            display="flex"
+            alignItems="center"
+            gap={1}
           >
             Agent ID:{' '}
             {summary.agentId ? (
@@ -271,7 +226,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
               '—'
             )}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Agent status:{' '}
             {hasAgent && agentStatusUrl ? (
               <Box
@@ -279,7 +234,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={agentStatusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {agentStatusUrl}
               </Box>
@@ -287,7 +243,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
               'n/a'
             )}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Code sandbox status:{' '}
             {sandboxStatusUrl ? (
               <Box
@@ -295,7 +251,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={sandboxStatusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {sandboxStatusUrl}
               </Box>
@@ -305,16 +262,14 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           </Box>
           {hasError && (
             <Box
-              sx={{
-                mt: 1,
-                p: 1,
-                border: '1px solid',
-                borderColor: 'danger.muted',
-                borderRadius: 2,
-                bg: 'danger.subtle',
-                color: 'danger.fg',
-                wordBreak: 'break-word',
-              }}
+              mt={1}
+              p={1}
+              border="1px solid"
+              borderColor="danger.muted"
+              borderRadius={2}
+              bg="danger.subtle"
+              color="danger.fg"
+              wordBreak="break-word"
             >
               Error: {summary.error}
             </Box>

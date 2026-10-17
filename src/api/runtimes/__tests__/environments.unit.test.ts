@@ -6,7 +6,7 @@
 /**
  * Every call of the environments API: its method, its URL, its body, and the
  * headers a conditional or keyed write carries, held to the routes of
- * PLAN_ENV.md section 9 as Runtimes serves them (E1-01). Following a build's
+ * the environments API as Runtimes serves them (E1-01). Following a build's
  * log runs on the stream E1-16's route sent, recorded in
  * `agent_runtimes/tests/environments_build_logs_recorded.sse`, and on streams
  * written to break where a network would. A trial, a promotion's record and
@@ -466,7 +466,7 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
   ],
 ];
 
-/** The routes of section 9, as E1-01 serves them; the log's `follow` is `subscribeToBuildLogs`. */
+/** The routes of the environments API, as E1-01 serves them; the log's `follow` is `subscribeToBuildLogs`. */
 const SECTION_9_ROUTES = [
   'POST /environments',
   'GET /environments',
@@ -522,7 +522,7 @@ describe('Runtimes Environments API', () => {
     },
   );
 
-  it('has a call for every route of section 9', () => {
+  it('has a call for every route of the environments API', () => {
     const covered = new Set(
       CALLS.map(([, , sent]) => {
         const path = new URL(sent.url).pathname
@@ -555,7 +555,7 @@ describe('Runtimes Environments API', () => {
     expect(requestDatalayerAPI).not.toHaveBeenCalled();
   });
 
-  it('reads the section 10 body of a refusal', async () => {
+  it('reads the error body of a refusal', async () => {
     const body = {
       code: 'DL_ENV_PRECONDITION_FAILED',
       message: 'The record changed since the version If-Match names',

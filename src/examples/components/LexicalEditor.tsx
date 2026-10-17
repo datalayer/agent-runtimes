@@ -123,14 +123,12 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
 
   return (
     <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        padding: 3,
-        backgroundColor: 'canvas.default',
-        minHeight: '600px',
-      }}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      padding={3}
+      backgroundColor="canvas.default"
+      minHeight="600px"
     >
       <LexicalConfigProvider
         lexicalId={LEXICAL_ID}

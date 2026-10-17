@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An execution's model budget, to the worker and back (PLAN_ORCHESTRATOR.md, O1-07).
+"""An execution's model budget, to the worker and back (O1-07).
 
 The delegation carries the limits the execution's policy sets, the worker
 turns them into pydantic-ai's per-run ``UsageLimits``, a limit reached is said

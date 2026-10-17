@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
 
@@ -274,6 +275,7 @@ def main() -> None:
 
     print(f"Loading frontend tool specs from {args.specs_dir}...")
     specs = load_frontend_tool_specs(args.specs_dir)
+    check_marks(specs, args.specs_dir)
     print(f"Loaded {len(specs)} frontend tool specifications")
 
     # Generate Python code

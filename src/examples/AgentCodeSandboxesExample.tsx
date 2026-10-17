@@ -23,11 +23,11 @@ import { CodespacesIcon, SyncIcon } from '@primer/octicons-react';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import {
   SANDBOX_CAPACITIES,
   SandboxCapacityPlugins,
-} from '../loop/plugins/agent-code-sandboxes';
+} from '../apps/plugins/agent-code-sandboxes';
 
 /** A variant launched: the capacity behind it and the agent made for it. */
 interface LaunchedSandbox {
@@ -61,20 +61,18 @@ const AgentCodeSandboxesInner: React.FC = () => {
     return (
       <Box
         data-sandboxes-chooser
-        sx={{
-          maxWidth: 840,
-          mx: 'auto',
-          mt: 6,
-          px: 3,
-          py: 3,
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-          bg: 'canvas.default',
-        }}
+        maxWidth={840}
+        mx="auto"
+        mt={6}
+        px={3}
+        py={3}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        display="flex"
+        flexDirection="column"
+        gap={3}
+        bg="canvas.default"
       >
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
           SANDBOX VARIANT DEMO
@@ -87,12 +85,12 @@ const AgentCodeSandboxesInner: React.FC = () => {
           the code where it ran to compare the sandboxes.
         </Text>
 
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box display="flex" gap={2} flexWrap="wrap">
           <Label variant="accent">Spec: {selected.specId}</Label>
           <Label variant="secondary">Variant: {selected.variant}</Label>
         </Box>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           <Text sx={{ fontSize: 1, fontWeight: 600 }}>Sandbox Variant</Text>
           <select
             value={selectedKey}
@@ -138,24 +136,20 @@ const AgentCodeSandboxesInner: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-      }}
+      height="100%"
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <CodespacesIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -180,7 +174,7 @@ const AgentCodeSandboxesInner: React.FC = () => {
       {/* The Loop creates the agent on the Local target from the variant's
           capacity plugin; a new launch is a new agent, hence the key. The
           variants stay visible so the agent is not pinned to the page. */}
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box flex={1} minHeight={0}>
         <LoopEmbed
           key={launched.agentId}
           serverUrl={serverUrl}

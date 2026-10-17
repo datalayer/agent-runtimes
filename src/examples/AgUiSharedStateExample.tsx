@@ -75,7 +75,7 @@ const IngredientsList: React.FC<{
       >
         Ingredients
       </Text>
-      <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
+      <Box display="flex" gap={2} marginBottom={2}>
         <TextInput
           value={newIngredient}
           onChange={e => setNewIngredient(e.target.value)}
@@ -92,18 +92,18 @@ const IngredientsList: React.FC<{
           No ingredients yet
         </Text>
       ) : (
-        <Box as="ul" sx={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <Box as="ul" listStyle="none" padding={0} margin={0}>
           {ingredients.map((ingredient, index) => (
             <Box
               as="li"
               key={index}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              padding={1}
+              borderColor="border.default"
               sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 1,
                 borderBottom: '1px solid',
-                borderColor: 'border.default',
                 '&:last-child': { borderBottom: 'none' },
               }}
             >
@@ -150,7 +150,7 @@ const InstructionsList: React.FC<{
       >
         Instructions
       </Text>
-      <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
+      <Box display="flex" gap={2} marginBottom={2}>
         <TextInput
           value={newInstruction}
           onChange={e => setNewInstruction(e.target.value)}
@@ -167,17 +167,15 @@ const InstructionsList: React.FC<{
           No instructions yet
         </Text>
       ) : (
-        <Box as="ol" sx={{ paddingLeft: 3, margin: 0 }}>
+        <Box as="ol" paddingLeft={3} margin={0}>
           {instructions.map((instruction, index) => (
             <Box
               as="li"
               key={index}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 2,
-              }}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="flex-start"
+              marginBottom={2}
             >
               <Text sx={{ fontSize: 1, flex: 1 }}>{instruction}</Text>
               <Button
@@ -205,7 +203,7 @@ const RecipeDisplay: React.FC<{
   onUpdate: (updates: Partial<RecipeState>) => void;
 }> = ({ recipe, onUpdate }) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box display="flex" flexDirection="column" gap={4}>
       {/* Title and description */}
       <Box>
         <TextInput
@@ -229,8 +227,8 @@ const RecipeDisplay: React.FC<{
       </Box>
 
       {/* Meta info */}
-      <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box display="flex" gap={4} flexWrap="wrap">
+        <Box display="flex" alignItems="center" gap={1}>
           <PersonIcon size={14} />
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Servings:</Text>
           <TextInput
@@ -243,7 +241,7 @@ const RecipeDisplay: React.FC<{
             min={1}
           />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
           <ClockIcon size={14} />
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Prep:</Text>
           <TextInput
@@ -253,7 +251,7 @@ const RecipeDisplay: React.FC<{
             sx={{ width: '80px' }}
           />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
           <BeakerIcon size={14} />
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Cook:</Text>
           <TextInput
@@ -266,13 +264,7 @@ const RecipeDisplay: React.FC<{
       </Box>
 
       {/* Two columns for ingredients and instructions */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: ['1fr', '1fr 1fr'],
-          gap: 4,
-        }}
-      >
+      <Box display="grid" gridTemplateColumns={['1fr', '1fr 1fr']} gap={4}>
         <IngredientsList
           ingredients={recipe.ingredients}
           onAdd={ingredient =>
@@ -358,27 +350,18 @@ const AgUiSharedStateExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box
-        sx={{
-          height: '100%',
-          overflow: 'auto',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
+        height="100%"
+        overflow="auto"
+        backgroundColor="canvas.default"
+        padding={4}
       >
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '900px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="900px" margin="0 auto">
           <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              marginBottom: 4,
-            }}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="flex-start"
+            marginBottom={4}
           >
             <Box>
               <Text
@@ -409,22 +392,18 @@ const AgUiSharedStateExample: React.FC = () => {
 
           {/* Recipe editor panel */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
           >
             <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 3,
-              }}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              marginBottom={3}
             >
               <Text as="h2" sx={{ fontSize: 2, fontWeight: 'semibold' }}>
                 Recipe Builder
@@ -436,13 +415,11 @@ const AgUiSharedStateExample: React.FC = () => {
 
           {/* About section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -458,18 +435,16 @@ const AgUiSharedStateExample: React.FC = () => {
               <code>display_recipe</code> tool), it emits STATE_SNAPSHOT events
               that update the frontend.
             </Text>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>
                 Try these prompts:
               </Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>"Create a recipe for chocolate chip cookies"</li>
                 <li>"Add butter and sugar to the ingredients"</li>

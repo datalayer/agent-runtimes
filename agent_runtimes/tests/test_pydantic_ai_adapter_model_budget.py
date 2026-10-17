@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The model budget a delegation sets, held on the run (PLAN_ORCHESTRATOR.md, O1-07).
+"""The model budget a delegation sets, held on the run (O1-07).
 
 A delegation's budget reaches the adapter in the run's context; the adapter
 hands it to pydantic-ai as the run's own ``UsageLimits``, and a run those

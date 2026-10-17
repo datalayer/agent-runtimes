@@ -83,3 +83,48 @@ async def test_a_run_that_fails_still_ends_its_stream() -> None:
     events = await _events(Agent(FunctionModel(stream_function=model)))
 
     assert events[-1].type == "error" and "The model went away" in str(events[-1].data)
+
+
+@pytest.mark.asyncio
+async def test_each_tool_call_and_its_end_are_streamed_among_the_text() -> None:
+    """A caller over A2A sees which tool the agent uses, and when it ends."""
+    requests: list[Any] = []
+
+    async def model(messages: list[Any], info: AgentInfo) -> Any:
+        requests.append(messages)
+        if len(requests) == 1:
+            yield "Reading the books. "
+            yield {
+                0: DeltaToolCall(
+                    name="odoo_accounting_list_invoices",
+                    json_args='{"state": "open"}',
+                    tool_call_id="call-1",
+                )
+            }
+        else:
+            yield "Two are open."
+
+    agent = Agent(FunctionModel(stream_function=model))
+
+    @agent.tool_plain
+    def odoo_accounting_list_invoices(state: str) -> str:
+        return f"2 {state} invoices"
+
+    events = await _events(agent)
+
+    kinds = [event.type for event in events]
+    call = kinds.index("tool_call")
+    result = kinds.index("tool_result")
+    assert kinds.index("text") < call < result < len(kinds) - 3
+    assert events[call].data == {
+        "id": "call-1",
+        "name": "odoo_accounting_list_invoices",
+        "arguments": {"state": "open"},
+    }
+    assert events[result].data == {
+        "id": "call-1",
+        "name": "odoo_accounting_list_invoices",
+        "result": "2 open invoices",
+        "error": None,
+    }
+    assert _text(events) == "Reading the books. Two are open."

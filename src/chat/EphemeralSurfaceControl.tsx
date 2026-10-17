@@ -15,7 +15,8 @@
  */
 
 import type { JSX } from 'react';
-import { Box, Tooltip } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Tooltip } from '@primer/react';
 import { CircleSlashIcon, FileIcon, RowsIcon } from '@primer/octicons-react';
 import type { EphemeralSurfaceMode } from '../types';
 
@@ -73,14 +74,12 @@ export function EphemeralSurfaceControl({
 
   return (
     <Box
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        bg: 'neutral.muted',
-        borderRadius: '6px',
-        p: '2px',
-        gap: '1px',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      bg="neutral.muted"
+      borderRadius="6px"
+      p="2px"
+      gap="1px"
     >
       {choices.map(({ mode: choice, icon: ModeIcon, label }) => (
         <Tooltip key={choice} text={label} direction="n">
@@ -88,23 +87,21 @@ export function EphemeralSurfaceControl({
             as="button"
             aria-label={label}
             onClick={() => onChange?.(choice)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 26,
-              height: 24,
-              borderRadius: '4px',
-              border: 'none',
-              cursor: 'pointer',
-              bg: mode === choice ? 'canvas.default' : 'transparent',
-              boxShadow: mode === choice ? 'shadow.small' : 'none',
-              color: mode === choice ? 'fg.default' : 'fg.muted',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                color: 'fg.default',
-                bg: mode === choice ? 'canvas.default' : 'neutral.subtle',
-              },
+            display="inline-flex"
+            alignItems="center"
+            justifyContent="center"
+            width={26}
+            height={24}
+            borderRadius="4px"
+            border="none"
+            cursor="pointer"
+            bg={mode === choice ? 'canvas.default' : 'transparent'}
+            boxShadow={mode === choice ? 'shadow.small' : 'none'}
+            color={mode === choice ? 'fg.default' : 'fg.muted'}
+            transition="all 0.15s ease"
+            hover={{
+              color: 'fg.default',
+              bg: mode === choice ? 'canvas.default' : 'neutral.subtle',
             }}
           >
             <ModeIcon size={14} />

@@ -9,17 +9,25 @@ Supports identity context for OAuth token propagation across agent boundaries.
 """
 
 import asyncio
+import difflib
+import hashlib
 import logging
+import re
+import traceback
 import uuid
-from dataclasses import dataclass
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 from ..context.identities import IdentityContextManager
+from ..guardrails.credentials import redact
 from .base import BaseTransport
 
 if TYPE_CHECKING:
     from ..adapters.base import BaseAgent
     from ..context.usage import TurnSpend
+    from ..output.formats import RunOutputs
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +45,8 @@ class A2ATransport(BaseTransport):
     It is deliberately not an orchestrator. It does not choose a worker,
     delegate to one, aggregate results across several, or negotiate
     capabilities: those are the orchestration control plane's, and the
-    canonical model they will speak lives in `datalayer_core.orchestration`
-    (PLAN_ORCHESTRATOR.md). This docstring used to claim task delegation,
+    canonical model they will speak lives in `datalayer_core.orchestration`.
+    This docstring used to claim task delegation,
     result aggregation and capability negotiation, none of which the class
     has ever done, and a docstring that describes a design rather than a
     class is how somebody comes to depend on a feature that is not there.
@@ -149,11 +157,11 @@ class A2ATransport(BaseTransport):
                 }
 
             except Exception as e:
-                logger.error(f"A2A request error: {e}")
+                logger.error(redact(f"A2A request error: {e}"))
                 return {
                     "result": None,
                     "status": "error",
-                    "error": str(e),
+                    "error": redact(str(e)),
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
                     "conversation_id": conversation_id,
@@ -233,10 +241,10 @@ class A2ATransport(BaseTransport):
                     yield a2a_event
 
             except Exception as e:
-                logger.error(f"A2A stream error: {e}")
+                logger.error(redact(f"A2A stream error: {e}"))
                 yield {
                     "type": "error",
-                    "data": str(e),
+                    "data": redact(str(e)),
                     "conversation_id": conversation_id,
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
@@ -306,32 +314,54 @@ def activated_extensions_of(params: Any) -> list[str]:
 
 def _tool_call_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("id"),
             "name": data.get("name"),
             "arguments": data.get("arguments") or data.get("args") or {},
         }
-    return {
-        "id": getattr(data, "id", None),
-        "name": getattr(data, "name", None),
-        "arguments": getattr(data, "arguments", None) or {},
-    }
+    else:
+        payload = {
+            "id": getattr(data, "id", None),
+            "name": getattr(data, "name", None),
+            "arguments": getattr(data, "arguments", None) or {},
+        }
+    return _with_output_note(payload, ended=False)
 
 
 def _tool_result_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("tool_call_id") or data.get("id"),
             "name": data.get("name"),
             "result": _short(data.get("result")),
             "error": data.get("error"),
         }
-    return {
-        "id": getattr(data, "tool_call_id", None),
-        "name": getattr(data, "name", None),
-        "result": _short(getattr(data, "result", None)),
-        "error": getattr(data, "error", None),
-    }
+    else:
+        payload = {
+            "id": getattr(data, "tool_call_id", None),
+            "name": getattr(data, "name", None),
+            "result": _short(getattr(data, "result", None)),
+            "error": getattr(data, "error", None),
+        }
+    return _with_output_note(payload, ended=True)
+
+
+def _with_output_note(payload: dict[str, Any], ended: bool) -> dict[str, Any]:
+    """A tool that composes an output says what it does in words: `Writing a notebook…`.
+
+    Its arguments are the output itself, which the caller receives as an
+    artifact: they are not told twice.
+    """
+    from ..output.formats import OUTPUT_TOOL_NOTES
+
+    notes = OUTPUT_TOOL_NOTES.get(str(payload.get("name") or ""))
+    if notes is None:
+        return payload
+    if not ended:
+        payload["arguments"] = {}
+    else:
+        payload["result"] = notes[1]
+    return {**payload, "note": notes[1] if ended else notes[0]}
 
 
 def _short(value: Any, limit: int = 2000) -> str:
@@ -339,6 +369,367 @@ def _short(value: Any, limit: int = 2000) -> str:
         return ""
     text = value if isinstance(value, str) else str(value)
     return text if len(text) <= limit else text[:limit] + "…"
+
+
+# -- a harness served over A2A (SH-15) ---------------------------------------
+
+#: The media type of a diff artifact, one per file the harness changed.
+DIFF_MEDIA_TYPE = "text/x-diff"
+
+#: What a caller answers an approval with, when it does not know the extension:
+#: one word, whole, matched against the options' ids and names and these.
+YES_WORDS = frozenset({"yes", "y", "allow", "approve", "ok", "approved"})
+ALWAYS_WORDS = frozenset({"always", "allow_always"})
+NO_WORDS = frozenset({"no", "n", "reject", "deny", "refuse", "rejected"})
+
+#: How long an A2A caller has to answer an approval, when the approvals have
+#: no timeout of their own.
+APPROVAL_TIMEOUT = 300.0
+
+
+def unified_diff(path: str, old_text: str | None, new_text: str) -> str:
+    """
+    The change to one file as a unified diff: ``a/<path>`` to ``b/<path>``, ``/dev/null`` for a new file.
+
+    Parameters
+    ----------
+    path : str
+        The file, as the harness named it.
+    old_text : str | None
+        What it held; ``None`` for a file that did not exist.
+    new_text : str
+        What it holds now.
+
+    Returns
+    -------
+    str
+        The diff, ending with a newline.
+    """
+    before = old_text.splitlines(keepends=True) if old_text is not None else []
+    after = new_text.splitlines(keepends=True)
+    lines = list(
+        difflib.unified_diff(
+            before,
+            after,
+            fromfile="/dev/null" if old_text is None else f"a/{path}",
+            tofile=f"b/{path}",
+        )
+    )
+    text = "".join(line if line.endswith("\n") else line + "\n" for line in lines)
+    return text or f"--- a/{path}\n+++ b/{path}\n"
+
+
+def provenance_of(body: str, *sources: str) -> dict[str, Any]:
+    """
+    ``artifactProvenance`` of the orchestration extension: the body's hash, when, from what.
+
+    Parameters
+    ----------
+    body : str
+        The artifact's text.
+    *sources : str
+        What it was produced from (the file's path).
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{"datalayer": {"artifactProvenance": {contentHash, producedAt, sourceReferences}}}``.
+    """
+    return {
+        "datalayer": {
+            "artifactProvenance": {
+                "contentHash": f"sha256:{hashlib.sha256(body.encode('utf-8')).hexdigest()}",
+                "producedAt": datetime.now(timezone.utc).isoformat(),
+                "sourceReferences": list(sources),
+            }
+        }
+    }
+
+
+def diff_artifact(
+    artifact_id: str, path: str, old_text: str | None, new_text: str
+) -> "Artifact":
+    """
+    One ``diff`` artifact: named by its path, ``text/x-diff``, with its provenance.
+
+    Parameters
+    ----------
+    artifact_id : str
+        The artifact's id, the same for every change to the path in a task.
+    path : str
+        The file.
+    old_text : str | None
+        What it held.
+    new_text : str
+        What it holds now.
+
+    Returns
+    -------
+    Artifact
+        The artifact, its one part the unified diff.
+    """
+    body = unified_diff(path, old_text, new_text)
+    return Artifact(
+        artifact_id=artifact_id,
+        name=path,
+        description=f"The change to {path}, as a unified diff.",
+        parts=[Part(text=body, media_type=DIFF_MEDIA_TYPE, filename=path)],
+        metadata=provenance_of(body, path),
+    )
+
+
+def plan_artifact(artifact_id: str, steps: list[dict[str, Any]]) -> "Artifact":
+    """
+    The ``plan`` artifact, replaced as the harness's plan progresses.
+
+    Parameters
+    ----------
+    artifact_id : str
+        The artifact's id, the same for the whole task.
+    steps : list[dict[str, Any]]
+        The plan's entries: ``content``, ``priority``, ``status``.
+
+    Returns
+    -------
+    Artifact
+        A text part (the steps ticked) and a data part (the steps as given).
+    """
+    marks = {"completed": "x", "in_progress": "~"}
+    lines = [
+        f"- [{marks.get(str(step.get('status')), ' ')}] {step.get('content', '')}"
+        + (f" ({step['priority']})" if step.get("priority") else "")
+        for step in steps
+    ]
+    body = "\n".join(lines) + ("\n" if lines else "")
+    return Artifact(
+        artifact_id=artifact_id,
+        name="plan",
+        description="The harness's plan, its steps ticked as it progresses.",
+        parts=[
+            Part(text=body, media_type="text/markdown"),
+            Part(data={"steps": steps}, media_type="application/json"),
+        ],
+        metadata=provenance_of(body),
+    )
+
+
+def harness_card_skills(harness: Any) -> list[dict[str, Any]]:
+    """
+    The agent card's skills for a harness, from its spec.
+
+    Parameters
+    ----------
+    harness : HarnessSpec
+        The catalogue's spec.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One skill: the harness, what it answers in (words, diffs, the plan).
+    """
+    return [
+        {
+            "id": str(harness.id),
+            "name": str(harness.name),
+            "description": str(harness.description or harness.name),
+            "tags": [*(harness.tags or []), "acp"],
+            "input_modes": ["text/plain"],
+            "output_modes": ["text/plain", DIFF_MEDIA_TYPE, "application/json"],
+        }
+    ]
+
+
+def chosen_option(message: Any, options: list[dict[str, str]]) -> str | None:
+    """
+    Which option a caller's message chooses: the extension's ``approval.optionId``, else one whole word.
+
+    Parameters
+    ----------
+    message : Message
+        The caller's message on the waiting task.
+    options : list[dict[str, str]]
+        The options offered: ``option_id``, ``name``, ``kind``.
+
+    Returns
+    -------
+    str | None
+        The option's id, or ``None`` when the message chooses none.
+    """
+    meta = message.get("metadata") if isinstance(message, dict) else None
+    ours = meta.get("datalayer") if isinstance(meta, dict) else None
+    answer = ours.get("approval") if isinstance(ours, dict) else None
+    if isinstance(answer, dict) and answer.get("optionId"):
+        wanted = str(answer["optionId"])
+        return next((o["option_id"] for o in options if o["option_id"] == wanted), None)
+    words = a2a_message_text(message).strip().lower()
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]*", words):
+        return None
+    for option in options:
+        if words in (option["option_id"].lower(), option["name"].lower()):
+            return option["option_id"]
+    kinds = (
+        ("allow_always", "allow_once")
+        if words in ALWAYS_WORDS
+        else ("allow_once", "allow_always")
+        if words in YES_WORDS
+        else ("reject_once", "reject_always")
+        if words in NO_WORDS
+        else ()
+    )
+    for kind in kinds:
+        for option in options:
+            if option["kind"] == kind:
+                return option["option_id"]
+    return None
+
+
+class A2AApprovals:
+    """
+    The runtime's approvals over A2A: ``input-required`` carrying ``approvalRequest``, answered on the same task.
+
+    The harness's *ask me first* reaches an A2A caller as a
+    status ``input-required`` whose message says the sentence and the options
+    in words, and carries the orchestration extension's ``approvalRequest
+    {toolCall, options, expiresAt}`` in its metadata. The
+    caller answers with a message on the same task: ``datalayer.approval
+    {optionId}`` when it knows the extension, else one whole word (*yes*,
+    *no*, *always*, or an option's name — a2acode's convention, the fallback
+    only). The task's stream ends at ``input-required`` as A2A says; the
+    caller resubscribes for the rest.
+    """
+
+    def __init__(
+        self,
+        worker: "A2AWorker",
+        task_id: str,
+        context_id: str,
+        timeout: float = APPROVAL_TIMEOUT,
+    ) -> None:
+        """Keep the task the approvals are raised on."""
+        self.worker = worker
+        self.task_id = task_id
+        self.context_id = context_id
+        self.timeout = timeout
+        self.options: list[dict[str, str]] = []
+        self.answer: asyncio.Future[str] | None = None
+
+    async def request_and_wait(
+        self, tool_name: str, tool_args: dict[str, Any], tool_call_id: str | None = None
+    ) -> dict[str, Any]:
+        """
+        Raise the approval as ``input-required`` and wait for the caller's answer.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``{"status": "approved", "option_id": …}`` for an allowing option.
+
+        Raises
+        ------
+        ToolApprovalRejectedError
+            The caller chose a rejecting option.
+        ToolApprovalTimeoutError
+            Nobody answered in time.
+        """
+        from ..guardrails.tool_approvals import (
+            ToolApprovalRejectedError,
+            ToolApprovalTimeoutError,
+        )
+
+        self.options = [
+            {
+                "option_id": str(o.get("option_id") or o.get("optionId") or ""),
+                "name": str(o.get("name") or ""),
+                "kind": str(o.get("kind") or ""),
+            }
+            for o in (tool_args.get("options") or [])
+            if isinstance(o, dict)
+        ] or [
+            {"option_id": "allow", "name": "Allow", "kind": "allow_once"},
+            {"option_id": "reject", "name": "Reject", "kind": "reject_once"},
+        ]
+        sentence = str(tool_args.get("sentence") or tool_name)
+        expires = datetime.now(timezone.utc) + timedelta(seconds=self.timeout)
+        asked = _agent_message(
+            self.context_id,
+            Part(
+                text=(
+                    f"{sentence} Answer on this task with one of: "
+                    + ", ".join(f"{o['name']} ({o['option_id']})" for o in self.options)
+                    + "."
+                )
+            ),
+        )
+        asked["metadata"] = {
+            "datalayer": {
+                "approvalRequest": {
+                    "toolCall": {
+                        "id": tool_call_id or "",
+                        "title": tool_name,
+                        "kind": str(tool_args.get("kind") or "other"),
+                        "sentence": sentence,
+                        **{
+                            key: value
+                            for key, value in tool_args.items()
+                            if key not in ("options", "sentence", "kind")
+                        },
+                    },
+                    "options": [
+                        {
+                            "optionId": o["option_id"],
+                            "name": o["name"],
+                            "kind": o["kind"],
+                        }
+                        for o in self.options
+                    ],
+                    "expiresAt": expires.isoformat(),
+                }
+            }
+        }
+        loop = asyncio.get_running_loop()
+        self.answer = loop.create_future()
+        self.worker.waiting[self.task_id] = self
+        await self.worker.storage.update_task(self.task_id, state="input-required")
+        await self.worker.publish_status(
+            self.task_id, self.context_id, "input-required", asked
+        )
+        try:
+            option_id = await asyncio.wait_for(self.answer, self.timeout)
+        except asyncio.TimeoutError:
+            raise ToolApprovalTimeoutError(
+                f"{tool_name}: no answer on task {self.task_id} within {int(self.timeout)} s"
+            ) from None
+        finally:
+            self.worker.waiting.pop(self.task_id, None)
+            self.answer = None
+        await self.worker.storage.update_task(self.task_id, state="working")
+        await self.worker.publish_status(self.task_id, self.context_id, "working")
+        option = next(o for o in self.options if o["option_id"] == option_id)
+        if option["kind"].startswith("reject"):
+            raise ToolApprovalRejectedError(
+                tool_name, f"the caller chose {option['name']}"
+            )
+        return {"status": "approved", "id": None, "option_id": option_id}
+
+    def answered(self, message: Any) -> bool:
+        """
+        Take the caller's message as the answer; ``False`` when it chooses no option.
+
+        Parameters
+        ----------
+        message : Message
+            The message sent on the waiting task.
+
+        Returns
+        -------
+        bool
+            Whether the waiting run was answered.
+        """
+        option_id = chosen_option(message, self.options)
+        if option_id is None or self.answer is None or self.answer.done():
+            return False
+        self.answer.set_result(option_id)
+        return True
 
 
 @dataclass
@@ -365,6 +756,32 @@ class A2AWorker(_FastA2AWorker):
     #: The id the agent is served under, which its usage and cost are counted
     #: under: what a task spent is on the status that ends it (O2-10).
     agent_id: str | None = None
+    #: The media types its answers come in, as its card declares them: a
+    #: caller that accepts one besides words gets it as an artifact.
+    output_modes: tuple[str, ...] = ()
+    #: The tasks waiting on a caller's answer to an approval (SH-15), by id.
+    waiting: dict[str, A2AApprovals] = field(default_factory=dict)
+
+    @asynccontextmanager
+    async def run(self) -> AsyncIterator[None]:
+        """Run the worker: every task it is given runs at once, beside the others.
+
+        fasta2a's worker awaits each task before it takes the next, so a
+        request sent while another task works waited for it — a minute for a
+        report — before its stream said anything, and one its caller gave up
+        on meanwhile stayed submitted for ever.
+        """
+        import anyio
+
+        async with anyio.create_task_group() as tasks:
+
+            async def loop() -> None:
+                async for operation in self.broker.receive_task_operations():
+                    tasks.start_soon(self._handle_task_operation, operation)
+
+            tasks.start_soon(loop)
+            yield
+            tasks.cancel_scope.cancel()
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
@@ -372,6 +789,27 @@ class A2AWorker(_FastA2AWorker):
             raise ValueError(f"Task {params['id']} not found")
         task_id = task["id"]
         context_id = task["context_id"]
+        # A message on a task waiting for an approval answers it (SH-15):
+        # the run that asked goes on under the same task; nothing new starts.
+        waiting = self.waiting.get(task_id)
+        if waiting is not None:
+            if not waiting.answered(params["message"]):
+                await self.storage.update_task(task_id, state="input-required")
+                told = _agent_message(
+                    context_id,
+                    Part(
+                        text=(
+                            "That chooses none of the options: answer with "
+                            + ", ".join(
+                                f"{o['name']} ({o['option_id']})"
+                                for o in waiting.options
+                            )
+                            + "."
+                        )
+                    ),
+                )
+                await self.publish_status(task_id, context_id, "input-required", told)
+            return
         from ..context.delegation import merged_meta, spent_meta
         from ..context.usage import TurnSpend
 
@@ -383,14 +821,18 @@ class A2AWorker(_FastA2AWorker):
             # nothing about why. Log it, and put the reason on the failed
             # status; closing here keeps the base's own failed status from
             # following it.
-            logger.exception(
-                "A2A task %s for agent %s failed", task_id, self.agent.name
+            # Said, and logged, with any credential withheld (R-19).
+            logger.error(
+                "A2A task %s for agent %s failed: %s",
+                task_id,
+                self.agent.name,
+                redact("".join(traceback.format_exception(exc))),
             )
             from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
 
             await self.storage.update_task(task_id, state="failed")
             message = _agent_message(
-                context_id, Part(text=f"{type(exc).__name__}: {exc}")
+                context_id, Part(text=redact(f"{type(exc).__name__}: {exc}"))
             )
             # Which limit of the budget the delegation set stopped the run,
             # where the delegation put the budget (O1-07), and what it spent.
@@ -413,10 +855,42 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         turn: "TurnSpend",
     ) -> None:
+        from ..loop.apps.visitors import (
+            enter_visitor_run,
+            leave_visitor_run,
+            visitor_of_a2a,
+        )
+        from ..output.formats import (
+            RunOutputs,
+            accepted_formats,
+            enter_run_outputs,
+            leave_run_outputs,
+        )
+
         cancel = self.cancellation.register(task_id) if self.cancellation else None
+        # A visitor's run, as the application's gate marked it: it only reads,
+        # whatever its rules say (R-30).
+        visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        # A turn asked by a personal agent through the company service: its
+        # declared operations are proposed, or performed once confirmed
+        # (B-04).
+        from ..loop.apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
+
+        pap_turn = enter_pap_turn(pap_turn_of(params["message"].get("metadata")))
+        # What it may give besides words: what its card declares and the
+        # caller accepts. Its output tools are offered for those only.
+        outputs = RunOutputs(
+            accepted=accepted_formats(
+                self.output_modes, params.get("accepted_output_modes")
+            )
+        )
+        composing = enter_run_outputs(outputs)
         try:
-            await self._stream_run(task_id, context_id, params, cancel, turn)
+            await self._stream_run(task_id, context_id, params, cancel, turn, outputs)
         finally:
+            leave_run_outputs(composing)
+            leave_pap_turn(pap_turn)
+            leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
 
@@ -427,17 +901,23 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         cancel: "asyncio.Event | None",
         turn: "TurnSpend",
+        outputs: "RunOutputs",
     ) -> None:
+        from ..output.formats import artifacts_of, outputs_instructions, refused_action
+
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
 
         history: A2AContext = list(await self.storage.load_context(context_id) or [])
         incoming = params["message"]
-        prompt = a2a_message_text(incoming)
+        # The request, and what this run may give besides words: the agent
+        # is told of a format only when its caller accepts it.
+        prompt = a2a_message_text(incoming) + outputs_instructions(outputs)
 
         from ..adapters.base import AgentContext
         from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
         from ..context.delegation import (
+            DELEGATED_CREDENTIAL,
             CredentialLost,
             checkpoint_of,
             close_steering,
@@ -456,6 +936,21 @@ class A2AWorker(_FastA2AWorker):
         from ..guardrails.model_budget import delegated_budget
 
         meta = incoming.get("metadata")
+        # A message said and heard (its audio by `HearA2AAudio`, or by the
+        # client itself): marked spoken for the run and the record (VO-27, VO-28).
+        from ..voice import hear, spoken_of, voice_of_agent
+
+        hear(spoken_of(meta.get("voice")) if isinstance(meta, dict) else None)
+        # The voice of an agent whose answers may be heard, said at the start
+        # in the status message's metadata, as AG-UI's `voice.settings` (VO-36).
+        voice = voice_of_agent(self.agent)
+        if voice:
+            await self.publish_status(
+                task_id,
+                context_id,
+                "working",
+                voice_settings_message(context_id, voice),
+            )
         # The model budget the delegation set on this run, when it set one:
         # the adapter applies it as the run's usage limits (O1-07).
         budget = delegated_budget(meta)
@@ -474,6 +969,21 @@ class A2AWorker(_FastA2AWorker):
             )
         if credential:
             set_request_user_jwt(credential)
+        from ..loop.apps.pap_company import current_pap_turn, perform_prompt, redeem
+
+        company_turn = current_pap_turn()
+        if company_turn is not None and company_turn.ticket:
+            # What the person confirmed, as the company service recorded it:
+            # the run makes that call, with those terms, and nothing else.
+            prompt = perform_prompt(await redeem(company_turn, credential or ""))
+        from ..loop.apps.pap_company import asked_for_said
+
+        # Asked of its company or its PACT business: which personal agent asks,
+        # for whom and with what the person granted, as ai-agents marked it
+        # (PR-13, B-04).
+        asked_for = asked_for_said(meta)
+        if asked_for:
+            prompt = f"{asked_for}\n\n{prompt}"
         # The execution this run is for, whose checkpoints it keeps, and the
         # checkpoint it resumes from when it was paused (O2-05).
         execution_id = execution_of(meta)
@@ -505,8 +1015,13 @@ class A2AWorker(_FastA2AWorker):
                 },
                 **({"budget": budget} if budget else {}),
                 **({"user_token": credential} if credential else {}),
+                # Said apart, so a harness lends its MCP with it (SH-33).
+                **({DELEGATED_CREDENTIAL: credential} if credential else {}),
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
+                # An approval a harness asks for is raised on this task as
+                # `input-required`, and answered on it (SH-15).
+                "approvals": A2AApprovals(self, task_id, context_id),
             },
         )
 
@@ -514,9 +1029,22 @@ class A2AWorker(_FastA2AWorker):
         text = ""
         final_output: str | None = None
         canceled = False
+        # A harness's plan, one artifact replaced as it progresses, and its
+        # diffs, one artifact per file; reasoning is never an
+        # artifact: a `thought` event is not published at all.
+        plan_id = f"plan-{task_id}"
+        plan: Artifact | None = None
+        diffs: dict[str, Artifact] = {}
+        # A button of an answer's surface that would do more than read, pressed
+        # by a visitor, is refused in a sentence: no model runs (H-03).
+        refused = refused_action(incoming)
+        # `say_aloud`'s lines, by call: said once the call has answered (VO-36).
+        say_lines: dict[str, str] = {}
         open_steering(task_id)
         try:
-            async for event in self.agent.stream(prompt, context):
+            async for event in (
+                _said(refused) if refused else self.agent.stream(prompt, context)
+            ):
                 if cancel is not None and cancel.is_set():
                     # Leaving the loop closes the adapter's stream, which stops
                     # the run underneath it.
@@ -539,27 +1067,62 @@ class A2AWorker(_FastA2AWorker):
                         last_chunk=False,
                     )
                 elif event.type == "tool_call":
-                    await self.publish_status(
-                        task_id,
+                    called = _tool_call_payload(event.data)
+                    if called.get("name") == SAY_ALOUD_TOOL and isinstance(
+                        called.get("arguments"), dict
+                    ):
+                        say_lines[str(called.get("id"))] = str(
+                            called["arguments"].get("line") or ""
+                        )
+                    said = _agent_message(
                         context_id,
-                        "working",
-                        _agent_message(
-                            context_id,
-                            Part(data={"tool_call": _tool_call_payload(event.data)}),
-                        ),
+                        Part(data={"tool_call": called}),
                     )
+                    # A harness's tool call says its kind, title and status in
+                    # the status message's metadata.
+                    titled = _harness_call_meta(event.data)
+                    if titled:
+                        said["metadata"] = titled
+                    await self.publish_status(task_id, context_id, "working", said)
                 elif event.type == "tool_result":
-                    await self.publish_status(
-                        task_id,
+                    answered = _tool_result_payload(event.data)
+                    said = _agent_message(
                         context_id,
-                        "working",
-                        _agent_message(
-                            context_id,
-                            Part(
-                                data={"tool_result": _tool_result_payload(event.data)}
-                            ),
-                        ),
+                        Part(data={"tool_result": answered}),
                     )
+                    titled = _harness_call_meta(event.data)
+                    if titled:
+                        said["metadata"] = titled
+                    await self.publish_status(task_id, context_id, "working", said)
+                    line = say_lines.pop(str(answered.get("id")), "")
+                    if line and voice and not answered.get("error"):
+                        await self.publish_status(
+                            task_id,
+                            context_id,
+                            "working",
+                            voice_say_message(context_id, line, voice),
+                        )
+                    for shown in _displays_of(event.data):
+                        if shown.get("display") != "diff":
+                            continue
+                        path = str(shown.get("path") or "")
+                        kept = diffs.get(path)
+                        changed = diff_artifact(
+                            kept["artifact_id"] if kept else f"diff-{uuid.uuid4()}",
+                            path,
+                            shown.get("old_text"),
+                            str(shown.get("new_text") or ""),
+                        )
+                        diffs[path] = changed
+                        await self.publish_artifact(task_id, context_id, changed)
+                elif event.type == "plan":
+                    steps = (
+                        list(event.data.get("steps") or [])
+                        if isinstance(event.data, dict)
+                        else []
+                    )
+                    plan = plan_artifact(plan_id, steps)
+                    await self.publish_artifact(task_id, context_id, plan)
                 elif event.type == "output":
                     final_output = str(event.data) if event.data is not None else None
                 elif event.type == "done":
@@ -635,15 +1198,26 @@ class A2AWorker(_FastA2AWorker):
         artifact = Artifact(
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
+        # What it composed besides words, each an artifact of its media type.
+        from ..loop.apps.pap_company import pap_artifacts
+
+        composed = [
+            *artifacts_of(outputs),
+            *pap_artifacts(current_pap_turn()),
+            *([plan] if plan is not None else []),
+            *diffs.values(),
+        ]
         await self.storage.update_task(
             task_id,
             state="completed",
-            new_artifacts=[artifact],
+            new_artifacts=[artifact, *composed],
             new_messages=[reply],
         )
         # The whole result once more, as the last chunk: a client that does
         # not assemble chunks, or joined late, still gets the answer.
         await self.publish_artifact(task_id, context_id, artifact)
+        for extra in composed:
+            await self.publish_artifact(task_id, context_id, extra)
         # The `completed` status says what the run spent (O2-10), so it is sent
         # and the stream ended here rather than by the base, whose final status
         # carries no message.
@@ -677,6 +1251,98 @@ class A2AWorker(_FastA2AWorker):
                 parts=[Part(text=str(result))],
             )
         ]
+
+
+def _harness_call_meta(data: Any) -> dict[str, Any] | None:
+    """A harness's ``{kind, title, status}`` for the status message's metadata; ``None`` for another agent's call."""
+    fields = data if isinstance(data, dict) else {}
+    if "kind" not in fields:
+        return None
+    return {
+        "kind": str(fields.get("kind") or "other"),
+        "title": str(fields.get("name") or fields.get("title") or ""),
+        "status": str(fields.get("status") or ""),
+    }
+
+
+def _displays_of(data: Any) -> list[dict[str, Any]]:
+    """The displays a harness's tool result carries (a diff, a terminal)."""
+    shown = data.get("display") if isinstance(data, dict) else None
+    return [item for item in (shown or []) if isinstance(item, dict)]
+
+
+async def _said(text: str) -> AsyncIterator[Any]:
+    """An answer given in words without a model: one text event.
+
+    Yields
+    ------
+    Any
+        The one text event.
+    """
+    from types import SimpleNamespace
+
+    yield SimpleNamespace(type="text", data=text)
+
+
+#: The tool an agent whose answers may be heard says a short line with (VO-35).
+SAY_ALOUD_TOOL = "say_aloud"
+
+
+def voice_settings_message(context_id: str, settings: dict[str, Any]) -> "Message":
+    """
+    The voice of an agent whose answers may be heard, as an A2A status message (VO-36).
+
+    AG-UI says it as the ``voice.settings`` custom event; A2A in the message's
+    ``metadata.voice.settings``, its one data part saying the same.
+
+    Parameters
+    ----------
+    context_id : str
+        The conversation.
+    settings : dict[str, Any]
+        The voice, resolved against the catalogue (``voice_of_agent``).
+
+    Returns
+    -------
+    Message
+        The agent's message.
+    """
+    said = {"settings": dict(settings)}
+    message = _agent_message(context_id, Part(data={"voice": said}))
+    message["metadata"] = {"voice": said}
+    return message
+
+
+def voice_say_message(
+    context_id: str, line: str, settings: dict[str, Any]
+) -> "Message":
+    """
+    A line the agent says aloud (``say_aloud``) as an A2A status message (VO-36).
+
+    AG-UI says it as the ``voice.say`` custom event; A2A as the line in a
+    text part, captioned, with ``metadata.voice.say`` naming the voice and
+    language it is said in.
+
+    Parameters
+    ----------
+    context_id : str
+        The conversation.
+    line : str
+        The line, at most 200 characters.
+    settings : dict[str, Any]
+        The agent's voice.
+
+    Returns
+    -------
+    Message
+        The agent's message.
+    """
+    from ..voice import say_aloud_event
+
+    said = dict(say_aloud_event(line, settings).value)
+    message = _agent_message(context_id, Part(text=said["text"]))
+    message["metadata"] = {"voice": {"say": said}}
+    return message
 
 
 def _agent_message(context_id: str, part: "Part") -> "Message":

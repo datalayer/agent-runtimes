@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a delegation hands its worker, and what the worker hands back (ORCHESTRATOR.md, O1-17, O2-05).
+"""What a delegation hands its worker, and what the worker hands back (O1-17, O2-05).
 
 **The credential.** The control plane sends an execution's own token with the
 delegation, under ``datalayer.credential`` in the A2A message's ``metadata``
@@ -62,6 +62,7 @@ __all__ = [
     "SPENT_FIELD",
     "STEER_METHOD",
     "WITHHELD",
+    "DELEGATED_CREDENTIAL",
     "CredentialLost",
     "SteerCapability",
     "checkpoint_of",
@@ -93,7 +94,7 @@ __all__ = [
 # `CREDENTIAL_FIELD`, `EXECUTION_FIELD`, `CHECKPOINT_FIELD`, `PAUSED_FIELD`,
 # `PAUSE_FIELD` and `STEER_METHOD` are imported above, from the standalone
 # package this runtime's own delegation metadata is checked against
-# (ORCHESTRATOR.md, O3-02), rather than declared here — a rename on either
+# (O3-02), rather than declared here — a rename on either
 # side is now a real import error, not a silent drift between two
 # hand-maintained copies of the same strings. What has no equivalent in that
 # package — held credentials, the current run's `ContextVar`,
@@ -105,6 +106,12 @@ SPENT_FIELD = USAGE_FIELD
 
 #: What the message keeps in the credential's place: that one was sent, and not what it was.
 WITHHELD = "withheld"
+
+#: Where a run's ``AgentContext.metadata`` holds the credential its delegation
+#: carried (ACP ``_meta`` or A2A ``metadata``), apart from ``user_token``, which
+#: any caller's token may be: the narrowest authority the run holds, so a
+#: harness's lent MCP is scoped by it before anything else (SH-33).
+DELEGATED_CREDENTIAL = "delegated_credential"
 
 #: Run id -> the credential delegated for it. Process memory only.
 _held: dict[str, str] = {}
@@ -355,7 +362,7 @@ def spent_of(meta: Any) -> Usage | None:
     -------
     Usage | None
         The usage; ``None`` when the worker reported none, or something that is
-        not one — a worker's numbers are shown, and cannot break a move (section 9).
+        not one — a worker's numbers are shown, and cannot break a move.
     """
     ours = _ours(meta)
     spent = ours.get(SPENT_FIELD) if ours is not None else None

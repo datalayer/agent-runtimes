@@ -18,8 +18,8 @@ import type {
   ChatThread,
   ToolRegistryEntry,
   ToolDefinition,
-  ChatExtension,
-  ExtensionRegistryEntry,
+  ChatUIPlugin,
+  UIPluginRegistryEntry,
   ChatMiddleware,
 } from '../types';
 import type { ToolCallStatus } from '../types/messages';
@@ -27,7 +27,7 @@ import type { InferenceProvider } from '../types/inference';
 import type { ProtocolAdapter } from '../types/protocol';
 import type { ToolExecutor } from '../tools/ToolExecutor';
 import type { MiddlewarePipeline } from '../middleware/MiddlewarePipeline';
-import type { ExtensionRegistry } from '../extensions/ExtensionRegistry';
+import type { UIPluginRegistry } from '../ui-plugins/UIPluginRegistry';
 
 /**
  * Chat configuration options
@@ -106,7 +106,7 @@ export interface ChatState {
   protocolAdapter: ProtocolAdapter | null;
   toolExecutor: ToolExecutor | null;
   middlewarePipeline: MiddlewarePipeline | null;
-  extensionRegistry: ExtensionRegistry | null;
+  uiPluginRegistry: UIPluginRegistry | null;
 
   // === Messages ===
   messages: ChatMessage[];
@@ -122,8 +122,8 @@ export interface ChatState {
   tools: Map<string, ToolRegistryEntry>;
   pendingToolCalls: Map<string, ToolCallState>;
 
-  // === Extension registry ===
-  extensions: Map<string, ExtensionRegistryEntry>;
+  // === UI plugin registry ===
+  uiPlugins: Map<string, UIPluginRegistryEntry>;
 
   // === Middleware ===
   middlewares: ChatMiddleware[];
@@ -147,7 +147,7 @@ export interface ChatActions {
   setProtocolAdapter: (adapter: ProtocolAdapter | null) => void;
   setToolExecutor: (executor: ToolExecutor | null) => void;
   setMiddlewarePipeline: (pipeline: MiddlewarePipeline | null) => void;
-  setExtensionRegistry: (registry: ExtensionRegistry | null) => void;
+  setUIPluginRegistry: (registry: UIPluginRegistry | null) => void;
 
   // === Message actions ===
   addMessage: (message: ChatMessage) => void;
@@ -190,15 +190,15 @@ export interface ChatActions {
   ) => void;
   getPendingToolCalls: () => ToolCallState[];
 
-  // === Extension registry actions ===
-  registerExtension: (
-    extension: ChatExtension,
+  // === UI plugin registry actions ===
+  registerUIPlugin: (
+    plugin: ChatUIPlugin,
     options?: { enabled?: boolean },
   ) => void;
-  unregisterExtension: (name: string) => void;
-  enableExtension: (name: string) => void;
-  disableExtension: (name: string) => void;
-  getExtensions: <T extends ChatExtension>(type?: T['type']) => T[];
+  unregisterUIPlugin: (name: string) => void;
+  enableUIPlugin: (name: string) => void;
+  disableUIPlugin: (name: string) => void;
+  getUIPlugins: <T extends ChatUIPlugin>(type?: T['type']) => T[];
 
   // === Middleware actions ===
   addMiddleware: (middleware: ChatMiddleware) => void;
@@ -229,7 +229,7 @@ const initialState: ChatState = {
   protocolAdapter: null,
   toolExecutor: null,
   middlewarePipeline: null,
-  extensionRegistry: null,
+  uiPluginRegistry: null,
   messages: [],
   isLoading: false,
   isStreaming: false,
@@ -238,7 +238,7 @@ const initialState: ChatState = {
   threads: new Map(),
   tools: new Map(),
   pendingToolCalls: new Map(),
-  extensions: new Map(),
+  uiPlugins: new Map(),
   middlewares: [],
   isOpen: false,
   error: null,
@@ -288,8 +288,8 @@ export const useChatStore = create<ChatStore>()(
           set({ middlewarePipeline: pipeline }, false, 'setMiddlewarePipeline');
         },
 
-        setExtensionRegistry: registry => {
-          set({ extensionRegistry: registry }, false, 'setExtensionRegistry');
+        setUIPluginRegistry: registry => {
+          set({ uiPluginRegistry: registry }, false, 'setUIPluginRegistry');
         },
 
         // === Message actions ===
@@ -509,74 +509,74 @@ export const useChatStore = create<ChatStore>()(
           );
         },
 
-        // === Extension registry actions ===
-        registerExtension: (extension, options) => {
+        // === UI plugin registry actions ===
+        registerUIPlugin: (plugin, options) => {
           set(
             state => {
-              const newExtensions = new Map(state.extensions);
-              newExtensions.set(extension.name, {
-                extension,
+              const newUIPlugins = new Map(state.uiPlugins);
+              newUIPlugins.set(plugin.name, {
+                plugin,
                 enabled: options?.enabled ?? true,
                 registeredAt: new Date(),
               });
-              return { extensions: newExtensions };
+              return { uiPlugins: newUIPlugins };
             },
             false,
-            'registerExtension',
+            'registerUIPlugin',
           );
         },
 
-        unregisterExtension: name => {
+        unregisterUIPlugin: name => {
           set(
             state => {
-              const newExtensions = new Map(state.extensions);
-              newExtensions.delete(name);
-              return { extensions: newExtensions };
+              const newUIPlugins = new Map(state.uiPlugins);
+              newUIPlugins.delete(name);
+              return { uiPlugins: newUIPlugins };
             },
             false,
-            'unregisterExtension',
+            'unregisterUIPlugin',
           );
         },
 
-        enableExtension: name => {
+        enableUIPlugin: name => {
           set(
             state => {
-              const newExtensions = new Map(state.extensions);
-              const entry = newExtensions.get(name);
+              const newUIPlugins = new Map(state.uiPlugins);
+              const entry = newUIPlugins.get(name);
               if (entry) {
-                newExtensions.set(name, { ...entry, enabled: true });
+                newUIPlugins.set(name, { ...entry, enabled: true });
               }
-              return { extensions: newExtensions };
+              return { uiPlugins: newUIPlugins };
             },
             false,
-            'enableExtension',
+            'enableUIPlugin',
           );
         },
 
-        disableExtension: name => {
+        disableUIPlugin: name => {
           set(
             state => {
-              const newExtensions = new Map(state.extensions);
-              const entry = newExtensions.get(name);
+              const newUIPlugins = new Map(state.uiPlugins);
+              const entry = newUIPlugins.get(name);
               if (entry) {
-                newExtensions.set(name, { ...entry, enabled: false });
+                newUIPlugins.set(name, { ...entry, enabled: false });
               }
-              return { extensions: newExtensions };
+              return { uiPlugins: newUIPlugins };
             },
             false,
-            'disableExtension',
+            'disableUIPlugin',
           );
         },
 
-        getExtensions: <T extends ChatExtension>(type?: T['type']): T[] => {
-          const extensions = Array.from(get().extensions.values())
+        getUIPlugins: <T extends ChatUIPlugin>(type?: T['type']): T[] => {
+          const uiPlugins = Array.from(get().uiPlugins.values())
             .filter(entry => entry.enabled)
-            .map(entry => entry.extension);
+            .map(entry => entry.plugin);
 
           if (type) {
-            return extensions.filter(ext => ext.type === type) as T[];
+            return uiPlugins.filter(ext => ext.type === type) as T[];
           }
-          return extensions as T[];
+          return uiPlugins as T[];
         },
 
         // === Middleware actions ===
@@ -646,5 +646,5 @@ export const useChatConfig = () => useChatStore(state => state.config);
 export const useChatReady = () => useChatStore(state => state.ready);
 export const useChatInferenceProvider = () =>
   useChatStore(state => state.inferenceProvider);
-export const useChatExtensionRegistry = () =>
-  useChatStore(state => state.extensionRegistry);
+export const useChatUIPluginRegistry = () =>
+  useChatStore(state => state.uiPluginRegistry);

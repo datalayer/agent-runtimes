@@ -14,12 +14,14 @@ import type { ComponentType, ReactNode } from 'react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
 import type { ContextSnapshotData } from './context';
 import type { InputPromptVariant } from '../chat/prompt/InputPromptBase';
 import type { MentionableAgent } from '../chat/prompt/plugins/AgentMentionPlugin';
+import type { PromptCommand } from '../chat/prompt/plugins/CommandPlugin';
 import type { Icon } from '@primer/octicons-react';
 
 /** One agent a chat may address, as its controls need it. */
@@ -36,6 +38,7 @@ import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
 import type { EphemeralRuntimeOverride } from '../chat/notebook/EphemeralNotebook';
 import type { EphemeralDocumentCollaboration } from '../chat/document/EphemeralDocument';
+import type { ChatVoice } from '../voice';
 
 // ---------------------------------------------------------------------------
 // Tool invocation hooks
@@ -85,7 +88,11 @@ export interface ToolCallCompleteContext {
  * - 'sidebar': Docked sidebar panel — offered only where the host has a mount point for it
  */
 export type ChatViewMode =
-  'floating' | 'floating-small' | 'floating-draggable' | 'sidebar';
+  | 'floating'
+  | 'floating-small'
+  | 'floating-draggable'
+  | 'assistant'
+  | 'sidebar';
 
 /**
  * Companion "ephemeral surface" shown next to the chat.
@@ -113,7 +120,8 @@ export type DisplayToolCallStatus =
 export type RespondCallback = (result: unknown) => void;
 
 /**
- * Tool call render context passed to renderToolResult
+ * A tool call, as the chat hands it to the renderer a Reactor plugin
+ * contributed for it (`ReactorDisplay`'s `context`).
  */
 export interface ToolCallRenderContext {
   /** Tool call ID */
@@ -133,18 +141,9 @@ export interface ToolCallRenderContext {
   /**
    * What the chat would have drawn for this tool call by itself.
    *
-   * Supplying `renderToolResult` replaces the default row outright, and
-   * returning nothing from it draws nothing at all — so a caller who only
-   * wanted to *add* something under one tool had to either reimplement the
-   * row or lose it, and lose every other tool's row along with it.
-   *
-   * Render it to compose:
-   *
-   * ```tsx
-   * renderToolResult={({ name, defaultUI }) =>
-   *   name === 'my_tool' ? <>{defaultUI}<MyPanel /></> : defaultUI
-   * }
-   * ```
+   * A renderer composes with it — `<>{defaultUI}<MyPanel /></>` — or falls
+   * back to it for a status it does not draw (a failed call, one still
+   * running).
    */
   defaultUI?: ReactNode;
   /**
@@ -154,11 +153,6 @@ export interface ToolCallRenderContext {
    */
   respond?: RespondCallback;
 }
-
-/**
- * Render function for tool results
- */
-export type RenderToolResult = (context: ToolCallRenderContext) => ReactNode;
 
 /**
  * Internal type for tracking tool calls in messages
@@ -182,6 +176,11 @@ export interface ToolCallMessage {
   };
   /** Exit code when code called sys.exit() */
   exitCode?: number | null;
+  /**
+   * What the tool does, in its runtime's own words (`Asking Accounting…`):
+   * shown in place of its arguments' summary.
+   */
+  summary?: string;
 }
 
 /**
@@ -327,6 +326,10 @@ export interface MCPServerConfig {
   transport?: string;
   isConfig?: boolean;
   isRunning?: boolean;
+  /** The icon, `<package>:<name>` (agentspecs.marks), as the runtime's catalogue says it. */
+  icon?: string;
+  /** Drawn where there is no icon. */
+  emoji?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -564,9 +567,10 @@ export interface ChatCommonProps {
   initialSkills?: string[];
 
   // ============ Tool Rendering & Hooks ============
-
-  /** Custom render function for tool results */
-  renderToolResult?: RenderToolResult;
+  //
+  // Tool results are drawn by Reactor plugins: a renderer per display type
+  // (`Renderers`) and the tools bound to it (`ToolBindings`), resolved for
+  // each call with `resolveToolResult` (`@datalayer/reactor/ui`).
 
   /** Frontend tool definitions to register with the chat */
   frontendTools?: FrontendToolDefinition[];
@@ -831,6 +835,34 @@ export interface ChatCommonProps {
 /**
  * ChatBase props
  */
+/** Properties laid over a theme's own, by mode. */
+export type ThemeOverrides = {
+  light?: Record<string, string>;
+  dark?: Record<string, string>;
+};
+
+/**
+ * A conversation the chat goes on with (D-13): an embedded
+ * application's session, reattached after its page reloaded.
+ */
+export type ResumedThread = {
+  /** Its id, AG-UI's `threadId`: the session's uid. */
+  id: string;
+  /** What it holds already; none for a new one. */
+  messages: ChatMessage[];
+  /**
+   * Opened from a person's history (P-24): its conversation is read
+   * from the runtime the application's chat runs on as the chat mounts —
+   * held there, else resumed from its record — in place of `messages`.
+   */
+  fromRuntime?: boolean;
+  /**
+   * Told the thread a message is first sent on — this one, or a new one
+   * after the header's + — so that its host keeps it. A stable function.
+   */
+  onStarted?: (threadId: string) => void;
+};
+
 export interface ChatBaseProps {
   /**
    * Hands an imperative send function to the host, once the chat is able to
@@ -845,12 +877,41 @@ export interface ChatBaseProps {
    */
   onSendReady?: (
     controls: {
-      send: (message: string) => void;
+      /** Send a message; `forwardedProps` go with its run (AG-UI's). */
+      send: (message: string, forwardedProps?: Record<string, unknown>) => void;
       stop: () => void;
       /** Start the conversation over — what the header's + does. */
       newChat: () => void;
+      /**
+       * The conversation the next message goes to, as the runtime knows it
+       * (AG-UI's thread): what an application's record keeps it under.
+       */
+      thread: () => string;
+      /**
+       * Stops the agent's voice (VO-10): the chat's own speaker,
+       * for a host whose composer holds the microphone and *Stop speaking*.
+       * Absent while its answers are not heard.
+       */
+      stopSpeaking?: () => void;
+      /**
+       * How loud the chat's speaker plays now, 0 to 1 (VO-13): a
+       * host's hands-free gates barge-in on it. Absent while its answers
+       * are not heard by a speaker that gives a level.
+       */
+      voiceLevel?: () => number;
+      /**
+       * Marks the answer the person spoke over *interrupted* (VO-13),
+       * for a host whose composer holds the microphone.
+       */
+      markInterrupted: () => void;
     } | null,
   ) => void;
+
+  /**
+   * Reports whether the agent's voice is speaking, for a host that draws the
+   * composer and so its *Stop speaking* (VO-10).
+   */
+  onSpeakingChange?: (speaking: boolean) => void;
 
   /**
    * Reports whether the chat is streaming a reply, so a host that owns the
@@ -904,7 +965,7 @@ export interface ChatBaseProps {
   /**
    * External MCP toolsets status data for the MCP indicator.
    * When provided, the data is forwarded to the McpStatusIndicator
-   * so it shows live status instead of "No MCP Server defined".
+   * so it shows their live status; with none, it is not drawn.
    */
   mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
 
@@ -943,6 +1004,11 @@ export interface ChatBaseProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * Commands the prompt lists while `/` is typed, before its own: an
+   * application's (P-19). Picking one writes `/<name> `. Lexical only.
+   */
+  promptCommands?: PromptCommand[];
   /**
    * Whether the prompt offers a chooser for who answers.
    *
@@ -1072,6 +1138,13 @@ export interface ChatBaseProps {
   /** Optional theme variant override for companion notebook/document surfaces. */
   themeVariant?: string;
 
+  /**
+   * Properties laid over the theme's own, by mode — an application's accent
+   * over the theme it wears (T-05): without them the chat would wear the
+   * theme's default accent whatever the page around it set.
+   */
+  themeOverrides?: ThemeOverrides;
+
   /** Optional color mode override for companion notebook/document surfaces. */
   colorMode?: 'light' | 'dark' | 'auto';
 
@@ -1168,8 +1241,6 @@ export interface ChatBaseProps {
   /** Empty state configuration */
   emptyState?: EmptyStateConfig;
 
-  /** Tool result renderer for tool calls */
-  renderToolResult?: RenderToolResult;
   /**
    * Draw the chat's title bar from these fully assembled props.
    *
@@ -1197,13 +1268,61 @@ export interface ChatBaseProps {
    * For a chat whose agent works a notebook the reader cannot see. A cell
    * that was inserted, updated or run appears under its tool row — source
    * first, then its outputs streaming from the live model; `executeCodeInNotebook`
-   * shows only what came back. Ignored when `renderToolResult` is given:
-   * a host that writes its own renderer owns the whole surface.
+   * shows only what came back. A tool a Reactor plugin renders is drawn by
+   * that plugin instead.
    */
   notebookToolSurfacesId?: string;
 
   /** Custom footer content (rendered above input) */
   footerContent?: ReactNode;
+
+  /**
+   * The agent's welcome, said as the first message of the history: drawn as
+   * the chat draws the agent's messages, and never sent nor kept. The floating
+   * assistant's balloon opens on it (T-23).
+   */
+  welcome?: string;
+
+  /**
+   * What follows the last message, inside the history and scrolled with it:
+   * the floating assistant's balloon holds an approval there, as a message
+   * with *Approve* and *Deny* (T-23).
+   */
+  trailingContent?: ReactNode;
+
+  /**
+   * Its voice (V1): a microphone in the composer, push-to-talk,
+   * what is said heard on the device and put in the composer — or sent, with
+   * *Send what I say* — marked as spoken (VO-27).
+   */
+  voice?: ChatVoice;
+
+  /** The agent is speaking: the composer offers *Stop speaking* (`Esc`). */
+  voiceSpeaking?: boolean;
+
+  /**
+   * The sentence the host's speaker is saying, marked in the conversation
+   * (VO-65); a chat that speaks for itself marks its own.
+   */
+  voiceSentence?: string;
+
+  /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening (VO-13). */
+  onStopSpeaking?: () => void;
+
+  /**
+   * How loud the host's speaker plays now, between 0 and 1 (`useVoiceSpeaker`'s
+   * `level`): hands-free's barge-in counts speech only above what the answer's
+   * own sound can leave in the microphone (VO-13). A chat that speaks
+   * for itself reads its own.
+   */
+  voiceLevel?: () => number;
+
+  /**
+   * Reads an answer aloud (VO-21): given, each answer the agent has
+   * finished writing has a *Read aloud* under it, which calls it with the
+   * answer's text.
+   */
+  onReadAloud?: (answer: string) => void;
 
   /**
    * Show the information icon in the header.
@@ -1448,6 +1567,14 @@ export interface ChatBaseProps {
   }>;
 
   /**
+   * The conversation to go on with (D-13): its AG-UI thread — an
+   * application's session — and what it holds, drawn in place of the
+   * runtime's history, which is its agent's and not one session's. Read
+   * when the chat mounts; a new thread (the header's +) is the chat's own.
+   */
+  thread?: ResumedThread;
+
+  /**
    * Runtime ID for conversation persistence.
    * When provided, messages are restored from websocket snapshot data on
    * reload and prevents message mixing between different agent runtimes.
@@ -1508,6 +1635,14 @@ export interface ChatBaseProps {
    * ```
    */
   onToolCallComplete?: (context: ToolCallCompleteContext) => void;
+
+  /**
+   * The Agent Inspector's tracer: the agent's turns (`invoke_agent` spans:
+   * its model, its tokens) and its tool calls (`execute_tool` spans), from
+   * start to end, are recorded there. Without it, the tracer of the nearest
+   * `AgentInspectorProvider`, if any.
+   */
+  inspector?: OtelLiveTracer | null;
 
   // ============ Tool Approval Banner ============
 

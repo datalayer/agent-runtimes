@@ -63,6 +63,6 @@ describe('the floating chat’s button', () => {
   });
 
   it('keeps the light behind the button', () => {
-    expect(source).toMatch(/isolation: 'isolate',/);
+    expect(source).toMatch(/isolation="isolate"/);
   });
 });

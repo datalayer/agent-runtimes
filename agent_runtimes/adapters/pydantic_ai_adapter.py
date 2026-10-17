@@ -31,6 +31,7 @@ from ..guardrails.tool_approvals import (
     ToolApprovalManager,
     ToolApprovalRejectedError,
 )
+from ..mcp.google_workspace import GOOGLE_WORKSPACE_SERVER
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from .base import (
     AgentContext,
@@ -100,6 +101,28 @@ def model_messages(history: list[Any]) -> list[ModelMessage]:
                 f"A conversation message names a role nobody speaks in: {role!r}"
             )
     return messages
+
+
+def _tool_call_of(event: Any) -> dict[str, Any]:
+    """A tool call as the stream tells it: its id, its name and its arguments."""
+    part = event.part
+    try:
+        arguments = part.args_as_dict()
+    except Exception:  # Arguments the model wrote badly: the call is still told.
+        arguments = {}
+    return {"id": part.tool_call_id, "name": part.tool_name, "arguments": arguments}
+
+
+def _tool_result_of(event: Any, retry_part: type) -> dict[str, Any]:
+    """A tool call's end as the stream tells it: what it returned, or why it is retried."""
+    part = event.part
+    retried = isinstance(part, retry_part)
+    return {
+        "id": part.tool_call_id,
+        "name": part.tool_name,
+        "result": None if retried else part.content,
+        "error": str(part.content) if retried else None,
+    }
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -506,6 +529,36 @@ class PydanticAIAdapter(BaseAgent):
             )
         return toolset
 
+    async def _toolsets_of_the_run(self, user_token: str | None) -> list[Any]:
+        """The toolsets of one run, the Datalayer MCP gateway reached as whom the run is.
+
+        An application's run reaches it as its AG-UI runs do
+        (`gateway_toolsets_of_the_run`): a deployment as its principal, with
+        the companies it works with — over A2A too, where a company's turn
+        reaches its kept deployment (B-04: found on r1, its
+        agent answered without the company's tools it was given). Any other
+        run with an identity of its own reaches it with that identity, never
+        with the process's key (O1-17).
+        """
+        toolsets = await self._get_runtime_toolsets_async()
+        from ..models.models import app_instance_of
+
+        if str((app_instance_of(self._agent_id) or {}).get("app_uid") or "").strip():
+            from ..loop.apps.principal import gateway_toolsets_of_the_run
+            from ..loop.apps.sessions import agent_code_toolset
+
+            # And the tools of its code, when it is written in Python (R-14): a session adds them itself, a run over A2A only here.
+            own = agent_code_toolset(self._agent_id)
+            gateway = await gateway_toolsets_of_the_run(
+                self._agent_id, toolsets, user_token
+            )
+            return [*gateway, own] if own is not None else gateway
+        if user_token:
+            from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+            return toolsets_for_the_run(toolsets, user_token)
+        return toolsets
+
     def _get_runtime_toolsets(self) -> list[Any]:
         """
         Get the list of toolsets to use at run time (sync, no waiting).
@@ -561,6 +614,25 @@ class PydanticAIAdapter(BaseAgent):
                 instance = lifecycle_manager.get_running_server(
                     server_id, is_config=None
                 )
+                if (
+                    instance
+                    and instance.is_running
+                    and server_id == GOOGLE_WORKSPACE_SERVER
+                ):
+                    from ..context.identities import get_request_user_jwt
+                    from ..mcp.google_workspace import toolset_for_the_run
+
+                    # Gmail, for this run only, in the name of whom it acts
+                    # for: every request carries a token IAM minted for them
+                    # (W-02), never the process's or anybody else's.
+                    toolsets.append(
+                        toolset_for_the_run(
+                            self._agent_id,
+                            get_request_user_jwt(),
+                            instance.config.url,
+                        )
+                    )
+                    continue
                 if instance and instance.is_running:
                     pydantic_server = instance.pydantic_server
                     # Debug: log toolset details to help trace errors
@@ -599,6 +671,8 @@ class PydanticAIAdapter(BaseAgent):
                     logger.warning(
                         f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping"
                     )
+                    # Started again for the next turn (H-03).
+                    lifecycle_manager.retry_in_background(server_id)
 
         elif codemode_enabled:
             logger.info(
@@ -714,15 +788,7 @@ class PydanticAIAdapter(BaseAgent):
 
         try:
             # Dynamically get toolsets at run time to reflect current MCP server state
-            runtime_toolsets = await self._get_runtime_toolsets_async()
-            if user_token_override:
-                from ..mcp.datalayer_gateway import toolsets_for_the_run
-
-                # A run with an identity of its own reaches the Datalayer MCP
-                # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(
-                    runtime_toolsets, user_token_override
-                )
+            runtime_toolsets = await self._toolsets_of_the_run(user_token_override)
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
@@ -883,7 +949,14 @@ class PydanticAIAdapter(BaseAgent):
         import asyncio
         import time
 
-        from pydantic_ai.messages import PartDeltaEvent, PartStartEvent, TextPartDelta
+        from pydantic_ai.messages import (
+            FunctionToolCallEvent,
+            FunctionToolResultEvent,
+            PartDeltaEvent,
+            PartStartEvent,
+            RetryPromptPart,
+            TextPartDelta,
+        )
 
         # The conversation before the prompt, as pydantic-ai's own messages.
         message_history = model_messages(context.conversation_history)
@@ -909,15 +982,7 @@ class PydanticAIAdapter(BaseAgent):
                         "PydanticAIAdapter: Temporarily set end_strategy to exhaustive for stream"
                     )
 
-            runtime_toolsets = await self._get_runtime_toolsets_async()
-            if user_token_override:
-                from ..mcp.datalayer_gateway import toolsets_for_the_run
-
-                # A run with an identity of its own reaches the Datalayer MCP
-                # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(
-                    runtime_toolsets, user_token_override
-                )
+            runtime_toolsets = await self._toolsets_of_the_run(user_token_override)
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )
@@ -930,22 +995,40 @@ class PydanticAIAdapter(BaseAgent):
 
             for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
                 # -- per-round queue & handler --------------------------------
-                text_queue: asyncio.Queue[str | None] = asyncio.Queue()
+                text_queue: asyncio.Queue[StreamEvent | None] = asyncio.Queue()
 
                 async def _event_handler(_run_ctx: Any, events: Any) -> None:
                     # Called for each model request of the run, so the text of
                     # every round is the stream's; a part's first chunk arrives
-                    # as the part's start, and the rest as deltas.
+                    # as the part's start, and the rest as deltas. Each tool
+                    # call is told as it starts and as it ends, in the order
+                    # they happen among the text: a caller over A2A sees which
+                    # tool its peer is using, and for how long.
                     async for ev in events:
                         if isinstance(ev, PartStartEvent) and isinstance(
                             ev.part, TextPart
                         ):
                             if ev.part.content:
-                                await text_queue.put(ev.part.content)
+                                await text_queue.put(
+                                    StreamEvent(type="text", data=ev.part.content)
+                                )
                         elif isinstance(ev, PartDeltaEvent) and isinstance(
                             ev.delta, TextPartDelta
                         ):
-                            await text_queue.put(ev.delta.content_delta)
+                            await text_queue.put(
+                                StreamEvent(type="text", data=ev.delta.content_delta)
+                            )
+                        elif isinstance(ev, FunctionToolCallEvent):
+                            await text_queue.put(
+                                StreamEvent(type="tool_call", data=_tool_call_of(ev))
+                            )
+                        elif isinstance(ev, FunctionToolResultEvent):
+                            await text_queue.put(
+                                StreamEvent(
+                                    type="tool_result",
+                                    data=_tool_result_of(ev, RetryPromptPart),
+                                )
+                            )
 
                 run_kwargs: dict[str, Any] = {
                     "message_history": current_message_history,
@@ -991,10 +1074,10 @@ class PydanticAIAdapter(BaseAgent):
                 # -- yield text deltas from queue -----------------------------
                 try:
                     while True:
-                        text_delta = await text_queue.get()
-                        if text_delta is None:
+                        streamed = await text_queue.get()
+                        if streamed is None:
                             break
-                        yield StreamEvent(type="text", data=text_delta)
+                        yield streamed
                 except BaseException:
                     run_task.cancel()
                     raise

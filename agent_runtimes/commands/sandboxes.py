@@ -32,6 +32,7 @@ app = typer.Typer(
     name="sandboxes",
     help="Code sandbox providers, environments and sandboxes.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()
@@ -105,6 +106,7 @@ providers_app = typer.Typer(
     name="providers",
     help="The places sandboxes can run, and what each of them requires.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 app.add_typer(providers_app)
 

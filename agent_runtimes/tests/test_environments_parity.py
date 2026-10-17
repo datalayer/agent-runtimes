@@ -2,14 +2,14 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Every route of section 9 is reachable from both SDKs and the CLI (E4-07).
+Every route of the environments API is reachable from both SDKs and the CLI (E4-07).
 
-The TypeScript SDK has held itself to an exact match against section 9 since
+The TypeScript SDK has held itself to an exact match against the environments API since
 E1-01. The Python SDK and the CLI never did, and the cost of that showed:
 E2-15 shipped `publish`, `unpublish` and `publication` as routes, the
 TypeScript client gained calls for them, and for a day there was no way to
 publish an environment from Python or from a terminal at all — the make target
-`PLAN_ENVS.md` E2-16 asks for could not even be written.
+E2-16 asks for could not even be written.
 
 So the route table is read from the TypeScript test rather than copied: one
 list, three clients, and a route added to any one of them fails the other two
@@ -136,7 +136,7 @@ def test_every_sdk_call_reaches_a_route_of_section_9() -> None:
     routes = {_route_of(call) for _, call in SDK_CALLS}
     unknown = sorted(routes - set(section_9_routes()))
     assert unknown == [], (
-        f"the Python SDK calls routes section 9 does not list: {unknown}"
+        f"the Python SDK calls routes the environments API does not list: {unknown}"
     )
 
 
@@ -148,7 +148,9 @@ def test_the_python_sdk_has_a_call_for_every_route_of_section_9() -> None:
     """
     covered = {_route_of(call) for _, call in SDK_CALLS}
     missing = sorted(set(section_9_routes()) - covered)
-    assert missing == [], f"section 9 routes the Python SDK cannot reach: {missing}"
+    assert missing == [], (
+        f"environments API routes the Python SDK cannot reach: {missing}"
+    )
 
 
 def test_each_sdk_call_is_named_once() -> None:
@@ -186,7 +188,9 @@ def test_the_cli_reaches_every_route_of_section_9() -> None:
     called = cli_called_methods()
     reachable = {_route_of(call) for name, call in SDK_CALLS if name in called}
     missing = sorted(set(section_9_routes()) - reachable)
-    assert missing == [], f"section 9 routes no `envs` command reaches: {missing}"
+    assert missing == [], (
+        f"environments API routes no `envs` command reaches: {missing}"
+    )
 
 
 def test_every_client_method_the_cli_calls_exists() -> None:

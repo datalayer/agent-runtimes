@@ -24,7 +24,19 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Box, Text, Spinner, IconButton } from '@primer/react';
+import { Text, Spinner, IconButton } from '@primer/react';
+import { ReactorLazy } from '@datalayer/reactor/react';
+import {
+  ANSWER_ACTION,
+  emptyUiModel,
+  isFileRef,
+  uploadFile,
+  type Display,
+  type UiAct,
+  type UiModel,
+  type UiOp,
+} from '@datalayer/reactor/ui';
+import { UiSocket } from '@datalayer/reactor/ui/ws';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -32,13 +44,14 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
+  Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
   getThemeConfig,
   useSystemColorMode,
 } from '@datalayer/primer-addons';
-import { AlertIcon, PersonIcon } from '@primer/octicons-react';
+import { AlertIcon, PersonIcon, UnmuteIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
 import { useCoreStore } from '@datalayer/core';
@@ -46,11 +59,9 @@ import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
-import {
-  generateMessageId,
-  createUserMessage,
-  createAssistantMessage,
-} from '../../types/messages';
+import { askedOf } from '../../portable/records';
+import { extractChatMessagesFromFullContext } from './fullContextMessages';
+import { generateMessageId, createUserMessage } from '../../types/messages';
 import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 import type {
@@ -62,7 +73,7 @@ import type {
   EphemeralSurfaceMode,
   ModelConfig,
 } from '../../types/chat';
-import { AgentDetails } from '../../agents/AgentDetails';
+import type { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
 import {
   AI_MODEL_CATALOGUE,
@@ -74,11 +85,34 @@ import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
   isToolCallMessage,
-  convertHistoryToDisplayItems,
+  getMessageText,
   createProtocolAdapter,
   getApiBaseFromConfig,
   sanitizeAssistantContent,
 } from '../../utils';
+import {
+  BROWSER_LIMITS,
+  emptyConversation,
+  reduceConversation,
+  withError,
+  withoutItems,
+  withPrompt,
+  withTurnEnded,
+  type ConversationState,
+} from '../../portable/conversation';
+import {
+  conversationEventsOf,
+  snapshotOfMessages,
+} from '../../portable/adapterEvents';
+import type { AgUiEvent } from '../../portable/agui';
+import {
+  conversationDrawer,
+  emptyChatLayer,
+  rowIdOf,
+  toolCallOf,
+  type ChatLayer,
+  type MessageExtras,
+} from './conversationItems';
 import {
   useConfig,
   useSkills,
@@ -98,7 +132,6 @@ import {
 } from '../header/ChatHeaderBase';
 import { useChatAvailability } from './ChatAvailability';
 import { ChatEmptyState } from '../display/EmptyState';
-import { notebookToolSurfacesRenderer } from '../messages/NotebookToolSurfaces';
 import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
 import type { ToolbarItem } from '@datalayer/primer-addons';
@@ -108,14 +141,28 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
+import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
+import { answerSpokenOver } from '../../voice/handsFree';
+import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
+import type { SpokenMetadata } from '../../voice/types';
+import { settledVoice } from '../../voice/chatVoice';
+import { useVoiceSettings } from '../../voice/useVoiceSettings';
+import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
+import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
+import { saidMessageId, useSaidSentence } from '../../voice/captions';
+import { lineToSay, type VoiceActivity } from '../../voice/sayAloud';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
-import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
-import { initialModelId, isOffered, usableModels } from './modelChoice';
+import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import {
+  initialModelId,
+  isOffered,
+  offeredModels as offeredModelsFor,
+} from './modelChoice';
 // EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
 // initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
 // never pull lexical into the bundle or trigger its module side effects.
@@ -124,8 +171,47 @@ const EphemeralDocument = React.lazy(() =>
     default: m.EphemeralDocument,
   })),
 );
+// The agent's details (its context charts draw with ECharts) and the
+// companion notebook (JupyterLab's notebook) are opened by a click, not drawn
+// with the conversation: each is its own chunk, fetched when first shown, so
+// a chat — and an embedded application (D-08) — loads without them.
+// A chunk that cannot load says so where the view would be.
+const loadAgentDetails = () =>
+  import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
+const loadEphemeralNotebook = () =>
+  import('../notebook/EphemeralNotebook').then(m => ({
+    default: m.EphemeralNotebook,
+  }));
+const lazyViewRefused = (what: string) => (error: Error) => (
+  <Text as="p" sx={{ p: 3, color: 'danger.fg' }}>
+    {`The ${what} could not be loaded: ${error.message}`}
+  </Text>
+);
+const agentDetailsRefused = lazyViewRefused('agent details');
+const ephemeralNotebookRefused = lazyViewRefused('notebook');
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
+import { useAgentInspectorTracer } from '../../components/inspector/agentSpans';
+import {
+  chatSpanRecorder,
+  type ChatSpanRecorder,
+} from '../../components/inspector/chatSpans';
+import { isStepDisplay, withLoopStep } from './loopStep';
+import { applyLoopElement } from './loopElement';
+import { tellLoopWindow } from './loopWindow';
+import {
+  displayPressOf,
+  placeable,
+  routeUiOp,
+  withPress,
+  withUiOp,
+} from './uiOps';
+import {
+  namesFiles,
+  withUploadedFiles,
+  type UploadToConversation,
+} from './uiFiles';
+import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -168,15 +254,13 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
       aria-label={
         mode === 'notebook' ? 'Preparing notebook…' : 'Preparing document…'
       }
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-        p: 4,
-      }}
+      flex={1}
+      minHeight={0}
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      p={4}
     >
       {mode === 'notebook' ? (
         <>
@@ -184,16 +268,14 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
           {[0, 1, 2].map(i => (
             <Box
               key={i}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'border.muted',
-                borderRadius: 2,
-                bg: 'canvas.subtle',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
+              p={3}
+              border="1px solid"
+              borderColor="border.muted"
+              borderRadius={2}
+              bg="canvas.subtle"
+              display="flex"
+              flexDirection="column"
+              gap={2}
             >
               <SkeletonText lines={1} />
               <SkeletonText lines={i === 0 ? 2 : 3} />
@@ -202,14 +284,12 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
         </>
       ) : (
         <Box
-          sx={{
-            maxWidth: 860,
-            width: '100%',
-            mx: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
+          maxWidth={860}
+          width="100%"
+          mx="auto"
+          display="flex"
+          flexDirection="column"
+          gap={3}
         >
           <SkeletonText lines={1} />
           <SkeletonText lines={4} />
@@ -261,9 +341,11 @@ function ThemedChatBoundary({
   children,
   themeVariant,
   colorMode,
+  themeOverrides,
 }: React.PropsWithChildren<{
   themeVariant?: string;
   colorMode?: 'light' | 'dark' | 'auto';
+  themeOverrides?: ChatBaseProps['themeOverrides'];
 }>) {
   const storeColorMode = useThemeStore(s => s.colorMode);
   const storeThemeVariant = useThemeStore(s => s.theme);
@@ -273,10 +355,13 @@ function ThemedChatBoundary({
   const themeConfig = getThemeConfig(resolvedThemeVariant as any);
   const resolvedMode =
     resolvedColorMode === 'auto' ? systemMode : resolvedColorMode;
-  const modeStyles =
-    resolvedMode === 'dark'
+  const modeStyles = {
+    ...(resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
-      : themeConfig.themeStyles.light;
+      : themeConfig.themeStyles.light),
+    // What the host lays over the theme: an application's accent (T-05).
+    ...themeOverrides?.[resolvedMode],
+  };
   const themeBackground =
     (modeStyles as Record<string, string>).backgroundColor ?? '';
   return (
@@ -495,116 +580,6 @@ function formatToolResultFallback(result: unknown): string {
   }
 }
 
-function extractChatMessagesFromFullContext(
-  fullContext: Record<string, unknown> | null,
-): ChatMessage[] {
-  if (!fullContext) {
-    return [];
-  }
-
-  const rawMessages = Array.isArray(fullContext.messages)
-    ? (fullContext.messages as Array<Record<string, unknown>>)
-    : [];
-
-  return rawMessages
-    .map((msg, index) => {
-      const role = String(msg.role || '').toLowerCase();
-
-      const timestampValue =
-        typeof msg.timestamp === 'string' && msg.timestamp.length > 0
-          ? msg.timestamp
-          : new Date().toISOString();
-      const createdAtRaw = new Date(timestampValue);
-      const createdAt = Number.isNaN(createdAtRaw.getTime())
-        ? new Date()
-        : createdAtRaw;
-
-      const rawContent =
-        typeof msg.content === 'string'
-          ? msg.content
-          : JSON.stringify(msg.content ?? '');
-
-      const isToolCall = Boolean(msg.isToolCall);
-      const isToolResult = Boolean(msg.isToolResult);
-      const toolCallId =
-        typeof msg.toolCallId === 'string' && msg.toolCallId.length > 0
-          ? msg.toolCallId
-          : undefined;
-      const toolName =
-        typeof msg.toolName === 'string' && msg.toolName.length > 0
-          ? msg.toolName
-          : undefined;
-
-      // Tool-call turns arrive as assistant messages whose `content` is the
-      // JSON-encoded tool arguments. Reconstruct a structured `toolCalls`
-      // entry so it renders as a tool card (matching the live stream) instead
-      // of leaking raw JSON into the transcript.
-      if (isToolCall) {
-        let args: Record<string, unknown> = {};
-        if (rawContent) {
-          try {
-            const parsed = JSON.parse(rawContent);
-            if (
-              parsed &&
-              typeof parsed === 'object' &&
-              !Array.isArray(parsed)
-            ) {
-              args = parsed as Record<string, unknown>;
-            }
-          } catch {
-            args = {};
-          }
-        }
-        const resolvedToolCallId = toolCallId || `history-tc-${index}`;
-        return {
-          id: `history-toolcall-${index}-${timestampValue}`,
-          role: 'assistant',
-          content: '',
-          createdAt,
-          toolCalls: [
-            {
-              type: 'tool-call',
-              toolCallId: resolvedToolCallId,
-              toolName: toolName || 'tool',
-              args,
-              status: 'completed',
-            },
-          ],
-        } as ChatMessage;
-      }
-
-      // Tool results arrive as `role: 'tool'` messages; keep them (with the
-      // matching toolCallId) so `convertHistoryToDisplayItems` can merge the
-      // result into its tool card.
-      if (isToolResult || role === 'tool') {
-        return {
-          id: `history-toolresult-${index}-${timestampValue}`,
-          role: 'tool',
-          content: rawContent,
-          createdAt,
-          metadata: {
-            toolCallId,
-            toolName,
-          },
-        } as ChatMessage;
-      }
-
-      // Only hydrate conversational turns in the visible history.
-      // System messages may contain internal prompts and metadata.
-      if (role !== 'user' && role !== 'assistant') {
-        return null;
-      }
-
-      return {
-        id: `history-${role}-${index}-${timestampValue}`,
-        role,
-        content: rawContent,
-        createdAt,
-      } as ChatMessage;
-    })
-    .filter((m): m is ChatMessage => m !== null);
-}
-
 function parseEnabledMcpToolsByServer(
   mcpStatusData: unknown,
 ): Map<string, Set<string>> | null {
@@ -691,6 +666,9 @@ function parseApprovedMcpToolsByServer(
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
 
+/** When the welcome is said: it has no time of its own. */
+const WELCOME_AT = new Date(0);
+
 /**
  * ChatBase component — Universal chat panel supporting store, protocol, and custom modes.
  */
@@ -702,6 +680,7 @@ export function ChatBase(props: ChatBaseProps) {
     disableInternalJupyterTheme = false,
     themeVariant,
     colorMode,
+    themeOverrides,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -740,7 +719,11 @@ export function ChatBase(props: ChatBaseProps) {
   const wrappedContent = disableInternalJupyterTheme ? (
     content
   ) : (
-    <ThemedChatBoundary themeVariant={themeVariant} colorMode={colorMode}>
+    <ThemedChatBoundary
+      themeVariant={themeVariant}
+      colorMode={colorMode}
+      themeOverrides={themeOverrides}
+    >
       {content}
     </ThemedChatBoundary>
   );
@@ -775,6 +758,7 @@ function ChatBaseInner({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents: mentionableAgentsProp,
+  promptCommands,
   showAgentsMenu = true,
   agents: agentsProp,
   selectedAgentId,
@@ -812,6 +796,7 @@ function ChatBaseInner({
   onSendMessage,
   onSendReady,
   onLoadingChange,
+  onSpeakingChange,
   onContextSnapshot,
   enableStreaming = false,
   // Extended props
@@ -821,11 +806,18 @@ function ChatBaseInner({
   showPoweredBy = false,
   poweredByProps,
   emptyState,
-  renderToolResult,
   renderHeader,
   showTurnFooter = true,
   notebookToolSurfacesId,
   footerContent,
+  welcome,
+  trailingContent,
+  voice,
+  voiceSpeaking = false,
+  voiceSentence,
+  onStopSpeaking,
+  voiceLevel,
+  onReadAloud,
   showInformation = false,
   onInformationClick,
   headerContent,
@@ -867,11 +859,13 @@ function ChatBaseInner({
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
+  inspector: inspectorGiven,
   // Identity/Authorization props
   onAuthorizationRequired: _onAuthorizationRequired,
   connectedIdentities,
   // Conversation persistence
   runtimeId,
+  thread,
   historyEndpoint,
   historyAuthToken: _historyAuthToken,
   // Pending prompt
@@ -885,6 +879,7 @@ function ChatBaseInner({
   onApproveApproval: onApproveApprovalProp,
   onRejectApproval: onRejectApprovalProp,
 }: ChatBaseProps) {
+  const chatText = useChatWords();
   useEffect(() => {
     setupPrimerPortals();
   }, []);
@@ -1709,7 +1704,108 @@ function ChatBaseInner({
   const isA2AProtocol = protocol?.type === 'a2a';
 
   // ---- Component state ----
-  const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
+  /*
+   * The conversation (M-030): `reduceConversation`'s, as on the phone,
+   * whatever protocol the agent speaks — its adapter's events normalised by
+   * `conversationEventsOf`. Kept in a ref as each change lands, so the events
+   * of one network chunk each read the last, and drawn on the next render
+   * with what only the web holds beside it (`ChatLayer`).
+   */
+  const [conversation, setConversation] = useState<ConversationState>(() =>
+    emptyConversation(BROWSER_LIMITS),
+  );
+  const conversationRef = useRef(conversation);
+  // Whether anything has changed it yet: a store is not written over by the
+  // empty conversation a chat mounts with.
+  const conversationTouchedRef = useRef(false);
+  const changeConversation = useCallback(
+    (change: (state: ConversationState) => ConversationState) => {
+      const next = change(conversationRef.current);
+      if (next === conversationRef.current) return;
+      conversationRef.current = next;
+      conversationTouchedRef.current = true;
+      setConversation(next);
+    },
+    [],
+  );
+  const [layer, setLayer] = useState<ChatLayer>(emptyChatLayer);
+  const layerRef = useRef(layer);
+  const changeLayer = useCallback((change: (layer: ChatLayer) => ChatLayer) => {
+    const next = change(layerRef.current);
+    if (next === layerRef.current) return;
+    layerRef.current = next;
+    setLayer(next);
+  }, []);
+  /** The conversation and what the web held beside it, gone: a new one. */
+  const resetConversation = useCallback(() => {
+    changeConversation(() => emptyConversation(BROWSER_LIMITS));
+    changeLayer(() => emptyChatLayer());
+  }, [changeConversation, changeLayer]);
+  /** A conversation read again: its messages, its tool calls and their results. */
+  const restoreConversation = useCallback(
+    (messages: ChatMessage[]) => {
+      let restored: ConversationState;
+      try {
+        restored = reduceConversation(
+          emptyConversation(BROWSER_LIMITS),
+          snapshotOfMessages(messages),
+        );
+      } catch (failure) {
+        console.error('[ChatBase] Conversation not read again:', failure);
+        setError(
+          failure instanceof Error ? failure : new Error(String(failure)),
+        );
+        return;
+      }
+      const extras = new Map<string, MessageExtras>();
+      for (const message of messages) {
+        const {
+          id,
+          role: _role,
+          content: _content,
+          toolCalls: _calls,
+          ...rest
+        } = message;
+        extras.set(id, rest);
+      }
+      changeLayer(() => ({ ...emptyChatLayer(), extras }));
+      changeConversation(() => restored);
+    },
+    [changeConversation, changeLayer],
+  );
+  /** One more input of the reducer. */
+  const reduce = useCallback(
+    (event: AgUiEvent) =>
+      changeConversation(state => reduceConversation(state, event)),
+    [changeConversation],
+  );
+  /** A tool call as its card draws it now, or `undefined`. */
+  const toolCardNow = useCallback((toolCallId: string) => {
+    const row = conversationRef.current.items.find(
+      item => item.kind === 'tool' && item.id === toolCallId,
+    );
+    return row && row.kind === 'tool' ? toolCallOf(row) : undefined;
+  }, []);
+  /** Every tool call as its card draws it now. */
+  const toolCardsNow = useCallback(
+    () =>
+      conversationRef.current.items.flatMap(item =>
+        item.kind === 'tool' ? [toolCallOf(item)] : [],
+      ),
+    [],
+  );
+  const chatTextRef = useRef(chatText);
+  chatTextRef.current = chatText;
+  const drawConversation = useMemo(
+    () => conversationDrawer(text => chatTextRef.current.error(text)),
+    [],
+  );
+  const displayItems = useMemo(
+    () => drawConversation(conversation, layer),
+    [drawConversation, conversation, layer],
+  );
+  const displayItemsRef = useRef(displayItems);
+  displayItemsRef.current = displayItems;
   /*
    * What the harness itself reported, for an agent with no server behind it.
    *
@@ -1761,6 +1857,10 @@ function ChatBaseInner({
   const [historyLoaded, setHistoryLoaded] = useState(!historyScopeId);
   const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
+  // The steps of an application's code shown so far, as displays (patched
+  // as they stream), and the elements it showed (RU-3).
+  const uiStepsRef = useRef<UiModel>(emptyUiModel());
+  const uiElementsRef = useRef<Set<string>>(new Set());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
   // Guard so each distinct pending prompt is sent at most once. Stores the
@@ -1901,7 +2001,10 @@ function ChatBaseInner({
    * — that is the whole point of it — so the menu was empty for the one kind
    * of agent whose tools the browser already knows in full.
    */
-  const builtinTools = useMemo<BuiltinTool[]>(() => {
+  const builtinTools = useMemo<{
+    runtime: BuiltinTool[];
+    frontend: BuiltinTool[];
+  }>(() => {
     /*
      * Both lists, not one or the other.
      *
@@ -1942,7 +2045,12 @@ function ChatBaseInner({
         return true;
       })
       .map(tool => ({ id: tool.name, name: tool.name }));
-    return [...fromConfig, ...fromPage];
+    /*
+     * Kept apart: the runtime's tools, and the frontend tools — the ones this
+     * page runs. The menu names them under two headings, so a person can tell
+     * what the agent does on the server from what it does here.
+     */
+    return { runtime: fromConfig, frontend: fromPage };
   }, [configQuery.data?.builtinTools, frontendTools, protocol?.options]);
 
   /*
@@ -1991,37 +2099,47 @@ function ChatBaseInner({
       : undefined;
   const offeredModels = useMemo<ModelConfig[]>(() => {
     // Only what can actually be called — see `modelChoice` for the rule.
-    const fromConfig = availableModels || configQuery.data?.models;
-    if (fromConfig?.length) {
-      return usableModels(fromConfig);
-    }
-    /*
-     * The catalogue, filtered to what is worth offering.
-     *
-     * A server tells the chat which models it can reach and that answer wins.
-     * Without one — an in-page agent, or a server that has not answered yet —
-     * this used to offer the single model the protocol was built with, which
-     * is a menu with nothing to choose.
-     *
-     * `available` is the filter, not the whole catalogue: twenty-six models,
-     * most of them superseded, is a list nobody reads. The specs say which
-     * four are current.
-     */
-    const catalogued = Object.values(AI_MODEL_CATALOGUE)
-      // A typed-judgment model answers typed questions, not a chat.
-      .filter(model => model.available && isChatModel(model))
-      .map(model => ({
-        id: model.id,
-        name: model.name,
-        provider: model.provider,
-      }));
-    if (catalogued.length > 0) {
-      return usableModels(catalogued);
-    }
-    return browserModel
-      ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
-      : [];
-  }, [availableModels, configQuery.data?.models, browserModel]);
+    // The runtime's answer, when it gave one, is the whole list.
+    // A runtime that was asked and did not answer offers nothing: the
+    // agentspecs catalogue below is not its answer.
+    const fromConfig =
+      availableModels ||
+      configQuery.data?.models ||
+      (configQuery.isError ? [] : undefined);
+    return offeredModelsFor(fromConfig, () => {
+      /*
+       * The catalogue, filtered to what is worth offering.
+       *
+       * A server tells the chat which models it can reach and that answer wins.
+       * Without one — an in-page agent, or a server that has not answered yet —
+       * this used to offer the single model the protocol was built with, which
+       * is a menu with nothing to choose.
+       *
+       * `available` is the filter, not the whole catalogue: twenty-six models,
+       * most of them superseded, is a list nobody reads. The specs say which
+       * four are current.
+       */
+      const catalogued = Object.values(AI_MODEL_CATALOGUE)
+        // A typed-decision model answers typed questions, not a chat.
+        .filter(model => model.available && isChatModel(model))
+        .map(model => ({
+          id: model.id,
+          name: model.name,
+          provider: model.provider,
+        }));
+      if (catalogued.length > 0) {
+        return catalogued;
+      }
+      return browserModel
+        ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
+        : [];
+    });
+  }, [
+    availableModels,
+    configQuery.data?.models,
+    configQuery.isError,
+    browserModel,
+  ]);
 
   /*
    * Who `@` may address.
@@ -2164,8 +2282,10 @@ function ChatBaseInner({
   useEffect(() => {
     onContextSnapshot?.(agentUsage);
   }, [agentUsage, onContextSnapshot]);
+  // Never on a runtime held to the application's own routes: it answers no
+  // sandbox socket (OwnRoutesOnly).
   const sandboxStatusQuery = useSandbox(
-    configQueriesEnabled && showHeader,
+    configQueriesEnabled && showHeader && !protocol?.ownRoutesOnly,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
@@ -2174,16 +2294,255 @@ function ChatBaseInner({
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const toolCallsRef = useRef<Map<string, ToolCallMessage>>(new Map());
   const pendingToolExecutionsRef = useRef(0);
-  const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const respondedApprovalIdsRef = useRef<Set<string>>(new Set());
   const defaultSkillsBootstrapRef = useRef<Set<string>>(new Set());
   const defaultMcpToolsBootstrapRef = useRef<Set<string>>(new Set());
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
-  const threadIdRef = useRef<string>(generateMessageId());
+  const threadIdRef = useRef<string>(thread?.id || generateMessageId());
+  /*
+   * The thread a host gave, kept as it was given at mount (D-13), and
+   * told when a message is first sent on a thread: the host keeps it.
+   */
+  const threadGivenRef = useRef(thread);
+  const threadStartedRef = useRef<string | null>(
+    thread?.messages.length ? thread.id : null,
+  );
+  const noteThreadStarted = useCallback(() => {
+    const id = threadIdRef.current;
+    if (threadStartedRef.current !== id) {
+      threadStartedRef.current = id;
+      threadGivenRef.current?.onStarted?.(id);
+    }
+  }, []);
+
+  /*
+   * The conversation's ui channel (RU-W): one WebSocket per
+   * conversation, its thread the scope, opened once its session is there
+   * (the first event of its first run, or a thread reopened). What its
+   * messages show, its steps, its elements, its authors and its window
+   * messages arrive here as `reactor.ui` ops; the presses of what they
+   * offered go up it. An op about a message the run stream has not brought
+   * yet — they are two connections — waits for it (`placeable`).
+   */
+  const uiSocketRef = useRef<{ socket: UiSocket; scope: string } | null>(null);
+  const parkedUiOpsRef = useRef<UiOp[]>([]);
+  const historyStepsRef = useRef<Set<string>>(new Set());
+  const uiSocketUrl = protocol?.uiSocket;
+  const uiSocketTokenRef = useRef(protocol?.authToken);
+  uiSocketTokenRef.current = protocol?.authToken;
+  /*
+   * Its files (RU-6): uploaded to its runtime before the run or
+   * the press that names them, the conversation's thread their scope; the
+   * run carries the ref, never the bytes.
+   */
+  const uiFilesUrl = protocol?.uiFiles;
+  const uploadToConversation = useCallback<UploadToConversation>(
+    file => {
+      if (!uiFilesUrl) {
+        return Promise.reject(new Error('This conversation takes no file.'));
+      }
+      return uploadFile(file, {
+        url: uiFilesUrl,
+        scope: threadIdRef.current,
+        token: uiSocketTokenRef.current,
+      });
+    },
+    [uiFilesUrl],
+  );
+
+  /** The messages as a ui op reads them: their ids, what they show, who said them. */
+  const messageStubs = useCallback(() => {
+    const kept = layerRef.current;
+    return conversationRef.current.items.flatMap(item =>
+      item.kind === 'message' || item.kind === 'error'
+        ? [
+            {
+              id: item.id,
+              displays: kept.displays.get(item.id),
+              speaker: kept.speakers.get(item.id),
+            },
+          ]
+        : [],
+    );
+  }, []);
+
+  /*
+   * A ui op on the messages: what they show and who said them are the web's
+   * (`ChatLayer`); a message taken back leaves the conversation.
+   */
+  const applyToMessages = useCallback(
+    (op: UiOp) => {
+      const stubs = messageStubs();
+      let next: typeof stubs;
+      try {
+        next = withUiOp(stubs, op);
+      } catch (error) {
+        console.error('[ChatBase] reactor.ui op not applied:', error);
+        return;
+      }
+      const left = new Set(next.map(stub => stub.id));
+      const removed = stubs
+        .filter(stub => !left.has(stub.id))
+        .map(stub => stub.id);
+      changeLayer(kept => {
+        const displays = new Map(kept.displays);
+        const speakers = new Map(kept.speakers);
+        for (const stub of next) {
+          if (stub.displays) displays.set(stub.id, stub.displays);
+          if (stub.speaker) speakers.set(stub.id, stub.speaker);
+        }
+        for (const id of removed) {
+          displays.delete(id);
+          speakers.delete(id);
+        }
+        return { ...kept, displays, speakers };
+      });
+      if (removed.length > 0) {
+        changeConversation(state => withoutItems(state, removed));
+      }
+    },
+    [messageStubs, changeLayer, changeConversation],
+  );
+
+  const applySocketOp = useCallback(
+    (op: UiOp, history: boolean) => {
+      // The past is drawn again, never acted on: a window message is not
+      // raised again, and the steps of turns long over are not drawn again.
+      if (history) {
+        if (op.op === 'window') return;
+        if ((op.op === 'show' || op.op === 'ask') && isStepDisplay(op.body)) {
+          historyStepsRef.current.add(op.body.id);
+          return;
+        }
+        if (
+          (op.op === 'patch' || op.op === 'append') &&
+          historyStepsRef.current.has(op.id)
+        ) {
+          return;
+        }
+      }
+      let next: ReturnType<typeof routeUiOp>;
+      try {
+        next = routeUiOp(op, uiStepsRef.current, uiElementsRef.current);
+      } catch (error) {
+        console.error('[ChatBase] reactor.ui op not applied:', error);
+        return;
+      }
+      uiStepsRef.current = next.steps;
+      const routed = next.routed;
+      if (routed.to === 'window') {
+        // For the page it sits in, outside the conversation (P-25).
+        tellLoopWindow(routed.data);
+      } else if (routed.to === 'step') {
+        // A step of its code, drawn as it runs (P-16).
+        const step = routed.step;
+        changeLayer(kept => {
+          const anchors = new Map(
+            kept.steps.map(row => [row.item.id, row.after] as const),
+          );
+          const last = conversationRef.current.items.at(-1)?.id ?? null;
+          const items = withLoopStep(
+            kept.steps.map(row => row.item),
+            step,
+          ) as ToolCallMessage[];
+          return {
+            ...kept,
+            steps: items.map(item => ({
+              item,
+              after: anchors.has(item.id)
+                ? (anchors.get(item.id) ?? null)
+                : last,
+            })),
+          };
+        });
+      } else if (routed.to === 'element') {
+        // In a side panel or on a page of its own (P-18).
+        uiElementsRef.current.add(routed.change.id);
+        applyLoopElement(routed.change);
+      } else if (!placeable(messageStubs(), routed.op)) {
+        const under =
+          routed.op.op === 'show' || routed.op.op === 'ask'
+            ? routed.op.body.data?.message_id
+            : undefined;
+        if (history && typeof under === 'string') {
+          // Shown in the past under a message that said nothing: the
+          // thread did not draw it, the chat draws it for what it showed.
+          reduce({
+            type: 'MESSAGE_SAID',
+            messageId: under,
+            role: 'assistant',
+            text: '',
+            streaming: false,
+          });
+          applyToMessages(routed.op);
+        } else {
+          parkedUiOpsRef.current.push(routed.op);
+        }
+      } else {
+        applyToMessages(routed.op);
+      }
+    },
+    [applyToMessages, messageStubs, changeLayer, reduce],
+  );
+  const applySocketOpRef = useRef(applySocketOp);
+  applySocketOpRef.current = applySocketOp;
+
+  // What waited for its message, applied once the message is here.
+  useEffect(() => {
+    if (parkedUiOpsRef.current.length === 0) return;
+    const parked = parkedUiOpsRef.current.splice(0);
+    for (const op of parked) {
+      if (!placeable(messageStubs(), op)) {
+        parkedUiOpsRef.current.push(op);
+        continue;
+      }
+      applyToMessages(op);
+    }
+  }, [conversation, applyToMessages, messageStubs]);
+
+  /** The conversation's ui socket, opened for its thread when it is not yet. */
+  const ensureUiSocket = useCallback((): UiSocket | null => {
+    if (!uiSocketUrl) return null;
+    const scope = threadIdRef.current;
+    const open = uiSocketRef.current;
+    if (open && open.scope === scope) return open.socket;
+    // Another conversation: what the last one showed goes with it.
+    open?.socket.close();
+    uiStepsRef.current = emptyUiModel();
+    uiElementsRef.current = new Set();
+    parkedUiOpsRef.current = [];
+    historyStepsRef.current = new Set();
+    const socket = new UiSocket({
+      url: uiSocketUrl,
+      scope,
+      token: () => uiSocketTokenRef.current ?? '',
+      onOp: (op, _seq, history) => applySocketOpRef.current(op, history),
+      onStatus: (status, reason) => {
+        if (status === 'refused' || status === 'gone') {
+          console.error(`[ChatBase] ui socket ${status}: ${reason ?? ''}`);
+        }
+      },
+    });
+    uiSocketRef.current = { socket, scope };
+    socket.connect();
+    return socket;
+  }, [uiSocketUrl]);
+  const ensureUiSocketRef = useRef(ensureUiSocket);
+  ensureUiSocketRef.current = ensureUiSocket;
+
+  // A thread reopened has its session already: its socket opens now.
+  useEffect(() => {
+    if (thread?.messages.length) ensureUiSocketRef.current();
+    return () => {
+      uiSocketRef.current?.socket.close();
+      uiSocketRef.current = null;
+    };
+    // At mount: the thread it was given.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -2202,6 +2561,36 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
+  // The Agent Inspector: the turns and tool calls, as spans, as they happen.
+  const inspectorFromContext = useAgentInspectorTracer();
+  const inspectorTracer = inspectorGiven ?? inspectorFromContext;
+  const inspectorActorRef = useRef('Agent');
+  inspectorActorRef.current =
+    (typeof title === 'string' && title) || activeAgentId || 'Agent';
+  const recorderRef = useRef<{
+    tracer: unknown;
+    recorder: ChatSpanRecorder;
+  } | null>(null);
+  if (inspectorTracer && recorderRef.current?.tracer !== inspectorTracer) {
+    recorderRef.current = {
+      tracer: inspectorTracer,
+      recorder: chatSpanRecorder(
+        inspectorTracer,
+        () => inspectorActorRef.current,
+        {
+          frontendTools: () =>
+            (frontendToolsRef.current ?? []).map(tool => tool.name),
+        },
+      ),
+    };
+  } else if (!inspectorTracer) {
+    recorderRef.current = null;
+  }
+  const inspectAnswerRef = useRef('');
+  // A line the agent says aloud, from a run's `voice.say` (VO-35).
+  const voiceSayRef = useRef<((activity: VoiceActivity) => void) | undefined>(
+    undefined,
+  );
   const handleRespondRef = useRef<
     ((toolCallId: string, result: unknown) => Promise<void>) | null
   >(null);
@@ -2220,7 +2609,7 @@ function ChatBaseInner({
         if (!respond) return;
         const normalize = (name?: string) =>
           (name ?? '').toLowerCase().replace(/[-_]/g, '');
-        const calls = Array.from(toolCallsRef.current.values());
+        const calls = toolCardsNow();
         // By the approval id the tool result carries, else by the tool
         // name of a call still waiting — the same two matches the card makes.
         const call =
@@ -2260,7 +2649,7 @@ function ChatBaseInner({
 
       let targetToolCallId = approval.tool_call_id;
       if (!targetToolCallId) {
-        for (const [tcId, tc] of toolCallsRef.current.entries()) {
+        for (const tc of toolCardsNow()) {
           if (tc.status !== 'inProgress' && tc.status !== 'executing') {
             continue;
           }
@@ -2270,7 +2659,7 @@ function ChatBaseInner({
             approval.tool_args ?? {},
           );
           if (tcSig === approvalSig) {
-            targetToolCallId = tcId;
+            targetToolCallId = tc.toolCallId;
             break;
           }
         }
@@ -2280,7 +2669,7 @@ function ChatBaseInner({
         return false;
       }
 
-      const target = toolCallsRef.current.get(targetToolCallId);
+      const target = toolCardNow(targetToolCallId);
       if (!target) {
         return false;
       }
@@ -2315,8 +2704,17 @@ function ChatBaseInner({
   const wsBaseUrl = protocol?.configEndpoint
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
+  /*
+   * Not on a runtime held to the application's own routes (OwnRoutesOnly): it
+   * answers no monitoring stream, and an application's session asks its
+   * approvals in the conversation, over its ui socket.
+   */
   useAgentRuntimeWebSocket({
-    enabled: !!protocol && !!wsBaseUrl && !isAgentNodeTunnelAgUi,
+    enabled:
+      !!protocol &&
+      !!wsBaseUrl &&
+      !isAgentNodeTunnelAgUi &&
+      !protocol.ownRoutesOnly,
     baseUrl: wsBaseUrl,
     authToken: protocol?.authToken,
     agentId: protocol?.agentId,
@@ -2851,10 +3249,10 @@ function ChatBaseInner({
     if (useStoreMode && !runtimeId) {
       const storeMessages = useChatStore.getState().messages;
       if (storeMessages.length > 0) {
-        setDisplayItems(storeMessages);
+        restoreConversation(storeMessages);
       }
     }
-  }, [useStoreMode, runtimeId]);
+  }, [useStoreMode, runtimeId, restoreConversation]);
 
   // ---- Conversation history loading ----
   const prevHistoryScopeRef = useRef<string | undefined>(undefined);
@@ -2862,6 +3260,8 @@ function ChatBaseInner({
   // Set when the next load must come from a fresh snapshot, not the one in
   // the store: what the store holds is the transcript before the change.
   const freshSnapshotRef = useRef(false);
+  // The given thread drawn, by its id: once.
+  const threadSeededRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (historyScopeId !== prevHistoryScopeRef.current) {
@@ -2869,12 +3269,30 @@ function ChatBaseInner({
         historyRetryAttemptsRef.current.set(historyScopeId, 0);
       }
       prevHistoryScopeRef.current = historyScopeId;
-      setDisplayItems([]);
-      toolCallsRef.current.clear();
+      resetConversation();
       if (!historyScopeId) return;
     }
 
     if (!historyScopeId) return;
+
+    /*
+     * A thread the host gave (D-13): its session's conversation, drawn
+     * once, and never replaced by the runtime's snapshot, which is its
+     * agent's — every session's — not this one's.
+     */
+    const given = threadGivenRef.current;
+    if (given) {
+      if (threadSeededRef.current !== given.id) {
+        threadSeededRef.current = given.id;
+        useConversationStore
+          .getState()
+          .setMessages(historyScopeId, given.messages);
+        restoreConversation(given.messages);
+        useConversationStore.getState().markFetched(historyScopeId);
+        setHistoryLoaded(true);
+      }
+      return;
+    }
 
     if (historyVersion !== historyVersionRef.current) {
       historyVersionRef.current = historyVersion;
@@ -2882,8 +3300,7 @@ function ChatBaseInner({
         // The transcript changed on the server outside a run — a rewind to a
         // checkpoint. Forget what is shown and load what the agent now has.
         useConversationStore.getState().clearMessages(historyScopeId);
-        setDisplayItems([]);
-        toolCallsRef.current.clear();
+        resetConversation();
         historyRetryAttemptsRef.current.set(historyScopeId, 0);
         freshSnapshotRef.current = true;
       }
@@ -2893,9 +3310,15 @@ function ChatBaseInner({
     const currentlyFetching = store.isFetching(historyScopeId);
     const storedMessages = store.getMessages(historyScopeId);
 
-    // 1) Fast local hydration for view switches in the same browser session.
+    // 1) Fast local hydration for view switches in the same browser session:
+    // only into an empty conversation. The saved copy holds messages, not
+    // tool calls, and this effect runs again on every change of the socket's
+    // state — put over a live conversation, it erased its tool cards, a
+    // pending approval among them, at the socket's first retry.
     if (storedMessages.length > 0) {
-      setDisplayItems(storedMessages);
+      if (conversationRef.current.items.length === 0) {
+        restoreConversation(storedMessages);
+      }
       setHistoryLoaded(true);
     }
 
@@ -2924,7 +3347,7 @@ function ChatBaseInner({
 
     const applyMessages = (messages: ChatMessage[]) => {
       store.setMessages(historyScopeId, messages);
-      setDisplayItems(convertHistoryToDisplayItems(messages));
+      restoreConversation(messages);
       historyRetryAttemptsRef.current.set(historyScopeId, 0);
       store.markFetched(historyScopeId);
       setHistoryLoaded(true);
@@ -3035,6 +3458,8 @@ function ChatBaseInner({
     activeAgentId,
     historyRefreshTick,
     historyVersion,
+    resetConversation,
+    restoreConversation,
   ]);
 
   // Keep in-memory store in sync with displayItems
@@ -3050,6 +3475,18 @@ function ChatBaseInner({
       }
     }
   }, [historyScopeId, displayItems]);
+
+  // A store-mode chat keeps its messages in the shared chat store, as drawn.
+  useEffect(() => {
+    if (!useStoreMode || !conversationTouchedRef.current) return;
+    useChatStore
+      .getState()
+      .setMessages(
+        displayItems.filter(
+          (item): item is ChatMessage => !isToolCallMessage(item),
+        ),
+      );
+  }, [useStoreMode, displayItems]);
 
   // ---- Derived state ----
   const messages = displayItems.filter(
@@ -3133,6 +3570,8 @@ function ChatBaseInner({
     setAdapterReady(true);
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
+      // The run's session is there once it answers: its ui socket opens.
+      ensureUiSocketRef.current();
       /*
        * Nothing more from a turn the reader has stopped.
        *
@@ -3160,6 +3599,57 @@ function ChatBaseInner({
       ) {
         return;
       }
+      /*
+       * The event, as the conversation reads it (`conversationEventsOf`):
+       * one reducer whatever the protocol. What it cannot read is said.
+       */
+      const read = () => {
+        try {
+          const inputs = conversationEventsOf(event, conversationRef.current);
+          changeConversation(state =>
+            inputs.reduce(
+              (kept, input) => reduceConversation(kept, input),
+              state,
+            ),
+          );
+        } catch (failure) {
+          console.error('[ChatBase] Protocol event not read:', failure);
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+        }
+      };
+      /** The conversation's latest tool row with an answer, if any said nothing. */
+      const toolResultFallback = (): void => {
+        const items = conversationRef.current.items;
+        const hasAssistantContent = items.some(
+          item =>
+            item.kind === 'message' &&
+            item.role === 'assistant' &&
+            item.text.trim().length > 0,
+        );
+        if (hasAssistantContent) {
+          return;
+        }
+        const latestCompletedTool = [...items]
+          .reverse()
+          .find(
+            item =>
+              item.kind === 'tool' &&
+              item.status === 'complete' &&
+              item.value !== undefined,
+          );
+        if (!latestCompletedTool || latestCompletedTool.kind !== 'tool') {
+          return;
+        }
+        reduce({
+          type: 'MESSAGE_SAID',
+          messageId: generateMessageId(),
+          role: 'assistant',
+          text: formatToolResultFallback(latestCompletedTool.value),
+          streaming: false,
+        });
+      };
       switch (event.type) {
         case 'message':
           if (event.usage) {
@@ -3201,106 +3691,23 @@ function ChatBaseInner({
             }
           }
 
+          // A prompt that only calls a tool shows the tool, not its words.
           if (suppressAssistantTextForToolOnlyRef.current) {
-            const suppressedMessageId = currentAssistantMessageRef.current?.id;
-            if (suppressedMessageId) {
-              setDisplayItems(prev =>
-                prev.filter(
-                  item =>
-                    isToolCallMessage(item) || item.id !== suppressedMessageId,
-                ),
-              );
-              if (useStoreMode) {
-                useChatStore.getState().deleteMessage(suppressedMessageId);
-              }
-              currentAssistantMessageRef.current = null;
-            }
             break;
           }
 
           if (event.message) {
-            const incomingId = event.message.id;
-            const currentId = currentAssistantMessageRef.current?.id;
-            const isNewMessage =
-              !currentId || (incomingId && incomingId !== currentId);
-
-            if (currentAssistantMessageRef.current && !isNewMessage) {
-              setDisplayItems(prev => {
-                const newItems = [...prev];
-                const idx = newItems.findIndex(
-                  item =>
-                    !isToolCallMessage(item) &&
-                    item.id === currentAssistantMessageRef.current?.id,
-                );
-                if (idx >= 0 && !isToolCallMessage(newItems[idx])) {
-                  const rawContent = event.message?.content;
-                  const sanitizedContent =
-                    typeof rawContent === 'string'
-                      ? sanitizeAssistantContent(rawContent)
-                      : (rawContent ?? '');
-                  newItems[idx] = {
-                    ...(newItems[idx] as ChatMessage),
-                    content: sanitizedContent,
-                  };
-                }
-                return newItems;
-              });
-              if (useStoreMode && currentAssistantMessageRef.current) {
-                const rawContent = event.message?.content;
-                const sanitizedContent =
-                  typeof rawContent === 'string'
-                    ? sanitizeAssistantContent(rawContent)
-                    : (rawContent ?? '');
-                useChatStore
-                  .getState()
-                  .updateMessage(currentAssistantMessageRef.current.id, {
-                    content: sanitizedContent,
-                  });
-              }
-            } else {
-              const content = event.message.content;
-              const contentStr =
-                typeof content === 'string' ? content : (content ?? '');
-              const sanitizedContent =
-                typeof contentStr === 'string'
-                  ? sanitizeAssistantContent(contentStr)
-                  : '';
-              const newMessage = createAssistantMessage(sanitizedContent);
-              newMessage.id = event.message.id || newMessage.id;
-              currentAssistantMessageRef.current = newMessage;
-              setDisplayItems(prev => {
-                const existingIdx = prev.findIndex(
-                  item => !isToolCallMessage(item) && item.id === newMessage.id,
-                );
-                if (existingIdx >= 0) {
-                  const newItems = [...prev];
-                  newItems[existingIdx] = {
-                    ...(newItems[existingIdx] as ChatMessage),
-                    content: sanitizedContent,
-                  };
-                  return newItems;
-                }
-                return [...prev, newMessage];
-              });
-              if (useStoreMode) {
-                const existingInStore = useChatStore
-                  .getState()
-                  .messages.find(m => m.id === newMessage.id);
-                if (existingInStore) {
-                  useChatStore.getState().updateMessage(newMessage.id, {
-                    content: sanitizedContent,
-                  });
-                } else {
-                  useChatStore.getState().addMessage(newMessage);
-                }
-              }
+            const content = event.message.content;
+            if (typeof content === 'string' && content) {
+              inspectAnswerRef.current = sanitizeAssistantContent(content);
             }
+            read();
           }
           break;
 
         case 'tool-call':
           if (event.toolCall && !stoppedRef.current) {
-            const toolCallId = event.toolCall.toolCallId || generateMessageId();
+            const toolCallId = event.toolCall.toolCallId;
             const toolName = event.toolCall.toolName;
             const args = event.toolCall.args || {};
             /*
@@ -3311,59 +3718,38 @@ function ChatBaseInner({
              * `false`. Without the flag, the old heuristics decide.
              */
             const argsComplete = event.toolCall.argsComplete;
+            const known = toolCardNow(toolCallId);
+            read();
+            const card = toolCardNow(toolCallId);
+            if (!card) {
+              break;
+            }
+            const frontendTool = frontendToolsRef.current?.find(
+              t => t.name === toolName,
+            );
+            const toolHandler = frontendTool?.handler;
 
-            if (toolCallsRef.current.has(toolCallId)) {
-              const existingToolCall = toolCallsRef.current.get(toolCallId);
-              if (existingToolCall) {
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  args: { ...existingToolCall.args, ...args },
-                };
-                toolCallsRef.current.set(toolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) && item.toolCallId === toolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-
-                const frontendTool = frontendToolsRef.current?.find(
-                  t => t.name === toolName,
-                );
-                const toolHandler = frontendTool?.handler;
-                if (
-                  toolHandler &&
-                  existingToolCall.status === 'executing' &&
-                  (argsComplete ?? Object.keys(args).length > 0)
-                ) {
-                  pendingToolExecutionsRef.current++;
-                  executeFrontendTool(toolHandler, updatedToolCall, toolCallId);
-                }
+            if (known) {
+              if (
+                toolHandler &&
+                known.status === 'executing' &&
+                (argsComplete ?? Object.keys(args).length > 0)
+              ) {
+                pendingToolExecutionsRef.current++;
+                executeFrontendTool(toolHandler, card, toolCallId);
               }
             } else {
-              const toolCallMsg: ToolCallMessage = {
-                id: `tool-${toolCallId}`,
-                type: 'tool-call',
-                toolCallId,
-                toolName,
-                args,
-                status: 'executing',
-              };
-              toolCallsRef.current.set(toolCallId, toolCallMsg);
-              setDisplayItems(prev => [...prev, toolCallMsg]);
-
               // Fire pre-hook for new tool calls
               onToolCallStartRef.current?.({
                 toolName,
                 toolCallId,
                 args,
               });
-
-              const frontendTool = frontendToolsRef.current?.find(
-                t => t.name === toolName,
-              );
-              const toolHandler = frontendTool?.handler;
+              recorderRef.current?.recorder.toolStarted({
+                id: toolCallId,
+                name: toolName,
+                args,
+              });
               // Execute when the args are complete. The protocol says so
               // when it can (`argsComplete`); without the flag, fall back
               // to the old heuristics — actual args present, or a tool
@@ -3378,7 +3764,7 @@ function ChatBaseInner({
                     !frontendToolExpectsArgs(frontendTool)))
               ) {
                 pendingToolExecutionsRef.current++;
-                executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
+                executeFrontendTool(toolHandler, card, toolCallId);
               }
             }
           }
@@ -3386,141 +3772,47 @@ function ChatBaseInner({
 
         case 'tool-result':
           if (event.toolResult) {
-            const toolCallId = event.toolResult.toolCallId;
-            if (toolCallId && toolCallsRef.current.has(toolCallId)) {
-              const existingToolCall = toolCallsRef.current.get(toolCallId);
-              if (existingToolCall) {
-                const isHumanInTheLoop =
-                  existingToolCall.args &&
-                  'steps' in existingToolCall.args &&
-                  Array.isArray(existingToolCall.args.steps);
-
-                const resultData = event.toolResult.result as
-                  Record<string, unknown> | undefined;
-                let executionError: string | undefined;
-                let codeError: ToolCallMessage['codeError'] | undefined;
-                let exitCode: number | null | undefined;
-                let isPendingApproval = false;
-                let hasError = !!event.toolResult.error;
-
-                if (resultData && typeof resultData === 'object') {
-                  if (
-                    'pending_approval' in resultData &&
-                    resultData.pending_approval === true
-                  ) {
-                    isPendingApproval = true;
-                  }
-                  if (
-                    resultData.execution_error &&
-                    typeof resultData.execution_error === 'string'
-                  ) {
-                    executionError = resultData.execution_error;
-                    hasError = true;
-                  }
-                  if (
-                    resultData.code_error &&
-                    typeof resultData.code_error === 'object'
-                  ) {
-                    const ce = resultData.code_error as Record<string, unknown>;
-                    codeError = {
-                      name: (ce.name as string) || 'Error',
-                      value: (ce.value as string) || 'Unknown error',
-                      traceback: ce.traceback as string | undefined,
-                    };
-                    hasError = true;
-                  }
-                  if ('exit_code' in resultData) {
-                    const ec = resultData.exit_code;
-                    exitCode = typeof ec === 'number' ? ec : null;
-                    if (exitCode != null && exitCode !== 0) hasError = true;
-                  }
-                  if (
-                    'execution_ok' in resultData &&
-                    resultData.execution_ok === false
-                  ) {
-                    hasError = true;
-                  }
-                }
-
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  result: event.toolResult.result,
-                  status: hasError
-                    ? 'error'
-                    : isPendingApproval
-                      ? 'inProgress'
-                      : isHumanInTheLoop
-                        ? 'executing'
-                        : 'complete',
-                  error: event.toolResult.error,
-                  executionError,
-                  codeError,
-                  exitCode,
-                };
-                toolCallsRef.current.set(toolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) && item.toolCallId === toolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-
-                // Fire post-hook for tool results
-                onToolCallCompleteRef.current?.({
-                  toolName: existingToolCall.toolName,
-                  toolCallId,
-                  args: existingToolCall.args,
-                  result: event.toolResult.result,
-                  status: updatedToolCall.status,
-                  error: event.toolResult.error,
-                });
-              }
+            const toolCallId = event.toolResult.toolCallId ?? '';
+            const known = toolCardNow(toolCallId);
+            read();
+            const card = toolCardNow(toolCallId);
+            if (known && card) {
+              recorderRef.current?.recorder.toolEnded(toolCallId, {
+                result: event.toolResult.result,
+                error:
+                  event.toolResult.error ??
+                  (card.status === 'error'
+                    ? (card.executionError ?? 'failed')
+                    : undefined),
+              });
+              // Fire post-hook for tool results
+              onToolCallCompleteRef.current?.({
+                toolName: known.toolName,
+                toolCallId,
+                args: known.args,
+                result: event.toolResult.result,
+                status: card.status,
+                error: event.toolResult.error,
+              });
             }
           }
           break;
 
         case 'state-update':
           onStateUpdate?.(event.data);
-          if (event.data) {
-            const executingToolCalls = Array.from(
-              toolCallsRef.current.entries(),
-            ).filter(([_, tc]) => tc.status === 'executing');
+          // A tool that answers by setting the shared state: the newest
+          // running call is answered with it (`conversationEventsOf`).
+          read();
+          break;
 
-            if (executingToolCalls.length > 0) {
-              const [lastToolCallId, existingToolCall] =
-                executingToolCalls[executingToolCalls.length - 1];
-
-              const isHumanInTheLoop =
-                existingToolCall.args &&
-                'steps' in existingToolCall.args &&
-                Array.isArray(existingToolCall.args.steps);
-
-              if (!isHumanInTheLoop) {
-                const stateData = event.data as Record<string, unknown>;
-                const result =
-                  stateData.weather ??
-                  stateData.result ??
-                  stateData.toolResult ??
-                  stateData;
-
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  result,
-                  status: 'complete',
-                };
-                toolCallsRef.current.set(lastToolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) &&
-                    item.toolCallId === lastToolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-              }
-            }
+        case 'activity':
+          // What the server says besides the conversation's text comes on
+          // the ui socket (RU-W); the run's own — `loop.session`
+          // among them — are the conversation's.
+          if (event.activity) {
+            voiceSayRef.current?.(event.activity);
           }
+          read();
           break;
 
         case 'done':
@@ -3534,6 +3826,11 @@ function ChatBaseInner({
            * The bar and its ring simply never appeared for a browser agent.
            */
           {
+            recorderRef.current?.recorder.turnEnded({
+              text: inspectAnswerRef.current || undefined,
+              usage: event.usage,
+            });
+            inspectAnswerRef.current = '';
             const turnInput = event.usage?.promptTokens ?? 0;
             const turnOutput = event.usage?.completionTokens ?? 0;
             // The parts sum to the total when the harness did not send one:
@@ -3558,44 +3855,11 @@ function ChatBaseInner({
             suppressAssistantTextForToolOnlyRef.current &&
             hideMessagesAfterToolUIRef.current
           ) {
-            setDisplayItems(prev => {
-              const hasAssistantContent = prev.some(
-                item =>
-                  !isToolCallMessage(item) &&
-                  item.role === 'assistant' &&
-                  String(item.content || '').trim().length > 0,
-              );
-
-              if (hasAssistantContent) {
-                return prev;
-              }
-
-              const latestCompletedTool = [...prev]
-                .reverse()
-                .find(
-                  item =>
-                    isToolCallMessage(item) &&
-                    item.status === 'complete' &&
-                    item.result !== undefined,
-                );
-
-              if (
-                !latestCompletedTool ||
-                !isToolCallMessage(latestCompletedTool)
-              ) {
-                return prev;
-              }
-
-              const fallbackMessage = createAssistantMessage(
-                formatToolResultFallback(latestCompletedTool.result),
-              );
-
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(fallbackMessage);
-              }
-
-              return [...prev, fallbackMessage];
-            });
+            toolResultFallback();
+          }
+          // A stopped turn was ended when it was stopped.
+          if (!stoppedRef.current) {
+            read();
           }
           suppressAssistantTextForToolOnlyRef.current = false;
           pendingToolExecutionsRef.current = 0;
@@ -3606,56 +3870,27 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          recorderRef.current?.recorder.turnEnded({
+            error: event.error?.message ?? 'error',
+          });
           if (
             event.error?.message &&
             /exceeded maximum retries/i.test(event.error.message) &&
             hideMessagesAfterToolUIRef.current
           ) {
-            setDisplayItems(prev => {
-              const hasAssistantContent = prev.some(
-                item =>
-                  !isToolCallMessage(item) &&
-                  item.role === 'assistant' &&
-                  String(item.content || '').trim().length > 0,
-              );
-
-              if (hasAssistantContent) {
-                return prev;
-              }
-
-              const latestCompletedTool = [...prev]
-                .reverse()
-                .find(
-                  item =>
-                    isToolCallMessage(item) &&
-                    item.status === 'complete' &&
-                    item.result !== undefined,
-                );
-
-              if (
-                !latestCompletedTool ||
-                !isToolCallMessage(latestCompletedTool)
-              ) {
-                return prev;
-              }
-
-              const fallbackMessage = createAssistantMessage(
-                formatToolResultFallback(latestCompletedTool.result),
-              );
-
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(fallbackMessage);
-              }
-
-              return [...prev, fallbackMessage];
-            });
+            toolResultFallback();
           }
+          read();
           suppressAssistantTextForToolOnlyRef.current = false;
           setError(event.error || new Error('Unknown error'));
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
           agentRuntimeStore.getState().requestRefresh(activeAgentId);
+          break;
+
+        default:
+          read();
           break;
       }
     });
@@ -3693,34 +3928,24 @@ function ChatBaseInner({
             result,
           });
         }
-        const completedToolCall: ToolCallMessage = {
-          ...toolCallMsg,
+        recorderRef.current?.recorder.toolEnded(toolCallId, { result });
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: true,
           result,
-          status: 'complete',
-        };
-        toolCallsRef.current.set(toolCallId, completedToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? completedToolCall
-              : item,
-          ),
-        );
+        });
       } catch (err) {
         console.error('[ChatBase] Frontend tool execution error:', err);
-        const errorToolCall: ToolCallMessage = {
-          ...toolCallMsg,
-          status: 'error',
+        recorderRef.current?.recorder.toolEnded(toolCallId, {
           error: (err as Error).message,
-        };
-        toolCallsRef.current.set(toolCallId, errorToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? errorToolCall
-              : item,
-          ),
-        );
+        });
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: false,
+          error: (err as Error).message,
+        });
       } finally {
         pendingToolExecutionsRef.current--;
         if (pendingToolExecutionsRef.current < 0) {
@@ -3750,43 +3975,196 @@ function ChatBaseInner({
   // ========================================================================
   // handleSend
   // ========================================================================
+  // Voice (V1): what was said and put in the composer, until sent.
+  const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
+  // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
+  // The person's own settings, followed as the voice menu changes them (VO-30).
+  const [personVoice] = useVoiceSettings();
+  const settled = useMemo(
+    () => (voice ? settledVoice(voice, personVoice) : undefined),
+    [voice, personVoice],
+  );
+  // The words in the box are still being heard: greyed until final (VO-11).
+  const [voiceInterim, setVoiceInterim] = useState(false);
+  /*
+   * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
+   * host's speaker when it gives one (`ChatFloating`, whose assistant's mouth
+   * moves with it), else the chat's own — a chat given a `voice` speaks
+   * wherever it is drawn.
+   */
+  const hostSpeaks = Boolean(onReadAloud || onStopSpeaking);
+  const ownVoice = useVoiceSpeaker(settled, !hostSpeaks);
+  useSpokenAnswers(
+    displayItems,
+    isLoading,
+    !hostSpeaks && settled?.output === 'always',
+    ownVoice.speaker,
+  );
+  const speakingNow = voiceSpeaking || ownVoice.state.speaking;
+  // The sentence being said, marked in the conversation (VO-65).
+  const sentenceSaid = hostSpeaks ? voiceSentence : ownVoice.state.sentence;
+  const saidConversationRef = useRef<HTMLDivElement>(null);
+  useSaidSentence(saidConversationRef, sentenceSaid, displayItems);
+  /*
+   * A line the agent wants heard, not written (VO-35): a caption while the
+   * run goes on, said by the speaker where answers are said by themselves.
+   */
+  const [voiceSaid, setVoiceSaid] = useState('');
+  voiceSayRef.current = activity => {
+    const line = lineToSay(activity);
+    if (!line) {
+      return;
+    }
+    setVoiceSaid(line);
+    if (settled?.output === 'always') {
+      if (onReadAloud) {
+        onReadAloud(line);
+      } else {
+        ownVoice.speaker?.say(line);
+      }
+    }
+  };
+  useEffect(() => {
+    if (!isLoading) {
+      setVoiceSaid('');
+    }
+  }, [isLoading]);
+  // Answers spoken over, hands-free (VO-13): marked *interrupted*.
+  const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // The conversation as shown, read when the person speaks over an answer.
+  const shownItemsRef = useRef<readonly DisplayItem[]>([]);
+  const markInterrupted = useCallback(() => {
+    const spokenOver = answerSpokenOver(
+      shownItemsRef.current.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      ),
+    );
+    if (spokenOver) {
+      setInterruptedIds(ids => new Set([...ids, spokenOver]));
+    }
+  }, []);
+  const stopSpeaking =
+    onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
+  // How loud the answer plays: the host's speaker's, or the chat's own (VO-13).
+  const playbackLevel = hostSpeaks ? voiceLevel : ownVoice.level;
+  const readAnswerAloud =
+    onReadAloud ?? (ownVoice.speaker ? ownVoice.read : undefined);
   const handleSend = useCallback(
-    async (messageOverride?: string) => {
+    async (
+      messageOverride?: string,
+      // AG-UI's: what goes with the run besides the conversation — an
+      // application's page says there what it did (R-04).
+      forwardedPropsGiven?: Record<string, unknown>,
+      // How the message was heard, when it was said (VO-27).
+      spokenGiven?: SpokenMetadata,
+    ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
+      // Its files are uploaded first: the run names their refs (RU-6).
+      if (forwardedPropsGiven && namesFiles(forwardedPropsGiven)) {
+        try {
+          forwardedPropsGiven = await withUploadedFiles(
+            forwardedPropsGiven,
+            uploadToConversation,
+          );
+        } catch (failure) {
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+          return;
+        }
+      }
+      // A press of what a display offered goes up the ui socket, checked
+      // there; the run that answers it names it only (RU-W).
+      const pressed = displayPressOf(forwardedPropsGiven);
+      if (pressed && forwardedPropsGiven) {
+        const socket = uiSocketRef.current?.socket;
+        if (!socket) {
+          setError(new Error('This conversation’s ui channel is not open.'));
+          return;
+        }
+        try {
+          const result = await socket.act(pressed);
+          if (!result.ok) {
+            setError(
+              new Error(
+                result.detail || `The press was refused (${result.status}).`,
+              ),
+            );
+            return;
+          }
+          forwardedPropsGiven = withPress(forwardedPropsGiven, result.value);
+        } catch (failure) {
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+          return;
+        }
+      }
       stoppedRef.current = false;
+      inspectAnswerRef.current = '';
+      recorderRef.current?.recorder.turnStarted(
+        messageContent,
+        selectedModel || undefined,
+      );
       suppressAssistantTextForToolOnlyRef.current =
         isToolCallOnlyPrompt(messageContent);
+      // Said, then sent: by the microphone at once, or from the composer it
+      // was put in — the words may have been edited, it was still said.
+      // Or said in a composer its host holds, riding on the run (`voice`).
+      const spoken =
+        spokenGiven ??
+        spokenOf(forwardedPropsGiven?.voice) ??
+        (messageOverride === undefined ? spokenRef.current : undefined);
+      spokenRef.current = undefined;
+      const forwardedProps = spoken
+        ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
+        : forwardedPropsGiven;
 
-      const userMessage = createUserMessage(messageContent);
+      const userMessage = createUserMessage(
+        messageContent,
+        spoken ? { ...spoken } : undefined,
+      );
       const currentMessages = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
       const allMessages = [...currentMessages, userMessage];
 
-      setDisplayItems(prev => [...prev, userMessage]);
+      {
+        const { id, role: _role, content: _content, ...extras } = userMessage;
+        changeLayer(kept => ({
+          ...kept,
+          extras: new Map(kept.extras).set(id, extras),
+        }));
+      }
+      changeConversation(state =>
+        reduceConversation(withPrompt(state, userMessage.id, messageContent), {
+          type: 'RUN_STARTED',
+        }),
+      );
       setInput('');
       setIsLoading(true);
       setIsStreaming(true);
       setError(null);
-      currentAssistantMessageRef.current = null;
-
-      if (useStoreMode) {
-        useChatStore.getState().addMessage(userMessage);
-      }
 
       try {
         if (onSendMessage) {
           if (enableStreaming) {
             const assistantMessageId = generateMessageId();
-            const assistantMessage = createAssistantMessage('');
-            assistantMessage.id = assistantMessageId;
-            setDisplayItems(prev => [...prev, assistantMessage]);
-            currentAssistantMessageRef.current = assistantMessage;
+            const said = (text: string, streaming: boolean) =>
+              reduce({
+                type: 'MESSAGE_SAID',
+                messageId: assistantMessageId,
+                role: 'assistant',
+                text,
+                streaming,
+              });
+            said('', true);
 
             if (useStoreMode) {
-              useChatStore.getState().addMessage(assistantMessage);
               useChatStore.getState().startStreaming(assistantMessageId);
             }
 
@@ -3794,50 +4172,21 @@ function ChatBaseInner({
 
             await onSendMessage(messageContent, allMessages, {
               onChunk: (chunk: string) => {
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? {
-                          ...item,
-                          content: (item as ChatMessage).content + chunk,
-                        }
-                      : item,
-                  ),
-                );
-                if (useStoreMode) {
-                  useChatStore
-                    .getState()
-                    .appendToStream(assistantMessageId, chunk);
-                }
+                reduce({
+                  type: 'TEXT_MESSAGE_CONTENT',
+                  messageId: assistantMessageId,
+                  delta: chunk,
+                });
               },
               onComplete: (fullResponse: string) => {
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? { ...item, content: fullResponse }
-                      : item,
-                  ),
-                );
+                said(fullResponse, false);
                 if (useStoreMode) {
-                  useChatStore.getState().updateMessage(assistantMessageId, {
-                    content: fullResponse,
-                  });
                   useChatStore.getState().stopStreaming();
                 }
               },
               onError: (error: Error) => {
-                const errorContent = `Error: ${error.message}`;
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? { ...item, content: errorContent }
-                      : item,
-                  ),
-                );
+                said(chatText.error(error.message), false);
                 if (useStoreMode) {
-                  useChatStore.getState().updateMessage(assistantMessageId, {
-                    content: errorContent,
-                  });
                   useChatStore.getState().stopStreaming();
                 }
                 setError(error);
@@ -3847,11 +4196,13 @@ function ChatBaseInner({
           } else {
             const response = await onSendMessage(messageContent, allMessages);
             if (response) {
-              const assistantMessage = createAssistantMessage(response);
-              setDisplayItems(prev => [...prev, assistantMessage]);
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(assistantMessage);
-              }
+              reduce({
+                type: 'MESSAGE_SAID',
+                messageId: generateMessageId(),
+                role: 'assistant',
+                text: response,
+                streaming: false,
+              });
             }
           }
         } else if (adapterRef.current) {
@@ -3870,6 +4221,8 @@ function ChatBaseInner({
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 
+          // The thread is opened by this run: its host keeps it (D-13).
+          noteThreadStarted();
           await adapterRef.current.sendMessage(userMessage, {
             threadId: threadIdRef.current,
             messages: allMessages,
@@ -3878,15 +4231,14 @@ function ChatBaseInner({
             builtinTools: enabledMcpToolNames,
             skills: enabledSkillIds,
             identities: connectedIdentitiesRef.current,
+            ...(forwardedProps ? { forwardedProps } : {}),
           } as Parameters<typeof adapterRef.current.sendMessage>[1]);
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('[ChatBase] Send error:', err);
-          const errorMessage = createAssistantMessage(
-            `Error: ${(err as Error).message}`,
-          );
-          setDisplayItems(prev => [...prev, errorMessage]);
+          // Said in the conversation, as the assistant's words.
+          changeConversation(state => withError(state, (err as Error).message));
           setError(err as Error);
         }
       } finally {
@@ -3896,12 +4248,14 @@ function ChatBaseInner({
         // For the non-adapter path (onSendMessage), 'done' is never
         // emitted so we reset when no adapter is present.
         if (!adapterRef.current) {
+          if (conversationRef.current.running) {
+            reduce({ type: 'RUN_FINISHED' });
+          }
           setIsLoading(false);
           setIsStreaming(false);
           agentRuntimeStore.getState().requestRefresh(activeAgentId);
         }
         suppressAssistantTextForToolOnlyRef.current = false;
-        currentAssistantMessageRef.current = null;
         abortControllerRef.current = null;
       }
     },
@@ -3917,6 +4271,12 @@ function ChatBaseInner({
       enableStreaming,
       getEnabledMcpToolNames,
       getEnabledSkillIds,
+      noteThreadStarted,
+      chatText,
+      uploadToConversation,
+      changeConversation,
+      changeLayer,
+      reduce,
     ],
   );
 
@@ -3984,29 +4344,8 @@ function ChatBaseInner({
       }
     }
 
-    // Mark in-flight tool calls as interrupted so UI doesn't remain "Executing".
-    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
-      if (toolCall.status === 'executing' || toolCall.status === 'inProgress') {
-        toolCallsRef.current.set(toolCallId, {
-          ...toolCall,
-          status: 'error',
-          error: 'Interrupted by user',
-        });
-      }
-    }
-    setDisplayItems(prev =>
-      prev.map(item => {
-        if (!isToolCallMessage(item)) return item;
-        if (item.status !== 'executing' && item.status !== 'inProgress') {
-          return item;
-        }
-        return {
-          ...item,
-          status: 'error',
-          error: 'Interrupted by user',
-        } as ToolCallMessage;
-      }),
-    );
+    // The turn ends stopped: what streamed stops, a call under way says so.
+    changeConversation(state => withTurnEnded(state, 'stopped'));
 
     if (useStoreMode) {
       useChatStore.getState().stopStreaming();
@@ -4020,7 +4359,6 @@ function ChatBaseInner({
     // own stop event arrives — if it ever does.
     agentRuntimeStore.getState().stopSubagentActivity();
     suppressAssistantTextForToolOnlyRef.current = false;
-    currentAssistantMessageRef.current = null;
 
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
@@ -4049,10 +4387,47 @@ function ChatBaseInner({
     protocol?.agentId,
   ]);
 
+  /*
+   * How a message's display presses what it offered (RU-4,
+   * RU-W): with the token of the offer, as the run's press — which
+   * `handleSend` sends up the ui socket before the run, the run naming it
+   * only. An answer is the person's words in the conversation; any other
+   * press, the action's name.
+   */
+  const actOnDisplay = useCallback(
+    (display: Display): UiAct =>
+      async action => {
+        const offer = display.actions?.find(one => one.name === action.action);
+        if (!offer) {
+          throw new Error(`“${action.action}” was not offered here.`);
+        }
+        const value = (action.payload as { value?: unknown } | undefined)
+          ?.value;
+        const words =
+          action.action === ANSWER_ACTION
+            ? typeof value === 'string'
+              ? value
+              : isFileRef(value)
+                ? value.name
+                : 'Answered.'
+            : action.action;
+        await handleSend(words, {
+          loop: {
+            action: {
+              name: action.action,
+              display_id: display.id,
+              token: offer.token,
+              payload: action.payload ?? {},
+            },
+          },
+        });
+      },
+    [handleSend],
+  );
+
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {
-    setDisplayItems([]);
-    toolCallsRef.current.clear();
+    resetConversation();
     pendingToolExecutionsRef.current = 0;
     setInput('');
     threadIdRef.current = generateMessageId();
@@ -4061,7 +4436,14 @@ function ChatBaseInner({
       useConversationStore.getState().clearMessages(historyScopeId);
     onNewChat?.();
     headerButtons?.onNewChat?.();
-  }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
+  }, [
+    clearStoreMessages,
+    onNewChat,
+    headerButtons,
+    useStoreMode,
+    runtimeId,
+    resetConversation,
+  ]);
 
   // Hand the send function to a host that owns the input box (the LOOP
   // workspace). Withdrawn on unmount so nothing holds a stale sender.
@@ -4072,13 +4454,20 @@ function ChatBaseInner({
       return undefined;
     }
     onSendReady({
-      send: (message: string) => {
-        void handleSend(message);
+      send: (message: string, forwardedProps?: Record<string, unknown>) => {
+        void handleSend(message, forwardedProps);
       },
       stop: handleStop,
       // The same reset the header's + performs, for a host whose controls
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
+      thread: () => threadIdRef.current,
+      // Its speaker, for a host whose composer holds the microphone (VO-10).
+      stopSpeaking,
+      // How loud it plays, for a host's hands-free barge-in (VO-13).
+      voiceLevel: playbackLevel,
+      // The answer spoken over, marked for a host's own composer (VO-13).
+      markInterrupted,
     });
     return () => {
       onSendReady(null);
@@ -4090,6 +4479,9 @@ function ChatBaseInner({
     handleSend,
     handleStop,
     handleNewChat,
+    stopSpeaking,
+    playbackLevel,
+    markInterrupted,
   ]);
 
   // Streaming state, for a host that draws the prompt.
@@ -4097,36 +4489,55 @@ function ChatBaseInner({
     onLoadingChange?.(isLoading);
   }, [onLoadingChange, isLoading]);
 
+  // Whether its voice speaks, for a host that draws the composer (VO-10).
+  useEffect(() => {
+    onSpeakingChange?.(speakingNow);
+  }, [onSpeakingChange, speakingNow]);
+
   // ---- handleClear ----
   const handleClear = useCallback(() => {
     if (window.confirm('Clear all messages?')) {
-      setDisplayItems([]);
-      toolCallsRef.current.clear();
+      resetConversation();
       if (useStoreMode) clearStoreMessages();
       if (historyScopeId)
         useConversationStore.getState().clearMessages(historyScopeId);
       onClear?.();
       headerButtons?.onClear?.();
     }
-  }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
+  }, [
+    clearStoreMessages,
+    onClear,
+    headerButtons,
+    useStoreMode,
+    runtimeId,
+    resetConversation,
+  ]);
 
   // ---- Turn removal (the TurnFooter's remove action) ----
-  const handleRemoveItems = useCallback((ids: string[]) => {
-    const drop = new Set(ids);
-    setDisplayItems(prev => prev.filter(item => !drop.has(item.id)));
-    // The tool-call registry mirrors the transcript; a removed turn's calls
-    // must not linger there or a late protocol event would resurrect them.
-    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
-      if (drop.has(toolCall.id)) {
-        toolCallsRef.current.delete(toolCallId);
-      }
-    }
-  }, []);
+  const handleRemoveItems = useCallback(
+    (ids: string[]) => {
+      const drop = new Set(ids);
+      // The turn's rows leave the conversation, its steps the web's layer.
+      const rows = displayItemsRef.current
+        .filter(item => drop.has(item.id))
+        .map(rowIdOf);
+      changeConversation(state => withoutItems(state, rows));
+      changeLayer(kept =>
+        kept.steps.some(step => drop.has(step.item.id))
+          ? {
+              ...kept,
+              steps: kept.steps.filter(step => !drop.has(step.item.id)),
+            }
+          : kept,
+      );
+    },
+    [changeConversation, changeLayer],
+  );
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
-      const existingToolCall = toolCallsRef.current.get(toolCallId);
+      const existingToolCall = toolCardNow(toolCallId);
       if (
         existingToolCall &&
         (existingToolCall.status === 'executing' ||
@@ -4210,18 +4621,20 @@ function ChatBaseInner({
               return;
             }
 
-            const updatedToolCall: ToolCallMessage = {
-              ...existingToolCall,
-              result,
-              status: approved ? 'complete' : 'error',
-              error: approved ? undefined : 'Tool approval rejected by user',
-            };
-            toolCallsRef.current.set(toolCallId, updatedToolCall);
-            setDisplayItems(prev =>
-              prev.map(item =>
-                isToolCallMessage(item) && item.toolCallId === toolCallId
-                  ? updatedToolCall
-                  : item,
+            // The person's decision, said on the call; the run goes on.
+            changeConversation(state =>
+              reduceConversation(
+                reduceConversation(state, {
+                  type: 'TOOL_CALL_DONE',
+                  toolCallId,
+                  success: approved,
+                  result,
+                  answered: true,
+                  ...(approved
+                    ? {}
+                    : { error: 'Tool approval rejected by user' }),
+                }),
+                { type: 'RUN_STARTED' },
               ),
             );
 
@@ -4251,19 +4664,14 @@ function ChatBaseInner({
           return;
         }
 
-        const updatedToolCall: ToolCallMessage = {
-          ...existingToolCall,
+        // The person's answer completes the call.
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: true,
           result,
-          status: 'complete',
-        };
-        toolCallsRef.current.set(toolCallId, updatedToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? updatedToolCall
-              : item,
-          ),
-        );
+          answered: true,
+        });
 
         if (adapterRef.current) {
           let responseText: string;
@@ -4301,6 +4709,7 @@ function ChatBaseInner({
 
           setIsLoading(true);
           setIsStreaming(true);
+          reduce({ type: 'RUN_STARTED' });
 
           try {
             const allMessages = displayItems.filter(
@@ -4318,7 +4727,14 @@ function ChatBaseInner({
         }
       }
     },
-    [displayItems, onApproveApproval, onRejectApproval],
+    [
+      displayItems,
+      onApproveApproval,
+      onRejectApproval,
+      toolCardNow,
+      changeConversation,
+      reduce,
+    ],
   );
   handleRespondRef.current = handleRespond;
 
@@ -4426,38 +4842,20 @@ function ChatBaseInner({
   }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
-  /*
-   * The transcript's tool renderer: the host's own, or — when a notebook was
-   * named — the built-in surfaces that show what each cell tool did. Baked
-   * in here rather than in any workspace, so every chat with a headless
-   * notebook gets the same transcript. Above the early return below, as
-   * every hook must be.
-   */
-  const effectiveRenderToolResult = useMemo(
-    () =>
-      renderToolResult ??
-      (notebookToolSurfacesId
-        ? notebookToolSurfacesRenderer(notebookToolSurfacesId)
-        : undefined),
-    [renderToolResult, notebookToolSurfacesId],
-  );
-
   if (!ready) {
     return (
       <Box
         className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          p: 4,
-          borderRadius,
-          bg: backgroundColor || 'canvas.default',
-          border,
-          boxShadow,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        p={4}
+        borderRadius={borderRadius}
+        bg={backgroundColor || 'canvas.default'}
+        border={border}
+        boxShadow={boxShadow}
       >
         {loadingState || (
           <>
@@ -4525,15 +4923,69 @@ function ChatBaseInner({
             .filter(item => item.message)
         : undefined;
 
+  /*
+   * The welcome, as the first message: drawn as the agent's own words are,
+   * never sent nor kept. With it, the history is never empty, so the empty
+   * state gives way to it.
+   */
+  const welcomedItems: DisplayItem[] = welcome
+    ? [
+        {
+          id: '__welcome__',
+          role: 'assistant',
+          content: welcome,
+          createdAt: WELCOME_AT,
+        } as DisplayItem,
+        ...displayItems,
+      ]
+    : displayItems;
+
+  shownItemsRef.current = welcomedItems;
+  const saidId = saidMessageId(welcomedItems, sentenceSaid);
+  /*
+   * *Read aloud* under each answer the agent has finished (VO-21),
+   * when the host reads answers aloud on request.
+   */
+  const writingId =
+    isLoading || isStreaming
+      ? [...welcomedItems]
+          .reverse()
+          .find(
+            (item): item is ChatMessage =>
+              !isToolCallMessage(item) && item.role === 'assistant',
+          )?.id
+      : undefined;
+  const readAloudFooter =
+    readAnswerAloud || interruptedIds.size
+      ? (message: ChatMessage) => {
+          const text = getMessageText(message);
+          return (
+            <>
+              {interruptedIds.has(message.id) ? (
+                <Text
+                  sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
+                  data-interrupted=""
+                >
+                  interrupted
+                </Text>
+              ) : null}
+              {readAnswerAloud && readsAloud(message, text, writingId) ? (
+                <ReadAloud onRead={() => readAnswerAloud(text)} />
+              ) : null}
+            </>
+          );
+        }
+      : undefined;
+
   const messagesContent = children ? (
     children
   ) : (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        /*
+      ref={saidConversationRef}
+      display="flex"
+      flexDirection="column"
+      minHeight={0}
+      /*
           A reading column, not a full-bleed sheet.
 
           The transcript keeps a book-page width and centres itself; on a
@@ -4541,27 +4993,34 @@ function ChatBaseInner({
           rows inside carry their own horizontal padding, which becomes the
           margin once the cap does bind.
         */
-        width: '100%',
-        maxWidth: 920,
-        mx: 'auto',
-        bg: 'canvas.default',
-      }}
+      width="100%"
+      maxWidth={920}
+      mx="auto"
+      bg="canvas.default"
     >
       <ChatMessageList
-        displayItems={displayItems}
+        displayItems={welcomedItems}
+        actOn={protocol?.uiSocket ? actOnDisplay : undefined}
+        upload={protocol?.uiFiles ? uploadToConversation : undefined}
         isLoading={isLoading}
         isStreaming={isStreaming}
         showLoadingIndicator={showLoadingIndicator}
         hideMessagesAfterToolUI={hideMessagesAfterToolUI}
         avatarConfig={defaultAvatarConfig}
         padding={padding}
-        renderToolResult={effectiveRenderToolResult}
+        // Tool calls are drawn by the page's Reactor plugins; a named
+        // notebook's cell surfaces stand in for the default row of its tools,
+        // so every chat with a headless notebook gets the same transcript.
+        notebookToolSurfacesId={notebookToolSurfacesId}
         approvalConfig={approvalConfig}
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}
         showTurnFooters={showTurnFooter}
+        renderMessageFooter={readAloudFooter}
+        saidMessageId={saidId}
         agentUsage={agentUsage}
         onRemoveItems={handleRemoveItems}
+        mcpServers={filteredMcpServers}
         emptyContent={
           launching ? null : (
             <ChatEmptyState
@@ -4576,11 +5035,86 @@ function ChatBaseInner({
           )
         }
       />
+      {trailingContent}
     </Box>
   );
 
+  // The microphone, in the composer's footer (VO-10, VO-11).
+  const voiceControl =
+    settled && settled.input !== 'off' ? (
+      <ComposerVoice
+        voice={settled}
+        input={input}
+        setInput={setInput}
+        disabled={disabled || launching}
+        speaking={speakingNow}
+        onStopSpeaking={stopSpeaking}
+        // Barge-in gated on how loud the answer plays (VO-13): the host's
+        // speaker, or the chat's own.
+        playbackLevel={playbackLevel}
+        // Hands-free (VO-12, VO-13): the run in progress, stopped when the
+        // person speaks over it, and the answer marked interrupted.
+        running={isLoading}
+        onStopRun={handleStop}
+        onInterrupted={markInterrupted}
+        onInterimChange={setVoiceInterim}
+        // The menu offers when answers are heard where the application
+        // lets them be (VO-21, VO-30).
+        answers={Boolean(
+          voice?.output && voice.output !== 'off' && voice.speechUrl,
+        )}
+        onSpoken={metadata => {
+          spokenRef.current = metadata;
+        }}
+        send={(text, metadata) => void handleSend(text, undefined, metadata)}
+      />
+    ) : undefined;
+  // Why an answer could not be heard, in a sentence, by the composer.
+  const voiceRefused =
+    !hostSpeaks && ownVoice.state.refused ? (
+      <Text
+        role="alert"
+        sx={{ fontSize: 0, color: 'danger.fg', maxWidth: 260 }}
+        data-voice-refused=""
+      >
+        {ownVoice.state.refused}
+      </Text>
+    ) : null;
+
+  // The line said aloud, written as it is said: captions always (VO-65).
+  const voiceSayCaption = voiceSaid ? (
+    <Text
+      aria-live="polite"
+      sx={{
+        fontSize: 0,
+        fontStyle: 'italic',
+        color: 'fg.muted',
+        maxWidth: 260,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 1,
+      }}
+      data-voice-say=""
+    >
+      <UnmuteIcon size={12} aria-label="Said aloud" />
+      {voiceSaid}
+    </Text>
+  ) : null;
+
   const inputToolbar = showInput ? (
     <InputPrompt
+      footerExtras={
+        voiceRefused || voiceSayCaption ? (
+          <>
+            {voiceSayCaption}
+            {voiceRefused}
+            {voiceControl}
+          </>
+        ) : (
+          voiceControl
+        )
+      }
+      interim={voiceInterim}
       input={input}
       setInput={setInput}
       isLoading={isLoading}
@@ -4608,9 +5142,12 @@ function ChatBaseInner({
       }
       promptVariant={promptVariant}
       mentionableAgents={mentionableAgents}
+      promptCommands={promptCommands}
       // The runtime's memory of what was sent to this agent, for the arrow
       // keys — part of the same initial state as the models and tools.
-      promptHistory={configQuery.data?.promptHistory}
+      // Without what the runtime told the application before a personal
+      // agent's request (`askedOf`): the person never wrote it.
+      promptHistory={configQuery.data?.promptHistory?.map(askedOf)}
       showTokenUsage={showTokenUsage}
       showContextRing={showContextRing}
       agentUsage={agentUsage}
@@ -4630,9 +5167,20 @@ function ChatBaseInner({
       // agent has no config endpoint waits for ever otherwise.
       configLoading={configQuery.isLoading}
       models={offeredModels}
+      // Listed apart and read-only: a typed-decision model is never the
+      // agent's model.
+      decisions={
+        configQuery.data
+          ? {
+              models: configQuery.data.decisionModels,
+              note: configQuery.data.decisionsNote,
+            }
+          : undefined
+      }
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
-      availableTools={builtinTools}
+      availableTools={builtinTools.runtime}
+      availableFrontendTools={builtinTools.frontend}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
       enabledMcpToolCount={getEnabledMcpToolNames().length}
@@ -4721,14 +5269,13 @@ function ChatBaseInner({
   return (
     <Box
       className={className}
-      sx={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        /*
+      position="relative"
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      maxHeight="100%"
+      minHeight={0}
+      /*
           As wide as the host, always.
 
           The root set its height and said nothing about width, so mounted in
@@ -4739,15 +5286,14 @@ function ChatBaseInner({
           bubble drift while the agent answered. A chat fills the column it
           is given; the column decides the width, not the transcript.
         */
-        flex: '1 1 auto',
-        width: '100%',
-        minWidth: 0,
-        bg: backgroundColor || 'canvas.default',
-        borderRadius,
-        border,
-        boxShadow,
-        overflow: 'hidden',
-      }}
+      flex="1 1 auto"
+      width="100%"
+      minWidth={0}
+      bg={backgroundColor || 'canvas.default'}
+      borderRadius={borderRadius}
+      border={border}
+      boxShadow={boxShadow}
+      overflow="hidden"
     >
       {/* Header — shown at the top only when no companion surface is visible.
           When a surface (notebook/document) is visible the header is rendered
@@ -4777,22 +5323,24 @@ function ChatBaseInner({
           the same way and has always looked right for exactly this reason.
         */
         <Box
-          sx={{
-            flex: '1 1 auto',
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          flex="1 1 auto"
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            icon={brandIcon}
-            protocol={protocol?.type ?? 'unknown'}
-            url={protocol?.endpoint || ''}
-            messageCount={displayItems.length}
-            agentId={activeAgentId}
-            apiBase={protocol?.configEndpoint}
-            onBack={() => setShowDetails(false)}
+          <ReactorLazy<React.ComponentProps<typeof AgentDetails>>
+            load={loadAgentDetails}
+            errorFallback={agentDetailsRefused}
+            props={{
+              name: title || 'AI Agent',
+              icon: brandIcon,
+              protocol: protocol?.type ?? 'unknown',
+              url: protocol?.endpoint || '',
+              messageCount: displayItems.length,
+              agentId: activeAgentId,
+              apiBase: protocol?.configEndpoint,
+              onBack: () => setShowDetails(false),
+            }}
           />
         </Box>
       )}
@@ -4811,15 +5359,13 @@ function ChatBaseInner({
       {/* Error banner */}
       {showErrors && error && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: padding,
-            bg: 'danger.subtle',
-            borderBottom: '1px solid',
-            borderColor: 'danger.muted',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          p={padding}
+          bg="danger.subtle"
+          borderBottom="1px solid"
+          borderColor="danger.muted"
         >
           <AlertIcon size={16} />
           <Text sx={{ color: 'danger.fg', fontSize: 1 }}>{error.message}</Text>
@@ -4829,49 +5375,52 @@ function ChatBaseInner({
       {/* Messages area */}
       {surfaceVisible ? (
         <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
+          flex={1}
+          minHeight={0}
+          display="flex"
+          overflow="hidden"
+          position="relative"
         >
           {/* Left: in-memory companion surface (notebook or document). */}
           <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              ...(surfaceChatFloating
+            flex={1}
+            minWidth={0}
+            minHeight={0}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            sx={
+              surfaceChatFloating
                 ? null
                 : surfaceCollapsed
                   ? null
                   : {
                       borderRight: '1px solid',
                       borderColor: 'border.default',
-                    }),
-            }}
+                    }
+            }
           >
             {launching || overlay ? (
               <CompanionSurfaceSkeleton
                 mode={notebookVisible ? 'notebook' : 'document'}
               />
             ) : notebookVisible ? (
-              <EphemeralNotebook
-                notebookId={ephemeralNotebookId}
-                runtimeName={runtimeId || activeAgentId}
-                runtimeOverride={ephemeralRuntimeOverride}
-                themeVariant={themeVariant}
-                colorMode={colorMode}
-                nbformat={persistedEphemeralNbformat ?? undefined}
-                onNbformatChange={handleEphemeralNotebookChange}
-                toolbarComponent={ephemeralNotebookToolbar}
-                toolbarExtraItems={notebookToolbarItems}
-                collaborationProvider={ephemeralNotebookCollaborationProvider}
+              <ReactorLazy<React.ComponentProps<typeof EphemeralNotebook>>
+                load={loadEphemeralNotebook}
+                errorFallback={ephemeralNotebookRefused}
+                fallback={<CompanionSurfaceSkeleton mode="notebook" />}
+                props={{
+                  notebookId: ephemeralNotebookId,
+                  runtimeName: runtimeId || activeAgentId,
+                  runtimeOverride: ephemeralRuntimeOverride,
+                  themeVariant,
+                  colorMode,
+                  nbformat: persistedEphemeralNbformat ?? undefined,
+                  onNbformatChange: handleEphemeralNotebookChange,
+                  toolbarComponent: ephemeralNotebookToolbar,
+                  toolbarExtraItems: notebookToolbarItems,
+                  collaborationProvider: ephemeralNotebookCollaborationProvider,
+                }}
               />
             ) : (
               <React.Suspense fallback={null}>
@@ -4935,12 +5484,10 @@ function ChatBaseInner({
               {chatHeaderElement}
               <Box
                 ref={messagesContainerRef}
-                sx={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: 'auto',
-                  bg: 'canvas.default',
-                }}
+                flex={1}
+                minHeight={0}
+                overflow="auto"
+                bg="canvas.default"
               >
                 {messagesContent}
               </Box>
@@ -4952,14 +5499,7 @@ function ChatBaseInner({
           {surfaceCollapsed &&
             onExpandFromCollapsed &&
             (chatViewMode === 'sidebar' ? (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 6,
-                }}
-              >
+              <Box position="absolute" top={8} right={8} zIndex={6}>
                 <IconButton
                   icon={SidebarExpandIcon}
                   aria-label="Open chat"
@@ -4981,13 +5521,12 @@ function ChatBaseInner({
         <>
           <Box
             ref={messagesContainerRef}
-            sx={{
-              flex: 1,
-              flexGrow: 1,
-              minHeight: 0,
-              overflow: 'auto',
-              bg: 'canvas.default',
-            }}
+            data-chat-history=""
+            flex={1}
+            flexGrow={1}
+            minHeight={0}
+            overflow="auto"
+            bg="canvas.default"
           >
             {messagesContent}
           </Box>
@@ -5009,30 +5548,26 @@ function ChatBaseInner({
           selectors are force-disabled while an overlay is set. */}
       {overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-            overflow: 'auto',
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={20}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
+          overflow="auto"
         >
           {/* Translucent dim layer (kept separate so the card stays opaque). */}
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.4,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.4}
+            backdropFilter="blur(1px)"
           />
           {/* Foreground gate content (opaque, above the dim layer). */}
-          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
+          <Box position="relative" zIndex={1} maxWidth="100%">
             {overlay}
           </Box>
         </Box>
@@ -5045,35 +5580,29 @@ function ChatBaseInner({
           own inline skeletons underneath. */}
       {launching && !overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={15}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
         >
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.35,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.35}
+            backdropFilter="blur(1px)"
           />
           <Box
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 3,
-            }}
+            position="relative"
+            zIndex={1}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={3}
           >
             <Spinner size="large" />
             <Text sx={{ color: 'fg.muted' }}>

@@ -48,6 +48,11 @@ import type {
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
 import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
+import {
+  agentDeletionUrl,
+  launchesOwnRoutesOnly,
+  runtimeStatusUrl,
+} from './ownRoutes';
 import { runtimeUrl, runtimesUrl } from '../runtimes/lifecycle';
 
 import {
@@ -105,7 +110,22 @@ export interface UseAgentOptions {
    * connection bootstrap as well as agent creation.
    */
   runtimeConnection?: AgentRuntimeConnectionOptions;
+  /**
+   * The application the runtime is launched for (R-19): its Appspec,
+   * and the saved application and deployment it runs for. Sent with the
+   * launch, as `RuntimesClient.create` sends it in Python, so the runtime is
+   * given the secrets its connections declare before its agent is made.
+   *
+   * An application's runtime is always its own: a running runtime is never
+   * looked up and reused for it, since one not launched for the application
+   * was not given its secrets.
+   */
+  appLaunch?: AppLaunch;
 }
+
+/** What an application's launch carries besides its environment (R-19). */
+export type AppLaunch = Required<Pick<IRuntimeOptions, 'appSpec'>> &
+  Pick<IRuntimeOptions, 'appUid' | 'deploymentUid'>;
 
 /**
  * Return type for the useAgents hook.
@@ -284,6 +304,11 @@ export interface AgentSandboxConnectionInfo {
   agentId?: string;
   agentBaseUrl?: string;
   runtimeEnvironment?: RuntimeEnvironmentDetails;
+  /**
+   * The runtime answers only the application's own routes (OwnRoutesOnly):
+   * its agent's status is not asked, and the ingress given is used.
+   */
+  ownRoutesOnly?: boolean;
 }
 
 export interface RuntimeEnvironmentDetails {
@@ -457,26 +482,23 @@ export async function createServiceManagerFromAgentSandbox(
     .replace(/\/$/, '');
   const agentId = String(info.agentId || '').trim();
   const bearer = String(authToken || '').trim();
-  if (agentBaseUrl && agentId && bearer) {
-    const statusCandidates = [
-      `${agentBaseUrl}/api/v1/runtime/status?agent_id=${encodeURIComponent(agentId)}`,
-    ];
-    for (const statusUrl of statusCandidates) {
-      try {
-        const response = await fetch(statusUrl, {
-          headers: {
-            Authorization: `Bearer ${bearer}`,
-          },
-        });
-        if (!response.ok) {
-          continue;
-        }
-        const payload = (await response
-          .json()
-          .catch(() => null)) as SandboxStatusResponse | null;
-        if (!payload) {
-          continue;
-        }
+  const statusUrl =
+    agentBaseUrl && agentId && bearer
+      ? runtimeStatusUrl(agentBaseUrl, agentId, Boolean(info.ownRoutesOnly))
+      : undefined;
+  if (statusUrl) {
+    try {
+      const response = await fetch(statusUrl, {
+        headers: {
+          Authorization: `Bearer ${bearer}`,
+        },
+      });
+      const payload = response.ok
+        ? ((await response
+            .json()
+            .catch(() => null)) as SandboxStatusResponse | null)
+        : null;
+      if (payload) {
         payloadFromStatus = payload;
         const ingressFromStatus = resolveSandboxIngress(payload);
         if (ingressFromStatus) {
@@ -492,10 +514,9 @@ export async function createServiceManagerFromAgentSandbox(
           }
         }
         tokenFromStatus = resolveSandboxToken(payload);
-        break;
-      } catch {
-        // Keep fallback ingress/token when status endpoint is unavailable.
       }
+    } catch {
+      // Keep fallback ingress/token when status endpoint is unavailable.
     }
   }
 
@@ -616,11 +637,15 @@ export function useAgentRuntimes(
     runtimeCreationTarget,
     runtimeCreationBaseUrl,
     runtimeConnection,
+    appLaunch,
   } = options;
 
   // Both vocabularies funnel into one value here, so no branch below has to
   // remember that the old names exist.
   const variant = toAgentRuntimeVariant(variantOption ?? runtimeCreationTarget);
+  // Launched for a deployment, its runtime answers only the application's
+  // own routes (OwnRoutesOnly): nothing else is asked of it.
+  const ownRoutesOnly = launchesOwnRoutesOnly(appLaunch);
 
   const { configuration } = useCoreStore();
 
@@ -762,12 +787,14 @@ export function useAgentRuntimes(
             runtimeOptions
               ? {
                   ...runtimeOptions,
+                  ...appLaunch,
                   runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 }
               : {
                   environmentName: 'ai-agents-env',
                   creditsLimit: 10,
                   givenName: safeName,
+                  ...appLaunch,
                   runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 },
           );
@@ -793,6 +820,7 @@ export function useAgentRuntimes(
       agentConfig?.name,
       agentSpec?.name,
       agentSpecId,
+      appLaunch,
       hasSpec,
       resolvedRuntimeCreationBaseUrl,
       storeLaunchAgent,
@@ -859,16 +887,18 @@ export function useAgentRuntimes(
   const teardown = useCallback(async () => {
     const agentId = runtime?.agentId;
     const agentBaseUrl = runtime?.agentBaseUrl;
-    if (agentId && agentBaseUrl) {
+    // A deployment's runtime keeps its agent: nobody outside deletes it.
+    const deletion =
+      agentId && agentBaseUrl
+        ? agentDeletionUrl(agentBaseUrl, agentId, ownRoutesOnly)
+        : undefined;
+    if (deletion) {
       try {
         const { token } = await getAuthHeaders();
-        await fetch(
-          `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
-          {
-            method: 'DELETE',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
+        await fetch(deletion, {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
       } catch {
         // Best-effort teardown: ignore network / 404 errors.
       }
@@ -879,7 +909,7 @@ export function useAgentRuntimes(
     setLifecycleStatus('idle');
     setLifecycleError(null);
     agentRuntimeStore.getState().reset();
-  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders]);
+  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders, ownRoutesOnly]);
 
   // ─── Auto-create agent when runtime is ready (connect mode) ───────
 
@@ -952,6 +982,12 @@ export function useAgentRuntimes(
      * then launch if there was nothing to find.
      */
     if (!hasSpec || runtime || lifecycleStatus !== 'idle') {
+      return;
+    }
+    if (appLaunch) {
+      // An application's runtime is launched for it (R-19): a running one
+      // was not given its connections' secrets, so none is looked for.
+      setLookedForExisting(true);
       return;
     }
 
@@ -1044,6 +1080,7 @@ export function useAgentRuntimes(
     lifecycleStatus,
     getAuthHeaders,
     agentSpecId,
+    appLaunch,
     storeConnectAgent,
   ]);
 

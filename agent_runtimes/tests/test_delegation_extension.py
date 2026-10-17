@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Datalayer orchestration extension, as a worker speaks it (ORCHESTRATOR.md, O2-05).
+"""The Datalayer orchestration extension, as a worker speaks it (O2-05).
 
 A delegation names its execution and the checkpoint it resumes from; a paused
 worker answers with the checkpoint it paused at; and a steer delivered while a

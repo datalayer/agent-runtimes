@@ -66,6 +66,38 @@ export interface ProtocolConfig {
   enableConfigQuery?: boolean;
   /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
   configEndpoint?: string;
+  /**
+   * The ui channel's WebSocket (`ws://` or `wss://`, RU-W): an
+   * application's session says on it what its messages show, its steps, its
+   * elements, its authors and its window messages, and takes the presses of
+   * what they offered. Set for an application's agent; one connection per
+   * conversation, its thread the scope.
+   */
+  uiSocket?: string;
+  /**
+   * Where a file of a conversation is uploaded before the run or the press
+   * that names it (RU-6): Reactor's upload, the bytes as the body,
+   * the conversation's thread its scope. A run carries the ref it answers,
+   * never the bytes. Set for an application's agent.
+   */
+  uiFiles?: string;
+  /**
+   * The application's sessions (`…/api/v1/apps/sessions`), each AG-UI thread
+   * one of them: Stop is its session's (`{appSessions}/{thread}/stop`). Set
+   * for an application's agent. The runtime's generic `/ag-ui/terminate`
+   * never knew a session's thread, and a deployment's runtime does not
+   * answer it (OwnRoutesOnly).
+   */
+  appSessions?: string;
+  /**
+   * The runtime answers only the application's own routes (OwnRoutesOnly,
+   * the release gates): it serves a deployment — kept always on,
+   * launched by a hosted page for it — or is the visitors' runtime. Nothing
+   * outside them is opened: not the monitoring stream (an application's
+   * session asks its approvals in the conversation, over `uiSocket`), not
+   * the sandbox's socket, nor any runtime-wide setting. Needs `appSessions`.
+   */
+  ownRoutesOnly?: boolean;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }
@@ -97,6 +129,9 @@ export interface ProtocolAdapterConfig {
 
   /** Request timeout in milliseconds */
   timeout?: number;
+
+  /** The fetch to use; a phone passes one whose response body streams (e.g. `expo/fetch`). Default: the global `fetch`. */
+  fetch?: typeof fetch;
 
   /** Additional protocol-specific options */
   options?: Record<string, unknown>;
@@ -194,6 +229,8 @@ export interface ProtocolAdapter {
         provider: string;
         accessToken: string;
       }>;
+      /** What goes with the run besides the conversation (AG-UI's `forwardedProps`). */
+      forwardedProps?: Record<string, unknown>;
     },
   ): Promise<void>;
 

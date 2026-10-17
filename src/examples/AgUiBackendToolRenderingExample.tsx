@@ -25,10 +25,10 @@ import { InlineWeatherCard, type WeatherResult } from './components/weather';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
-  useSpecRenderToolResult,
+  useSpecToolRenderers,
   specRendererClassName,
   type SpecRenderer,
-} from './hooks/useSpecRenderToolResult';
+} from './hooks/useToolRenderers';
 
 /**
  * Renderers for this example, keyed by the spec's renderer id. The tool name to
@@ -85,10 +85,8 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
     agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
 
   // Tool name to match and CSS file to load are read from the agent spec.
-  const renderToolResult = useSpecRenderToolResult(
-    AGENTSPEC_ID,
-    weatherRenderers,
-  );
+  // Contributed as a Reactor plugin the chat resolves each tool call with.
+  useSpecToolRenderers(AGENTSPEC_ID, weatherRenderers);
 
   // Optional: still track weather for sidebar display if needed
   const handleStateUpdate = useCallback((_state: unknown) => {
@@ -98,20 +96,9 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -136,13 +123,11 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
 
           {/* About section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -157,16 +142,14 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
               in the chat conversation, similar to the AG-UI Dojo
               implementation.
             </Text>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>Features:</Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>
                   🌤️ Dynamic background colors based on weather conditions
@@ -177,18 +160,16 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
                 <li>⏳ Loading spinner while fetching data</li>
               </Box>
             </Box>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>
                 Try these prompts:
               </Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>&quot;What&apos;s the weather in New York?&quot;</li>
                 <li>&quot;Weather in London and Paris&quot;</li>
@@ -211,7 +192,6 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
             brandColor={brandColor}
             defaultOpen={true}
             onStateUpdate={handleStateUpdate}
-            renderToolResult={renderToolResult}
             suggestions={[
               {
                 title: 'Paris weather',

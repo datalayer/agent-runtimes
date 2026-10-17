@@ -72,6 +72,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         jupyter_token: Optional[str] = None,
         started_at: Optional[str] = None,
         expired_at: Optional[str] = None,
+        unmetered: bool = False,
     ):
         """
         Initialize a runtime service.
@@ -108,6 +109,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             Start time for the runtime.
         expired_at : Optional[str]
             Expiration time for the runtime.
+        unmetered : bool
+            Whether the runtime was started on the platform's magic key: it
+            consumes no credits and never expires.
         """
         # Initialize the runtime model with all the data fields
         self._model = RuntimeModel(
@@ -126,6 +130,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             jupyter_token=jupyter_token,
             started_at=started_at,
             expired_at=expired_at,
+            unmetered=unmetered,
             runtime={},
             sandbox_client=None,
             kernel_id=None,
@@ -217,6 +222,11 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
     def expired_at(self) -> Optional[str]:
         """Get the expiration time."""
         return self._model.expired_at
+
+    @property
+    def unmetered(self) -> bool:
+        """Whether the runtime consumes no credits and never expires."""
+        return self._model.unmetered
 
     @property
     def environment(self) -> str:

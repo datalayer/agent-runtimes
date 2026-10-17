@@ -17,6 +17,11 @@ read, write, send, buy, delete, publish — read from ``agentspecs.actions``.
 Each application is validated here, by ``agentspecs`` itself, and arrives
 with its layout said and with what it names that is not enabled (`setup`).
 
+How each was built travels beside it (``APP_BUILT``), since an Appspec does
+not hold it: ``python`` when ``apps/<id>/app.py`` sits beside its spec
+(agentspecs >= 0.0.15), ``canvas`` when its page says it was composed on the
+Canvas (``composed_by: canvas``, agentspecs >= 0.0.23), else ``written``.
+
 Usage:
     python generate_apps.py \\
       --specs-dir agentspecs/agentspecs/apps \\
@@ -42,19 +47,55 @@ CAMEL = {
     "ready_at": "readyAt",
     "keep_for": "keepFor",
     "retention_days": "retentionDays",
+    "suggest_tests": "suggestTests",
     "composed_by": "composedBy",
     "composed_at": "composedAt",
     "min_confidence": "minConfidence",
-    "judgment_model": "judgmentModel",
+    "decision_model": "decisionModel",
+    "backend_tools": "backendTools",
+    "character_alone": "characterAlone",
+    "settings_ui": "settingsUi",
+    "custom_components": "customComponents",
+    # Personal Agent Protocol (pap.connections[], pap.company, its operations).
+    "sign_in": "signIn",
+    "signed_out": "signedOut",
+    "personal_agents": "personalAgents",
+    "registered_agents": "registeredAgents",
+    "user_approval_required": "userApprovalRequired",
 }
 
-#: The keys whose value is carried as it is written: a component tree, weights by name.
-VERBATIM = ("components", "weights")
+#: The keys whose value is carried as it is written: a component tree, weights
+#: and a sample's metrics by name.
+VERBATIM = ("components", "weights", "metrics")
 
 
 def _flat(text: Any) -> str:
     """A text on one line."""
     return " ".join(str(text or "").split())
+
+
+def built_of(specs_dir: Path, identity: str, app: Any) -> str:
+    """How an application was built: `python`, `canvas` or `written`."""
+    if (specs_dir / identity / "app.py").is_file():
+        return "python"
+    surface = app.interface.surface
+    if surface is not None and surface.composed_by == "canvas":
+        return "canvas"
+    return "written"
+
+
+def python_of(specs_dir: Path, identity: str) -> str:
+    """Each application in Python, as the example pages show it.
+
+    Its own ``app.py`` when it was built in Python; otherwise the file `loop
+    apps eject` writes from its spec, so every example can be read in Python.
+    """
+    from agent_runtimes.loop.apps.scaffold import eject_text  # noqa: PLC0415
+
+    code = specs_dir / identity / "app.py"
+    if code.is_file():
+        return code.read_text()
+    return eject_text((specs_dir / f"{identity}.yaml").read_text()).code
 
 
 def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -66,24 +107,77 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     behaviours: dict[str, dict[str, str]] = {}
     escalations: dict[str, dict[str, Any]] = {}
     sources: dict[str, Any] = {}
+    built: dict[str, str] = {}
+    python: dict[str, str] = {}
     for identity in sorted(apps):
         app = apps[identity]
         spec = app.model_dump(mode="json", by_alias=True)
         spec["interface"]["layout"] = app.layout.value
         spec["record"]["retention_days"] = app.record.retention_days
         spec["setup"] = apps_module.app_setup(app)
+        # What TypeScript reads only when it is said: off, or none.
+        deployment = spec.get("deployment") or {}
+        if (deployment.get("hosted") or {}).get("character_alone") is False:
+            del deployment["hosted"]["character_alone"]
+        if deployment.get("embedded") and deployment["embedded"].get("host") is None:
+            del deployment["embedded"]["host"]
         behaviours[identity] = {
             tool: behaviour.value
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())
         }
         escalations[identity] = dict(sorted(apps_module.tool_escalations(app).items()))
         sources[identity] = apps_module.dump_app(app)
+        built[identity] = built_of(specs_dir, identity, app)
+        python[identity] = python_of(specs_dir, identity)
         for rule in spec["rules"]:
             rule["applies_to"] = (
                 [rule["applies_to"]]
                 if isinstance(rule["applies_to"], str)
                 else rule["applies_to"]
             )
+        # A starter offered under a category names it; the others say nothing of it.
+        for starter in [
+            *spec["interface"]["starters"],
+            *(
+                item
+                for profile in spec["interface"]["profiles"]
+                for item in profile["starters"]
+            ),
+        ]:
+            if not starter.get("category"):
+                starter.pop("category", None)
+        # A case decided by code names it; the others say nothing of it.
+        for case in spec["tests"]["cases"]:
+            if not case.get("code"):
+                case.pop("code", None)
+            # A case given files names them; the others say nothing of them.
+            if not case.get("files"):
+                case.pop("files", None)
+            # A conversation says its turns, each by what it does (`say`,
+            # `choose`, or `press` with its payload); a case of one message
+            # says none, and its `ask` is empty when it has them.
+            if not case.get("turns"):
+                case.pop("turns", None)
+            for turn in case.get("turns", []):
+                for key in ("say", "choose", "press", "payload"):
+                    if not turn.get(key):
+                        turn.pop(key, None)
+        # Components of its own: said only when it has some.
+        if not spec["interface"].get("custom_components"):
+            spec["interface"].pop("custom_components", None)
+        # Personal Agent Protocol only when the application says something of it:
+        # an Appspec that does not mention `pap` reads back with none (the TypeScript
+        # reader's rule), so the catalogue leaves the defaults out too.
+        if "pap" in spec and spec["pap"] == type(app.pap)().model_dump(
+            mode="json", by_alias=True
+        ):
+            spec.pop("pap")
+        # PACT, commerce, signed fetch and A2A's extensions the same way (PI-01, PR-02, EX-11).
+        for block in ("pact", "commerce", "signed_fetch", "a2a"):
+            if block in spec and spec[block] == type(getattr(app, block))().model_dump(
+                mode="json", by_alias=True
+            ):
+                spec.pop(block)
         for key in ("description", "instructions", "goal"):
             spec[key] = _flat(spec.get(key))
         spec["interface"]["welcome"] = _flat(spec["interface"].get("welcome"))
@@ -121,14 +215,38 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             },
             # What an argument makes it do besides.
             "conditions": {name: found for name, found in conditions.items() if found},
+            # The argument carrying what it sends, signed with the byline (I-10).
+            "signs": {
+                name: signs
+                for name in names
+                if (signs := actions_module.server_tool_signs(server, name))
+            },
         }
+    # The agent protocols' tools (PR-54): by protocol, the
+    # connection prefix its connections take and what each tool can do.
+    protocols = {
+        identity: {
+            "connection": spec["connection"],
+            "tools": {
+                name: [
+                    item.value
+                    for item in actions_module.protocol_tool_classes(identity, name)
+                ]
+                for name in actions_module.protocol_tool_names(identity)
+            },
+        }
+        for identity, spec in sorted(actions_module.protocol_tool_specs().items())
+    }
     actions = {
         "classes": [item.value for item in actions_module.ActionClass],
+        "protocols": protocols,
         "tools": tools,
         "servers": servers,
         "behaviours": behaviours,
         "escalations": escalations,
         "sources": sources,
+        "built": built,
+        "python": python,
     }
     return specs, actions
 
@@ -174,7 +292,7 @@ ABOUT_ACTIONS = [
 ]
 
 
-def generate_python_code(specs: list[dict[str, Any]]) -> str:
+def generate_python_code(specs: list[dict[str, Any]], built: dict[str, str]) -> str:
     """Generate the Python application catalogue."""
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -185,10 +303,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         *HEADER,
         '"""',
         "",
-        "from typing import Dict",
+        "from typing import Dict, Literal",
         "",
         "from agent_runtimes.types import AppSpec",
-        "",
         "",
         "# " + "=" * 76,
         "# Application Definitions",
@@ -215,6 +332,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         [
             "}",
             "",
+            "#: How each application was built: `python` (its `app.py`), `canvas` (its",
+            "#: page composed on the Canvas) or `written` (its spec written out).",
+            f"APP_BUILT: Dict[str, Literal['python', 'canvas', 'written']] = {built!r}",
+            "",
             "",
             "def get_app(app_id: str) -> AppSpec | None:",
             '    """An application, by `id` or `id:version`, or None."""',
@@ -235,7 +356,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 
 def generate_typescript_code(
-    specs: list[dict[str, Any]], sources: dict[str, Any]
+    specs: list[dict[str, Any]],
+    sources: dict[str, Any],
+    built: dict[str, str],
+    python: dict[str, str],
 ) -> str:
     """Generate the TypeScript application catalogue."""
     lines = [
@@ -250,7 +374,7 @@ def generate_typescript_code(
         *[f" * {line}" for line in HEADER],
         " */",
         "",
-        "import type { AppKind, AppSpec } from '../types/agentspecs';",
+        "import type { AppBuilt, AppKind, AppSpec } from '../types/agentspecs';",
         "",
     ]
     for spec in specs:
@@ -288,6 +412,22 @@ def generate_typescript_code(
             + json.dumps(sources, indent=2, ensure_ascii=False)
             + ";",
             "",
+            "/**",
+            " * How each application was built: `python` (its `app.py`), `canvas` (its",
+            " * page composed on the Canvas) or `written` (its spec written out).",
+            " */",
+            "export const APP_BUILT: Record<string, AppBuilt> = "
+            + json.dumps(built, indent=2)
+            + ";",
+            "",
+            "/**",
+            " * Each application in Python: its own `app.py` when it was built in",
+            " * Python, otherwise the file `loop apps eject` writes from its spec.",
+            " */",
+            "export const APP_PYTHON: Record<string, string> = "
+            + json.dumps(python, indent=2, ensure_ascii=False)
+            + ";",
+            "",
             "/** Every application of the catalogue, or those of a kind. */",
             "export function listApps(kind?: AppKind): AppSpec[] {",
             "  return Object.values(APP_CATALOGUE).filter(",
@@ -319,7 +459,7 @@ def generate_actions_python_code(actions: dict[str, Any]) -> str:
         f"ACTION_CLASSES: List[str] = {actions['classes']!r}",
         "",
         "#: What each tool of the tools catalogue does, by id.",
-        f"TOOL_ACTIONS: Dict[str, List[str]] = {actions['tools']!r}",
+        f"BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {actions['tools']!r}",
         "",
         "#: What each MCP server's tools do, by server id. `checked` is the day the",
         "#: names were read off the running server, or None when nobody looked.",
@@ -330,6 +470,10 @@ def generate_actions_python_code(actions: dict[str, Any]) -> str:
     lines.extend(
         [
             "}",
+            "",
+            "#: What each agent protocol's tools do, by protocol id: the prefix its",
+            "#: connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+            f"PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {actions['protocols']!r}",
             "",
             "#: What each application of the catalogue does about each classed tool of the",
             "#: servers it connects to, as agentspecs decides it: `do_it`, `if_asked`,",
@@ -370,7 +514,7 @@ def generate_actions_typescript_code(actions: dict[str, Any]) -> str:
         f"export const ACTION_CLASSES: ActionClass[] = {json.dumps(actions['classes'])};",
         "",
         "/** What each tool of the tools catalogue does, by id. */",
-        "export const TOOL_ACTIONS: Record<string, ActionClass[]> = "
+        "export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = "
         + json.dumps(actions["tools"], indent=2)
         + ";",
         "",
@@ -381,6 +525,15 @@ def generate_actions_typescript_code(actions: dict[str, Any]) -> str:
         "export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = "
         + json.dumps(_drop_nulls(actions["servers"]), indent=2)
         + ";",
+        "",
+        "/**",
+        " * What each agent protocol's tools do, by protocol id: the prefix its",
+        " * connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+        " */",
+        "export const PROTOCOL_TOOL_CLASSES: Record<",
+        "  string,",
+        "  { connection: string; tools: Record<string, ActionClass[]> }",
+        "> = " + json.dumps(actions["protocols"], indent=2) + ";",
         "",
         "/**",
         " * What each application of the catalogue does about each classed tool of the",
@@ -415,6 +568,47 @@ def _drop_nulls(value: Any) -> Any:
     return value
 
 
+def generate_schema_typescript_code() -> str:
+    """The Appspec's JSON Schema, for the editors of the page (S-01, S-02).
+
+    Taken from the agentspecs the catalogue is generated from, so that what
+    an editor completes and explains is what the spec accepts.
+    """
+    from agentspecs.apps import json_schema
+
+    schema = json.dumps(json_schema(), indent=2, ensure_ascii=False, sort_keys=False)
+    return "\n".join(
+        [
+            "/*",
+            " * Copyright (c) 2025-2026 Datalayer, Inc.",
+            " * Distributed under the terms of the Modified BSD License.",
+            " */",
+            "",
+            "/**",
+            " * The Appspec's JSON Schema, generated from agentspecs by",
+            " * `scripts/codegen/generate_apps.py`. Do not edit.",
+            " *",
+            " * @module specs/appspecSchema",
+            " */",
+            "",
+            "export type JsonSchema = {",
+            "  [key: string]: unknown;",
+            "  type?: string;",
+            "  description?: string;",
+            "  properties?: Record<string, JsonSchema>;",
+            "  items?: JsonSchema;",
+            "  enum?: readonly unknown[];",
+            "  anyOf?: readonly JsonSchema[];",
+            "  $ref?: string;",
+            "  $defs?: Record<string, JsonSchema>;",
+            "};",
+            "",
+            f"export const APPSPEC_SCHEMA: JsonSchema = {schema};",
+            "",
+        ]
+    )
+
+
 def main() -> None:
     """Generate the application catalogue and the action classes."""
     parser = argparse.ArgumentParser(
@@ -432,13 +626,19 @@ def main() -> None:
         sys.exit(1)
     specs, actions = load_specs(args.specs_dir)
     outputs = [
-        (args.python_output, generate_python_code(specs)),
+        (args.python_output, generate_python_code(specs, actions["built"])),
         (
             args.typescript_output,
-            generate_typescript_code(specs, actions["sources"]),
+            generate_typescript_code(
+                specs, actions["sources"], actions["built"], actions["python"]
+            ),
         ),
         (args.actions_python_output, generate_actions_python_code(actions)),
         (args.actions_typescript_output, generate_actions_typescript_code(actions)),
+        (
+            args.typescript_output.with_name("appspecSchema.ts"),
+            generate_schema_typescript_code(),
+        ),
     ]
     for path, text in outputs:
         path.parent.mkdir(parents=True, exist_ok=True)

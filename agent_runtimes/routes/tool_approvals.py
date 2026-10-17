@@ -45,6 +45,7 @@ async def _decide_approval_via_ws(
     tool_call_id: str | None = None,
 ) -> ToolApprovalRecord:
     resolved_approval_id = _resolve_local_approval_id(approval_id, tool_call_id)
+    await _refuse_every_visitors(resolved_approval_id)
     return await _update_approval(
         resolved_approval_id,
         status="approved" if approved else "rejected",
@@ -54,7 +55,23 @@ async def _decide_approval_via_ws(
 
 async def _delete_approval_via_ws(approval_id: str) -> ToolApprovalRecord:
     resolved_approval_id = _resolve_local_approval_id(approval_id)
+    await _refuse_every_visitors(resolved_approval_id)
     return await _delete_approval(resolved_approval_id)
+
+
+async def _refuse_every_visitors(approval_id: str) -> None:
+    """Refuse a decision on an approval of an agent that serves a deployment, over this stream.
+
+    Anybody reaches the runtime's monitoring stream; the person decides at
+    ai-agents, whose decision reaches the run (`serves_a_deployment`).
+    """
+    from agent_runtimes.loop.apps.principal import EVERY_VISITORS, serves_a_deployment
+
+    record = await _get_approval(approval_id)
+    if serves_a_deployment(record.agent_id):
+        raise HTTPException(
+            status_code=403, detail=EVERY_VISITORS.format(agent=record.agent_id)
+        )
 
 
 class ToolApprovalCreateRequest(BaseModel):
@@ -561,7 +578,7 @@ async def forward_approval_to_ai_agents(
 
     Called from ``ToolApprovalManager.request_and_wait`` so that approvals
     created via the inline ``ToolsGuardrailCapability`` path are visible in
-    remote UI panels (e.g. the ToolApprovals view in datalayer/ui) that poll
+    remote UI panels (e.g. the landing's Tool Approvals view) that poll
     the ai-agents service rather than the local agent-runtimes endpoints.
     """
     if not user_jwt_token:
@@ -576,6 +593,11 @@ async def forward_approval_to_ai_agents(
             return None
         ai_agents_url = ai_agents_url.rstrip("/")
         remote_approval_id: str | None = None
+        # The session whose turn asks it: a host mapping that session is
+        # delivered it.
+        from agent_runtimes.loop.apps.record import current_session
+
+        session_uid = current_session()
         async with httpx.AsyncClient(
             timeout=10.0,
             headers={"Authorization": f"Bearer {user_jwt_token}"},
@@ -588,6 +610,7 @@ async def forward_approval_to_ai_agents(
                     "tool_name": record.tool_name,
                     "tool_args": record.tool_args or {},
                     "tool_call_id": record.tool_call_id,
+                    **({"session_uid": session_uid} if session_uid else {}),
                 },
             )
             resp.raise_for_status()

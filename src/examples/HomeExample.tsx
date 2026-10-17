@@ -33,32 +33,21 @@ const HomeExample: React.FC<HomeExampleProps> = ({
   );
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        height: '100%',
-        overflow: 'auto',
-        bg: 'canvas.default',
-      }}
-    >
+    <Box width="100%" height="100%" overflow="auto" bg="canvas.default">
       <Box
-        sx={{
-          maxWidth: '1600px',
-          margin: '0 auto',
-          p: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-        }}
+        maxWidth="1600px"
+        margin="0 auto"
+        p={4}
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 3,
-            flexWrap: 'wrap',
-          }}
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          gap={3}
+          flexWrap="wrap"
         >
           <Box>
             <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
@@ -80,28 +69,24 @@ const HomeExample: React.FC<HomeExampleProps> = ({
 
         {sortedExamples.length === 0 ? (
           <Box
-            sx={{
-              border: '1px dashed',
-              borderColor: 'border.default',
-              borderRadius: 3,
-              p: 4,
-              textAlign: 'center',
-              color: 'fg.muted',
-            }}
+            border="1px dashed"
+            borderColor="border.default"
+            borderRadius="card"
+            p={4}
+            textAlign="center"
+            color="fg.muted"
           >
             No examples match your search.
           </Box>
         ) : (
           <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: [
-                '1fr',
-                'repeat(2, minmax(0, 1fr))',
-                'repeat(4, minmax(0, 1fr))',
-              ],
-              gap: 3,
-            }}
+            display="grid"
+            gridTemplateColumns={[
+              '1fr',
+              'repeat(2, minmax(0, 1fr))',
+              'repeat(4, minmax(0, 1fr))',
+            ]}
+            gap={3}
           >
             {sortedExamples.map(example => (
               <Box
@@ -115,28 +100,25 @@ const HomeExample: React.FC<HomeExampleProps> = ({
                     onSelectExample?.(example.id);
                   }
                 }}
-                sx={{
-                  bg: 'canvas.default',
-                  p: 4,
-                  borderRadius: '12px',
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  cursor: 'pointer',
-                  transition:
-                    'box-shadow 0.2s, transform 0.2s, border-color 0.2s',
-                  '&:hover': {
-                    boxShadow: 'shadow.large',
-                    transform: 'translateY(-2px)',
-                    borderColor: 'accent.emphasis',
-                  },
-                  '&:focus-visible': {
-                    outline: '2px solid',
-                    outlineColor: 'accent.emphasis',
-                    outlineOffset: '2px',
-                  },
+                bg="canvas.default"
+                p={4}
+                borderRadius="12px"
+                border="1px solid"
+                borderColor="border.default"
+                display="flex"
+                flexDirection="column"
+                gap={2}
+                cursor="pointer"
+                transition="box-shadow 0.2s, transform 0.2s, border-color 0.2s"
+                hover={{
+                  boxShadow: 'shadow.large',
+                  transform: 'translateY(-2px)',
+                  borderColor: 'accent.emphasis',
+                }}
+                focusVisible={{
+                  outline: '2px solid',
+                  outlineColor: 'accent.emphasis',
+                  outlineOffset: '2px',
                 }}
               >
                 <Heading as="h3" sx={{ fontSize: 2, fontWeight: 'bold' }}>
@@ -155,15 +137,7 @@ const HomeExample: React.FC<HomeExampleProps> = ({
                   {example.id}
                 </Text>
                 {example.tags.length > 0 && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 1,
-                      flexWrap: 'wrap',
-                      mt: 'auto',
-                      pt: 2,
-                    }}
-                  >
+                  <Box display="flex" gap={1} flexWrap="wrap" mt="auto" pt={2}>
                     {example.tags.map(tag => (
                       <Label key={`${example.id}-${tag}`} variant="secondary">
                         {tag}

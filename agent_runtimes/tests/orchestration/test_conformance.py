@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenarios 1 to 6 (PLAN_ORCHESTRATOR.md, section 13, 19.7, O0-12).
+"""Scenarios 1 to 6 (O0-12).
 
 Successful delegation and artifact return, streaming progress, rejection
 before acceptance, disconnect after acceptance, lost acknowledgement, and
@@ -82,7 +82,7 @@ class TestSuccessfulDelegation:
     async def test_the_answer_comes_back_as_an_artifact_with_provenance(
         self, binding, monkeypatch
     ):
-        """Section 5.4: a typed, attributed record, not an opaque blob.
+        """Artifacts: a typed, attributed record, not an opaque blob.
 
         The provenance is what makes an artifact answerable six weeks later,
         when the question is which attempt of which execution produced the
@@ -101,7 +101,7 @@ class TestSuccessfulDelegation:
 
     @pytest.mark.asyncio
     async def test_the_artifact_belongs_to_the_trees_trace(self, binding, monkeypatch):
-        """Section 10 asks for artifact provenance to carry the trace, so a
+        """Artifact provenance carries the trace, so a
         report and a trace are two views of one run rather than two runs."""
         delivered = await deliver(binding, monkeypatch, WorkerScript())
 
@@ -115,7 +115,7 @@ class TestSuccessfulDelegation:
     async def test_the_reduced_guarantees_reach_the_execution_first(
         self, binding, monkeypatch
     ):
-        """19.8, decision 5: the reduction is reported, not hidden.
+        """The reduction is reported, not hidden.
 
         It is the first event of the dispatch, so 'why did this execution
         never checkpoint?' is answered from the execution's own stream
@@ -197,7 +197,7 @@ class TestStreamingProgress:
     async def test_the_worker_is_asked_for_the_objective_and_its_context(
         self, binding, monkeypatch
     ):
-        """Section 2: context is passed by reference, and the reference is
+        """Context is passed by reference, and the reference is
         versioned. A worker that was handed a copy could not be asked what
         version it read."""
         delivered = await deliver(binding, monkeypatch, WorkerScript())
@@ -298,10 +298,10 @@ class TestDisconnectAfterAcceptance:
     async def test_losing_sight_of_the_work_is_unknown_not_failed(
         self, binding, monkeypatch
     ):
-        """Section 6.4: reconcile before declaring anything.
+        """Delivery: reconcile before declaring anything.
 
         A control plane that failed an execution because its own connection
-        dropped would retry work that is still running, and section 6.4 asks
+        dropped would retry work that is still running, and the delivery rules ask
         for the opposite: the state stands until the worker is asked again.
         """
         delivered = await deliver(
@@ -397,7 +397,7 @@ class TestLostAcknowledgement:
     async def test_the_milestones_are_readable_in_the_order_they_were_reached(
         self, binding, monkeypatch
     ):
-        """Section 6.3 exists so that 'the endpoint has it' and 'a worker
+        """The acknowledgement milestones exist so that 'the endpoint has it' and 'a worker
         took it' are not the same fact; an order that could not be read
         would collapse them again."""
         delivered = await deliver(binding, monkeypatch, WorkerScript())
@@ -452,7 +452,7 @@ class TestDuplicateCommandDelivery:
     async def test_the_second_delivery_finds_the_first_execution(
         self, binding, monkeypatch
     ):
-        """Section 6.4: a client retries, a queue redelivers, a person
+        """Delivery: a client retries, a queue redelivers, a person
         clicks twice. The second delivery must find the work the first
         started, not start a second piece of it."""
         delivered = await deliver(binding, monkeypatch, WorkerScript())
@@ -565,7 +565,7 @@ class TestWorkerCrashAndRecovery:
     async def test_the_crashed_attempt_never_reports_the_ending(
         self, binding, monkeypatch
     ):
-        """The lifecycle is walked once, through the states section 6.1 has.
+        """The lifecycle is walked once, through the states the lifecycle has.
 
         An execution that went straight from running to completed would
         have hidden the recovery; one that moved twice into a terminal
@@ -609,7 +609,7 @@ class TestWorkerCrashAndRecovery:
     async def test_a_worker_with_no_checkpoint_says_so_rather_than_pretending(
         self, binding, monkeypatch
     ):
-        """The reduced guarantee of decision 5, read from the adapter.
+        """The reported reduced guarantee, read from the adapter.
 
         A plain worker cannot be resumed from a checkpoint, and the useful
         thing on the day somebody asks why a crash cost the whole run is
@@ -692,7 +692,7 @@ class TestCancellationRacesCompletion:
     ):
         """The completion won, and a completed execution has no moves left.
 
-        Section 6.1 makes terminal states absorbing precisely so that a
+        The lifecycle makes terminal states absorbing precisely so that a
         cancel racing a result cannot un-complete work that was done — and
         the result stays committed, because the worker did the work.
         """

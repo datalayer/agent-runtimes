@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Section 16's measures, taken by the store's rules (PLAN_ORCHESTRATOR.md, O1-14).
+"""The orchestration measures, taken by the store's rules (O1-14).
 
 The measures are taken where the rules are — a delegation created or found
 again, a milestone, a move into a terminal state, a commit — so the tests

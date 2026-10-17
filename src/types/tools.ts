@@ -6,7 +6,7 @@
 /**
  * Runtime binding metadata for a tool implementation.
  */
-export interface ToolRuntimeSpec {
+export interface BackendToolRuntimeSpec {
   /** Implementation language */
   language: 'python' | 'typescript';
   /** Module/package containing the implementation */
@@ -18,7 +18,7 @@ export interface ToolRuntimeSpec {
 /**
  * Specification for a runtime tool.
  */
-export interface ToolSpec {
+export interface BackendToolSpec {
   /** Unique tool identifier */
   id: string;
   /** Version */
@@ -38,10 +38,10 @@ export interface ToolSpec {
   /** Whether tool requires human approval before execution */
   requiresApproval?: boolean;
   /** Runtime binding metadata */
-  runtime: ToolRuntimeSpec;
-  /** Icon identifier */
+  runtime: BackendToolRuntimeSpec;
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 
@@ -86,9 +86,9 @@ export interface FrontendToolSpec {
    * read and edit a notebook but must never delete from it.
    */
   toolset: string | string[];
-  /** Icon identifier */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 

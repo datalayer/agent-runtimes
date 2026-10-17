@@ -7,12 +7,12 @@ Example: Integrating agent-codemode and agent-skills with agent-runtimes.
 
 This example demonstrates how to use the integration module to:
 1. Connect agent-runtimes with agent-codemode and agent-skills
-2. Use Code Mode for efficient tool composition
+2. Use Codemode for efficient tool composition
 3. Discover and execute skills through the integration layer
 
 Key Concept: Unified Integration
 The integration layer allows agents running on agent-runtimes to
-seamlessly use both Code Mode (for tool composition) and Skills
+seamlessly use both Codemode (for tool composition) and Skills
 (for reusable patterns).
 """
 

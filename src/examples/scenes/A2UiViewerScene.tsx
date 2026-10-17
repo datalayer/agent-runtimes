@@ -371,19 +371,17 @@ function ViewerContent({
   }, [selectedScene, processMessages, resetSurfaces]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
+    <Box display="flex" flexDirection="column" gap={3} p={3}>
       <Box
-        sx={{
-          width: '100%',
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          p: 3,
-          backgroundColor: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-        }}
+        width="100%"
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        p={3}
+        backgroundColor="canvas.default"
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Text sx={{ fontSize: 2, fontWeight: 'bold' }}>Select Scene</Text>
         <SegmentedControl aria-label="A2UI viewer scene picker" fullWidth>
@@ -413,7 +411,7 @@ function ViewerContent({
         }}
       >
         {surfaces.map(surface => (
-          <Box key={surface.id} sx={{ width: '100%' }}>
+          <Box key={surface.id} width="100%">
             <A2uiSurfaceComposed surface={surface} />
           </Box>
         ))}
@@ -434,21 +432,17 @@ const A2UiViewerScene: React.FC = () => {
     <>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            height: '100%',
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          height="100%"
+          overflow="auto"
+          display="flex"
+          flexDirection="column"
         >
           <Box
-            sx={{
-              px: 3,
-              py: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              backgroundColor: 'canvas.default',
-            }}
+            px={3}
+            py={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            backgroundColor="canvas.default"
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
               🔍 A2UI Viewer
@@ -462,17 +456,15 @@ const A2UiViewerScene: React.FC = () => {
           <ViewerContent onAction={handleAction} />
 
           <Box
-            sx={{
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              p: 3,
-              fontFamily: 'mono',
-              fontSize: 0,
-              backgroundColor: 'canvas.default',
-              whiteSpace: 'pre-wrap',
-              maxHeight: 180,
-              overflow: 'auto',
-            }}
+            borderTop="1px solid"
+            borderColor="border.default"
+            p={3}
+            fontFamily="mono"
+            fontSize={0}
+            backgroundColor="canvas.default"
+            whiteSpace="pre-wrap"
+            maxHeight={180}
+            overflow="auto"
           >
             {lastAction
               ? JSON.stringify(lastAction, null, 2)

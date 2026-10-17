@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the A2A binding (PLAN_ORCHESTRATOR.md, sections 7.1, O0-06).
+"""Tests for the A2A binding (O0-06).
 
 A worker that has never heard of Datalayer runs an execution to completion,
 its artifacts are registered, the parent's ``agent.subagent`` events keep
@@ -351,7 +351,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_reduced_guarantees_land_on_the_execution(self, monkeypatch):
-        """19.8, decision 5: the reduction is reported, not hidden."""
+        """The reduction is reported, not hidden."""
         _relay(monkeypatch, GOOD_RUN)
         _no_task_lookup(monkeypatch)
         store = InMemoryExecutionStore()
@@ -459,7 +459,7 @@ class TestEndings:
 class TestRecoveryAndCancellation:
     @pytest.mark.asyncio
     async def test_re_attaching_reports_where_the_task_stands(self, monkeypatch):
-        """Conformance scenario 4, on the polling decision 5 allows.
+        """Conformance scenario 4, on the polling the design allows.
 
         The first look is progress, not a state change: an execution that
         was running before the disconnect is still running, and saying so

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The orchestrator as one ACP agent (ORCHESTRATOR.md, 7.4, O2-08).
+"""The orchestrator as one ACP agent (O2-08).
 
 A turn is a root execution, delegated as the person connected to the agent
 the orchestrator was registered with, and keyed on the session and the

@@ -1,0 +1,98 @@
+{
+  "description": "Every Reactor contribution point of this protocol's plugin, in both languages. test_protocols_reactor_points.py and src/protocols/reactorPoints.unit.test.ts hold each language to this file. A point whose `extension` is true is an extension the protocol defines; its contributions are implementations of it. `default` is the contribution id of the plugin's own default (order 100), null when a host must contribute one. `resolution` is `single` (the lowest order answers; two at the same order fail closed) or `all` (every contribution is used).",
+  "plugin": {
+    "python": "agent-runtimes.protocols.ucp",
+    "typescript": "@datalayer/agent-runtimes/protocols/ucp"
+  },
+  "points": [
+    {
+      "id": "ucp.approver",
+      "python": "agent_runtimes.protocols.ucp.plugin:APPROVERS",
+      "typescript": "UcpApprovers",
+      "contract": "CheckoutApprover",
+      "members": [
+        "approve"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "Without an approver nothing is bought (U-19, U-25 on Datalayer)."
+    },
+    {
+      "id": "ucp.paymentInstruments",
+      "python": "agent_runtimes.protocols.ucp.plugin:PAYMENT_INSTRUMENTS",
+      "typescript": "UcpPaymentInstruments",
+      "contract": "PaymentInstruments",
+      "members": [
+        "instrument"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "The host holds payment tokens (IAM custody, PI-11); a model never sees one."
+    },
+    {
+      "id": "ucp.proposalStore",
+      "python": "agent_runtimes.protocols.ucp.plugin:PROPOSAL_STORES",
+      "typescript": "UcpProposalStores",
+      "contract": "ProposalStore",
+      "members": [
+        "take"
+      ],
+      "default": {
+        "python": "memory",
+        "typescript": "memory"
+      },
+      "resolution": "single",
+      "tenant": null,
+      "extension": false
+    },
+    {
+      "id": "ucp.extension.fulfillment",
+      "python": "agent_runtimes.protocols.ucp.plugin:FULFILLMENT",
+      "typescript": "UcpFulfillmentExtensions",
+      "contract": "UcpExtension",
+      "members": [
+        "capability",
+        "version"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "capability": "dev.ucp.shopping.fulfillment"
+    },
+    {
+      "id": "ucp.extension.discount",
+      "python": "agent_runtimes.protocols.ucp.plugin:DISCOUNT",
+      "typescript": "UcpDiscountExtensions",
+      "contract": "UcpExtension",
+      "members": [
+        "capability",
+        "version"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "capability": "dev.ucp.shopping.discount"
+    },
+    {
+      "id": "ucp.extension.buyer_consent",
+      "python": "agent_runtimes.protocols.ucp.plugin:BUYER_CONSENT",
+      "typescript": "UcpBuyerConsentExtensions",
+      "contract": "UcpExtension",
+      "members": [
+        "capability",
+        "version"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "capability": "dev.ucp.shopping.buyer_consent"
+    }
+  ]
+}

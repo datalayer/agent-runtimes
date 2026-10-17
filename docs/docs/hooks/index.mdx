@@ -12,8 +12,10 @@ Agent Runtimes provides a comprehensive set of React hooks for building AI agent
 | Category | Hooks | Purpose |
 |----------|-------|---------|
 | **Chat Component System** | `useChat`, `useFrontendTool`, `useBackendTool`, `useKeyboardShortcuts` | Work with the Zustand-based chat components |
-| **Transport-Specific** | `useAGUI`, `useA2A`, `useAcp`, `useVercelAI` | Direct protocol access without chat components |
-| **Datalayer Platform** | `useAIAgents`, `useNotebookAgents` | Datalayer platform integration |
+| **Transport-Specific** | `useAgUi`, `useA2A`, `useAcp`, `useVercelAI` | Direct protocol access without chat components |
+| **Datalayer Platform** | `useAgentsService`, `useNotebookAgents` | Datalayer platform integration |
+
+All of them except `useIdentity` are imported from `@datalayer/agent-runtimes/lib/hooks` (the keyboard hooks come from Datalayer Core, `@datalayer/core/lib/hooks`, and are re-exported there); `useIdentity` is exported by the package root.
 | **Identity** | `useIdentity` | OAuth identity management |
 
 ## Lifecycle Hooks (Agentspecs)
@@ -69,14 +71,14 @@ post_hooks:
 
 ## Chat Component System Hooks
 
-These hooks integrate with the Zustand-based chat components (`<Chat />`, `<ChatSidebar />`, `<ChatFloating />`).
+The hooks below are imported from `@datalayer/agent-runtimes/lib/hooks`; the package root does not re-export them. These hooks integrate with the Zustand-based chat components (`<Chat />`, `<ChatSidebar />`, `<ChatFloating />`).
 
 ### `useChat`
 
 The main chat hook for messages, streaming, and state management.
 
 ```typescript
-import { useChat } from '@datalayer/agent-runtimes';
+import { useChat } from '@datalayer/agent-runtimes/lib/hooks';
 
 function ChatUI() {
   const {
@@ -114,7 +116,7 @@ function ChatUI() {
 Register frontend tools that execute in the browser. Compatible with CopilotKit's interface.
 
 ```typescript
-import { useFrontendTool } from '@datalayer/agent-runtimes';
+import { useFrontendTool } from '@datalayer/agent-runtimes/lib/hooks';
 
 function DocumentEditor() {
   useFrontendTool({
@@ -147,7 +149,7 @@ function DocumentEditor() {
 Register backend tools that will be sent to the agent.
 
 ```typescript
-import { useBackendTool } from '@datalayer/agent-runtimes';
+import { useBackendTool } from '@datalayer/agent-runtimes/lib/hooks';
 
 function DataViewer() {
   useBackendTool({
@@ -167,7 +169,7 @@ function DataViewer() {
 Access all registered tools (both frontend and backend).
 
 ```typescript
-import { useRegisteredTools } from '@datalayer/agent-runtimes';
+import { useRegisteredTools } from '@datalayer/agent-runtimes/lib/hooks';
 
 function ToolsPanel() {
   const tools = useRegisteredTools();
@@ -187,36 +189,35 @@ function ToolsPanel() {
 
 ### `usePendingToolCalls`
 
-Track tool calls waiting for execution or user input.
+Track tool calls that have started and not finished. Each entry is a
+`ToolCallState` (`toolCallId`, `toolName`, `args`, `status`, `startedAt`).
+Approving or rejecting a call that waits for a person goes through
+`useToolApprovals` (`approve`, `reject`), also in `lib/hooks`.
 
 ```typescript
-import { usePendingToolCalls } from '@datalayer/agent-runtimes';
+import { usePendingToolCalls } from '@datalayer/agent-runtimes/lib/hooks';
 
-function ToolApprovalPanel() {
+function PendingToolCalls() {
   const pendingCalls = usePendingToolCalls();
-  
+
   return (
-    <div>
+    <ul>
       {pendingCalls.map(call => (
-        <ToolApprovalCard
-          key={call.id}
-          toolName={call.name}
-          args={call.args}
-          onApprove={() => call.execute()}
-          onReject={() => call.reject()}
-        />
+        <li key={call.toolCallId}>
+          {call.toolName} ({call.status}) {JSON.stringify(call.args)}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 ```
 
 ### `useKeyboardShortcuts`
 
-Handle keyboard shortcuts for chat UI.
+Handle keyboard shortcuts for chat UI. The keyboard hooks live in Datalayer Core (`@datalayer/core/lib/hooks`); `@datalayer/agent-runtimes/lib/hooks` re-exports them.
 
 ```typescript
-import { useKeyboardShortcuts } from '@datalayer/agent-runtimes';
+import { useKeyboardShortcuts } from '@datalayer/core/lib/hooks';
 
 function ChatWithShortcuts() {
   useKeyboardShortcuts({
@@ -253,13 +254,14 @@ function ChatWithShortcuts() {
 Pre-configured keyboard shortcuts for common chat actions.
 
 ```typescript
-import { useChatKeyboardShortcuts } from '@datalayer/agent-runtimes';
+import { useChatKeyboardShortcuts } from '@datalayer/core/lib/hooks';
 
 function ChatUI() {
   useChatKeyboardShortcuts({
+    onToggle: () => setSidebarOpen(prev => !prev), // Cmd/Ctrl+K
     onNewChat: () => clearMessages(),
+    onClear: () => clearMessages(),
     onFocusInput: () => inputRef.current?.focus(),
-    onToggleSidebar: () => setSidebarOpen(prev => !prev),
   });
 
   return <Chat />;
@@ -272,12 +274,12 @@ function ChatUI() {
 
 These hooks provide direct protocol access without the chat component system. Use them for custom implementations or fine-grained control.
 
-### `useAGUI`
+### `useAgUi`
 
 AG-UI protocol hook - Pydantic AI's native UI protocol.
 
 ```typescript
-import { useAGUI } from '@datalayer/agent-runtimes';
+import { useAgUi } from '@datalayer/agent-runtimes/lib/hooks';
 
 function AGUIChat() {
   const {
@@ -288,8 +290,7 @@ function AGUIChat() {
     sendMessage,    // Send a message
     connect,        // Connect to agent
     disconnect,     // Disconnect from agent
-    clearMessages,  // Clear history
-  } = useAGUI({
+  } = useAgUi({
     baseUrl: 'http://localhost:8765',
     agentId: 'demo-agent',
     autoConnect: true,
@@ -316,7 +317,7 @@ function AGUIChat() {
 A2A protocol hook - Agent-to-Agent with JSON-RPC 2.0.
 
 ```typescript
-import { useA2A } from '@datalayer/agent-runtimes';
+import { useA2A } from '@datalayer/agent-runtimes/lib/hooks';
 
 function A2AChat() {
   const {
@@ -366,23 +367,27 @@ function A2AChat() {
 ACP protocol hook - Agent Client Protocol via WebSocket.
 
 ```typescript
-import { useAcp } from '@datalayer/agent-runtimes';
+import { useAcp } from '@datalayer/agent-runtimes/lib/hooks';
 
 function ACPChat() {
   const {
-    isConnected,
+    connectionState,  // 'connecting' | 'connected' | 'disconnected' | 'error'
+    agent,            // The agent the session runs
+    session,
     messages,
     sendMessage,
+    isStreaming,
+    streamingContent,
+    pendingPermission, // A tool call waiting for the person's choice
+    grantPermission,
+    denyPermission,
     connect,
     disconnect,
-    // WebSocket-specific
-    reconnect,
-    connectionState,  // 'connecting' | 'connected' | 'disconnected' | 'error'
   } = useAcp({
     wsUrl: 'ws://localhost:8765/api/v1/acp/ws',
     agentId: 'demo-agent',
     autoConnect: true,
-    reconnectOnDisconnect: true,
+    reconnectAttempts: 5,
     reconnectDelay: 1000,
   });
 
@@ -392,25 +397,25 @@ function ACPChat() {
 
 ### `useVercelAI`
 
-Vercel AI SDK chat hook - HTTP/SSE streaming.
+Vercel AI SDK chat hook - HTTP/SSE streaming. It returns the AI SDK's `UseChatHelpers` (from `@ai-sdk/react`'s `useChat`), pointed at the agent's Vercel AI endpoint.
 
 ```typescript
-import { useVercelAI } from '@datalayer/agent-runtimes';
+import { useVercelAI } from '@datalayer/agent-runtimes/lib/hooks';
 
 function VercelChat() {
   const {
     messages,
-    isLoading,
+    status,          // 'submitted' | 'streaming' | 'ready' | 'error'
     error,
-    sendMessage,
+    sendMessage,     // sendMessage({ text: 'Hello' })
     stop,            // Stop generation
-    reload,          // Regenerate last response
+    regenerate,      // Regenerate the last response
     setMessages,     // Directly set messages
   } = useVercelAI({
-    api: '/api/chat',
-    initialMessages: [],
-    onFinish: (message) => console.log('Complete:', message),
-    onError: (err) => console.error('Error:', err),
+    baseUrl: 'http://localhost:8765',
+    agentId: 'demo-agent',
+    onMessageSent: (content) => console.log('Sent:', content),
+    onMessageReceived: (message) => console.log('Complete:', message),
   });
 
   return <Chat />;
@@ -423,40 +428,30 @@ function VercelChat() {
 
 Hooks for Datalayer platform integration.
 
-### `useAIAgents`
+### `useAgentsService`
 
-REST API hook for managing AI agents on the Datalayer platform.
+REST calls to the Datalayer AI Agents service (`api/ai-agents/v1`), which keeps one agent per document. It replaces the older `useAIAgents` hook: the agent is keyed by the document it serves rather than created from a name, model and prompt (an agent's model and prompt come from its [agentspec](/agentspecs)).
 
 ```typescript
-import { useAIAgents } from '@datalayer/agent-runtimes';
+import { useAgentsService } from '@datalayer/agent-runtimes/lib/hooks';
 
-function AgentManager() {
+function NotebookAgentButton({ notebookId }: { notebookId: string }) {
   const {
-    // CRUD operations
-    createAIAgent,
-    getAIAgent,
-    updateAIAgent,
-    deleteAIAgent,
-    listAIAgents,
-    
-    // State
-    isLoading,
-    error,
-  } = useAIAgents();
+    createAgent,   // (documentId, documentType, ingress?, token?, kernelId?)
+    getAgent,      // (documentId)
+    getAgents,     // ()
+    patchAgent,    // (documentId, ingress?, token?, kernelId?)
+    deleteAgent,   // (documentId)
+  } = useAgentsService();
 
   const handleCreate = async () => {
-    const result = await createAIAgent({
-      name: 'My Agent',
-      model: 'anthropic:claude-sonnet-4-5',
-      systemPrompt: 'You are a helpful assistant.',
-    });
-    
+    const result = await createAgent(notebookId, 'notebook_persist');
     if (result.success) {
-      console.log('Created agent:', result.agent.id);
+      console.log('Agent for', notebookId);
     }
   };
 
-  return <button onClick={handleCreate}>Create Agent</button>;
+  return <button onClick={handleCreate}>Add an agent</button>;
 }
 ```
 
@@ -465,13 +460,13 @@ function AgentManager() {
 Hook for notebook-specific agent management. Handles agent lifecycle tied to a notebook document.
 
 ```typescript
-import { useNotebookAgents } from '@datalayer/agent-runtimes';
+import { useNotebookAgents } from '@datalayer/agent-runtimes/lib/hooks';
 
 function NotebookChat({ notebookId }: { notebookId: string }) {
   // Automatically manages agent lifecycle for this notebook
-  // - Checks agent health every 60 seconds
-  // - Updates agent state when runtime changes
-  // - Cleans up when notebook is closed
+  // - Checks the agent every 60 seconds through useAgentsService
+  // - Updates the agent store when its runtime changes
+  // - Removes the agent from the store when the service no longer has it
   const agent = useNotebookAgents(notebookId);
 
   if (!agent) {
@@ -479,11 +474,9 @@ function NotebookChat({ notebookId }: { notebookId: string }) {
   }
 
   return (
-    <Chat
-      transport={agent.transport}
-      baseUrl={agent.baseUrl}
-      agentId={agent.id}
-    />
+    <div>
+      {agent.name} runs on {agent.runtimeId} ({agent.status}, {agent.protocol})
+    </div>
   );
 }
 ```
@@ -555,12 +548,9 @@ function IdentityManager() {
 ### Combining Multiple Hooks
 
 ```typescript
-import { 
-  useChat, 
-  useFrontendTool, 
-  useIdentity,
-  useKeyboardShortcuts 
-} from '@datalayer/agent-runtimes';
+import { useIdentity } from '@datalayer/agent-runtimes';
+import { useChat, useFrontendTool } from '@datalayer/agent-runtimes/lib/hooks';
+import { useKeyboardShortcuts } from '@datalayer/core/lib/hooks';
 
 function FullFeaturedChat() {
   const chat = useChat();
@@ -600,7 +590,8 @@ function FullFeaturedChat() {
 Build on top of existing hooks for your specific use case:
 
 ```typescript
-import { useChat, useIdentity } from '@datalayer/agent-runtimes';
+import { useIdentity } from '@datalayer/agent-runtimes';
+import { useChat } from '@datalayer/agent-runtimes/lib/hooks';
 
 function useGitHubAgent() {
   const chat = useChat();

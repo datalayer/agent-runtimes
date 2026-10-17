@@ -25,42 +25,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import type { ToolApprovalFilters } from '../types/tool-approvals';
 import { useAIAgentsWebSocket } from './useAIAgentsWebSocket';
+import { normalizeApproval, type ApprovalRecord } from '../portable/approvals';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-/**
- * Normalised approval record. Both snake_case (server-native) and
- * camelCase (TypeScript-idiomatic) keys are present so existing UI
- * consumers keep working regardless of which naming they read.
- */
-export type ApprovalRecord = {
-  id: string;
-  agent_id: string;
-  agentId: string;
-  runtime_name: string;
-  runtimeName: string;
-  tool_name: string;
-  toolName: string;
-  tool_call_id?: string;
-  toolCallId?: string;
-  tool_args: Record<string, unknown>;
-  toolArgs: Record<string, unknown>;
-  status: string;
-  note?: string | null;
-  requester_uid?: string;
-  requesterUid?: string;
-  requested_by?: string;
-  requestedBy?: string;
-  resolved_by?: string;
-  resolvedBy?: string;
-  resolved_at?: string;
-  resolvedAt?: string;
-  created_at: string;
-  createdAt: string;
-  updated_at?: string;
-  updatedAt?: string;
-  read?: boolean;
-};
+export type { ApprovalRecord };
 
 interface ApprovalsQueryData {
   approvals: ApprovalRecord[];
@@ -83,75 +52,6 @@ interface DecisionMutationResult extends MutationResult {
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 const APPROVALS_ROOT_KEY = ['tool-approvals'] as const;
-
-function str(value: unknown): string {
-  return typeof value === 'string' ? value : value == null ? '' : String(value);
-}
-
-function normalizeApproval(raw: unknown): ApprovalRecord | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const rec = raw as Record<string, unknown>;
-  const idSource = rec.id ?? rec.approval_id ?? rec.approvalId;
-  const id = typeof idSource === 'string' ? idSource : undefined;
-  if (!id) return null;
-
-  const agent = str(rec.agent_id ?? rec.agentId);
-  const pod = str(rec.runtime_name ?? rec.runtimeName);
-  const tool = str(rec.tool_name ?? rec.toolName ?? 'unknown');
-  const toolCall = rec.tool_call_id ?? rec.toolCallId;
-  const args =
-    (rec.tool_args as Record<string, unknown> | undefined) ??
-    (rec.toolArgs as Record<string, unknown> | undefined) ??
-    {};
-  const created = str(rec.created_at ?? rec.createdAt);
-  const updated = str(rec.updated_at ?? rec.updatedAt);
-  const resolvedBy = str(rec.resolved_by ?? rec.resolvedBy);
-  const requesterUid = str(rec.requester_uid ?? rec.requesterUid);
-  const requestedBy = str(rec.requested_by ?? rec.requestedBy);
-  const resolvedAtRaw = str(rec.resolved_at ?? rec.resolvedAt);
-  const status = str(rec.status ?? 'pending');
-  // Keep reviewer metadata from WS payloads. If this is dropped during
-  // normalization, downstream pages receive status=approved/rejected but no
-  // reviewer/timestamp context and can incorrectly render "review pending".
-  // Some producers only set updated_at on decision; for non-pending statuses,
-  // fall back to updated_at so UI can still show a decision time.
-  const resolvedAt =
-    resolvedAtRaw || (status !== 'pending' ? updated || undefined : undefined);
-
-  return {
-    id,
-    agent_id: agent,
-    agentId: agent,
-    runtime_name: pod,
-    runtimeName: pod,
-    tool_name: tool,
-    toolName: tool,
-    tool_call_id: typeof toolCall === 'string' ? toolCall : undefined,
-    toolCallId: typeof toolCall === 'string' ? toolCall : undefined,
-    tool_args: args,
-    toolArgs: args,
-    status,
-    note:
-      typeof rec.note === 'string'
-        ? rec.note
-        : rec.note === null
-          ? null
-          : undefined,
-    requester_uid: requesterUid || undefined,
-    requesterUid: requesterUid || undefined,
-    requested_by: requestedBy || undefined,
-    requestedBy: requestedBy || undefined,
-    resolved_by: resolvedBy || undefined,
-    resolvedBy: resolvedBy || undefined,
-    resolved_at: resolvedAt,
-    resolvedAt: resolvedAt,
-    created_at: created,
-    createdAt: created,
-    updated_at: updated || undefined,
-    updatedAt: updated || undefined,
-    read: typeof rec.read === 'boolean' ? rec.read : undefined,
-  };
-}
 
 function matchesFilter(
   a: ApprovalRecord,

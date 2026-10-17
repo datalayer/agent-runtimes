@@ -186,21 +186,17 @@ const LexicalUI = React.memo(function LexicalUI({
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        padding: 3,
-      }}
+      flex={1}
+      display="flex"
+      flexDirection="column"
+      overflow="auto"
+      padding={3}
     >
       <Box
-        sx={{
-          marginBottom: 3,
-          paddingBottom: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
+        marginBottom={3}
+        paddingBottom={3}
+        borderBottom="1px solid"
+        borderColor="border.default"
       >
         <h1>Lexical Example</h1>
         <p>
@@ -210,14 +206,12 @@ const LexicalUI = React.memo(function LexicalUI({
       </Box>
 
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          padding: 3,
-          backgroundColor: 'canvas.default',
-          minHeight: '600px',
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        padding={3}
+        backgroundColor="canvas.default"
+        minHeight="600px"
       >
         <LexicalConfigProvider
           lexicalId={LEXICAL_ID}
@@ -332,14 +326,7 @@ function LexicalWithChat({
   );
 
   return (
-    <Box
-      sx={{
-        height: '100vh',
-        width: '100vw',
-        display: 'flex',
-        overflow: 'hidden',
-      }}
-    >
+    <Box height="100vh" width="100vw" display="flex" overflow="hidden">
       <LexicalUI
         content={content}
         serviceManager={serviceManager}
@@ -349,16 +336,14 @@ function LexicalWithChat({
 
       {chatError && (
         <Box
-          sx={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            padding: 3,
-            backgroundColor: 'danger.subtle',
-            color: 'danger.fg',
-            borderRadius: 2,
-            maxWidth: 300,
-          }}
+          position="fixed"
+          bottom={20}
+          right={20}
+          padding={3}
+          backgroundColor="danger.subtle"
+          color="danger.fg"
+          borderRadius={2}
+          maxWidth={300}
         >
           <strong>Error:</strong> {chatError}
         </Box>

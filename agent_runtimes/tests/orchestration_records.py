@@ -25,7 +25,7 @@ from datalayer_core.orchestration import (
 #: A W3C traceparent, so a test can assert the trace reaches an artifact.
 TRACEPARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 
-#: A versioned notebook, in the URI form 19.8 decided.
+#: A versioned notebook, in the decided URI form.
 NOTEBOOK = "datalayer:notebook/nb-7@3"
 
 

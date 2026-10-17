@@ -4,8 +4,8 @@
  */
 
 import React, { useCallback } from 'react';
+import { Box } from '@datalayer/primer-addons';
 import {
-  Box,
   Text,
   Button,
   Label,
@@ -250,11 +250,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         }}
       >
         {isPending ? (
-          <Box
-            as="span"
-            className="anim-rotate"
-            sx={{ display: 'inline-block' }}
-          >
+          <Box as="span" className="anim-rotate" display="inline-block">
             ⏳
           </Box>
         ) : (
@@ -280,33 +276,29 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
   // Full variant
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        p: 2,
-        border: '1px solid',
-        borderColor: isConnected ? 'success.muted' : 'border.default',
-        borderRadius: 2,
-        backgroundColor: isConnected ? 'success.subtle' : 'canvas.subtle',
-      }}
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      p={2}
+      border="1px solid"
+      borderColor={isConnected ? 'success.muted' : 'border.default'}
+      borderRadius={2}
+      backgroundColor={isConnected ? 'success.subtle' : 'canvas.subtle'}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" gap={2}>
         <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: display.color,
-            color: 'white',
-          }}
+          width={40}
+          height={40}
+          borderRadius={2}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          backgroundColor={display.color}
+          color="white"
         >
           <display.icon size={20} />
         </Box>
-        <Box sx={{ flex: 1 }}>
+        <Box flex={1}>
           <Text sx={{ fontWeight: 'bold', display: 'block' }}>
             {display.name}
           </Text>
@@ -323,9 +315,9 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         )}
       </Box>
       {isConnected && identity && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           {/* User info section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pl: 1 }}>
+          <Box display="flex" alignItems="center" gap={2} pl={1}>
             {identity.userInfo?.avatarUrl && (
               <a
                 href={
@@ -348,7 +340,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
                 />
               </a>
             )}
-            <Box sx={{ flex: 1 }}>
+            <Box flex={1}>
               {identity.userInfo?.username && (
                 <a
                   href={
@@ -380,7 +372,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
           </Box>
           {/* Scopes section */}
           {identity.scopes && identity.scopes.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 1 }}>
+            <Box display="flex" flexWrap="wrap" gap={1} pl={1}>
               {identity.scopes.map(scope => (
                 <Text
                   key={scope}
@@ -482,7 +474,7 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
 
   if (layout === 'inline') {
     return (
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box display="flex" gap={2} alignItems="center">
         {showHeader && (
           <Text sx={{ fontSize: 1, color: 'fg.muted', mr: 2 }}>{title}:</Text>
         )}
@@ -508,11 +500,9 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
           <Label variant="success">
             <Box
               as="span"
-              sx={{
-                mr: 1,
-                display: 'inline-flex',
-                verticalAlign: 'text-bottom',
-              }}
+              mr={1}
+              display="inline-flex"
+              verticalAlign="text-bottom"
             >
               <CheckCircleFillIcon size={12} />
             </Box>
@@ -525,37 +515,31 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
 
   return (
     <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        backgroundColor: 'canvas.default',
-        overflow: 'hidden',
-      }}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      backgroundColor="canvas.default"
+      overflow="hidden"
     >
       {showHeader && (
         <Box
-          sx={{
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            backgroundColor: 'canvas.subtle',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          backgroundColor="canvas.subtle"
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
         >
           <Text sx={{ fontWeight: 'bold' }}>{title}</Text>
           {connectedCount > 0 && (
             <Label variant="success">
               <Box
                 as="span"
-                sx={{
-                  mr: 1,
-                  display: 'inline-flex',
-                  verticalAlign: 'text-bottom',
-                }}
+                mr={1}
+                display="inline-flex"
+                verticalAlign="text-bottom"
               >
                 <CheckCircleFillIcon size={12} />
               </Box>
@@ -569,7 +553,9 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
         <Flash variant="danger" sx={{ m: 2, borderRadius: 1 }}>
           <Box
             as="span"
-            sx={{ mr: 2, display: 'inline-flex', verticalAlign: 'text-bottom' }}
+            mr={2}
+            display="inline-flex"
+            verticalAlign="text-bottom"
           >
             <AlertIcon size={16} />
           </Box>
@@ -578,16 +564,15 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
       )}
 
       <Box
-        sx={{
-          p: 2,
-          display: layout === 'grid' ? 'grid' : 'flex',
-          flexDirection: layout === 'list' ? 'column' : undefined,
-          gridTemplateColumns:
-            layout === 'grid'
-              ? 'repeat(auto-fill, minmax(250px, 1fr))'
-              : undefined,
-          gap: 2,
-        }}
+        p={2}
+        display={layout === 'grid' ? 'grid' : 'flex'}
+        flexDirection={layout === 'list' ? 'column' : undefined}
+        gridTemplateColumns={
+          layout === 'grid'
+            ? 'repeat(auto-fill, minmax(250px, 1fr))'
+            : undefined
+        }
+        gap={2}
       >
         {providerKeys.map(provider => {
           const config = providers[provider]!;
@@ -725,7 +710,7 @@ export const IdentityMenu: React.FC<IdentityMenuProps> = ({
                   <ActionList.LeadingVisual>
                     <display.icon size={16} />
                   </ActionList.LeadingVisual>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Text>{display.name}</Text>
                     {isConnected && (
                       <>

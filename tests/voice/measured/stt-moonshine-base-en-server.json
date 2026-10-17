@@ -1,0 +1,99 @@
+{
+  "model": "moonshine-base-en-server",
+  "runtime": "onnxruntime q8 on the CPU, greedy, 4 threads",
+  "languages": {
+    "en": {
+      "load_ms": 698,
+      "clips": [
+        {
+          "id": "en-6930-75918-0000",
+          "heard": "Concord returned to its place amidst the tents.",
+          "ms": 139,
+          "audio_s": 3.5
+        },
+        {
+          "id": "en-6930-75918-0002",
+          "heard": "Congratulations were poured in upon the princess everywhere during her journey,",
+          "ms": 198,
+          "audio_s": 5.03
+        },
+        {
+          "id": "en-6930-75918-0006",
+          "heard": "This has indeed been a harassing day, continued the young man, his eyes fixed upon his friend.",
+          "ms": 255,
+          "audio_s": 5.85
+        },
+        {
+          "id": "en-6930-75918-0007",
+          "heard": "You will be frank with me. I always am.",
+          "ms": 179,
+          "audio_s": 3.31
+        },
+        {
+          "id": "en-6930-75918-0008",
+          "heard": "Can you imagine why Buckingham has been so violent? I suspect.",
+          "ms": 190,
+          "audio_s": 4.79
+        },
+        {
+          "id": "en-6930-75918-0009",
+          "heard": "It is you who are mistaken, Raoul. I have read his distress in his eyes in his every gesture and action the whole day.",
+          "ms": 331,
+          "audio_s": 7.28
+        },
+        {
+          "id": "en-6930-75918-0010",
+          "heard": "I can perceive love clearly enough.",
+          "ms": 131,
+          "audio_s": 3.04
+        },
+        {
+          "id": "en-6930-75918-0011",
+          "heard": "I am convinced of what I say, said the count.",
+          "ms": 193,
+          "audio_s": 3.19
+        },
+        {
+          "id": "en-6930-75918-0013",
+          "heard": "In those very terms, I even had it more.",
+          "ms": 162,
+          "audio_s": 2.94
+        },
+        {
+          "id": "en-6930-75918-0015",
+          "heard": "Thus it is that the honour of three is saved, our country, our masters, and our own.",
+          "ms": 308,
+          "audio_s": 6.38
+        }
+      ]
+    }
+  },
+  "turns": {
+    "3s": {
+      "file": "en-6930-75918-0013.flac",
+      "audio_s": 2.94,
+      "ms": [
+        162,
+        150,
+        177,
+        196,
+        153
+      ],
+      "median_ms": 162,
+      "heard": "In those very terms, I even had it more."
+    },
+    "9s": {
+      "file": "weather-in-paris.wav",
+      "audio_s": 8.92,
+      "ms": [
+        177,
+        198,
+        199,
+        187,
+        183
+      ],
+      "median_ms": 187,
+      "heard": "What is the weather like in Paris today?"
+    }
+  }
+}

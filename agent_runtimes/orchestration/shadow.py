@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A gateway-started run, as its own execution (ORCHESTRATOR.md, O4-05).
+"""A gateway-started run, as its own execution (O4-05).
 
 MCP stays the tool and context protocol; a `tools/call` the gateway routes
 straight to a durable workflow (`NotebookRunWorkflow` and its kin, over

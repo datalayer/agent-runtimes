@@ -1873,13 +1873,8 @@ def extract_full_context_snapshot(
             "GITHUB_TOKEN",
         ):
             if key in os.environ:
-                # Mask the value for security
-                value = os.environ[key]
-                if len(value) > 8:
-                    masked = value[:4] + "..." + value[-4:]
-                else:
-                    masked = "***"
-                snapshot.tool_environment[key] = masked
+                # That it is set, and no part of its value.
+                snapshot.tool_environment[key] = "***"
     except Exception as e:
         logger.debug("Could not extract tool environment: %s", e)
 

@@ -1,0 +1,110 @@
+---
+sidebar_position: 25
+title: MCP and A2A, what is implemented
+---
+
+# MCP and A2A: what is implemented
+
+The two transport protocols an agent uses with the world, as agent-runtimes
+implements them today, in both languages, as a client and as a server; and
+the gaps against their latest specifications. Inventory taken on 2026-10-12
+from the code (PR-01); it moves with the change that moves a
+row.
+
+## Versions
+
+| Package | Pin | Protocol version |
+| --- | --- | --- |
+| Python `mcp` | `mcp>=2,<3` (2.1.1 installed) | `2026-07-28` (`mcp.types.LATEST_PROTOCOL_VERSION`) |
+| Python `fastmcp-slim[client]` | `>=4.0.0b3,<5` | the transports of the MCP client |
+| Python `pydantic-ai-slim[mcp]` | `>=2.35.0,<3` | `MCPToolset`, which `DisplayMCPToolset` extends |
+| TypeScript `@modelcontextprotocol/sdk` | `^1.32.1` (1.32.1 installed) | `2025-11-25` (`MCP_SPECIFICATION_VERSION` in `src/protocols/mcp`) |
+| Python `fasta2a` | `>=2.1.1,<2.2` (extra `a2a`) | A2A 1.0, JSON-RPC binding |
+| Python `a2a-sdk` | `>=0.3.0,<0.4.0` | used by tests only, to validate agent cards |
+| TypeScript `@a2a-js/sdk` | `^1.3.0` | A2A 1.0 method names |
+
+The two MCP SDKs speak different protocol versions: Python `2026-07-28`,
+TypeScript `2025-11-25`. The Python server answers a TypeScript client at
+`2025-11-25` (the initialize handshake), held by
+`test_protocols_mcp_two_languages.py`.
+
+## MCP
+
+agent-runtimes is an MCP **client**, in Python, for tools. It serves no MCP
+server of its own in either language: `/api/v1/mcp/proxy/…` is a REST proxy
+and `/api/v1/mcp-ui/…` an agent chat transport.
+
+| Feature | Python client | TypeScript client | Server (either) |
+| --- | --- | --- | --- |
+| stdio | yes (`mcp/lifecycle.py`) | through `McpClient.connect({ transport })` | no |
+| Streamable HTTP | yes (`mcp/tools.py`, `mcp/datalayer_gateway.py`, `mcp/google_workspace.py`) | yes (`McpClient` in `src/protocols/mcp/client.ts`) | no |
+| Legacy HTTP+SSE | not used | no | no |
+| Tools: list, call | yes (`mcp/lifecycle.py`, `mcp/displays.py`) | yes (`McpClient.listTools`, `callTool`; the page still manages a runtime's servers through its REST routes) | no |
+| A tool's display (`_meta["reactor.ui/display"]`) | yes (`mcp/displays.py`) | drawn from the runtime's stream | no |
+| Structured content, output schemas, annotations | read (`protocols/mcp/reading.py`, the conformance's readings); through pydantic-ai for an agent's tools | read (`toolReading`, `callReading`; a structured answer checked against its output schema by the SDK) | no |
+| Resources, prompts | read (`resource_reading`, `prompt_reading`); not wired to an agent | read (`readResource`, `getPrompt`) | no |
+| Sampling, elicitation, roots | no | no | no |
+| Logging, progress, cancellation, completions | no | no | no |
+| Tasks | library only (`mcp/tasks.py`: call as a task, get, cancel, list, status) | no | no |
+| Authorization | OAuth 2.1 flow (`mcp/auth/`: RFC 9728 and 8414 discovery, dynamic registration, PKCE, client ID metadata documents) behind `routes/mcp_auth.py`; the bearer sent comes from headers (the gateway's, a configured header) | no | — |
+| MCP UI (`ui://`) | — | drawn from activity messages (`MCPUIPlugin`); `text/html` and remote DOM refused by design | `ui://` resources built for the `mcp-ui` chat transport (`transports/mcp_ui.py`), not an MCP server |
+
+On Datalayer, an application reaches MCP servers through the **MCP
+gateway**, which holds the credentials and decides each call (the `pap` and
+`pact` toolsets are served there); the runtime holds the gateway's bearer
+only.
+
+## A2A
+
+agent-runtimes serves A2A in Python (fasta2a) and calls A2A agents from
+both languages.
+
+| Feature | Python client | Python server | TypeScript client |
+| --- | --- | --- | --- |
+| Binding | JSON-RPC (`fasta2a.client.A2AClient`, `subagents/a2a.py`) | JSON-RPC 2.0, `POST` at `/api/v1/a2a/agents/{id}/` (`routes/a2a.py`) | JSON-RPC (`@a2a-js/sdk` in `runtimes/browser/a2aPeer.ts`; `A2AAdapter.ts`, `useA2A.tsx` by hand) |
+| HTTP+JSON, gRPC | no | no | no |
+| Agent card at `/.well-known/agent-card.json` | yes | yes | yes |
+| `SendMessage` / `message/send` | — | yes | yes (`useA2A.tsx`) |
+| `SendStreamingMessage` / `message/stream` | yes | yes (SSE) | yes (`A2AAdapter.ts`, `a2aPeer.ts`) |
+| `GetTask` | yes (polling) | yes | yes |
+| `CancelTask` | yes | yes | no: `A2AAdapter` cancels through the runtime's `/api/v1/a2a/terminate` |
+| `SubscribeToTask` | no | yes | no |
+| `ListTasks` | no | answers *unsupported* | no |
+| Push notification configs | no | answers *not supported*; the card says `pushNotifications: false` | no |
+| Authenticated extended card | no | no | no |
+| Security | bearer | the card's Bearer scheme; an application's route gated (`loop/apps/a2a.py`); signed requests verified (Web Bot Auth) | bearer |
+| Extensions | the orchestration extension's routes | `A2A-Extensions` negotiated, required extensions checked; card extensions from the A2A plugin's points and the Appspec ([Agent protocols](./agent-protocols#a2a-card-extensions)) | `A2A-Extensions` header |
+
+### A harness over A2A (SH-15)
+
+An application whose agent is a [harness](../harnesses/transports#a2a-sh-15--built)
+(Claude Code, Codex, any ACP agent) is served by the same worker, plus: its
+plan as one artifact replaced as it progresses; each file it changed as a
+`text/x-diff` artifact named by its path, with the orchestration extension's
+`artifactProvenance` (`sha256:` of the body, when, from what); its tool calls
+as `working` statuses carrying `{kind, title, status}`; a permission as
+`input-required` carrying `approvalRequest {toolCall, options, expiresAt}`,
+answered on the same task by a message naming it — `datalayer.approval
+{optionId}`, or one whole word (*yes*, *no*, *always*, an option's name) from a
+caller without the extension; reasoning never an artifact. The card's skills
+come from the harness spec, `text/x-diff` among its output modes. The
+extension's schema describes these three fields since 15 October 2026.
+
+## Gaps
+
+1. **No MCP server** in agent-runtimes; an application is reached over A2A,
+   AG-UI or Vercel AI, never as an MCP server.
+2. **MCP beyond tools**: resources, prompts, sampling, elicitation, roots,
+   logging, progress, completions and cancellation are not wired, although
+   pydantic-ai supports several. Each becomes `mcp.extension.<name>` when it is.
+3. **MCP OAuth** stores a token after the flow but does not attach a stored
+   token when connecting: on Datalayer the gateway holds credentials instead.
+4. **MCP tasks** are library code that only tests call.
+5. **The TypeScript MCP client** (`McpClient`, on `@modelcontextprotocol/sdk`)
+   is a library: no page of the package uses it yet.
+6. **Two MCP versions** across the SDKs (`2026-07-28`, `2025-11-25`).
+7. **A2A server**: JSON-RPC only (no HTTP+JSON binding, which PACT 1.0
+   requires of a Brand); push notifications and `ListTasks` answer
+   *unsupported*; no authenticated extended card.
+8. **TypeScript A2A**: cancels through a runtime route rather than
+   `CancelTask`; no client resubscribes.

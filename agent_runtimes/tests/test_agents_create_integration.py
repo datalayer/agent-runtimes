@@ -130,7 +130,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         goal="Spec goal",
         system_prompt_codemode_addons="Use codemode tools.",
         skills=["python-analyzer"],
-        tools=["fetch_webpage", "run_in_terminal"],
+        backend_tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
         sandbox_variant="jupyter-server",
@@ -141,6 +141,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
             "enableToolReranker": True,
         },
         mcp_servers=[SimpleNamespace(id="filesystem")],
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(
@@ -209,7 +210,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
             "description": "Forwarded description",
             "model": forwarded_model,
             "systemPrompt": "Forwarded prompt",
-            "tools": ["fetch_webpage"],
+            "backendTools": ["fetch_webpage"],
             "protocol": "vercel-ai",
             "mcpServers": [{"id": "github", "origin": "catalog"}],
         },
@@ -263,7 +264,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             system_prompt="Strict prompt",
             system_prompt_codemode_addons=None,
             skills=[],
-            tools=["fetch_webpage"],
+            backend_tools=["fetch_webpage"],
             sandbox_variant="eval",
             protocol="vercel-ai",
             codemode=None,
@@ -272,6 +273,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             frontend_tools=[],
             trigger=None,
             advanced=None,
+            suggestions=[],
         ),
     )
 
@@ -280,7 +282,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
         agent_spec_id="demo/spec",
         model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt="Strict prompt",
-        tools=["fetch_webpage"],
+        backend_tools=["fetch_webpage"],
         transport="vercel-ai",
     )
 
@@ -344,6 +346,38 @@ async def test_sandbox_without_codemode_keeps_execute_code_enabled(
 
 
 @pytest.mark.asyncio
+async def test_an_agent_whose_sandbox_is_the_browser_is_refused_on_a_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    """The `browser` sandbox is Pyodide in the page: an agent that names it is
+    refused in a sentence (422), not failed (500, *Unknown sandbox variant:
+    browser*, drilled 2026-10-08 with `jupyter-notebook-reviewer`)."""
+    from fastapi import HTTPException
+
+    # The catalogue's own: its spec names the browser's sandbox.
+    request = CreateAgentRequest(
+        name="Reviewer", agent_spec_id="jupyter-notebook-reviewer"
+    )
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(request, _DummyRequest())
+    assert refused.value.status_code == 422
+    assert refused.value.detail == (
+        "jupyter-notebook-reviewer runs its code in the browser: it is not "
+        "started on a runtime. Give it a sandbox a runtime has (eval, "
+        "jupyter-server), or run it in the page."
+    )
+    # Said for a request that names it as well.
+    with pytest.raises(HTTPException) as named:
+        await create_agent(
+            CreateAgentRequest(name="In Page", sandbox_variant="browser"),
+            _DummyRequest(),
+        )
+    assert named.value.status_code == 422
+    assert named.value.detail.startswith("in-page runs its code in the browser")
+
+
+@pytest.mark.asyncio
 async def test_create_agent_disable_tool_approvals_request_override(
     monkeypatch: pytest.MonkeyPatch,
     creation_spy: dict[str, object],
@@ -356,7 +390,7 @@ async def test_create_agent_disable_tool_approvals_request_override(
 
     request = CreateAgentRequest(
         name="No Approval Agent",
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         disableToolApprovals=True,
     )
 
@@ -378,7 +412,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         goal=None,
         system_prompt_codemode_addons=None,
         skills=[],
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         description="Spec description",
         model=None,
         sandbox_variant=None,
@@ -386,6 +420,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         codemode=None,
         mcp_servers=[],
         disable_tool_approvals=True,
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(
@@ -422,7 +457,7 @@ async def test_create_agent_disable_tool_approvals_runtime_default(
         env_ctx.setenv("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "true")
         request = CreateAgentRequest(
             name="Env No Approval Agent",
-            tools=["runtime-sensitive-echo"],
+            backend_tools=["runtime-sensitive-echo"],
         )
         response = await create_agent(request, _DummyRequest())
 
@@ -430,3 +465,136 @@ async def test_create_agent_disable_tool_approvals_runtime_default(
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
     assert "output_type" not in pydantic_kwargs
+
+
+class _DummyHarnessAgent:
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = kwargs
+        self.initialized = False
+        self.cleaned = False
+        self.name = str(kwargs.get("name") or "harness")
+
+    async def initialize(self) -> None:
+        self.initialized = True
+
+    async def cleanup(self) -> None:
+        self.cleaned = True
+
+
+@pytest.mark.asyncio
+async def test_create_agent_on_a_harness_launches_the_acp_agent(
+    monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
+) -> None:
+    """SH-10: the route builds the ACP adapter, not a pydantic-ai agent."""
+    import agent_runtimes.adapters.acp_agent as acp_agent
+
+    made: list[_DummyHarnessAgent] = []
+
+    def harness_agent(
+        agent_id: str, harness_id: str, **kwargs: object
+    ) -> _DummyHarnessAgent:
+        agent = _DummyHarnessAgent(agent_id=agent_id, harness_id=harness_id, **kwargs)
+        made.append(agent)
+        return agent
+
+    monkeypatch.setattr(acp_agent, "harness_agent", harness_agent)
+    request = CreateAgentRequest(
+        name="Coder",
+        agent_spec={"id": "coder", "harness": "claude-code", "protocol": "a2a"},
+        transport="a2a",
+    )
+    http_request = _DummyRequest()
+    http_request.headers = {"Authorization": "Bearer person-token"}
+    response = await create_agent(request, http_request)
+    try:
+        assert response.id == "coder" and response.transport == "a2a"
+        [agent] = made
+        assert agent.initialized
+        assert (
+            agent.kwargs["agent_id"] == "coder"
+            and agent.kwargs["harness_id"] == "claude-code"
+        )
+        assert agent.kwargs["approvals"].config.agent_id == "coder"
+        assert agent.kwargs["approvals"].config.user_jwt_token == "person-token"
+        assert agent.kwargs["app"] is None and agent.kwargs["recorder"] is None
+        # Nothing of pydantic-ai was built in its place.
+        assert creation_spy["pydantic_model"] is None
+    finally:
+        agents_route._agents.pop("coder", None)
+        agents_route._agentspecs.pop("coder", None)
+
+
+@pytest.mark.asyncio
+async def test_create_agent_on_a_harness_refuses_vercel_ai_and_says_what_refused_it(
+    monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
+) -> None:
+    from fastapi import HTTPException
+
+    import agent_runtimes.adapters.acp_agent as acp_agent
+
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(
+            CreateAgentRequest(
+                name="Coder", agent_spec={"id": "coder", "harness": "codex"}
+            ),
+            _DummyRequest(),
+        )
+    assert refused.value.status_code == 422 and "SH-16" in refused.value.detail
+
+    def refusing(agent_id: str, harness_id: str, **kwargs: object) -> object:
+        raise acp_agent.HarnessRefused(
+            "Codex needs OPENAI_API_KEY in the environment, and it is not set."
+        )
+
+    monkeypatch.setattr(acp_agent, "harness_agent", refusing)
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(
+            CreateAgentRequest(
+                name="Coder",
+                agent_spec={"id": "coder", "harness": "codex"},
+                transport="acp",
+            ),
+            _DummyRequest(),
+        )
+    assert refused.value.status_code == 422
+    assert (
+        refused.value.detail
+        == "Codex needs OPENAI_API_KEY in the environment, and it is not set."
+    )
+    assert "coder" not in agents_route._agents
+
+
+def test_an_applications_agent_never_defers_a_catalogue_tool_marked_for_approval() -> (
+    None
+):
+    """An application's Rules ask the person before a call runs: its
+    catalogue tools are not deferred to the websocket flow, whose
+    `DeferredToolRequests` output an application's agent does not take."""
+    deferred = agents_route._catalogue_tools_deferred
+    application = SimpleNamespace(id="slack-mail-approvals")
+    assert deferred(False, None) is True
+    assert deferred(True, None) is False
+    assert deferred(False, application) is False
+    assert deferred(True, application) is False
+
+
+def test_runtime_send_mail_is_registered_undeferred_when_approvals_are_the_rules() -> (
+    None
+):
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+
+    from agent_runtimes.services.runtime_tools import register_agent_tools
+
+    def tool_of(disabled: bool) -> object:
+        agent = Agent(TestModel())
+        names = register_agent_tools(
+            agent, ["runtime-send-mail:0.0.1"], disable_tool_approvals=disabled
+        )
+        assert names == ["runtime_send_mail"]
+        return agent._function_toolset.tools["runtime_send_mail"]
+
+    # Marked `approval: manual` in the catalogue: deferred outside an application.
+    assert getattr(tool_of(False), "requires_approval") is True
+    # An application's agent: run, its Rules having asked first.
+    assert getattr(tool_of(True), "requires_approval") is False

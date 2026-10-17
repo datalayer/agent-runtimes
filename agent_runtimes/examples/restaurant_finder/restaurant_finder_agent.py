@@ -18,8 +18,8 @@ from functools import lru_cache
 from typing import Any
 
 from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.inference_formats.direct_json import DirectJsonFormat
 from a2ui.schema.constants import VERSION_0_9
-from a2ui.schema.manager import A2uiSchemaManager
 from pydantic_ai import Agent, RunContext
 
 from .restaurant_data import get_restaurant_data
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def _get_a2ui_catalog() -> Any:
     """Return the cached basic A2UI catalog from the a2ui-agent-sdk."""
-    manager = A2uiSchemaManager(
+    direct_json = DirectJsonFormat(
         version=VERSION_0_9,
         catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
     )
-    return manager.get_selected_catalog()
+    return direct_json.get_selected_catalog()
 
 
 def _validate_a2ui_messages(messages: list[dict[str, Any]]) -> None:
@@ -50,7 +50,11 @@ def _validate_a2ui_messages(messages: list[dict[str, Any]]) -> None:
         return
     for index, message in enumerate(messages):
         try:
-            catalog.validator.validate(message)
+            errors = catalog.validate_components(message)
+            if errors:
+                raise ValueError(
+                    "; ".join(f"{error.path}: {error.message}" for error in errors)
+                )
         except Exception as exc:
             command = next((k for k in message if k != "version"), "unknown")
             logger.warning(

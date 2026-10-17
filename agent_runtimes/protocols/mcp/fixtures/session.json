@@ -1,0 +1,149 @@
+{
+  "description": "MCP conformance (PR-51, EX-09): one server's answers as they arrive on the wire, and what an MCP client of agent-runtimes reads from each. Python reads them with the `mcp` SDK's types (test_protocols_mcp.py), TypeScript with `@modelcontextprotocol/sdk`'s (src/protocols/mcp/mcpClient.unit.test.ts): the same inputs, the same expected readings. The server of `examples/protocols/mcp/fixture_server.py` answers exactly these, and the TypeScript McpClient reads them from it over Streamable HTTP (test_protocols_mcp_two_languages.py). A tool's annotations missing are read with the specification's defaults: readOnlyHint false, destructiveHint true, idempotentHint false, openWorldHint true; destructiveHint means something only when the tool is not read-only, so a read-only tool is never destructive.",
+  "versions": {
+    "python": "2026-07-28",
+    "typescript": "2025-11-25",
+    "between": "2025-11-25"
+  },
+  "server": {
+    "name": "conformance",
+    "version": "1.0.0"
+  },
+  "tools": {
+    "wire": {
+      "tools": [
+        {
+          "name": "add",
+          "title": "Add",
+          "description": "Add two numbers.",
+          "inputSchema": {
+            "type": "object",
+            "properties": { "a": { "type": "number" }, "b": { "type": "number" } },
+            "required": ["a", "b"]
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": { "sum": { "type": "number" } },
+            "required": ["sum"]
+          },
+          "annotations": { "readOnlyHint": true, "openWorldHint": false }
+        },
+        {
+          "name": "forecast",
+          "description": "The weather in a city.",
+          "inputSchema": {
+            "type": "object",
+            "properties": { "city": { "type": "string" } },
+            "required": ["city"]
+          }
+        },
+        {
+          "name": "delete_note",
+          "description": "Delete a note.",
+          "inputSchema": {
+            "type": "object",
+            "properties": { "uri": { "type": "string" } },
+            "required": ["uri"]
+          },
+          "annotations": { "destructiveHint": true, "idempotentHint": true }
+        }
+      ]
+    },
+    "read": [
+      {
+        "name": "add",
+        "title": "Add",
+        "description": "Add two numbers.",
+        "parameters": ["a", "b"],
+        "required": ["a", "b"],
+        "structured": true,
+        "readOnly": true,
+        "destructive": false,
+        "idempotent": false,
+        "openWorld": false
+      },
+      {
+        "name": "forecast",
+        "title": null,
+        "description": "The weather in a city.",
+        "parameters": ["city"],
+        "required": ["city"],
+        "structured": false,
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": false,
+        "openWorld": true
+      },
+      {
+        "name": "delete_note",
+        "title": null,
+        "description": "Delete a note.",
+        "parameters": ["uri"],
+        "required": ["uri"],
+        "structured": false,
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": true,
+        "openWorld": true
+      }
+    ]
+  },
+  "calls": [
+    {
+      "tool": "add",
+      "arguments": { "a": 2, "b": 3 },
+      "wire": {
+        "content": [{ "type": "text", "text": "5" }],
+        "structuredContent": { "sum": 5 },
+        "isError": false
+      },
+      "read": { "isError": false, "text": "5", "structured": { "sum": 5 } }
+    },
+    {
+      "tool": "forecast",
+      "arguments": { "city": "Paris" },
+      "wire": {
+        "content": [
+          { "type": "text", "text": "Sunny, 21 °C." },
+          { "type": "text", "text": "Wind 10 km/h." }
+        ]
+      },
+      "read": { "isError": false, "text": "Sunny, 21 °C.\nWind 10 km/h.", "structured": null }
+    },
+    {
+      "tool": "forecast",
+      "arguments": { "city": "Atlantis" },
+      "wire": {
+        "content": [{ "type": "text", "text": "No forecast for Atlantis." }],
+        "isError": true
+      },
+      "read": { "isError": true, "text": "No forecast for Atlantis.", "structured": null }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "note://welcome",
+      "name": "welcome",
+      "mimeType": "text/plain",
+      "wire": {
+        "contents": [{ "uri": "note://welcome", "mimeType": "text/plain", "text": "Welcome." }]
+      },
+      "read": [{ "uri": "note://welcome", "mimeType": "text/plain", "text": "Welcome." }]
+    }
+  ],
+  "prompts": [
+    {
+      "name": "greet",
+      "description": "Greet somebody.",
+      "arguments": [{ "name": "name", "required": true }],
+      "get": { "name": "Ada" },
+      "wire": {
+        "description": "Greet somebody.",
+        "messages": [
+          { "role": "user", "content": { "type": "text", "text": "Say hello to Ada." } }
+        ]
+      },
+      "read": [{ "role": "user", "text": "Say hello to Ada." }]
+    }
+  ]
+}

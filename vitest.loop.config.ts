@@ -17,7 +17,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/loop/__tests__/**/*.test.{ts,tsx}'],
+    include: ['src/apps/__tests__/**/*.test.{ts,tsx}'],
     environment: 'node',
     environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
     // Browser globals jsdom lacks, installed before any module is imported —

@@ -15,6 +15,7 @@ import { Text, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CopyIcon, SyncIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../messages/markdownWithoutHtml';
 
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
@@ -52,21 +53,18 @@ export function TextPart({
 
   return (
     <Box
-      sx={{
-        padding: 3,
-        borderRadius: 2,
-        backgroundColor:
-          message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-        marginBottom: 2,
-      }}
+      padding={3}
+      borderRadius={2}
+      backgroundColor={
+        message.role === 'user' ? 'accent.subtle' : 'canvas.subtle'
+      }
+      marginBottom={2}
     >
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 2,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        marginBottom={2}
       >
         <Text
           sx={{
@@ -79,7 +77,7 @@ export function TextPart({
           {message.role === 'user' ? 'You' : 'Assistant'}
         </Text>
         {message.role === 'assistant' && isLastPart && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box display="flex" gap={1}>
             <IconButton
               icon={SyncIcon}
               aria-label="Regenerate"
@@ -98,7 +96,9 @@ export function TextPart({
         )}
       </Box>
       <Box sx={streamdownMarkdownStyles}>
-        <Streamdown>{text}</Streamdown>
+        <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+          {text}
+        </Streamdown>
       </Box>
     </Box>
   );

@@ -145,7 +145,7 @@ function Section({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box display="flex" flexDirection="column" gap={2}>
       <Heading as="h4" sx={{ fontSize: 1, m: 0 }}>
         {title}
       </Heading>
@@ -163,16 +163,16 @@ function Row({
 }): React.ReactElement {
   return (
     <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: '112px 1fr',
-        gap: 2,
-        alignItems: 'baseline',
-        fontSize: 0,
-      }}
+      display="grid"
+      gridTemplateColumns="112px 1fr"
+      gap={2}
+      alignItems="baseline"
+      fontSize={0}
     >
       <Text sx={{ color: 'fg.muted', fontSize: 0 }}>{label}</Text>
-      <Box sx={{ minWidth: 0, wordBreak: 'break-all' }}>{children}</Box>
+      <Box minWidth={0} wordBreak="break-all">
+        {children}
+      </Box>
     </Box>
   );
 }
@@ -264,7 +264,7 @@ function ValueView({
     }
     if (value.every(item => typeof item !== 'object' || item === null)) {
       return (
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box display="flex" gap={2} flexWrap="wrap">
           {value.map((item, index) => (
             <ValueView key={index} value={item} depth={depth + 1} />
           ))}
@@ -272,11 +272,13 @@ function ValueView({
       );
     }
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box display="flex" flexDirection="column" gap={2}>
         {value.map((item, index) => (
           <Box
             key={index}
-            sx={{ pl: 2, borderLeft: '2px solid', borderColor: 'border.muted' }}
+            pl={2}
+            borderLeft="2px solid"
+            borderColor="border.muted"
           >
             <ValueView value={item} depth={depth + 1} />
           </Box>
@@ -290,18 +292,16 @@ function ValueView({
   }
   return (
     <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: 'max-content 1fr',
-        columnGap: 2,
-        rowGap: 1,
-        alignItems: 'baseline',
-      }}
+      display="grid"
+      gridTemplateColumns="max-content 1fr"
+      columnGap={2}
+      rowGap={1}
+      alignItems="baseline"
     >
       {entries.map(([key, entry]) => (
         <React.Fragment key={key}>
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{humanize(key)}</Text>
-          <Box sx={{ minWidth: 0, wordBreak: 'break-all' }}>
+          <Box minWidth={0} wordBreak="break-all">
             <ValueView value={entry} depth={depth + 1} />
           </Box>
         </React.Fragment>
@@ -347,7 +347,7 @@ function CardFields({
   const outputs = strings(card.defaultOutputModes);
   const others = Object.entries(card).filter(([key]) => !HANDLED_KEYS.has(key));
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box display="flex" flexDirection="column" gap={2}>
       <Box>
         <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
           {text(card.name) ?? 'Unnamed agent'}
@@ -393,16 +393,14 @@ function CardFields({
           {interfaces.length === 0 ? (
             <None />
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box display="flex" flexDirection="column" gap={1}>
               {interfaces.map((entry, index) => (
                 <Box
                   key={index}
-                  sx={{
-                    display: 'flex',
-                    gap: 2,
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                  }}
+                  display="flex"
+                  gap={2}
+                  alignItems="center"
+                  flexWrap="wrap"
                 >
                   <Label size="small">
                     {text(entry.protocolBinding) ?? 'binding'}
@@ -424,9 +422,9 @@ function CardFields({
           {capabilityEntries.length === 0 ? (
             <None />
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box display="flex" flexDirection="column" gap={1}>
               {/* Every flag, on or off: an absent "no" reads as unknown. */}
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Box display="flex" gap={1} flexWrap="wrap">
                 {capabilityEntries
                   .filter(([, flag]) => typeof flag === 'boolean')
                   .map(([key, flag]) => (
@@ -442,12 +440,10 @@ function CardFields({
               {extensions.map((extension, index) => (
                 <Box
                   key={index}
-                  sx={{
-                    display: 'flex',
-                    gap: 2,
-                    alignItems: 'baseline',
-                    flexWrap: 'wrap',
-                  }}
+                  display="flex"
+                  gap={2}
+                  alignItems="baseline"
+                  flexWrap="wrap"
                 >
                   <Mono>{text(extension.uri) ?? 'extension'}</Mono>
                   {extension.required === true ? (
@@ -468,7 +464,7 @@ function CardFields({
                     typeof entry !== 'boolean' && key !== 'extensions',
                 )
                 .map(([key, entry]) => (
-                  <Box key={key} sx={{ display: 'flex', gap: 2 }}>
+                  <Box key={key} display="flex" gap={2}>
                     <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                       {humanize(key)}
                     </Text>
@@ -484,7 +480,7 @@ function CardFields({
           {skills.length === 0 ? (
             <None />
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box display="flex" flexDirection="column" gap={1}>
               {skills.map((skill, index) => (
                 <Box key={index}>
                   <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
@@ -496,7 +492,7 @@ function CardFields({
                     </Text>
                   ) : null}
                   {strings(skill.tags).length > 0 ? (
-                    <Box sx={{ display: 'inline-flex', gap: 1, ml: 2 }}>
+                    <Box display="inline-flex" gap={1} ml={2}>
                       {strings(skill.tags).map(tag => (
                         <Label key={tag} size="small">
                           {tag}
@@ -574,7 +570,9 @@ export function A2AAgentDialog({
       <Box
         data-a2a-agent-dialog={details.name}
         data-a2a-card-status={fetched.status}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Section title="This run">
           {details.description ? (
@@ -629,7 +627,7 @@ export function A2AAgentDialog({
             </Text>
           ) : null}
           {fetched.status === 'loading' ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" alignItems="center" gap={2}>
               <Spinner size="small" />
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                 Fetching {cardUrl}…
@@ -645,25 +643,23 @@ export function A2AAgentDialog({
           {fetched.status === 'loaded' ? (
             <>
               <CardFields card={fetched.card} />
-              <Box as="details" sx={{ fontSize: 0 }}>
-                <Box as="summary" sx={{ cursor: 'pointer', color: 'fg.muted' }}>
+              <Box as="details" fontSize={0}>
+                <Box as="summary" cursor="pointer" color="fg.muted">
                   Raw JSON
                 </Box>
                 <Box
                   as="pre"
                   data-a2a-card-json
-                  sx={{
-                    mt: 2,
-                    p: 2,
-                    bg: 'canvas.subtle',
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    overflow: 'auto',
-                    maxHeight: 280,
-                    fontSize: 0,
-                    m: 0,
-                  }}
+                  mt={2}
+                  p={2}
+                  bg="canvas.subtle"
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
+                  overflow="auto"
+                  maxHeight={280}
+                  fontSize={0}
+                  m={0}
                 >
                   {JSON.stringify(fetched.card, null, 2)}
                 </Box>

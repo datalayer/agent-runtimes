@@ -29,6 +29,7 @@ import type { LexicalDTO } from '../models/LexicalDTO';
 import type { ProjectDTO, ProjectDefaultItems } from '../models/ProjectDTO';
 import type {
   RuntimeMemory,
+  RuntimeMemoryShare,
   ListRuntimeMemoriesOptions,
 } from '../api/runtimes/runtimes';
 
@@ -84,6 +85,18 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     options?: ListRuntimeMemoriesOptions,
   ): Promise<RuntimeMemory[]>;
   getRuntimeMemory(memoryId: string): Promise<RuntimeMemory>;
+  forgetRuntimeMemory(memoryId: string): Promise<number>;
+  correctRuntimeMemory(memoryId: string, text: string): Promise<RuntimeMemory>;
+  forgetRuntimeMemories(agentId: string, count: number): Promise<number>;
+  listRuntimeMemoryShares(filter: {
+    source?: string;
+    reader?: string;
+  }): Promise<RuntimeMemoryShare[]>;
+  allowRuntimeMemoryShare(
+    source: string,
+    reader: string,
+  ): Promise<RuntimeMemoryShare>;
+  stopRuntimeMemoryShare(source: string, reader: string): Promise<void>;
   getRuntime(runtimeName: string): Promise<RuntimeDTO>;
   deleteRuntime(runtimeName: string): Promise<void>;
   terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]>;

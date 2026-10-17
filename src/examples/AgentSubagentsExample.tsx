@@ -25,8 +25,8 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentSubagentsPlugin } from '../loop/plugins/agent-subagents';
+import { LoopEmbed } from '../apps';
+import { AgentSubagentsPlugin } from '../apps/plugins/agent-subagents';
 import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
 import {
   useAgentRuntimeActiveSubagentToolCallId,
@@ -54,13 +54,7 @@ const ACTIVE_PANEL_HEIGHT = 280;
 const ActiveSubagentPanel: React.FC = () => {
   const activeToolCallId = useAgentRuntimeActiveSubagentToolCallId();
   return (
-    <Box
-      sx={{
-        p: 3,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
-    >
+    <Box p={3} borderBottom="1px solid" borderColor="border.default">
       <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
         Active Subagent
       </Heading>
@@ -71,16 +65,14 @@ const ActiveSubagentPanel: React.FC = () => {
         />
       ) : (
         <Box
-          sx={{
-            height: ACTIVE_PANEL_HEIGHT,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid',
-            borderColor: 'border.muted',
-            borderRadius: 2,
-            bg: 'canvas.subtle',
-          }}
+          height={ACTIVE_PANEL_HEIGHT}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          border="1px solid"
+          borderColor="border.muted"
+          borderRadius={2}
+          bg="canvas.subtle"
         >
           <Text sx={{ fontSize: 0, color: 'fg.muted', m: 0 }}>
             No active Subagent
@@ -114,9 +106,7 @@ const SubagentRoster: React.FC<{
               <PersonIcon />
             </Timeline.Badge>
             <Timeline.Body>
-              <Box
-                sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}
-              >
+              <Box mb={1} display="flex" alignItems="center" gap={2}>
                 <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>{sa.name}</Text>
                 {isRunning ? (
                   <>
@@ -148,24 +138,20 @@ const AgentSubagentsExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          bg: 'canvas.default',
-        }}
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flexShrink: 0,
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flexShrink={0}
         >
           <PeopleIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -177,8 +163,8 @@ const AgentSubagentsExample: React.FC = () => {
           </Label>
         </Box>
 
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minHeight={0} display="flex">
+          <Box flex={1} minWidth={0}>
             {/* The Loop creates the orchestrator on the Local target from the
                 capacity plugin's blueprint, the way the hooks and A2A examples
                 do; an agent made by hand for another transport answers the
@@ -199,41 +185,27 @@ const AgentSubagentsExample: React.FC = () => {
           </Box>
 
           <Box
-            sx={{
-              width: 320,
-              borderLeft: '1px solid',
-              borderColor: 'border.default',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'auto',
-            }}
+            width={320}
+            borderLeft="1px solid"
+            borderColor="border.default"
+            display="flex"
+            flexDirection="column"
+            overflow="auto"
           >
             <ActiveSubagentPanel />
 
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
+            <Box p={3} borderBottom="1px solid" borderColor="border.default">
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
                 Available Subagents
               </Heading>
               <SubagentRoster subagents={subagents} />
             </Box>
 
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
+            <Box p={3} borderBottom="1px solid" borderColor="border.default">
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
                 Delegation Tools
               </Heading>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box display="flex" flexDirection="column" gap={2}>
                 {[
                   {
                     name: 'delegate_task',
@@ -243,15 +215,13 @@ const AgentSubagentsExample: React.FC = () => {
                 ].map(tool => (
                   <Box
                     key={tool.name}
-                    sx={{
-                      p: 2,
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      borderRadius: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                    }}
+                    p={2}
+                    border="1px solid"
+                    borderColor="border.default"
+                    borderRadius={2}
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
                   >
                     <tool.icon size={14} />
                     <Box>
@@ -276,7 +246,7 @@ const AgentSubagentsExample: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ p: 3 }}>
+            <Box p={3}>
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
                 How It Works
               </Heading>

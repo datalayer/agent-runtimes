@@ -1,0 +1,544 @@
+{
+  "slug": "conversation-streaming",
+  "title": "Conversation streaming",
+  "description": "Atlas reads a Manzanita conversation over Server-Sent Events: display-only text deltas, complete message events, and a resume from Last-Event-ID.",
+  "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "sdk": "personal-agent-protocol 0.16.0",
+  "parties": [
+    {
+      "id": "user",
+      "name": "Ada",
+      "role": "person",
+      "initial": "A"
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "role": "Ada's personal agent",
+      "domain": "atlas.example",
+      "initial": "At"
+    },
+    {
+      "id": "manzanita",
+      "name": "Manzanita Outfitters",
+      "role": "company",
+      "domain": "manzanita.example",
+      "initial": "M"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Atlas finds Manzanita",
+      "channel": "Discovery + Session",
+      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Say hello to Manzanita for me."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/poppy.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "protocol_version": "0.1",
+              "organization": {
+                "name": "Manzanita Outfitters",
+                "domain": "manzanita.example"
+              },
+              "auth": {
+                "issuer": "https://manzanita.example",
+                "direct": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "device": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "mediated": {
+                  "endpoint": "https://manzanita.example/poppy/sign-in",
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "custom_scopes": {
+                  "orders:read": "See your orders",
+                  "orders:write": "Exchange and return items"
+                }
+              },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://manzanita.example/poppy/conversations"
+                  }
+                ]
+              },
+              "apis": [
+                {
+                  "type": "openapi",
+                  "url": "https://manzanita.example/api/openapi.json",
+                  "description": "Orders and exchanges"
+                },
+                {
+                  "type": "mcp",
+                  "url": "https://manzanita.example/mcp",
+                  "description": "Orders and exchanges, as MCP tools"
+                }
+              ],
+              "web": {
+                "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
+              },
+              "extensions": {
+                "operations": {
+                  "version": "1",
+                  "endpoint": "https://manzanita.example/poppy/operations"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-authorization-server",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "issuer": "https://manzanita.example",
+              "token_endpoint": "https://manzanita.example/oauth/token",
+              "revocation_endpoint": "https://manzanita.example/oauth/revoke",
+              "poppy_domains": ["manzanita.example"],
+              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
+              "device_1": "https://manzanita.example/oauth/device",
+              "authorization_endpoint": "https://manzanita.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+              "assertion": "‹session assertion›",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "",
+              "session_id": "ses_1",
+              "signed_in": false
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "A conversation starts",
+      "channel": "Conversation",
+      "summary": "Atlas starts the conversation and returns at once with a receipt; the events come next.",
+      "chat": [],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 4 events"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/poppy/conversations",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_1",
+                "sender": "human",
+                "text": "Hello"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Streaming the events",
+      "channel": "SSE",
+      "summary": "1 text-delta piece(s) are shown as they arrive but never acted on (actionable: false); the complete message event replaces them. The stream ends at the closed state.",
+      "chat": [
+        {
+          "speaker": "manzanita",
+          "kind": "delta",
+          "text": "Hello from Manzanita Outfit"
+        },
+        {
+          "speaker": "manzanita",
+          "kind": "message",
+          "text": "Hello from Manzanita Outfitters. Ask me about an order."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          },
+          {
+            "label": "Conversation",
+            "value": "closed · agent · 5 events"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/close",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {}
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "status": "closed",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/events",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "text/event-stream",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "text/event-stream",
+              "cache-control": "no-store"
+            },
+            "body": ": poppy\n\nid: evt_1\ndata: {\"id\": \"evt_1\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_1\", \"sender\": \"human\", \"text\": \"Hello\", \"role\": \"user\"}}\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"working\", \"responder\": \"agent\"}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_2\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_2\", \"sender\": \"agent\", \"role\": \"company\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_4\ndata: {\"id\": \"evt_4\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"idle\", \"responder\": \"agent\"}\n\nid: evt_5\ndata: {\"id\": \"evt_5\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"closed\", \"responder\": \"agent\"}\n\n",
+            "encoding": "sse"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Resuming from Last-Event-ID",
+      "channel": "SSE resume",
+      "summary": "Reopened with Last-Event-ID, the stream skips the 1 event(s) already handled and continues to the end.",
+      "chat": [],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          },
+          {
+            "label": "Conversation",
+            "value": "closed · agent · 5 events"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/events",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "text/event-stream",
+              "last-event-id": "evt_1",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "text/event-stream",
+              "cache-control": "no-store"
+            },
+            "body": ": poppy\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"working\", \"responder\": \"agent\"}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_2\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_2\", \"sender\": \"agent\", \"role\": \"company\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_4\ndata: {\"id\": \"evt_4\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"idle\", \"responder\": \"agent\"}\n\nid: evt_5\ndata: {\"id\": \"evt_5\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"closed\", \"responder\": \"agent\"}\n\n",
+            "encoding": "sse"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -238,8 +238,8 @@ def launch_config(
 ) -> dict[str, Any]:
     """The launch's configuration, the keys the service reads (B2-03, B2-06).
 
-    `git` is where the launch came from when CI made it (BENCHMARK.md,
-    B6-02): the commit, the ref, the pull request, the action run and the
+    `git` is where the launch came from when CI made it (B6-02):
+    the commit, the ref, the pull request, the action run and the
     repository. Kept on the launch, indexed by the service, shown on the
     launch's page and in the report's methodology. Empty values are dropped,
     so a launch made by hand carries no `git` at all.
@@ -300,7 +300,7 @@ def submit_launch(
 
 def launch_outcome_lines(payload: dict[str, Any]) -> list[str]:
     """What to say about a settled launch, beyond its status: one line per
-    run that did not complete, with why (BENCHMARK.md, 25.13).
+    run that did not complete, with why.
 
     "Launch 1 failed" alone sent people to the page to learn that every run
     was refused at its first step; the run's failure cause is in the answer
@@ -456,8 +456,8 @@ def execute_evalset_spec(
     Imports the evalset from ``spec`` (through the service's import route),
     then, ``run_limit`` times, either submits a **launch** the platform
     executes on a pool of ``concurrency`` sandboxes per agentspec and watches
-    it to its end (``execution_target='cloud'``, BENCHMARK.md B2-03 and
-    B2-15), or runs every case through a local ``agent-runtimes`` server,
+    it to its end (``execution_target='cloud'``, B2-03 and B2-15),
+    or runs every case through a local ``agent-runtimes`` server,
     grades the outputs with the evals API and stores one run record per
     execution (``execution_target='local'``). Local execution resources are
     always torn down before returning, including on error.

@@ -39,6 +39,23 @@ export function usableModels(models: ModelConfig[]): ModelConfig[] {
   return usable.length > 0 ? usable : models;
 }
 
+/**
+ * The models a chat offers, given what its runtime answered.
+ *
+ * The runtime's answer is the list: an agent's own models (its `model` and
+ * `model_additionals`), each flagged with whether its inference serves it.
+ * When the runtime answered, nothing else is added — not even when its list
+ * is empty, which says the agent has nothing to switch to. `fallback` is
+ * asked only when there is no runtime to answer (an in-page agent) or it
+ * has not answered yet.
+ */
+export function offeredModels(
+  fromRuntime: ModelConfig[] | undefined,
+  fallback: () => ModelConfig[],
+): ModelConfig[] {
+  return usableModels(fromRuntime ?? fallback());
+}
+
 /** Whether `id` is on offer and usable — the selection may stand. */
 export const isOffered = (offered: ModelConfig[], id?: string): boolean =>
   Boolean(id) && offered.some(m => m.id === id && isUsable(m));
@@ -71,8 +88,29 @@ export type ServerCatalogueModel = {
   name?: string;
   available?: boolean;
   missing_env_vars?: string[];
-  reason?: string;
+  reason?: string | null;
   warning?: string | null;
+};
+
+/**
+ * The typed-decision models a runtime lists apart (Jev).
+ *
+ * They answer a decision's typed questions, not a conversation: the menu
+ * shows them read-only, under their own heading, with `note` saying so, and
+ * never offers one as the agent's model.
+ */
+export type Decisions = {
+  models: ModelConfig[];
+  note: string;
+};
+
+/** The runtime's `/configure/models` answer, as far as the chat reads it. */
+export type ServerCatalogue = {
+  models?: ServerCatalogueModel[];
+  source?: string;
+  note?: string;
+  decision_models: ServerCatalogueModel[];
+  decisions_note: string;
 };
 
 /**
@@ -84,22 +122,41 @@ export type ServerCatalogueModel = {
  * its spec was known went to the first row — Alibaba, and its missing key.
  */
 export function readServerCatalogue(
-  payload: { models?: ServerCatalogueModel[] } | null | undefined,
+  payload:
+    | { models?: ServerCatalogueModel[]; source?: string; note?: string }
+    | null
+    | undefined,
 ): ModelConfig[] {
-  return (payload?.models ?? []).map(model => {
-    const missing = model.missing_env_vars ?? [];
-    const reason =
-      model.reason ??
-      (missing.length > 0 ? `Set ${missing.join(', ')}` : undefined) ??
-      model.warning ??
-      undefined;
-    return {
-      id: model.id,
-      name: model.name ?? model.id,
-      isAvailable: model.available !== false,
-      ...(reason && model.available === false
-        ? { unavailableReason: reason }
-        : {}),
-    };
-  });
+  return (payload?.models ?? []).map(readServerModel);
+}
+
+/**
+ * The typed-decision models of the runtime's answer, in the chat's shape.
+ *
+ * Read apart from `readServerCatalogue`, so no list a chat picks its model
+ * from ever holds one.
+ */
+export function readServerDecisions(payload: ServerCatalogue): Decisions {
+  return {
+    models: payload.decision_models.map(readServerModel),
+    note: payload.decisions_note,
+  };
+}
+
+/** One row of the runtime's answer, in the chat's shape. */
+function readServerModel(model: ServerCatalogueModel): ModelConfig {
+  const missing = model.missing_env_vars ?? [];
+  const reason =
+    model.reason ??
+    (missing.length > 0 ? `Set ${missing.join(', ')}` : undefined) ??
+    model.warning ??
+    undefined;
+  return {
+    id: model.id,
+    name: model.name ?? model.id,
+    isAvailable: model.available !== false,
+    ...(reason && model.available === false
+      ? { unavailableReason: reason }
+      : {}),
+  };
 }
