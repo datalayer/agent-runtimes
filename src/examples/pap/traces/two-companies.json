@@ -1,9 +1,9 @@
 {
   "slug": "two-companies",
   "title": "Two companies working together",
-  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.1 defines no company-to-company protocol.",
+  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.2 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.16.0",
+  "sdk": "personal-agent-protocol 0.25.0",
   "parties": [
     {
       "id": "user",
@@ -120,7 +120,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.1",
+              "protocol_version": "0.2",
               "organization": {
                 "name": "Ledgerly",
                 "domain": "ledgerly.example"
@@ -145,6 +145,9 @@
                     "endpoint": "https://ledgerly.example/poppy/conversations"
                   }
                 ]
+              },
+              "feedback": {
+                "endpoint": "https://ledgerly.example/poppy/feedback"
               },
               "extensions": {
                 "operations": {
@@ -643,7 +646,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.1",
+              "protocol_version": "0.2",
               "organization": {
                 "name": "Northwind Bank",
                 "domain": "northwind.example"
@@ -668,6 +671,9 @@
                     "endpoint": "https://northwind.example/poppy/conversations"
                   }
                 ]
+              },
+              "feedback": {
+                "endpoint": "https://northwind.example/poppy/feedback"
               },
               "extensions": {
                 "operations": {

@@ -18,8 +18,8 @@ identifier by a stable one (`cnv_1`), so the output is deterministic. The
 script refuses to write a trace in which a secret survives.
 
 From the Agent Runtimes repository, with the released PAP Python SDK installed
-(Agent Runtimes pins 0.15.0 and later; the traces in the repository were
-recorded with 0.16.0):
+(Agent Runtimes pins 0.25.0 and later; the traces in the repository were
+recorded with 0.25.0 (PAP draft 0.2)):
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py
@@ -580,6 +580,8 @@ class World:
             tenant_id=TENANT,
             pairwise_user_id=PAIRWISE,
             session_id=self.session.session_id,
+            organization=self.company.document.organization,
+            poppy_domains=self.metadata.poppy_domains,
         )
         self.trace.secret(started.user_code, "‹user code›")
         self.clock.advance(started.poll_interval)
@@ -1235,7 +1237,7 @@ async def two_companies() -> Trace:
         "Two companies working together",
         "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP "
         "personal agent at Northwind Bank for her. Every approval is an Operation. This is "
-        "composition: draft 0.1 defines no company-to-company protocol.",
+        "composition: draft 0.2 defines no company-to-company protocol.",
         [ADA_PARTY, ATLAS_PARTY, LEDGERLY_PARTY, NORTHWIND_PARTY],
     )
     clock = MutableClock()
@@ -1341,6 +1343,8 @@ async def two_companies() -> Trace:
         tenant_id=TENANT,
         pairwise_user_id=PAIRWISE_LEDGERLY,
         session_id=session.session_id,
+        organization=company.document.organization,
+        poppy_domains=metadata.poppy_domains,
     )
     trace.secret(started.user_code, "‹Ledgerly user code›")
     trace.action(

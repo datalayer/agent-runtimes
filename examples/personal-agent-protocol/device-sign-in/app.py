@@ -19,6 +19,7 @@ from personal_agent_protocol import (
     DpopProofRequest,
     build_pap_reactor,
 )
+from personal_agent_protocol.models import Organization
 from pydantic import SecretStr
 from reactor import PluginManifest
 
@@ -165,6 +166,9 @@ async def explain_device_sign_in() -> dict[str, Any]:
             tenant_id="example-tenant",
             pairwise_user_id="usr_host_only_example",
             session_id="ses_existing",
+            # The link is shown only on the company's own hosts, named with it (§4.6).
+            organization=Organization(name="Shop", domain="shop.example"),
+            poppy_domains=("shop.example",),
         )
         early = await client.poll(started.reference)
         security.clock.advance(5)

@@ -44,7 +44,7 @@ class TransportPlugin:
 app = Application(
     id="pap-dpop-transport",
     name="PAP DPoP Transport",
-    description="Send proof-bound PAP requests through nonce retries and redirects safely.",
+    description="Send proof-bound PAP requests through nonce retries, refusing redirects.",
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
@@ -58,7 +58,7 @@ app = Application(
 
 @app.tool(does="read")
 async def explain_dpop_transport() -> dict[str, Any]:
-    """Exercise nonce retry and redirect proof regeneration."""
+    """Exercise nonce retry, a refused redirect, and protected headers."""
 
     calls = 0
 
@@ -74,8 +74,9 @@ async def explain_dpop_transport() -> dict[str, Any]:
                 },
             )
         if calls == 2:
-            return httpx.Response(307, headers={"Location": "/orders/current"})
-        return httpx.Response(200, json={"order_count": 2})
+            return httpx.Response(200, json={"order_count": 2})
+        # PAP 0.2 §3: a redirect never gets the token, a proof, or a body: it is refused.
+        return httpx.Response(307, headers={"Location": "/orders/current"})
 
     proofs = RecordingProofProvider()
     token = SessionToken(
@@ -108,6 +109,19 @@ async def explain_dpop_transport() -> dict[str, Any]:
                 tenant_id="example-tenant",
                 pairwise_user_id="usr_host_only",
                 issuer="https://auth.shop.example",
+            )
+        except TransportError as refused:
+            redirect_refused = refused.code == "redirect_refused"
+        else:
+            redirect_refused = False
+        try:
+            await DpopHttpClient(reactor=reactor, http_client=http).request(
+                "GET",
+                "https://api.shop.example/orders",
+                token=token,
+                tenant_id="example-tenant",
+                pairwise_user_id="usr_host_only",
+                issuer="https://auth.shop.example",
                 headers={"Authorization": "Bearer model-controlled"},
             )
         except TransportError:
@@ -121,9 +135,7 @@ async def explain_dpop_transport() -> dict[str, Any]:
         "fresh_proof_per_attempt": len(proofs.requests) == 3,
         "nonce_retry": [request.nonce for request in proofs.requests]
         == [None, "host-only-company-nonce", None],
-        "redirect_rebound_to_target": proofs.requests[-1].url.endswith(
-            "/orders/current"
-        ),
+        "redirect_refused": redirect_refused,
         "protected_headers_rejected": protected_headers_rejected,
         "cross_origin_forwarding": False,
         "tokens_withheld": True,

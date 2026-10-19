@@ -39,7 +39,9 @@ dependencies = [
     # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
     # tested against (Sessions, Device Sign-In, conversations, Operations,
     # the reference company of PapCompanyCapability; PR-03).
-    "personal-agent-protocol[ui]>=0.24.0,<1",
+    # 0.25.0: PAP draft 0.2 (Device Sign-In names the company, assertions name
+    # its issuer, token_for_mcp); a 0.2 personal agent uses only 0.2 companies.
+    "personal-agent-protocol[ui]>=0.25.0,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",

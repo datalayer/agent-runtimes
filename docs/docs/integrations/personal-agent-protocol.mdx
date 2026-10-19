@@ -5,11 +5,24 @@ title: Personal Agent Protocol
 
 # Personal Agent Protocol
 
-Agent Runtimes depends on Personal Agent Protocol (PAP) in Python and
-TypeScript: `personal-agent-protocol[ui]` (0.15.0, implementing the
-[draft 0.1 specification](https://personalagentprotocol.org/docs/spec) and
-Operations v1) and `@datalayer/personal-agent-protocol`. The integration
-divides responsibility explicitly:
+Agent Runtimes depends on Personal Agent Protocol (PAP, or Poppy) in Python
+and TypeScript: `personal-agent-protocol[ui]` and
+`@datalayer/personal-agent-protocol` (0.25.0 and later, implementing
+[draft 0.2](https://personalagentprotocol.org/docs/0.2/spec) and the
+[Operations extension](https://personalagentprotocol.org/docs/0.2/extensions/operations)
+version 1; see the SDKs'
+[protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/)).
+
+The protocol itself is specified by the
+[Personal Agent Protocol organization on GitHub](https://github.com/personal-agent-protocol):
+its public
+[personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol)
+repository is the source of [personalagentprotocol.org](https://personalagentprotocol.org),
+which publishes each version of the specification, extensions and guides, the
+[changelog](https://personalagentprotocol.org/docs/changelog), and takes
+feedback as issues on that repository.
+
+The integration divides responsibility explicitly:
 
 - the PAP SDK validates discovery, issuer/domain binding, client metadata,
   same-domain JWKS, protocol models, and cryptographic flows;

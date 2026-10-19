@@ -1,7 +1,8 @@
 # PAP DPoP Transport
 
 This Loop application demonstrates fresh DPoP proof generation for an API
-request, one nonce retry, and a same-origin redirect. It also proves that model
+request and one nonce retry, and refuses a redirect: PAP draft 0.2 never sends
+a token or proof to the URL a protocol endpoint redirects to. It also proves that model
 or caller-controlled authorization headers are rejected.
 
 ```bash

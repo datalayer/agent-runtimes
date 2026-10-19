@@ -139,8 +139,8 @@ export const PAP_PROTOCOL_0_0_1: ProtocolSpec = {
     "A person's agent working with a company for them — signed out, then signed in at the company, its changes confirmed by the person — and an application being a company personal agents reach.",
   publisher: 'Sierra, Meta',
   layer: 'consent',
-  specUrl: 'https://poppy.md',
-  specVersion: 'draft 0.1',
+  specUrl: 'https://personalagentprotocol.org',
+  specVersion: 'draft 0.2',
   status: 'shipped',
   connects: "Companies, as a person's agent there, or being one",
   packages: {

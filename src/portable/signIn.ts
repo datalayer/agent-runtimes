@@ -34,6 +34,12 @@ export type PapSignInWaiting = {
    * which sends the person on to the company and takes them back only from it.
    */
   company?: string;
+  /**
+   * The company that asks, by name and domain (PAP draft 0.2 §4.6, §4.7): the
+   * SDK names it on every Device and Mediated Sign-In, and the card shows both
+   * with the link, so a company cannot pass off another's page as its own.
+   */
+  organization?: { name: string; domain: string };
   /** The code to enter, for `device`. */
   code?: string;
   /** Where the company sent a code, for `mediated`, when it did. */
@@ -50,11 +56,17 @@ export type PapSignInWaiting = {
 /** What the card says. */
 export const PAP_SIGN_IN_WORDS = {
   title: (host: string): string => `Sign in at ${host}`,
+  /** A Device Sign-In, with the company that asks named (PAP 0.2 §4.6). */
+  titleFor: (name: string, domain: string, host: string): string =>
+    `Sign in to ${name} (${domain}) at ${host}`,
   direct:
     'Open the company’s page through Datalayer, sign in there, and this conversation goes on once you are back.',
   device: 'Open the company’s page and enter this code there.',
   /** `mediated`: the page is Datalayer's, which names the company and asks what it asks. */
   mediatedTitle: (host: string): string => `Sign in through ${host}`,
+  /** A Mediated Sign-In, with the company that asks named (PAP 0.2 §4.7). */
+  mediatedTitleFor: (name: string, domain: string, host: string): string =>
+    `Sign in to ${name} (${domain}) through ${host}`,
   mediated:
     'Open this page: it names the company and asks what the company needs. Type it there, never in this conversation.',
   sentTo: (to: string): string => `The company sent a code to ${to}.`,
@@ -199,6 +211,20 @@ export function readPapSignIn(
     typeof data.company === 'string' && DOMAIN.test(data.company)
       ? data.company
       : '';
+  // The company that asks, as the SDK names it (organization_name, organization_domain).
+  const organizationName =
+    typeof data.organization_name === 'string'
+      ? data.organization_name.trim().slice(0, 200)
+      : '';
+  const organizationDomain =
+    typeof data.organization_domain === 'string' &&
+    DOMAIN.test(data.organization_domain.toLowerCase())
+      ? data.organization_domain.toLowerCase()
+      : '';
+  const organization =
+    organizationName && organizationDomain
+      ? { name: organizationName, domain: organizationDomain }
+      : undefined;
   // What the company said it needs: scope tokens only, anything else not shown.
   const needs = Array.isArray(data.needs)
     ? data.needs.filter(
@@ -211,6 +237,7 @@ export function readPapSignIn(
     open: url.toString(),
     host: url.hostname,
     ...(company ? { company } : {}),
+    ...(organization ? { organization } : {}),
     ...(typeof data.code === 'string' && data.code ? { code: data.code } : {}),
     ...(data.mode === 'mediated' &&
     typeof data.sent_to === 'string' &&

@@ -70,7 +70,7 @@ const STEPS: readonly JourneyStep[] = [
     channel: 'Discovery',
     messages: conversationStart,
     facts: [
-      { label: 'Publishes', value: 'poppy.json · draft 0.1' },
+      { label: 'Publishes', value: 'poppy.json · draft 0.2' },
       { label: 'Returns', value: 'Company conversation agent' },
       { label: 'Sign-in', value: "Northstar's own page" },
     ],
@@ -80,7 +80,7 @@ const STEPS: readonly JourneyStep[] = [
     request: 'Accept: application/json',
     response: `200 OK
 {
-  "protocol_version": "0.1",
+  "protocol_version": "0.2",
   "organization": { "name": "Northstar Outfitters" },
   "auth": { "issuer": "https://auth.northstar.example" },
   "agent": { "protocols": [{ "type": "poppy" }] }
@@ -279,7 +279,7 @@ const runJourney = async (): Promise<
   readonly (readonly JourneyMessage[])[]
 > => {
   parseDiscoveryDocument({
-    protocol_version: '0.1',
+    protocol_version: '0.2',
     organization: { name: 'Northstar Outfitters', domain: 'northstar.example' },
     auth: {
       issuer: 'https://auth.northstar.example',
@@ -298,7 +298,7 @@ const runJourney = async (): Promise<
   buildSessionAssertionClaims({
     clientId: 'https://atlas.example/agent.json',
     pairwiseUserId: 'usr_host_only_journey',
-    tokenEndpoint: 'https://auth.northstar.example/oauth/token',
+    issuer: 'https://auth.northstar.example',
   });
   await buildDirectSignInRequest({
     authorizationEndpoint: 'https://auth.northstar.example/oauth/authorize',

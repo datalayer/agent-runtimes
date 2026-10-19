@@ -48,6 +48,43 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
+  it('names the company that asks, by name and domain (PAP 0.2 §4.6)', () => {
+    const named = readPapSignIn({
+      ...DEVICE,
+      organization_name: 'Manzanita',
+      organization_domain: 'Manzanita.Example',
+    });
+    expect(
+      named && 'organization' in named ? named.organization : null,
+    ).toEqual({
+      name: 'Manzanita',
+      domain: 'manzanita.example',
+    });
+    // Without both, or with a domain that is not one, nothing is named.
+    for (const partial of [
+      { organization_name: 'Manzanita' },
+      { organization_domain: 'manzanita.example' },
+      { organization_name: 'Manzanita', organization_domain: 'not a domain' },
+    ]) {
+      const read = readPapSignIn({ ...DEVICE, ...partial });
+      expect(read).not.toHaveProperty('organization');
+    }
+    expect(
+      PAP_SIGN_IN_WORDS.titleFor(
+        'Manzanita',
+        'manzanita.example',
+        'manzanita.example',
+      ),
+    ).toBe('Sign in to Manzanita (manzanita.example) at manzanita.example');
+    expect(
+      PAP_SIGN_IN_WORDS.mediatedTitleFor(
+        'Manzanita',
+        'manzanita.example',
+        'datalayer.ai',
+      ),
+    ).toBe('Sign in to Manzanita (manzanita.example) through datalayer.ai');
+  });
+
   it('names what the company said it needs, scope tokens only (P-02)', () => {
     const asked = readPapSignIn({
       ...DEVICE,

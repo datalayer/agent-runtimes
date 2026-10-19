@@ -27,11 +27,12 @@ const PapAuthorizationBoundaryView: React.FC = () => {
     setError(null);
     try {
       const clientId = 'https://assistant.example/agent.json';
-      const tokenEndpoint = 'https://shop.example/oauth/token';
+      // PAP 0.2 §4.2: the assertion names the company's issuer, not its token endpoint.
+      const issuer = 'https://shop.example';
       const claims = buildSessionAssertionClaims({
         clientId,
         pairwiseUserId: generatePairwiseUserId(),
-        tokenEndpoint,
+        issuer,
       });
       const request = await buildDirectSignInRequest({
         authorizationEndpoint: 'https://shop.example/oauth/authorize',
@@ -43,7 +44,7 @@ const PapAuthorizationBoundaryView: React.FC = () => {
       setSummary({
         session: {
           issuerBoundToClient: claims.iss === clientId,
-          audienceBoundToTokenEndpoint: claims.aud === tokenEndpoint,
+          audienceBoundToIssuer: claims.aud === issuer,
           lifetimeSeconds: claims.exp - claims.iat,
           pairwiseSubjectWithheld: true,
           uniqueRequestIdWithheld: true,

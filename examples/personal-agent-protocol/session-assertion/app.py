@@ -30,7 +30,6 @@ TENANT_ID = os.getenv("PAP_TENANT_ID", "example-application")
 LOCAL_USER_ID = os.getenv("PAP_LOCAL_USER_ID", "example-local-user")
 COMPANY_ISSUER = os.getenv("PAP_COMPANY_ISSUER", "https://shop.example")
 CLIENT_ID = os.getenv("PAP_CLIENT_ID", "https://assistant.example/agent.json")
-TOKEN_ENDPOINT = os.getenv("PAP_TOKEN_ENDPOINT", "https://shop.example/oauth/token")
 
 
 class HostPairwiseStorePlugin:
@@ -83,11 +82,11 @@ async def explain_session_assertion() -> dict[str, Any]:
     claims = build_session_assertion_claims(
         client_id=CLIENT_ID,
         pairwise_user_id=pairwise_user_id,
-        token_endpoint=TOKEN_ENDPOINT,
+        issuer=COMPANY_ISSUER,
     )
     return {
         "issuer_bound_to_client_id": claims.iss == CLIENT_ID,
-        "audience_bound_to_token_endpoint": claims.aud == TOKEN_ENDPOINT,
+        "audience_bound_to_the_issuer": claims.aud == COMPANY_ISSUER,
         "lifetime_seconds": claims.exp - claims.iat,
         "stable_pairwise_subject": True,
         "pairwise_subject_withheld": True,

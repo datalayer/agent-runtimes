@@ -91,6 +91,8 @@ async def _device_sign_in() -> dict[str, Any]:
             tenant_id=TENANT,
             pairwise_user_id=PAIRWISE,
             session_id=session.session_id,
+            organization=company.document.organization,
+            poppy_domains=metadata.poppy_domains,
         )
     return {
         "status": WAITING_FOR_THE_PERSON,
@@ -98,6 +100,9 @@ async def _device_sign_in() -> dict[str, Any]:
         "open": started.verification_uri_complete or started.verification_uri,
         "code": started.user_code,
         "expires_at": started.expires_at.isoformat(),
+        # The company that asks for the code, by name and domain (PAP 0.2 §4.6).
+        "organization_name": started.organization_name,
+        "organization_domain": started.organization_domain,
     }
 
 

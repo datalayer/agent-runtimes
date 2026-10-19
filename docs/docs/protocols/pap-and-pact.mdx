@@ -7,14 +7,14 @@ title: PAP and PACT
 
 Two consent protocols let a person's own agent work with a business for
 them: the [Personal Agent Protocol](../integrations/personal-agent-protocol)
-(PAP, draft 0.1, Sierra and Meta) and [PACT](./pact) (1.0, Decagon and
+(PAP, draft 0.2, Sierra and Meta; [personalagentprotocol.org](https://personalagentprotocol.org)) and [PACT](./pact) (1.0, Decagon and
 Instinct). They answer the same questions — *which agent is this, for whom,
 and how far may it go* — in different ways, and one application can use
 both in the same task.
 
 ## What each carries
 
-| | PAP (draft 0.1) | PACT 1.0 |
+| | PAP (draft 0.2) | PACT 1.0 |
 | --- | --- | --- |
 | The business is found at | its domain: `https://{domain}/.well-known/poppy.json`, the organization's domain checked, its OAuth issuer's metadata checked | an A2A Agent Card URL; the interface chosen by binding and version (`HTTP+JSON`, `1.0`) |
 | The agent proves itself with | its client metadata and same-domain JWKS; a short-lived Session Token, DPoP-bound | a personal-agent JWT (ES256), `iss` the platform, its JWKS registered once with the Provider |

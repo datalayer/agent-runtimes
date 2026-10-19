@@ -18,7 +18,7 @@ const SAMPLE_DOMAIN = 'shop.example';
 const sampleCompany = (domain: string): DiscoveredCompany => ({
   discoveryUrl: `https://${domain}/.well-known/poppy.json`,
   document: parseDiscoveryDocument({
-    protocol_version: '0.1',
+    protocol_version: '0.2',
     organization: { name: 'Example Shop', domain },
     auth: {
       issuer: `https://auth.${domain}`,

@@ -14,7 +14,7 @@ import { PapPersonalAgentCapability } from './index';
 const company: DiscoveredCompany = {
   discoveryUrl: 'https://shop.example/.well-known/poppy.json',
   document: {
-    protocol_version: '0.1',
+    protocol_version: '0.2',
     organization: { name: 'Example Shop', domain: 'shop.example' },
     auth: {
       issuer: 'https://auth.shop.example',

@@ -175,6 +175,8 @@ class PapSignInSummary(BaseModel):
         "waiting_for_the_person", "pending", "signed_in", "not_started", "unavailable"
     ]
     company: str
+    #: The company's domain, shown with its name next to the link (PAP 0.2 §4.6).
+    company_domain: str | None = None
     #: Where the person signs in, on the company's own page.
     open: str | None = None
     #: The code the person types there (the private device code is never said).
@@ -495,11 +497,16 @@ class PapPersonalAgentCapability:
             tenant_id=self._tenant_id,
             pairwise_user_id=link.pairwise_user_id,
             session_id=session.session_id,
+            # The SDK shows the link only on the company's issuer host or one of its
+            # poppy_domains, and names the company with it (PAP 0.2 §4.6).
+            organization=link.company.document.organization,
+            poppy_domains=metadata.poppy_domains,
         )
         link.device_reference = started.reference
         return PapSignInSummary(
             status="waiting_for_the_person",
             company=name,
+            company_domain=started.organization_domain,
             open=started.verification_uri_complete or started.verification_uri,
             code=started.user_code,
             expires_at=started.expires_at.isoformat(),

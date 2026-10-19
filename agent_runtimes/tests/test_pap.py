@@ -20,7 +20,7 @@ class CompanyClient:
             discovery_url="https://shop.example/.well-known/poppy.json",
             document=DiscoveryDocument.model_validate(
                 {
-                    "protocol_version": "0.1",
+                    "protocol_version": "0.2",
                     "organization": {"name": "Example Shop", "domain": "shop.example"},
                     "auth": {
                         "issuer": "https://auth.shop.example",

@@ -95,10 +95,16 @@ export function PapSignInCard({
   };
   // Who the person signs in at: the company itself for a Direct Sign-In (P-04), the page's host otherwise.
   const named = read.company ?? read.host;
+  // The company that asks, by name and domain, beside the page (PAP 0.2 §4.6, §4.7).
+  const org = read.organization;
   const title =
     read.mode === 'mediated'
-      ? PAP_SIGN_IN_WORDS.mediatedTitle(read.host)
-      : PAP_SIGN_IN_WORDS.title(named);
+      ? org
+        ? PAP_SIGN_IN_WORDS.mediatedTitleFor(org.name, org.domain, read.host)
+        : PAP_SIGN_IN_WORDS.mediatedTitle(read.host)
+      : org && read.mode === 'device'
+        ? PAP_SIGN_IN_WORDS.titleFor(org.name, org.domain, read.host)
+        : PAP_SIGN_IN_WORDS.title(named);
   return (
     <Box
       as="section"
