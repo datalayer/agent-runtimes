@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.57
+
+19 October 2026 ([Personal Agent Protocol](https://agent-runtimes.datalayer.tech/docs/integrations/personal-agent-protocol)):
+
+- **1.5.56 as released** (its tests failed on the display test): `test_mcp_displays` gives the gateway's device sign-in the company's name and domain, which personal-agent-protocol 0.25 requires.
+
 ## 1.5.56
 
 19 October 2026 ([Personal Agent Protocol](https://agent-runtimes.datalayer.tech/docs/integrations/personal-agent-protocol)):
