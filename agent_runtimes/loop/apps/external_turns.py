@@ -21,18 +21,22 @@ names the turn **for its caller**:
   said from the session (`GET /sessions/{uid}/messages`);
 - again with another request under the same key: ``409``, said.
 
-Held by the runtime that holds the sessions, for a day, at most
-:data:`HELD` turns; the turns of one caller never answer another's.
+Kept for a day, at most :data:`HELD` turns, in the runtime's protocol state
+store (kind :data:`KIND`: the agent-memories PostgreSQL on Kubernetes, a
+SQLite file elsewhere), so a retry after the runtime restarted is answered
+the original turn too (DC-205); a turn that was running when its process went
+is answered ``failed``. The turns of one caller never answer another's.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import time
 import uuid
-from dataclasses import dataclass
-from typing import Any, AsyncIterator, Dict, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, AsyncIterator, Dict, Optional, Set, Tuple
 
 #: How long a turn is remembered, in seconds: longer than any host retries.
 TTL_SECONDS = 24 * 3600
@@ -45,6 +49,13 @@ KEY_LIMIT = 255
 
 #: The custom event that says which turn a stream is.
 TURN_EVENT = "loop.turn"
+
+#: The kind of the protocol state records a turn is kept under, by its key.
+KIND = "loop.external_turn"
+
+#: How often, in seconds, the stale records are removed from the store; a
+#: stale record is never answered, removed or not.
+PRUNE_EVERY = 60.0
 
 
 @dataclass
@@ -69,11 +80,29 @@ class TurnConflict(Exception):
         self.reason = reason
 
 
+#: The turns this process knows, by key: what it claimed, and what it read
+#: back from the store.
 _TURNS: Dict[str, ExternalTurn] = {}
+
+#: The turns this process runs: a turn the store says is running and this
+#: process does not run ran in a process that went.
+_RUNNING: Set[str] = set()
+
+_pruned_at = 0.0
 
 
 def forget() -> None:
+    """Forget what this process holds, as a restart does; the store keeps its records."""
+    global _pruned_at
     _TURNS.clear()
+    _RUNNING.clear()
+    _pruned_at = 0.0
+
+
+def _store() -> Any:
+    from agent_runtimes.protocol_state import protocol_state_store
+
+    return protocol_state_store()
 
 
 def _caller_key(caller: Any) -> str:
@@ -141,6 +170,7 @@ def claim(
         at=at,
     )
     _TURNS[key] = turn
+    _RUNNING.add(turn.turn)
     return turn, False
 
 
@@ -159,9 +189,61 @@ def peek(
     return known
 
 
-def release(key: str) -> None:
+async def recall(key: str, *, now: Optional[float] = None) -> None:
+    """Read back the turn the store keeps under a key, when this process does
+    not hold it — after a restart — so that `peek` and `claim` know it. A turn
+    the store says is running, which no process runs any longer, is
+    ``failed``, and kept so.
+    """
+    if key in _TURNS:
+        return
+    value = await _store().get(KIND, key)
+    if value is None:
+        return
+    at = time.time() if now is None else now
+    if value.pop("key") != key:
+        raise ValueError(f"The external turn record under {key!r} names another key.")
+    turn = ExternalTurn(**value)
+    if turn.at + TTL_SECONDS <= at:
+        await _store().delete(KIND, key)
+        return
+    if key in _TURNS:
+        # Claimed here while the store was read.
+        return
+    _prune(at)
+    gone = turn.state == "running" and turn.turn not in _RUNNING
+    if gone:
+        turn.state = "failed"
+    _TURNS[key] = turn
+    if gone:
+        await keep(key, turn, now=at)
+
+
+async def keep(key: str, turn: ExternalTurn, *, now: Optional[float] = None) -> None:
+    """Write a turn to the store as it stands, and every :data:`PRUNE_EVERY`
+    seconds remove the records older than :data:`TTL_SECONDS` and the oldest
+    beyond :data:`HELD`.
+    """
+    global _pruned_at
+    store = _store()
+    await store.put(KIND, key, {"key": key, **asdict(turn)})
+    at = time.time() if now is None else now
+    if at - _pruned_at < PRUNE_EVERY:
+        return
+    _pruned_at = at
+    records = await store.list(KIND)
+    stale = [r["key"] for r in records if r["at"] + TTL_SECONDS <= at]
+    fresh = [r["key"] for r in records if r["at"] + TTL_SECONDS > at]
+    for gone in stale + fresh[: max(0, len(fresh) - HELD)]:
+        await store.delete(KIND, gone)
+
+
+async def release(key: str) -> None:
     """A turn refused before it ran is not remembered: the host may try again."""
-    _TURNS.pop(key, None)
+    turn = _TURNS.pop(key, None)
+    if turn is not None:
+        _RUNNING.discard(turn.turn)
+    await _store().delete(KIND, key)
 
 
 def turn_event(turn: ExternalTurn, *, replayed: bool) -> str:
@@ -185,7 +267,15 @@ def turn_event(turn: ExternalTurn, *, replayed: bool) -> str:
     )
 
 
-async def tracked(turn: ExternalTurn, chunks: AsyncIterator[str]) -> AsyncIterator[str]:
+async def _ended(key: str, turn: ExternalTurn) -> None:
+    _RUNNING.discard(turn.turn)
+    # Kept even when the stream was cancelled under it.
+    await asyncio.shield(keep(key, turn))
+
+
+async def tracked(
+    key: str, turn: ExternalTurn, chunks: AsyncIterator[str]
+) -> AsyncIterator[str]:
     """A turn's stream, its state kept as it ends: ``finished``, or ``failed``."""
     try:
         async for chunk in chunks:
@@ -194,9 +284,11 @@ async def tracked(turn: ExternalTurn, chunks: AsyncIterator[str]) -> AsyncIterat
             yield chunk
     except BaseException:
         turn.state = "failed"
+        await _ended(key, turn)
         raise
     if turn.state == "running":
         turn.state = "finished"
+    await _ended(key, turn)
 
 
 async def replayed(head: str, turn: ExternalTurn) -> AsyncIterator[str]:

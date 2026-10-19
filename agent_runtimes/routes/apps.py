@@ -1436,9 +1436,14 @@ def _turn_key(
         raise HTTPException(status_code=422, detail=conflict.reason) from None
 
 
-def _peek_turn(key: str, asked: Dict[str, Any]) -> Any:
-    from agent_runtimes.loop.apps.external_turns import TurnConflict, peek
+async def _peek_turn(key: str, asked: Dict[str, Any]) -> Any:
+    """The turn a key already names — this process's, or the store's after a
+    restart — or None. Nothing is awaited between it and `_external_turn`'s
+    claim, so two deliveries of one turn at once make one turn.
+    """
+    from agent_runtimes.loop.apps.external_turns import TurnConflict, peek, recall
 
+    await recall(key)
     try:
         return peek(key, request=asked)
     except TurnConflict as conflict:
@@ -1456,12 +1461,15 @@ def _replay(known: Any) -> Any:
     return _stream(replayed(live.session_event() if live else "", known))
 
 
-def _external_turn(
+async def _external_turn(
     key: str, asked: Dict[str, Any], live: Any, external_event_id: str, run: Any
 ) -> Any:
-    """Run a turn a host named, once: its stream says which turn it is."""
+    """Run a turn a host named, once: its stream says which turn it is. The
+    turn is kept in the store before it runs, and kept again as it ends.
+    """
     from agent_runtimes.loop.apps.external_turns import (
         claim,
+        keep,
         release,
         tracked,
         turn_event,
@@ -1471,12 +1479,13 @@ def _external_turn(
         key, request=asked, session_uid=live.uid, external_event_id=external_event_id
     )
     try:
+        await keep(key, turn)
         chunks = run(live.session_event() + turn_event(turn, replayed=False))
     except BaseException:
         # Refused before it ran: not remembered, so that the host may try again.
-        release(key)
+        await release(key)
         raise
-    return _stream(tracked(turn, chunks))
+    return _stream(tracked(key, turn, chunks))
 
 
 @router.post("/sessions")
@@ -1507,7 +1516,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     turn_key = _turn_key(authorized.caller, request, body.external_event_id)
     asked = body.model_dump(exclude={"user_token"})
     if turn_key:
-        known = _peek_turn(turn_key, asked)
+        known = await _peek_turn(turn_key, asked)
         if known is not None:
             return _replay(known)
     _prune()
@@ -1524,7 +1533,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
             user=user,
         )
         if turn_key:
-            return _external_turn(
+            return await _external_turn(
                 turn_key,
                 asked,
                 live,
@@ -1595,10 +1604,10 @@ async def session_message(
     try:
         if turn_key:
             asked = {"session": uid, **body.model_dump()}
-            known = _peek_turn(turn_key, asked)
+            known = await _peek_turn(turn_key, asked)
             if known is not None:
                 return _replay(known)
-            return _external_turn(
+            return await _external_turn(
                 turn_key,
                 asked,
                 live,

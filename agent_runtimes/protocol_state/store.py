@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -138,15 +139,28 @@ class SqliteProtocolStateStore(ProtocolStateStore):
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._made = False
+        self._making = threading.Lock()
+
+    def _make(self, connection: sqlite3.Connection) -> None:
+        # Once per store, never two calls at once: SQLite refuses a second
+        # connection's switch to WAL with "database is locked", busy timeout
+        # or not, while the first one's is under way on a new file.
+        with self._making:
+            if self._made:
+                return
+            with connection:
+                connection.execute("PRAGMA journal_mode=WAL")
+                connection.execute(_SQLITE_TABLE)
+            self._made = True
 
     def _run(
         self, statement: str, parameters: tuple[Any, ...] = (), *, fetch: bool = False
     ) -> list[tuple[Any, ...]]:
         connection = sqlite3.connect(self._path, timeout=30)
         try:
+            self._make(connection)
             with connection:
-                connection.execute("PRAGMA journal_mode=WAL")
-                connection.execute(_SQLITE_TABLE)
                 cursor = connection.execute(statement, parameters)
                 return cursor.fetchall() if fetch else []
         finally:
