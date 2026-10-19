@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.56
+
+19 October 2026 ([Personal Agent Protocol](https://agent-runtimes.datalayer.tech/docs/integrations/personal-agent-protocol)):
+
+- **PAP draft 0.2** (8eb73dff): personal-agent-protocol 0.25.0 and `@datalayer/personal-agent-protocol` ^0.25.0, which implement draft 0.2 of the specification at [personalagentprotocol.org](https://personalagentprotocol.org) (published from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol)). `PapPersonalAgentCapability.sign_in` passes the company's organization and `poppy_domains` to Device Sign-In and names its domain (`company_domain`); the sign-in card names the company that asks, by name and domain, for a Device or Mediated Sign-In; the PAP examples, traces and gallery views follow 0.2 (assertions name the issuer, redirects are refused, documents are `0.2`); `PAP_PROTOCOL_PROFILE` is `0.2`.
+
 ## 1.5.55
 
 19 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
