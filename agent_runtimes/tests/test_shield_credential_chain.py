@@ -285,6 +285,7 @@ async def test_the_credential_in_an_a2a_messages_metadata_scopes_the_harnesss_su
     assert "subagent: write_note: refused" in said, said
     assert stand_in.seen == [("read_note", READ_ONLY), ("write_note", READ_ONLY)]
     kept = await storage.load_task(task_id)
+    assert kept is not None
     assert READ_ONLY not in repr(kept)
     assert kept["history"][0]["metadata"]["datalayer"]["credential"] == "withheld"
     assert READ_ONLY not in repr(agent.audit.rows)

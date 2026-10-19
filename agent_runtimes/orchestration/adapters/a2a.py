@@ -330,7 +330,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         Returns
         -------
         AdapterCapabilities
-            the fifth decision.
+            The fifth decision.
         """
         return A2A_CAPABILITIES
 

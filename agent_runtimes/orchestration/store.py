@@ -726,8 +726,8 @@ class ExecutionStore(ABC):
         Commit what one attempt produced, and write back what that decided.
 
         ``commit_artifacts`` in ``core`` decides — the first attempt to
-        commit wins, and a later one's artifacts are kept and superseded
-       . This is where the decision is stored, said on the
+        commit wins, and a later one's artifacts are kept and superseded.
+        This is where the decision is stored, said on the
         event stream and counted (O1-14). Durable's commit step and the O0-13
         example both call it, so a commit is written in one place rather than
         once per caller.

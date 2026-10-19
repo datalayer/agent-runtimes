@@ -573,12 +573,11 @@ def _kokoro_here(tmp_path: Path, monkeypatch) -> None:
         "kokoro-82m",
         _pinned_store(tmp_path, "kokoro-82m", contents),
     )
-    store.fill(
-        ["kokoro-82m"],
-        tmp_path,
-        "https://cdn",
-        lambda url, target: target.write_bytes(contents[url.rsplit("/", 1)[1]]),
-    )
+
+    def download(url: str, target: Path) -> None:
+        target.write_bytes(contents[url.rsplit("/", 1)[1]])
+
+    store.fill(["kokoro-82m"], tmp_path, "https://cdn", download)
 
 
 def _whisper_here(tmp_path: Path, monkeypatch) -> None:

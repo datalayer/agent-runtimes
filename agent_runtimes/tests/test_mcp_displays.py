@@ -216,7 +216,9 @@ async def test_the_page_receives_the_display_the_model_does_not(
     page = json.loads(result.content)
     display = page["_meta"][DISPLAY_META_KEY]
     assert display["data"]["open"] == OPEN and display["data"]["code"] == CODE
-    assert page["text"].startswith("Sign in to Manzanita Outfitters (manzanita.example)")
+    assert page["text"].startswith(
+        "Sign in to Manzanita Outfitters (manzanita.example)"
+    )
     assert "open" not in page["data"] and "code" not in page["data"]
     # The model's message holds the model view alone.
     read = tool_return(seen[-1]).model_response_str()

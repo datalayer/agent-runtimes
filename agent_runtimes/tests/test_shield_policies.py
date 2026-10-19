@@ -668,9 +668,7 @@ class TestTheSessionRulesRoutes:
             ).status_code
             == 200
         )
-        assert session_rules().of("session-0001") == [], (
-            "gone with the session"
-        )
+        assert session_rules().of("session-0001") == [], "gone with the session"
 
 
 # --- SH-32: the budget, soft then hard -------------------------------------------------------
