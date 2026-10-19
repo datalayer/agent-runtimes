@@ -332,7 +332,7 @@ async def test_a_real_acp_client_over_websocket_drives_the_harness(
     """The proof: agent-shield's WebSocket channel (the SDK's Connection) against the route served by uvicorn."""
     import uvicorn
     from acp import text_block
-    from acp.schema import ClientCapabilities, FileSystemCapability, Implementation
+    from acp.schema import ClientCapabilities, Implementation
     from agent_shield.acp.channel import WebSocketACPChannel
 
     monkeypatch.setattr(
@@ -360,9 +360,13 @@ async def test_a_real_acp_client_over_websocket_drives_the_harness(
             client, f"ws://127.0.0.1:{port}/api/v1/acp/ws/fake-ws"
         ) as channel:
             advertised = await channel.initialize(
-                client_capabilities=ClientCapabilities(
-                    fs=FileSystemCapability(read_text_file=True, write_text_file=True),
-                    terminal=True,
+                # In the protocol's own words: the SDK renamed the class
+                # (FileSystemCapability, FileSystemCapabilities from 0.9).
+                client_capabilities=ClientCapabilities.model_validate(
+                    {
+                        "fs": {"readTextFile": True, "writeTextFile": True},
+                        "terminal": True,
+                    }
                 ),
                 client_info=Implementation(name="ide", version="0"),
             )

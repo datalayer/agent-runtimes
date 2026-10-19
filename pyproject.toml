@@ -208,6 +208,11 @@ a2a = [
 # happen to have it. The durable worker runs both adapters, so it is
 # `agent-runtimes[a2a,acp]` that it needs, and neither extra is optional
 # there.
+# agent-client-protocol: the code uses names every release from 0.7.1 to
+# 0.12.1 has (McpServerStdio, not StdioMcpServer, which 0.8 removed), and its
+# ACP tests pass on 0.12.1. datalayer-agent-shield, a core dependency, still
+# caps it below 0.8 (its code imports names 0.9 renamed): that cap, not this
+# floor, is what an install resolves until agent-shield moves.
 acp = [
     "agent-client-protocol>=0.7.1",
 ]

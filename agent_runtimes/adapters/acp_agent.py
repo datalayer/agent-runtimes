@@ -55,10 +55,10 @@ from acp.schema import (
     HttpMcpServer,
     Implementation,
     InitializeResponse,
+    McpServerStdio,
     PermissionOption,
     PromptResponse,
     RequestPermissionResponse,
-    StdioMcpServer,
     ToolCallUpdate,
 )
 from agent_shield.__version__ import __version__ as shield_version
@@ -1243,7 +1243,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             handle = hold(item.name, item.url, bearer)
             self._handles.append(handle)
             servers.append(
-                StdioMcpServer(
+                McpServerStdio(
                     name=item.name,
                     command=sys.executable,
                     args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
