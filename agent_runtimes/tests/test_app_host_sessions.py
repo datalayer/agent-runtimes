@@ -402,3 +402,72 @@ def test_a_turn_carries_its_provenance_as_the_contract_says(
             provenance=wrong,
         )
         assert refused.status_code == 422, (wrong, refused.text)
+
+
+def test_an_external_turn_holds_to_the_shared_contract(
+    runtime: Runtime, remote: TestClient, hosted: Any
+) -> None:
+    """S-004: the `external_turn` section of the hosts' shared contracts,
+    held by the session API that answers it: its requests are taken as
+    written, the `loop.turn` event carries exactly its keys, and a retry is
+    answered as its replay rule says, under the external event id (a start)
+    and under the `Idempotency-Key` (a message)."""
+    contract = CONTRACTS["external_turn"]
+    start, message = contract["start_request"], contract["message_request"]
+    optional = set(contract["optional_request"])
+    assert set(start) | optional <= set(routes.StartSessionRequest.model_fields)
+    assert set(message) | optional <= set(routes.SessionMessageRequest.model_fields)
+    event = contract["turn_event"]
+    assert (event["type"], event["name"]) == ("CUSTOM", external_turns.TURN_EVENT)
+    assert contract["provenance_limit_bytes"] == routes.PROVENANCE_LIMIT_BYTES
+    # The event as the runtime encodes it, before any request.
+    encoded = external_turns.turn_event(
+        external_turns.ExternalTurn(
+            session_uid="s", turn="t", external_event_id="e", fingerprint="f", at=0
+        ),
+        replayed=False,
+    )
+    [data] = [line for line in encoded.splitlines() if line.startswith("data:")]
+    emitted = json.loads(data[len("data:") :])
+    assert (emitted["type"], emitted["name"]) == (event["type"], event["name"])
+    assert sorted(emitted["value"]) == sorted(event["value_keys"])
+
+    model = runtime.make(start["agent"], ASSISTANT, DEPLOYED)
+    who = as_("host:alice:dep-1")
+    sessions = "/api/v1/apps/sessions"
+    first = _turn(events_of(remote.post(sessions, headers=who, json=start)))
+    assert sorted(first) == sorted(event["value_keys"])
+    assert (first["session"], first["external_event_id"], first["replayed"]) == (
+        start["session"],
+        start["external_event_id"],
+        False,
+    )
+    # The same event id, the same request: the original turn, nothing run.
+    again = _turn(events_of(remote.post(sessions, headers=who, json=start)))
+    assert sorted(again) == sorted(event["value_keys"])
+    assert (again["turn"], again["replayed"]) == (first["turn"], True)
+    assert len(model.prompts) == 1
+    # The same event id, another request: 409, nothing run.
+    assert (
+        remote.post(
+            sessions, headers=who, json={**start, "opener": "Other"}
+        ).status_code
+        == 409
+    )
+    assert len(model.prompts) == 1
+
+    keyed = {**who, CONTRACTS["headers"]["idempotency_key"]: "k-contract"}
+    messages = f"{sessions}/{start['session']}/messages"
+    said = _turn(events_of(remote.post(messages, headers=keyed, json=message)))
+    assert sorted(said) == sorted(event["value_keys"])
+    assert (said["external_event_id"], said["replayed"]) == (
+        message["external_event_id"],
+        False,
+    )
+    assert len(model.prompts) == 2
+    retried = _turn(events_of(remote.post(messages, headers=keyed, json=message)))
+    assert (retried["turn"], retried["replayed"]) == (said["turn"], True)
+    assert len(model.prompts) == 2
+    other = {**message, "text": "Something else"}
+    assert remote.post(messages, headers=keyed, json=other).status_code == 409
+    assert len(model.prompts) == 2

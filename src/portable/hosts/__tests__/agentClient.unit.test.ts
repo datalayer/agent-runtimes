@@ -37,6 +37,10 @@ const contracts = JSON.parse(
     optional_request: Record<string, unknown>;
     request: Record<string, string>;
   };
+  bind_session: {
+    request: { target: Record<string, string> };
+    target_limit: number;
+  };
   external_turn: { start_request: Record<string, string> };
   headers: Record<string, string>;
 };
@@ -207,6 +211,14 @@ describe('the host agent client', () => {
     expect(bind?.body).toEqual({
       target: { channelId: 'C', userId: '80351110224678912' },
     });
+    // Held to the contract's `bind_session` request: the target alone, an
+    // object within its limit.
+    expect(Object.keys(bind?.body as object)).toEqual(
+      Object.keys(contracts.bind_session.request),
+    );
+    expect(
+      JSON.stringify((bind?.body as { target: unknown }).target).length,
+    ).toBeLessThanOrEqual(contracts.bind_session.target_limit);
     expect(seen).toEqual([
       { kind: 'tool', id: 'c1', name: 'search', status: 'running' },
       { kind: 'tool', id: 'c1', name: 'search', status: 'complete' },

@@ -125,6 +125,35 @@
       "expires_in"
     ]
   },
+  "bind_session": {
+    "about": "The host maps a session it opened to a place of its own, with the host token it opened it with and its host key: binding it again replaces the target. The target is opaque to ai-agents (a JSON object of at most target_limit characters) and is handed back with every delivery of that session.",
+    "request": {
+      "target": {
+        "appId": "A0",
+        "channelId": "C0",
+        "teamId": "T0",
+        "threadTs": "1700000000.000001",
+        "userId": "U0ALICE"
+      }
+    },
+    "session_uid_pattern": "^[A-Za-z0-9_-]{8,128}$",
+    "target_limit": 2048,
+    "response_keys": [
+      "success",
+      "binding"
+    ],
+    "binding_keys": [
+      "uid",
+      "host_uid",
+      "session_uid",
+      "deployment_uid",
+      "agent_id",
+      "link_uid",
+      "principal_uid",
+      "target",
+      "state"
+    ]
+  },
   "external_turn": {
     "start_request": {
       "agent": "agent-desk",
@@ -142,6 +171,7 @@
       "type": "CUSTOM",
       "name": "loop.turn",
       "value_keys": [
+        "session",
         "turn",
         "external_event_id",
         "replayed",
