@@ -7,6 +7,13 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.55
+
+19 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **The host contracts' session binding** (S-004, 3efc903d): `src/portable/hosts/contracts.json` gains `bind_session` — the request a host sends to bind a session to its thread, the session uid's pattern, the target's 2048-byte limit and the binding's keys — and `loop.turn` lists its `session` key; the runtime's test holds external turns to `external_turn`, and the host client's bind body to `bind_session`.
+- **An external turn is kept in the protocol state store** (DC-205, 0e1ef34b): a host's retry is answered once across a restart of the runtime.
+
 ## 1.5.54
 
 19 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
