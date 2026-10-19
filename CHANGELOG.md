@@ -7,6 +7,15 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.54
+
+19 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **An application's catalogue tool marked for approval asks through its Rules** (S-303, 40a96cf2): an application's agent never defers a catalogue tool such as `runtime-send-mail`; its Rules ask the person before the call runs (Ask me first, through the tool-approvals service). Deferred, the call ended the run with pydantic-ai's "DeferredToolRequests is not among output types".
+- **The Rules card's This session reads the chat's thread** (SH-54, f4796d31): a workspace whose host names no conversation, such as the Studio's Preview, knows its session.
+- **Specs regenerated from agentspecs** (SH-43, e51f1d12): catalogue agents on Codex, Gemini CLI, goose, OpenCode, OpenHands and fast-agent.
+- **Shield: `datalayer-agent-shield>=0.2.7`** (a8969651).
+
 ## 1.5.53
 
 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
