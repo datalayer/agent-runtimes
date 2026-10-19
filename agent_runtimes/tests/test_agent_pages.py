@@ -182,7 +182,7 @@ def _page(dist: Path, page: str) -> None:
 
 def test_a_package_without_its_pages_is_refused(tmp_path: Path) -> None:
     hook = _hook_module()
-    build = SimpleNamespace(root=str(tmp_path))
+    build = SimpleNamespace(root=str(tmp_path), target_name="wheel")
     initialize = hook.AgentRuntimesBuildHook.initialize
     dist = tmp_path / "dist"
     packaged = tmp_path / "agent_runtimes" / "static" / "dist"
@@ -205,7 +205,7 @@ def test_a_package_without_its_pages_is_refused(tmp_path: Path) -> None:
         initialize(build, "standard", {})
     assert not packaged.exists()
 
-    # Complete: copied into the package, then kept for the wheel the sdist builds.
+    # Complete: copied into the package, then kept when dist/ is gone.
     (dist / "assets" / "stream.css").write_text("")
     initialize(build, "standard", {})
     assert (packaged / "agent-notebook.html").is_file()
@@ -213,3 +213,41 @@ def test_a_package_without_its_pages_is_refused(tmp_path: Path) -> None:
     shutil.rmtree(dist)
     initialize(build, "standard", {})
     assert hook.missing_from(packaged) == []
+
+
+def test_the_sdist_carries_no_frontend(tmp_path: Path) -> None:
+    hook = _hook_module()
+    sdist = SimpleNamespace(root=str(tmp_path), target_name="sdist")
+    # Nothing built, nothing refused, nothing copied: the wheel alone serves pages.
+    hook.AgentRuntimesBuildHook.initialize(sdist, "standard", {})
+    for page in hook.PAGES:
+        _page(tmp_path / "dist", page)
+    hook.AgentRuntimesBuildHook.initialize(sdist, "standard", {})
+    assert not (tmp_path / "agent_runtimes" / "static" / "dist").exists()
+
+
+def test_the_wheel_leaves_out_what_no_browser_fetches(tmp_path: Path) -> None:
+    hook = _hook_module()
+    wheel = SimpleNamespace(root=str(tmp_path), target_name="wheel")
+    dist = tmp_path / "dist"
+    for page in hook.PAGES:
+        _page(dist, page)
+    never = [
+        "ort-wasm-simd-threaded.asyncify.wasm",
+        "KaTeX_Main-Regular.woff",
+        "KaTeX_Main-Regular.ttf",
+        "fa-solid-900.eot",
+        "fa-solid-900.woff",
+        "fa-solid-900.ttf",
+        "fa-solid-900.svg",
+    ]
+    kept = ["loro_wasm_bg.wasm", "KaTeX_Main-Regular.woff2", "fa-solid-900.woff2"]
+    for name in never + kept:
+        (dist / "assets" / name).write_bytes(b"")
+    hook.AgentRuntimesBuildHook.initialize(wheel, "standard", {})
+    packaged = tmp_path / "agent_runtimes" / "static" / "dist" / "assets"
+    assert sorted(p.name for p in packaged.iterdir() if p.name in never + kept) == (
+        sorted(kept)
+    )
+    # The repository's own build is left as it is.
+    assert all((dist / "assets" / name).is_file() for name in never)

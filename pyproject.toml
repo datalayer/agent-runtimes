@@ -383,9 +383,14 @@ path = "agent_runtimes/_version.py"
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
 
+# What building the wheel reads, and no more (hatchling adds pyproject.toml,
+# the README and the licence): the Python package, the hook, package.json for
+# the version and the Jupyter config. No built frontend, no frontend sources,
+# no npm tarball: the wheel alone carries the frontend (see hatch_build.py),
+# and the release builds both from the repository.
 [tool.hatch.build.targets.sdist]
-artifacts = ["agent_runtimes/static/dist"]
-exclude = [".github", "binder"]
+only-include = ["agent_runtimes", "jupyter-config", "hatch_build.py", "package.json"]
+exclude = ["agent_runtimes/static/dist"]
 
 [tool.hatch.build.targets.wheel]
 artifacts = ["agent_runtimes/static/dist"]

@@ -254,9 +254,9 @@ publish-npm: clean build-lib ## publish-npm
 
 publish-pypi: clean build # publish the pypi package
 	git clean -fdx -e dist -e agent_runtimes/static/dist && \
-		python -m build --outdir python-dist
+		python -m build --sdist --wheel --outdir python-dist
 	@exec echo
-	@exec echo twine upload ./python-dist/*-py3-none-any.whl
+	@exec echo twine upload ./python-dist/*
 	@exec echo
 	@exec echo https://pypi.org/project/agent-runtimes/#history
 
