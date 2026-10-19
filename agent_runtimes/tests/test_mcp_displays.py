@@ -54,6 +54,9 @@ ANSWER = {
     "open": OPEN,
     "code": CODE,
     "expires_at": "2026-10-11T12:15:00+00:00",
+    # PAP draft 0.2 §4.6: a device sign-in names the company that asks.
+    "organization_name": "Manzanita Outfitters",
+    "organization_domain": "manzanita.example",
 }
 PLAIN = {"company": "manzanita", "open": OPEN}
 
@@ -150,7 +153,8 @@ async def test_the_model_reads_the_display_s_model_view_only(
     assert OPEN not in read and CODE not in read and "user_code" not in read
     assert back.return_value["type"] == "application/vnd.datalayer.pap.sign-in+json"
     assert back.return_value["text"] == (
-        "Sign in at manzanita.example: open its sign-in page, shown here, "
+        "Sign in to Manzanita Outfitters (manzanita.example) at manzanita.example: "
+        "open its sign-in page, shown here, "
         "and enter the code shown with it."
     )
     # The model view's fields, never the page's (open, code); a newer PAP
@@ -212,7 +216,7 @@ async def test_the_page_receives_the_display_the_model_does_not(
     page = json.loads(result.content)
     display = page["_meta"][DISPLAY_META_KEY]
     assert display["data"]["open"] == OPEN and display["data"]["code"] == CODE
-    assert page["text"].startswith("Sign in at manzanita.example")
+    assert page["text"].startswith("Sign in to Manzanita Outfitters (manzanita.example)")
     assert "open" not in page["data"] and "code" not in page["data"]
     # The model's message holds the model view alone.
     read = tool_return(seen[-1]).model_response_str()
