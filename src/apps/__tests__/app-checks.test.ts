@@ -98,9 +98,9 @@ describe('the instant checks', () => {
     expect(
       checkAppspec({
         ...BASE,
-        deployment: { hosted: { character_alone: 'yes' } },
+        deployment: { hosted: { avatar_alone: 'yes' } },
       }).problems,
-    ).toContain('deployment.hosted.character_alone: is true or false.');
+    ).toContain('deployment.hosted.avatar_alone: is true or false.');
     expect(checkAppspec({ ...BASE, team: 'jupyter' }).problems).toContain(
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );
@@ -395,32 +395,30 @@ describe('the instant checks', () => {
     ).toContain('banner: is named as its drawing is, `SvgTutorialsHero`.');
   });
 
-  it('read the assistant embed mode and any character a plugin may contribute, and refuse an id of the wrong shape (D-07, T-24)', () => {
+  it('read the assistant embed mode and any avatar a plugin may contribute, and refuse an id of the wrong shape (D-07, T-24)', () => {
     const assistant = parseAppspec({
       ...BASE,
-      interface: { assistant: 'wizard' },
+      interface: { avatar: 'wizard' },
       deployment: { embedded: { mode: 'assistant' } },
     }).app;
-    expect(assistant.interface.assistant).toBe('wizard');
+    expect(assistant.interface.avatar).toBe('wizard');
     expect(assistant.deployment.embedded?.mode).toBe('assistant');
     const written = dumpAppspec(assistant);
-    expect(written.interface).toEqual({ assistant: 'wizard' });
+    expect(written.interface).toEqual({ avatar: 'wizard' });
     expect(parseAppspec(written).app).toEqual(assistant);
     // Unchosen: nothing written, the paper clip.
-    expect(parseAppspec(BASE).app.interface.assistant).toBeUndefined();
-    // A plugin's own character is named as Datalayer's are; whether an
+    expect(parseAppspec(BASE).app.interface.avatar).toBeUndefined();
+    // A plugin's own avatar is named as Datalayer's are; whether an
     // enabled plugin gives it is the page's to say, not the spec's.
     for (const id of ['owl', 'acme-owl-2']) {
       expect(
-        checkAppspec({ ...BASE, interface: { assistant: id } }).problems,
+        checkAppspec({ ...BASE, interface: { avatar: id } }).problems,
       ).not.toEqual(
-        expect.arrayContaining([
-          expect.stringMatching(/^interface\.assistant/),
-        ]),
+        expect.arrayContaining([expect.stringMatching(/^interface\.avatar/)]),
       );
       expect(
-        parseAppspec({ ...BASE, interface: { assistant: id } }).app.interface
-          .assistant,
+        parseAppspec({ ...BASE, interface: { avatar: id } }).app.interface
+          .avatar,
       ).toBe(id);
     }
     for (const wrong of [
@@ -431,9 +429,9 @@ describe('the instant checks', () => {
       'o'.repeat(65),
     ]) {
       expect(
-        checkAppspec({ ...BASE, interface: { assistant: wrong } }).problems,
+        checkAppspec({ ...BASE, interface: { avatar: wrong } }).problems,
       ).toContain(
-        'interface.assistant: names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`.',
+        'interface.avatar: names an avatar by the id a plugin contributes it under, lowercase words joined by a hyphen (`paperclip`, `acme-owl`), or is a 3D model, `{kind: model3d, url}`.',
       );
     }
     expect(
@@ -443,6 +441,73 @@ describe('the instant checks', () => {
       }).problems,
     ).toContain(
       'deployment.embedded.mode: is one of inline, bubble, panel, assistant.',
+    );
+  });
+
+  it('read a 3D avatar, the default robot or a model at an address, and refuse what is not one', () => {
+    const robot = parseAppspec({
+      ...BASE,
+      interface: { avatar: { kind: 'model3d' } },
+    }).app;
+    expect(robot.interface.avatar).toEqual({ kind: 'model3d' });
+    expect(dumpAppspec(robot).interface).toEqual({
+      avatar: { kind: 'model3d' },
+    });
+    const url = 'https://example.com/models/fox.glb';
+    const fox = parseAppspec({
+      ...BASE,
+      interface: { avatar: { kind: 'model3d', url } },
+    }).app;
+    expect(fox.interface.avatar).toEqual({ kind: 'model3d', url });
+    expect(parseAppspec(dumpAppspec(fox)).app).toEqual(fox);
+    expect(
+      checkAppspec({ ...BASE, interface: { avatar: { kind: 'model3d', url } } })
+        .problems,
+    ).toEqual([]);
+    expect(
+      checkAppspec({
+        ...BASE,
+        interface: {
+          avatar: { kind: 'model3d', url: 'http://example.com/fox.glb' },
+        },
+      }).problems,
+    ).toContain(
+      'interface.avatar.url: is the https address of a `.glb` or `.gltf` model.',
+    );
+    expect(
+      checkAppspec({ ...BASE, interface: { avatar: { kind: 'vrm' } } })
+        .problems,
+    ).toContain(
+      'interface.avatar.kind: is `model3d`, not "vrm"; the others are named by id, as `wizard`.',
+    );
+    expect(
+      checkAppspec({
+        ...BASE,
+        interface: { avatar: { kind: 'model3d', scale: 2 } },
+      }).problems,
+    ).toContain(
+      'interface.avatar.scale: is not a key of a 3D avatar: kind, url.',
+    );
+  });
+
+  it('refuse the old names of the avatar, each with its new one (fail fast, no alias)', () => {
+    for (const old of ['assistant', 'character']) {
+      const checked = checkAppspec({ ...BASE, interface: { [old]: 'wizard' } });
+      expect(checked.problems).toContain(
+        `interface.${old}: is now \`interface.avatar\`: rename the key, its value is the same.`,
+      );
+      expect(
+        parseAppspec({ ...BASE, interface: { [old]: 'wizard' } }).app.interface
+          .avatar,
+      ).toBeUndefined();
+    }
+    expect(
+      checkAppspec({
+        ...BASE,
+        deployment: { hosted: { slug: 'desk', character_alone: true } },
+      }).problems,
+    ).toContain(
+      'deployment.hosted.character_alone: is now `deployment.hosted.avatar_alone`: rename the key.',
     );
   });
 

@@ -173,7 +173,7 @@ describe('the character the workspace draws', () => {
     ).toEqual({
       saidBy: 'app',
       problem:
-        'This application names the character “robot”, which nothing enabled here draws; the characters are owl.',
+        'This application names the avatar “robot”, which nothing enabled here draws; the avatars are owl.',
     });
     expect(assistantCharacterFor([], { person: 'owl' })).toMatchObject({
       saidBy: 'person',
@@ -181,7 +181,7 @@ describe('the character the workspace draws', () => {
     });
     expect(assistantCharacterFor([], {})).toMatchObject({
       saidBy: 'default',
-      problem: expect.stringContaining('the characters are none'),
+      problem: expect.stringContaining('the avatars are none'),
     });
   });
 
@@ -223,7 +223,7 @@ describe('the character the workspace draws', () => {
     expect(el.querySelector('[data-assistant-state]')).toBeNull();
     expect(
       el.querySelector('[data-assistant-problem="app"]')?.textContent,
-    ).toContain('This application names the character “owl”');
+    ).toContain('This application names the avatar “owl”');
   });
 
   it('stays away when the person sent it away for good', async () => {

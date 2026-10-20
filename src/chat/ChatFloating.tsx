@@ -21,6 +21,7 @@
  * @module chat/ChatFloating
  */
 
+import type { AssistantModel3D } from './assistant/avatar3d';
 import React, {
   useCallback,
   useEffect,
@@ -239,7 +240,8 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
    * @default 'paperclip'
    */
-  assistantCharacter?: string | AssistantCharacter | AssistantCharacterData;
+  assistantCharacter?:
+    string | AssistantCharacter | AssistantCharacterData | AssistantModel3D;
 
   /**
    * How the floating assistant's balloon shows the conversation (T-23; an Appspec's `interface.balloon`):

@@ -84,6 +84,7 @@ import {
   type BalloonVisual,
 } from './BalloonVisual';
 import { SpriteCharacter } from './SpriteCharacter';
+import { isAssistantModel3D, type AssistantModel3D } from './avatar3d';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
 import {
@@ -103,6 +104,13 @@ import {
   type BalloonApproval,
 } from './state';
 import { useChatWords } from '../ChatLanguage';
+
+/**
+ * The 3D avatar's drawing, loaded with three.js only when one is shown: a
+ * page with Datalayer's drawings or a Microsoft Agent character never
+ * fetches either.
+ */
+const Avatar3D = lazy(() => import('./Avatar3D'));
 
 /** The motions, by the state the stage is in. */
 const MOTIONS = {
@@ -319,7 +327,7 @@ export function assistantMenuItems(options: {
   if (options.onChangeCharacter) {
     items.push({
       id: 'character',
-      label: 'Change character…',
+      label: 'Change avatar…',
       icon: PencilIcon,
       onSelect: options.onChangeCharacter,
     });
@@ -519,8 +527,12 @@ export function useKeepClear(
 }
 
 export interface AssistantStageProps {
-  /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
-  character: string | AssistantCharacter | AssistantCharacterData;
+  /**
+   * The avatar: one Datalayer ships, by id (T-25), one loaded from a file
+   * (T-26), or a 3D model.
+   */
+  character:
+    string | AssistantCharacter | AssistantCharacterData | AssistantModel3D;
   /** What it acts out (T-22). */
   state: AssistantState;
   /** Its size, in pixels. */
@@ -753,17 +765,20 @@ export function AssistantStage({
   label,
 }: AssistantStageProps): JSX.Element {
   const chatText = useChatWords();
-  // A shipped one by id, a drawing contributed by a plugin (T-24), or a
-  // character read from a file (T-26).
+  // A shipped one by id, a drawing contributed by a plugin (T-24), a
+  // character read from a file (T-26), or a 3D model.
+  const model = isAssistantModel3D(character) ? character : undefined;
   const shipped =
     typeof character === 'string'
       ? assistantCharacter(character)
-      : 'Drawing' in character
+      : !model && 'Drawing' in character
         ? character
         : undefined;
   const characterName = shipped
     ? shipped.name
-    : (character as AssistantCharacterData).name;
+    : model
+      ? model.name
+      : (character as AssistantCharacterData).name;
   // The agent's name where the host gives it, else the character's.
   const name = agentName ?? characterName;
   // The character, as the figure's description, when it is not its name.
@@ -788,6 +803,7 @@ export function AssistantStage({
   const [soundsOn, setSoundsOn] = useState(false);
   const hasSounds =
     !shipped &&
+    !model &&
     Object.keys((character as AssistantCharacterData).sounds ?? {}).length > 0;
   useEffect(() => () => clearTimeout(longPress.current), []);
   // Where the press began: a press that moves is a drag, not a click.
@@ -1144,11 +1160,27 @@ export function AssistantStage({
             clip="rect(0 0 0 0)"
             whiteSpace="nowrap"
           >
-            {`Its character: ${characterName}`}
+            {`Its avatar: ${characterName}`}
           </Box>
         )}
         {shipped ? (
           <shipped.Drawing size={size} mode={colorMode} />
+        ) : model ? (
+          <Suspense
+            fallback={
+              <span
+                aria-busy="true"
+                style={{ display: 'block', width: size, height: size }}
+              />
+            }
+          >
+            <Avatar3D
+              avatar={model}
+              state={state}
+              size={size}
+              mouthLevel={mouthLevel}
+            />
+          </Suspense>
         ) : (
           <SpriteCharacter
             character={character as AssistantCharacterData}
@@ -1250,7 +1282,7 @@ export function AssistantStage({
             ['Spec', about.spec],
             ['Model', about.model],
             ['Runs', about.where],
-            ['Character', characterName],
+            ['Avatar', characterName],
           ]
             .filter(([, value]) => value)
             .map(([key, value]) => (

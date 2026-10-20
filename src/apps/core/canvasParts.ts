@@ -25,12 +25,12 @@ export type CanvasPartKind =
   | 'model'
   | 'protocol'
   | 'ui'
-  | 'character';
+  | 'avatar';
 
 /**
  * A part of an agent the Canvas may place (C-20): a connection to a
  * server of the catalogue, a skill, a model, a rule, a test, an event, a
- * protocol it speaks, a UI its answers render in, the character it shows
+ * protocol it speaks, a UI its answers render in, the avatar it shows
  * (PS-04, PS-05) —
  * contributed by the plugin of what it comes from. The toolbox is what the
  * enabled plugins contribute here, and nothing else: a plugin disabled takes
@@ -54,7 +54,7 @@ export type CanvasPartContribution = {
   /**
    * What it arrives with, spelled as the Appspec's text spells it: a
    * connection's, a rule's, a test's or an event's object, a skill's, a
-   * model's, a protocol's, a UI's or a character's id. Every example is one the Appspec's schema takes as it is.
+   * model's, a protocol's, a UI's or an avatar's id (or a 3D avatar's object). Every example is one the Appspec's schema takes as it is.
    */
   example: unknown;
   /** Whether what it names is enabled today; a part that is not is offered, and its application's setup notes say so. */

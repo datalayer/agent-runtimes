@@ -805,7 +805,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description:
             "A widget's page written in its code (`@app.page`, P-05): its inputs as a form, its outputs as values; run again as an input changes, its outputs shown in place. None when unsaid",
         },
-        assistant: {
+        avatar: {
           anyOf: [
             {
               maxLength: 64,
@@ -813,13 +813,16 @@ export const APPSPEC_SCHEMA: JsonSchema = {
               type: 'string',
             },
             {
+              $ref: '#/$defs/Model3DAvatar',
+            },
+            {
               type: 'null',
             },
           ],
           default: null,
           description:
-            "The character its floating assistant shows, by the id a plugin contributes it under (lowercase letters and digits, words joined by a hyphen): Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The paper clip when unsaid; an id no enabled plugin contributes is refused where the plugins are known, the runtime and the page. Said here, it wins over a person's own choice in their settings",
-          title: 'Assistant',
+            "The avatar its floating assistant shows, its appearance: by the id a plugin contributes it under (lowercase letters and digits, words joined by a hyphen), Datalayer's own drawings `paperclip`, `wizard`, `cat` and `eyes` or a Microsoft Agent character a plugin brings; or a 3D model, `{kind: model3d, url}`. The paper clip when unsaid; an id no enabled plugin contributes is refused where the plugins are known, the runtime and the page. Said here, it wins over a person's own choice in their settings",
+          title: 'Avatar',
         },
         balloon: {
           anyOf: [
@@ -2574,11 +2577,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Slug',
           type: 'string',
         },
-        character_alone: {
+        avatar_alone: {
           default: false,
           description:
-            'At its address, only its character: the conversation opens in its balloon, as when it is shipped as `assistant`',
-          title: 'Character Alone',
+            'At its address, only its avatar: the conversation opens in its balloon, as when it is shipped as `assistant`',
+          title: 'Avatar Alone',
           type: 'boolean',
         },
       },
@@ -2590,6 +2593,31 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       enum: ['chat', 'page', 'split'],
       title: 'Layout',
       type: 'string',
+    },
+    Model3DAvatar: {
+      additionalProperties: false,
+      description:
+        'An avatar that is a 3D model (glTF), drawn in the page with three.js.',
+      properties: {
+        kind: {
+          const: 'model3d',
+          description: '`model3d`',
+          title: 'Kind',
+          type: 'string',
+        },
+        url: {
+          default: '',
+          description:
+            "The https address of its model, a `.glb` or `.gltf`; when unsaid, Datalayer's default robot (RobotExpressive, CC0). Its animation named `Idle` plays while it is quiet; while it speaks, its mouth and head move with its voice",
+          maxLength: 2048,
+          pattern: '^(?:https://[^\\s]+\\.(?:glb|gltf)(?:[?#][^\\s]*)?)?$',
+          title: 'Url',
+          type: 'string',
+        },
+      },
+      required: ['kind'],
+      title: 'Model3DAvatar',
+      type: 'object',
     },
     PairRole: {
       description:

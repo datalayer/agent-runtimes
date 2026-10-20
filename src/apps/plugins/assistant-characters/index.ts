@@ -25,6 +25,11 @@ import {
 } from '../../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../../chat/assistant/formats/types';
 import {
+  assistantModel3D,
+  type AssistantModel3D,
+} from '../../../chat/assistant/avatar3d';
+import type { AppAvatar } from '../../../types/agentspecs';
+import {
   LoopAssistantCharacter,
   type AssistantCharacterContribution,
 } from '../../core';
@@ -45,9 +50,9 @@ export const AssistantCharactersPlugin: ReactorPlugin<
   unknown
 > = definePlugin({
   name: ASSISTANT_CHARACTERS_PLUGIN_NAME,
-  displayName: 'Assistant characters',
+  displayName: 'Assistant avatars',
   description:
-    "Datalayer's own characters for the floating assistant: a paper clip, a wizard, a cat and the L👀P eyes.",
+    "Datalayer's own avatars for the floating assistant: a paper clip, a wizard, a cat and the L👀P eyes.",
   octicon: 'paperclip',
   contributes: ASSISTANT_CHARACTERS.map(character =>
     contribution(
@@ -70,8 +75,8 @@ export function defineAssistantCharacterPlugin(
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   return definePlugin({
     name: `${ASSISTANT_CHARACTERS_PLUGIN_NAME}-${id}`,
-    displayName: `Assistant character: ${character.name}`,
-    description: `${character.name}, a character for the floating assistant.`,
+    displayName: `Assistant avatar: ${character.name}`,
+    description: `${character.name}, an avatar for the floating assistant.`,
     octicon: 'paperclip',
     contributes: [
       contribution(LoopAssistantCharacter, { id, character }, { id }),
@@ -117,7 +122,7 @@ export function assistantCharacterNamed(
   const found = all.find(entry => entry.id === id);
   if (!found) {
     throw new Error(
-      `No enabled plugin contributes the assistant character "${id}"; the characters are ${all.map(entry => entry.id).join(', ') || 'none'}.`,
+      `No enabled plugin contributes the assistant avatar "${id}"; the avatars are ${all.map(entry => entry.id).join(', ') || 'none'}.`,
     );
   }
   return found.character;
@@ -126,29 +131,34 @@ export function assistantCharacterNamed(
 /** Whose choice the character drawn is (T-24). */
 export type AssistantCharacterSaidBy = 'app' | 'person' | 'default';
 
-/** The character drawn, or why none can be. */
+/** The avatar drawn, or why none can be: a drawing, a Microsoft Agent character, or a 3D model. */
 export type AssistantCharacterChosen =
   | {
       id: string;
-      character: AssistantCharacter | AssistantCharacterData;
+      character: AssistantCharacter | AssistantCharacterData | AssistantModel3D;
       saidBy: AssistantCharacterSaidBy;
     }
   | { problem: string; saidBy: AssistantCharacterSaidBy };
 
 /**
- * The character the floating assistant draws on a page (T-24): the one the
- * application's Appspec names (`interface.assistant`), which wins; else the
- * one the person chose in their settings; else the paper clip — each looked
- * up in what the enabled plugins contribute. An id no enabled plugin gives
- * is not replaced by another: it is said, with the ids there are.
+ * The avatar the floating assistant draws on a page (T-24): the one the
+ * application's Appspec names (`interface.avatar`), which wins — a 3D model
+ * drawn as it says, an id looked up — else the one the person chose in
+ * their settings; else the paper clip — each id looked up in what the
+ * enabled plugins contribute. An id no enabled plugin gives is not replaced
+ * by another: it is said, with the ids there are.
  */
 export function assistantCharacterFor(
   contributed: ReadonlyArray<{
     id: string;
     character: AssistantCharacter | AssistantCharacterData;
   }>,
-  choice: { app?: string; person?: string },
+  choice: { app?: AppAvatar; person?: string },
 ): AssistantCharacterChosen {
+  if (typeof choice.app === 'object' && choice.app !== null) {
+    const model = assistantModel3D(choice.app);
+    return { id: model.id, character: model, saidBy: 'app' };
+  }
   const saidBy: AssistantCharacterSaidBy = choice.app
     ? 'app'
     : choice.person
@@ -167,7 +177,7 @@ export function assistantCharacterFor(
         : 'The default is';
   return {
     saidBy,
-    problem: `${whose} the character “${id}”, which nothing enabled here draws; the characters are ${contributed.map(entry => entry.id).join(', ') || 'none'}.`,
+    problem: `${whose} the avatar “${id}”, which nothing enabled here draws; the avatars are ${contributed.map(entry => entry.id).join(', ') || 'none'}.`,
   };
 }
 

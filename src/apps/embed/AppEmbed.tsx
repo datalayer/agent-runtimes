@@ -16,7 +16,7 @@
  * - **panel** — the conversation at the right edge of the page, at full
  *   height;
  * - **assistant** — the application's character on the page, speaking in a
- *   balloon: the one its Appspec names (`interface.assistant`), else
+ *   balloon: the one its Appspec names (`interface.avatar`), else
  *   the paper clip, looked up in what is contributed — Datalayer's four and
  *   the host's own plugins (T-24); an id nothing contributes is said, never
  *   replaced.
@@ -67,6 +67,7 @@ import type { ResumedThread, ThemeOverrides } from '../../types/chat';
 import { generateMessageId } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
+import type { AssistantModel3D } from '../../chat/assistant/avatar3d';
 import { ChatFloating } from '../../chat/ChatFloating';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import {
@@ -447,9 +448,9 @@ export function useHostBridge(
 const NO_PLUGINS: PluginRef[] = [];
 
 /**
- * The character the assistant mode draws (T-24, D-07): the application's own
- * (`interface.assistant`), else the paper clip, from what Datalayer's
- * characters and the host's plugins contribute — as a page decides it, with
+ * The avatar the assistant mode draws (T-24, D-07): the application's own
+ * (`interface.avatar`), else the paper clip, from what Datalayer's
+ * avatars and the host's plugins contribute — as a page decides it, with
  * no person's choice, since a visitor to another product has none here.
  */
 export function embedAssistantCharacter(
@@ -458,7 +459,7 @@ export function embedAssistantCharacter(
 ): AssistantCharacterChosen {
   return assistantCharacterFor(
     assistantCharactersFrom([AssistantCharactersPlugin, ...plugins]),
-    { app: app.interface.assistant },
+    { app: app.interface.avatar },
   );
 }
 
@@ -480,8 +481,8 @@ export type AppFloatingProps = {
   themeVariant?: AppThemeVariant;
   /** The accent and face inside the conversation. */
   themeOverrides: ThemeOverrides;
-  /** The assistant's character, in the assistant mode. */
-  character?: AssistantCharacter | AssistantCharacterData;
+  /** The assistant's avatar, in the assistant mode. */
+  character?: AssistantCharacter | AssistantCharacterData | AssistantModel3D;
   /** The host's agent-runtimes server, when it names one. */
   serverUrl?: string;
   instance?: AppInstance;
@@ -737,7 +738,7 @@ export function AppEmbed({
     () => embedThemeOverrides({ accent: worn, font, variant }),
     [worn, font, variant],
   );
-  const named = app.interface.assistant;
+  const named = JSON.stringify(app.interface.avatar ?? null);
   const assistant = useMemo(
     () =>
       view === 'assistant' ? embedAssistantCharacter(app, plugins) : undefined,

@@ -54,6 +54,7 @@
  * writes to `.env.local`, never committed.
  */
 
+import { avatarShown } from '../chat/assistant/avatar3d';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flash, Heading, Text, Textarea } from '@primer/react';
@@ -300,7 +301,7 @@ function AgentA2ATeam(): JSX.Element {
               id: SALES.id,
               name: SALES.name,
               emoji: SALES.emoji,
-              character: SALES.interface.assistant ?? 'paperclip',
+              character: avatarShown(SALES.interface.avatar, 'paperclip'),
               where:
                 salesMember.runsIn === 'browser'
                   ? 'in your browser'
@@ -329,7 +330,7 @@ function AgentA2ATeam(): JSX.Element {
               name: ACCOUNTING.name,
               // Its face as its card says it, once it is reached.
               emoji: peer?.face?.emoji ?? ACCOUNTING.emoji,
-              character: ACCOUNTING.interface.assistant ?? 'wizard',
+              character: avatarShown(ACCOUNTING.interface.avatar, 'wizard'),
               where: accountingWhere,
               persona: team.peerPersona,
               onAway: team.setPeerAway,

@@ -141,7 +141,7 @@ describe('AppEmbed, the React component', () => {
   it('draws the assistant with the application’s character, name, welcome and starters', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const app = chatApp(a => {
-      a.interface.assistant = 'wizard';
+      a.interface.avatar = 'wizard';
       a.deployment = { embedded: { mode: 'assistant', origins: [] } };
     });
     const { root } = await render(<AppEmbed app={app} />);
@@ -172,7 +172,7 @@ describe('AppEmbed, the React component', () => {
       ],
     });
     const app = chatApp(a => {
-      a.interface.assistant = 'owl';
+      a.interface.avatar = 'owl';
     });
     const plugins = [OwlPlugin];
     const one = await render(
@@ -184,7 +184,7 @@ describe('AppEmbed, the React component', () => {
     const two = await render(<AppEmbed app={app} mode="assistant" />);
     expect(seen.floating).toHaveLength(0);
     expect(two.container.textContent).toBe(
-      'This application names the character “owl”, which nothing enabled here draws; the characters are paperclip, wizard, cat, eyes.',
+      'This application names the avatar “owl”, which nothing enabled here draws; the avatars are paperclip, wizard, cat, eyes.',
     );
     await act(async () => two.root.unmount());
   });
@@ -537,7 +537,7 @@ kind: chat
 agent: support-agent
 interface:
   accent: sun
-  assistant: cat
+  avatar: cat
 deployment:
   embedded:
     mode: assistant
@@ -582,17 +582,17 @@ deployment:
     await act(async () => element.remove());
   });
 
-  it('says a character nothing contributes, in place', async () => {
+  it('says an avatar nothing contributes, in place', async () => {
     const element = document.createElement('datalayer-app');
     element.innerHTML =
-      '<script type="application/json">{"id":"a","name":"A","kind":"chat","agent":"x","interface":{"assistant":"owl"},"deployment":{"embedded":{"mode":"assistant"}}}</script>';
+      '<script type="application/json">{"id":"a","name":"A","kind":"chat","agent":"x","interface":{"avatar":"owl"},"deployment":{"embedded":{"mode":"assistant"}}}</script>';
     await act(async () => {
       document.body.appendChild(element);
     });
     await settle();
     expect(element.getAttribute('data-embed-mode')).toBe('inline');
     expect(element.shadowRoot!.textContent).toContain(
-      'This application names the character “owl”, which nothing enabled here draws',
+      'This application names the avatar “owl”, which nothing enabled here draws',
     );
     expect(seen.floating).toHaveLength(0);
     await act(async () => element.remove());

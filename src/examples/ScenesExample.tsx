@@ -27,6 +27,7 @@
  * Inspector over the page, on the one tracer every member records into.
  */
 
+import { avatarShown } from '../chat/assistant/avatar3d';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -343,7 +344,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
               id: entry.app.id,
               name: entry.app.name,
               emoji: entry.cast.persona.face || entry.app.emoji,
-              character: entry.app.interface.assistant ?? 'paperclip',
+              character: avatarShown(entry.app.interface.avatar, 'paperclip'),
               where: whereOf(entry),
               persona: team.entryPersona,
               onToggle: () => composer.current?.focus(),
@@ -369,7 +370,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
                   reachedOf(peer.id).peer?.face?.emoji ||
                   peer.cast.persona.face ||
                   peer.app.emoji,
-                character: peer.app.interface.assistant ?? 'wizard',
+                character: avatarShown(peer.app.interface.avatar, 'wizard'),
                 where: whereOf(peer),
                 persona: kept?.persona ?? team.peerPersona,
                 onAway: kept?.setAway,

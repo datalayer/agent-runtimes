@@ -93,7 +93,7 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "wizard",
+            "avatar": "wizard",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -282,7 +282,7 @@ BOOKKEEPING_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -423,7 +423,7 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "cat",
+            "avatar": "cat",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -582,7 +582,7 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "eyes",
+            "avatar": "eyes",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -770,7 +770,7 @@ CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "cat",
+            "avatar": "cat",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -933,7 +933,7 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
             ],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1120,7 +1120,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "wizard",
+            "avatar": "wizard",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1259,7 +1259,7 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "wizard",
+            "avatar": "wizard",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1402,7 +1402,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1531,7 +1531,7 @@ EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "paperclip",
+            "avatar": "paperclip",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1695,7 +1695,7 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1826,7 +1826,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -1998,7 +1998,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -2193,7 +2193,7 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -2319,7 +2319,7 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
             ],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -2588,7 +2588,7 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "cat",
+            "avatar": "cat",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -2768,7 +2768,7 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -2929,7 +2929,7 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -3150,7 +3150,7 @@ PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "page": None,
-            "assistant": "eyes",
+            "avatar": "eyes",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -3425,7 +3425,7 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -3646,7 +3646,7 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "page": None,
-            "assistant": "wizard",
+            "avatar": "wizard",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -3836,7 +3836,7 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -3967,7 +3967,7 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": "paperclip",
+            "avatar": "paperclip",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4095,7 +4095,7 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
             ],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4352,7 +4352,7 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4507,7 +4507,7 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4668,7 +4668,7 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4802,7 +4802,7 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -4927,7 +4927,7 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
             ],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -5272,7 +5272,7 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "page": None,
-            "assistant": "paperclip",
+            "avatar": "paperclip",
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -5436,7 +5436,7 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,
@@ -5576,7 +5576,7 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "page": None,
-            "assistant": None,
+            "avatar": None,
             "balloon": None,
             "voice": {
                 "enabled": False,

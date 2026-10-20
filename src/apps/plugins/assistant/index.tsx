@@ -7,7 +7,7 @@
  * The floating assistant in the LOOP workspace (T-24): the character a
  * page draws over its workspace, chosen from what the enabled plugins
  * contribute to `loop.assistant.character` — the application's own
- * (`interface.assistant`) when its Appspec names one, else the person's
+ * (`interface.avatar`) when its Appspec names one, else the person's
  * choice from their settings, else the paper clip. It acts out what the
  * application is doing as its chat says it — paused too, when its deployment
  * is — and the turn (T-22), says the agent's newest words in its balloon
@@ -31,6 +31,7 @@
  * @module apps/plugins/assistant
  */
 
+import type { AppAvatar } from '../../../types/agentspecs';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { definePlugin, signal } from '@datalayer/reactor';
@@ -90,8 +91,8 @@ import { useChatWords } from '../../../chat/ChatLanguage';
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
 export type LoopAssistantConfig = {
-  /** The character the application's Appspec names; it wins. */
-  app?: string;
+  /** The avatar the application's Appspec names (an id, or a 3D model); it wins. */
+  app?: AppAvatar;
   /** The character the person chose in their settings. */
   person?: string;
   /**
@@ -463,7 +464,7 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
   },
   displayName: 'Floating assistant',
   description:
-    'The chat as a character on the page: the application’s own, or the one the person chose, from the characters the enabled plugins contribute.',
+    'The chat as an avatar on the page: the application’s own, or the one the person chose, from the avatars the enabled plugins contribute.',
   octicon: 'paperclip',
   build: ({ config }) => {
     const Configured = ({

@@ -157,7 +157,7 @@ with its *Shrink* icon.
 
 ```yaml
 interface:
-  assistant: wizard
+  avatar: wizard
   balloon: current   # or history
 ```
 
@@ -374,7 +374,7 @@ balloon does not offer to ask:
 />
 
 configurePlugin(LoopAssistantPlugin, {
-  app: app.interface.assistant,
+  app: app.interface.avatar,
   decisions: { serverUrl: runtimeUrl, token },
 });
 ```
@@ -601,8 +601,8 @@ among them, and draws the one chosen.
 ### Named by an application, chosen by a person
 
 An application names its character in its Appspec, by the id a plugin
-contributes it under: `interface.assistant: owl`. The spec (agentspecs
-0.0.27) checks only the id's shape — lowercase letters and digits, words
+contributes it under: `interface.avatar: owl` (the key was `assistant` until
+agentspecs 0.0.116, and the old key is now refused). The spec checks only the id's shape — lowercase letters and digits, words
 joined by a hyphen, at most 64 characters — since which characters exist is
 known where the plugins are, not in the spec. A person may choose a character
 of their own, and whether the assistant shows at all, in their settings; on
@@ -643,7 +643,7 @@ import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/
     AssistantCharactersPlugin,
     OwlCharacterPlugin,
     configurePlugin(LoopAssistantPlugin, {
-      app: app.interface.assistant,
+      app: app.interface.avatar,
       person: 'cat',
       appId: app.id,
     }),
@@ -853,3 +853,27 @@ balloon seen in a browser; stepping aside, seen in a browser; a brought
 character's mouths and sounds, seen and heard in a browser.
 
 **Not built yet.** Sharing a character one brought with one's organisation.
+
+### A 3D avatar
+
+Beside Datalayer's drawings and the Microsoft Agent characters a person
+brings, an avatar may be a 3D model (glTF), drawn with
+[three.js](https://threejs.org):
+
+```yaml
+interface:
+  avatar:
+    kind: model3d
+    url: https://example.com/models/fox.glb # optional
+```
+
+With no `url` it is Datalayer's default robot: RobotExpressive by Tomás Laulhé
+(Quaternius, CC0 1.0), with Don McCurdy's facial morph targets, loaded from the
+three.js repository at r170 through jsDelivr. It plays the model's `Idle`
+animation while quiet; while it speaks, the morph targets that open a mouth
+(`mouth…`, `jaw…`, a viseme `aa`, or RobotExpressive's `Surprised`) follow the
+voice's level, as the other avatars' mouths do, and its head nods with it. A
+reader who asks for reduced motion sees it still. three.js is loaded only when
+a 3D avatar is shown (`Avatar3D`, a dynamic import). A browser that cannot draw
+WebGL shows a sentence in its place, and so does a model that cannot be loaded.
+In Python: `Application("desk", "chat", avatar={"kind": "model3d"})`.

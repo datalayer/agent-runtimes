@@ -51,7 +51,8 @@ import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
 import {
   APP_THEME_MODES,
   APP_THEME_VARIANTS,
-  isAssistantCharacterId,
+  isAvatarId,
+  AVATAR_MODEL_URL,
   PAGE_OUTPUT_SHOWS,
   parseAppspec,
 } from './appspec';
@@ -1089,11 +1090,53 @@ export function documentShapeProblems(document: unknown): string[] {
         }
       }
     });
-    if (ui.assistant !== undefined && !isAssistantCharacterId(ui.assistant)) {
-      at(
-        'interface.assistant',
-        'names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`',
-      );
+    // The character is now the avatar: the old keys are refused, never read.
+    for (const old of ['assistant', 'character']) {
+      if (ui[old] !== undefined) {
+        at(
+          `interface.${old}`,
+          'is now `interface.avatar`: rename the key, its value is the same',
+        );
+      }
+    }
+    const avatar = ui.avatar;
+    if (avatar !== undefined) {
+      if (typeof avatar === 'string') {
+        if (!isAvatarId(avatar)) {
+          at(
+            'interface.avatar',
+            'names an avatar by the id a plugin contributes it under, lowercase words joined by a hyphen (`paperclip`, `acme-owl`), or is a 3D model, `{kind: model3d, url}`',
+          );
+        }
+      } else if (
+        typeof avatar !== 'object' ||
+        avatar === null ||
+        Array.isArray(avatar)
+      ) {
+        at(
+          'interface.avatar',
+          'is an id, as `wizard`, or a 3D model, `{kind: model3d, url}`',
+        );
+      } else {
+        const model = avatar as Record<string, unknown>;
+        if (model.kind !== 'model3d') {
+          at(
+            'interface.avatar.kind',
+            `is \`model3d\`, not ${JSON.stringify(model.kind ?? null)}; the others are named by id, as \`wizard\``,
+          );
+        }
+        if (
+          model.url !== undefined &&
+          model.url !== '' &&
+          !(typeof model.url === 'string' && AVATAR_MODEL_URL.test(model.url))
+        ) {
+          at(
+            'interface.avatar.url',
+            'is the https address of a `.glb` or `.gltf` model',
+          );
+        }
+        unknownKeys(model, ['kind', 'url'], 'interface.avatar', 'a 3D avatar');
+      }
     }
     // Its voice (VO-41, VO-12).
     mapping(ui.voice, 'interface.voice', voice => {
@@ -1431,10 +1474,16 @@ export function documentShapeProblems(document: unknown): string[] {
         );
       }
       if (
-        hosted.character_alone !== undefined &&
-        typeof hosted.character_alone !== 'boolean'
+        hosted.avatar_alone !== undefined &&
+        typeof hosted.avatar_alone !== 'boolean'
       ) {
-        at('deployment.hosted.character_alone', 'is true or false');
+        at('deployment.hosted.avatar_alone', 'is true or false');
+      }
+      if (hosted.character_alone !== undefined) {
+        at(
+          'deployment.hosted.character_alone',
+          'is now `deployment.hosted.avatar_alone`: rename the key',
+        );
       }
     });
     mapping(deployment.embedded, 'deployment.embedded', embedded => {

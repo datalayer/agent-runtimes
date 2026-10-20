@@ -334,24 +334,24 @@ describe('writing an Appspec', () => {
     );
   });
 
-  it('shows only its character at its address when said, off unless said (T-21)', () => {
+  it('shows only its avatar at its address when said, off unless said (T-21)', () => {
     const alone = parseAppspec({
       kind: 'chat',
-      deployment: { hosted: { slug: 'desk', character_alone: true } },
+      deployment: { hosted: { slug: 'desk', avatar_alone: true } },
     }).app;
     expect(alone.deployment.hosted).toEqual({
       visibility: 'private',
       slug: 'desk',
-      characterAlone: true,
+      avatarAlone: true,
     });
     expect(dumpAppspec(alone).deployment).toEqual({
-      hosted: { slug: 'desk', character_alone: true },
+      hosted: { slug: 'desk', avatar_alone: true },
     });
     expect(
       parseAppspec({
         kind: 'chat',
-        deployment: { hosted: { slug: 'desk', character_alone: 'yes' } },
-      }).app.deployment.hosted?.characterAlone,
+        deployment: { hosted: { slug: 'desk', avatar_alone: 'yes' } },
+      }).app.deployment.hosted?.avatarAlone,
     ).toBeUndefined();
   });
 

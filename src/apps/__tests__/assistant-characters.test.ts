@@ -80,7 +80,7 @@ describe('the characters of the floating assistant', () => {
     ]);
     expect(assistantCharacterNamed(reactor, 'robot')).toBe(robot);
     expect(() => assistantCharacterNamed(reactor, 'paperclip')).toThrow(
-      'No enabled plugin contributes the assistant character "paperclip"; the characters are robot.',
+      'No enabled plugin contributes the assistant avatar "paperclip"; the avatars are robot.',
     );
   });
 });

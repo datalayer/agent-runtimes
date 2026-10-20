@@ -3022,6 +3022,13 @@ class AppActionSpec(BaseModel):
     )
 
 
+class AppAvatarModel3DSpec(BaseModel):
+    """An avatar that is a 3D model (glTF): the default robot when no url is said."""
+
+    kind: Literal["model3d"] = "model3d"
+    url: str = Field(default="", description="The https address of a `.glb` or `.gltf`")
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -3085,12 +3092,13 @@ class AppInterfaceSpec(BaseModel):
             "its outputs values, run again as an input changes"
         ),
     )
-    assistant: Optional[str] = Field(
+    avatar: Optional[Union[str, AppAvatarModel3DSpec]] = Field(
         default=None,
         description=(
-            "The character its floating assistant shows, by the id a plugin "
+            "The avatar its floating assistant shows: by the id a plugin "
             "contributes it under (`paperclip`, `wizard`, `cat`, `eyes` are "
-            "Datalayer's); the paper clip when unsaid"
+            "Datalayer's drawings), or a 3D model, `{kind: model3d, url}`; "
+            "the paper clip when unsaid"
         ),
     )
     balloon: Optional[Literal["history", "current"]] = Field(

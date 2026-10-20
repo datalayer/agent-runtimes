@@ -48,9 +48,9 @@ function withPart(part: CanvasPartContribution): Record<string, unknown> {
   if (part.kind === 'agent') {
     return { ...data, agent: part.example };
   }
-  if (part.kind === 'character') {
+  if (part.kind === 'avatar') {
     const face = (data.interface ?? {}) as Record<string, unknown>;
-    return { ...data, interface: { ...face, assistant: part.example } };
+    return { ...data, interface: { ...face, avatar: part.example } };
   }
   const [head, tail] = LISTS[part.kind];
   if (tail) {
@@ -108,7 +108,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
         'event',
         'protocol',
         'ui',
-        'character',
+        'avatar',
       ]),
     );
     // Every protocol of the catalogue, a planned one offered but not enabled
@@ -124,7 +124,11 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     expect(parts.find(part => part.id === 'ui:chat')?.example).toEqual({
       plugin: 'chat',
     });
-    expect(ids).toContain('character:paperclip');
+    expect(ids).toContain('avatar:paperclip');
+    // The 3D avatar, the default robot, beside Datalayer's drawings.
+    expect(parts.find(part => part.id === 'avatar:model3d')?.example).toEqual({
+      kind: 'model3d',
+    });
     // The catalogue's harnesses as the agent (SH-43): each by the
     // catalogue agent that runs on it — Claude Code, Codex, Gemini CLI,
     // goose, OpenCode, OpenHands and fast-agent alike.

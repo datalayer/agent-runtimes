@@ -28,6 +28,7 @@ import { getSkillSpecs } from '../../../specs/skills';
 import { listProtocolSpecs } from '../../../specs/protocols';
 import { listUI } from '../../../specs/ui';
 import { ASSISTANT_CHARACTERS } from '../../../chat/assistant/characters';
+import { AVATAR_3D_ID } from '../../../chat/assistant/avatar3d';
 import {
   LoopCanvasPart,
   type CanvasPartContribution,
@@ -50,7 +51,7 @@ export const CANVAS_PART_SOURCES = [
   'events',
   'protocols',
   'ui',
-  'characters',
+  'avatars',
 ] as const;
 
 export type CanvasPartSource = (typeof CANVAS_PART_SOURCES)[number];
@@ -276,16 +277,29 @@ export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
   enabled: true,
 }));
 
-/** Datalayer's characters for its floating assistant, dropped on the agent (PS-05). */
-export const CHARACTER_PARTS: CanvasPartContribution[] =
-  ASSISTANT_CHARACTERS.map(character => ({
-    id: `character:${character.id}`,
-    kind: 'character',
+/**
+ * The avatars of its floating assistant, dropped on the agent (PS-05):
+ * Datalayer's own drawings, by id, and a 3D model (the default robot; its
+ * `url` is changed in the Appspec).
+ */
+export const AVATAR_PARTS: CanvasPartContribution[] = [
+  ...ASSISTANT_CHARACTERS.map(character => ({
+    id: `avatar:${character.id}`,
+    kind: 'avatar' as const,
     label: character.name,
     says: `Its floating assistant shows ${character.name}.`,
     example: character.id,
     enabled: true,
-  }));
+  })),
+  {
+    id: `avatar:${AVATAR_3D_ID}`,
+    kind: 'avatar',
+    label: '3D model',
+    says: 'Its floating assistant shows a 3D model, idle while quiet and talking with its voice: a robot unless its `url` names another `.glb`.',
+    example: { kind: 'model3d' },
+    enabled: true,
+  },
+];
 
 export const CANVAS_PART_PLUGINS: ReactorPlugin<
   Record<string, never>,
@@ -301,7 +315,7 @@ export const CANVAS_PART_PLUGINS: ReactorPlugin<
   partsPlugin('events', 'Events', EVENT_PARTS),
   partsPlugin('protocols', 'Protocols', PROTOCOL_PARTS),
   partsPlugin('ui', 'UI', UI_PARTS),
-  partsPlugin('characters', 'Characters', CHARACTER_PARTS),
+  partsPlugin('avatars', 'Avatars', AVATAR_PARTS),
 ];
 
 /** The toolbox's reactor, its named plugins disabled; a name no plugin has is refused. */

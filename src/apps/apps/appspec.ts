@@ -34,7 +34,9 @@ import type {
   AppAccent,
   AppThemeMode,
   AppThemeVariant,
-  AppAssistantCharacter,
+  AppAvatar,
+  AppAvatarId,
+  AppAvatarModel3D,
   AppEmbedMode,
   AppHostUser,
   AppActionSpec,
@@ -128,23 +130,57 @@ export const APP_EMBED_MODES: AppEmbedMode[] = [
 ];
 
 /**
- * How an Appspec names the character of its floating assistant (T-24):
- * the id a plugin contributes it under, `paperclip` or `acme-owl` — as
- * agentspecs' `ASSISTANT_CHARACTER_ID`. Which ids exist is what the enabled
+ * How an Appspec names the avatar of its floating assistant (T-24): the
+ * id a plugin contributes it under, `paperclip` or `acme-owl` — as
+ * agentspecs' `ASSISTANT_AVATAR_ID`. Which ids exist is what the enabled
  * plugins contribute (`assistantCharacterNamed`), not the spec's to say.
  */
-export const APP_ASSISTANT_CHARACTER_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+export const APP_ASSISTANT_AVATAR_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-/** Whether a value is shaped as a character id an Appspec may name. */
-export function isAssistantCharacterId(
-  value: unknown,
-): value is AppAssistantCharacter {
+/** Whether a value is shaped as an avatar id an Appspec may name. */
+export function isAvatarId(value: unknown): value is AppAvatarId {
   return (
     typeof value === 'string' &&
     value.length <= 64 &&
-    APP_ASSISTANT_CHARACTER_ID.test(value)
+    APP_ASSISTANT_AVATAR_ID.test(value)
   );
 }
+
+/**
+ * The 3D model an avatar of kind `model3d` shows when it names no `url`
+ * (agentspecs' `DEFAULT_AVATAR_MODEL_URL`): RobotExpressive, by Tomás
+ * Laulhé (Quaternius), CC0 1.0, with Don McCurdy's facial morph targets,
+ * from the three.js repository at r170, served by jsDelivr.
+ */
+export const DEFAULT_AVATAR_MODEL_URL =
+  'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r170/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
+
+/** What a 3D avatar's `url` may be: an https address of a glTF model. */
+export const AVATAR_MODEL_URL = /^https:\/\/\S+\.(?:glb|gltf)(?:[?#]\S*)?$/;
+
+/** Whether a value is a 3D avatar as an Appspec says it. */
+export function isAvatarModel3D(value: unknown): value is AppAvatarModel3D {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const { kind, url, ...rest } = value as Record<string, unknown>;
+  return (
+    kind === 'model3d' &&
+    Object.keys(rest).length === 0 &&
+    (url === undefined ||
+      url === '' ||
+      (typeof url === 'string' && AVATAR_MODEL_URL.test(url)))
+  );
+}
+
+/** Whether a value is an avatar an Appspec may name: an id, or a 3D model. */
+export function isAvatar(value: unknown): value is AppAvatar {
+  return isAvatarId(value) || isAvatarModel3D(value);
+}
+
+/** The address of the model a 3D avatar shows: its own, else the default. */
+export const avatarModelUrl = (avatar: AppAvatarModel3D): string =>
+  avatar.url || DEFAULT_AVATAR_MODEL_URL;
 
 const ACTION_CLASS_NAMES = [
   'read',
@@ -1187,8 +1223,12 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   if (isData(data.page)) {
     parsed.page = parsePage(data.page);
   }
-  if (isAssistantCharacterId(data.assistant)) {
-    parsed.assistant = data.assistant;
+  if (isAvatarId(data.avatar)) {
+    parsed.avatar = data.avatar;
+  } else if (isAvatarModel3D(data.avatar)) {
+    parsed.avatar = data.avatar.url
+      ? { kind: 'model3d', url: data.avatar.url }
+      : { kind: 'model3d' };
   }
   if (data.balloon === 'history' || data.balloon === 'current') {
     parsed.balloon = data.balloon;
@@ -1276,7 +1316,7 @@ function parseDeployment(data: Data): AppDeploymentSpec {
         'private',
       ),
       slug: text(data.hosted.slug),
-      ...(data.hosted.character_alone === true ? { characterAlone: true } : {}),
+      ...(data.hosted.avatar_alone === true ? { avatarAlone: true } : {}),
     };
   }
   if (isData(data.embedded)) {
@@ -1888,8 +1928,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   if (spec.page) {
     writer.data.page = dumpPage(spec.page);
   }
-  if (spec.assistant) {
-    writer.data.assistant = spec.assistant;
+  if (spec.avatar) {
+    writer.data.avatar =
+      typeof spec.avatar === 'string' ? spec.avatar : { ...spec.avatar };
   }
   if (spec.balloon) {
     writer.data.balloon = spec.balloon;
@@ -2141,8 +2182,8 @@ export function dumpAppspec(app: AppSpec): Data {
               )
               .text('slug', app.deployment.hosted.slug)
               .value<boolean>(
-                'character_alone',
-                app.deployment.hosted.characterAlone === true,
+                'avatar_alone',
+                app.deployment.hosted.avatarAlone === true,
                 false,
               ).data,
         )

@@ -724,13 +724,29 @@ export interface AppThemeSpec {
 }
 
 /**
- * The character an application's floating assistant shows (T-24): the id
- * an enabled plugin contributes it under to `loop.assistant.character` —
- * Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The spec checks
- * its shape (`APP_ASSISTANT_CHARACTER_ID`); whether a plugin gives it is
- * known only where the plugins are.
+ * An avatar named by id (T-24): the id an enabled plugin contributes it
+ * under to `loop.assistant.character` — Datalayer's own drawings are
+ * `paperclip`, `wizard`, `cat` and `eyes`; a plugin may bring a Microsoft
+ * Agent character. The spec checks its shape (`APP_ASSISTANT_AVATAR_ID`);
+ * whether a plugin gives it is known only where the plugins are.
  */
-export type AppAssistantCharacter = string;
+export type AppAvatarId = string;
+
+/**
+ * An avatar that is a 3D model (glTF), drawn with three.js: idle while
+ * quiet, talking with its voice. Its `url` is an https `.glb` or `.gltf`;
+ * Datalayer's default robot when unsaid (`DEFAULT_AVATAR_MODEL_URL`).
+ */
+export interface AppAvatarModel3D {
+  kind: 'model3d';
+  url?: string;
+}
+
+/**
+ * The appearance an application's floating assistant shows: an avatar by
+ * id (a drawing, or a Microsoft Agent character), or a 3D model.
+ */
+export type AppAvatar = AppAvatarId | AppAvatarModel3D;
 
 /** How a floating assistant's balloon shows the conversation (T-23). */
 export type AppBalloonDisplay = 'history' | 'current';
@@ -1312,10 +1328,10 @@ export interface AppInterfaceSpec {
   /** A widget's page written in its code (P-05); none when unsaid. */
   page?: AppPageSpec;
   /**
-   * The character its floating assistant shows; the paper clip when unsaid.
+   * The avatar its floating assistant shows; the paper clip when unsaid.
    * Said, it wins over the one the person chose in their settings.
    */
-  assistant?: AppAssistantCharacter;
+  avatar?: AppAvatar;
   /**
    * How its floating assistant's balloon shows the conversation: `history`
    * (every message, the composer last) or `current` (only what it says or
@@ -1483,11 +1499,11 @@ export interface AppDeploymentSpec {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
     slug: string;
     /**
-     * At its address, only its character (T-21): the conversation
+     * At its address, only its avatar (T-21): the conversation
      * opens in its balloon, as when it is shipped as `assistant`. Off
      * unless said.
      */
-    characterAlone?: boolean;
+    avatarAlone?: boolean;
   };
   embedded?: {
     mode: AppEmbedMode;

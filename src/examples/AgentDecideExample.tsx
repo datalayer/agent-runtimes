@@ -58,7 +58,7 @@ const AgentDecideExample: React.FC = () => {
     () => [
       AssistantCharactersPlugin,
       configurePlugin(LoopAssistantPlugin, {
-        app: app.interface.assistant ?? undefined,
+        app: app.interface.avatar ?? undefined,
         decisions: { serverUrl },
       }),
     ],

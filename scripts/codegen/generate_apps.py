@@ -53,7 +53,7 @@ CAMEL = {
     "min_confidence": "minConfidence",
     "decision_model": "decisionModel",
     "backend_tools": "backendTools",
-    "character_alone": "characterAlone",
+    "avatar_alone": "avatarAlone",
     "settings_ui": "settingsUi",
     "custom_components": "customComponents",
     # Personal Agent Protocol (pap.connections[], pap.company, its operations).
@@ -117,8 +117,8 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         spec["setup"] = apps_module.app_setup(app)
         # What TypeScript reads only when it is said: off, or none.
         deployment = spec.get("deployment") or {}
-        if (deployment.get("hosted") or {}).get("character_alone") is False:
-            del deployment["hosted"]["character_alone"]
+        if (deployment.get("hosted") or {}).get("avatar_alone") is False:
+            del deployment["hosted"]["avatar_alone"]
         if deployment.get("embedded") and deployment["embedded"].get("host") is None:
             del deployment["embedded"]["host"]
         behaviours[identity] = {

@@ -261,6 +261,11 @@ class Application:
         A plugin is one of agentspecs' ``ui``, a renderer one of its
         ``ui-renderers`` the plugin may be exposed through; a renderer's id
         alone (``["a2ui"]``) is refused.
+    avatar : str or Mapping[str, str], optional
+        The avatar its floating assistant shows (``interface.avatar``): an id a
+        plugin contributes (``"wizard"``), or a 3D model, ``{"kind":
+        "model3d"}`` (the default robot) or ``{"kind": "model3d", "url":
+        "https://example.com/fox.glb"}``. The paper clip when unsaid.
     """
 
     def __init__(
@@ -278,6 +283,7 @@ class Application:
         version: Optional[str] = None,
         protocols: Sequence[str] = (),
         ui: Sequence[Mapping[str, str]] = (),
+        avatar: Union[str, Mapping[str, str], None] = None,
     ) -> None:
         """Start an app's declaration with its id and kind."""
         document: Dict[str, Any] = {
@@ -306,6 +312,11 @@ class Application:
             document["ui"] = [
                 dict(choice) if isinstance(choice, Mapping) else choice for choice in ui
             ]
+        if avatar is not None:
+            # Checked with the rest of the spec when it is built.
+            document["interface"] = {
+                "avatar": avatar if isinstance(avatar, str) else dict(avatar)
+            }
         self._document = document
         self._version_declared = version is not None
         self._attach_code()

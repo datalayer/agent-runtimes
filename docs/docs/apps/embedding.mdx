@@ -28,7 +28,7 @@ different one with the `mode` attribute.
 | `inline`    | The application where the element is. If it has a page, the page is drawn beside the conversation (`AppRenderer`). This is the default.                                                                |
 | `bubble`    | A round button in the corner, showing the application's face, that opens the application in a popup: the copilot pattern.                                                                            |
 | `panel`     | The application at the right edge of the page, at full height.                                                                                                                                        |
-| `assistant` | The application's character on the page, speaking in a balloon ([the floating assistant](../chat/floating-assistant)). The character is the one the Appspec names in `interface.assistant`, the paper clip when it names none, looked up among the characters contributed: Datalayer's four, and in React whatever the host's `plugins` contribute. An id nothing contributes is said in place of the application. |
+| `assistant` | The application's character on the page, speaking in a balloon ([the floating assistant](../chat/floating-assistant)). The character is the avatar the Appspec names in `interface.avatar`, the paper clip when it names none, looked up among the avatars contributed (or a 3D model, `{kind: model3d, url}`, drawn as it says): Datalayer's four, and in React whatever the host's `plugins` contribute. An id nothing contributes is said in place of the application. |
 
 Every mode draws the application with the same renderer, `AppRenderer`: its
 kind's preset, its layout, its page, its starters and its agent. The three
@@ -68,7 +68,7 @@ The element looks in three places and uses the first one it finds:
          - plugin: chat
        interface:
          accent: sky
-         assistant: wizard
+         avatar: wizard
        deployment:
          embedded:
            mode: assistant
@@ -295,14 +295,14 @@ import { AppEmbed } from '@datalayer/agent-runtimes/lib/apps';
 
 `plugins` are the host's own plugins for the assistant mode: the characters
 they contribute to `loop.assistant.character` are there beside Datalayer's
-four, so an Appspec may name one of them (`interface.assistant: owl`). The
+four, so an Appspec may name one of them (`interface.avatar: owl`). The
 element takes no plugins, so an embedded application draws one of the four.
 
 `AppEmbed` is the renderer the element draws. In a React host it uses
 Primer's portal root, and the styles go where the host's bundler puts them.
 Pass `ownPortal` only when the component is mounted in a root of its own.
 
-### The character alone, at the application's address
+### The avatar alone, at the application's address
 
 On Datalayer, an application's own address draws its page with its
 conversation. When its Appspec says so —
@@ -311,12 +311,12 @@ conversation. When its Appspec says so —
 deployment:
   hosted:
     slug: support-desk
-    character_alone: true # false unless said
+    avatar_alone: true # false unless said
 ```
 
-— the address shows only its character instead, the conversation opening in
+— the address shows only its avatar instead, the conversation opening in
 its balloon, as the `assistant` mode does in another product's page: the
-character the Appspec names (`interface.assistant`), else the paper clip,
+avatar the Appspec names (`interface.avatar`), else the paper clip,
 whatever the visitor chose in their own settings. `AppFloating` is that
 floating chrome on its own, for a host that already has its theme and passes
 its renderer what else it needs (`renderer`: the UI plugins its organization
@@ -691,7 +691,7 @@ Tested (vitest, `src/apps/__tests__/embed-config.test.ts`,
   in a browser: the element on a host page, fetching its module and chunks
   from `/embed/`;
 - the modes and the chat each one floats in;
-- `AppFloating` as the character alone, on the visitors' runtime too;
+- `AppFloating` as the avatar alone, on the visitors' runtime too;
 - the host's tools (`host-bridge.test.ts`): the values named and no others,
   a function called and told to the page, one no rule names refused before
   the page is called; the element's `context` and `message`;

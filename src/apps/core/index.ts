@@ -741,7 +741,7 @@ export const LoopChatSuggestion =
  * of Datalayer's own (T-25) or a plugin's — or a character read from a file
  * a person holds the rights to (T-26). The catalogue of characters is what
  * the enabled plugins contribute here, and nothing else; an application
- * names one by id (`interface.assistant`).
+ * names one by id (`interface.avatar`).
  */
 export type AssistantCharacterContribution = {
   /** Stable id, what an application names. */

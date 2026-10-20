@@ -428,7 +428,7 @@ describe('A2ATeamGraph, by name and by keyboard', () => {
     const described = figure?.getAttribute('aria-describedby');
     expect(described).toBeTruthy();
     expect(container.querySelector(`[id="${described}"]`)?.textContent).toMatch(
-      /^Its character: \S/,
+      /^Its avatar: \S/,
     );
     expect(
       container

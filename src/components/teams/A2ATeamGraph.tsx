@@ -38,6 +38,7 @@
  * @module components/teams/A2ATeamGraph
  */
 
+import type { AssistantModel3D } from '../../chat/assistant/avatar3d';
 import type { JSX, KeyboardEvent } from 'react';
 import {
   createContext,
@@ -95,8 +96,8 @@ export type A2ATeamGraphMember = {
   id: string;
   name: string;
   emoji?: string;
-  /** Its character, as its Appspec's `interface.assistant` names it. */
-  character: string;
+  /** Its avatar, as its Appspec's `interface.avatar` names it: an id, or a 3D model. */
+  character: string | AssistantModel3D;
   /** Where it runs, in a few words: "in your browser", "on a runtime". */
   where: string;
   persona: A2ATeamPersona;

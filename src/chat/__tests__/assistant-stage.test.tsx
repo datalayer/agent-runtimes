@@ -277,7 +277,7 @@ describe('the floating assistant', () => {
     const description = named.container.querySelector(
       `[id="${team?.getAttribute('aria-describedby')}"]`,
     );
-    expect(description?.textContent).toMatch(/^Its character: \S/);
+    expect(description?.textContent).toMatch(/^Its avatar: \S/);
     expect(description?.textContent).not.toContain('Sales');
     // Its menu, by keyboard, is the agent's: Shift+F10.
     await act(async () => {
