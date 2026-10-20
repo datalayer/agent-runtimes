@@ -7,6 +7,15 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.61
+
+20 October 2026 ([The session API](https://agent-runtimes.datalayer.tech/docs/apps/session-api), [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
+
+- **A conversation a host opened opens on the web for its person** (7e2dda95). A session that Slack or Discord opened for a linked person is now that person's when they sign in on the web: its messages, its resume, its ui socket and the next turn. *Open in Datalayer* had answered "No session … is held here." Another person, or another installation's host, is still refused.
+- **Spoken audio is kept for applications that keep it** (VO-63; 46cf50aa). When an application's record names audio, a signed-in person's spoken turn is sent to ai-agents as a WAV of at most a minute, never inside the conversation's message.
+- **Hands-free barge-in reacts faster** (VO-52; 7d456395, 7efe4f9d). It is checked every 150 ms by the voice detector alone, the end of a spoken turn is found sooner, and a long first sentence's first clause is spoken first.
+- `ChatBase` passes the spoken message's metadata as a record (b8b19805).
+
 ## 1.5.60
 
 20 October 2026 ([Python applications: Voice](https://agent-runtimes.datalayer.tech/docs/apps/python-applications#voice), [The session API](https://agent-runtimes.datalayer.tech/docs/apps/session-api), [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
