@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, cast
 
 import pytest
 from fastapi import FastAPI, Request
@@ -366,7 +366,7 @@ async def test_at_the_terminal_voice_gives_the_sound_to_app_audio(
     tux.console = tux.channel.console = Console(record=True, width=400)
     hearing = HereHearing()
     tux._voice_session = voice_cli.VoiceSession(
-        hearing=hearing,
+        hearing=cast(Any, hearing),
         listener=voice_cli.Listener(open_stream=Stream),
     )
     tux.app_session = await tux.host.open()
