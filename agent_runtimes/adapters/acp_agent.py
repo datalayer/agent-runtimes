@@ -1027,7 +1027,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
             for handle in self._handles:
                 with contextlib.suppress(ValueError, OSError):
                     carry(handle, traceparent)
-            return await ShieldProxy.prompt(self, [text_block(prompt)], acp_session)
+            # The turn inside this span: `ShieldProxy.prompt` would open a second.
+            return await ShieldProxy.run_turn(self, [text_block(prompt)], acp_session)
 
     # -- sessions -----------------------------------------------------------------
 
