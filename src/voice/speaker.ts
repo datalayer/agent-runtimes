@@ -65,13 +65,33 @@ export interface SpeakerOptions {
    * caller that follows its sentences one by one (a deck's narrator).
    */
   firstClauseFirst?: boolean;
+  /**
+   * Ask each sentence streamed (VO-52): the speech service says it piece by
+   * piece where it pauses and sends each piece's 16-bit PCM as soon as it is
+   * said, and the speaker plays the pieces as they come — the first sound
+   * after the first piece, not the whole sentence. A service that answers a
+   * whole sound instead is played as before.
+   */
+  streamed?: boolean;
   fetcher?: typeof fetch;
 }
+
+/** A sentence's sound as the service answered it: whole, or 16-bit PCM as it comes. */
+type Answer =
+  | { kind: 'whole'; audio: ArrayBuffer }
+  | {
+      kind: 'pcm';
+      rate: number;
+      body: ReadableStream<Uint8Array> | ArrayBuffer;
+    };
+
+/** Played as it comes: at least this much at a time, in seconds. */
+const STREAMED_SLICE_SECONDS = 0.25;
 
 interface Queued {
   text: string;
   /** Asked of the service once it is among the next `SENTENCES_AHEAD`. */
-  audio?: Promise<ArrayBuffer | string>;
+  audio?: Promise<Answer | string>;
   asked: number;
 }
 
@@ -123,6 +143,8 @@ export class ServerSpeaker {
   private buffer?: Float32Array;
   private queue: Queued[] = [];
   private playing?: AudioBufferSourceNode;
+  /** The pieces of a streamed sentence scheduled to play, stopped together. */
+  private scheduled: AudioBufferSourceNode[] = [];
   private running = false;
   private generation = 0;
   private state: SpeakerState = { speaking: false };
@@ -204,6 +226,7 @@ export class ServerSpeaker {
     // Nothing playing or waiting: this is the first thing heard (VO-52).
     const first =
       this.options.firstClauseFirst &&
+      !this.options.streamed &&
       !this.queue.length &&
       !this.playing &&
       !this.running;
@@ -229,7 +252,7 @@ export class ServerSpeaker {
     }
   }
 
-  private async fetch(text: string): Promise<ArrayBuffer | string> {
+  private async fetch(text: string): Promise<Answer | string> {
     const { speechUrl, voice, language, token, fetcher = fetch } = this.options;
     try {
       const answered = await fetcher(
@@ -244,7 +267,9 @@ export class ServerSpeaker {
             text,
             voice,
             language,
-            format: 'opus',
+            ...(this.options.streamed
+              ? { format: 'pcm', stream: true }
+              : { format: 'opus' }),
           }),
         },
       );
@@ -254,7 +279,19 @@ export class ServerSpeaker {
           ? body.detail
           : `The answer could not be spoken (${answered.status}).`;
       }
-      return await answered.arrayBuffer();
+      const kind = answered.headers.get('content-type') ?? '';
+      if (kind.toLowerCase().startsWith('audio/l16')) {
+        const rate =
+          Number(answered.headers.get('x-speech-rate')) ||
+          Number(/rate=(\d+)/i.exec(kind)?.[1]) ||
+          24000;
+        return {
+          kind: 'pcm',
+          rate,
+          body: answered.body ?? (await answered.arrayBuffer()),
+        };
+      }
+      return { kind: 'whole', audio: await answered.arrayBuffer() };
     } catch {
       return 'Datalayer’s speech service could not be reached: the answer is still written here.';
     }
@@ -280,7 +317,11 @@ export class ServerSpeaker {
         this.queue.shift();
         this.askAhead();
         const context = this.audio();
-        const decoded = await context.decodeAudioData(audio);
+        if (audio.kind === 'pcm') {
+          await this.playStreamed(generation, next, audio);
+          continue;
+        }
+        const decoded = await context.decodeAudioData(audio.audio);
         if (generation !== this.generation) {
           return;
         }
@@ -312,16 +353,106 @@ export class ServerSpeaker {
     }
   }
 
+  /**
+   * A sentence streamed as 16-bit PCM (VO-52): played in slices as they
+   * come, each scheduled right after the last, until the last has ended.
+   */
+  private async playStreamed(
+    generation: number,
+    next: Queued,
+    answer: { rate: number; body: ReadableStream<Uint8Array> | ArrayBuffer },
+  ): Promise<void> {
+    const context = this.audio();
+    const speed = this.speed();
+    if (this.gain) {
+      this.gain.gain.value = this.loudness();
+    }
+    let at = 0;
+    let first = true;
+    let pending = new Uint8Array(0);
+    let last: Promise<void> = Promise.resolve();
+    const slice = Math.round(answer.rate * STREAMED_SLICE_SECONDS) * 2;
+    const play = (bytes: Uint8Array) => {
+      const samples = new Float32Array(bytes.length / 2);
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+      for (let k = 0; k < samples.length; k++) {
+        samples[k] = view.getInt16(k * 2, true) / 32768;
+      }
+      const buffer = context.createBuffer(1, samples.length, answer.rate);
+      buffer.getChannelData(0).set(samples);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = speed;
+      source.connect(this.analyser!);
+      at = Math.max(at, context.currentTime);
+      last = new Promise<void>(resolve => {
+        source.onended = () => {
+          this.scheduled = this.scheduled.filter(one => one !== source);
+          resolve();
+        };
+      });
+      this.scheduled.push(source);
+      this.playing = source;
+      if (first) {
+        first = false;
+        this.set({ speaking: true, sentence: next.text, refused: undefined });
+        this.options.onFirstSound?.(Math.round(performance.now() - next.asked));
+      }
+      source.start(at);
+      at += buffer.duration / speed;
+    };
+    const take = (chunk: Uint8Array, done: boolean) => {
+      const joined = new Uint8Array(pending.length + chunk.length);
+      joined.set(pending);
+      joined.set(chunk, pending.length);
+      pending = joined;
+      while (pending.length >= slice || (done && pending.length >= 2)) {
+        const size = Math.min(pending.length, Math.max(slice, 2));
+        const even = size - (size % 2);
+        play(pending.subarray(0, even));
+        pending = pending.slice(even);
+        if (done && pending.length < 2) {
+          break;
+        }
+      }
+    };
+    if (answer.body instanceof ArrayBuffer) {
+      take(new Uint8Array(answer.body), true);
+    } else {
+      const reader = answer.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (generation !== this.generation) {
+          void reader.cancel().catch(() => undefined);
+          return;
+        }
+        if (done) {
+          take(new Uint8Array(0), true);
+          break;
+        }
+        take(value, false);
+      }
+    }
+    await last;
+    this.playing = undefined;
+  }
+
   /** Stop at once: what plays and what waits (barge-in, `Esc`; VO-13). */
   stop(): void {
     this.generation += 1;
     this.queue = [];
     this.running = false;
-    try {
-      this.playing?.stop();
-    } catch {
-      // Already ended.
+    for (const source of [
+      ...this.scheduled,
+      ...(this.playing ? [this.playing] : []),
+    ]) {
+      try {
+        source.stop();
+      } catch {
+        // Already ended.
+      }
     }
+    this.scheduled = [];
     this.playing = undefined;
     this.set({ speaking: false, sentence: undefined });
   }

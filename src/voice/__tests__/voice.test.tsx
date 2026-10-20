@@ -395,6 +395,97 @@ describe('the first sound, sooner (VO-52)', () => {
   });
 });
 
+describe('a sentence streamed, played as it comes (VO-52)', () => {
+  it('asks it streamed, and plays each slice of 16-bit PCM right after the last as it arrives', async () => {
+    const started: Array<{ at: number; seconds: number }> = [];
+    const sources: Array<{ stop: () => void; onended?: () => void }> = [];
+    class StandInContext {
+      currentTime = 0;
+      destination = {};
+      createAnalyser() {
+        return { fftSize: 0, connect: () => undefined };
+      }
+      createGain() {
+        return { gain: { value: 1 }, connect: () => undefined };
+      }
+      createBuffer(_channels: number, length: number, rate: number) {
+        const data = new Float32Array(length);
+        return { duration: length / rate, getChannelData: () => data };
+      }
+      createBufferSource() {
+        const source = {
+          buffer: undefined as { duration: number } | undefined,
+          playbackRate: { value: 1 },
+          onended: undefined as undefined | (() => void),
+          connect: () => undefined,
+          start: (at: number) => {
+            started.push({ at, seconds: source.buffer!.duration });
+            setTimeout(() => source.onended?.(), 0);
+          },
+          stop: () => undefined,
+        };
+        sources.push(source);
+        return source;
+      }
+      resume() {
+        return Promise.resolve();
+      }
+      close() {
+        return Promise.resolve();
+      }
+    }
+    vi.stubGlobal('AudioContext', StandInContext);
+    const rate = 24000;
+    // Two pieces, a quarter second and a fifth: sent as they are said.
+    const pieces = [
+      new Uint8Array(rate * 0.25 * 2),
+      new Uint8Array(rate * 0.2 * 2),
+    ];
+    const asked: unknown[] = [];
+    const fetcher = vi.fn(async (_url: string, init?: RequestInit) => {
+      asked.push(JSON.parse(String(init?.body)));
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (const piece of pieces) {
+            controller.enqueue(piece);
+          }
+          controller.close();
+        },
+      });
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'Content-Type': `audio/L16;rate=${rate};channels=1`,
+          'X-Speech-Rate': String(rate),
+        },
+      });
+    });
+    const first: number[] = [];
+    const speaker = new ServerSpeaker({
+      speechUrl: 'https://r1.example',
+      voice: 'kokoro-af-heart',
+      language: 'en-US',
+      fetcher: fetcher as unknown as typeof fetch,
+      streamed: true,
+      firstClauseFirst: true,
+      onFirstSound: ms => first.push(ms),
+    });
+    speaker.say(
+      'The Eiffel Tower was built for the 1889 World’s Fair, and it was the tallest structure in the world.',
+    );
+    await vi.waitFor(() => expect(started.length).toBe(2));
+    // Asked whole, streamed: the service cuts it where it pauses.
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatchObject({ format: 'pcm', stream: true });
+    // Each slice right after the last.
+    expect(started[0].seconds).toBeCloseTo(0.25, 5);
+    expect(started[1].at).toBeCloseTo(started[0].at + 0.25, 5);
+    expect(first).toHaveLength(1);
+    speaker.stop();
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('the answers of a conversation, heard as they are written', () => {
   function Speaking({
     items,

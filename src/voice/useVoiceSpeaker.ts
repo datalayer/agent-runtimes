@@ -53,7 +53,9 @@ export function useVoiceSpeaker(
             rate: voice.rate,
             volume: voice.volume,
             onState: setState,
-            // The chat's answers: a long first sentence's first clause first.
+            // The chat's answers: streamed, played as they are said (VO-52);
+            // from a service that does not stream, the first clause first.
+            streamed: true,
             firstClauseFirst: true,
           })
         : undefined,

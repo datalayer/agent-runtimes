@@ -583,7 +583,9 @@ describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
         text: 'The report is ready.',
         voice: 'kokoro-bf-emma',
         language: 'en-GB',
-        format: 'opus',
+        // The chat's answers are asked streamed, played as they come (VO-52).
+        format: 'pcm',
+        stream: true,
       },
       auth: 'Bearer tok',
     });
