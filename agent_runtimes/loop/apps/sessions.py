@@ -779,9 +779,12 @@ class LiveSession:
             rule_from,
             session_rules,
         )
+        from agent_runtimes.guardrails.shield_policy import rules_policy
 
         try:
-            session_rules().add(self.uid, rule_from(data))
+            session_rules().add(
+                self.uid, rule_from(data), application=rules_policy(self.app)
+            )
         except SessionRuleRefused as refused:
             raise SessionRefused(422, str(refused)) from None
         except Exception as refused:  # noqa: BLE001 - IAM unreadable: nothing is tightened under nothing

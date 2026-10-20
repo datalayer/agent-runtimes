@@ -9,7 +9,11 @@ once, gone with the session, never written to the deployment. A rule is the
 Shield's :class:`agent_shield.policy.Rule` — a name, a decision, the classes
 or kinds it names, where, paths, commands — and it may only tighten: one that
 would permit more than the organization's documents say is refused with the
-sentences of :func:`agent_shield.policy.check_tightens`.
+sentences of :func:`agent_shield.policy.check_tightens`, and one that would
+permit more than the **application's own Rules** (the Appspec's ``rules``,
+read as :func:`agent_runtimes.guardrails.shield_policy.rules_policy`) is
+refused when it is added, in a sentence naming the application's rule it
+conflicts with — never accepted to be overruled later at decision time.
 
 One registry per runtime, by session uid, read at every decision:
 
@@ -26,13 +30,21 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from agent_shield.policy import Policy, PolicyWidens, Rule, check_tightens
+from agent_shield.policy import (
+    VERDICT_WORDS,
+    Policy,
+    PolicyWidens,
+    Rule,
+    check_tightens,
+    overlaps,
+)
 from pydantic import ValidationError
 
 from agent_runtimes.guardrails.managed_policies import runtime_policies
 
 __all__ = [
     "SessionRuleRefused",
+    "application_widening",
     "SessionRules",
     "rule_from",
     "session_rules",
@@ -42,6 +54,8 @@ __all__ = [
 #: The Shield's verdict as the application's behaviour, for the pydantic-ai path.
 _BEHAVIOUR_OF_VERDICT = {"allow": "do_it", "ask": "ask_first", "deny": "leave_to_me"}
 _STRICTNESS = ("do_it", "if_asked", "ask_first", "leave_to_me")
+#: How much a verdict permits: *do it* the most, *leave it to me* the least.
+_PERMITS = {"allow": 2, "ask": 1, "deny": 0}
 
 
 class SessionRuleRefused(ValueError):
@@ -74,14 +88,29 @@ class SessionRules:
         return list(self._rules.get(session, ()))
 
     def add(
-        self, session: str, rule: Rule, *, above: Optional[Sequence[Policy]] = None
+        self,
+        session: str,
+        rule: Rule,
+        *,
+        application: Optional[Policy],
+        above: Optional[Sequence[Policy]] = None,
     ) -> List[Rule]:
-        """Add or replace (by name) a rule of ``session``; refused when it loosens the organization's.
+        """Add or replace (by name) a rule of ``session``; refused when it loosens the application's Rules or the organization's.
 
+        ``application`` is the application's own Rules as a policy
+        (``rules_policy(app)``), ``None`` for an application with none: a
+        session rule permitting more than one of them is refused at once.
         ``above`` is the organization's documents to tighten under; unsaid,
         the runtime's managed documents (IAM's), which a managed runtime
         must be able to read.
         """
+        loosened = application_widening(rule, application)
+        if loosened:
+            raise SessionRuleRefused(
+                "The session rule is refused, it would permit more than the application's Rules: "
+                + "; ".join(loosened)
+                + "."
+            )
         ceiling = (
             list(above)
             if above is not None
@@ -121,6 +150,23 @@ class SessionRules:
             json.loads(rule.model_dump_json(exclude_none=True))
             for rule in self.of(session)
         ]
+
+
+def application_widening(rule: Rule, application: Optional[Policy]) -> List[str]:
+    """Every rule of the application that ``rule`` would loosen, in sentences; empty when it only tightens."""
+    if application is None:
+        return []
+    found: List[str] = []
+    for ceiling in application.rules:
+        if _PERMITS[rule.decision] > _PERMITS[ceiling.decision] and overlaps(
+            rule, ceiling
+        ):
+            found.append(
+                f"the session rule '{rule.name}' says {VERDICT_WORDS[rule.decision]} where the "
+                f"application's rule '{ceiling.name}' says {VERDICT_WORDS[ceiling.decision]}; "
+                "a session rule may only tighten the application's Rules"
+            )
+    return found
 
 
 _RULES = SessionRules()

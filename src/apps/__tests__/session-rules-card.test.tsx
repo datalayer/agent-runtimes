@@ -119,6 +119,25 @@ describe('the Rules card, this session', () => {
     expect(view.getByRole('alert').textContent).toBe(sentence);
   });
 
+  it('says the runtime’s sentence when a rule would loosen the application’s own Rules', async () => {
+    const sentence =
+      "The session rule is refused, it would permit more than the application's Rules: " +
+      "the session rule 'Delete files' says do it where the application's rule " +
+      "'Delete files' says leave it to me; a session rule may only tighten the application's Rules.";
+    runtime([
+      [200, inForce([])],
+      [422, { detail: sentence }],
+    ]);
+    const view = draw();
+    await waitFor(() => view.getByText(SESSION_RULES_WORDS.none));
+    fireEvent.click(
+      view.getByRole('button', { name: FILE_AND_SHELL_RULES[0].name }),
+    );
+    await waitFor(() => view.getByRole('alert'));
+    expect(view.getByRole('alert').textContent).toBe(sentence);
+    expect(view.getByText(SESSION_RULES_WORDS.none)).toBeTruthy();
+  });
+
   it('says why nothing is decided when the runtime cannot read its policies', async () => {
     runtime([[200, { ...inForce([]), unavailable: 'IAM did not answer' }]]);
     const view = draw();

@@ -481,12 +481,16 @@ class TestSessionRules:
         rules = SessionRules()
         above = [ORGANIZATION]
         rules.add(
-            "s", Rule(name="no sends", decision="deny", classes=["send"]), above=above
+            "s",
+            Rule(name="no sends", decision="deny", classes=["send"]),
+            application=None,
+            above=above,
         )
         with pytest.raises(SessionRuleRefused) as refused:
             rules.add(
                 "s",
                 Rule(name="run freely", decision="allow", classes=["execute"]),
+                application=None,
                 above=above,
             )
         assert str(refused.value).startswith(
@@ -494,13 +498,16 @@ class TestSessionRules:
             "the session rule 'run freely' says do it where the organization rule 'execute asks' says ask me first"
         )
         rules.add(
-            "s", Rule(name="no sends", decision="ask", classes=["send"]), above=above
+            "s",
+            Rule(name="no sends", decision="ask", classes=["send"]),
+            application=None,
+            above=above,
         )
         assert [(r.name, r.decision) for r in rules.of("s")] == [("no sends", "ask")]
         rules.remove("s", "no sends")
         with pytest.raises(SessionRuleRefused, match="no rule named 'nope'"):
             rules.remove("s", "nope")
-        rules.add("s", Rule(name="x", decision="deny"), above=above)
+        rules.add("s", Rule(name="x", decision="deny"), application=None, above=above)
         rules.forget("s")
         assert rules.of("s") == []
 
@@ -508,10 +515,16 @@ class TestSessionRules:
         self, unmanaged: None
     ) -> None:
         session_rules().add(
-            "s1", Rule(name="never write", decision="deny", classes=["write"]), above=[]
+            "s1",
+            Rule(name="never write", decision="deny", classes=["write"]),
+            application=None,
+            above=[],
         )
         session_rules().add(
-            "s1", Rule(name="ask to read", decision="ask", classes=["read"]), above=[]
+            "s1",
+            Rule(name="ask to read", decision="ask", classes=["read"]),
+            application=None,
+            above=[],
         )
         assert tightened("s1", ["write"], "do_it") == ("leave_to_me", "never write")
         assert tightened("s1", ["read"], "do_it") == ("ask_first", "ask to read")
@@ -553,6 +566,7 @@ class TestSessionRules:
             session_rules().add(
                 "run-1",
                 Rule(name="no reads", decision="deny", classes=["read"]),
+                application=None,
                 above=[],
             )
             decision = agent.decide(state, act("read", path="a.py", inside=True))
@@ -598,6 +612,127 @@ def remote(runtime: Runtime) -> Iterator[TestClient]:
 
     with TestClient(create_app(), client=("10.0.0.4", 50000)) as client:
         yield client
+
+
+class TestTheApplicationsRulesAreACeiling:
+    """A session rule that loosens the application's own Rules is refused at once (SH-54)."""
+
+    APP_RULES = Policy(
+        scope="team",
+        rules=[
+            Rule(name="Edit files", decision="allow", classes=["write"]),
+            Rule(name="Run commands", decision="ask", classes=["execute"]),
+            Rule(name="Delete files", decision="deny", classes=["delete"]),
+        ],
+    )
+
+    def test_a_rule_allowing_what_the_application_leaves_to_the_person_is_refused(
+        self,
+    ) -> None:
+        rules = SessionRules()
+        with pytest.raises(SessionRuleRefused) as refused:
+            rules.add(
+                "s",
+                Rule(name="delete freely", decision="allow", classes=["delete"]),
+                application=self.APP_RULES,
+                above=[],
+            )
+        assert str(refused.value) == (
+            "The session rule is refused, it would permit more than the application's Rules: "
+            "the session rule 'delete freely' says do it where the application's rule "
+            "'Delete files' says leave it to me; a session rule may only tighten the "
+            "application's Rules."
+        )
+        assert rules.of("s") == [], "nothing was added"
+
+    def test_asking_where_the_application_refuses_is_a_loosening_too(self) -> None:
+        with pytest.raises(
+            SessionRuleRefused, match="'Delete files' says leave it to me"
+        ):
+            SessionRules().add(
+                "s",
+                Rule(name="ask to delete", decision="ask", kinds=["delete"]),
+                application=self.APP_RULES,
+                above=[],
+            )
+        with pytest.raises(
+            SessionRuleRefused, match="'Run commands' says ask me first"
+        ):
+            SessionRules().add(
+                "s",
+                Rule(name="run freely", decision="allow", classes=["execute"]),
+                application=self.APP_RULES,
+                above=[],
+            )
+
+    def test_tightening_the_applications_rules_is_kept(self) -> None:
+        rules = SessionRules()
+        rules.add(
+            "s",
+            Rule(
+                name="no rm", decision="deny", classes=["execute"], commands=[r"^rm\b"]
+            ),
+            application=self.APP_RULES,
+            above=[],
+        )
+        rules.add(
+            "s",
+            Rule(name="ask before writing", decision="ask", classes=["write"]),
+            application=self.APP_RULES,
+            above=[],
+        )
+        # A class the application's Rules do not name is the application's default to tighten, not a loosening of a rule.
+        rules.add(
+            "s",
+            Rule(name="read freely", decision="allow", classes=["read"]),
+            application=self.APP_RULES,
+            above=[],
+        )
+        assert [r.name for r in rules.of("s")] == [
+            "no rm",
+            "ask before writing",
+            "read freely",
+        ]
+
+    def test_the_route_refuses_it_with_the_sentence(
+        self, runtime: Runtime, remote: TestClient
+    ) -> None:
+        guarded = {
+            **ASSISTANT,
+            "rules": [
+                {
+                    "action": "Delete files",
+                    "applies_to": ["delete"],
+                    "behaviour": "leave_to_me",
+                }
+            ],
+        }
+        runtime.make("notes-assistant", guarded, {"app_uid": "app-1", "version": 3})
+        events_of(
+            remote.post(
+                "/api/v1/apps/sessions",
+                headers=as_("ada"),
+                json={
+                    "agent": "notes-assistant",
+                    "app_uid": "app-1",
+                    "version": 3,
+                    "opener": "Hello",
+                    "session": "session-0002",
+                },
+            )
+        )
+        refused = remote.post(
+            "/api/v1/apps/sessions/session-0002/rules",
+            headers=as_("ada"),
+            json={"name": "delete freely", "decision": "allow", "classes": ["delete"]},
+        )
+        assert refused.status_code == 422, refused.text
+        assert refused.json()["detail"].startswith(
+            "The session rule is refused, it would permit more than the application's Rules: "
+            "the session rule 'delete freely' says do it where the application's rule "
+            "'Delete files' says leave it to me"
+        )
+        assert session_rules().of("session-0002") == []
 
 
 class TestTheSessionRulesRoutes:
