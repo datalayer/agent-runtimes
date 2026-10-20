@@ -68,7 +68,13 @@ export interface Hearing {
    * Whether there is speech in some sound, found by the VAD alone — nothing
    * transcribed, nothing sent (VO-52): hands-free's quick look for barge-in.
    */
-  spokeSoFar?(audio: Float32Array): Promise<boolean>;
+  spokeSoFar?(audio: Float32Array, shortestSeconds?: number): Promise<boolean>;
+  /**
+   * Whether there is speech in some sound and how long it has been quiet
+   * since, by the VAD alone — no words (VO-52): hands-free's quick look for
+   * the end of a turn once the person has spoken.
+   */
+  quietSoFar?(audio: Float32Array): Promise<HeardSoFar>;
 }
 
 /** Joins the speech a VAD found, in order. */
@@ -260,9 +266,17 @@ export class DeviceHearing implements Hearing {
    * words, for the composer as they come, and how long it has been silent
    * since the speech ended — what stops a click to talk (VO-10).
    */
-  async spokeSoFar(audio: Float32Array): Promise<boolean> {
+  async spokeSoFar(
+    audio: Float32Array,
+    shortestSeconds = 0.2,
+  ): Promise<boolean> {
     const { speech } = await this.findSpeech(audio);
-    return speech.length >= HEARING_RATE * 0.2;
+    return speech.length >= HEARING_RATE * shortestSeconds;
+  }
+
+  async quietSoFar(audio: Float32Array): Promise<HeardSoFar> {
+    const { speech, silentMs } = await this.findSpeech(audio);
+    return { text: '', spoke: speech.length >= HEARING_RATE * 0.2, silentMs };
   }
 
   async hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar> {

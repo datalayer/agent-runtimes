@@ -330,6 +330,50 @@ describe('Talk with it (VO-12, VO-13)', () => {
     expect(stopped.marked).toBeGreaterThanOrEqual(1);
   });
 
+  it('once the person spoke, looks for the end of the turn often, by the VAD alone (VO-52)', async () => {
+    class QuickHearing extends StandInHearing {
+      quiet = 0;
+      transcribed = 0;
+      async hearSoFar(): Promise<HeardSoFar> {
+        this.transcribed += 1;
+        return this.heard;
+      }
+      async quietSoFar(): Promise<HeardSoFar> {
+        this.quiet += 1;
+        return { ...this.heard, text: '' };
+      }
+    }
+    const hearing = new QuickHearing();
+    const sent: string[] = [];
+    act(() =>
+      root.render(
+        <HandsFree
+          hearing={hearing}
+          language="en-US"
+          consentKey="desk"
+          send={text => sent.push(text)}
+        />,
+      ),
+    );
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    hearing.heard = { text: 'What is', spoke: true, silentMs: 0 };
+    await until(() => hearing.transcribed >= 1);
+    // Spoke: looked at often without the words, the words now and then.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 600));
+    });
+    expect(hearing.quiet).toBeGreaterThanOrEqual(2);
+    hearing.heard = { text: 'What is', spoke: true, silentMs: 600 };
+    const quietAt = Date.now();
+    await until(() => sent.length === 1);
+    expect(Date.now() - quietAt).toBeLessThan(BARGE_IN_POLL_MS + 300);
+  });
+
   it('while it answers, looks for the person by the VAD alone, often, over the last moment (VO-52)', async () => {
     class QuickHearing extends StandInHearing {
       looked: number[] = [];

@@ -61,6 +61,9 @@ export const BARGE_IN_POLL_MS = 150;
 
 /** The last of the sound looked at for barge-in: 1.5 s, so each look is cheap. */
 const BARGE_IN_WINDOW = Math.round(HEARING_RATE * 1.5);
+
+/** The least speech that is barge-in, in seconds: a short word (VO-52). */
+const BARGE_IN_SHORTEST = 0.12;
 import type { SpokenMetadata } from './types';
 
 export interface HandsFreeProps {
@@ -198,10 +201,18 @@ export function HandsFree({
       }
       heardWhile.current =
         stateRef.current === 'listening' ? 'listening' : 'answering';
+      // Once the person spoke in this turn, its end is looked for often,
+      // by the VAD alone, the words between (VO-52).
+      let spokeThisTurn = false;
+      let wordsAt = 0;
       while (alive) {
         const quick =
-          Boolean(hearing.spokeSoFar) &&
-          (stateRef.current === 'thinking' || stateRef.current === 'speaking');
+          (Boolean(hearing.spokeSoFar) &&
+            (stateRef.current === 'thinking' ||
+              stateRef.current === 'speaking')) ||
+          (Boolean(hearing.quietSoFar) &&
+            spokeThisTurn &&
+            stateRef.current === 'listening');
         await pause(quick ? BARGE_IN_POLL_MS : INTERIM_MS);
         const open = capture.current;
         if (!alive || !open) {
@@ -222,6 +233,7 @@ export function HandsFree({
           }
           heardWhile.current = answering ? 'answering' : 'listening';
           quietSince = Date.now();
+          spokeThisTurn = false;
           continue;
         }
         let so: Awaited<ReturnType<Hearing['hearSoFar']>> | undefined;
@@ -231,10 +243,19 @@ export function HandsFree({
             const sound = open.peek();
             const spoke = await hearing.spokeSoFar(
               sound.subarray(Math.max(0, sound.length - BARGE_IN_WINDOW)),
+              BARGE_IN_SHORTEST,
             );
             so = { text: '', spoke, silentMs: 0 };
+          } else if (
+            spokeThisTurn &&
+            hearing.quietSoFar &&
+            Date.now() - wordsAt < INTERIM_MS
+          ) {
+            // The turn's end looked for: the VAD alone, no words.
+            so = await hearing.quietSoFar(open.peek());
           } else {
             so = await hearing.hearSoFar(open.peek(), language);
+            wordsAt = Date.now();
           }
         } catch {
           so = undefined;
@@ -247,6 +268,9 @@ export function HandsFree({
         }
         if (so.spoke) {
           quietSince = Date.now();
+          if (now === 'listening') {
+            spokeThisTurn = true;
+          }
         }
         const playing = latest.current.playbackLevel;
         const levels = playing
@@ -299,6 +323,7 @@ export function HandsFree({
           }
           heardWhile.current = 'listening';
           quietSince = Date.now();
+          spokeThisTurn = false;
           continue;
         }
         if (now === 'listening' && Date.now() - quietSince >= IDLE_PAUSE_MS) {
