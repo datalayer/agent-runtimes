@@ -1247,7 +1247,7 @@ export function AssistantStage({
               state={state}
               size={size}
               mouthLevel={mouthLevel}
-              aside={aside}
+              aside={aside !== undefined}
               replay={replay}
             />
           </Suspense>
