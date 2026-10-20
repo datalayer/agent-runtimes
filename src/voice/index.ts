@@ -69,7 +69,7 @@ export interface ChatVoice {
    * `off`: none.
    */
   input: 'off' | 'push_to_talk' | 'hands_free';
-  /** The silence after speech that ends a hands-free turn, in ms (VO-12): 700 when unsaid. */
+  /** The silence after speech that ends a hands-free turn, in ms (VO-12): 500 when unsaid. */
   turnSilenceMs?: number;
   /**
    * When answers are heard: `always`, as they are written; `on_request`, a

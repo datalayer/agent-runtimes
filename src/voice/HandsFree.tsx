@@ -10,7 +10,7 @@
  *
  * On, the microphone stays open. The words are written in the composer as
  * they are heard (VO-11); once the person has spoken and been silent for the
- * turn's silence (`turnSilenceMs`, 700 ms unless said), what was said is
+ * turn's silence (`turnSilenceMs`, 500 ms unless said), what was said is
  * heard whole and **sent** — nothing waits for a click. The answer is said as
  * it is written (hands-free implies `output: always`), and listening goes
  * on through it: speech heard while the agent thinks or speaks is
@@ -32,7 +32,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { openMicrophone, type Capture } from './capture';
+import { HEARING_RATE, openMicrophone, type Capture } from './capture';
 import {
   CONSENT_SENTENCE,
   SERVER_CONSENT_SENTENCE,
@@ -50,6 +50,16 @@ import {
 } from './handsFree';
 import type { Hearing } from './hearing';
 import { INTERIM_MS } from './VoiceInput';
+
+/**
+ * While the agent answers, how often the microphone is looked at for the
+ * person speaking over it, by the VAD alone (VO-52): looked at every
+ * `INTERIM_MS` with the words transcribed, barge-in waited up to 0.7 s.
+ */
+export const BARGE_IN_POLL_MS = 150;
+
+/** The last of the sound looked at for barge-in: 1.5 s, so each look is cheap. */
+const BARGE_IN_WINDOW = Math.round(HEARING_RATE * 1.5);
 import type { SpokenMetadata } from './types';
 
 export interface HandsFreeProps {
@@ -60,7 +70,7 @@ export interface HandsFreeProps {
   consentKey: string;
   /** The microphone the person chose (VO-30); the browser's own when unsaid. */
   microphoneId?: string;
-  /** The silence after speech that ends a turn, in ms; 700 unless said (VO-12). */
+  /** The silence after speech that ends a turn, in ms; 500 unless said (VO-12). */
   turnSilenceMs?: number;
   /** A turn, heard whole: sent at once. */
   send: (text: string, metadata: SpokenMetadata) => void;
@@ -182,7 +192,10 @@ export function HandsFree({
       heardWhile.current =
         stateRef.current === 'listening' ? 'listening' : 'answering';
       while (alive) {
-        await pause(INTERIM_MS);
+        const quick =
+          Boolean(hearing.spokeSoFar) &&
+          (stateRef.current === 'thinking' || stateRef.current === 'speaking');
+        await pause(quick ? BARGE_IN_POLL_MS : INTERIM_MS);
         const open = capture.current;
         if (!alive || !open) {
           return;
@@ -206,7 +219,16 @@ export function HandsFree({
         }
         let so: Awaited<ReturnType<Hearing['hearSoFar']>> | undefined;
         try {
-          so = await hearing.hearSoFar(open.peek(), language);
+          if (answering && hearing.spokeSoFar) {
+            // Barge-in only: the VAD over the last moment, nothing transcribed.
+            const sound = open.peek();
+            const spoke = await hearing.spokeSoFar(
+              sound.subarray(Math.max(0, sound.length - BARGE_IN_WINDOW)),
+            );
+            so = { text: '', spoke, silentMs: 0 };
+          } else {
+            so = await hearing.hearSoFar(open.peek(), language);
+          }
         } catch {
           so = undefined;
         }

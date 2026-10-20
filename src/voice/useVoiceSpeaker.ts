@@ -53,6 +53,8 @@ export function useVoiceSpeaker(
             rate: voice.rate,
             volume: voice.volume,
             onState: setState,
+            // The chat's answers: a long first sentence's first clause first.
+            firstClauseFirst: true,
           })
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps

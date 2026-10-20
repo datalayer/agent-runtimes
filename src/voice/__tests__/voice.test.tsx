@@ -22,7 +22,13 @@ import {
 } from '../pinned';
 import { DeviceHearing, joinSegments, runtimeFiles } from '../hearing';
 import { resample } from '../capture';
-import { SENTENCES_AHEAD, ServerSpeaker, SYNTHESES_PATH } from '../speaker';
+import {
+  FIRST_CLAUSE_SPLIT_CHARS,
+  SENTENCES_AHEAD,
+  ServerSpeaker,
+  SYNTHESES_PATH,
+  firstClause,
+} from '../speaker';
 import { answerText, useSpokenAnswers } from '../useSpokenAnswers';
 import { assistantStateOf } from '../../chat/assistant/state';
 import { mouthOpening } from '../../chat/assistant/AssistantStage';
@@ -341,6 +347,51 @@ describe('a long answer, said (VO-33, VO-39)', () => {
     );
     await vi.waitFor(() => expect(states.at(-1)?.refused).toBe('No.'));
     expect(fetcher).toHaveBeenCalledTimes(SENTENCES_AHEAD);
+  });
+});
+
+describe('the first sound, sooner (VO-52)', () => {
+  const LONG =
+    'The Eiffel Tower was built for the 1889 World’s Fair, and it was the tallest structure in the world for forty years.';
+
+  it('cuts a long sentence after its first clause, never in a number nor into a sliver', () => {
+    expect(LONG.length).toBeGreaterThan(FIRST_CLAUSE_SPLIT_CHARS);
+    expect(firstClause(LONG)).toEqual([
+      'The Eiffel Tower was built for the 1889 World’s Fair,',
+      'and it was the tallest structure in the world for forty years.',
+    ]);
+    expect(firstClause('One moment, please.')).toEqual(['One moment, please.']);
+    const number =
+      'It costs 1,000,000 euros to repaint the whole tower every seven years or so.';
+    expect(firstClause(number)).toEqual([number]);
+    const sliver =
+      'Yes, the tower is repainted by hand about every seven years by a crew.';
+    expect(firstClause(sliver)).toEqual([sliver]);
+  });
+
+  it('asks the first clause on its own for the chat, and never for a caller following its sentences', () => {
+    const asked = (firstClauseFirst: boolean) => {
+      const fetcher = vi.fn(() => new Promise<Response>(() => undefined));
+      const speaker = new ServerSpeaker({
+        speechUrl: 'https://r1.example',
+        voice: 'kokoro-af-heart',
+        language: 'en-US',
+        fetcher: fetcher as unknown as typeof fetch,
+        firstClauseFirst,
+      });
+      speaker.say(LONG);
+      speaker.say(LONG);
+      return fetcher.mock.calls.map(
+        call =>
+          JSON.parse(String((call as unknown as [string, RequestInit])[1].body))
+            .text,
+      );
+    };
+    expect(asked(true)).toEqual([
+      'The Eiffel Tower was built for the 1889 World’s Fair,',
+      'and it was the tallest structure in the world for forty years.',
+    ]);
+    expect(asked(false)).toEqual([LONG, LONG]);
   });
 });
 

@@ -58,6 +58,13 @@ export interface SpeakerOptions {
   onState?: (state: SpeakerState) => void;
   /** Called with how long a sentence took from asked to first sound, in ms. */
   onFirstSound?: (ms: number) => void;
+  /**
+   * Say a long first sentence's first clause on its own (VO-52): the service
+   * makes a sentence whole, in about the time its length takes, so the first
+   * sound comes sooner when the first thing asked is shorter. Off for a
+   * caller that follows its sentences one by one (a deck's narrator).
+   */
+  firstClauseFirst?: boolean;
   fetcher?: typeof fetch;
 }
 
@@ -76,6 +83,37 @@ interface Queued {
  * 14 October 2026).
  */
 export const SENTENCES_AHEAD = 2;
+
+/** A first sentence longer than this is said clause first (`firstClauseFirst`). */
+export const FIRST_CLAUSE_SPLIT_CHARS = 60;
+
+/** Neither part of a sentence cut at its first clause is shorter than this. */
+const SHORTEST_CLAUSE_CHARS = 15;
+
+/**
+ * A sentence cut after its first clause — a comma, semicolon, colon or dash
+ * followed by a space — when it is long and neither part is too short (VO-52);
+ * else the sentence alone. Never cut inside a number (`1,000`).
+ */
+export function firstClause(sentence: string): string[] {
+  if (sentence.length <= FIRST_CLAUSE_SPLIT_CHARS) {
+    return [sentence];
+  }
+  const boundary = /[,;:\u2013\u2014]\s+/g;
+  let found: RegExpExecArray | null;
+  while ((found = boundary.exec(sentence)) !== null) {
+    const end = found.index + 1;
+    if (end < SHORTEST_CLAUSE_CHARS) {
+      continue;
+    }
+    const rest = sentence.slice(found.index + found[0].length);
+    if (rest.length < SHORTEST_CLAUSE_CHARS) {
+      break;
+    }
+    return [sentence.slice(0, end), rest];
+  }
+  return [sentence];
+}
 
 /** Plays an answer's sentences, said by the speech service. */
 export class ServerSpeaker {
@@ -163,7 +201,15 @@ export class ServerSpeaker {
     if (!sentence) {
       return;
     }
-    this.queue.push({ text: sentence, asked: performance.now() });
+    // Nothing playing or waiting: this is the first thing heard (VO-52).
+    const first =
+      this.options.firstClauseFirst &&
+      !this.queue.length &&
+      !this.playing &&
+      !this.running;
+    for (const part of first ? firstClause(sentence) : [sentence]) {
+      this.queue.push({ text: part, asked: performance.now() });
+    }
     if (!this.state.speaking) {
       // Something new to say: the last refusal is no longer the news.
       this.set({ speaking: true, refused: undefined });

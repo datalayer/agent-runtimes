@@ -10,7 +10,7 @@
  * microphone and the clock, this decides.
  *
  * - **Listening**: the microphone is open; the turn ends after
- *   `turnSilenceMs` of silence once the person has spoken (700 ms unless
+ *   `turnSilenceMs` of silence once the person has spoken (500 ms unless
  *   the application or the person says otherwise), and is sent.
  * - **Thinking**: the turn was sent and the agent is answering, nothing
  *   said yet.
@@ -38,7 +38,7 @@ export const HANDS_FREE_WORDS: Record<HandsFreeState, string> = {
 };
 
 /** The silence after speech that ends a turn, in ms, unless said otherwise (VO-12). */
-export const TURN_SILENCE_MS = 700;
+export const TURN_SILENCE_MS = 500;
 
 /** Listening with nothing said for this long pauses it: a microphone is not left open on an empty room. */
 export const IDLE_PAUSE_MS = 5 * 60_000;

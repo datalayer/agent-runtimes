@@ -26,7 +26,7 @@ import {
   heardOverPlayback,
   turnEnded,
 } from '../handsFree';
-import { HandsFree } from '../HandsFree';
+import { BARGE_IN_POLL_MS, HandsFree } from '../HandsFree';
 import { chatVoiceOf } from '../chatVoice';
 import type { HeardSoFar, Hearing } from '../hearing';
 import type { Transcript } from '../types';
@@ -65,10 +65,10 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(HANDS_FREE_WORDS.listening).toBe('Listening…');
   });
 
-  it('ends a turn after the silence once the person spoke, 700 ms unless said', () => {
-    expect(TURN_SILENCE_MS).toBe(700);
-    expect(turnEnded({ spoke: true, silentMs: 699 })).toBe(false);
-    expect(turnEnded({ spoke: true, silentMs: 700 })).toBe(true);
+  it('ends a turn after the silence once the person spoke, 500 ms unless said (VO-52)', () => {
+    expect(TURN_SILENCE_MS).toBe(500);
+    expect(turnEnded({ spoke: true, silentMs: 499 })).toBe(false);
+    expect(turnEnded({ spoke: true, silentMs: 500 })).toBe(true);
     expect(turnEnded({ spoke: false, silentMs: 5000 })).toBe(false);
     expect(turnEnded({ spoke: true, silentMs: 400 }, 300)).toBe(true);
   });
@@ -328,6 +328,59 @@ describe('Talk with it (VO-12, VO-13)', () => {
     await until(() => stopped.voice >= 1);
     expect(stopped.run).toBeGreaterThanOrEqual(1);
     expect(stopped.marked).toBeGreaterThanOrEqual(1);
+  });
+
+  it('while it answers, looks for the person by the VAD alone, often, over the last moment (VO-52)', async () => {
+    class QuickHearing extends StandInHearing {
+      looked: number[] = [];
+      transcribed = 0;
+      async hearSoFar(): Promise<HeardSoFar> {
+        this.transcribed += 1;
+        return this.heard;
+      }
+      async spokeSoFar(audio: Float32Array): Promise<boolean> {
+        this.looked.push(audio.length);
+        return this.heard.spoke;
+      }
+    }
+    const hearing = new QuickHearing();
+    const stopped = { voice: 0 };
+    const draw = (running: boolean, speaking: boolean) =>
+      act(() =>
+        root.render(
+          <HandsFree
+            hearing={hearing}
+            language="en-US"
+            consentKey="desk"
+            send={() => undefined}
+            running={running}
+            speaking={speaking}
+            onStopSpeaking={() => (stopped.voice += 1)}
+          />,
+        ),
+      );
+    draw(false, false);
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    draw(true, true);
+    await until(() => opened.length === 2);
+    const transcribedBefore = hearing.transcribed;
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 700));
+    });
+    // Several quick looks in what was one look before, none transcribed,
+    // each over at most the last second and a half.
+    expect(hearing.looked.length).toBeGreaterThanOrEqual(3);
+    expect(hearing.transcribed).toBe(transcribedBefore);
+    expect(Math.max(...hearing.looked)).toBeLessThanOrEqual(HEARING_RATE * 1.5);
+    hearing.heard = { text: '', spoke: true, silentMs: 0 };
+    const spoke = Date.now();
+    await until(() => stopped.voice >= 1);
+    expect(Date.now() - spoke).toBeLessThan(BARGE_IN_POLL_MS + 250);
   });
 
   it("does not take the answer's own sound for the person while it plays, and stops for the person's voice over it (VO-13)", async () => {

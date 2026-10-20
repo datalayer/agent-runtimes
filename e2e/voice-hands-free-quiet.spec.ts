@@ -31,8 +31,8 @@ test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
     // *Pauses before I am done*: Longer (VO-69), twice the usual silence.
     const { runs, syntheses, toggle, state, states, times, turnSilenceMs } =
       await talkWith(page, context, { pause: 2 });
-    // The turn's silence the composer was given: twice the usual 700 ms.
-    expect(await turnSilenceMs()).toBe(1400);
+    // The turn's silence the composer was given: twice the usual 500 ms.
+    expect(await turnSilenceMs()).toBe(1000);
     await expect
       .poll(() => runs.length, { timeout: 120_000 })
       .toBeGreaterThan(0);

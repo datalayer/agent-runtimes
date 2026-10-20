@@ -410,6 +410,11 @@ export class ServerHearing implements Hearing {
    * Whether speech was found and how long it has been silent, and the words
    * the speech service heard so far: the sound goes to its stream as it comes.
    */
+  async spokeSoFar(audio: Float32Array): Promise<boolean> {
+    const { speech } = await this.finder.findSpeech(audio);
+    return speech.length >= SHORTEST;
+  }
+
   async hearSoFar(audio: Float32Array, language = ''): Promise<HeardSoFar> {
     const { speech, silentMs } = await this.finder.findSpeech(audio);
     const spoke = speech.length >= SHORTEST;
@@ -570,6 +575,13 @@ export class AutoHearing implements Hearing {
 
   hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar> {
     return this.current.hearSoFar(audio, language);
+  }
+
+  async spokeSoFar(audio: Float32Array): Promise<boolean> {
+    const current = this.current;
+    return current.spokeSoFar
+      ? current.spokeSoFar(audio)
+      : (await current.hearSoFar(audio, '')).spoke;
   }
 
   async hear(
