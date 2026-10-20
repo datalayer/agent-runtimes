@@ -7,6 +7,13 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.58
+
+20 October 2026 ([The floating assistant](https://agent-runtimes.datalayer.tech/docs/chat/floating-assistant), [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding)):
+
+- **The character is now the avatar** (ecee34b0), with agentspecs 0.0.116: an Appspec names its assistant's appearance in `interface.avatar` (it was `interface.assistant`), and `deployment.hosted.avatar_alone` replaces `character_alone`. The old keys are refused, each in one sentence that names the new key; there is no alias. `AppAvatar`, `isAvatar`, `isAvatarId`, `isAvatarModel3D` and `DEFAULT_AVATAR_MODEL_URL` replace `AppAssistantCharacter` and `isAssistantCharacterId`. The Canvas parts are `avatars` (`avatar:<id>`), and the menus say *Change avatar…* and *Its avatar*. `Application(avatar=…)` writes it from Python.
+- **A third kind of avatar, a 3D model**, beside Datalayer's drawings and the Microsoft Agent characters: `{kind: model3d, url}` is a glTF model drawn with three.js 0.186.1 (`Avatar3D`). It is lazy-loaded, so a page with no 3D avatar never loads three.js. The model plays its `Idle` animation while quiet. While it speaks, its mouth morph targets and a head nod follow the voice's level, as the other avatars' mouths do. It is drawn still for readers who ask for reduced motion. With no WebGL, or a model that does not load, a sentence takes its place. The default model is RobotExpressive by Tomás Laulhé (Quaternius, CC0 1.0), from the three.js repository at r170 through jsDelivr. The Canvas offers it as *3D model*.
+
 ## 1.5.57
 
 19 October 2026 ([Personal Agent Protocol](https://agent-runtimes.datalayer.tech/docs/integrations/personal-agent-protocol)):
