@@ -185,6 +185,31 @@ naming none is refused. ai-agents checks that the page may open that
 deployment, as a runtime does, and counts the speech against the deployment's
 spend limit. The owner pays.
 
+These limits — each visitor's 120 seconds, a caller's calls at once and its
+characters an hour — are counted by each speech pod in its own memory. The
+service runs 2 to 4 pods, so a caller whose calls land on several pods can
+have up to that many times as much. This is accepted as it is (20 October
+2026); a store the pods share would make them exact.
+
+### What is said, kept as sound
+
+An application whose record names `audio` (`record.include`) keeps what a
+person says as sound, besides the words, for its record's days and **30 days
+at most**. It is never kept for a public deployment, a visitor without an
+account or an embed's, and an Appspec that asks for it otherwise is refused.
+The microphone's first sentence says so (*This application also keeps what
+you say as sound, with this conversation, for 7 days at most…*) and is asked
+apart from the one that only hears: *Not now*, and the person types.
+
+Each turn's recording (a 16-bit mono WAV at 16 kHz, a minute at most) rides
+on the run as `forwardedProps.voice.sound`. The runtime takes it out before
+anything reads the run — no model hears it, no record entry holds it — and
+sends it to ai-agents (`POST /api/ai-agents/v1/apps/records/audio`), which
+puts it in its object store and gives the session's record an `audio` entry
+that points at it. Deleting a person's conversations, a deployment's Reset
+and an entry past its day delete the sound with them; the bucket's own rule
+expires it at 30 days besides.
+
 `<datalayer-app>` is drawn in the host's page, so the page's
 `Permissions-Policy` decides whether the microphone may be asked for. The
 snippet from *Ship* says so for an application that listens. When the policy

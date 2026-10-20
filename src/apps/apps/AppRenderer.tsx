@@ -99,6 +99,7 @@ import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import { ChatLanguage } from '../../chat/ChatLanguage';
 import { chatVoiceOf, type ChatVoicePlace } from '../../voice/chatVoice';
+import { keptAudioDays } from '../../voice/keptSound';
 import { defineAppRuntimePlugin } from './AppRuntimePlugins';
 import { hasFolderModules } from './customComponents';
 import { appPluginPair } from './pluginPair';
@@ -681,11 +682,18 @@ export function AppRenderer({
     }
     try {
       return {
-        voice: chatVoiceOf(app.interface?.voice, {
-          ...speech,
-          consentKey: app.id,
-          language,
-        }),
+        voice: chatVoiceOf(
+          app.interface?.voice,
+          {
+            ...speech,
+            consentKey: app.id,
+            language,
+          },
+          // What is said kept as sound, as its record says (VO-63): only for
+          // a person signed in (the host gave their token), never a visitor
+          // nor an embed's.
+          visitor || !speech.token ? undefined : keptAudioDays(app.record),
+        ),
       };
     } catch (error) {
       return {
@@ -695,6 +703,8 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     JSON.stringify(app.interface?.voice ?? null),
+    JSON.stringify(app.record?.include ?? null),
+    visitor,
     app.id,
     language,
     speech?.speechUrl,

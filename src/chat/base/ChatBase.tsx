@@ -4137,10 +4137,14 @@ function ChatBaseInner({
         ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
         : forwardedPropsGiven;
 
-      const userMessage = createUserMessage(
-        messageContent,
-        spoken ? { ...spoken } : undefined,
-      );
+      // The message says how it was heard; its sound, sent to be kept
+      // (VO-63), rides on the run only, never on the conversation.
+      let heardAs: SpokenMetadata | undefined;
+      if (spoken) {
+        const { sound: _sound, ...rest } = spoken;
+        heardAs = rest;
+      }
+      const userMessage = createUserMessage(messageContent, heardAs);
       const currentMessages = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );

@@ -96,6 +96,19 @@ export interface SpokenMetadata {
   language: string;
   engine: string;
   where: 'device' | 'server';
+  /**
+   * The turn's sound, sent to be kept with its words when the application's
+   * record keeps `audio` and the person agreed (VO-63); never on the
+   * conversation's own message.
+   */
+  sound?: SpokenSound;
+}
+
+/** A turn's recording, to keep (VO-63): a WAV, base64. */
+export interface SpokenSound {
+  data: string;
+  type: 'audio/wav';
+  seconds: number;
 }
 
 /** What the person said, once heard. */

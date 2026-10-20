@@ -267,6 +267,44 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     expect(openMicrophone).not.toHaveBeenCalled();
   });
 
+  it('keeping what is said as sound, asks apart and sends the turn’s recording with its words (VO-63)', async () => {
+    const hearing = new DeviceHearing(
+      'https://models.example/speech',
+      engines(['Open', 'the', 'notebook.']),
+    );
+    act(() => {
+      root.render(
+        <VoiceInput
+          hearing={hearing}
+          language="en-US"
+          consentKey="listening-test"
+          keepsAudio={7}
+          silenceMs={800}
+          onTranscript={transcript => transcripts.push(transcript)}
+        />,
+      );
+    });
+    const mic = container.querySelector('[data-voice-mic]')!;
+    // A yes to being heard is not a yes to being kept: asked again.
+    await act(async () => {
+      press(mic, 'pointerdown');
+      press(mic, 'pointerup');
+    });
+    expect(state()).toBe('asking');
+    expect(
+      container.querySelector('[data-voice-consent-kept]')?.textContent,
+    ).toContain('for 7 days at most');
+    await act(async () => {
+      (
+        container.querySelector('[data-voice-consent-yes]') as HTMLElement
+      ).click();
+    });
+    await until(() => transcripts.length === 1);
+    const sound = transcripts[0].metadata.sound;
+    expect(sound?.type).toBe('audio/wav');
+    expect(atob(sound!.data).slice(0, 4)).toBe('RIFF');
+  });
+
   it('says so in a sentence when the microphone is refused', async () => {
     vi.mocked(openMicrophone).mockRejectedValue(
       new MicrophoneRefused(

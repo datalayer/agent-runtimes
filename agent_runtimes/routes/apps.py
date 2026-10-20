@@ -2040,6 +2040,42 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         raise _refused(refused) from None
 
 
+#: The most sound a turn sends to keep, as base64 (a minute, VO-63).
+SAID_SOUND_BASE64 = AUDIO_TURN_BYTES * 4 // 3 + 4
+
+
+def _said_sound(forwarded: Any) -> Optional[Tuple[bytes, str, float, str]]:
+    """The sound a spoken message carries to be kept (VO-63) —
+    ``forwardedProps.voice.sound``: ``{data: <base64>, type, seconds}`` —
+    taken out of the run: ``(sound, content_type, seconds, language)``, or
+    ``None`` when there is none or it is not a sound a turn may keep.
+    """
+    import base64
+    import binascii
+
+    voice = forwarded.get("voice") if isinstance(forwarded, dict) else None
+    if not isinstance(voice, dict):
+        return None
+    sound = voice.pop("sound", None)
+    if not isinstance(sound, dict):
+        return None
+    data = sound.get("data")
+    kind = str(sound.get("type") or "").split(";")[0].strip().lower()
+    if not isinstance(data, str) or kind not in AUDIO_TYPES:
+        return None
+    if len(data) > SAID_SOUND_BASE64:
+        return None
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    try:
+        seconds = float(sound.get("seconds") or 0.0)
+    except (TypeError, ValueError):
+        seconds = 0.0
+    return raw, kind, seconds, str(voice.get("language") or "")
+
+
 @router.post("/agents/{agent}/ag-ui/")
 async def session_agui(agent: str, request: Request) -> Any:
     """An application's agent over AG-UI, each thread a session of it.
@@ -2078,6 +2114,9 @@ async def session_agui(agent: str, request: Request) -> Any:
     thread = str(body.get("threadId") or "")
     forwarded = body.get("forwardedProps")
     loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
+    # What they said as sound, sent to be kept with their consent (VO-63):
+    # taken out before anything else reads the run, never given to a model.
+    said = _said_sound(forwarded)
     # A message the person said: its transcript is the message, and the
     # record keeps it marked spoken (VO-27, VO-29).
     hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
@@ -2106,7 +2145,10 @@ async def session_agui(agent: str, request: Request) -> Any:
             raise SessionRefused(404, f"No session {thread} of {agent} is held here.")
         else:
             live.acts_as = await _acts_as(instance, authorized.caller, bearer, app)
-        return _stream(live.run_agui(body, loop=loop or {}, bearer=bearer))
+        streamed = live.run_agui(body, loop=loop or {}, bearer=bearer)
+        if said is not None and authorized.caller.kind == "person":
+            live.keep_said_later(*said)
+        return _stream(streamed)
     except SessionRefused as refused:
         raise _refused(refused) from None
 

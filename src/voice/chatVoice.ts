@@ -72,6 +72,7 @@ export interface ChatVoicePlace {
 export function chatVoiceOf(
   spec: AppVoiceSpec | undefined,
   place: ChatVoicePlace,
+  keepsAudio?: number,
 ): ChatVoice | undefined {
   if (!spec?.enabled || (spec.input === 'off' && spec.output === 'off')) {
     return undefined;
@@ -94,6 +95,8 @@ export function chatVoiceOf(
     token: place.token,
     consentKey: place.consentKey,
     where: spec.where ?? 'auto',
+    // Kept as sound only when it listens, as its record says (VO-63).
+    ...(keepsAudio && spec.input !== 'off' ? { keepsAudio } : {}),
   };
 }
 

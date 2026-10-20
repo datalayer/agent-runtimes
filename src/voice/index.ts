@@ -17,6 +17,7 @@ import type { VoiceEngines } from './types';
 
 export * from './types';
 export * from './sentences';
+export * from './keptSound';
 export * from './pinned';
 export * from './capture';
 export * from './hearing';
@@ -100,6 +101,12 @@ export interface ChatVoice {
   detect?: boolean;
   /** The token the speech service is asked with. */
   token?: string;
+  /**
+   * The days the application keeps what is said as sound (VO-63), when its
+   * record keeps `audio`: asked in the microphone's first sentence, each
+   * turn's recording sent with its words. Never for a visitor.
+   */
+  keepsAudio?: number;
   /** Send what is said at once, rather than put it in the composer. */
   sendWhatISay?: boolean;
   /**

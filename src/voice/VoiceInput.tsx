@@ -37,6 +37,7 @@ import {
   consented,
 } from './consent';
 import type { Hearing } from './hearing';
+import { keptAudioSentence, soundOf } from './keptSound';
 import type { Transcript } from './types';
 
 /** What the microphone is doing, said in words (VO-67, VO-68). */
@@ -90,6 +91,11 @@ export interface VoiceInputProps {
   onListen?: () => void;
   /** Whose consent is remembered: the application's id. */
   consentKey: string;
+  /**
+   * The days the application keeps what is said as sound (VO-63): asked in
+   * the first sentence, and each turn's recording sent with its words.
+   */
+  keepsAudio?: number;
   disabled?: boolean;
   /** The agent is speaking: offer to stop it. */
   speaking?: boolean;
@@ -112,6 +118,7 @@ export function VoiceInput({
   microphoneId,
   onListen,
   consentKey,
+  keepsAudio,
   disabled = false,
   speaking = false,
   onStopSpeaking,
@@ -138,7 +145,7 @@ export function VoiceInput({
     if (disabled || stateRef.current !== 'idle') {
       return;
     }
-    if (!consented(consentKeyFor(consentKey, hearing.where))) {
+    if (!consented(consentKeyFor(consentKey, hearing.where, keepsAudio))) {
       setState('asking');
       return;
     }
@@ -167,7 +174,15 @@ export function VoiceInput({
           : 'The microphone could not be opened.',
       );
     }
-  }, [consentKey, disabled, hearing, language, microphoneId, onListen]);
+  }, [
+    consentKey,
+    keepsAudio,
+    disabled,
+    hearing,
+    language,
+    microphoneId,
+    onListen,
+  ]);
 
   const stop = useCallback(async () => {
     const open = capture.current;
@@ -192,7 +207,15 @@ export function VoiceInput({
         return;
       }
       setSaid(`Heard: ${transcript.text}`);
-      onTranscript(transcript);
+      // Kept as sound too, as the person agreed (VO-63).
+      onTranscript(
+        keepsAudio
+          ? {
+              ...transcript,
+              metadata: { ...transcript.metadata, sound: soundOf(audio) },
+            }
+          : transcript,
+      );
     } catch (error) {
       setState('idle');
       onInterim?.('');
@@ -468,6 +491,11 @@ export function VoiceInput({
               ? SERVER_CONSENT_SENTENCE
               : CONSENT_SENTENCE}
           </Text>
+          {keepsAudio ? (
+            <Text as="p" sx={{ fontSize: 1, mb: 2 }} data-voice-consent-kept="">
+              {keptAudioSentence(keepsAudio)}
+            </Text>
+          ) : null}
           <Box display="flex" gap={2} justifyContent="flex-end">
             <Button size="small" onClick={() => setState('idle')}>
               Not now
@@ -477,7 +505,7 @@ export function VoiceInput({
               variant="primary"
               data-voice-consent-yes=""
               onClick={() => {
-                consent(consentKeyFor(consentKey, hearing.where));
+                consent(consentKeyFor(consentKey, hearing.where, keepsAudio));
                 // Asked, and said yes: listen now, without another press.
                 stateRef.current = 'idle';
                 setState('idle');

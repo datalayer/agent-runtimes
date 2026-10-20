@@ -108,6 +108,9 @@ INCLUDED_BY = {
     # each is a hash and a size, or a command and an exit, unless named.
     "diff": "diffs",
     "terminal": "terminals",
+    # What the person said, as sound, with their consent (VO-63): kept by
+    # ai-agents in its object store, the record pointing at it.
+    "audio": "audio",
 }
 
 #: Kept whatever `record.include` says: a session's start, a run's start
@@ -343,6 +346,50 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
     )
 
 
+async def keep_sound_in_ai_agents(
+    sound: bytes, *, content_type: str, params: Dict[str, Any]
+) -> None:
+    """Send a turn's sound to ai-agents to keep (VO-63): its object store
+    keeps it, the session's record points at it. With the token of the run,
+    as the record is sent.
+
+    Raises
+    ------
+    RecordNotSent
+        When there is no token or no ai-agents, or ai-agents refused it.
+    """
+    import httpx
+
+    token, refusal = token_for(str(params.get("deployment_uid") or ""))
+    if not token:
+        raise RecordNotSent(
+            f"The sound of {params.get('app_uid')} is not kept: {refusal}"
+        )
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise RecordNotSent(
+            f"The sound of {params.get('app_uid')} is not kept: no ai-agents."
+        )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            f"{url.rstrip('/')}/api/ai-agents/v1/apps/records/audio",
+            params=params,
+            content=sound,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": content_type},
+        )
+    if response.status_code >= 300:
+        raise RecordNotSent(
+            f"The sound of {params.get('app_uid')} was not kept "
+            f"({response.status_code}): {response.text[:200]}"
+        )
+
+
+#: Sends a turn's sound to keep: ``(sound, content_type=, params=)``.
+KeepSound = Callable[..., Awaitable[None]]
+
+
 @dataclass
 class AppRecorder:
     """The entries of an application's sessions, kept until they are sent."""
@@ -362,6 +409,7 @@ class AppRecorder:
     #: deployment is kept on (R-30): nothing of it is kept, as on theirs.
     visitors: bool = False
     send: Send = send_to_ai_agents
+    keep_sound: KeepSound = keep_sound_in_ai_agents
 
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
     _started: Set[str] = field(default_factory=set, init=False)
@@ -445,6 +493,43 @@ class AppRecorder:
         """
         signed = str((self._signed.get(session) or {}).get("name") or "").strip()
         return signed or self._opener_names.get(session, "")
+
+    async def keep_said(
+        self,
+        session: str,
+        sound: bytes,
+        *,
+        content_type: str,
+        language: str = "",
+        seconds: float = 0.0,
+    ) -> str:
+        """Keep what the person said in ``session`` as sound (VO-63), when
+        the application's record keeps ``audio`` and a person known opened
+        it: ai-agents keeps the sound, the record points at it. Why it was
+        not kept, in a sentence, or ``""``.
+        """
+        if self.purpose == "test" or not self.kept("audio"):
+            return "This application's record does not keep what is said as sound."
+        opener = self.opener(session)
+        if not opener:
+            return "Sound is kept only for a person who is signed in."
+        params = {
+            "app_uid": self.app_uid or self.app.id,
+            "session_uid": session,
+            "deployment_uid": self.deployment_uid,
+            "version": self.version,
+            "opened_by": opener,
+            "keep_days": keep_days_of(self.app),
+            "turn": self._turns.get(session, 0),
+            "seconds": round(max(0.0, float(seconds or 0.0)), 2),
+            "language": str(language or "")[:35],
+        }
+        try:
+            await self.keep_sound(sound, content_type=content_type, params=params)
+        except RecordNotSent as refused:
+            logger.warning("%s", refused)
+            return str(refused)
+        return ""
 
     def woken(self, session: str) -> Dict[str, Any]:
         """What woke a session: its own, or every session's; empty when a person opened it."""

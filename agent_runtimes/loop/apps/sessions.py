@@ -1951,6 +1951,29 @@ class LiveSession:
 
         return self._start_turn(work, wraps_run=self.host is not None, head=head)
 
+    def keep_said_later(
+        self, sound: bytes, content_type: str, seconds: float, language: str
+    ) -> None:
+        """Keep what the person said as sound (VO-63), beside the turn:
+        ai-agents keeps it when the application's record keeps ``audio``;
+        what refuses it is logged, and the turn goes on as words.
+        """
+        if self.opened_by.kind != "person":
+            return
+
+        async def keep() -> None:
+            await self.recorder.keep_said(
+                self.uid,
+                sound,
+                content_type=content_type,
+                language=language,
+                seconds=seconds,
+            )
+
+        task = asyncio.ensure_future(keep())
+        _KEEPING.add(task)
+        task.add_done_callback(_KEEPING.discard)
+
     async def interrupt(self) -> None:
         """The person spoke over the agent (VO-46, VO-13): the client reading
         the turn is told (``voice.interrupted``) before its stream ends, what
@@ -2376,6 +2399,9 @@ def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
 # --- the sessions of this runtime ------------------------------------------------------
 
 _SESSIONS: Dict[str, LiveSession] = {}
+
+#: The sounds being sent to be kept, held until sent (VO-63).
+_KEEPING: "set[asyncio.Future[None]]" = set()
 
 #: The ui channel of every session of this runtime (RU-W): each
 #: session's ops, numbered and kept, for the page's WebSocket

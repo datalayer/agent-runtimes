@@ -45,7 +45,16 @@ export const CONSENT_SENTENCE =
 export const SERVER_CONSENT_SENTENCE =
   'What you say is sent to Datalayer’s servers to be transcribed: the sound and the words are not kept there. The words go in the message box, for you to send.';
 
-/** Whose consent is remembered for hearing in a place: the application's, apart for the server. */
-export function consentKeyFor(app: string, where: 'device' | 'server'): string {
-  return where === 'server' ? `${app}:server` : app;
+/**
+ * Whose consent is remembered for hearing in a place: the application's,
+ * apart for the server, and apart again when what is said is kept as sound
+ * (VO-63) — a yes to being heard is not a yes to being kept.
+ */
+export function consentKeyFor(
+  app: string,
+  where: 'device' | 'server',
+  keepsAudio?: number,
+): string {
+  const heard = where === 'server' ? `${app}:server` : app;
+  return keepsAudio ? `${heard}:kept` : heard;
 }

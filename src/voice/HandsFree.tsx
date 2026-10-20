@@ -49,6 +49,7 @@ import {
   turnEnded,
 } from './handsFree';
 import type { Hearing } from './hearing';
+import { keptAudioSentence, soundOf } from './keptSound';
 import { INTERIM_MS } from './VoiceInput';
 
 /**
@@ -68,6 +69,11 @@ export interface HandsFreeProps {
   language: string;
   /** Whose consent to the microphone is remembered: the application's id. */
   consentKey: string;
+  /**
+   * The days the application keeps what is said as sound (VO-63): asked in
+   * the first sentence, and each turn's recording sent with its words.
+   */
+  keepsAudio?: number;
   /** The microphone the person chose (VO-30); the browser's own when unsaid. */
   microphoneId?: string;
   /** The silence after speech that ends a turn, in ms; 500 unless said (VO-12). */
@@ -102,6 +108,7 @@ export function HandsFree({
   hearing,
   language,
   consentKey,
+  keepsAudio,
   microphoneId,
   turnSilenceMs = TURN_SILENCE_MS,
   send,
@@ -140,7 +147,7 @@ export function HandsFree({
     onStopRun,
     onInterrupted,
   };
-  const key = consentKeyFor(consentKey, hearing.where);
+  const key = consentKeyFor(consentKey, hearing.where, keepsAudio);
 
   const turnOn = useCallback(() => {
     if (!consented(key)) {
@@ -277,7 +284,13 @@ export function HandsFree({
           }
           latest.current.onInterim?.('');
           if (heard) {
-            latest.current.send(heard.text, heard.metadata);
+            // Kept as sound too, as the person agreed (VO-63).
+            latest.current.send(
+              heard.text,
+              keepsAudio
+                ? { ...heard.metadata, sound: soundOf(audio) }
+                : heard.metadata,
+            );
           }
           try {
             capture.current = await openMicrophone(microphoneId);
@@ -300,7 +313,7 @@ export function HandsFree({
       capture.current = undefined;
     };
     // The loop reads the state through a ref: it is not restarted on it.
-  }, [on, paused, hearing, language, microphoneId, turnSilenceMs]);
+  }, [on, paused, hearing, language, microphoneId, turnSilenceMs, keepsAudio]);
 
   // Esc pauses it.
   useEffect(() => {
@@ -423,6 +436,11 @@ export function HandsFree({
               ? SERVER_CONSENT_SENTENCE
               : CONSENT_SENTENCE}
           </Text>
+          {keepsAudio ? (
+            <Text as="p" sx={{ fontSize: 1, mb: 2 }} data-voice-consent-kept="">
+              {keptAudioSentence(keepsAudio)}
+            </Text>
+          ) : null}
           <Box display="flex" gap={2} justifyContent="flex-end">
             <Button size="small" onClick={() => setAsking(false)}>
               Not now

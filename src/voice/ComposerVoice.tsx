@@ -142,6 +142,7 @@ export function ComposerVoice({
           hearing={hearing}
           language={voice.language}
           consentKey={voice.consentKey ?? 'chat'}
+          keepsAudio={voice.keepsAudio}
           microphoneId={voice.microphoneId}
           turnSilenceMs={voice.turnSilenceMs}
           disabled={disabled}
@@ -166,6 +167,7 @@ export function ComposerVoice({
         hearing={hearing}
         language={voice.language}
         consentKey={voice.consentKey ?? 'chat'}
+        keepsAudio={voice.keepsAudio}
         silenceMs={voice.silenceMs}
         microphoneId={voice.microphoneId}
         disabled={disabled}
