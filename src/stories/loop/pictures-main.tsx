@@ -43,9 +43,9 @@ import {
   type ReferenceScreen,
 } from './ReferenceScreens';
 import {
-  AssistantGalleryGrid,
+  AvatarGalleryGrid,
   useGalleryCharacters,
-} from '../../examples/utils/AssistantGalleryGrid';
+} from '../../examples/utils/AvatarGalleryGrid';
 
 import '../../../style/primer-primitives.css';
 // The `loop` theme's face (T-04): Inter and its metric-matched fallback,
@@ -98,7 +98,7 @@ function GalleryScreen(): JSX.Element {
   const { characters, ready } = useGalleryCharacters();
   return (
     <Box flex={1} bg="canvas.default" p={2} overflow="hidden">
-      <AssistantGalleryGrid characters={characters} />
+      <AvatarGalleryGrid characters={characters} />
       {ready && <Ready />}
     </Box>
   );

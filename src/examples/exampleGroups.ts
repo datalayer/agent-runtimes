@@ -13,7 +13,7 @@
 
 export const EXAMPLE_GROUP_ORDER = [
   'Apps',
-  'Assistant',
+  'Avatar',
   'A2UI',
   'A2A',
   'Personal Agent Protocol',
@@ -52,8 +52,8 @@ export const getExampleGroup = (id: string): string => {
   // Each remaining Agent* example demonstrates one capability of the
   // runtime: checkpoints, hooks, memory, guardrails…
   if (id.startsWith('Agent')) return 'Capabilities';
-  // The floating assistant, and its gallery: before the chat they wrap.
-  if (id.startsWith('Assistant')) return 'Assistant';
+  // The floating assistant's avatar, and its gallery: before the chat they wrap.
+  if (id.startsWith('Avatar')) return 'Avatar';
   if (id.startsWith('Chat') || id === 'VoiceChatExample') return 'Chat';
   // The document examples: the ones on the Lexical editor, and the page
   // with a document on it.

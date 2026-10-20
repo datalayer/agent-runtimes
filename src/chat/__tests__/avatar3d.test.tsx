@@ -6,7 +6,9 @@
 /**
  * The 3D avatar (the third kind, beside the drawings and the Microsoft Agent
  * characters): what is decided without WebGL — its model, its idle
- * animation, the morph targets its voice moves, how far it talks — and the
+ * animation, how it acts each state the other avatars act (an animation
+ * of its own, else moved by code), the morph targets its voice moves, how
+ * far it talks — and the
  * sentence said where it would stand in a browser that cannot draw 3D,
  * before three.js is ever loaded.
  */
@@ -16,7 +18,9 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assistantCharacterFor } from '../../apps/plugins/assistant-characters';
 import { ASSISTANT_CHARACTERS } from '../assistant/characters';
+import type { AssistantState } from '../assistant/state';
 import {
+  AVATAR_3D_STATES,
   DEFAULT_AVATAR_MODEL_URL,
   NO_WEBGL_SENTENCE,
   assistantModel3D,
@@ -24,7 +28,9 @@ import {
   cameraDistance,
   idleClipName,
   isAssistantModel3D,
+  proceduralPose,
   smoothed,
+  stateMotion,
   talkAmount,
   talkingMorphIndices,
   webglAvailable,
@@ -33,6 +39,36 @@ import {
 vi.mock('three', () => {
   throw new Error('three.js is loaded only when WebGL can draw it');
 });
+
+/** RobotExpressive's animations, the default model's. */
+const ROBOT_CLIPS = [
+  'Dance',
+  'Death',
+  'Idle',
+  'Jump',
+  'No',
+  'Punch',
+  'Running',
+  'Sitting',
+  'Standing',
+  'ThumbsUp',
+  'Walking',
+  'WalkJump',
+  'Wave',
+  'Yes',
+];
+
+/** Every state, keyed so that a state added to the union fails to compile here. */
+const EVERY_STATE: Record<AssistantState, true> = {
+  idle: true,
+  greeting: true,
+  thinking: true,
+  working: true,
+  waiting: true,
+  speaking: true,
+  paused: true,
+  goodbye: true,
+};
 
 const contributed = ASSISTANT_CHARACTERS.map(character => ({
   id: character.id,
@@ -89,6 +125,85 @@ describe('a 3D avatar', () => {
     expect(idleClipName([])).toBeUndefined();
   });
 
+  it('acts every state the other avatars act', () => {
+    expect([...AVATAR_3D_STATES].sort()).toEqual(
+      Object.keys(EVERY_STATE).sort(),
+    );
+  });
+
+  it('acts a state with the robot’s own animation when it has one, else idles and is moved', () => {
+    const robot = Object.fromEntries(
+      AVATAR_3D_STATES.map(state => [state, stateMotion(state, ROBOT_CLIPS)]),
+    ) as Record<AssistantState, ReturnType<typeof stateMotion>>;
+    expect(robot.idle).toMatchObject({ clip: 'Idle', own: true, once: false });
+    // Hello and goodbye: it waves once, then idles again.
+    expect(robot.greeting).toMatchObject({
+      clip: 'Wave',
+      own: true,
+      once: true,
+      holds: false,
+      procedural: false,
+    });
+    expect(robot.goodbye).toMatchObject({ clip: 'Wave', once: true });
+    // It walks while it works, and sits down, staying seated, when paused.
+    expect(robot.working).toMatchObject({ clip: 'Walking', once: false });
+    expect(robot.paused).toMatchObject({
+      clip: 'Sitting',
+      once: true,
+      holds: true,
+    });
+    // No animation of its own: it idles, moved by code.
+    for (const state of ['thinking', 'waiting', 'speaking'] as const) {
+      expect(robot[state]).toMatchObject({
+        clip: 'Idle',
+        own: false,
+        procedural: true,
+      });
+    }
+    // A model with no animations at all is moved by code in every state.
+    for (const state of AVATAR_3D_STATES) {
+      expect(stateMotion(state, [])).toEqual({
+        clip: undefined,
+        own: false,
+        once: false,
+        holds: false,
+        procedural: true,
+      });
+    }
+    // A model's own names win: one that says it thinks, thinks with it.
+    expect(stateMotion('thinking', ['Idle', 'Thinking'])).toMatchObject({
+      clip: 'Thinking',
+      own: true,
+    });
+  });
+
+  it('is moved differently in each state, by code', () => {
+    const at = 0.5;
+    const poses = AVATAR_3D_STATES.map(state =>
+      JSON.stringify(proceduralPose(state, at)),
+    );
+    expect(new Set(poses).size).toBe(AVATAR_3D_STATES.length);
+    for (const state of AVATAR_3D_STATES) {
+      const pose = proceduralPose(state, at);
+      expect(Object.values(pose).some(value => value !== 0)).toBe(true);
+      for (const value of Object.values(pose)) {
+        // Small turns and lifts: the model stays in its square.
+        expect(Math.abs(value)).toBeLessThan(0.5);
+      }
+    }
+    // Thinking tilts its head and looks up; paused hangs it.
+    expect(proceduralPose('thinking', at).headRoll).toBeGreaterThan(0);
+    expect(proceduralPose('thinking', at).headPitch).toBeLessThan(0);
+    expect(proceduralPose('paused', at).headPitch).toBeGreaterThan(0);
+    // The hello wiggle settles; goodbye sinks.
+    expect(Math.abs(proceduralPose('greeting', 0).bodyYaw)).toBeGreaterThan(
+      Math.abs(proceduralPose('greeting', 1.9).bodyYaw),
+    );
+    expect(proceduralPose('goodbye', 1).bodyLift).toBeLessThan(
+      proceduralPose('goodbye', 0.1).bodyLift,
+    );
+  });
+
   it('opens the morph targets of a mouth with its voice, not the others', () => {
     // RobotExpressive's: its surprise opens the mouth.
     expect(talkingMorphIndices({ Angry: 0, Surprised: 1, Sad: 2 })).toEqual([
@@ -138,6 +253,13 @@ describe('a 3D avatar', () => {
     });
     const figure = holder.querySelector('[data-avatar-model3d]');
     expect(figure?.getAttribute('aria-label')).toBe('Robot (3D)');
+    expect(figure?.getAttribute('data-avatar-state')).toBe('idle');
+    await act(async () => {
+      root.render(
+        <Avatar3D avatar={assistantModel3D()} state="thinking" size={88} />,
+      );
+    });
+    expect(figure?.getAttribute('data-avatar-state')).toBe('thinking');
     expect(holder.querySelector('[role="status"]')?.textContent).toBe(
       NO_WEBGL_SENTENCE,
     );

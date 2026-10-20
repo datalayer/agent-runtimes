@@ -57,21 +57,22 @@ describe('the A2UI Jupyter output example', () => {
   });
 });
 
-describe('the Assistant group', () => {
-  it('holds the assistant and its gallery, under their own names', () => {
+describe('the Avatar group', () => {
+  it('holds the avatar and its gallery, under their own names', () => {
     const ids = getExampleEntries().map(entry => entry.id);
-    expect(ids).toContain('AssistantExample');
-    expect(ids).toContain('AssistantGalleryExample');
+    expect(ids).toContain('AvatarExample');
+    expect(ids).toContain('AvatarGalleryExample');
     expect(ids.some(id => id.startsWith('ChatAssistant'))).toBe(false);
-    expect(getExampleGroup('AssistantExample')).toBe('Assistant');
-    expect(getExampleGroup('AssistantGalleryExample')).toBe('Assistant');
-    expect(
-      getExampleEntries().find(e => e.id === 'AssistantExample')?.title,
-    ).toBe('Assistant');
+    expect(ids.some(id => id.startsWith('Assistant'))).toBe(false);
+    expect(getExampleGroup('AvatarExample')).toBe('Avatar');
+    expect(getExampleGroup('AvatarGalleryExample')).toBe('Avatar');
+    expect(getExampleEntries().find(e => e.id === 'AvatarExample')?.title).toBe(
+      'Avatar',
+    );
   });
 
   it('comes right before A2UI', () => {
-    const at = EXAMPLE_GROUP_ORDER.indexOf('Assistant');
+    const at = EXAMPLE_GROUP_ORDER.indexOf('Avatar');
     expect(at).toBeGreaterThan(-1);
     expect(EXAMPLE_GROUP_ORDER[at + 1]).toBe('A2UI');
     expect(getExampleGroup('ChatExample')).toBe('Chat');

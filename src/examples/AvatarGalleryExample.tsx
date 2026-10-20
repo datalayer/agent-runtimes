@@ -4,11 +4,12 @@
  */
 
 /**
- * Every representation of the floating assistant, as a gallery (T-21
- * to T-27): each character — Datalayer's four, the owl an example plugin
+ * Every avatar of the floating assistant, as a gallery (T-21
+ * to T-27): each one — Datalayer's four, the owl an example plugin
  * contributes to `loop.assistant.character`, a test sprite read through
- * the clippy.js reader, and, when asked, the characters clippy.js publishes,
- * fetched from jsDelivr — in each state it acts, stepped aside, with its
+ * the clippy.js reader, the 3D robot drawn with three.js, and, when asked,
+ * the characters clippy.js publishes, fetched from jsDelivr — in each state
+ * it acts, stepped aside, with its
  * balloon, in light and dark, moving or still. The balloon shows the
  * conversation either way (T-23): a peek of it (`history`), or only what is
  * said or done now (`current`); a tool call is said in plain words ("Using
@@ -42,7 +43,8 @@ import type { AssistantAway, AssistantState } from '../chat/assistant/state';
 import type { BalloonExpandTarget } from '../chat/assistant/BalloonVisual';
 import type { BalloonDisplay, ToolLinePhase } from '../chat/assistant/toolLine';
 import {
-  AssistantGalleryGrid,
+  AvatarGalleryGrid,
+  MODEL_3D_CHARACTER,
   GalleryBalloons,
   GalleryNotebook,
   GalleryObstacle,
@@ -50,7 +52,7 @@ import {
   Still,
   useGalleryCharacters,
   type GalleryCharacter,
-} from './utils/AssistantGalleryGrid';
+} from './utils/AvatarGalleryGrid';
 import {
   GALLERY_POSES,
   GALLERY_POSE_LABELS,
@@ -62,7 +64,7 @@ import {
   sampleToolLine,
   stateOfPose,
   type GalleryPose,
-} from './utils/assistantGallery';
+} from './utils/avatarGallery';
 import {
   CLIPPY_JS_VERSION,
   useClippyJsCharacters,
@@ -288,11 +290,14 @@ function InModes({
   );
 }
 
-const AssistantGalleryExample: React.FC = () => {
+const AvatarGalleryExample: React.FC = () => {
   const { characters: ours, problem } = useGalleryCharacters();
   const [withClippyJs, setWithClippyJs] = useState(false);
   const clippyJs = useClippyJsCharacters(withClippyJs);
-  const characters = [...ours, ...clippyJs.characters];
+  const characters = [...ours, MODEL_3D_CHARACTER, ...clippyJs.characters];
+  // The grid draws each avatar in every pose: the 3D robot, a WebGL context
+  // per cell, is shown one at a time only.
+  const inGrid = characters.filter(entry => entry !== MODEL_3D_CHARACTER);
   const [characterId, setCharacterId] = useState('paperclip');
   const [pose, setPose] = useState<GalleryPose>('idle');
   const [view, setView] = useState<View>('stage');
@@ -384,15 +389,17 @@ const AssistantGalleryExample: React.FC = () => {
       <Box minHeight="100vh" bg="canvas.default" color="fg.default" p={4}>
         <Box maxWidth={1200} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
-            Assistant gallery
+            Avatar gallery
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
             Every character in every state the floating assistant acts, with its
             balloon, in light and dark. Datalayer&rsquo;s four and the owl are
             what the enabled plugins contribute to{' '}
             <code>loop.assistant.character</code>; Pixel is a test sprite of our
-            own, read through the clippy.js reader. No agent is behind it: the
-            words are a sample conversation.
+            own, read through the clippy.js reader; the robot is a 3D model
+            drawn with three.js, shown one at a time (each one drawn is a WebGL
+            context of its own). No agent is behind it: the words are a sample
+            conversation.
           </Text>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
             The characters clippy.js publishes — Clippy, Merlin, Links, Rover
@@ -644,10 +651,7 @@ const AssistantGalleryExample: React.FC = () => {
                     p={2}
                     overflowX="auto"
                   >
-                    <AssistantGalleryGrid
-                      key={replay}
-                      characters={characters}
-                    />
+                    <AvatarGalleryGrid key={replay} characters={inGrid} />
                     {/* The balloon's displays: history, a tool, a notebook. */}
                     <GalleryBalloons character={character} />
                   </Box>
@@ -681,4 +685,4 @@ const AssistantGalleryExample: React.FC = () => {
   );
 };
 
-export default AssistantGalleryExample;
+export default AvatarGalleryExample;

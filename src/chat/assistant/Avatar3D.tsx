@@ -7,10 +7,14 @@
  * A 3D avatar, drawn (the third kind, beside Datalayer's drawings and the
  * Microsoft Agent characters): a glTF model loaded with three.js, which is
  * imported only when one is shown, so a page with no 3D avatar never loads
- * it. It idles with its `Idle` animation; while it speaks, the morph
+ * it. It acts out every state the other avatars do (`stateMotion`): with
+ * an animation of its own when the model has one — RobotExpressive waves
+ * hello and goodbye, walks while it works, sits down when paused — else
+ * idling and moved by code (`proceduralPose`): it tilts its head to think,
+ * leans in to wait, turns its head as it talks. While it speaks, the morph
  * targets that open its mouth follow its voice's level (`mouthLevel`, as
  * the other avatars' mouths do) and its head nods with it. A reader who
- * asks for reduced motion sees it still, drawn once. A browser that cannot
+ * asks for reduced motion sees it still, drawn once in each state's pose. A browser that cannot
  * draw WebGL, or a model that cannot be loaded, is said in a sentence where
  * the avatar would stand.
  *
@@ -26,7 +30,9 @@ import {
   idleClipName,
   modelNotLoadedSentence,
   prefersReducedMotion,
+  proceduralPose,
   smoothed,
+  stateMotion,
   talkAmount,
   talkingMorphIndices,
   webglAvailable,
@@ -65,6 +71,13 @@ export function Avatar3D({
   speaking.current = state === 'speaking';
   const level = useRef(mouthLevel);
   level.current = mouthLevel;
+  // The state acted now, and how a new one is entered once the model is in.
+  const acted = useRef(state);
+  acted.current = state;
+  const enter = useRef<(next: AssistantState) => void>(() => undefined);
+  useEffect(() => {
+    enter.current(state);
+  }, [state]);
 
   useEffect(() => {
     const element = holder.current;
@@ -138,13 +151,58 @@ export function Avatar3D({
       const distance = cameraDistance(Math.max(extent.x, extent.y), FOV);
       camera.position.set(middle.x, middle.y, middle.z + distance);
       camera.lookAt(middle);
-      // Its idle animation, played while it is shown.
+      const height = extent.y;
+      const rest = {
+        x: model.rotation.x,
+        y: model.rotation.y,
+        z: model.rotation.z,
+        lift: model.position.y,
+      };
+      // Each state's animation, or its idle one, played while it is shown.
       const mixer = new THREE.AnimationMixer(model);
-      const idle = idleClipName(gltf.animations.map(clip => clip.name));
-      const clip = gltf.animations.find(each => each.name === idle);
-      if (clip) {
-        mixer.clipAction(clip).play();
-      }
+      const names = gltf.animations.map(each => each.name);
+      const idleName = idleClipName(names);
+      const actionOf = (name: string | undefined) => {
+        const found = gltf.animations.find(each => each.name === name);
+        return found ? mixer.clipAction(found) : undefined;
+      };
+      let playing: Three.AnimationAction | undefined;
+      let motion = stateMotion(acted.current, names);
+      let enteredAt = 0;
+      const clock = new THREE.Clock();
+      // A new animation fades in over the last one; still, it replaces it.
+      const play = (
+        next: Three.AnimationAction | undefined,
+        once: boolean,
+      ): void => {
+        if (next === playing && !once) {
+          return;
+        }
+        if (playing && playing !== next && still) {
+          playing.stop();
+        }
+        if (next) {
+          next.reset();
+          next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+          // Played once, its last pose stays until the next fades in.
+          next.clampWhenFinished = once;
+          next.setEffectiveWeight(1);
+          next.play();
+          if (playing && playing !== next && !still) {
+            next.crossFadeFrom(playing, 0.3, false);
+          }
+        } else if (!still) {
+          playing?.fadeOut(0.3);
+        }
+        playing = next;
+      };
+      // Played once, it idles again, unless it holds its last pose.
+      mixer.addEventListener('finished', event => {
+        if (event.action === playing && !motion.holds) {
+          play(actionOf(idleName), false);
+        }
+      });
+      play(actionOf(motion.clip), motion.once);
       // What its voice moves: the morph targets of a mouth, and its head.
       const mouths: { influences: number[]; indices: number[] }[] = [];
       let head: Three.Object3D | undefined;
@@ -158,21 +216,67 @@ export function Avatar3D({
           head = object;
         }
       });
+      // The head's turn last added, taken off before the mixer poses it again.
+      const added = { x: 0, y: 0, z: 0 };
+      const pose = (seconds: number, nod: number) => {
+        const moved = motion.procedural
+          ? proceduralPose(acted.current, seconds)
+          : proceduralPose('idle', 0);
+        const pitch = (motion.procedural ? moved.headPitch : 0) + nod;
+        const yaw = motion.procedural ? moved.headYaw : 0;
+        const roll = motion.procedural ? moved.headRoll : 0;
+        if (head) {
+          added.x = pitch;
+          added.y = yaw;
+          added.z = roll;
+          head.rotation.x += pitch;
+          head.rotation.y += yaw;
+          head.rotation.z += roll;
+        }
+        // Without a head, the whole model turns as its head would.
+        model.rotation.set(
+          rest.x + moved.bodyLean + (head ? 0 : pitch),
+          rest.y + moved.bodyYaw + (head ? 0 : yaw),
+          rest.z + (head ? 0 : roll),
+        );
+        model.position.y = rest.lift + moved.bodyLift * height;
+      };
+      const unpose = () => {
+        if (head) {
+          head.rotation.x -= added.x;
+          head.rotation.y -= added.y;
+          head.rotation.z -= added.z;
+        }
+        added.x = added.y = added.z = 0;
+      };
+      // Still: each state's pose, drawn once — a held animation at its end.
+      const drawStill = () => {
+        unpose();
+        if (playing && motion.holds) {
+          playing.time = playing.getClip().duration;
+        }
+        mixer.update(0);
+        pose(0.5, 0);
+        renderer.render(scene, camera);
+      };
+      // A new state: its animation, and, still, its pose drawn at once.
+      enter.current = next => {
+        motion = stateMotion(next, names);
+        enteredAt = clock.elapsedTime;
+        play(actionOf(motion.clip), motion.once);
+        if (still) {
+          drawStill();
+        }
+      };
       setLoading(false);
       if (still) {
-        mixer.update(0);
-        renderer.render(scene, camera);
+        drawStill();
         return;
       }
-      const clock = new THREE.Clock();
       let talking = 0;
-      // The nod last added, taken off before the mixer poses the head again.
-      let nod = 0;
       const step = () => {
         const seconds = clock.getDelta();
-        if (head) {
-          head.rotation.x += nod;
-        }
+        unpose();
         mixer.update(seconds);
         const target = talkAmount({
           speaking: speaking.current,
@@ -186,11 +290,9 @@ export function Avatar3D({
             mouth.influences[index] = talking;
           }
         }
-        if (head) {
-          // Added over the idle pose the mixer has just set.
-          nod = talking * 0.18;
-          head.rotation.x -= nod;
-        }
+        // Added over the pose the mixer has just set: the state's, and a
+        // nod with the voice.
+        pose(clock.elapsedTime - enteredAt, -talking * 0.18);
         renderer.render(scene, camera);
         frame = requestAnimationFrame(step);
       };
@@ -208,6 +310,7 @@ export function Avatar3D({
     });
     return () => {
       stopped = true;
+      enter.current = () => undefined;
       cancelAnimationFrame(frame);
       dispose();
     };
@@ -217,6 +320,7 @@ export function Avatar3D({
     <span
       ref={holder}
       className="assistant-model3d"
+      data-avatar-state={state}
       role="img"
       aria-label={avatar.name}
       aria-busy={loading && !said}

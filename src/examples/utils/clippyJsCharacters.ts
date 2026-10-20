@@ -24,7 +24,7 @@
 import { useEffect, useState } from 'react';
 import { readClippyCharacter } from '../../chat/assistant/formats/clippy';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
-import type { GalleryCharacter } from './AssistantGalleryGrid';
+import type { GalleryCharacter } from './AvatarGalleryGrid';
 
 /** The version of `clippyjs` the characters are read from. */
 export const CLIPPY_JS_VERSION = '0.1.0';

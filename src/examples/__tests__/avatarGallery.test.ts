@@ -22,7 +22,7 @@ import {
   sampleHistory,
   sampleSaying,
   stateOfPose,
-} from '../utils/assistantGallery';
+} from '../utils/avatarGallery';
 import {
   TEST_SPRITE_AGENT_JS,
   testSpriteMapPng,
@@ -140,12 +140,12 @@ describe('the test sprite', () => {
 });
 
 describe('the registry', () => {
-  it('lists the gallery in the Assistant group', () => {
+  it('lists the gallery in the Avatar group', () => {
     const entry = getExampleEntries().find(
-      e => e.id === 'AssistantGalleryExample',
+      e => e.id === 'AvatarGalleryExample',
     );
-    expect(entry?.title).toBe('Assistant Gallery');
-    expect(EXAMPLES.AssistantGalleryExample).toBeTypeOf('function');
-    expect(getExampleGroup('AssistantGalleryExample')).toBe('Assistant');
+    expect(entry?.title).toBe('Avatar Gallery');
+    expect(EXAMPLES.AvatarGalleryExample).toBeTypeOf('function');
+    expect(getExampleGroup('AvatarGalleryExample')).toBe('Avatar');
   });
 });

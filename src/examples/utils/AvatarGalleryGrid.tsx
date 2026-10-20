@@ -4,15 +4,16 @@
  */
 
 /**
- * The floating assistant's characters, every one in every pose, small, for
+ * The floating assistant's avatars, every one in every pose, small, for
  * a quick visual check (T-16, T-22, T-24 to T-27): Datalayer's four and
  * the owl as the enabled plugins contribute them to
- * `loop.assistant.character`, and a test sprite read through the clippy.js
- * reader. Each cell is the real `AssistantStage`, set in the grid's flow
- * rather than fixed to the window; stepped aside is the real `useKeepClear`
- * stepping it aside from a composer laid over the cell.
+ * `loop.assistant.character`, a test sprite read through the clippy.js
+ * reader, and the 3D robot. Each cell is the real `AssistantStage`, set in
+ * the grid's flow rather than fixed to the window; stepped aside is the real
+ * `useKeepClear` stepping it aside from a composer laid over the cell. The
+ * cards (`AvatarGalleryCards`) show each avatar once, in the pose asked.
  *
- * @module examples/utils/AssistantGalleryGrid
+ * @module examples/utils/AvatarGalleryGrid
  */
 
 import type React from 'react';
@@ -24,6 +25,10 @@ import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { AssistantStage } from '../../chat/assistant/AssistantStage';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
+import {
+  assistantModel3D,
+  type AssistantModel3D,
+} from '../../chat/assistant/avatar3d';
 import {
   AssistantCharactersPlugin,
   assistantCharactersOf,
@@ -44,16 +49,26 @@ import {
   sampleToolLine,
   stateOfPose,
   type GalleryPose,
-} from './assistantGallery';
+} from './avatarGallery';
 
 /** A character of the gallery: by id, with its name, as contributed. */
 export interface GalleryCharacter {
   id: string;
   name: string;
-  character: AssistantCharacter | AssistantCharacterData;
+  character: AssistantCharacter | AssistantCharacterData | AssistantModel3D;
   /** Where it comes from, as the gallery says it. */
   from: string;
 }
+
+/**
+ * The 3D avatar, the default robot: three.js, loaded when it is drawn. Each
+ * one drawn is a WebGL context of its own, of which a page has few: shown
+ * once (on a stage, or as a card), never in every cell of the grid.
+ */
+export const MODEL_3D_CHARACTER: GalleryCharacter = (() => {
+  const model = assistantModel3D();
+  return { id: model.id, name: model.name, character: model, from: 'three.js' };
+})();
 
 /** The plugins the gallery enables: Datalayer's characters and the owl's. */
 const reactor = buildReactorFromPlugins([
@@ -179,7 +194,7 @@ export function GalleryObstacle({
   );
 }
 
-function GalleryCell({
+export function GalleryCell({
   character,
   pose,
   size,
@@ -216,7 +231,7 @@ function GalleryCell({
 }
 
 /** Every character in every pose: a row per character, a column per pose. */
-export function AssistantGalleryGrid({
+export function AvatarGalleryGrid({
   characters,
   size = 48,
 }: {
@@ -226,7 +241,7 @@ export function AssistantGalleryGrid({
   return (
     <Box
       as="table"
-      data-assistant-gallery-grid=""
+      data-avatar-gallery-grid=""
       borderCollapse="collapse"
       sx={{
         color: 'fg.default',
@@ -274,6 +289,55 @@ export function AssistantGalleryGrid({
           </tr>
         ))}
       </tbody>
+    </Box>
+  );
+}
+
+/**
+ * Each avatar once, as a card, in the pose asked: its name and where it
+ * comes from under it. A new `key` replays the motions.
+ */
+export function AvatarGalleryCards({
+  characters,
+  pose,
+  size = 72,
+}: {
+  characters: readonly GalleryCharacter[];
+  pose: GalleryPose;
+  size?: number;
+}): JSX.Element {
+  return (
+    <Box
+      data-avatar-gallery-cards=""
+      data-avatar-pose={pose}
+      display="grid"
+      gridTemplateColumns={`repeat(auto-fill, minmax(${size + 88}px, 1fr))`}
+      gap={3}
+    >
+      {characters.map(character => (
+        <Box
+          key={character.id}
+          data-avatar-card={character.id}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap={1}
+          p={2}
+          bg="canvas.default"
+          color="fg.default"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+        >
+          <GalleryCell character={character} pose={pose} size={size} />
+          <Text sx={{ fontWeight: 600, fontSize: 1, textAlign: 'center' }}>
+            {character.name}
+          </Text>
+          <Text sx={{ fontSize: 0, color: 'fg.muted', textAlign: 'center' }}>
+            {character.from}
+          </Text>
+        </Box>
+      ))}
     </Box>
   );
 }
@@ -413,4 +477,4 @@ export function GalleryBalloons({
   );
 }
 
-export default AssistantGalleryGrid;
+export default AvatarGalleryGrid;

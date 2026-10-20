@@ -480,13 +480,14 @@ per mode (`assistant-gallery-light`, `assistant-gallery-dark`).
 
 ## The gallery
 
-The *Assistant Gallery* example (`src/examples/AssistantGalleryExample.tsx`,
-in the examples' *Chat* group) shows every representation of the assistant,
+The *Avatar Gallery* example (`src/examples/AvatarGalleryExample.tsx`,
+in the examples' *Avatar* group) shows every avatar of the assistant,
 from static data — no agent, no server, no sign-in:
 
-- **every character**: Datalayer's four, the owl the example plugin
-  contributes to `loop.assistant.character`, and *Pixel*, a small test sprite
-  of our own read through the clippy.js reader (`readClippyCharacter`);
+- **every avatar**: Datalayer's four, the owl the example plugin
+  contributes to `loop.assistant.character`, *Pixel*, a small test sprite
+  of our own read through the clippy.js reader (`readClippyCharacter`), and
+  the 3D robot drawn with three.js (`MODEL_3D_CHARACTER`);
 - **every state**: idle, greeting, thinking, working, waiting (the approval in
   its balloon, with *Approve* and *Deny*), speaking, paused, stepped aside (a
   composer laid over it) and goodbye;
@@ -503,13 +504,22 @@ from static data — no agent, no server, no sign-in:
   the browser sandbox — into the area under the stage, or, with the *Expand
   into the page* toggle off, in an overlay;
 - **a grid**: all the characters by all the states, small, for a quick visual
-  check (`AssistantGalleryGrid`, in `src/examples/utils/`), and under it the
+  check (`AvatarGalleryGrid`, in `src/examples/utils/`; the 3D robot is left
+  out, each cell would be a WebGL context of its own), and under it the
   balloon's displays for the chosen character — the history listed, a current
   balloon with a tool line, and one with the same notebook
   (`GalleryBalloons`).
 
 Every cell is the real `AssistantStage`; nothing in the gallery is drawn for
-it.
+it. `AvatarGalleryCards`, in the same module, shows each avatar once, as a
+card, in the pose asked.
+
+The 3D robot acts every state the other avatars act (`stateMotion` and
+`proceduralPose`, in `chat/assistant/avatar3d`): with the model's own
+animation where it has one — RobotExpressive waves hello and goodbye, walks
+while it works and sits down when paused — else idling and moved by code: it
+tilts its head and looks up to think, leans in with a questioning tilt to
+wait, turns its head as it talks.
 
 ## Datalayer's characters
 
@@ -594,7 +604,7 @@ assistantCharactersOf(reactor).map(entry => entry.id); // paperclip, wizard, cat
 <ChatFloating defaultViewMode="assistant" assistantCharacter={assistantCharacterNamed(reactor, 'owl')} … />
 ```
 
-The *Assistant* example does just this: its picker lists what the
+The *Avatar* example does just this: its picker lists what the
 enabled plugins contribute, the owl of `src/examples/utils/owlCharacterPlugin.tsx`
 among them, and draws the one chosen.
 
@@ -753,7 +763,7 @@ embedded application does — passes it as `conversation`:
 header, and the character acts `presence` and says `saying` as it would its
 own chat's.
 
-From the *Assistant* example (`src/examples/AssistantExample.tsx`),
+From the *Avatar* example (`src/examples/AvatarExample.tsx`),
 with a picker of Datalayer's characters and a file input for a character one
 brings (the example itself lists the contributed characters, as above):
 
@@ -835,7 +845,7 @@ above it where it was put down, and the wizard, the cat and the eyes draw.
 Each character's dark drawing and its contrast, light and dark, are tested
 (`assistant-characters-contrast.test.tsx`), and so is the stage drawing the
 chat's mode; a character contributed by a plugin is drawn in the
-*Assistant* example and pictured (`character-owl-*.png`). The choice of a
+*Avatar* example and pictured (`character-owl-*.png`). The choice of a
 character — the application's over the person's over the paper clip, an
 unknown id said and not replaced — and the assistant in a LOOP workspace,
 drawn from a plugin's character and acting out the chat's turn, dozing while

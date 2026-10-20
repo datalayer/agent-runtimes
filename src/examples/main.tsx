@@ -159,9 +159,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   'PapSignInDisplayExample',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
-  'AssistantExample',
+  'AvatarExample',
   // Every character in every state, from static data: no agent at all.
-  'AssistantGalleryExample',
+  'AvatarGalleryExample',
   // Voice: heard in the page, the agent on the local server, the speech
   // service named in the address.
   'VoiceChatExample',

@@ -16,6 +16,7 @@
  */
 
 import type { AppAvatarModel3D } from '../../types/agentspecs';
+import type { AssistantState } from './state';
 
 /**
  * The 3D model an avatar of kind `model3d` shows when it names no `url`
@@ -116,6 +117,161 @@ export function idleClipName(names: readonly string[]): string | undefined {
     names.find(name => /idle/i.test(name)) ??
     names[0]
   );
+}
+
+/** Every state a 3D avatar acts out, as the drawings and sprites do. */
+export const AVATAR_3D_STATES = [
+  'idle',
+  'greeting',
+  'thinking',
+  'working',
+  'waiting',
+  'speaking',
+  'paused',
+  'goodbye',
+] as const satisfies readonly AssistantState[];
+
+/**
+ * The animations a model may have for each state, by name, in order of
+ * preference; `once` plays it a single time, then idles again, unless it
+ * `holds` its last pose. RobotExpressive's are `Idle`, `Wave`, `Walking`
+ * and `Sitting` among others.
+ */
+const STATE_CLIPS: Record<
+  AssistantState,
+  { names: readonly RegExp[]; once?: boolean; holds?: boolean }
+> = {
+  idle: { names: [/^idle$/i, /idle/i] },
+  greeting: { names: [/^wave$/i, /wave|greet|hello/i], once: true },
+  thinking: { names: [/think|ponder/i] },
+  working: { names: [/work|typing/i, /^walk(ing)?$/i] },
+  waiting: { names: [/wait/i] },
+  speaking: { names: [/talk|speak/i] },
+  paused: { names: [/^sit(ting)?$/i, /sit/i], once: true, holds: true },
+  goodbye: { names: [/bye/i, /^wave$/i, /wave/i], once: true },
+};
+
+/** How a 3D avatar acts a state: an animation of its own, or idle and moved by code. */
+export interface StateMotion {
+  /** The animation played: the state's own, else its idle one; none when it has none. */
+  clip?: string;
+  /** Whether that animation is the state's own. */
+  own: boolean;
+  /** Played once, then idle again (or held). */
+  once: boolean;
+  /** Its last pose held once played. */
+  holds: boolean;
+  /** Whether the state is acted by moving the model (`proceduralPose`): it has no animation of its own. */
+  procedural: boolean;
+}
+
+/** How a model with these animations acts a state. */
+export function stateMotion(
+  state: AssistantState,
+  names: readonly string[],
+): StateMotion {
+  const wanted = STATE_CLIPS[state];
+  for (const pattern of wanted.names) {
+    const clip = names.find(name => pattern.test(name));
+    if (clip) {
+      return {
+        clip,
+        own: true,
+        once: !!wanted.once,
+        holds: !!wanted.holds,
+        procedural: false,
+      };
+    }
+  }
+  return {
+    clip: idleClipName(names),
+    own: false,
+    once: false,
+    holds: false,
+    procedural: true,
+  };
+}
+
+/**
+ * How the model is moved, by code, for a state it has no animation for:
+ * its head (radians, added to its head bone, or to the whole model when it
+ * has none) and its body (turned, leant, lifted by a share of its height).
+ */
+export interface Pose3D {
+  headPitch: number;
+  headYaw: number;
+  headRoll: number;
+  bodyYaw: number;
+  bodyLean: number;
+  bodyLift: number;
+}
+
+const REST: Pose3D = {
+  headPitch: 0,
+  headYaw: 0,
+  headRoll: 0,
+  bodyYaw: 0,
+  bodyLean: 0,
+  bodyLift: 0,
+};
+
+/**
+ * The pose of a state, `seconds` after it began: idle breathes, greeting
+ * wiggles hello, thinking tilts its head and looks up, working bobs looking
+ * down, waiting leans in with a questioning tilt, speaking turns its head as
+ * it talks, paused slumps, goodbye wiggles and sinks.
+ */
+export function proceduralPose(state: AssistantState, seconds: number): Pose3D {
+  const t = Math.max(0, seconds);
+  const sin = Math.sin;
+  switch (state) {
+    case 'idle':
+      return { ...REST, bodyLift: 0.006 * sin(t * 2) };
+    case 'greeting': {
+      const fade = Math.max(0.15, 1 - t / 2);
+      return {
+        ...REST,
+        bodyYaw: 0.3 * sin(t * 7 + Math.PI / 2) * fade,
+        headRoll: 0.15 * sin(t * 7 + Math.PI / 2) * fade,
+        bodyLift: 0.035 * Math.abs(sin(t * 7 + Math.PI / 2)) * fade,
+      };
+    }
+    case 'thinking':
+      return {
+        ...REST,
+        headPitch: -0.18,
+        headRoll: 0.22,
+        headYaw: 0.25 * sin(t * 0.9 + 0.4),
+      };
+    case 'working':
+      return {
+        ...REST,
+        headPitch: 0.22,
+        headYaw: 0.12 * sin(t * 3),
+        bodyLift: 0.02 * Math.abs(sin(t * 10 + 0.3)),
+      };
+    case 'waiting':
+      return {
+        ...REST,
+        bodyLean: 0.08,
+        headRoll: -0.12 + 0.05 * sin(t * 1.6),
+        bodyLift: 0.012 * sin(t * 3),
+      };
+    case 'speaking':
+      return {
+        ...REST,
+        headYaw: 0.12 * sin(t * 1.7 + 0.6),
+        headRoll: 0.05 * sin(t * 2.3),
+      };
+    case 'paused':
+      return { ...REST, headPitch: 0.35, bodyLean: 0.1, bodyLift: -0.03 };
+    case 'goodbye':
+      return {
+        ...REST,
+        bodyYaw: 0.3 * sin(t * 7 + Math.PI / 2),
+        bodyLift: -0.12 * Math.min(1, t / 0.7),
+      };
+  }
 }
 
 /** The morph targets that open a mouth: mouth, jaw, open, a viseme `aa`, or surprise. */

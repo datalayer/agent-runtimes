@@ -9,7 +9,7 @@
  * each one says — the agent's latest saying (T-23), an approval to answer,
  * or that it is paused. Static data only: no agent, no server.
  *
- * @module examples/utils/assistantGallery
+ * @module examples/utils/avatarGallery
  */
 
 import type { AssistantStageProps } from '../../chat/assistant/AssistantStage';

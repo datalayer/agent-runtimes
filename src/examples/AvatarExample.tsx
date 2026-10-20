@@ -103,7 +103,7 @@ const CATALOGUE = assistantCharactersOf(reactor).map(entry => ({
   name: entry.character.name,
 }));
 
-const AssistantExample: React.FC = () => {
+const AvatarExample: React.FC = () => {
   const [character, setCharacter] = useState<string | AssistantCharacterData>(
     'paperclip',
   );
@@ -205,7 +205,7 @@ const AssistantExample: React.FC = () => {
       <Box minHeight="100vh" bg="canvas.default" p={4}>
         <Box maxWidth={720} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
-            Assistant
+            Avatar
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3 }}>
             The chat as a character on the page. It greets you, acts out what
@@ -410,4 +410,4 @@ const AssistantExample: React.FC = () => {
   );
 };
 
-export default AssistantExample;
+export default AvatarExample;
