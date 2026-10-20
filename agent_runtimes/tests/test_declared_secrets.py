@@ -203,10 +203,13 @@ def test_a_subagent_by_reference_declares_what_its_agentspec_does() -> None:
     assert declared.runtime == {"R19_SERVER_TOKEN", "R19_SKILL_TOKEN"}
 
 
-def test_an_agent_on_a_harness_declares_the_key_its_harness_requires() -> None:
-    # The harness spec's declared secrets reach the process from
-    # IAM through the companion, so a runtime made for a Claude Code agent is
-    # given ANTHROPIC_API_KEY — and refused when the account has none.
+def test_an_agent_on_a_harness_declares_the_key_its_harness_requires(
+    monkeypatch,
+) -> None:
+    # Off Datalayer, the harness spec's declared secrets reach the process, so
+    # a runtime made for a Claude Code agent is given ANTHROPIC_API_KEY — and
+    # refused when the account has none.
+    monkeypatch.delenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", raising=False)
     coder = Agentspec(id="r19-coder", name="coder", harness="claude-code")
     declared = declared_secrets(coder)
     assert declared.consumers["the harness claude-code"] == {"ANTHROPIC_API_KEY"}
@@ -215,6 +218,23 @@ def test_an_agent_on_a_harness_declares_the_key_its_harness_requires() -> None:
     [sentence] = declared.missing(lambda name: False, "Coder")
     assert "the harness claude-code needs ANTHROPIC_API_KEY" in sentence
     assert declared_secrets(Agentspec(id="r19-plain", name="plain")).consumers == {}
+
+
+def test_on_datalayer_claude_codes_key_is_not_declared(monkeypatch) -> None:
+    # On Datalayer, Claude Code calls Anthropic through ai-inference, which
+    # reads the account's key itself: the runtime is never given it.
+    monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+    declared = declared_secrets(
+        Agentspec(id="r19-coder-dl", name="coder", harness="claude-code")
+    )
+    assert "ANTHROPIC_API_KEY" not in declared.runtime
+    assert declared.missing(lambda name: False, "Coder") == []
+    # Another harness still declares what it requires.
+    goose = declared_secrets(
+        Agentspec(id="r19-goose-dl", name="goose", harness="goose")
+    )
+    assert "ANTHROPIC_API_KEY" in goose.runtime
 
 
 def test_a_missing_secret_is_said_in_a_sentence() -> None:

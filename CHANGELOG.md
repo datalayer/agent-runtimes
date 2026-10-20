@@ -7,6 +7,15 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.63
+
+20 October 2026 ([Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)):
+
+- **On Datalayer, Claude Code calls Anthropic through ai-inference, and the runtime never holds the Anthropic key.** A runtime that routes its inference through ai-inference (`AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer`) gives Claude Code `ANTHROPIC_BASE_URL` (ai-inference's Anthropic Messages route, `<ai-inference>/api/ai-inference/v1/anthropic`) and its own ai-inference token as `ANTHROPIC_AUTH_TOKEN`, set again as the harness starts; ai-inference calls Anthropic on the account's own `ANTHROPIC_API_KEY` and meters the call under the account. The key is no longer declared to the platform for Claude Code there (`declared_secrets`), nor passed to the harness when it is in the environment anyway; a runtime with no ai-inference token is refused in a sentence before the harness starts (`adapters/harness_inference.py`). Elsewhere (a runtime started by hand, `loop --harness`) Claude Code takes `ANTHROPIC_API_KEY` from the environment, as before.
+- **A session rule that loosens the application's own Rules is refused when it is added** (SH-54; f44652df): 422 on `POST /apps/sessions/{uid}/rules`, in a sentence naming the application's rule it conflicts with.
+- **Voice licence notices travel with the weights** (2d2ac243): `pin_store` writes a NOTICE and a LICENSE beside each model; the voice menu shows a voice's attribution.
+- **The assistant's balloon lists the conversation under History** (c7e2a99c, 40ecb251); the Assistant examples are now **Avatar** and **Avatar Gallery**, the 3D avatar acting every state (8756ac1c, b9efec75).
+
 ## 1.5.62
 
 20 October 2026 ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):

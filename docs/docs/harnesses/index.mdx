@@ -257,6 +257,29 @@ of the runtime's (`harness_environment`); an account without them is refused
 in a sentence before the agent is made — *… is not set up: the harness
 claude-code needs ANTHROPIC_API_KEY* — never fetched from anywhere else.
 
+## On Datalayer, Claude Code's calls go through ai-inference (1.5.63, 20 October 2026)
+
+A runtime that routes its inference through ai-inference
+(`AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer`, as every Datalayer
+runtime does) is **never given the Anthropic key**. Claude Code is started with:
+
+| Variable | Value |
+|---|---|
+| `ANTHROPIC_BASE_URL` | ai-inference's Anthropic Messages route, `<DATALAYER_AI_INFERENCE_URL>/api/ai-inference/v1/anthropic` |
+| `ANTHROPIC_AUTH_TOKEN` | the runtime's own ai-inference token (the person's token narrowed to ai-inference), set again as the harness starts |
+
+ai-inference relays `POST /v1/messages` (streamed or not) and
+`/v1/messages/count_tokens` to Anthropic on the **account's own**
+`ANTHROPIC_API_KEY`, read from the account's secrets (`datalayer secrets`), and
+records each call's tokens on the account's usage. An account with no key is
+answered *403: This account keeps no ANTHROPIC_API_KEY in its Datalayer
+secrets…*, which Claude Code shows as the turn's error; a runtime with no
+ai-inference token is refused in a sentence before the harness starts. The key
+is not declared for Claude Code there, so the platform does not copy it into
+the runtime (`adapters/harness_inference.py`). Elsewhere — a runtime started by
+hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
+environment, as above.
+
 ## In the runtime image (built: SH-05; image 0.0.44, 15 October 2026)
 
 The runtime image (`plane/etc/dockerfiles/agent-runtimes`, agent-runtimes

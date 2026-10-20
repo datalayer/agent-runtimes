@@ -210,17 +210,35 @@ def harness_environment(
     trimmed set holds HOME and PATH). A declared secret absent from
     ``environment`` is a refusal in a sentence: the harness would start and
     fail at its first model call, after the session was opened.
+
+    On Datalayer, a harness whose model calls go through ai-inference
+    (``adapters.harness_inference``: Claude Code) is not given its key: it is
+    given ai-inference's Anthropic route as ``ANTHROPIC_BASE_URL`` and the
+    runtime's ai-inference token as ``ANTHROPIC_AUTH_TOKEN`` (set again when
+    the harness starts, :meth:`ACPAgent.initialize`, since a runtime is given
+    its token when it is assigned).
     """
+    from agent_runtimes.adapters import harness_inference
+
     source = os.environ if environment is None else environment
     given: dict[str, str] = dict(harness.acp.env) if harness.acp else {}
-    missing = [name for name in harness.requires.secrets if not source.get(name)]
+    routed = harness_inference.routed_secret(harness.id, source)
+    required = [name for name in harness.requires.secrets if name != routed]
+    missing = [name for name in required if not source.get(name)]
     if missing:
         raise HarnessRefused(
             f"{harness.name} needs {', '.join(missing)} in the environment "
             f"({harness.registered.credential}), and it is not set."
         )
-    for name in harness.requires.secrets:
+    for name in required:
         given[name] = source[name]
+    if routed:
+        given[harness_inference.BASE_URL_VARIABLE] = (
+            harness_inference.anthropic_base_url(source)
+        )
+        token, _ = harness_inference.routed_token()
+        if token:
+            given[harness_inference.AUTH_TOKEN_VARIABLE] = token
     return given
 
 
@@ -844,10 +862,30 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Whether the harness's process is running."""
         return self._channel is not None
 
+    def _give_routed_token(self) -> None:
+        """The runtime's ai-inference token, as it is now, for a harness whose calls go through ai-inference.
+
+        A harness routed through ai-inference (``ANTHROPIC_BASE_URL`` in its
+        environment, :func:`harness_environment`) calls with the token the
+        runtime holds when the harness starts; none, or an expired one, is a
+        refusal in a sentence before the process is launched.
+        """
+        from agent_runtimes.adapters import harness_inference
+
+        if harness_inference.BASE_URL_VARIABLE not in self.agent_env:
+            return
+        token, refusal = harness_inference.routed_token()
+        if not token:
+            raise HarnessRefused(
+                f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}"
+            )
+        self.agent_env[harness_inference.AUTH_TOKEN_VARIABLE] = token
+
     async def initialize(self) -> None:
         """Launch the harness and negotiate; refuse what its spec asked that it lacks."""
         if self.started:
             return
+        self._give_routed_token()
         self._listen_for_policies()
         try:
             channel = await self.start_agent()

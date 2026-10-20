@@ -1307,6 +1307,70 @@ class TestResolvingACatalogueHarness:
             "OPENAI_API_KEY": "k",
         }
 
+    def test_on_datalayer_claude_code_calls_through_ai_inference(
+        self, monkeypatch
+    ) -> None:
+        from agent_runtimes.models import offered
+        from agent_runtimes.specs.harnesses import get_harness
+
+        claude = get_harness("claude-code")
+        assert claude is not None
+        datalayer = {
+            "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+            "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+            # A key in the environment anyway is not passed on.
+            "ANTHROPIC_API_KEY": "sk-ant-not-given",
+        }
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        given = harness_environment(claude, datalayer)
+        assert given == {
+            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": "the-inference-token",
+        }
+        # No key needed there: the route reads the account's own.
+        monkeypatch.setattr(offered, "_given", {"token": None, "expires_at": None})
+        monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        no_key = {k: v for k, v in datalayer.items() if k != "ANTHROPIC_API_KEY"}
+        assert harness_environment(claude, no_key) == {
+            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
+        }
+
+    @pytest.mark.asyncio
+    async def test_a_routed_harness_with_no_token_is_refused_before_it_starts(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.models import offered
+        from agent_runtimes.specs.harnesses import get_harness
+
+        claude = get_harness("claude-code")
+        assert claude is not None
+        monkeypatch.setattr(offered, "_given", {"token": None, "expires_at": None})
+        monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        agent = ACPAgent(
+            agent_id="routed",
+            harness=claude,
+            command=["/nonexistent/claude-agent-acp"],
+            workspace=tmp_path,
+            environment={
+                "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic"
+            },
+        )
+        with pytest.raises(
+            HarnessRefused, match="through ai-inference with this runtime's token"
+        ):
+            await agent.initialize()
+        assert not agent.started
+        # Given since, the token is the one the harness starts with.
+        monkeypatch.setattr(
+            offered, "_given", {"token": "given-later", "expires_at": None}
+        )
+        agent._give_routed_token()
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-later"
+
     def test_the_workspace_is_named_or_refused(self, tmp_path: Path) -> None:
         with pytest.raises(HarnessRefused, match=WORKSPACE_VARIABLE):
             harness_workspace({})

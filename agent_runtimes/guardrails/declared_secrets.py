@@ -15,7 +15,10 @@ given is what the specs it is configured from **declare**, read off them:
 - the harness its agent runs on (``harness: claude-code``) — the
   harness spec's ``requires.secrets`` (Claude Code's ``ANTHROPIC_API_KEY``),
   given to the harness's process by name and to nothing else of the runtime's
-  (``adapters.acp_agent.harness_environment``), never to the sandbox;
+  (``adapters.acp_agent.harness_environment``), never to the sandbox — but
+  on Datalayer, Claude Code's key is not declared at all: its model calls go
+  through ai-inference, which reads the account's key itself
+  (``adapters.harness_inference``);
 - a deployment that takes a signed user (D-21) — its user secret,
   ``DATALAYER_APP_USER_SECRET_<UID>``;
 - what the code an MCP server's tools write reads in the code sandbox — its
@@ -129,13 +132,23 @@ def _catalog_server(server_id: str) -> Any:
 
 
 def _harness_env_names(harness_id: str) -> FrozenSet[str]:
-    """The secrets a catalogue harness requires, by name; none for a builtin or unknown one."""
+    """The secrets a catalogue harness requires, by name; none for a builtin or unknown one.
+
+    On Datalayer, the key of a harness whose model calls go through
+    ai-inference (Claude Code's ``ANTHROPIC_API_KEY``) is not declared: the
+    runtime is never given it; ai-inference reads it from the account's
+    secrets (``adapters.harness_inference``).
+    """
+    from agent_runtimes.adapters.harness_inference import routed_secret
     from agent_runtimes.specs.harnesses import get_harness
 
     harness = get_harness(harness_id)
     if harness is None:
         return frozenset()
-    return frozenset(str(name) for name in harness.requires.secrets)
+    routed = routed_secret(harness_id)
+    return frozenset(
+        str(name) for name in harness.requires.secrets if str(name) != routed
+    )
 
 
 def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:
