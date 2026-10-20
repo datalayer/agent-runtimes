@@ -8,7 +8,8 @@
  * the microphone, what a person chooses for themselves — the language they
  * speak and hear, when answers are heard, the voice, its speed and loudness,
  * how long they pause before they are done (VO-69), *Send what I say*, the
- * microphone, and *Keep speech on this device*. Each
+ * microphone, and *Keep speech on this device*. A voice whose licence asks
+ * for it shows its attribution under its name (Siwis, CC BY 4.0). Each
  * choice is kept in the person's settings and heard at once by every chat
  * on the page; *Use the application's* forgets them all.
  *
@@ -131,6 +132,11 @@ export function VoiceMenu({
                       data-voice-voice={spoken.id}
                     >
                       {spoken.name}
+                      {spoken.attribution ? (
+                        <ActionList.Description variant="block">
+                          {spoken.attribution}
+                        </ActionList.Description>
+                      ) : null}
                     </ActionList.Item>
                   ))}
                 </ActionList.Group>

@@ -193,6 +193,17 @@ describe('the composer’s voice menu (VO-14, VO-21, VO-25, VO-30)', () => {
     expect(heard()).toBe('fr-FR on_request kokoro-ff-siwis');
   });
 
+  it('shows a voice’s attribution where its licence asks (CC BY 4.0)', async () => {
+    draw({ ...SPEAKS, language: 'fr-FR' }, true);
+    await open();
+    const siwis = document.querySelector(
+      '[data-voice-voice="kokoro-ff-siwis"]',
+    );
+    expect(siwis?.textContent).toContain('SIWIS');
+    expect(siwis?.textContent).toContain('University of Edinburgh');
+    expect(siwis?.textContent).toContain('CC BY 4.0');
+  });
+
   it('lists the microphones once named, and keeps the one chosen', async () => {
     draw(SPEAKS, true);
     await open();

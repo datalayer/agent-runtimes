@@ -312,7 +312,10 @@ instead.
    Datalayer's own copy, laid out the same, is
    `https://models-speech.datalayer.tech` (the CDN of
    `s3://datalayer-models-speech`); the speech service copies its models from
-   it.
+   it. Beside each model's files the store keeps a `NOTICE` (where the model
+   was published, its licences, its attribution and its voices', SIWIS's
+   CC BY 4.0 among them) and a `LICENSE` (its weights' licence text), written
+   by `pin_store.py` from the catalogue and checked by `--verify`.
 
    (`?voiceModelsUrl=`).
 3. **The speech service**: Datalayer's, `datalayer-speech` on r1

@@ -15,8 +15,16 @@ service read it from there and never from a third party's hub.
     python scripts/voice/pin_store.py --store ~/.cache/voice-work/store --verify
 
 ``--from`` takes files already downloaded (any layout) whose hash matches,
-instead of downloading them again. ``--verify`` downloads nothing and fails
-on a missing or changed file.
+instead of downloading them again. ``--verify`` downloads no model file and
+fails on a missing or changed one.
+
+Beside each model's files the store keeps its licence notices, written from
+the catalogue: ``NOTICE`` (the model, where it was published and at which
+revision, the licences of its weights and code, its attribution, and its
+voices with theirs, SIWIS's CC BY 4.0 among them) and ``LICENSE`` (the full
+text of its weights' licence, MIT or Apache-2.0, from SPDX's licence list at a
+pinned release, checked by its SHA-256). ``--verify`` fails on a missing or
+changed notice too. Copy them to Datalayer's storage with the model files.
 """
 
 from __future__ import annotations
@@ -32,10 +40,26 @@ from typing import Any, Dict, Iterator, Optional
 
 import httpx
 
-from agent_runtimes.specs.voices import SPEECH_MODEL_CATALOGUE
+from agent_runtimes.specs.voices import SPEECH_MODEL_CATALOGUE, VOICE_CATALOGUE
 
 #: Where the npm package that ships Silero VAD is published.
 NPM_TARBALL = "https://registry.npmjs.org/@ricky0123/vad-web/-/vad-web-{revision}.tgz"
+
+
+#: The licence texts written beside the weights: SPDX's licence list at v3.27.0, by SHA-256.
+LICENCE_TEXTS: Dict[str, tuple[str, str]] = {
+    "MIT": (
+        "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MIT.txt",
+        "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+    ),
+    "Apache-2.0": (
+        "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Apache-2.0.txt",
+        "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff",
+    ),
+}
+
+#: The MIT text's template line, given the model's authors.
+MIT_COPYRIGHT_TEMPLATE = "Copyright (c) <year> <copyright holders>"
 
 
 def sha256_of(path: Path) -> str:
@@ -108,6 +132,79 @@ def folder_of(model: Dict[str, Any]) -> str:
     return f"{model['provider']}/{model['id']}"
 
 
+def notice_of(model: Dict[str, Any]) -> str:
+    """The model's NOTICE, from the catalogue: what it is, where from, under which licences, and its voices."""
+    licence = model["licence"]
+    lines = [
+        f"{model['name']} ({model['id']}), as kept by Datalayer under {folder_of(model)}/",
+        "",
+        f"Published by: {model['provider']}, {model['upstream']}",
+        f"These files: {_repository(model)} at revision {model['revision']}",
+        f"Licence of the weights: {licence['weights']} (the text is in LICENSE beside this file)",
+    ]
+    if licence.get("code"):
+        lines.append(f"Licence of the code: {licence['code']}")
+    if licence.get("dataset"):
+        lines.append(f"Licence of the training data: {licence['dataset']}")
+    lines.append(
+        f"Copyright: the authors of {model['name']}, as published at {model['upstream']}"
+    )
+    if model.get("attribution"):
+        lines += ["", model["attribution"]]
+    voices = [
+        voice for voice in VOICE_CATALOGUE.values() if voice["model"] == model["id"]
+    ]
+    if voices:
+        lines += ["", "Voices offered:"]
+        for voice in sorted(voices, key=lambda item: item["id"]):
+            terms = voice["licence"]["weights"]
+            if voice["licence"].get("dataset"):
+                terms += f"; training data {voice['licence']['dataset']}"
+            lines.append(f"- {voice['name']} ({voice['id']}): {terms}")
+            if voice.get("attribution"):
+                lines.append(f"  {voice['attribution']}")
+    lines += [
+        "",
+        "Every file here is pinned by its SHA-256 and size in the agentspecs speech catalogue.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def licence_text(model: Dict[str, Any], texts: Dict[str, str]) -> str:
+    """The full text of the model's weights' licence, MIT given the model's authors."""
+    weights = model["licence"]["weights"]
+    if weights not in LICENCE_TEXTS:
+        raise SystemExit(
+            f"{model['id']}: no licence text is pinned for {weights}: add it to LICENCE_TEXTS"
+        )
+    if weights not in texts:
+        url, sha256 = LICENCE_TEXTS[weights]
+        with tempfile.TemporaryDirectory() as scratch:
+            target = Path(scratch) / "LICENSE"
+            _download(url, target)
+            if sha256_of(target) != sha256:
+                raise SystemExit(f"{url} was published with another hash: refused")
+            texts[weights] = target.read_text()
+    text = texts[weights]
+    if weights == "MIT":
+        if MIT_COPYRIGHT_TEMPLATE not in text:
+            raise SystemExit("the pinned MIT text has no copyright line to fill")
+        text = text.replace(
+            MIT_COPYRIGHT_TEMPLATE,
+            f"Copyright (c) the authors of {model['name']} ({model['upstream']})",
+        )
+    return text
+
+
+def notices() -> Iterator[tuple[Dict[str, Any], str]]:
+    seen = set()
+    for model in SPEECH_MODEL_CATALOGUE.values():
+        if folder_of(model) not in seen:
+            seen.add(folder_of(model))
+            yield model, folder_of(model)
+
+
 def files() -> Iterator[tuple[Dict[str, Any], Dict[str, Any]]]:
     for model in SPEECH_MODEL_CATALOGUE.values():
         for item in model["files"]:
@@ -152,11 +249,34 @@ def main() -> int:
             problems.append(
                 f"{model['id']}/{item['path']} was published with another hash: refused"
             )
+    texts: Dict[str, str] = {}
+    for model, folder in notices():
+        if (args.store / folder).is_symlink():
+            problems.append(
+                f"{folder} is a link to another folder, whose notices its own would overwrite: "
+                "make it a copy, as Datalayer's storage keeps it"
+            )
+            continue
+        for name, text in (
+            ("NOTICE", notice_of(model)),
+            ("LICENSE", licence_text(model, texts)),
+        ):
+            target = args.store / folder / name
+            if target.is_file() and target.read_text() == text:
+                continue
+            if args.verify:
+                problems.append(
+                    f"{folder}/{name} is missing or not as the catalogue says"
+                )
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
     for problem in problems:
         print(problem, file=sys.stderr)
     if not problems:
         print(
-            f"{args.store}: {sum(1 for _ in files())} files, {total / 1e6:.0f} MB, every one as pinned"
+            f"{args.store}: {sum(1 for _ in files())} files, {total / 1e6:.0f} MB, every one as pinned; "
+            f"a NOTICE and a LICENSE beside each of {sum(1 for _ in notices())} models"
         )
     return 1 if problems else 0
 

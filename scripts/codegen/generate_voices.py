@@ -61,13 +61,37 @@ def _model(model: Any) -> dict[str, Any]:
     }
 
 
+def _register(book: Any) -> dict[str, Any]:
+    """What ships, by the register: its used entries, and who reviewed it when."""
+    return {
+        "reviewedBy": book.reviewed_by or "",
+        "reviewedOn": book.reviewed_on,
+        "checkedOn": book.checked_on,
+        "entries": [
+            {
+                "name": entry.name,
+                "kind": entry.kind,
+                "version": entry.version,
+                "licence": entry.licence,
+                "where": entry.where,
+                "source": entry.source,
+            }
+            for entry in book.entries
+            if entry.status == "used"
+        ],
+    }
+
+
 def _py(value: Any) -> str:
     """A Python literal; `ruff format` lays it out."""
     return repr(value)
 
 
 def generate_python_code(
-    voices: list[dict[str, Any]], models: list[dict[str, Any]], allowed: list[str]
+    voices: list[dict[str, Any]],
+    models: list[dict[str, Any]],
+    allowed: list[str],
+    book: dict[str, Any],
 ) -> str:
     return "\n".join(
         [
@@ -84,6 +108,9 @@ def generate_python_code(
             "",
             "#: The licences the register allows anywhere, the browser included.",
             f"SPEECH_ALLOWED_LICENCES: List[str] = {_py(allowed)}",
+            "",
+            "#: What ships, by the licence register: its used entries, and who reviewed it when.",
+            f"SPEECH_REGISTER: Dict[str, Any] = {_py(book)}",
             "",
             "#: The voices, by id.",
             "VOICE_CATALOGUE: Dict[str, Dict[str, Any]] = {",
@@ -130,7 +157,10 @@ def generate_python_code(
 
 
 def generate_typescript_code(
-    voices: list[dict[str, Any]], models: list[dict[str, Any]], allowed: list[str]
+    voices: list[dict[str, Any]],
+    models: list[dict[str, Any]],
+    allowed: list[str],
+    book: dict[str, Any],
 ) -> str:
     def ts(value: Any) -> str:
         return json.dumps(value, indent=2, ensure_ascii=False)
@@ -214,6 +244,28 @@ def generate_typescript_code(
             "/** The licences the register allows anywhere, the browser included. */",
             f"export const SPEECH_ALLOWED_LICENCES: readonly string[] = {ts(allowed)};",
             "",
+            "/** One used line of the licence register: a library, model, voice or dataset that ships, where it goes. */",
+            "export interface SpeechRegisterEntry {",
+            "  name: string;",
+            "  kind: 'library' | 'model' | 'voice' | 'dataset';",
+            "  version: string;",
+            "  licence: string;",
+            "  /** The browser, Datalayer's servers, the person's machine (the voice extra), or tests only. */",
+            "  where: 'browser' | 'server' | 'machine' | 'tests';",
+            "  source: string;",
+            "}",
+            "",
+            "/** What ships, by the licence register: its used entries, and who reviewed it when. */",
+            "export interface SpeechRegister {",
+            "  /** `owner` or `counsel`, or empty when not reviewed. */",
+            "  reviewedBy: string;",
+            "  reviewedOn: string;",
+            "  checkedOn: string;",
+            "  entries: SpeechRegisterEntry[];",
+            "}",
+            "",
+            f"export const SPEECH_REGISTER: SpeechRegister = {ts(book)};",
+            "",
             "export const VOICE_CATALOGUE: Record<string, VoiceSpec> = {",
             *[
                 f"  {json.dumps(voice['id'])}: {ts(voice)},".replace("\n", "\n  ")
@@ -276,9 +328,15 @@ def main() -> None:
     args = parser.parse_args()
     voices = [_voice(voice) for voice in list_voices()]
     models = [_model(model) for model in list_speech_models()]
-    allowed = list(register().allowed)
-    args.python_output.write_text(generate_python_code(voices, models, allowed))
-    args.typescript_output.write_text(generate_typescript_code(voices, models, allowed))
+    book = register()
+    allowed = list(book.allowed)
+    shipped = _register(book)
+    args.python_output.write_text(
+        generate_python_code(voices, models, allowed, shipped)
+    )
+    args.typescript_output.write_text(
+        generate_typescript_code(voices, models, allowed, shipped)
+    )
     print(f"✓ Generated {len(voices)} voices and {len(models)} speech models")
 
 

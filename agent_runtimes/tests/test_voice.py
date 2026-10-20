@@ -86,6 +86,38 @@ def test_each_speech_model_is_kept_under_its_provider():
     )
 
 
+def test_each_speech_model_is_kept_with_its_licence_notices():
+    """MIT and Apache-2.0 ask for their notice to travel with the weights: NOTICE and LICENSE beside them."""
+    import sys
+    from pathlib import Path
+
+    import pytest
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts" / "voice"
+    sys.path.insert(0, str(scripts))
+    try:
+        import pin_store
+    finally:
+        sys.path.remove(str(scripts))
+    kokoro = SPEECH_MODEL_CATALOGUE["kokoro-82m"]
+    notice = pin_store.notice_of(kokoro)
+    assert "Licence of the weights: Apache-2.0" in notice
+    assert "https://huggingface.co/hexgrad/Kokoro-82M" in notice
+    assert "SIWIS" in notice and "CC BY 4.0" in notice
+    assert "University of Edinburgh" in notice
+    # Every model's weights' licence has a pinned text; MIT is given the model's authors.
+    for model in SPEECH_MODEL_CATALOGUE.values():
+        assert model["licence"]["weights"] in pin_store.LICENCE_TEXTS, model["id"]
+    texts = {"MIT": f"MIT License\n\n{pin_store.MIT_COPYRIGHT_TEMPLATE}\n\nPermission"}
+    whisper = SPEECH_MODEL_CATALOGUE["whisper-base"]
+    assert pin_store.licence_text(whisper, texts).startswith(
+        "MIT License\n\nCopyright (c) the authors of Whisper Base (https://huggingface.co/openai/whisper-base)"
+    )
+    unknown = {**whisper, "licence": {"weights": "CC-BY-4.0"}}
+    with pytest.raises(SystemExit, match="no licence text is pinned"):
+        pin_store.licence_text(unknown, texts)
+
+
 def test_an_application_without_a_voice_says_so():
     assert voice_settings(app()) == {"enabled": False}
     assert voice_capability(app()) is None
