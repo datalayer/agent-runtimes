@@ -9,13 +9,15 @@ It writes the Appspec's ``interface.avatar`` — an id a plugin contributes, or 
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from agentspecs.apps import AppError
 
 from agent_runtimes.loop.apps import Application
 
 
-def _app(**kwargs: object) -> Application:
+def _app(**kwargs: Any) -> Application:
     return Application("avatar-py", "chat", agent="example-blank:0.0.1", **kwargs)
 
 
