@@ -118,13 +118,30 @@ def test_a_host_runs_its_deployment_as_its_principal_recorded_as_its_person(
     # Let in by ai-agents with the host token itself.
     assert hosted == [("dep-1", "host:alice:dep-1")]
     assert {b["opened_by"] for b in runtime.records} == {"alice"}
-    # Its person on the web is somebody else's caller: the host's session is the host's.
+    # Its person opens it on the web, signed in as themselves (Open in
+    # Datalayer, S-305), its messages read; nobody else does.
+    held = remote.get(
+        "/api/v1/apps/sessions/slack-thread-0001/messages", headers=as_("alice")
+    )
+    assert held.status_code == 200
+    assert any(
+        m.get("role") == "user" and "Hello" in str(m.get("content"))
+        for m in held.json()["messages"]
+    )
     assert (
         remote.get(
             "/api/v1/apps/sessions/slack-thread-0001", headers=as_("alice")
         ).status_code
-        == 404
+        == 200
     )
+    for other in ("bob", "host:bob:dep-1"):
+        assert (
+            remote.get(
+                "/api/v1/apps/sessions/slack-thread-0001/messages",
+                headers=as_(other),
+            ).status_code
+            == 404
+        )
     assert (
         remote.get(
             "/api/v1/apps/sessions/slack-thread-0001", headers=as_("host:alice:dep-1")

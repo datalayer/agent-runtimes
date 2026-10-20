@@ -844,9 +844,17 @@ class LiveSession:
         ]
 
     def answers_to(self, caller: Caller) -> bool:
-        """Whether a caller may drive this session: who opened it, or the machine itself."""
+        """Whether a caller may drive this session: who opened it, or the machine itself.
+
+        A session a host opened (Slack, Discord) is its linked person's: they
+        open it on the web, signed in as themselves, from the host's *Open in
+        Datalayer* (S-305) — never another person, nor another host's
+        installation.
+        """
         if caller.kind == "local":
             return True
+        if self.opened_by.kind == "host" and caller.kind == "person":
+            return bool(caller.uid) and caller.uid == self.opened_by.uid
         # An embed's visitors are one owner's token each: told apart by the
         # visit their token was issued for (R-20).
         return (caller.kind, caller.uid, caller.visit) == (
