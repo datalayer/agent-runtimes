@@ -493,7 +493,10 @@ describe('the balloon’s history, from the chat’s conversation', () => {
       '[data-chat-message="assistant"] [data-chat-markdown]',
     );
     expect(assistant?.querySelector('h1')?.textContent).toBe('Findings');
-    expect(assistant?.querySelector('strong')?.textContent).toBe('report');
+    // Streamdown draws bold as its own element, marked `strong`.
+    expect(
+      assistant?.querySelector('[data-streamdown="strong"]')?.textContent,
+    ).toBe('report');
     expect(
       Array.from(assistant?.querySelectorAll('li') ?? []).map(
         item => item.textContent,
