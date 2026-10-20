@@ -44,6 +44,7 @@ import { ButtonGlow } from './display/ButtonGlow';
 import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
+import { ASSISTANT_CLEARANCE_VAR } from './assistant/clearance';
 import { decisionsAskerAt } from './assistant/decisions';
 import { DecisionAsk } from './assistant/DecisionAsk';
 import type { ChatBaseProps } from '../types/chat';
@@ -1444,6 +1445,9 @@ export function ChatFloating({
       ref={popupRef}
       className={className}
       sx={{
+        // Its own conversation stands beside the character, never under it:
+        // its prompt's controls keep their own padding (T-27).
+        ...(assistantShown ? { [ASSISTANT_CLEARANCE_VAR]: 'initial' } : {}),
         position:
           viewMode === 'panel' && !isMobile && (panelInFlow || dockedInMount)
             ? 'relative'

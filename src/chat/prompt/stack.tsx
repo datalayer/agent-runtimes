@@ -24,7 +24,45 @@
  */
 
 import type { ReactNode } from 'react';
+import { useTheme } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { ASSISTANT_CLEARANCE_VAR } from '../assistant/clearance';
+
+/** Primer's space scale, for a band drawn without a theme. */
+const PRIMER_SPACE = [
+  '0',
+  '4px',
+  '8px',
+  '16px',
+  '24px',
+  '32px',
+  '40px',
+  '48px',
+  '64px',
+] as const;
+
+/**
+ * A theme space step (`px={2}`) as a CSS length, from the theme's scale or
+ * else Primer's own.
+ */
+export function spaceLength(
+  step: number,
+  scale: readonly (string | number)[] = PRIMER_SPACE,
+): string {
+  const value = scale[step] ?? PRIMER_SPACE[step] ?? `${step * 8}px`;
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
+/**
+ * The right padding of a band that `clearsAssistant`: the floating
+ * assistant's clearance while it stands in a bottom corner (what it covers
+ * from the window's right edge, `--assistant-clearance`), so that the
+ * character is never drawn over the band's controls and never takes their
+ * clicks; else the band's own `padding`, a CSS length.
+ */
+export function clearOfAssistant(padding: string): string {
+  return `var(${ASSISTANT_CLEARANCE_VAR}, ${padding})`;
+}
 
 /** One band in a region. */
 export type PromptStack = {
@@ -77,6 +115,15 @@ export type PromptStack = {
    * showing the page behind it — a pale stripe down the right-hand side.
    */
   layout?: 'row' | 'block';
+  /**
+   * Keep the band's right end clear of the floating assistant while it
+   * stands in a bottom corner: its right padding becomes the assistant's
+   * clearance (`--assistant-clearance`), so that the character is never
+   * drawn over the band's controls and never takes their clicks. For a band
+   * that runs to the page's right edge, as the composer's session controls
+   * do on an application's page.
+   */
+  clearsAssistant?: boolean;
 };
 
 export type PromptStacksProps = {
@@ -102,6 +149,7 @@ export function PromptStacks({
   disabled = false,
 }: PromptStacksProps): React.JSX.Element | null {
   const visible = stacks.filter(isRendered);
+  const { theme } = useTheme();
   if (visible.length === 0) {
     return null;
   }
@@ -110,12 +158,24 @@ export function PromptStacks({
     <>
       {visible.map(stack => {
         const isDisabled = disabled || stack.disabled;
+        const px = stack.px ?? 2;
+        const right = Array.isArray(px) ? px[px.length - 1] : px;
         return (
           <Box
             key={stack.id}
             data-prompt-stack={stack.id}
             aria-disabled={isDisabled || undefined}
-            px={stack.px ?? 2}
+            px={px}
+            data-clears-assistant={stack.clearsAssistant ? '' : undefined}
+            sx={
+              stack.clearsAssistant
+                ? {
+                    paddingRight: clearOfAssistant(
+                      spaceLength(right, theme?.space as string[] | undefined),
+                    ),
+                  }
+                : undefined
+            }
             py={stack.py ?? 1}
             minHeight={stack.minHeight}
             display={stack.layout === 'block' ? undefined : 'flex'}

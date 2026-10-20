@@ -611,6 +611,9 @@ export function InputPrompt({
                 {
                   id: 'session-controls',
                   px: padding,
+                  // Its right end — the voice controls — is never under
+                  // the floating assistant in its corner (T-27).
+                  clearsAssistant: true,
                   py: 0.5,
                   minHeight: 36,
                   bordered: true,

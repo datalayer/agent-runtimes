@@ -39,6 +39,7 @@ export default defineConfig({
     'voice.spec.ts',
     'voice-hands-free.spec.ts',
     'voice-hands-free-quiet.spec.ts',
+    'voice-assistant-clear.spec.ts',
   ],
   outputDir: './test-results',
   globalSetup: './global-setup.ts',
