@@ -54,8 +54,9 @@ dependencies = [
     # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
     # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
     # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
-    # agentspecs 0.0.116: interface.avatar (was interface.assistant, now refused) and the 3D avatar, {kind: model3d, url}.
-    "agentspecs>=0.0.116",
+    # agentspecs 0.0.116: interface.avatar (was interface.assistant, now refused) and the 3D avatar, {kind: model3d, url};
+    # 0.0.117: the examples' app.py say avatar too.
+    "agentspecs>=0.0.117",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

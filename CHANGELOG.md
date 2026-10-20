@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.59
+
+20 October 2026:
+
+- **1.5.58 as released, with agentspecs 0.0.117**: its tests ran against agentspecs 0.0.116, whose Customer Interview and Report from a file `app.py` examples still said `interface.assistant`. That key is now refused, so the release failed before it published. 1.5.58 is not on PyPI or npm.
+
 ## 1.5.58
 
 20 October 2026 ([The floating assistant](https://agent-runtimes.datalayer.tech/docs/chat/floating-assistant), [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding)):
