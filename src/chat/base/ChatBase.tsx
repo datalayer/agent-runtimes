@@ -150,7 +150,11 @@ import { useVoiceSettings } from '../../voice/useVoiceSettings';
 import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
 import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
 import { saidMessageId, useSaidSentence } from '../../voice/captions';
-import { lineToSay, type VoiceActivity } from '../../voice/sayAloud';
+import {
+  isVoiceInterrupted,
+  lineToSay,
+  type VoiceActivity,
+} from '../../voice/sayAloud';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
@@ -4011,6 +4015,15 @@ function ChatBaseInner({
    */
   const [voiceSaid, setVoiceSaid] = useState('');
   voiceSayRef.current = activity => {
+    if (isVoiceInterrupted(activity)) {
+      // Spoken over, the runtime says (VO-46): its voice stops.
+      if (onStopSpeaking) {
+        onStopSpeaking();
+      } else if (ownVoice.speaker) {
+        ownVoice.stop();
+      }
+      return;
+    }
     const line = lineToSay(activity);
     if (!line) {
       return;
@@ -4315,77 +4328,87 @@ function ChatBaseInner({
   ]);
 
   // ---- handleStop ----
-  const handleStop = useCallback(() => {
-    stoppedRef.current = true;
-    abortControllerRef.current?.abort();
+  // Spoken over (VO-46, VO-13), an application's session is told so and
+  // stays open; Stop leaves it to be resumed.
+  const stopTurn = useCallback(
+    (spokenOver: boolean) => {
+      stoppedRef.current = true;
+      abortControllerRef.current?.abort();
 
-    // Best-effort cancellation without tearing down adapter/session.
-    const adapter = adapterRef.current as {
-      terminateSession?: () => Promise<void>;
-      terminateAgent?: () => Promise<void>;
-      terminateTask?: () => Promise<void>;
-      terminateRequest?: () => Promise<void>;
-      stopGeneration?: () => void;
-    } | null;
-    if (adapter) {
-      // Abort the client-side SSE / fetch stream (if the adapter exposes it).
-      if (typeof adapter.stopGeneration === 'function') {
-        adapter.stopGeneration();
+      // Best-effort cancellation without tearing down adapter/session.
+      const adapter = adapterRef.current as {
+        interruptSession?: () => Promise<void>;
+        terminateSession?: () => Promise<void>;
+        terminateAgent?: () => Promise<void>;
+        terminateTask?: () => Promise<void>;
+        terminateRequest?: () => Promise<void>;
+        stopGeneration?: () => void;
+      } | null;
+      if (adapter) {
+        // Abort the client-side SSE / fetch stream (if the adapter exposes it).
+        if (typeof adapter.stopGeneration === 'function') {
+          adapter.stopGeneration();
+        }
+        // Also tell the backend to stop (server-side cancellation).
+        if (spokenOver && typeof adapter.interruptSession === 'function') {
+          void adapter.interruptSession().catch(() => {});
+        } else if (typeof adapter.terminateSession === 'function') {
+          void adapter.terminateSession().catch(() => {});
+        } else if (typeof adapter.terminateAgent === 'function') {
+          void adapter.terminateAgent().catch(() => {});
+        } else if (typeof adapter.terminateTask === 'function') {
+          void adapter.terminateTask().catch(() => {});
+        } else if (typeof adapter.terminateRequest === 'function') {
+          void adapter.terminateRequest().catch(() => {});
+        }
       }
-      // Also tell the backend to stop (server-side cancellation).
-      if (typeof adapter.terminateSession === 'function') {
-        void adapter.terminateSession().catch(() => {});
-      } else if (typeof adapter.terminateAgent === 'function') {
-        void adapter.terminateAgent().catch(() => {});
-      } else if (typeof adapter.terminateTask === 'function') {
-        void adapter.terminateTask().catch(() => {});
-      } else if (typeof adapter.terminateRequest === 'function') {
-        void adapter.terminateRequest().catch(() => {});
+
+      // The turn ends stopped: what streamed stops, a call under way says so.
+      changeConversation(state => withTurnEnded(state, 'stopped'));
+
+      if (useStoreMode) {
+        useChatStore.getState().stopStreaming();
       }
-    }
+      pendingToolExecutionsRef.current = 0;
+      setIsLoading(false);
+      setIsStreaming(false);
+      agentRuntimeStore.getState().requestRefresh(activeAgentId);
+      // The boxes under the delegation cards read the runtime store, not the
+      // tool calls above; without this they keep their dots until the server's
+      // own stop event arrives — if it ever does.
+      agentRuntimeStore.getState().stopSubagentActivity();
+      suppressAssistantTextForToolOnlyRef.current = false;
 
-    // The turn ends stopped: what streamed stops, a call under way says so.
-    changeConversation(state => withTurnEnded(state, 'stopped'));
+      // Also interrupt any code running in the sandbox (best-effort).
+      sandboxStatusQuery.interrupt();
 
-    if (useStoreMode) {
-      useChatStore.getState().stopStreaming();
-    }
-    pendingToolExecutionsRef.current = 0;
-    setIsLoading(false);
-    setIsStreaming(false);
-    agentRuntimeStore.getState().requestRefresh(activeAgentId);
-    // The boxes under the delegation cards read the runtime store, not the
-    // tool calls above; without this they keep their dots until the server's
-    // own stop event arrives — if it ever does.
-    agentRuntimeStore.getState().stopSubagentActivity();
-    suppressAssistantTextForToolOnlyRef.current = false;
-
-    // Also interrupt any code running in the sandbox (best-effort).
-    sandboxStatusQuery.interrupt();
-
-    /*
-     * Interrupt the connected notebook kernel too, whatever it claims to be
-     * doing.
-     *
-     * This used to fire only when `kernel.status === 'busy'`, and that status
-     * is a value pushed from the server: a cell submitted a moment ago is
-     * running while the client still reads `idle`, which is precisely the
-     * window somebody hits Stop in. The check therefore skipped the interrupt
-     * exactly when it was wanted. Interrupting an idle kernel costs nothing —
-     * there is no execution to raise `KeyboardInterrupt` in — so the test was
-     * only ever able to do harm.
-     */
-    if (kernel) {
-      void kernel.interrupt().catch(() => {});
-    }
-  }, [
-    kernel,
-    useStoreMode,
-    activeAgentId,
-    protocol?.configEndpoint,
-    protocol?.authToken,
-    protocol?.agentId,
-  ]);
+      /*
+       * Interrupt the connected notebook kernel too, whatever it claims to be
+       * doing.
+       *
+       * This used to fire only when `kernel.status === 'busy'`, and that status
+       * is a value pushed from the server: a cell submitted a moment ago is
+       * running while the client still reads `idle`, which is precisely the
+       * window somebody hits Stop in. The check therefore skipped the interrupt
+       * exactly when it was wanted. Interrupting an idle kernel costs nothing —
+       * there is no execution to raise `KeyboardInterrupt` in — so the test was
+       * only ever able to do harm.
+       */
+      if (kernel) {
+        void kernel.interrupt().catch(() => {});
+      }
+    },
+    [
+      kernel,
+      useStoreMode,
+      activeAgentId,
+      protocol?.configEndpoint,
+      protocol?.authToken,
+      protocol?.agentId,
+    ],
+  );
+  const handleStop = useCallback(() => stopTurn(false), [stopTurn]);
+  const handleSpokenOver = useCallback(() => stopTurn(true), [stopTurn]);
 
   /*
    * How a message's display presses what it offered (RU-4,
@@ -4468,6 +4491,8 @@ function ChatBaseInner({
       voiceLevel: playbackLevel,
       // The answer spoken over, marked for a host's own composer (VO-13).
       markInterrupted,
+      // Spoken over: the run ends, the application's session stays open (VO-46).
+      interrupt: handleSpokenOver,
     });
     return () => {
       onSendReady(null);
@@ -4478,6 +4503,7 @@ function ChatBaseInner({
     onSendMessage,
     handleSend,
     handleStop,
+    handleSpokenOver,
     handleNewChat,
     stopSpeaking,
     playbackLevel,
@@ -5055,7 +5081,8 @@ function ChatBaseInner({
         // Hands-free (VO-12, VO-13): the run in progress, stopped when the
         // person speaks over it, and the answer marked interrupted.
         running={isLoading}
-        onStopRun={handleStop}
+        // Spoken over, the application's session stays open (VO-46).
+        onStopRun={handleSpokenOver}
         onInterrupted={markInterrupted}
         onInterimChange={setVoiceInterim}
         // The menu offers when answers are heard where the application

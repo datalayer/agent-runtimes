@@ -43,6 +43,12 @@ async def execute(tux: "CliTux") -> Optional[str]:
         tux.console.print(f"● {LISTENING}", style=STYLE_PRIMARY)
         return None
     tux.console.print("● Hearing what you said…", style=STYLE_MUTED)
+    # An application whose code hears the sound itself (`@app.audio`) is
+    # given the turn's sound, not the prompt line (VO-46).
+    hands_over = getattr(tux, "audio_turn", None)
+    if callable(hands_over) and tux.hears_audio():
+        await hands_over(session.listener.stop())
+        return None
     try:
         heard = await asyncio.to_thread(session.toggle)
     except VoiceRefused as refused:

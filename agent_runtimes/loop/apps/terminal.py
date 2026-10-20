@@ -396,6 +396,46 @@ class AppTux(CliTux):
         await self._turn(lambda: self.host.message(session, message))
         self.console.print()
 
+    def hears_audio(self) -> bool:
+        """Whether its code hears the person's sound itself (``@app.audio``, VO-46)."""
+        return (
+            self.application.handler("audio") is not None
+            and self.app_session is not None
+        )
+
+    async def audio_turn(self, pcm16: bytes) -> None:
+        """What ``/voice`` heard, given to its code's ``@app.audio`` (VO-46):
+        heard where ``loop --voice`` hears — this machine, else Datalayer's
+        speech service — and the turn run; what cannot be heard is said.
+        """
+        from agent_runtimes.voice.cli import RATE, wav_of
+        from agent_runtimes.voice.protocol_audio import AudioNotHeard
+
+        session = self.app_session
+        assert session is not None
+        if len(pcm16) < RATE * 2 // 5:  # a fifth of a second: nothing was said
+            self.console.print("● Nothing was heard.", style="dim")
+            return
+        voice = self.voice_session()
+        sound = wav_of(pcm16)
+        self.stats.messages += 1
+        self.console.print()
+
+        async def said() -> None:
+            try:
+                await self.host.audio(
+                    session,
+                    sound,
+                    content_type="audio/wav",
+                    language=voice.language,
+                    hearing=voice.hearing,
+                )
+            except AudioNotHeard as refused:
+                self.console.print(f"[yellow]● {refused}[/yellow]", highlight=False)
+
+        await self._turn(said)
+        self.console.print()
+
     async def end_session(self) -> None:
         """The person leaves: the conversation is closed, the code's ``end`` runs (P-14)."""
         if self.app_session is not None:

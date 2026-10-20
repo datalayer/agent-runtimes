@@ -1740,6 +1740,86 @@ async def session_window(uid: str, body: SessionWindowRequest, request: Request)
         raise _refused(refused) from None
 
 
+#: The most sound one turn may send: a minute of 16-bit mono WAV at 48 kHz
+#: is 5.8 MB; the speech service hears a minute at most (VO-34).
+AUDIO_TURN_BYTES = 8 * 1024 * 1024
+
+#: What a turn's sound may be, as the speech service hears it (VO-34).
+AUDIO_TYPES = (
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/flac",
+    "audio/ogg",
+    "audio/webm",
+)
+
+
+@router.post("/sessions/{uid}/audio")
+async def session_audio(uid: str, request: Request, language: str = "") -> Any:
+    """The person spoke (VO-46): the turn's sound as the body — WAV, FLAC,
+    Ogg Opus or WebM, as its ``Content-Type`` says, at most a minute —
+    read in the chunks it came in, heard, then the turn, streamed: its code's
+    ``@app.audio`` with what was heard, or the words as the person's
+    message, marked spoken. ``language`` is what it is said in (BCP 47),
+    the one heard when unsaid.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, bearer = await _held(uid, request)
+    kind = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if kind not in AUDIO_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"A turn's sound is WAV, FLAC, Ogg Opus or WebM, as its Content-Type "
+                f"says, not {kind or 'unsaid'}."
+            ),
+        )
+
+    # Read whole before the turn streams back: the response's own reading of
+    # the connection would compete with the body's.
+    chunks: List[bytes] = []
+    read = 0
+    async for chunk in request.stream():
+        read += len(chunk)
+        if read > AUDIO_TURN_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="A turn is at most a minute of sound: say it in shorter turns.",
+            )
+        chunks.append(chunk)
+    try:
+        return _stream(
+            live.audio(
+                chunks,
+                content_type=kind,
+                language=language.strip()[:35],
+                bearer=bearer,
+                head=live.session_event(),
+            )
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/sessions/{uid}/interrupt")
+async def interrupt_session(uid: str, request: Request) -> Dict[str, Any]:
+    """The person spoke over the agent (VO-46, VO-13): what runs is
+    cancelled, a client reading the turn told (``voice.interrupted``), its
+    code's ``@app.interrupted`` run. Unlike Stop, it stays open for what is
+    said next.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        await live.interrupt()
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    return dict(live.describe())
+
+
 @router.post("/agents/{agent}/files")
 async def upload_file(agent: str, request: Request) -> Any:
     """A file the page gives a conversation, uploaded before the run that

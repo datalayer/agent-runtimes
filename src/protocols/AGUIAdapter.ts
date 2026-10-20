@@ -191,6 +191,35 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   }
 
   /**
+   * The person spoke over the agent (VO-46, VO-13): an application's
+   * session is told (`POST {sessions}/{uid}/interrupt`) — what runs is
+   * cancelled, its code's `@app.interrupted` runs, and it stays open for
+   * what is said next, where Stop would leave it waiting to be resumed.
+   * Another agent's run is stopped, as Stop stops it.
+   */
+  async interruptSession(threadId?: string): Promise<void> {
+    const sessions = this.aguiConfig.appSessions;
+    const thread = threadId || this.currentThreadId;
+    if (!sessions) {
+      await this.terminateAgent(threadId);
+      return;
+    }
+    if (!thread) {
+      return;
+    }
+    const url = `${sessions.replace(/\/+$/, '')}/${encodeURIComponent(thread)}/interrupt`;
+    const response = await this.fetchOf()(url, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `The session ${thread} could not be told it was spoken over (${response.status}).`,
+      );
+    }
+  }
+
+  /**
    * Stop an application's session (`POST {sessions}/{uid}/stop`): what runs
    * is cancelled and it waits to be resumed. Its thread is the session; with
    * none, nothing was sent and there is nothing to stop.

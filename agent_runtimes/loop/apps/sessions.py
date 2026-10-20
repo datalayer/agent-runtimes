@@ -139,6 +139,7 @@ from agent_runtimes.loop.apps.session import (
     form_values,
     shown_step,
 )
+from agent_runtimes.loop.apps.speech import HeardSpeech
 from agent_runtimes.loop.apps.uploads import (
     given_refused,
     media_part,
@@ -146,6 +147,7 @@ from agent_runtimes.loop.apps.uploads import (
 )
 from agent_runtimes.types import AppSpec
 from agent_runtimes.voice import VOICE_INTERRUPTED_EVENT, VOICE_SAY_EVENT
+from agent_runtimes.voice import heard as heard_input
 
 logger = logging.getLogger(__name__)
 
@@ -1528,6 +1530,19 @@ class LiveSession:
         assert self.session is not None
         self.messages.append({"id": _new_id(), "role": "user", "content": text})
         session = self.session
+        spoken = heard_input()
+        if spoken is not None and self.host.app.handler("audio") is not None:
+            # Said on the page and heard there — in the browser or by
+            # Datalayer's speech service — its code's ``@app.audio`` is given
+            # what was heard; the sound stayed where it was heard (VO-46).
+            speech = HeardSpeech(
+                text=text,
+                language=spoken.language,
+                engine=spoken.engine,
+                where=spoken.where,
+            )
+            await self._code_turn(text, lambda: self.host.heard(session, speech))
+            return
         await self._code_turn(text, lambda: self.host.message(session, text))
 
     async def _code_turn(self, asked: str, work: Callable[[], Awaitable[Any]]) -> None:
@@ -1870,6 +1885,93 @@ class LiveSession:
 
         return self._start_turn(work, wraps_run=True, head=head)
 
+    def audio(
+        self,
+        chunks: Any,
+        *,
+        content_type: str,
+        language: str = "",
+        bearer: str = "",
+        head: str = "",
+    ) -> AsyncIterator[str]:
+        """The person spoke (VO-46): a turn's sound, in the chunks it came in,
+        heard once it has all come, then the turn — its code's ``@app.audio`` with
+        what was heard, or, without one, the words as the person's message,
+        marked spoken. Heard on this machine when it can, else by Datalayer's
+        speech service with the caller's token. What could not be heard is
+        said in a sentence on the stream; nothing heard is kept.
+        """
+        from agent_runtimes.loop.apps.speech import hear_speech
+        from agent_runtimes.voice import hear
+        from agent_runtimes.voice.protocol_audio import AudioNotHeard
+
+        if self.state == "waiting":
+            raise SessionRefused(
+                409,
+                self._waiting_for() + " Answer it in words: it is not heard.",
+            )
+
+        async def work() -> None:
+            """The turn: heard, then answered."""
+            if self.host is not None:
+                if self.session is None:
+                    await self._open_code()
+                assert self.session is not None
+                session = self.session
+                try:
+                    await self.host.audio(
+                        session,
+                        chunks,
+                        content_type=content_type,
+                        language=language,
+                        token=bearer or None,
+                    )
+                except AudioNotHeard as refused:
+                    raise SessionRefused(422, str(refused)) from None
+                return
+            try:
+                heard = await hear_speech(
+                    chunks,
+                    content_type=content_type,
+                    language=language,
+                    token=bearer or None,
+                )
+            except AudioNotHeard as refused:
+                raise SessionRefused(422, str(refused)) from None
+            # For the record, the turn was said (VO-27, VO-29).
+            spoken = heard.spoken()
+            hear(spoken)
+            words = self._settings_in_words()
+            said = f"{heard.text}\n\n{words}" if words else heard.text
+            await self._run_agent(
+                self._with_turn(said),
+                bearer=bearer,
+                forwarded={"voice": spoken.as_payload()},
+            )
+
+        return self._start_turn(work, wraps_run=self.host is not None, head=head)
+
+    async def interrupt(self) -> None:
+        """The person spoke over the agent (VO-46, VO-13): the client reading
+        the turn is told (``voice.interrupted``) before its stream ends, what
+        runs is cancelled, and its code's ``@app.interrupted`` runs. The
+        session stays open for what the person says next — unlike Stop,
+        nothing waits to be resumed.
+        """
+        from ag_ui.core import CustomEvent
+
+        if self.state == "stopped":
+            raise SessionRefused(
+                409, f"Session {self.uid} is stopped: resume it before going on."
+            )
+        self.emit(CustomEvent(name=VOICE_INTERRUPTED_EVENT, value={}))
+        await self._close()
+        if self.state != "stopped":
+            self.state = "open"
+        if self.host is not None and self.session is not None:
+            # Nothing left to cancel; told to the code, and to the ui socket.
+            await self.host.interrupt(self.session)
+
     async def stop(self) -> None:
         """Stop: what runs is cancelled, the code's ``stop`` runs, and the session waits to be resumed."""
         await self._close()
@@ -1957,8 +2059,17 @@ class LiveSession:
 
     # --- an agent's run -----------------------------------------------------------
 
-    async def _run_agent(self, history: List[Dict[str, Any]], *, bearer: str) -> None:
-        """A run of the application's agent, through its own AG-UI app, streamed."""
+    async def _run_agent(
+        self,
+        history: List[Dict[str, Any]],
+        *,
+        bearer: str,
+        forwarded: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        """A run of the application's agent, through its own AG-UI app,
+        streamed; ``forwarded`` its ``forwardedProps`` — how the message was
+        heard when it was said (VO-27).
+        """
         body = {
             "threadId": self.uid,
             "runId": self._run_id,
@@ -1966,7 +2077,7 @@ class LiveSession:
             "messages": history,
             "tools": [],
             "context": [],
-            "forwardedProps": None,
+            "forwardedProps": dict(forwarded) if forwarded else None,
         }
         await self.forward(body, bearer=bearer)
 

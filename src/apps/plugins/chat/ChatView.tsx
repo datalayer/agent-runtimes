@@ -196,6 +196,8 @@ type ChatControls = {
   thread: () => string;
   /** Stops the agent's voice: the chat's own speaker (VO-10). */
   stopSpeaking?: () => void;
+  /** Spoken over: the run ends, an application's session stays open (VO-46). */
+  interrupt?: () => void;
   /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it (VO-13). */
   voiceLevel?: () => number;
   /** Marks the answer spoken over *interrupted* (VO-13). */
@@ -2108,7 +2110,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // Hands-free (VO-12, VO-13): the run in progress, stopped when
               // the person speaks over it, and the answer marked interrupted.
               running={busy}
-              onStopRun={() => controlsRef.current?.stop?.()}
+              // Spoken over, the application's session stays open (VO-46).
+              onStopRun={() =>
+                (
+                  controlsRef.current?.interrupt ?? controlsRef.current?.stop
+                )?.()
+              }
               onInterrupted={() => controlsRef.current?.markInterrupted()}
               onInterimChange={setVoiceInterim}
               // The menu offers when answers are heard where the

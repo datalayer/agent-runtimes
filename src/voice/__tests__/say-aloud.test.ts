@@ -12,7 +12,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   SAY_ALOUD_MAX_CHARACTERS,
+  VOICE_INTERRUPTED_EVENT,
   VOICE_SAY_EVENT,
+  isVoiceInterrupted,
   lineToSay,
 } from '../sayAloud';
 
@@ -49,5 +51,20 @@ describe('A line the agent says aloud (VO-35)', () => {
     expect(
       lineToSay({ type: VOICE_SAY_EVENT, data: { text: long } }),
     ).toHaveLength(SAY_ALOUD_MAX_CHARACTERS);
+  });
+});
+
+describe('Spoken over, the runtime says (VO-46)', () => {
+  it('reads `voice.interrupted` from a custom event or a data part, and nothing else', () => {
+    expect(
+      isVoiceInterrupted({ type: VOICE_INTERRUPTED_EVENT, data: {} }),
+    ).toBe(true);
+    expect(
+      isVoiceInterrupted({ type: `data-${VOICE_INTERRUPTED_EVENT}`, data: {} }),
+    ).toBe(true);
+    expect(isVoiceInterrupted({ type: VOICE_SAY_EVENT, data: {} })).toBe(false);
+    expect(lineToSay({ type: VOICE_INTERRUPTED_EVENT, data: {} })).toBe(
+      undefined,
+    );
   });
 });

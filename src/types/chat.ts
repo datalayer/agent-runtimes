@@ -904,6 +904,12 @@ export interface ChatBaseProps {
        * for a host whose composer holds the microphone.
        */
       markInterrupted: () => void;
+      /**
+       * The person spoke over the run (VO-46, VO-13): it ends as Stop ends
+       * it, but an application's session is told it was spoken over and
+       * stays open for what is said next — Stop leaves it to be resumed.
+       */
+      interrupt?: () => void;
     } | null,
   ) => void;
 

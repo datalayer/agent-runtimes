@@ -22,6 +22,12 @@ export const VOICE_SAY_EVENT = 'voice.say';
 /** The running application's voice, at a run's start. */
 export const VOICE_SETTINGS_EVENT = 'voice.settings';
 
+/**
+ * The person spoke over the agent, the runtime says (VO-46): a client
+ * playing its voice stops it.
+ */
+export const VOICE_INTERRUPTED_EVENT = 'voice.interrupted';
+
 /** The longest line said aloud: the runtime refuses longer ones. */
 export const SAY_ALOUD_MAX_CHARACTERS = 200;
 
@@ -32,6 +38,10 @@ export interface VoiceActivity {
 }
 
 const nameOf = (type: string): string => type.replace(/^data-/, '');
+
+/** Whether an activity is the runtime's `voice.interrupted` (VO-46). */
+export const isVoiceInterrupted = (activity: VoiceActivity): boolean =>
+  nameOf(activity.type) === VOICE_INTERRUPTED_EVENT;
 
 /** The line a `voice.say` says, or `undefined` for anything else. */
 export function lineToSay(activity: VoiceActivity): string | undefined {

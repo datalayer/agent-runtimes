@@ -117,6 +117,55 @@ describe('Stop in an application’s chat', () => {
     ).toThrow(/needs its sessions/);
   });
 
+  it('spoken over, tells the session so on its own route, which keeps it open (VO-46)', async () => {
+    const { calls, fetch } = recording();
+    globalThis.fetch = fetch;
+    const adapter = createProtocolAdapter({
+      type: 'ag-ui',
+      endpoint: `${SERVER}/api/v1/apps/agents/my-app/ag-ui/`,
+      authToken: 'tok',
+      agentId: 'my-app',
+      appSessions: SESSIONS,
+      ownRoutesOnly: true,
+    }) as AGUIAdapter;
+    (adapter as unknown as { currentThreadId: string }).currentThreadId =
+      'msg_t';
+    await adapter.interruptSession();
+    expect(calls.map(call => call.url)).toEqual([
+      `${SESSIONS}/msg_t/interrupt`,
+    ]);
+    expect(calls[0].init?.method).toBe('POST');
+    expect(
+      (calls[0].init?.headers as Record<string, string>).Authorization,
+    ).toBe('Bearer tok');
+  });
+
+  it('spoken over, says so when the session cannot be told', async () => {
+    const { fetch } = recording(409);
+    globalThis.fetch = fetch;
+    const adapter = new AGUIAdapter({
+      protocol: 'ag-ui',
+      baseUrl: `${SERVER}/api/v1/apps/agents/my-app/ag-ui/`,
+      appSessions: SESSIONS,
+    });
+    await expect(adapter.interruptSession('msg_t')).rejects.toThrow(
+      'The session msg_t could not be told it was spoken over (409).',
+    );
+  });
+
+  it('spoken over, an agent’s chat (no application) is stopped as Stop stops it', async () => {
+    const { calls, fetch } = recording();
+    globalThis.fetch = fetch;
+    const adapter = createProtocolAdapter({
+      type: 'ag-ui',
+      endpoint: 'http://localhost:8765/api/v1/ag-ui/default/',
+    }) as AGUIAdapter;
+    await adapter.interruptSession('t1');
+    expect(calls.map(call => call.url)).toEqual([
+      'http://localhost:8765/api/v1/ag-ui/terminate',
+    ]);
+  });
+
   it('leaves an agent’s chat (no application) on the runtime’s AG-UI terminate', async () => {
     const { calls, fetch } = recording();
     globalThis.fetch = fetch;

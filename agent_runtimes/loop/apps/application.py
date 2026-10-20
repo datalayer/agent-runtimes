@@ -2928,6 +2928,29 @@ class AppHost:
         await self.message(session, heard.text)
         return heard
 
+    async def heard(self, session: Session, speech: HeardSpeech) -> None:
+        """What the person said, heard already (VO-46): by the page — in
+        the browser, or by Datalayer's speech service — the sound staying
+        where it was heard. ``audio`` runs with it, or, without one, the
+        words are the person's message, marked spoken.
+
+        Parameters
+        ----------
+        session : Session
+            The session.
+        speech : HeardSpeech
+            What was heard: the words, their language, the engine and where.
+        """
+        self._open(session)
+        handler = self._reaction("audio")
+        if handler is not None:
+            await self._react(session, handler, speech)
+            return
+        from ...voice import hear  # noqa: PLC0415
+
+        hear(speech.spoken())
+        await self.message(session, speech.text)
+
     async def interrupt(self, session: Session) -> None:
         """The person spoke over the agent (VO-46, VO-13): what runs is
         cancelled, the page told to stop the voice, then ``interrupted`` runs.

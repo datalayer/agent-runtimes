@@ -420,7 +420,7 @@ session always first:
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.feedback` | `(session, feedback)` | A person gave a thumb up or down on an answer, with a comment or not, and it is kept in the record (only when the Appspec's `record.include` names `feedback`). `feedback` is a `Feedback`: `liked`, `comment`, `message` (the answer it is about, `answer-<n>`) and `by`. See [Threads and feedback](#threads-and-feedback). |
 | `@app.audio` | `(session, heard)` | The person spoke (P-22): the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `loop --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
-| `@app.interrupted` | `(session)` | The person spoke over the agent: what was running is cancelled, the page told to stop the voice, then this runs. |
+| `@app.interrupted` | `(session)` | The person spoke over the agent: what was running is cancelled, the page told to stop the voice, then this runs. The conversation stays open for what they say next. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
@@ -922,6 +922,25 @@ most 200 characters: the page says and captions it, as it does an agent's
 conversation — what matters is written as well. An application without a
 voice is refused (`ValueError`). In the terminal the line is printed,
 *said aloud:*.
+
+What people say reaches `@app.audio` from wherever they say it:
+
+- **On its page**, the microphone hears what is said — in the browser, or on
+  Datalayer's servers — and the words come to `@app.audio` as what was heard
+  (`where` says which); the sound stays where it was heard.
+- **At the terminal**, `loop --voice` running the application: the second
+  `/voice` (or `Ctrl`+`T`) gives the turn's sound to `@app.audio`, heard on
+  your machine when the `voice` extra and the pinned model are there, else on
+  Datalayer's servers — not to the prompt line.
+- **From a program**, through its session: `POST /sessions/{uid}/audio`
+  with the turn's sound as the body (WAV, FLAC, Ogg Opus or WebM), the turn
+  streamed back as a message's is ([The session API](./session-api)).
+
+A turn is heard once it has all come — the words, not partial words, are
+what `@app.audio` is given. Speaking over the answer, hands-free on the page
+or `POST /sessions/{uid}/interrupt` from a program, cancels what runs, stops
+the voice that was saying it (`voice.interrupted`) and runs
+`@app.interrupted`; the conversation goes on with what was said next.
 
 ### Writing to the person
 
@@ -1802,9 +1821,9 @@ copilot been seen in a browser: the embed it loads does not load yet.
 
 **What Chainlit does that LOOP does not, yet:**
 
-- **A live microphone.** Chainlit streams the microphone to the application
-  (`on_audio_chunk`); LOOP takes a voice note, an audio file, but no audio
-  stream. Voice is set aside for now.
+- **A live microphone, frame by frame.** Chainlit streams the microphone to
+  the application (`on_audio_chunk`); LOOP gives its code a whole turn, heard
+  (`@app.audio`, [Voice](#voice)), never the frames as they are captured.
 
 What the rebuilds found missing and LOOP now has: a step that streams
 (`step.stream`, [Steps](#steps)), a blank agent built in this process

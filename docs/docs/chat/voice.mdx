@@ -44,7 +44,10 @@ text stays on screen.
   *Thinking…*, *Speaking…*, *Paused*. **Speak over it** and its voice stops
   at once; while the answer is still being written, the run is stopped too,
   the answer is marked *interrupted* in the conversation, and what you said
-  starts the next turn. While the answer plays, speech counts as yours only
+  starts the next turn. In an application's chat its session is told it was
+  spoken over (`POST …/sessions/{uid}/interrupt`), not stopped: its code's
+  `@app.interrupted` runs and the session stays open for that next turn.
+  While the answer plays, speech counts as yours only
   when the microphone is louder than the answer's own sound can leave in it
   once the browser's echo cancellation has done its part (at most 0.6 of
   what plays, on the meters' scales, plus a margin; the chat's speaker gives
