@@ -38,6 +38,7 @@ import {
 import { ThemedProvider } from './utils/themedProvider';
 import { useExampleThemeStore } from './utils/themeStore';
 import { AssistantStage } from '../chat/assistant/AssistantStage';
+import { isAssistantModel3D } from '../chat/assistant/avatar3d';
 import { useViewportDrag } from '../chat/useViewportDrag';
 import type { AssistantAway, AssistantState } from '../chat/assistant/state';
 import type { BalloonExpandTarget } from '../chat/assistant/BalloonVisual';
@@ -184,10 +185,17 @@ function ModePanel({
         </Box>
       ) : (
         <AssistantStage
-          key={`${character.id}-${replay}`}
+          // Drawn again to replay, but a 3D avatar: it replays in place
+          // (`replay`), its model kept, rather than blink out to load again.
+          key={
+            isAssistantModel3D(character.character)
+              ? character.id
+              : `${character.id}-${replay}`
+          }
           character={character.character}
           state={state}
           size={STAGE_SIZE}
+          replay={replay}
           place={{ position: 'absolute', left: spot.left, top: spot.top }}
           stageRef={stageRef}
           onDragStart={drag.onHandlePointerDown}

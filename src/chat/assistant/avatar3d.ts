@@ -193,9 +193,10 @@ export function stateMotion(
 }
 
 /**
- * How the model is moved, by code, for a state it has no animation for:
- * its head (radians, added to its head bone, or to the whole model when it
- * has none) and its body (turned, leant, lifted by a share of its height).
+ * How the model is moved, by code, over what its animation does: its head
+ * (radians, added to its head bone, or to the whole model when it has none)
+ * and its body (turned, leant, lifted and shifted sideways by a share of its
+ * size).
  */
 export interface Pose3D {
   headPitch: number;
@@ -204,29 +205,43 @@ export interface Pose3D {
   bodyYaw: number;
   bodyLean: number;
   bodyLift: number;
+  /** Sideways, a share of its size: past `OUT_OF_FRAME` it has left its square. */
+  bodyShift: number;
 }
 
-const REST: Pose3D = {
+/** Its pose with nothing added: as its animation leaves it. */
+export const REST_POSE: Readonly<Pose3D> = {
   headPitch: 0,
   headYaw: 0,
   headRoll: 0,
   bodyYaw: 0,
   bodyLean: 0,
   bodyLift: 0,
+  bodyShift: 0,
 };
+const REST = REST_POSE;
+
+/** What a 3D avatar acts: a state, or stepped aside from what covers it. */
+export type Avatar3DAct = AssistantState | 'aside';
 
 /**
- * The pose of a state, `seconds` after it began: idle breathes, greeting
- * wiggles hello, thinking tilts its head and looks up, working bobs looking
- * down, waiting leans in with a questioning tilt, speaking turns its head as
- * it talks, paused slumps, goodbye wiggles and sinks.
+ * The pose of a state, `seconds` after it began, for a model with no
+ * animation of its own for it: idle breathes and looks about, greeting
+ * wiggles hello, thinking tilts its head, looks up and sways slowly, working
+ * bobs looking down, waiting leans in, bobbing, with a questioning tilt,
+ * speaking nods and turns its head in the rhythm of talk, paused slumps,
+ * goodbye wiggles and sinks.
  */
 export function proceduralPose(state: AssistantState, seconds: number): Pose3D {
   const t = Math.max(0, seconds);
   const sin = Math.sin;
   switch (state) {
     case 'idle':
-      return { ...REST, bodyLift: 0.006 * sin(t * 2) };
+      return {
+        ...REST,
+        headYaw: 0.08 * sin(t * 0.45),
+        bodyLift: 0.006 * sin(t * 2),
+      };
     case 'greeting': {
       const fade = Math.max(0.15, 1 - t / 2);
       return {
@@ -239,9 +254,10 @@ export function proceduralPose(state: AssistantState, seconds: number): Pose3D {
     case 'thinking':
       return {
         ...REST,
-        headPitch: -0.18,
-        headRoll: 0.22,
-        headYaw: 0.25 * sin(t * 0.9 + 0.4),
+        headPitch: -0.16 + 0.03 * sin(t * 0.7),
+        headRoll: 0.24 + 0.04 * sin(t * 0.8),
+        headYaw: 0.22 * sin(t * 0.6 + 0.4),
+        bodyYaw: 0.07 * sin(t * 0.5),
       };
     case 'working':
       return {
@@ -253,15 +269,18 @@ export function proceduralPose(state: AssistantState, seconds: number): Pose3D {
     case 'waiting':
       return {
         ...REST,
-        bodyLean: 0.08,
-        headRoll: -0.12 + 0.05 * sin(t * 1.6),
-        bodyLift: 0.012 * sin(t * 3),
+        bodyLean: 0.12,
+        headPitch: -0.06,
+        headRoll: -0.14 + 0.05 * sin(t * 1.6),
+        bodyLift: 0.014 * sin(t * 2.4),
       };
     case 'speaking':
       return {
         ...REST,
+        headPitch: 0.07 * sin(t * 4.6),
         headYaw: 0.12 * sin(t * 1.7 + 0.6),
         headRoll: 0.05 * sin(t * 2.3),
+        bodyYaw: 0.04 * sin(t * 1.1),
       };
     case 'paused':
       return { ...REST, headPitch: 0.35, bodyLean: 0.1, bodyLift: -0.03 };
@@ -272,6 +291,68 @@ export function proceduralPose(state: AssistantState, seconds: number): Pose3D {
         bodyLift: -0.12 * Math.min(1, t / 0.7),
       };
   }
+}
+
+/**
+ * What is added over a state's own animation: little, so that the
+ * animation reads — the head down over its work, and nothing else.
+ */
+export function accentPose(state: AssistantState, seconds: number): Pose3D {
+  return state === 'working'
+    ? { ...REST, headPitch: 0.16 + 0.03 * Math.sin(Math.max(0, seconds) * 3) }
+    : REST;
+}
+
+/** How far sideways, as a share of its size, it has left its square. */
+export const OUT_OF_FRAME = 1.25;
+
+/**
+ * Leaving (goodbye, once it has waved, and stepped aside): turned to its
+ * side and walking out of its square, `seconds` after it set off. It does
+ * not vanish: it goes.
+ */
+export function leavingPose(seconds: number): Pose3D {
+  // Long gone (or drawn still): out of its square, standing.
+  const t = Number.isFinite(seconds) ? Math.max(0, seconds) : 60;
+  return {
+    ...REST,
+    bodyYaw: Math.PI / 2,
+    bodyShift: Math.min(OUT_OF_FRAME, 0.9 * t),
+    bodyLift: t < 3 ? 0.012 * Math.abs(Math.sin(t * 8)) : 0,
+  };
+}
+
+/** How long a goodbye with no animation of its own waves before it goes. */
+export const GOODBYE_WAVE_SECONDS = 1.2;
+
+/** How long one animation fades into the next: never a cut to the next. */
+export const CROSSFADE_SECONDS = 0.4;
+
+/** How fast a pose follows its target, per second: settled in about half a second. */
+export const POSE_FOLLOW_RATE = 7;
+
+/**
+ * The pose `seconds` after `current`, following `target` without jumping
+ * (exponentially damped, field by field): a new state's pose is reached,
+ * never snapped to.
+ */
+export function dampedPose(
+  current: Pose3D,
+  target: Pose3D,
+  seconds: number,
+  rate: number = POSE_FOLLOW_RATE,
+): Pose3D {
+  const follow = 1 - Math.exp(-Math.max(0, seconds) * rate);
+  const next = { ...current };
+  for (const key of Object.keys(target) as (keyof Pose3D)[]) {
+    next[key] = current[key] + (target[key] - current[key]) * follow;
+  }
+  return next;
+}
+
+/** The animation it walks with (away, and back): `Walking`, `Walk`; none when it has none. */
+export function walkClipName(names: readonly string[]): string | undefined {
+  return names.find(name => /^walk(ing)?$/i.test(name));
 }
 
 /** The morph targets that open a mouth: mouth, jaw, open, a viseme `aa`, or surprise. */

@@ -198,10 +198,13 @@ export function GalleryCell({
   character,
   pose,
   size,
+  replay,
 }: {
   character: GalleryCharacter;
   pose: GalleryPose;
   size: number;
+  /** A count: changed, a 3D avatar plays its pose again, not drawn again. */
+  replay?: number;
 }): JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null);
   return (
@@ -218,6 +221,7 @@ export function GalleryCell({
         character={character.character}
         state={stateOfPose(pose)}
         size={size}
+        replay={replay}
         place={{ position: 'relative', zIndex: 0 }}
         stageRef={stageRef}
         onDragStart={() => undefined}
@@ -295,16 +299,21 @@ export function AvatarGalleryGrid({
 
 /**
  * Each avatar once, as a card, in the pose asked: its name and where it
- * comes from under it. A new `key` replays the motions.
+ * comes from under it. A new `key` replays the drawn motions; a 3D avatar
+ * is replayed by `replay` instead — a new key would load its model again,
+ * and it would blink out while it loads.
  */
 export function AvatarGalleryCards({
   characters,
   pose,
   size = 72,
+  replay,
 }: {
   characters: readonly GalleryCharacter[];
   pose: GalleryPose;
   size?: number;
+  /** A count: changed, a 3D avatar plays its pose again. */
+  replay?: number;
 }): JSX.Element {
   return (
     <Box
@@ -329,7 +338,12 @@ export function AvatarGalleryCards({
           borderColor="border.default"
           borderRadius={2}
         >
-          <GalleryCell character={character} pose={pose} size={size} />
+          <GalleryCell
+            character={character}
+            pose={pose}
+            size={size}
+            replay={replay}
+          />
           <Text sx={{ fontWeight: 600, fontSize: 1, textAlign: 'center' }}>
             {character.name}
           </Text>

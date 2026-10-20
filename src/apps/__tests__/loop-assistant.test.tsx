@@ -462,3 +462,46 @@ describe("the Loop assistant's menu", () => {
     ).toBe('current');
   });
 });
+
+describe('the balloon’s history, from the chat’s conversation', () => {
+  it('draws an assistant message as markdown: headings, lists, bold', async () => {
+    const conversation = signal([
+      { role: 'user' as const, text: 'What did you find?' },
+      {
+        role: 'assistant' as const,
+        text: '# Findings\n\nThe **report** says:\n\n- one\n- two\n',
+      },
+    ]);
+    const WithConversation = definePlugin({
+      name: 'test-chat-turn-conversation',
+      contributes: [
+        contribution(
+          LoopChatTurn,
+          { id: 'turn', turn, conversation, presence },
+          { id: 'turn' },
+        ),
+      ],
+    });
+    const el = await mount([
+      AssistantCharactersPlugin,
+      WithConversation,
+      LoopAssistantPlugin,
+    ]);
+    const list = el.querySelector('[data-balloon-history-list]');
+    expect(list).not.toBeNull();
+    const assistant = list?.querySelector(
+      '[data-chat-message="assistant"] [data-chat-markdown]',
+    );
+    expect(assistant?.querySelector('h1')?.textContent).toBe('Findings');
+    expect(assistant?.querySelector('strong')?.textContent).toBe('report');
+    expect(
+      Array.from(assistant?.querySelectorAll('li') ?? []).map(
+        item => item.textContent,
+      ),
+    ).toEqual(['one', 'two']);
+    // The person's words stay as they wrote them.
+    expect(
+      list?.querySelector('[data-chat-message="user"]')?.textContent,
+    ).toContain('What did you find?');
+  });
+});

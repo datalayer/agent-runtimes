@@ -544,6 +544,11 @@ export interface AssistantStageProps {
   state: AssistantState;
   /** Its size, in pixels. */
   size?: number;
+  /**
+   * A count: changed, a 3D avatar plays its state again, the same model
+   * (the others are replayed by being drawn again).
+   */
+  replay?: number;
   /** Where it sits once moved, or the corner it starts in. */
   place: React.CSSProperties;
   /** The element the drag measures. */
@@ -736,6 +741,7 @@ export function AssistantStage({
   character,
   state,
   size = 88,
+  replay,
   place,
   stageRef,
   onDragStart,
@@ -959,8 +965,12 @@ export function AssistantStage({
         opacity: aside ? 0 : 1,
         visibility: aside ? 'hidden' : 'visible',
         pointerEvents: aside ? 'none' : undefined,
+        // A 3D avatar walks out of its square first (`Avatar3D`), and back
+        // in after: hidden once it has gone, shown before it comes back.
         transition: aside
-          ? 'opacity 150ms ease, visibility 0s linear 150ms'
+          ? model
+            ? 'opacity 150ms ease 1.4s, visibility 0s linear 1.55s'
+            : 'opacity 150ms ease, visibility 0s linear 150ms'
           : 'opacity 150ms ease',
         ...MOTIONS,
         '& .assistant-lids ellipse': {
@@ -1047,6 +1057,8 @@ export function AssistantStage({
         // One still frame per state for a reader who asks for no motion.
         '@media (prefers-reduced-motion: reduce)': {
           '& *': { animation: 'none !important' },
+          // Aside at once: nothing walks out.
+          transition: 'none',
         },
       }}
       onMouseEnter={() => dispatchHover('enter')}
@@ -1235,6 +1247,8 @@ export function AssistantStage({
               state={state}
               size={size}
               mouthLevel={mouthLevel}
+              aside={aside}
+              replay={replay}
             />
           </Suspense>
         ) : (

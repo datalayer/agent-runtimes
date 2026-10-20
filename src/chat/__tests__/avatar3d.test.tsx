@@ -25,14 +25,20 @@ import {
   NO_WEBGL_SENTENCE,
   assistantModel3D,
   avatarShown,
+  OUT_OF_FRAME,
+  REST_POSE,
+  accentPose,
   cameraDistance,
+  dampedPose,
   idleClipName,
+  leavingPose,
   isAssistantModel3D,
   proceduralPose,
   smoothed,
   stateMotion,
   talkAmount,
   talkingMorphIndices,
+  walkClipName,
   webglAvailable,
 } from '../assistant/avatar3d';
 
@@ -202,6 +208,53 @@ describe('a 3D avatar', () => {
     expect(proceduralPose('goodbye', 1).bodyLift).toBeLessThan(
       proceduralPose('goodbye', 0.1).bodyLift,
     );
+  });
+
+  it('reads each state with character: thinking sways, waiting leans in and bobs, speaking nods', () => {
+    const over = (state: AssistantState, key: keyof typeof REST_POSE) =>
+      Array.from({ length: 80 }, (_, index) => index * 0.05).map(
+        t => proceduralPose(state, t)[key],
+      );
+    const spread = (values: number[]) =>
+      Math.max(...values) - Math.min(...values);
+    // Thinking: the head tilted throughout, swaying slowly.
+    expect(Math.min(...over('thinking', 'headRoll'))).toBeGreaterThan(0.15);
+    expect(spread(over('thinking', 'bodyYaw'))).toBeGreaterThan(0.05);
+    // Waiting: leant in throughout, bobbing.
+    expect(Math.min(...over('waiting', 'bodyLean'))).toBeGreaterThan(0.1);
+    expect(spread(over('waiting', 'bodyLift'))).toBeGreaterThan(0.01);
+    // Speaking: the head nods in a rhythm.
+    expect(spread(over('speaking', 'headPitch'))).toBeGreaterThan(0.05);
+    // Over its own animation, little is added: its head down to work.
+    expect(accentPose('working', 1).headPitch).toBeGreaterThan(0.1);
+    expect(accentPose('greeting', 1)).toEqual(REST_POSE);
+  });
+
+  it('follows a new pose damped, never jumping to it, and settles on it', () => {
+    const target = proceduralPose('waiting', 0);
+    const first = dampedPose(REST_POSE, target, 1 / 60);
+    expect(first.bodyLean).toBeGreaterThan(0);
+    expect(first.bodyLean).toBeLessThan(target.bodyLean / 4);
+    let pose = REST_POSE;
+    for (let frame = 0; frame < 120; frame += 1) {
+      pose = dampedPose(pose, target, 1 / 60);
+    }
+    expect(pose.bodyLean).toBeCloseTo(target.bodyLean, 3);
+    expect(dampedPose(target, target, 0.5)).toEqual(target);
+  });
+
+  it('leaves by walking out of its square, turned to its side, and with the robot’s walk', () => {
+    expect(leavingPose(0).bodyShift).toBe(0);
+    expect(leavingPose(0).bodyYaw).toBeCloseTo(Math.PI / 2);
+    expect(leavingPose(0.5).bodyShift).toBeGreaterThan(0);
+    expect(leavingPose(0.5).bodyShift).toBeLessThan(OUT_OF_FRAME);
+    expect(leavingPose(10).bodyShift).toBe(OUT_OF_FRAME);
+    // Drawn still: already gone, a number in every field.
+    expect(Object.values(leavingPose(Infinity)).every(Number.isFinite)).toBe(
+      true,
+    );
+    expect(walkClipName(ROBOT_CLIPS)).toBe('Walking');
+    expect(walkClipName(['Idle'])).toBeUndefined();
   });
 
   it('opens the morph targets of a mouth with its voice, not the others', () => {

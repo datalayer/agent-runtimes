@@ -13,8 +13,15 @@
  * idling and moved by code (`proceduralPose`): it tilts its head to think,
  * leans in to wait, turns its head as it talks. While it speaks, the morph
  * targets that open its mouth follow its voice's level (`mouthLevel`, as
- * the other avatars' mouths do) and its head nods with it. A reader who
- * asks for reduced motion sees it still, drawn once in each state's pose. A browser that cannot
+ * the other avatars' mouths do) and its head nods with it.
+ *
+ * One renderer and one loaded model across every state: a new state never
+ * draws it again. Its animations fade into one another (`CROSSFADE_SECONDS`),
+ * the poses added by code follow their targets damped (`dampedPose`), a
+ * wave settles back into idle, and goodbye and stepping aside are walked:
+ * it turns and walks out of its square (`leavingPose`), and back. A reader
+ * who asks for reduced motion sees it still, drawn once in each state's
+ * pose, with no fade. A browser that cannot
  * draw WebGL, or a model that cannot be loaded, is said in a sentence where
  * the avatar would stand.
  *
@@ -25,9 +32,16 @@ import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type * as Three from 'three';
 import {
+  CROSSFADE_SECONDS,
+  GOODBYE_WAVE_SECONDS,
   NO_WEBGL_SENTENCE,
+  OUT_OF_FRAME,
+  REST_POSE,
+  accentPose,
   cameraDistance,
+  dampedPose,
   idleClipName,
+  leavingPose,
   modelNotLoadedSentence,
   prefersReducedMotion,
   proceduralPose,
@@ -35,8 +49,10 @@ import {
   stateMotion,
   talkAmount,
   talkingMorphIndices,
+  walkClipName,
   webglAvailable,
   type AssistantModel3D,
+  type Pose3D,
 } from './avatar3d';
 import type { AssistantState } from './state';
 
@@ -47,6 +63,10 @@ export interface Avatar3DProps {
   size: number;
   /** How loud its voice is now, between 0 and 1, while it is heard. */
   mouthLevel?: () => number;
+  /** Stepped aside (T-27): it walks out of its square, and back after. */
+  aside?: boolean;
+  /** A count: changed, it plays its state again — the same model, not drawn again. */
+  replay?: number;
 }
 
 /** The field of view of its camera, in degrees. */
@@ -60,6 +80,8 @@ export function Avatar3D({
   state,
   size,
   mouthLevel,
+  aside = false,
+  replay = 0,
 }: Avatar3DProps): JSX.Element {
   const holder = useRef<HTMLSpanElement>(null);
   const [said, setSaid] = useState<Said>(() =>
@@ -74,10 +96,21 @@ export function Avatar3D({
   // The state acted now, and how a new one is entered once the model is in.
   const acted = useRef(state);
   acted.current = state;
-  const enter = useRef<(next: AssistantState) => void>(() => undefined);
+  const away = useRef(aside);
+  away.current = aside;
+  const enter = useRef<(next: AssistantState, again: boolean) => void>(
+    () => undefined,
+  );
+  const stepAside = useRef<(aside: boolean) => void>(() => undefined);
+  const replayed = useRef(replay);
   useEffect(() => {
-    enter.current(state);
-  }, [state]);
+    const again = replayed.current !== replay;
+    replayed.current = replay;
+    enter.current(state, again);
+  }, [state, replay]);
+  useEffect(() => {
+    stepAside.current(aside);
+  }, [aside]);
 
   useEffect(() => {
     const element = holder.current;
@@ -152,57 +185,98 @@ export function Avatar3D({
       camera.position.set(middle.x, middle.y, middle.z + distance);
       camera.lookAt(middle);
       const height = extent.y;
+      // How far sideways it walks, as a share of this: out of the square.
+      const span = Math.max(extent.x, extent.y);
       const rest = {
         x: model.rotation.x,
         y: model.rotation.y,
         z: model.rotation.z,
         lift: model.position.y,
+        shift: model.position.x,
       };
       // Each state's animation, or its idle one, played while it is shown.
       const mixer = new THREE.AnimationMixer(model);
       const names = gltf.animations.map(each => each.name);
       const idleName = idleClipName(names);
-      const actionOf = (name: string | undefined) => {
+      const walkName = walkClipName(names);
+      // A once-animation played again fades in over itself: a second action
+      // of the same clip, so the replay is a crossfade and never a cut.
+      const twins = new Map<string, Three.AnimationAction>();
+      const actionOf = (name: string | undefined, fresh = false) => {
         const found = gltf.animations.find(each => each.name === name);
-        return found ? mixer.clipAction(found) : undefined;
+        if (!found) {
+          return undefined;
+        }
+        const action = mixer.clipAction(found);
+        if (!fresh || action !== playing) {
+          return action;
+        }
+        let twin = twins.get(found.name);
+        if (!twin) {
+          twin = mixer.clipAction(found.clone());
+          twins.set(found.name, twin);
+        }
+        return twin === playing ? action : twin;
       };
       let playing: Three.AnimationAction | undefined;
+      let playingName: string | undefined;
+      // What it acts now: the state, or idle once a wave has settled.
       let motion = stateMotion(acted.current, names);
+      let posed: AssistantState = acted.current;
       let enteredAt = 0;
+      // Leaving: since when it walks out (goodbye, once waved; aside).
+      let leftAt: number | undefined;
+      let current: Pose3D = { ...REST_POSE };
       const clock = new THREE.Clock();
       // A new animation fades in over the last one; still, it replaces it.
+      // Never faded out to nothing: with no weight, a model shows its bind
+      // pose, and that flash is a blink.
       const play = (
         next: Three.AnimationAction | undefined,
         once: boolean,
+        name: string | undefined,
       ): void => {
-        if (next === playing && !once) {
+        playingName = name;
+        if (!next || (next === playing && !once)) {
           return;
         }
         if (playing && playing !== next && still) {
           playing.stop();
         }
-        if (next) {
-          next.reset();
-          next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
-          // Played once, its last pose stays until the next fades in.
-          next.clampWhenFinished = once;
-          next.setEffectiveWeight(1);
-          next.play();
-          if (playing && playing !== next && !still) {
-            next.crossFadeFrom(playing, 0.3, false);
-          }
-        } else if (!still) {
-          playing?.fadeOut(0.3);
+        next.reset();
+        next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+        // Played once, its last pose stays until the next fades in.
+        next.clampWhenFinished = once;
+        next.setEffectiveWeight(1);
+        next.play();
+        if (playing && playing !== next && !still) {
+          next.crossFadeFrom(playing, CROSSFADE_SECONDS, false);
         }
         playing = next;
       };
-      // Played once, it idles again, unless it holds its last pose.
+      const leave = () => {
+        if (leftAt === undefined) {
+          leftAt = clock.elapsedTime;
+          play(actionOf(walkName ?? idleName), false, walkName ?? idleName);
+        }
+      };
+      // Played once: goodbye walks off; a held pose stays; else idle again.
       mixer.addEventListener('finished', event => {
-        if (event.action === playing && !motion.holds) {
-          play(actionOf(idleName), false);
+        if (event.action !== playing) {
+          return;
+        }
+        if (posed === 'goodbye') {
+          leave();
+        } else if (!motion.holds) {
+          motion = stateMotion('idle', names);
+          posed = 'idle';
+          play(actionOf(idleName), false, idleName);
         }
       });
-      play(actionOf(motion.clip), motion.once);
+      play(actionOf(motion.clip), motion.once, motion.clip);
+      if (away.current) {
+        leave();
+      }
       // What its voice moves: the morph targets of a mouth, and its head.
       const mouths: { influences: number[]; indices: number[] }[] = [];
       let head: Three.Object3D | undefined;
@@ -216,30 +290,41 @@ export function Avatar3D({
           head = object;
         }
       });
+      // Walking back into its square, from where it walked to.
+      const isReturning = () =>
+        leftAt === undefined && current.bodyShift > 0.05 * OUT_OF_FRAME;
+      // Where its pose is going: walking out, else its state's.
+      const target = (now: number): Pose3D => {
+        if (leftAt !== undefined) {
+          return leavingPose(still ? Infinity : now - leftAt);
+        }
+        const seconds = now - enteredAt;
+        const own = motion.procedural
+          ? proceduralPose(posed, seconds)
+          : accentPose(posed, seconds);
+        // Walking back in from the side it left by: facing where it goes.
+        return isReturning() ? { ...own, bodyYaw: -Math.PI / 2 } : own;
+      };
       // The head's turn last added, taken off before the mixer poses it again.
       const added = { x: 0, y: 0, z: 0 };
-      const pose = (seconds: number, nod: number) => {
-        const moved = motion.procedural
-          ? proceduralPose(acted.current, seconds)
-          : proceduralPose('idle', 0);
-        const pitch = (motion.procedural ? moved.headPitch : 0) + nod;
-        const yaw = motion.procedural ? moved.headYaw : 0;
-        const roll = motion.procedural ? moved.headRoll : 0;
+      const pose = (moved: Pose3D, nod: number) => {
+        const pitch = moved.headPitch + nod;
         if (head) {
           added.x = pitch;
-          added.y = yaw;
-          added.z = roll;
+          added.y = moved.headYaw;
+          added.z = moved.headRoll;
           head.rotation.x += pitch;
-          head.rotation.y += yaw;
-          head.rotation.z += roll;
+          head.rotation.y += moved.headYaw;
+          head.rotation.z += moved.headRoll;
         }
         // Without a head, the whole model turns as its head would.
         model.rotation.set(
           rest.x + moved.bodyLean + (head ? 0 : pitch),
-          rest.y + moved.bodyYaw + (head ? 0 : yaw),
-          rest.z + (head ? 0 : roll),
+          rest.y + moved.bodyYaw + (head ? 0 : moved.headYaw),
+          rest.z + (head ? 0 : moved.headRoll),
         );
         model.position.y = rest.lift + moved.bodyLift * height;
+        model.position.x = rest.shift + moved.bodyShift * span;
       };
       const unpose = () => {
         if (head) {
@@ -256,14 +341,37 @@ export function Avatar3D({
           playing.time = playing.getClip().duration;
         }
         mixer.update(0);
-        pose(0.5, 0);
+        current = target(enteredAt + 0.5);
+        pose(current, 0);
         renderer.render(scene, camera);
       };
-      // A new state: its animation, and, still, its pose drawn at once.
-      enter.current = next => {
+      // A new state (or the same, again): its animation faded in, its pose
+      // followed from where it is; back from where it walked to first.
+      enter.current = (next, again) => {
+        if (next === posed && !again && leftAt === undefined) {
+          return;
+        }
         motion = stateMotion(next, names);
+        posed = next;
         enteredAt = clock.elapsedTime;
-        play(actionOf(motion.clip), motion.once);
+        if (!away.current) {
+          leftAt = undefined;
+        }
+        if (leftAt === undefined) {
+          play(actionOf(motion.clip, again), motion.once, motion.clip);
+        }
+        if (still) {
+          drawStill();
+        }
+      };
+      stepAside.current = nowAside => {
+        if (nowAside) {
+          leave();
+        } else if (leftAt !== undefined && posed !== 'goodbye') {
+          leftAt = undefined;
+          enteredAt = clock.elapsedTime;
+          play(actionOf(motion.clip), motion.once, motion.clip);
+        }
         if (still) {
           drawStill();
         }
@@ -276,23 +384,48 @@ export function Avatar3D({
       let talking = 0;
       const step = () => {
         const seconds = clock.getDelta();
+        const now = clock.elapsedTime;
+        // A goodbye with no wave of its own goes once it has wiggled.
+        if (
+          posed === 'goodbye' &&
+          leftAt === undefined &&
+          !motion.own &&
+          now - enteredAt > GOODBYE_WAVE_SECONDS
+        ) {
+          leave();
+        }
+        // Walking back in, it walks; once back, its state's animation.
+        const returning = isReturning();
+        const wanted = returning ? (walkName ?? motion.clip) : undefined;
+        if (wanted && playingName !== wanted) {
+          play(actionOf(wanted), false, wanted);
+        } else if (
+          !returning &&
+          leftAt === undefined &&
+          playingName !== motion.clip &&
+          playingName === walkName &&
+          motion.clip !== walkName
+        ) {
+          play(actionOf(motion.clip), motion.once, motion.clip);
+        }
         unpose();
         mixer.update(seconds);
-        const target = talkAmount({
+        const loudness = talkAmount({
           speaking: speaking.current,
           level: level.current?.(),
           reducedMotion: false,
-          seconds: clock.elapsedTime,
+          seconds: now,
         });
-        talking = smoothed(talking, target, seconds);
+        talking = smoothed(talking, loudness, seconds);
         for (const mouth of mouths) {
           for (const index of mouth.indices) {
             mouth.influences[index] = talking;
           }
         }
-        // Added over the pose the mixer has just set: the state's, and a
-        // nod with the voice.
-        pose(clock.elapsedTime - enteredAt, -talking * 0.18);
+        // Added over the pose the mixer has just set, followed, never
+        // snapped to: the state's, and a nod with the voice.
+        current = dampedPose(current, target(now), seconds);
+        pose(current, -talking * 0.18);
         renderer.render(scene, camera);
         frame = requestAnimationFrame(step);
       };
@@ -311,6 +444,7 @@ export function Avatar3D({
     return () => {
       stopped = true;
       enter.current = () => undefined;
+      stepAside.current = () => undefined;
       cancelAnimationFrame(frame);
       dispose();
     };
@@ -321,6 +455,7 @@ export function Avatar3D({
       ref={holder}
       className="assistant-model3d"
       data-avatar-state={state}
+      {...(aside ? { 'data-avatar-aside': '' } : {})}
       role="img"
       aria-label={avatar.name}
       aria-busy={loading && !said}
