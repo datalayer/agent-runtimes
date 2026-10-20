@@ -165,7 +165,8 @@ export class ServerSpeaker {
     }
     this.queue.push({ text: sentence, asked: performance.now() });
     if (!this.state.speaking) {
-      this.set({ speaking: true });
+      // Something new to say: the last refusal is no longer the news.
+      this.set({ speaking: true, refused: undefined });
     }
     this.askAhead();
     if (!this.running) {

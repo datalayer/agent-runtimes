@@ -308,6 +308,11 @@ describe('the speaker (VO-33)', () => {
       refused: 'Answers are not spoken without an account yet.',
     });
     expect(speaker.level()).toBe(0);
+
+    // Said again: speaking, and the old refusal is no longer reported.
+    speaker.say('A new sentence to say.');
+    expect(states.at(-1)).toMatchObject({ speaking: true });
+    expect(states.at(-1)?.refused).toBeUndefined();
   });
 });
 
