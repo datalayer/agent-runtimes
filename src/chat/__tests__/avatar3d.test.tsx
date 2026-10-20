@@ -11,7 +11,7 @@
  * before three.js is ever loaded.
  */
 
-import { act } from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assistantCharacterFor } from '../../apps/plugins/assistant-characters';
