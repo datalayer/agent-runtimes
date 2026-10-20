@@ -4144,7 +4144,10 @@ function ChatBaseInner({
         const { sound: _sound, ...rest } = spoken;
         heardAs = rest;
       }
-      const userMessage = createUserMessage(messageContent, heardAs);
+      const userMessage = createUserMessage(
+        messageContent,
+        heardAs ? { ...heardAs } : undefined,
+      );
       const currentMessages = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
