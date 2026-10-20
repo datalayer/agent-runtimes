@@ -39,6 +39,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useReducer,
   useRef,
   useState,
 } from 'react';
@@ -84,6 +85,12 @@ import {
   type BalloonVisual,
 } from './BalloonVisual';
 import { SpriteCharacter } from './SpriteCharacter';
+import {
+  BALLOON_GRACE_MS,
+  BALLOON_HOVER_START,
+  balloonHover,
+  graceRuns,
+} from './balloonHover';
 import { isAssistantModel3D, type AssistantModel3D } from './avatar3d';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
@@ -787,7 +794,33 @@ export function AssistantStage({
   // Drawn for the chat's colour mode: the dark drawing on a dark page (T-25).
   const { colorScheme } = useTheme();
   const colorMode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
-  const [hovered, setHovered] = useState(false);
+  // The figure and its balloon are one hover region: the balloon stays
+  // while the pointer crosses to it, and closes once the pointer has been
+  // on neither for a moment, on Escape or on a press outside.
+  const [hover, dispatchHover] = useReducer(balloonHover, BALLOON_HOVER_START);
+  const hovered = hover.shown;
+  const hoverGrace = graceRuns(hover);
+  useEffect(() => {
+    if (!hoverGrace) {
+      return;
+    }
+    const grace = setTimeout(() => dispatchHover('grace'), BALLOON_GRACE_MS);
+    return () => clearTimeout(grace);
+  }, [hoverGrace]);
+  useEffect(() => {
+    if (!hovered) {
+      return;
+    }
+    const onPress = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && stageRef.current?.contains(target)) {
+        return;
+      }
+      dispatchHover('outside');
+    };
+    document.addEventListener('pointerdown', onPress, true);
+    return () => document.removeEventListener('pointerdown', onPress, true);
+  }, [hovered, stageRef]);
   const [menuOpen, setMenuOpen] = useState(false);
   // Its own menu, where it was opened; the inspector and *About* it opens.
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
@@ -1016,8 +1049,31 @@ export function AssistantStage({
           '& *': { animation: 'none !important' },
         },
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => dispatchHover('enter')}
+      onMouseLeave={() => dispatchHover('leave')}
+      onFocus={(event: React.FocusEvent<HTMLElement>) => {
+        // Keyboard focus keeps the balloon; a click's focus does not.
+        let keyboard = true;
+        try {
+          keyboard = event.target.matches(':focus-visible');
+        } catch {
+          // No :focus-visible here: count it.
+        }
+        if (keyboard) {
+          dispatchHover('focus');
+        }
+      }}
+      onBlur={(event: React.FocusEvent<HTMLElement>) => {
+        const next = event.relatedTarget as Node | null;
+        if (!next || !event.currentTarget.contains(next)) {
+          dispatchHover('blur');
+        }
+      }}
+      onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => {
+        if (event.key === 'Escape' && hovered) {
+          dispatchHover('escape');
+        }
+      }}
     >
       {shown && (
         <ExpandedVisual

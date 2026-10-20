@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import { AssistantStage } from '../assistant/AssistantStage';
 import { DECISION_WORDS } from '../assistant/DecisionAsk';
+import { BALLOON_GRACE_MS } from '../assistant/balloonHover';
 import {
   decisionAnswerWords,
   decisionsAskerAt,
@@ -266,6 +267,10 @@ describe('Ask a decision, in the floating assistant’s balloon', () => {
     expect(answerOf(container)).toBe('Urgent: yes (0.87)');
     await act(async () =>
       buttonNamed(container, DECISION_WORDS.cancel).click(),
+    );
+    // Put away, it goes once the hover's grace has passed.
+    await act(
+      () => new Promise(resolve => setTimeout(resolve, BALLOON_GRACE_MS + 50)),
     );
     expect(container.querySelector('[data-speech-balloon]')).toBeNull();
   });
