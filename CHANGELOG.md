@@ -7,6 +7,14 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.62
+
+20 October 2026 ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
+
+- **Spoken answers play as they come** (VO-52; 68cf215b). A chat asks the speech service for a streamed answer (16-bit PCM) and plays it in quarter-second slices, each scheduled right after the last, so a long sentence starts speaking sooner; a service that answers a whole sound is played as before.
+- **The floating assistant's balloon stays while the pointer travels to it** (ba31b82b).
+- **One harness turn is one `shield.turn` span** (SH-47; a0fc43f9). agent-shield 0.2.9 opened a span inside the proxy's prompt, nested in the one `ACPAgent` already opens with its harness, agent and session, so every turn was exported twice. `ACPAgent` now runs the turn with `ShieldProxy.run_turn` inside its own span; requires `datalayer-agent-shield>=0.2.11`.
+
 ## 1.5.61
 
 20 October 2026 ([The session API](https://agent-runtimes.datalayer.tech/docs/apps/session-api), [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
