@@ -7,6 +7,23 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.60
+
+20 October 2026 ([Python applications: Voice](https://agent-runtimes.datalayer.tech/docs/apps/python-applications#voice), [The session API](https://agent-runtimes.datalayer.tech/docs/apps/session-api), [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):
+
+- **`@app.audio` and `@app.interrupted` are reached** (VO-46; 660676b7, e81f33b3).
+  - The session API takes a spoken turn at `POST /apps/sessions/{uid}/audio`: WAV, FLAC, Ogg Opus or WebM, at most a minute. The turn is heard on the machine when it can be, otherwise by the speech service.
+  - `POST /apps/sessions/{uid}/interrupt` cancels what runs, tells the turn's reader `voice.interrupted`, runs `@app.interrupted`, and leaves the session open.
+  - A message spoken on the page reaches `@app.audio` as what was heard.
+  - In an application's chat, hands-free barge-in now interrupts the session instead of stopping it. A stopped session had refused the next spoken turn until it was resumed.
+  - A run's `voice.interrupted` stops the chat's voice.
+  - `loop --voice` gives `/voice`'s sound to an application whose code has `@app.audio`.
+- **The floating assistant keeps clear of the composer's controls** (T-27; c4f26e8e). The session-controls band under the prompt ends where the assistant's corner begins, so the microphone, the voice menu and *Talk with it* can be clicked on an application's page.
+- **The voice e2e** (VO-53, VO-12, VO-52; 2fd4ac9f).
+  - The device case runs at a hosted address (`E2E_VOICE_ADDRESS`).
+  - A latency probe, `timeVoice`, records timings in the page's own clock.
+- `test_app_avatar` types `Application`'s keyword arguments (e37ea960).
+
 ## 1.5.59
 
 20 October 2026:
