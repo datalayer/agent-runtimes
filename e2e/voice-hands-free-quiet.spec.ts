@@ -18,7 +18,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { hearing, inOrder, talkWith, unreachable } from './handsFree';
+import { activate, hearing, inOrder, talkWith, unreachable } from './handsFree';
 
 test.use(hearing('quiet-then-hello.wav'));
 
@@ -29,7 +29,7 @@ test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
     context,
   }) => {
     // *Pauses before I am done*: Longer (VO-69), twice the usual silence.
-    const { runs, syntheses, toggle, state, states, turnSilenceMs } =
+    const { runs, syntheses, toggle, state, states, times, turnSilenceMs } =
       await talkWith(page, context, { pause: 2 });
     // The turn's silence the composer was given: twice the usual 700 ms.
     expect(await turnSilenceMs()).toBe(1400);
@@ -47,6 +47,8 @@ test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
     const seen = await states();
     // Kept in the run's output: what the person saw, in order.
     console.log(`hands-free states: ${seen.join(' → ')}; runs ${runs.length}`);
+    // The moments the latency budgets are measured between (VO-52).
+    console.log(`voice times: ${JSON.stringify(await times())}`);
     // Never *Listening…* while the answer's voice is being made: speech then
     // is the person speaking over it (VO-13), not a new turn.
     expect(seen.join(' ')).not.toContain('thinking listening speaking');
@@ -58,9 +60,9 @@ test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
     // Esc pauses it; *Resume listening* listens again.
     await page.keyboard.press('Escape');
     await expect(state).toHaveAttribute('data-hands-free-state', 'paused');
-    await page.locator('[data-hands-free-resume]').first().click();
+    await activate(page.locator('[data-hands-free-resume]').first());
     await expect(state).toHaveAttribute('data-hands-free-state', 'listening');
-    await toggle.click();
+    await activate(toggle);
     await expect(page.locator('[data-hands-free-state]')).toHaveCount(0);
     expect(syntheses.length).toBeGreaterThan(0);
     expect(syntheses.every(status => status === 200)).toBe(true);

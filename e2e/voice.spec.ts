@@ -17,7 +17,12 @@
  * `voice-hands-free.spec.ts`, on a fixture of their own.
  *
  *   E2E_STATE=<signed-in storage state> E2E_VOICE_APP=<app id> \
+ *     E2E_VOICE_ADDRESS=<a hosted address open to visitors> \
  *     npx playwright test -c e2e/playwright.config.ts voice.spec.ts
+ *
+ * With `E2E_VOICE_ADDRESS`, the browser's own model hears at that address
+ * as a visitor (its voice turned on for the page alone): the Studio's
+ * Preview and the model together go past the memory a test is given.
  *
  * The fixture (`fixtures/weather-in-paris.wav`, 16 kHz mono) is *What is the
  * weather like in Paris today?* said by `datalayer-speech` (Kokoro, Apache
@@ -31,6 +36,13 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { PROBES, landingUrl } from './global-setup';
+import {
+  activate,
+  openVoice,
+  timeVoice,
+  voiceAddress,
+  voiceTimes,
+} from './handsFree';
 
 const FIXTURE = fileURLToPath(
   new URL('./fixtures/weather-in-paris.wav', import.meta.url),
@@ -45,8 +57,16 @@ const unreachable =
       ? 'E2E_VOICE_APP names no application to preview.'
       : '');
 
+/**
+ * The device case runs at a hosted address when one is named
+ * (`E2E_VOICE_ADDRESS`, a visitor, the voice turned on for the page alone):
+ * in the Studio's Preview the browser's own model and the Studio together
+ * go past the memory a test is given (OOM-killed at 2.5 GB, 16 October 2026).
+ */
+const deviceUnreachable =
+  process.env[PROBES.landing] || (voiceAddress() ? '' : unreachable);
+
 test.use({
-  storageState: process.env.E2E_STATE || undefined,
   permissions: ['microphone'],
   launchOptions: {
     executablePath: process.env.E2E_CHROME || '/usr/bin/google-chrome',
@@ -58,12 +78,20 @@ test.use({
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
       `--use-file-for-fake-audio-capture=${FIXTURE}`,
+      // The timing probe's own meter on the microphone runs without a gesture.
+      '--autoplay-policy=no-user-gesture-required',
     ],
   },
 });
 
-test.describe('voice in the composer (VO-53)', () => {
-  test.skip(Boolean(unreachable), unreachable);
+test.describe('voice in the composer, heard in the browser (VO-53)', () => {
+  test.skip(Boolean(deviceUnreachable), deviceUnreachable);
+  // A visitor at a hosted address has no account.
+  test.use({
+    storageState: voiceAddress()
+      ? undefined
+      : process.env.E2E_STATE || undefined,
+  });
 
   test('hears the fixture, greys the words until final, stops by itself and sends nothing', async ({
     page,
@@ -71,18 +99,6 @@ test.describe('voice in the composer (VO-53)', () => {
   }) => {
     const sent: string[] = [];
     const models: { status: number; cors: string | undefined }[] = [];
-    // Nothing of the application is changed: its voice is turned on here only.
-    await context.route('**/api/**', route =>
-      ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
-        ? route.abort()
-        : route.continue(),
-    );
-    // The notebook's Python in the browser is not needed to talk, and the
-    // Studio's page stays inside the memory a test is given.
-    await context.route(
-      /pyodide|jupyterlite|lite-service-worker|\.whl(\?|$)/,
-      route => route.abort(),
-    );
     page.on('request', request => {
       if (
         request.method() === 'POST' &&
@@ -99,28 +115,24 @@ test.describe('voice in the composer (VO-53)', () => {
         });
       }
     });
-    await page.goto(
-      `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
-    );
-    const card = page.locator('#app-voice');
-    await expect(card).toBeVisible({ timeout: 180_000 });
-    if (
-      !['on', 'true'].includes(
-        (await card.getAttribute('data-app-voice')) ?? '',
-      )
-    ) {
-      await card.locator('input[type=checkbox]').click();
-    }
-    await page.locator('text=Compose >> visible=true').first().click();
+    // The moments the latency budgets are measured between (VO-52).
+    await timeVoice(context);
+    // Nothing of the application is changed: its voice is turned on here
+    // only, heard by the browser's own model.
+    await openVoice(page, context, {
+      input: 'push_to_talk',
+      output: 'on_request',
+      where: 'device',
+    });
     const mic = page.locator('[data-voice-mic]').first();
     await expect(mic).toBeEnabled({ timeout: 120_000 });
     // The person's menu is beside it (VO-30).
     await expect(page.locator('[data-voice-menu]').first()).toBeVisible();
 
-    await mic.click();
+    await activate(mic);
     const yes = page.locator('[data-voice-consent-yes]');
     if (await yes.isVisible().catch(() => false)) {
-      await yes.click();
+      await activate(yes);
     }
     const box = page.locator('[contenteditable=true]').first();
     // Greyed while heard (VO-11).
@@ -135,6 +147,30 @@ test.describe('voice in the composer (VO-53)', () => {
     await expect(box).toHaveText(/weather like in/i);
     await expect(page.locator('[data-voice-interim]')).toHaveCount(0);
     await expect(box).toHaveCSS('font-style', 'normal');
+    // Held (VO-10): Ctrl+Space held while the fixture is said again (the
+    // fake microphone starts its file again when the page reopens it), let
+    // go once it has been quiet a moment; the words come into the emptied
+    // box. The moment it is let go is the push-to-talk budget's (VO-52).
+    await box.press('Control+a');
+    await box.press('Delete');
+    await expect(box).not.toHaveText(/weather/i);
+    const heard = async () =>
+      (await voiceTimes(page)).filter(moment => moment.what === 'silence')
+        .length;
+    const before = await heard();
+    await page.keyboard.down('Control');
+    await page.keyboard.down('Space');
+    await expect(page.locator('[data-voice-input="listening"]')).toHaveCount(
+      1,
+      { timeout: 30_000 },
+    );
+    await expect.poll(heard, { timeout: 30_000 }).toBeGreaterThan(before);
+    await page.waitForTimeout(200);
+    await page.keyboard.up('Space');
+    await page.keyboard.up('Control');
+    await expect(box).toHaveText(/weather like in/i, { timeout: 60_000 });
+    await expect(page.locator('[data-voice-input="idle"]')).toHaveCount(1);
+    console.log(`voice times: ${JSON.stringify(await voiceTimes(page))}`);
     expect(sent).toEqual([]);
     // The models came from Datalayer's CDN, readable from this origin (VO-49).
     expect(models.length).toBeGreaterThan(0);
@@ -143,6 +179,11 @@ test.describe('voice in the composer (VO-53)', () => {
       expect(model.cors).toBe('*');
     }
   });
+});
+
+test.describe('voice in the composer, heard on the servers (VO-53)', () => {
+  test.skip(Boolean(unreachable), unreachable);
+  test.use({ storageState: process.env.E2E_STATE || undefined });
 
   test('with detection chosen, hears the fixture on Datalayer’s servers and finds its language (VO-34, VO-14)', async ({
     page,

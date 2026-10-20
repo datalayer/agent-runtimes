@@ -34,9 +34,25 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { hearing, inOrder, talkWith, unreachable } from './handsFree';
+import { PROBES } from './global-setup';
+import { activate, hearing, inOrder, talkWith } from './handsFree';
 
-test.use(hearing('quiet-then-eiffel-tower.wav'));
+const unreachable =
+  process.env[PROBES.landing] ||
+  (!process.env.E2E_STATE
+    ? 'E2E_STATE names no signed-in storage state: the Preview needs a person.'
+    : !process.env.E2E_VOICE_APP
+      ? 'E2E_VOICE_APP names no application to preview.'
+      : '');
+
+/**
+ * Always in the Studio's Preview, signed in, heard on the servers: its
+ * question asks for a long answer, which the Preview's application gives
+ * and a hosted address's (an application of its own) may not.
+ */
+const STUDIO = '';
+
+test.use(hearing('quiet-then-eiffel-tower.wav', STUDIO));
 
 test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
   test.skip(Boolean(unreachable), unreachable);
@@ -44,8 +60,8 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     page,
     context,
   }) => {
-    const { runs, syntheses, toggle, state, states, sentenceMarked } =
-      await talkWith(page, context, {});
+    const { runs, syntheses, toggle, state, states, times, sentenceMarked } =
+      await talkWith(page, context, {}, STUDIO);
     // The question is said, then silence: the turn goes by itself (VO-12).
     await expect
       .poll(() => runs.length, { timeout: 120_000 })
@@ -76,13 +92,16 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     const seen = await states();
     // Kept in the run's output: what the person saw, in order.
     console.log(`hands-free states: ${seen.join(' → ')}; runs ${runs.length}`);
+    // The moments the latency budgets are measured between (VO-52).
+    console.log(`voice times: ${JSON.stringify(await times())}`);
     // Never *Listening…* while the answer's voice is being made: speech then
     // is the person speaking over it (VO-13), not a new turn.
     expect(seen.join(' ')).not.toContain('thinking listening speaking');
-    expect([seen, inOrder(seen, ['listening', 'thinking', 'speaking'])]).toEqual(
-      [seen, true],
-    );
-    await toggle.click();
+    expect([
+      seen,
+      inOrder(seen, ['listening', 'thinking', 'speaking']),
+    ]).toEqual([seen, true]);
+    await activate(toggle, STUDIO);
     await expect(page.locator('[data-hands-free-state]')).toHaveCount(0);
     expect(syntheses.every(status => status === 200)).toBe(true);
     expect(runs.length).toBeLessThanOrEqual(5);
