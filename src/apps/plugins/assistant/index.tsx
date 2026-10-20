@@ -72,8 +72,10 @@ import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
   type ChatTurnSnapshot,
+  type ConversationEntry,
   type LoopWorkspaceContext,
 } from '../../core';
+import type { DisplayItem } from '../../../types/chat';
 import { assistantCharacterFor } from '../assistant-characters';
 import { useOptionalSandboxService } from '../agents/useSandboxService';
 import { TARGET_SPECS } from '../agents/switchable';
@@ -126,6 +128,28 @@ const SIZE = 88;
 
 /* Signals to read when no chat contributed a turn: the hooks need one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
+const NO_CONVERSATION = signal<ConversationEntry[]>([]);
+
+/**
+ * The conversation as the balloon lists it under *History*: each person's
+ * and assistant's message with words in it, in order.
+ */
+export function balloonHistoryOf(
+  conversation: readonly ConversationEntry[],
+): DisplayItem[] {
+  const items: DisplayItem[] = [];
+  conversation.forEach((entry, index) => {
+    if (entry.role !== 'tool' && entry.text.trim()) {
+      items.push({
+        id: `conversation-${index}`,
+        role: entry.role,
+        content: entry.text,
+        createdAt: new Date(0),
+      });
+    }
+  });
+  return items;
+}
 const NO_PRESENCE = signal<PresenceState>('idle');
 
 /**
@@ -221,6 +245,9 @@ export function LoopAssistant({
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const presence = useSignalValue(
     turnEntries[0]?.value.presence ?? NO_PRESENCE,
+  );
+  const conversation = useSignalValue(
+    turnEntries[0]?.value.conversation ?? NO_CONVERSATION,
   );
   const signedIn = Boolean(useIAMStore(state => state.token));
   const [approval, setApproval] = useState<BalloonApproval | undefined>();
@@ -369,15 +396,21 @@ export function LoopAssistant({
     : undefined;
   const atWork = turn.status === 'streaming' || turn.status === 'thinking';
   const current = display === 'current';
+  // History: the closed balloon lists the conversation, not its newest line.
+  const history = current || open ? [] : balloonHistoryOf(conversation);
+  const withHistory = <T extends object>(
+    said: T,
+  ): T & { history?: readonly DisplayItem[] } =>
+    history.length > 0 ? { ...said, history } : said;
   const balloon =
     state === 'paused'
       ? { text: chatText.paused }
       : approval
-        ? { text: chatText.waitingForYou, approval }
+        ? withHistory({ text: chatText.waitingForYou, approval })
         : presence === 'waiting'
           ? { text: chatText.waitingOpen }
           : tool
-            ? { text: turn.activity ?? '', tool, busy: true }
+            ? withHistory({ text: turn.activity ?? '', tool, busy: true })
             : current && (atWork || unheard)
               ? {
                   text:
@@ -389,15 +422,16 @@ export function LoopAssistant({
                   busy: atWork,
                 }
               : unheard && saying
-                ? {
-                    // A peek: the first words; the rest is in the conversation.
+                ? withHistory({
+                    // A peek: the first words; the rest is in the conversation,
+                    // listed when there is one.
                     ...peekLine(saying.text),
                     onDismiss: () => {
                       setHeardId(saying.id);
                       setFresh(false);
                     },
-                  }
-                : { text: 'Click me to open the conversation.' };
+                  })
+                : withHistory({ text: 'Click me to open the conversation.' });
   const insist =
     state === 'greeting' ||
     presence === 'waiting' ||
