@@ -8,7 +8,8 @@ A person adds a rule to a session while it runs; it holds from the next
 action, for that session only, and only ever tightens. This script runs the
 runtime's harness agent (``ACPAgent``) on the fake agent and does what the
 session rules route does — ``POST /api/v1/apps/sessions/{uid}/rules`` calls
-``session_rules().add(uid, rule_from(body))`` — between two turns:
+``session_rules().add(uid, rule_from(body), application=rules_policy(app))``
+— between two turns (this example's application has no Rules of its own):
 
 1. ``read README.md`` — reading inside the workspace: *do it*.
 2. The rule ``no reads`` (*leave it to me* on reading) added to the session.
@@ -88,7 +89,7 @@ async def main() -> int:
         await turn(agent, "read README.md")
 
         rule = {"name": "no reads", "decision": "deny", "classes": ["read"]}
-        session_rules().add(SESSION, rule_from(rule))
+        session_rules().add(SESSION, rule_from(rule), application=None)
         in_force = agent.rules_in_force_of(SESSION) or {}
         names = [item["name"] for item in in_force.get("session_rules", [])]
         print(f"\nAdded      {rule} -> the session's rules: {names}")
@@ -101,6 +102,7 @@ async def main() -> int:
                 rule_from(
                     {"name": "run freely", "decision": "allow", "classes": ["execute"]}
                 ),
+                application=None,
                 above=[ORGANIZATION],
             )
         except SessionRuleRefused as refused:
