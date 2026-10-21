@@ -515,6 +515,12 @@ class A2AWorkerAdapter(WorkerAdapter):
                 LifecycleEvent.COMPLETE,
                 message=seen.state or "completed",
                 protocol_task_id=seen.task_id,
+                # The apps session a team seat worked in (MH-38), on the
+                # completed status as on any other ending: kept on the run
+                # and handed the seat's next task (MH-P05). Found on r1, 22
+                # October 2026: a completed seat's attempt carried none, so
+                # the run had no seat session to swap, clone or export.
+                session_id=session_of_meta(seen.metadata),
                 # What the worker says the task spent, on its final status (O2-10).
                 usage=spent_of(seen.metadata),
             )
