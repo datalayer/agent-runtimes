@@ -245,7 +245,8 @@ export {
   type StreamFailure,
 } from './runMeasures';
 
-// What an application is doing, and its record's entries (R-15, M-015b).
+// What an application is doing, its record's entries, and its sessions as
+// the record lists them (R-15, M-015b).
 export {
   ACTIVITY_WORDS,
   activityOf,
@@ -254,12 +255,27 @@ export {
   mergeActivityPages,
   runEndOf,
   scheduledSays,
+  SESSION_LINEAGE_WORDS,
+  SESSION_STATE_WORDS,
+  SESSION_STATES,
+  SESSION_TURN_WORDS,
+  SESSION_TURNS,
+  sessionAgentSaid,
+  sessionLineageSaid,
+  sessionPageOf,
+  sessionRowOf,
   sessionSentence,
+  sessionStateSaid,
   wakesOn,
   type AppActivity,
   type RecordEntry,
   type RecordKind,
   type ScheduledRun,
+  type SessionLineage,
+  type SessionRow,
+  type SessionRunsOn,
+  type SessionState,
+  type SessionTurn,
 } from './activity';
 
 // A deployment's pause, resume and reset, and its recorded events (R-17, M-041b).

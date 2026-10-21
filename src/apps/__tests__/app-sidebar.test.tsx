@@ -256,15 +256,24 @@ describe('the activity feed', () => {
         calls.push([url, init]);
         const body = url.includes('/sessions?')
           ? {
+              // A session as the record lists it: its uid, state, agent,
+              // title, lineage and turns — not an entry of it.
               sessions: [
                 {
-                  uid: 'e1',
-                  session_uid: 's1',
-                  kind: 'session',
+                  uid: 's1',
+                  app_uid: 'app-1',
                   version: 3,
-                  created_at: '2026-10-05T08:00:00Z',
+                  state: 'paused',
+                  agent: 'web-research',
+                  harness: '',
+                  title: 'Three sources',
+                  runs_on: null,
+                  lineage: { forked_from: null, imported_from: null },
+                  turns: 1,
+                  started_at: '2026-10-05T08:00:00Z',
                 },
               ],
+              has_more: false,
             }
           : {
               entries: [
@@ -302,6 +311,9 @@ describe('the activity feed', () => {
       'Bearer jwt',
     );
     expect(container.textContent).toContain('version 3');
+    // Its state and its agent, as the record lists them.
+    expect(container.textContent).toContain('Paused');
+    expect(container.textContent).toContain('web-research');
     const details = container.querySelector('details')!;
     await act(async () => {
       details.open = true;

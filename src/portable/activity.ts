@@ -5,8 +5,10 @@
 
 /**
  * What an application is doing (R-15), as ai-agents answers
- * `/api/ai-agents/v1/apps/activity`, and its record's entries
- * (`/apps/sessions`, `/apps/records`): read and said the same by the Studio
+ * `/api/ai-agents/v1/apps/activity`, its record's entries (`/apps/records`)
+ * and its sessions as the record lists them (`/apps/sessions`: state,
+ * agent, title, lineage, where each runs — the row a runtime describes a
+ * held session with too): read and said the same by the Studio, the chat
  * and Datalayer Mobile (M-015b). Pure: each client fetches with its own
  * authentication and hands the body here.
  *
@@ -124,6 +126,229 @@ export type ScheduledRun = {
   nextAt: string;
 };
 
+// --- a session, as the record lists it ------------------------------------
+
+/** The states of a session: open (held by a runtime), paused, ended. */
+export const SESSION_STATES = ['open', 'paused', 'ended'] as const;
+export type SessionState = (typeof SESSION_STATES)[number];
+
+/** The phase of an open session's turn, as the runtime that holds it says it. */
+export const SESSION_TURNS = ['idle', 'running', 'waiting'] as const;
+export type SessionTurn = (typeof SESSION_TURNS)[number];
+
+/** Where an open session runs: a runtime, or a seat of a team run; nothing while paused or ended. */
+export type SessionRunsOn =
+  | { kind: 'runtime'; uid: string }
+  | { kind: 'team_run'; executionId: string; seat: string }
+  | null;
+
+/** Where a session comes from: cloned from another at a turn, or imported from a file. */
+export type SessionLineage = {
+  forkedFrom: { uid: string; atTurn: number } | null;
+  importedFrom: {
+    digest: string;
+    exportedAt: string;
+    /** The exporter's uid. */
+    exportedBy: string;
+  } | null;
+};
+
+/**
+ * One session, as `GET /api/ai-agents/v1/apps/sessions` lists it and as a
+ * runtime describes one it holds (`GET /api/v1/apps/sessions/{uid}`): the
+ * same shape on the Studio, the chat and the phone. `turn` and `held` are
+ * the runtime's and empty from the record.
+ */
+export type SessionRow = {
+  uid: string;
+  appUid: string;
+  deploymentUid: string;
+  version: number;
+  /** `test` for a session its tests ran; empty for real use. */
+  purpose: string;
+  launchUid: string;
+  ownerUid: string;
+  openedBy: string;
+  wokenBy: string;
+  state: SessionState;
+  /** The runtime's turn phase of an open session; `''` from the record. */
+  turn: SessionTurn | '';
+  /** Whether the runtime asked holds it; `null` from the record. */
+  held: boolean | null;
+  /** The agentspec bound to it now. */
+  agent: string;
+  /** The harness that agent runs on; empty for a model agent. */
+  harness: string;
+  title: string;
+  archived: boolean;
+  runsOn: SessionRunsOn;
+  lineage: SessionLineage;
+  /** The person's turns so far. */
+  turns: number;
+  startedAt: string;
+  keptUntil: string;
+};
+
+const runsOnOf = (raw: unknown): SessionRunsOn => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  if (raw.kind === 'runtime') {
+    return { kind: 'runtime', uid: said(raw.uid) };
+  }
+  if (raw.kind === 'team_run') {
+    return {
+      kind: 'team_run',
+      executionId: said(raw.execution_id),
+      seat: said(raw.seat),
+    };
+  }
+  throw new Error(
+    `A session runs on a runtime or a team run, not on ${JSON.stringify(raw.kind)}.`,
+  );
+};
+
+const lineageOf = (raw: unknown): SessionLineage => {
+  const lineage = isRecord(raw) ? raw : {};
+  const forked = isRecord(lineage.forked_from) ? lineage.forked_from : null;
+  const imported = isRecord(lineage.imported_from)
+    ? lineage.imported_from
+    : null;
+  return {
+    forkedFrom: forked
+      ? { uid: said(forked.uid), atTurn: Number(forked.at_turn) || 0 }
+      : null,
+    importedFrom: imported
+      ? {
+          digest: said(imported.digest),
+          exportedAt: said(imported.exported_at),
+          exportedBy: said(imported.exported_by),
+        }
+      : null,
+  };
+};
+
+/**
+ * A session row as the record or a runtime answers it. A row without a uid,
+ * or whose state is not one of the three, is refused in a sentence: the
+ * reader never guesses a state (an older opening is re-indexed, not read).
+ */
+export function sessionRowOf(raw: Record<string, unknown>): SessionRow {
+  const uid = said(raw.uid);
+  if (!uid) {
+    throw new Error('A session row names its uid; this one does not.');
+  }
+  const state = said(raw.state);
+  if (!(SESSION_STATES as readonly string[]).includes(state)) {
+    throw new Error(
+      `There is no session state ${JSON.stringify(state)} (session ${uid}): one of ${SESSION_STATES.join(', ')}.`,
+    );
+  }
+  const turn = said(raw.turn);
+  if (turn && !(SESSION_TURNS as readonly string[]).includes(turn)) {
+    throw new Error(
+      `There is no turn phase ${JSON.stringify(turn)} (session ${uid}): one of ${SESSION_TURNS.join(', ')}.`,
+    );
+  }
+  return {
+    uid,
+    appUid: said(raw.app_uid),
+    deploymentUid: said(raw.deployment_uid),
+    version: Number(raw.version) || 0,
+    purpose: said(raw.purpose),
+    launchUid: said(raw.launch_uid),
+    ownerUid: said(raw.owner_uid),
+    openedBy: said(raw.opened_by),
+    wokenBy: said(raw.woken_by),
+    state: state as SessionState,
+    turn: turn as SessionTurn | '',
+    held: typeof raw.held === 'boolean' ? raw.held : null,
+    agent: said(raw.agent),
+    harness: said(raw.harness),
+    title: said(raw.title),
+    archived: raw.archived === true,
+    runsOn: runsOnOf(raw.runs_on),
+    lineage: lineageOf(raw.lineage),
+    turns: Number(raw.turns) || 0,
+    startedAt: said(raw.started_at),
+    keptUntil: said(raw.kept_until),
+  };
+}
+
+/** A page of sessions, as the record lists them: `{sessions, has_more}`. */
+export function sessionPageOf(body: Record<string, unknown>): {
+  sessions: SessionRow[];
+  hasMore: boolean;
+} {
+  return {
+    sessions: records(body.sessions).map(sessionRowOf),
+    hasMore: body.has_more === true,
+  };
+}
+
+/** The state words, on every client. */
+export const SESSION_STATE_WORDS: Record<SessionState, string> = {
+  open: 'Open',
+  paused: 'Paused',
+  ended: 'Ended',
+};
+
+/** The turn phase, beside an open session's state. */
+export const SESSION_TURN_WORDS: Record<SessionTurn, string> = {
+  idle: '',
+  running: 'answering',
+  waiting: 'waiting for you',
+};
+
+/** A session's state in words: *Open · answering*, *Paused*, *Ended*. */
+export function sessionStateSaid(
+  session: Pick<SessionRow, 'state' | 'turn'>,
+): string {
+  const phase =
+    session.state === 'open' && session.turn
+      ? SESSION_TURN_WORDS[session.turn]
+      : '';
+  return phase
+    ? `${SESSION_STATE_WORDS[session.state]} · ${phase}`
+    : SESSION_STATE_WORDS[session.state];
+}
+
+/** The words of a session's lineage. */
+export const SESSION_LINEAGE_WORDS = {
+  cloned: (uid: string, atTurn: number): string =>
+    `Cloned from ${uid} at turn ${atTurn}`,
+  imported: (exportedAt: string): string =>
+    exportedAt
+      ? `Imported from a file exported ${exportedAt}`
+      : 'Imported from a file',
+} as const;
+
+/** Where a session comes from, in a sentence; `''` for one opened here. */
+export function sessionLineageSaid(
+  session: Pick<SessionRow, 'lineage'>,
+): string {
+  const { forkedFrom, importedFrom } = session.lineage;
+  if (forkedFrom) {
+    return SESSION_LINEAGE_WORDS.cloned(forkedFrom.uid, forkedFrom.atTurn);
+  }
+  if (importedFrom) {
+    return SESSION_LINEAGE_WORDS.imported(importedFrom.exportedAt);
+  }
+  return '';
+}
+
+/** The agent a session is bound to, with its harness when it runs on one: *shield-mvp-codex (codex)*. */
+export function sessionAgentSaid(
+  session: Pick<SessionRow, 'agent' | 'harness'>,
+): string {
+  if (!session.agent) {
+    return '';
+  }
+  return session.harness && session.harness !== session.agent
+    ? `${session.agent} (${session.harness})`
+    : session.agent;
+}
+
 /** What an application, or all of a person's, is doing (R-15): real use only, its tests read apart. */
 export type AppActivity = {
   /** Sessions whose latest run has not answered yet, newest first: their run's start. */
@@ -132,8 +357,8 @@ export type AppActivity = {
   scheduled: ScheduledRun[];
   /** Why its schedules could not be read; empty when they were. */
   scheduledProblem: string;
-  /** Its other sessions, newest first: their opening entries. */
-  completed: RecordEntry[];
+  /** Its other sessions, newest first, each as the record lists it. */
+  completed: SessionRow[];
   /** The offset of the next page of completed sessions; `null` after the last. */
   nextOffset: number | null;
 };
@@ -152,7 +377,7 @@ export function activityOf(body: Record<string, unknown>): AppActivity {
       nextAt: said(raw.next_at),
     })),
     scheduledProblem: said(body.scheduled_problem),
-    completed: records(body.completed).map(entryOf),
+    completed: records(body.completed).map(sessionRowOf),
     nextOffset: typeof body.next_offset === 'number' ? body.next_offset : null,
   };
 }
@@ -173,7 +398,7 @@ export function mergeActivityPages(pages: readonly AppActivity[]): AppActivity {
   const completed = pages
     .flatMap(page => page.completed)
     .filter(entry => {
-      const key = entry.uid || entry.sessionUid;
+      const key = entry.uid;
       if (seen.has(key)) {
         return false;
       }

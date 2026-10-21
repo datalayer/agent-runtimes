@@ -11,7 +11,6 @@ import {
   agentSummaryOfRuntime,
   deploymentEventLine,
   deploymentEventOf,
-  entrySaid,
   isCreatingAgent,
   mergeActivityPages,
   notDeletedOf,
@@ -19,7 +18,11 @@ import {
   resetCountsOf,
   resetLines,
   scheduledSays,
-  sessionSentence,
+  sessionAgentSaid,
+  sessionLineageSaid,
+  sessionPageOf,
+  sessionRowOf,
+  sessionStateSaid,
   stateChangeBody,
   stoppedWorkLine,
   stoppedWorkOf,
@@ -33,11 +36,81 @@ describe('activity (M-015b)', () => {
     expect(scheduledSays(activity.scheduled[0])).toBe(
       'Every weekday morning (0 8 * * 1-5) · version 3',
     );
-    expect(entrySaid(activity.completed[0])).toBe('Stopped');
-    expect(sessionSentence(activity.completed)).toBe(
-      'No tool called, stopped.',
-    );
+    // A completed session is listed as the record lists sessions: its
+    // state, agent, title and turns, never an entry of it.
+    expect(activity.completed[0]).toMatchObject({
+      uid: 's-1',
+      state: 'ended',
+      agent: 'inbox-triage',
+      title: 'The inbox, Thursday',
+      turns: 2,
+      runsOn: null,
+    });
+    expect(sessionStateSaid(activity.completed[0])).toBe('Ended');
     expect(activity.nextOffset).toBe(20);
+  });
+
+  it('reads a session row as the record and a runtime say it, and refuses a state it does not have', () => {
+    const row = sessionRowOf({
+      uid: 'e67a52b2',
+      app_uid: 'app-1',
+      state: 'open',
+      turn: 'running',
+      held: true,
+      agent: 'shield-mvp-codex',
+      harness: 'codex',
+      title: 'The refactor',
+      runs_on: { kind: 'runtime', uid: '01m5d3e8' },
+      lineage: {
+        forked_from: { uid: 'c1a9f0e3', at_turn: 2 },
+        imported_from: null,
+      },
+      turns: 5,
+      started_at: '2026-10-21T10:00:00Z',
+    });
+    expect(row.runsOn).toEqual({ kind: 'runtime', uid: '01m5d3e8' });
+    expect(row.lineage.forkedFrom).toEqual({ uid: 'c1a9f0e3', atTurn: 2 });
+    expect(sessionStateSaid(row)).toBe('Open · answering');
+    expect(sessionAgentSaid(row)).toBe('shield-mvp-codex (codex)');
+    expect(sessionLineageSaid(row)).toBe('Cloned from c1a9f0e3 at turn 2');
+    const imported = sessionRowOf({
+      uid: '7d2c4b10',
+      state: 'paused',
+      lineage: {
+        forked_from: null,
+        imported_from: {
+          digest: 'sha256:1',
+          exported_at: '2026-10-21',
+          exported_by: '01jq',
+        },
+      },
+      runs_on: { kind: 'team_run', execution_id: 'x-1', seat: 'writer' },
+    });
+    expect(imported.runsOn).toEqual({
+      kind: 'team_run',
+      executionId: 'x-1',
+      seat: 'writer',
+    });
+    expect(sessionLineageSaid(imported)).toBe(
+      'Imported from a file exported 2026-10-21',
+    );
+    expect(sessionStateSaid(imported)).toBe('Paused');
+    expect(sessionLineageSaid(sessionRowOf({ uid: 'a', state: 'ended' }))).toBe(
+      '',
+    );
+    // Fail fast: no reader maps `stopped` to anything.
+    expect(() => sessionRowOf({ uid: 'a', state: 'stopped' })).toThrow(
+      'There is no session state "stopped" (session a): one of open, paused, ended.',
+    );
+    expect(() => sessionRowOf({ state: 'open' })).toThrow(/names its uid/);
+    expect(
+      sessionPageOf({
+        sessions: [{ uid: 'a', state: 'open' }],
+        has_more: true,
+      }),
+    ).toMatchObject({
+      hasMore: true,
+    });
   });
 
   it('merges pages: completed from all without repeats, the last page’s offset', () => {

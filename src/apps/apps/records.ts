@@ -14,7 +14,15 @@
  * @module apps/apps/records
  */
 
+import { sessionPageOf, type SessionRow } from '../../portable/activity';
 import { RUN_END_WORDS } from '../../portable/records';
+
+export {
+  sessionAgentSaid,
+  sessionLineageSaid,
+  sessionStateSaid,
+  type SessionRow,
+} from '../../portable/activity';
 
 /** What a record entry is. */
 export type RecordKind =
@@ -145,16 +153,18 @@ async function read(
 }
 
 /**
- * The sessions of an application, newest first: their opening entries. Real
- * use only — the sessions its tests ran are read apart (R-07) — unless
- * `tests` says otherwise: `true` for the tests only, `null` for both.
+ * The sessions of an application, newest first, each as the record lists
+ * it (`sessionRowOf`: state, agent, title, lineage, turns). Real use only —
+ * the sessions its tests ran are read apart (R-07) — unless `tests` says
+ * otherwise: `true` for the tests only, `null` for both. The first page;
+ * `hasMore` says whether there is a next.
  */
 export async function listSessions(
   context: RecordsContext,
   appUid: string,
   limit = 20,
   tests: boolean | null = false,
-): Promise<RecordEntry[]> {
+): Promise<{ sessions: SessionRow[]; hasMore: boolean }> {
   const body = await read(
     context,
     `/sessions?app_uid=${encodeURIComponent(appUid)}&limit=${limit}${
@@ -162,9 +172,7 @@ export async function listSessions(
     }`,
     'The sessions could not be read',
   );
-  return Array.isArray(body.sessions)
-    ? (body.sessions as Record<string, unknown>[]).map(entryOf)
-    : [];
+  return sessionPageOf(body);
 }
 
 /** What one session did, in order: a run's start is a mark, not a step (R-15). */

@@ -27,9 +27,12 @@ import {
   entrySaid,
   listSessions,
   readSession,
+  sessionAgentSaid,
+  sessionLineageSaid,
   sessionSentence,
-  type RecordEntry,
+  sessionStateSaid,
   type RecordsContext,
+  type SessionRow,
 } from '../../apps/records';
 
 /** What the feed says. */
@@ -80,14 +83,20 @@ function Session({
   session,
 }: {
   context: RecordsContext;
-  session: RecordEntry;
+  session: SessionRow;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const entries = useRead(
-    () => readSession(context, session.sessionUid),
-    `${session.sessionUid}:${context.token}`,
+    () => readSession(context, session.uid),
+    `${session.uid}:${context.token}`,
     open,
   );
+  // The session as the record lists it: its state, its agent, where it comes from.
+  const facts = [
+    sessionStateSaid(session),
+    sessionAgentSaid(session),
+    sessionLineageSaid(session),
+  ].filter(Boolean);
   return (
     <Box
       as="details"
@@ -99,12 +108,14 @@ function Session({
       py={2}
     >
       <Box as="summary" cursor="pointer" fontSize={1}>
-        {session.createdAt ? (
-          <RelativeTime datetime={session.createdAt} />
+        {session.startedAt ? (
+          <RelativeTime datetime={session.startedAt} />
         ) : (
           'A session'
         )}
+        {session.title ? ` · ${session.title}` : ''}
         {session.version ? ` · version ${session.version}` : ''}
+        {facts.length ? ` · ${facts.join(' · ')}` : ''}
         {entries.value ? ` · ${sessionSentence(entries.value)}` : ''}
       </Box>
       {!open ? null : entries.loading ? (
@@ -172,12 +183,12 @@ export function AppActivity({ appUid }: { appUid?: string }): JSX.Element {
         <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', m: 0 }}>
           {sessions.error}
         </Text>
-      ) : (sessions.value ?? []).length === 0 ? (
+      ) : (sessions.value?.sessions ?? []).length === 0 ? (
         <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', m: 0 }}>
           {APP_ACTIVITY_WORDS.none}
         </Text>
       ) : (
-        (sessions.value ?? []).map(session => (
+        (sessions.value?.sessions ?? []).map(session => (
           <Session key={session.uid} context={context} session={session} />
         ))
       )}

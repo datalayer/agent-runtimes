@@ -128,7 +128,7 @@ export function conversationFixture(): ConversationState {
 
 /**
  * `GET /api/ai-agents/v1/apps/activity`'s answer for one application: a
- * session in progress, a scheduled run, a completed one ended by Stop, and a
+ * session in progress, a scheduled run, a completed one (ended), and a
  * next page — what the Studio's Activity and the phone's read alike (M-015b).
  */
 export function activityFixture(): Record<string, unknown> {
@@ -161,15 +161,25 @@ export function activityFixture(): Record<string, unknown> {
     scheduled_problem: '',
     completed: [
       {
-        uid: 'e-out',
+        uid: 's-1',
         app_uid: 'app-1',
-        session_uid: 's-1',
         deployment_uid: 'd-1',
         version: 3,
-        kind: 'output',
-        summary: '',
-        payload: { status: 'stopped' },
-        created_at: '2026-10-15T08:00:00Z',
+        purpose: '',
+        launch_uid: '',
+        owner_uid: 'o-1',
+        opened_by: 'o-1',
+        woken_by: '',
+        state: 'ended',
+        agent: 'inbox-triage',
+        harness: '',
+        title: 'The inbox, Thursday',
+        archived: false,
+        runs_on: null,
+        lineage: { forked_from: null, imported_from: null },
+        turns: 2,
+        started_at: '2026-10-15T08:00:00Z',
+        kept_until: '2026-11-14T08:00:00Z',
       },
     ],
     next_offset: 20,
