@@ -22,12 +22,14 @@ import {
   Text,
 } from '@primer/react';
 import { KebabHorizontalIcon } from '@primer/octicons-react';
+import { Dialog } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
 import { useContributions } from '@datalayer/reactor/react';
 import {
   LoopSessionAction,
   sessionActionsFor,
   type SessionActionContext,
+  type SessionPanel,
   type SessionFacts,
 } from '../../core';
 import {
@@ -140,8 +142,12 @@ export function SessionActionsMenu({
   const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [said, setSaid] = useState('');
+  // A panel an entry shows (the session's Rules, SH-54), in a dialog of the
+  // menu's own when the host gives no other way.
+  const [panel, setPanel] = useState<SessionPanel | undefined>(undefined);
   const saying: SessionActionContext = {
     ...context,
+    show: context.show ?? setPanel,
     say: sentence => {
       setSaid(sentence);
       context.say(sentence);
@@ -161,53 +167,64 @@ export function SessionActionsMenu({
   }
   const applicable = sessionActionsFor(entries, facts);
   return (
-    <ActionMenu open={open} onOpenChange={onOpenChange}>
-      <ActionMenu.Anchor>
-        <IconButton
-          icon={KebabHorizontalIcon}
-          aria-label="Session actions"
-          variant="invisible"
-          size="small"
-          data-testid="session-actions"
-        />
-      </ActionMenu.Anchor>
-      <ActionMenu.Overlay width="small">
-        <ActionList>
-          {applicable.length === 0 ? (
-            <ActionList.Item disabled>
-              {facts
-                ? 'Nothing applies to this session now.'
-                : 'Reading the session…'}
-            </ActionList.Item>
-          ) : (
-            applicable.map(entry => (
-              <ActionList.Item
-                key={entry.id}
-                data-session-action={entry.id}
-                onSelect={() => {
-                  if (!facts) {
-                    return;
-                  }
-                  Promise.resolve(entry.run(facts, saying)).catch(error =>
-                    saying.say(String((error as Error).message ?? error)),
-                  );
-                }}
-              >
-                {entry.label}
+    <>
+      <ActionMenu open={open} onOpenChange={onOpenChange}>
+        <ActionMenu.Anchor>
+          <IconButton
+            icon={KebabHorizontalIcon}
+            aria-label="Session actions"
+            variant="invisible"
+            size="small"
+            data-testid="session-actions"
+          />
+        </ActionMenu.Anchor>
+        <ActionMenu.Overlay width="small">
+          <ActionList>
+            {applicable.length === 0 ? (
+              <ActionList.Item disabled>
+                {facts
+                  ? 'Nothing applies to this session now.'
+                  : 'Reading the session…'}
               </ActionList.Item>
-            ))
-          )}
-          {said ? (
-            <>
-              <ActionList.Divider />
-              <ActionList.Item disabled data-testid="session-actions-said">
-                {said}
-              </ActionList.Item>
-            </>
-          ) : null}
-        </ActionList>
-      </ActionMenu.Overlay>
-    </ActionMenu>
+            ) : (
+              applicable.map(entry => (
+                <ActionList.Item
+                  key={entry.id}
+                  data-session-action={entry.id}
+                  onSelect={() => {
+                    if (!facts) {
+                      return;
+                    }
+                    Promise.resolve(entry.run(facts, saying)).catch(error =>
+                      saying.say(String((error as Error).message ?? error)),
+                    );
+                  }}
+                >
+                  {entry.label}
+                </ActionList.Item>
+              ))
+            )}
+            {said ? (
+              <>
+                <ActionList.Divider />
+                <ActionList.Item disabled data-testid="session-actions-said">
+                  {said}
+                </ActionList.Item>
+              </>
+            ) : null}
+          </ActionList>
+        </ActionMenu.Overlay>
+      </ActionMenu>
+      {panel ? (
+        <Dialog
+          title={panel.title}
+          onClose={() => setPanel(undefined)}
+          width="large"
+        >
+          <Box data-session-panel="">{panel.render()}</Box>
+        </Dialog>
+      ) : null}
+    </>
   );
 }
 

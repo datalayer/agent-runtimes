@@ -704,6 +704,19 @@ export type SessionActionContext = {
   say: (sentence: string) => void;
   /** The turn a *Clone from here* was pressed on, when it was; else the last. */
   atTurn?: number;
+  /**
+   * Show the person a panel of the session — its Rules (SH-54) — over the
+   * thread: a title and what is drawn in it. The thread's menu shows it in a
+   * dialog of its own when the host gives no other way.
+   */
+  show?: (panel: SessionPanel) => void;
+};
+
+/** A panel an entry shows over the thread (`SessionActionContext.show`). */
+export type SessionPanel = {
+  title: string;
+  /** What the panel draws, rendered while it is open. */
+  render: () => import('react').ReactNode;
 };
 
 /** Where an entry is offered: the thread's `⋯` menu, each turn's row, or both. */

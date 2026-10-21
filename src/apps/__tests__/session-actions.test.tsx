@@ -44,6 +44,11 @@ import {
   swapSentence,
 } from '../plugins/chat/sessionActions';
 import { SessionChooseDialog } from '../plugins/chat/SessionChooseDialog';
+import {
+  SESSION_RULES,
+  SESSION_RULES_ACTION_WORDS,
+} from '../plugins/app-rules/sessionRulesAction';
+import { SessionRules } from '../plugins/app-rules/AppRulesCard';
 import { sessionOfSearch } from '../apps/threads';
 import { sessionRowOf } from '../../portable/activity';
 
@@ -75,7 +80,7 @@ afterEach(async () => {
 });
 
 describe('the loop.session.action point', () => {
-  it('holds the chat plugin’s five entries, in their order', async () => {
+  it('holds the chat plugin’s six entries, in their order', async () => {
     // The chat plugin alone: the preset pulls the notebook's JupyterLab in,
     // which this runner cannot load (the other preset specs fail the same
     // way on a clean tree); the preset includes the chat plugin unchanged.
@@ -86,6 +91,7 @@ describe('the loop.session.action point', () => {
     ).toEqual([
       'switch-agent',
       'clone-from-here',
+      'session-rules',
       'export',
       'import',
       'resume',
@@ -93,10 +99,55 @@ describe('the loop.session.action point', () => {
     expect(CHAT_SESSION_ACTIONS.map(entry => entry.label)).toEqual([
       'Switch agent…',
       'Clone from here',
+      'Rules for this session…',
       'Export',
       'Import…',
       'Resume',
     ]);
+  });
+
+  it('shows the session’s Rules card over the thread, on any open session (SH-54)', () => {
+    const shown: { title: string; render: () => unknown }[] = [];
+    const said: string[] = [];
+    const client = {
+      serverUrl: 'https://r1.example/agent-runtimes/pool/01m5',
+      accessToken: () => 'a-token',
+    } as never;
+    expect(SESSION_RULES.when(SESSION)).toBe(true);
+    expect(SESSION_RULES.when({ ...SESSION, state: 'paused' })).toBe(false);
+    SESSION_RULES.run(SESSION, {
+      client,
+      say: sentence => said.push(sentence),
+      show: panel => shown.push(panel),
+    });
+    expect(said).toEqual([]);
+    expect(shown.map(panel => panel.title)).toEqual(['Rules for this session']);
+    const drawn = shown[0].render() as React.ReactElement<{
+      agentServerUrl: string;
+      token: string;
+      sessionUid: string;
+    }>;
+    expect(drawn.type).toBe(SessionRules);
+    expect(drawn.props).toEqual({
+      agentServerUrl: 'https://r1.example/agent-runtimes/pool/01m5',
+      token: 'a-token',
+      sessionUid: SESSION.uid,
+    });
+    // No panel on the page, or no token: said, nothing shown.
+    SESSION_RULES.run(SESSION, {
+      client,
+      say: sentence => said.push(sentence),
+    });
+    SESSION_RULES.run(SESSION, {
+      client: { serverUrl: 'x', accessToken: () => undefined } as never,
+      say: sentence => said.push(sentence),
+      show: panel => shown.push(panel),
+    });
+    expect(said).toEqual([
+      SESSION_RULES_ACTION_WORDS.noPanel,
+      SESSION_RULES_ACTION_WORDS.signedOut,
+    ]);
+    expect(shown).toHaveLength(1);
   });
 
   it('hides what does not apply: no Resume on an open thread, no swap mid-turn', () => {
@@ -106,11 +157,14 @@ describe('the loop.session.action point', () => {
     expect(ids(SESSION)).toEqual([
       'switch-agent',
       'clone-from-here',
+      'session-rules',
       'export',
       'import',
     ]);
+    // A rule is added while a turn runs too: that is when it matters (SH-54).
     expect(ids({ ...SESSION, turn: 'running' })).toEqual([
       'clone-from-here',
+      'session-rules',
       'export',
       'import',
     ]);
@@ -120,7 +174,11 @@ describe('the loop.session.action point', () => {
       'import',
       'resume',
     ]);
-    expect(ids({ ...SESSION, turns: 0 })).toEqual(['switch-agent', 'import']);
+    expect(ids({ ...SESSION, turns: 0 })).toEqual([
+      'switch-agent',
+      'session-rules',
+      'import',
+    ]);
     expect(ids({ ...SESSION, state: 'ended' })).toEqual([
       'clone-from-here',
       'export',
@@ -320,6 +378,64 @@ describe('the loop.session.action point', () => {
     const confirm = buttons.find(button => button.textContent === 'Switch');
     await act(async () => confirm!.click());
     expect(picks).toEqual(['b']);
+  });
+
+  it('shows an entry’s panel in a dialog of its own when the host gives none (SH-54)', async () => {
+    const panelled: SessionActionContribution = {
+      id: 'a-panel',
+      label: 'A panel',
+      order: 95,
+      when: () => true,
+      run: (_session, context) =>
+        context.show?.({
+          title: 'The panel',
+          render: () => <p data-panel-body="">drawn</p>,
+        }),
+    };
+    const HostPlugin = definePlugin({
+      name: '@test/host-panel',
+      contributes: [
+        contribution(LoopSessionAction, panelled, {
+          id: panelled.id,
+          order: 95,
+        }),
+      ],
+    });
+    const reactor = buildReactorFromPlugins([ChatPlugin, HostPlugin]);
+    await reactor.start();
+    function Harness() {
+      useReactor(reactor);
+      return (
+        <ThemeProvider>
+          <SessionActionsMenu
+            uid={SESSION.uid}
+            describe={async () => SESSION}
+            context={{ client: {} as never, say: () => undefined }}
+          />
+        </ThemeProvider>
+      );
+    }
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+    await act(async () => root.render(<Harness />));
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="session-actions"]')!
+        .click(),
+    );
+    await act(async () => undefined);
+    const entry = document.querySelector<HTMLElement>(
+      '[data-session-action="a-panel"]',
+    );
+    expect(entry).not.toBeNull();
+    await act(async () => entry!.click());
+    await act(async () => undefined);
+    expect(
+      document.querySelector('[data-session-panel] [data-panel-body]')
+        ?.textContent,
+    ).toBe('drawn');
   });
 
   it('draws contributed entries from the registry and a host’s beside them', async () => {

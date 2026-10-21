@@ -137,6 +137,10 @@ const at = (uid: string): string =>
 export function appSessionsClient(options: RuntimeClientOptions) {
   const { json, stream, fetcher, headers, refused, root } = clientOf(options);
   return {
+    /** The runtime's agent-runtimes address this client speaks to. */
+    serverUrl: root,
+    /** The token it calls with now, or `undefined`. */
+    accessToken: (): string | undefined => options.getAccessToken(),
     /** Start a session with its first message. */
     start: (start: SessionStart, streaming: StreamOptions) =>
       stream(

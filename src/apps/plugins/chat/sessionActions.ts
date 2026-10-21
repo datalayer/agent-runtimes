@@ -26,6 +26,7 @@ import type {
 } from '../../core';
 import { listAgentspecs } from '../../../specs/agents';
 import { listHarnesses } from '../../../specs/harnesses';
+import { SESSION_RULES } from '../app-rules/sessionRulesAction';
 
 /** The file a session is exported as. */
 export const sessionFileName = (session: Pick<SessionFacts, 'uid'>): string =>
@@ -237,6 +238,9 @@ export const RESUME: SessionActionContribution = {
 export const CHAT_SESSION_ACTIONS: readonly SessionActionContribution[] = [
   SWITCH_AGENT,
   CLONE_FROM_HERE,
+  // The session's Rules over the thread (SH-54): every chat offers them,
+  // a chat-layout application too.
+  SESSION_RULES,
   EXPORT,
   IMPORT,
   RESUME,
