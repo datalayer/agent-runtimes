@@ -76,6 +76,23 @@ export interface ToolCallCompleteContext {
   error?: string;
 }
 
+/**
+ * A tool call said again while it runs (VSCODE VS-24): a coding agent's
+ * terminal output so far, a diff as it grows — the display its update
+ * carries (`datalayer.harness.tool_call`, SH-13), handed to the host as
+ * the stream brings it, before `onToolCallComplete`.
+ */
+export interface ToolCallUpdateContext {
+  /** The tool name as declared by the agent */
+  toolName: string;
+  /** Unique identifier for this tool invocation */
+  toolCallId: string;
+  /** Arguments passed to the tool, as far as they are known */
+  args: Record<string, unknown>;
+  /** The display the update carries, read strictly (`portable/displays`) */
+  display: import('../portable/displays').ProtocolDisplay;
+}
+
 // ---------------------------------------------------------------------------
 // View mode
 // ---------------------------------------------------------------------------
@@ -666,6 +683,13 @@ export interface ChatCommonProps {
 
   /** Post-hook: fires when a tool result is received */
   onToolCallComplete?: (context: ToolCallCompleteContext) => void;
+
+  /**
+   * Fires each time a running tool call's display is updated by the
+   * stream (a terminal's output as it streams, VS-24): a host drawing the
+   * display elsewhere — an editor's terminal — follows it as it comes.
+   */
+  onToolCallUpdate?: (context: ToolCallUpdateContext) => void;
 
   // ============ Suggestions ============
 
@@ -1652,6 +1676,13 @@ export interface ChatBaseProps {
    * ```
    */
   onToolCallComplete?: (context: ToolCallCompleteContext) => void;
+
+  /**
+   * Fires each time a running tool call's display is updated by the
+   * stream (a terminal's output as it streams, VS-24): a host drawing the
+   * display elsewhere — an editor's terminal — follows it as it comes.
+   */
+  onToolCallUpdate?: (context: ToolCallUpdateContext) => void;
 
   /**
    * The Agent Inspector's tracer: the agent's turns (`invoke_agent` spans:

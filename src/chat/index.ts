@@ -147,7 +147,7 @@ export {
 } from './tools/ToolApprovalBanner';
 
 // Components - Transport-agnostic chat
-export { Chat, type ChatProps } from './Chat';
+export { Chat, type ChatProps, type ChatSessionActions } from './Chat';
 export { ChatFloating, type ChatFloatingProps } from './ChatFloating';
 export {
   ChatInline,

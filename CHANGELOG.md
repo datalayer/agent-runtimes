@@ -2,6 +2,8 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+- **The standalone `<Chat>` opens a session and draws its menu** (VSCODE VS-24): `<Chat thread>` is forwarded to `ChatBase` — a `ResumedThread` read from its runtime by uid when `fromRuntime` is set (`GET …/apps/sessions/{uid}/messages`, else its record), the chat remounted on another thread's id, one that cannot be opened said and a new one started; `<Chat sessionActions>` draws the thread's `⋯` menu from the `loop.session.action` registry of the Reactor registered on the page (`SessionActionsMenu`, the apps' chat view's, reused — nothing copied), the host lending its ways (`download`, `choose`, `pickFile`) and told what an entry said or opened; `onSendReady` forwarded; and `onToolCallUpdate` on `<Chat>` and `ChatBase`, fired each time a running tool call's display is updated by the stream (`datalayer.harness.tool_call`: a terminal's output as it streams, a diff as it grows), so an editor's terminal follows the command as it runs.
+
 <!-- <END NEW CHANGELOG ENTRY> -->
 
 Each version names the boxes it carries (their ids, as its commits

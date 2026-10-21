@@ -93,6 +93,7 @@ import {
 import {
   BROWSER_LIMITS,
   emptyConversation,
+  HARNESS_TOOL_CALL,
   reduceConversation,
   withError,
   withoutItems,
@@ -864,6 +865,7 @@ function ChatBaseInner({
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
+  onToolCallUpdate,
   inspector: inspectorGiven,
   // Identity/Authorization props
   onAuthorizationRequired: _onAuthorizationRequired,
@@ -2566,6 +2568,8 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
+  const onToolCallUpdateRef = useRef(onToolCallUpdate);
+  onToolCallUpdateRef.current = onToolCallUpdate;
   // The Agent Inspector: the turns and tool calls, as spans, as they happen.
   const inspectorFromContext = useAgentInspectorTracer();
   const inspectorTracer = inspectorGiven ?? inspectorFromContext;
@@ -3818,6 +3822,29 @@ function ChatBaseInner({
             voiceSayRef.current?.(event.activity);
           }
           read();
+          // A running row said again with its display (VS-24): the host
+          // drawing it elsewhere follows it as it streams.
+          if (
+            event.activity?.type === HARNESS_TOOL_CALL &&
+            onToolCallUpdateRef.current
+          ) {
+            const data = event.activity.data;
+            const toolCallId =
+              data && typeof data === 'object' && 'id' in data
+                ? String((data as { id?: unknown }).id ?? '')
+                : '';
+            const row = conversationRef.current.items.find(
+              item => item.kind === 'tool' && item.id === toolCallId,
+            );
+            if (row && row.kind === 'tool' && row.display) {
+              onToolCallUpdateRef.current({
+                toolName: row.name,
+                toolCallId,
+                args: row.input ?? {},
+                display: row.display,
+              });
+            }
+          }
           break;
 
         case 'done':

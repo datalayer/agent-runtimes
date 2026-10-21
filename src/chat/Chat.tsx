@@ -26,14 +26,22 @@ import { AlertIcon, SyncIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { useConnectedIdentities } from '../identity';
+import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import type {
+  ChatBaseProps,
   ChatCommonProps,
   Extension,
   Protocol,
   ProtocolConfig,
+  ResumedThread,
 } from '../types';
 import { ChatBase } from './base/ChatBase';
 import { AgentDetails } from '../agents/AgentDetails';
+import { SessionActionsMenu } from '../apps/plugins/chat/SessionActionsMenu';
+import type { SessionActionContext } from '../apps/core';
+import { appSessionsClient } from '../portable/sessions';
+import { openThread, THREAD_WORDS } from '../portable/thread';
+import { generateMessageId } from '../types/messages';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -115,9 +123,52 @@ function getProtocolType(
 }
 
 /**
+ * What a host lends the thread's `⋯` menu (VSCODE VS-24): the ways an
+ * entry may use that only the page has — a file saved, a pick, a file
+ * picked — and what it is told. The menu itself is drawn from the
+ * `loop.session.action` registry of the Reactor registered on the page
+ * (`SessionActionsMenu`, the one the apps' chat view draws): nothing of it
+ * is copied here, and no Reactor registered means no menu.
+ */
+export interface ChatSessionActions {
+  /** Hand the person a file to save, when the host can. */
+  download?: SessionActionContext['download'];
+  /** Ask the person to pick one of several, when the host can. */
+  choose?: SessionActionContext['choose'];
+  /** Ask the person for a file, when the host can. */
+  pickFile?: SessionActionContext['pickFile'];
+  /** Told what an entry said: a swap's sentence, a refusal as the runtime said it. */
+  onSaid?: (sentence: string) => void;
+  /**
+   * Told the thread an entry opened (a clone's, an import's, a resumed
+   * one's) — which this chat opens in place too.
+   */
+  onOpenThread?: (uid: string) => void;
+}
+
+/**
  * Chat props — extends ChatCommonProps with transport-specific configuration.
  */
 export interface ChatProps extends ChatCommonProps {
+  /**
+   * The conversation to go on with (D-13, VS-24): an application's session,
+   * read from its runtime by uid when `fromRuntime` is set (`GET
+   * …/apps/sessions/{uid}/messages`, else resumed from its record), and
+   * drawn in place of the runtime's history. The chat is remounted on
+   * another thread's id; a thread that cannot be opened is said, and a
+   * new one starts.
+   */
+  thread?: ResumedThread;
+
+  /**
+   * The thread's `⋯` menu, drawn when a Reactor is registered on the page:
+   * what the host lends its entries. Absent, no menu is drawn.
+   */
+  sessionActions?: ChatSessionActions;
+
+  /** Hands the chat's send, stop, new-chat and thread to the host (`ChatBase`'s). */
+  onSendReady?: ChatBaseProps['onSendReady'];
+
   /**
    * Transport to use — REQUIRED.
    *
@@ -350,6 +401,10 @@ export function Chat({
   onApproveApproval,
   onRejectApproval,
   disableInternalJupyterTheme = false,
+  thread: givenThread,
+  sessionActions,
+  onSendReady,
+  onToolCallUpdate,
 }: ChatProps) {
   const resolvedAgentId =
     typeof agentId === 'string' && agentId.trim().length > 0
@@ -549,6 +604,183 @@ export function Chat({
     setMessageCount(nextCount);
   }, []);
 
+  /*
+   * The thread (VS-24): the host's, or the one a menu entry opened in its
+   * place (a clone's, an import's). One read from its runtime is opened
+   * here first — held there, else resumed from its record — and drawn in
+   * place of the runtime's history; one that cannot be opened is said, and
+   * a new one starts.
+   */
+  const [actionThread, setActionThread] = useState<ResumedThread | undefined>(
+    undefined,
+  );
+  const wantedThread = actionThread ?? givenThread;
+  const [openedThread, setOpenedThread] = useState<{
+    given: string;
+    thread: ResumedThread;
+    said: string;
+  } | null>(null);
+  const opening = Boolean(
+    wantedThread?.fromRuntime && openedThread?.given !== wantedThread.id,
+  );
+  useEffect(() => {
+    if (!wantedThread?.fromRuntime) {
+      return undefined;
+    }
+    let current = true;
+    void (async () => {
+      let failure = '';
+      for (let attempt = 0; attempt < 4 && current; attempt += 1) {
+        try {
+          const messages = await openThread({
+            agentBaseUrl: baseUrl,
+            agentId: resolvedAgentId,
+            uid: wantedThread.id,
+            token: authTokenProp,
+          });
+          if (current) {
+            setOpenedThread({
+              given: wantedThread.id,
+              thread: { ...wantedThread, fromRuntime: false, messages },
+              said: '',
+            });
+          }
+          return;
+        } catch (error) {
+          failure = error instanceof Error ? error.message : String(error);
+          // The runtime may still be making the application's agent.
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+      if (current) {
+        setOpenedThread({
+          given: wantedThread.id,
+          thread: {
+            id: generateMessageId(),
+            messages: [],
+            onStarted: wantedThread.onStarted,
+          },
+          said: THREAD_WORDS.notOpened(failure),
+        });
+      }
+    })();
+    return () => {
+      current = false;
+    };
+    // By the thread's id: its object is the host's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    wantedThread?.id,
+    wantedThread?.fromRuntime,
+    baseUrl,
+    resolvedAgentId,
+    authTokenProp,
+  ]);
+  const chatThread = wantedThread?.fromRuntime
+    ? openedThread?.given === wantedThread.id
+      ? openedThread.thread
+      : undefined
+    : wantedThread;
+  const threadSaid =
+    wantedThread?.fromRuntime && openedThread?.given === wantedThread.id
+      ? openedThread.said
+      : '';
+
+  /*
+   * The thread's menu (VS-24): the `loop.session.action` entries of the
+   * Reactor registered on the page, for the session the thread is — the
+   * uid the next message goes to, as the chat says it (`onSendReady`'s
+   * `thread`), kept here so the menu follows the header's +.
+   */
+  const reactor = useOptionalReactorPlatform();
+  const [threadId, setThreadId] = useState<string>(chatThread?.id ?? '');
+  const hostSendReadyRef = useRef(onSendReady);
+  hostSendReadyRef.current = onSendReady;
+  const handleSendReady = useCallback<
+    NonNullable<ChatBaseProps['onSendReady']>
+  >(controls => {
+    if (controls) {
+      setThreadId(controls.thread());
+    }
+    hostSendReadyRef.current?.(controls);
+  }, []);
+  const threadForBase = useMemo<ResumedThread | undefined>(
+    () =>
+      chatThread
+        ? {
+            ...chatThread,
+            onStarted: started => {
+              setThreadId(started);
+              chatThread.onStarted?.(started);
+            },
+          }
+        : undefined,
+    [chatThread],
+  );
+  const [actionSaid, setActionSaid] = useState('');
+  const sessionsClient = useMemo(
+    () =>
+      appSessionsClient({
+        baseUrl,
+        getAccessToken: () => authTokenProp,
+        fetch: (...args) => fetch(...args),
+      }),
+    [baseUrl, authTokenProp],
+  );
+  const sessionActionsRef = useRef(sessionActions);
+  sessionActionsRef.current = sessionActions;
+  const sessionContext = useMemo<SessionActionContext>(
+    () => ({
+      client: sessionsClient,
+      say: sentence => {
+        setActionSaid(sentence);
+        sessionActionsRef.current?.onSaid?.(sentence);
+      },
+      openThread: uid => {
+        setActionThread({ id: uid, messages: [], fromRuntime: true });
+        sessionActionsRef.current?.onOpenThread?.(uid);
+      },
+      ...(sessionActionsRef.current?.download
+        ? { download: sessionActionsRef.current.download }
+        : {}),
+      ...(sessionActionsRef.current?.choose
+        ? { choose: sessionActionsRef.current.choose }
+        : {}),
+      ...(sessionActionsRef.current?.pickFile
+        ? { pickFile: sessionActionsRef.current.pickFile }
+        : {}),
+    }),
+    [sessionsClient],
+  );
+  const describeSession = useCallback(
+    (uid: string) => sessionsClient.described(uid),
+    [sessionsClient],
+  );
+  const menuDrawn = Boolean(sessionActions && reactor);
+  const mergedHeaderActions = useMemo(
+    () =>
+      menuDrawn ? (
+        <Box display="inline-flex" alignItems="center" gap={2}>
+          {headerActions}
+          <SessionActionsMenu
+            uid={threadId || chatThread?.id || undefined}
+            describe={describeSession}
+            context={sessionContext}
+          />
+        </Box>
+      ) : (
+        headerActions
+      ),
+    [
+      menuDrawn,
+      headerActions,
+      threadId,
+      chatThread?.id,
+      describeSession,
+      sessionContext,
+    ],
+  );
+
   const headerButtons = useMemo(
     () => ({
       showNewChat: showNewChatButton,
@@ -701,95 +933,136 @@ export function Chat({
                 </Text>
               </Box>
             )}
-            <ChatBase
-              title={title}
-              subtitle={subtitle}
-              brandIcon={brandIcon}
-              showHeader={showHeader}
-              protocol={protocolConfig}
-              placeholder={placeholder}
-              description={description}
-              suggestions={suggestions}
-              submitOnSuggestionClick={submitOnSuggestionClick}
-              autoFocus={autoFocus}
-              runtimeId={runtimeId}
-              historyEndpoint={historyEndpoint}
-              pendingPrompt={pendingPrompt}
-              showInformation={showInformation}
-              onInformationClick={handleInformationClick}
-              headerContent={headerContent}
-              headerActions={headerActions}
-              showModelSelector={showModelSelector}
-              showToolsMenu={showToolsMenu}
-              showInput={showInput}
-              disableInputPrompt={disableInputPrompt}
-              disabled={disabled}
-              disableReason={disableReason}
-              overlay={overlay}
-              launching={launching}
-              launchingMessage={launchingMessage}
-              autoConnect={autoConnect}
-              showSkillsMenu={showSkillsMenu}
-              showTokenUsage={showTokenUsage}
-              codemodeEnabled={codemodeEnabled}
-              onToggleCodemode={onToggleCodemode}
-              initialModel={initialModel}
-              availableModels={availableModels}
-              mcpServers={mcpServers}
-              initialSkills={initialSkills}
-              connectedIdentities={identitiesForChat}
-              onNewChat={handleNewChat}
-              onMessagesChange={handleMessagesChange}
-              headerButtons={headerButtons}
-              avatarConfig={avatarConfig}
-              backgroundColor="canvas.default"
-              focusTrigger={focusTrigger}
-              chatViewMode={chatViewMode}
-              onChatViewModeChange={onChatViewModeChange}
-              frontendTools={frontendTools}
-              enableEphemeralNotebook={enableEphemeralNotebook}
-              initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
-              onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
-              enableEphemeralDocument={enableEphemeralDocument}
-              initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
-              onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
-              collapsed={collapsed}
-              onExpandFromCollapsed={onExpandFromCollapsed}
-              ephemeralNotebookToolbar={ephemeralNotebookToolbar}
-              ephemeralNotebookToolbarExtraItems={
-                ephemeralNotebookToolbarExtraItems
-              }
-              ephemeralDocumentToolbarExtraItems={
-                ephemeralDocumentToolbarExtraItems
-              }
-              ephemeralNotebookCollaborationProvider={
-                ephemeralNotebookCollaborationProvider
-              }
-              ephemeralNotebookCollaborationDocumentId={
-                ephemeralNotebookCollaborationDocumentId
-              }
-              ephemeralDocumentCollaboration={ephemeralDocumentCollaboration}
-              ephemeralRuntimeOverride={ephemeralRuntimeOverride}
-              onToolCallStart={onToolCallStart}
-              onToolCallComplete={onToolCallComplete}
-              hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-              contextSnapshot={contextSnapshot}
-              mcpStatusData={mcpStatusData}
-              sandboxStatusData={sandboxStatusData}
-              kernel={kernel}
-              kernelIndicatorPlacement={kernelIndicatorPlacement}
-              kernelEnvironmentName={kernelEnvironmentName}
-              kernelCpu={kernelCpu}
-              kernelMemory={kernelMemory}
-              kernelGpu={kernelGpu}
-              themeVariant={themeVariant}
-              colorMode={colorMode}
-              showToolApprovalBanner={showToolApprovalBanner}
-              pendingApprovals={pendingApprovals}
-              onApproveApproval={onApproveApproval}
-              onRejectApproval={onRejectApproval}
-              disableInternalJupyterTheme={disableInternalJupyterTheme}
-            />
+            {threadSaid || actionSaid ? (
+              // What opening the thread, or a menu entry, said: a refusal
+              // as the runtime said it, a swap's sentence — until dismissed.
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={2}
+                px={3}
+                py={2}
+                bg="attention.subtle"
+                borderBottom="1px solid"
+                borderColor="attention.muted"
+                data-testid="chat-thread-said"
+              >
+                <Text sx={{ fontSize: 1, color: 'attention.fg', flex: 1 }}>
+                  {actionSaid || threadSaid}
+                </Text>
+                <Button
+                  size="small"
+                  variant="invisible"
+                  onClick={() => setActionSaid('')}
+                >
+                  Dismiss
+                </Button>
+              </Box>
+            ) : null}
+            {opening ? (
+              <Text
+                as="p"
+                role="status"
+                sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
+              >
+                {THREAD_WORDS.opening}
+              </Text>
+            ) : (
+              <ChatBase
+                // Another thread is another conversation: remounted on its id.
+                key={chatThread?.id ?? 'own'}
+                thread={threadForBase}
+                onSendReady={handleSendReady}
+                onToolCallUpdate={onToolCallUpdate}
+                title={title}
+                subtitle={subtitle}
+                brandIcon={brandIcon}
+                showHeader={showHeader}
+                protocol={protocolConfig}
+                placeholder={placeholder}
+                description={description}
+                suggestions={suggestions}
+                submitOnSuggestionClick={submitOnSuggestionClick}
+                autoFocus={autoFocus}
+                runtimeId={runtimeId}
+                historyEndpoint={historyEndpoint}
+                pendingPrompt={pendingPrompt}
+                showInformation={showInformation}
+                onInformationClick={handleInformationClick}
+                headerContent={headerContent}
+                headerActions={mergedHeaderActions}
+                showModelSelector={showModelSelector}
+                showToolsMenu={showToolsMenu}
+                showInput={showInput}
+                disableInputPrompt={disableInputPrompt}
+                disabled={disabled}
+                disableReason={disableReason}
+                overlay={overlay}
+                launching={launching}
+                launchingMessage={launchingMessage}
+                autoConnect={autoConnect}
+                showSkillsMenu={showSkillsMenu}
+                showTokenUsage={showTokenUsage}
+                codemodeEnabled={codemodeEnabled}
+                onToggleCodemode={onToggleCodemode}
+                initialModel={initialModel}
+                availableModels={availableModels}
+                mcpServers={mcpServers}
+                initialSkills={initialSkills}
+                connectedIdentities={identitiesForChat}
+                onNewChat={handleNewChat}
+                onMessagesChange={handleMessagesChange}
+                headerButtons={headerButtons}
+                avatarConfig={avatarConfig}
+                backgroundColor="canvas.default"
+                focusTrigger={focusTrigger}
+                chatViewMode={chatViewMode}
+                onChatViewModeChange={onChatViewModeChange}
+                frontendTools={frontendTools}
+                enableEphemeralNotebook={enableEphemeralNotebook}
+                initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
+                onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
+                enableEphemeralDocument={enableEphemeralDocument}
+                initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
+                onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
+                collapsed={collapsed}
+                onExpandFromCollapsed={onExpandFromCollapsed}
+                ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+                ephemeralNotebookToolbarExtraItems={
+                  ephemeralNotebookToolbarExtraItems
+                }
+                ephemeralDocumentToolbarExtraItems={
+                  ephemeralDocumentToolbarExtraItems
+                }
+                ephemeralNotebookCollaborationProvider={
+                  ephemeralNotebookCollaborationProvider
+                }
+                ephemeralNotebookCollaborationDocumentId={
+                  ephemeralNotebookCollaborationDocumentId
+                }
+                ephemeralDocumentCollaboration={ephemeralDocumentCollaboration}
+                ephemeralRuntimeOverride={ephemeralRuntimeOverride}
+                onToolCallStart={onToolCallStart}
+                onToolCallComplete={onToolCallComplete}
+                hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+                contextSnapshot={contextSnapshot}
+                mcpStatusData={mcpStatusData}
+                sandboxStatusData={sandboxStatusData}
+                kernel={kernel}
+                kernelIndicatorPlacement={kernelIndicatorPlacement}
+                kernelEnvironmentName={kernelEnvironmentName}
+                kernelCpu={kernelCpu}
+                kernelMemory={kernelMemory}
+                kernelGpu={kernelGpu}
+                themeVariant={themeVariant}
+                colorMode={colorMode}
+                showToolApprovalBanner={showToolApprovalBanner}
+                pendingApprovals={pendingApprovals}
+                onApproveApproval={onApproveApproval}
+                onRejectApproval={onRejectApproval}
+                disableInternalJupyterTheme={disableInternalJupyterTheme}
+              />
+            )}
           </Box>
         </Box>
       </QueryClientProvider>
