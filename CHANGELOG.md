@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.76
+
+22 October 2026. A team seat's completed task leaves its session on the run.
+
+- **The completed attempt carries the seat's apps session** (META_HARNESS MH-38, MH-42): the orchestration A2A adapter named the session a seat worked in on every ending but the completed one, so a team run's completed seats had no session to swap, clone or export.
+
 ## 1.5.75
 
 22 October 2026. 1.5.74 published: its release's tests failed on a test reusing a session uid another test's recorder had started (a recorder adopts a session another started, 9095ace5); each test now starts with no session started by any recorder. The content is 1.5.74's.
