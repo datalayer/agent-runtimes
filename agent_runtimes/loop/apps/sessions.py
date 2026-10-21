@@ -58,6 +58,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import json
 import logging
 import re
@@ -160,6 +161,21 @@ MAX_TEXT_CHARACTERS = 120_000
 
 #: Where a session's files are put in its sandbox: ``files/<session>/<name>``.
 FILES_DIR = "files"
+
+#: A title is at most this long (MH-43).
+TITLE_LIMIT = 200
+
+#: A title taken from the first turn's first line is cut here (MH-43).
+FIRST_LINE_TITLE = 60
+
+
+def first_line_title(text: str) -> str:
+    """The first turn's first line, cut at 60 characters: a session's title until it is given one."""
+    line = next(
+        (part.strip() for part in str(text or "").splitlines() if part.strip()), ""
+    )
+    return line[:FIRST_LINE_TITLE]
+
 
 #: A session's uid, when its caller names it (the chat's thread).
 SESSION_UID = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
@@ -857,13 +873,17 @@ class LiveSession:
         from agent_runtimes.guardrails.shield_policy import rules_policy
 
         try:
-            session_rules().add(
-                self.uid, rule_from(data), application=rules_policy(self.app)
-            )
+            rule = rule_from(data)
+            session_rules().add(self.uid, rule, application=rules_policy(self.app))
         except SessionRuleRefused as refused:
             raise SessionRefused(422, str(refused)) from None
         except Exception as refused:  # noqa: BLE001 - IAM unreadable: nothing is tightened under nothing
             raise SessionRefused(503, str(refused)) from None
+        # In the record too (MH-03): a resume from it has the rule again.
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.ruled(
+            self.uid, rule=json.loads(rule.model_dump_json(exclude_none=True))
+        )
         return self.rules_in_force()
 
     def remove_rule(self, name: str) -> Dict[str, Any]:
@@ -877,7 +897,40 @@ class LiveSession:
             session_rules().remove(self.uid, name)
         except SessionRuleRefused as refused:
             raise SessionRefused(404, str(refused)) from None
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.ruled(self.uid, removed=name)
         return self.rules_in_force()
+
+    def _title_from_turn(self, text: str) -> None:
+        """The first turn's first line as the title, until the person gives one (MH-43)."""
+        if self.title or any(m.get("role") == "user" for m in self.messages):
+            return
+        title = first_line_title(text)
+        if not title:
+            return
+        self.title = title
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.titled(self.uid, title=self.title, archived=self.archived)
+
+    def retitle(self, title: str) -> Dict[str, Any]:
+        """The person's title (MH-43): at most 200 characters, in the record."""
+        title = str(title or "").strip()
+        if len(title) > TITLE_LIMIT:
+            raise SessionRefused(
+                422,
+                f"A session's title is at most {TITLE_LIMIT} characters; this one has {len(title)}.",
+            )
+        self.title = title
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.titled(self.uid, title=self.title, archived=self.archived)
+        return self.describe()
+
+    def set_archived(self, archived: bool) -> Dict[str, Any]:
+        """Hide the session from the list, or bring it back (MH-43)."""
+        self.archived = bool(archived)
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.titled(self.uid, title=self.title, archived=self.archived)
+        return self.describe()
 
     def describe(self) -> Dict[str, Any]:
         """The session as the API says it."""
@@ -1532,6 +1585,7 @@ class LiveSession:
                 return
             if not opener:
                 return
+            self._title_from_turn(opener)
             if self.host is not None:
                 await self._message_code(opener)
                 return
@@ -1775,6 +1829,7 @@ class LiveSession:
             raise SessionRefused(422, "Nothing to send: write a message first.")
         if self.turn == "waiting":
             return self._answer_waiting(text=text, head=head)
+        self._title_from_turn(text)
         if self.host is not None:
             return self._start_turn(
                 lambda: self._message_code(text), wraps_run=True, head=head
@@ -1842,15 +1897,28 @@ class LiveSession:
         )
 
     def _keep(self, given: List[UploadedFile], path: str = "") -> None:
-        """Say the files given among the session's."""
+        """Say the files given among the session's, and on the record (MH-01):
+        name, type, size, digest and place — never the bytes.
+        """
         for file in given:
+            digest = "sha256:" + hashlib.sha256(file.content).hexdigest()
             self.files.append(
                 {
                     "name": file.name,
                     "type": file.media_type,
                     "size": len(file.content),
                     "path": path,
+                    "digest": digest,
                 }
+            )
+            self.recorder.start(self.uid, facts=self.facts())
+            self.recorder.filed(
+                self.uid,
+                name=file.name,
+                media_type=file.media_type,
+                size=len(file.content),
+                digest=digest,
+                path=path,
             )
 
     def _files_for_agent(
@@ -2668,6 +2736,7 @@ def new_session(
     lineage: Optional[Mapping[str, Any]] = None,
     runs_on: Optional[Mapping[str, Any]] = None,
     archived: bool = False,
+    files: Optional[List[Dict[str, Any]]] = None,
 ) -> LiveSession:
     """A session of an application's agent on this runtime, kept by uid.
 
@@ -2725,6 +2794,7 @@ def new_session(
         recorder=recorder,
         settings=values,
         messages=list(messages or []),
+        files=[dict(item) for item in (files or [])],
         resumed=resumed,
         profile=profile,
         user=user,
@@ -2807,20 +2877,102 @@ async def record_entries(
         raise SessionRefused(refused.status, refused.reason) from None
 
 
+@dataclass
+class Rebuilt:
+    """A session rebuilt from its record (MH-03): everything a resume gives back."""
+
+    messages: List[Dict[str, Any]]
+    files: List[Dict[str, Any]]
+    rules: List[Dict[str, Any]]
+    title: str
+    archived: bool
+    lineage: Dict[str, Any]
+    state: str
+    agent: str
+    turns: int
+
+
+_ROW_FACTS = (
+    "kind",
+    "class",
+    "path",
+    "command",
+    "url",
+    "what",
+    "status",
+    "behaviour",
+    "because",
+    "classes",
+    "outcome",
+    "note",
+    "input",
+)
+
+
+def _row_shown(entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """A tool row, a step, a decision or an approval of the record as a
+    display (`StepShown`), re-shown on a resume as the live one was.
+    """
+    kind = str(entry.get("kind") or "")
+    payload = dict(entry.get("payload") or {})
+    at = str(entry.get("at") or "")
+    if kind == "step":
+        return StepShown(
+            id=str(payload.get("id") or _new_id()),
+            name=str(payload.get("name") or payload.get("event") or "step"),
+            kind=str(payload.get("kind") or "step"),
+            parent_id=payload.get("parent_id") or None,
+            input=payload.get("input"),
+            output=payload.get("output") or payload.get("what"),
+            error=str(payload.get("error") or ""),
+            started_at=str(payload.get("started_at") or at),
+            ended_at=payload.get("ended_at") or at,
+        ).model_dump(mode="json")
+    if kind in ("tool_call", "decision", "approval"):
+        name = str(payload.get("tool") or payload.get("name") or kind)
+        facts = {key: value for key, value in payload.items() if key in _ROW_FACTS}
+        return StepShown(
+            id=str(payload.get("tool_call_id") or _new_id()) + f"-{kind}",
+            name=name,
+            kind="tool" if kind == "tool_call" else kind,
+            input=facts or None,
+            output=payload.get("display")
+            or payload.get("output")
+            or str(entry.get("summary") or ""),
+            error=str(payload.get("refused") or ""),
+            started_at=at,
+            ended_at=at,
+        ).model_dump(mode="json")
+    return None
+
+
 async def conversation_from_record(
     session_uid: str, app: AppSpec, instance: Mapping[str, Any], bearer: str
 ) -> List[Dict[str, Any]]:
-    """The conversation of a session this runtime no longer holds, from its record.
+    """The conversation of a session this runtime no longer holds, from its record, as AG-UI messages."""
+    return (await rebuilt_from_record(session_uid, app, instance, bearer)).messages
 
-    Its ``turn`` entries — what was asked and answered — as AG-UI messages.
+
+async def rebuilt_from_record(
+    session_uid: str, app: AppSpec, instance: Mapping[str, Any], bearer: str
+) -> Rebuilt:
+    """A session this runtime no longer holds, rebuilt whole from its record (MH-03).
+
+    Its turns — what was asked and answered — as AG-UI messages; its tool
+    rows, steps, decisions and approvals as displays under them, re-shown on
+    the resume; the files given, their places in the sandbox re-stated; the
+    session's Rules, applied again; its title, archive flag, lineage, state
+    and agent as the record says them.
 
     Raises
     ------
     SessionRefused
         When the application keeps no conversations, the caller has no token
-        to read the record with, the record is not this application's, or it
-        holds no turn of the session.
+        to read the record with, the record is not this application's, the
+        session ended (409, naming clone), or the record holds no turn of it.
     """
+    from agent_runtimes.loop.apps.record import session_from_entries
+
     include = {str(getattr(item, "value", item)) for item in app.record.include}
     if "conversations" not in include:
         raise SessionRefused(
@@ -2839,24 +2991,112 @@ async def conversation_from_record(
         raise SessionRefused(
             409, f"Session {session_uid} is not a session of {app.name}."
         )
-    messages: List[Dict[str, Any]] = []
-    for entry in entries:
-        if entry.get("kind") != "turn":
-            continue
-        payload = entry.get("payload") or {}
-        asked, answered = (
-            str(payload.get("asked") or ""),
-            str(payload.get("answered") or ""),
+    try:
+        described = session_from_entries(session_uid, entries)
+    except ValueError as wrong:
+        raise SessionRefused(422, str(wrong)) from None
+    if described is not None and described["state"] == "ended":
+        raise SessionRefused(
+            409,
+            f"Session {session_uid} ended; an ended session is not resumed — clone it to go on from it.",
         )
-        if asked:
-            messages.append({"id": _new_id(), "role": "user", "content": asked})
-        if answered:
-            messages.append({"id": _new_id(), "role": "assistant", "content": answered})
-    if not messages:
+    messages: List[Dict[str, Any]] = []
+    files: List[Dict[str, Any]] = []
+    rules: Dict[str, Dict[str, Any]] = {}
+    for entry in entries:
+        kind = entry.get("kind")
+        payload = entry.get("payload") or {}
+        if kind == "turn":
+            asked, answered = (
+                str(payload.get("asked") or ""),
+                str(payload.get("answered") or ""),
+            )
+            if asked:
+                messages.append({"id": _new_id(), "role": "user", "content": asked})
+            if answered:
+                messages.append(
+                    {"id": _new_id(), "role": "assistant", "content": answered}
+                )
+        elif kind == "file":
+            file = {
+                "name": str(payload.get("name") or ""),
+                "type": str(payload.get("type") or ""),
+                "size": int(payload.get("size") or 0),
+                "path": str(payload.get("path") or ""),
+                "digest": str(payload.get("digest") or ""),
+            }
+            files.append(file)
+            messages.append(
+                {
+                    "id": _new_id(),
+                    "role": "assistant",
+                    "content": f"The file {file['name']} ({file['size']} bytes) was given"
+                    + (
+                        f"; it is at {file['path']} in the sandbox."
+                        if file["path"]
+                        else "."
+                    ),
+                    "name": app.name,
+                }
+            )
+        elif kind == "rule":
+            if payload.get("removed"):
+                rules.pop(str(payload["removed"]), None)
+            elif isinstance(payload.get("rule"), dict) and payload["rule"].get("name"):
+                rules[str(payload["rule"]["name"])] = dict(payload["rule"])
+        else:
+            shown = _row_shown(entry)
+            if shown is not None:
+                messages.append(
+                    {
+                        "id": _new_id(),
+                        "role": "assistant",
+                        "content": str(entry.get("summary") or ""),
+                        "name": app.name,
+                        "shows": shown,
+                    }
+                )
+    if not any(m.get("role") == "user" for m in messages):
         raise SessionRefused(
             404, f"The record holds no turn of session {session_uid} to resume it from."
         )
-    return messages
+    return Rebuilt(
+        messages=messages,
+        files=files,
+        rules=list(rules.values()),
+        title=str(described["title"] if described else ""),
+        archived=bool(described["archived"] if described else False),
+        lineage=dict(
+            described["lineage"]
+            if described
+            else {"forked_from": None, "imported_from": None}
+        ),
+        state=str(described["state"] if described else "paused"),
+        agent=str(described["agent"] if described else ""),
+        turns=sum(1 for m in messages if m.get("role") == "user"),
+    )
+
+
+def apply_rules(live: "LiveSession", rules: List[Dict[str, Any]]) -> List[str]:
+    """The record's rules applied to a resumed session; the names of those refused."""
+    from agent_runtimes.guardrails.session_rules import rule_from, session_rules
+    from agent_runtimes.guardrails.shield_policy import rules_policy
+
+    refused: List[str] = []
+    for data in rules:
+        try:
+            session_rules().add(
+                live.uid, rule_from(data), application=rules_policy(live.app)
+            )
+        except Exception as wrong:  # noqa: BLE001 - said, the rest applied
+            logger.warning(
+                "The rule %r of session %s was not applied again: %s",
+                data.get("name"),
+                live.uid,
+                wrong,
+            )
+            refused.append(str(data.get("name") or ""))
+    return refused
 
 
 __all__ = [
@@ -2878,7 +3118,11 @@ __all__ = [
     "check_state",
     "code_of",
     "serve_agent_code",
+    "Rebuilt",
+    "TITLE_LIMIT",
+    "apply_rules",
     "conversation_from_record",
+    "first_line_title",
     "forget_sessions",
     "given_files",
     "is_text",
@@ -2888,6 +3132,7 @@ __all__ = [
     "put_in_sandbox",
     "question_in_words",
     "question_of",
+    "rebuilt_from_record",
     "record_entries",
     "run_hooks",
     "session_of",

@@ -165,7 +165,8 @@ def test_one_visitor_never_reaches_anothers_session_on_the_same_runtime(
         == 404
     )
     assert visitors_runtime.get("/api/v1/apps/sessions", headers=bob).json() == {
-        "sessions": []
+        "sessions": [],
+        "has_more": False,
     }
 
     # Their own, on the same agent, apart.

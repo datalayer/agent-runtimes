@@ -25,6 +25,13 @@ import tempfile  # noqa: E402
 os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
     tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "protocol-state.sqlite"
 )
+# Sessions are kept in a file store of the test process's own (MH-F03): no
+# test reads or writes the platform's record, whatever the shell's
+# DATALAYER_* say; a test of the record store installs its fake.
+os.environ["AGENT_RUNTIMES_SESSION_STORE"] = "file"
+os.environ["AGENT_RUNTIMES_SESSIONS_PATH"] = os.path.join(
+    tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "sessions"
+)
 
 # A machine with the platform's magic key launches unmetered: no credits asked,
 # a reservation that never ends. The tests of launching expect a metered one;

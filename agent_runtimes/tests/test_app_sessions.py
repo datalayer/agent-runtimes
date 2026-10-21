@@ -12,6 +12,7 @@ application's code reacting, and asking for a file the page gives.
 """
 
 import base64
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple
@@ -594,6 +595,8 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
             "type": "application/pdf",
             "size": len(pdf),
             "path": "files/thread-0002/report.pdf",
+            # Its digest, as the record keeps a file (MH-01): never its bytes.
+            "digest": "sha256:" + hashlib.sha256(pdf).hexdigest(),
         }
     ]
 
@@ -1258,7 +1261,11 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     [offer] = shown["actions"]
     assert offer["name"] == "reactor.answer"
     waiting = local.get("/api/v1/apps/sessions/session-0007").json()
-    assert (waiting["state"], waiting["turn"], waiting["asking"]["kind"]) == ("open", "waiting", "file")
+    assert (waiting["state"], waiting["turn"], waiting["asking"]["kind"]) == (
+        "open",
+        "waiting",
+        "file",
+    )
     assert local.post(
         "/api/v1/apps/sessions/session-0007/messages", json={"text": "hm"}
     ).json()["detail"] == (

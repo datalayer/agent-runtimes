@@ -112,7 +112,7 @@ async def test_a_choice_is_shown_with_buttons_and_a_press_answers_it() -> None:
     live, got, events = await asking(
         "session-ask-1", ChoiceQuestion("May this be recorded?", ("Yes", "No"))
     )
-    assert live.state == "waiting" and got == []
+    assert live.turn == "waiting" and got == []
     # The run ends on the question, its result saying what it asks.
     assert events[-1]["type"] == "RUN_FINISHED"
     assert events[-1]["result"]["asking"]["kind"] == "choice"
@@ -165,7 +165,7 @@ async def test_an_answer_not_among_what_was_asked_is_refused_and_it_still_waits(
         await answered(live, "a-2")
     assert refused.value.status == 422
     assert "Team, Solo" in refused.value.reason
-    assert got == [] and live.state == "waiting"
+    assert got == [] and live.turn == "waiting"
     # A message typed in the chat is not an answer.
     with pytest.raises(sessions.SessionRefused) as typed:
         live.run_agui(
@@ -257,7 +257,7 @@ async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
         with pytest.raises(sessions.SessionRefused) as refused:
             await answered(live, f"k-{status}")
         assert refused.value.status == status
-        assert live.state == "waiting"
+        assert live.turn == "waiting"
     live.press_up(ADA, press(display, csv.model_dump(), "k-ok"))
     events = await answered(live, "k-ok")
     assert events[0]["type"] == "RUN_STARTED"

@@ -1557,14 +1557,49 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
         raise _refused(refused) from None
 
 
+def _owner_of(caller: Any) -> Dict[str, str]:
+    """Who a listing is for: the caller, as the store filters by opener."""
+    return {"kind": str(caller.kind), "uid": str(caller.uid or "")}
+
+
+async def _store_refused(call: Any) -> Any:
+    """A store's answer, its refusal as the route's."""
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreError,
+        SessionStoreRefused,
+    )
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    try:
+        return await call
+    except SessionStoreRefused as refused:
+        raise _refused(SessionRefused(503, str(refused))) from None
+    except SessionStoreError as refused:
+        raise _refused(SessionRefused(refused.status, refused.reason)) from None
+
+
 @router.get("/sessions")
 async def list_sessions(
-    request: Request, agent: str = "", state: str = ""
+    request: Request,
+    agent: str = "",
+    state: str = "",
+    app: str = "",
+    q: str = "",
+    archived: bool = False,
+    after: str = "",
+    limit: int = 50,
+    held: bool = False,
 ) -> Dict[str, Any]:
-    """The caller's sessions held by this runtime, of one agent or all;
-    ``?state=`` one of open, paused, ended — any other word is 422.
+    """The caller's sessions, held by this runtime **and** recorded (MH-02):
+    each with its state, turn phase, whether it is held here, agent, harness,
+    turns, title, lineage, where it runs and when it started; newest first,
+    paged (``?limit=``, 50 and at most 200; ``?after=<uid>``; ``has_more``),
+    filtered (``?app=``, ``?agent=``, ``?state=`` — an unknown word is 422 —,
+    ``?q=`` on the title, ``?archived=true`` to include the archived).
+    ``?held=true`` lists what this runtime holds alone.
     """
     from agent_runtimes.loop.apps import sessions
+    from agent_runtimes.loop.apps.session_store import active_store
     from agent_runtimes.loop.apps.sessions import SessionRefused, check_state
 
     try:
@@ -1572,22 +1607,161 @@ async def list_sessions(
     except SessionRefused as refused:
         raise _refused(refused) from None
     authorized = await _authorize(request, False)
-    return {
-        "sessions": [
-            live.describe()
-            for live in sessions._SESSIONS.values()
-            if (not agent or live.agent_id == agent)
-            and (not wanted or live.state == wanted)
-            and live.answers_to(authorized.caller)
-        ]
-    }
+    limit = max(1, min(int(limit or 50), 200))
+    held_here = [
+        live.describe()
+        for live in sessions._SESSIONS.values()
+        if (not agent or live.agent_spec == agent)
+        and (not wanted or live.state == wanted)
+        and (
+            not app
+            or live.app.id == app
+            or str(live.instance.get("app_uid") or "") == app
+        )
+        and (not q or q.lower() in live.title.lower())
+        and (archived or not live.archived)
+        and live.answers_to(authorized.caller)
+    ]
+    if held:
+        return {"sessions": held_here, "has_more": False}
+    page = await _store_refused(
+        active_store().list(
+            _owner_of(authorized.caller),
+            app=app,
+            after=after,
+            limit=limit,
+            agent=agent,
+            state=wanted,
+            query=q,
+            archived=archived,
+        )
+    )
+    by_uid = {item["uid"]: item for item in held_here}
+    listed: List[Dict[str, Any]] = []
+    for recorded in page.sessions:
+        # A session held here is said as the runtime holds it: its turn phase
+        # and what it asks are the runtime's, not the record's.
+        listed.append(by_uid.pop(recorded["uid"], None) or {**recorded, "held": False})
+    if not after:
+        # Held sessions the record does not list yet (its write in flight): first.
+        listed = [*by_uid.values(), *listed]
+    return {"sessions": listed, "has_more": page.has_more}
+
+
+async def _recorded(uid: str, request: Request) -> Dict[str, Any]:
+    """A session this runtime does not hold, from the record, for its owner:
+    a stranger's — an organization's admin included — is a 404.
+    """
+    from agent_runtimes.loop.apps.session_store import active_store
+
+    authorized = await _authorize(request, False)
+    described = await _store_refused(active_store().get(uid))
+    if described is None:
+        raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
+    caller = authorized.caller
+    owner = str(described.get("opened_by", {}).get("uid") or "")
+    if caller.kind != "local" and (
+        not owner or owner != caller.uid or caller.kind not in ("person", "host")
+    ):
+        raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
+    return described
 
 
 @router.get("/sessions/{uid}")
 async def get_session(uid: str, request: Request) -> Dict[str, Any]:
-    """What a session is: its application, in whose name it runs, where it stands."""
-    live, _ = await _held(uid, request)
-    return dict(live.describe())
+    """What a session is: its application, in whose name it runs, where it
+    stands — held here, or, for its owner, as its record says it (MH-02).
+    """
+    from agent_runtimes.loop.apps.sessions import session_of
+
+    if session_of(uid) is not None:
+        live, _ = await _held(uid, request)
+        return dict(live.describe())
+    return await _recorded(uid, request)
+
+
+class TitleRequest(BaseModel):
+    """A session's title, the person's (MH-43)."""
+
+    title: str = Field("", description="At most 200 characters; empty takes it back")
+
+
+class ArchivedRequest(BaseModel):
+    """Whether a session is hidden from the list (MH-43)."""
+
+    archived: bool
+
+
+async def _titled_in_record(
+    uid: str, request: Request, *, title: Optional[str], archived: Optional[bool]
+) -> Dict[str, Any]:
+    """A `titled` entry on a session this runtime does not hold, through the store."""
+    from agent_runtimes.loop.apps.session_store import active_store
+
+    described = await _recorded(uid, request)
+    if described["state"] == "ended" and title is None:
+        pass
+    new_title = described["title"] if title is None else title
+    new_archived = described["archived"] if archived is None else archived
+    await _store_refused(
+        active_store().append(
+            uid,
+            [
+                {
+                    "kind": "titled",
+                    "summary": new_title
+                    or ("Archived" if new_archived else "Untitled"),
+                    "payload": {"title": new_title, "archived": new_archived},
+                }
+            ],
+            app_uid=described["instance"]["app_uid"] or described["app"]["id"],
+            deployment_uid=described["instance"]["deployment_uid"],
+            version=described["instance"]["version"],
+            opened_by=described["opened_by"]["uid"],
+        )
+    )
+    return {**described, "title": new_title, "archived": new_archived}
+
+
+@router.put("/sessions/{uid}/title")
+async def retitle_session(
+    uid: str, body: TitleRequest, request: Request
+) -> Dict[str, Any]:
+    """Rename a session (MH-43): at most 200 characters, 422 over it; in the record."""
+    from agent_runtimes.loop.apps.sessions import (
+        TITLE_LIMIT,
+        SessionRefused,
+        session_of,
+    )
+
+    title = body.title.strip()
+    if len(title) > TITLE_LIMIT:
+        raise _refused(
+            SessionRefused(
+                422,
+                f"A session's title is at most {TITLE_LIMIT} characters; this one has {len(title)}.",
+            )
+        )
+    if session_of(uid) is not None:
+        live, _ = await _held(uid, request)
+        try:
+            return dict(live.retitle(title))
+        except SessionRefused as refused:
+            raise _refused(refused) from None
+    return await _titled_in_record(uid, request, title=title, archived=None)
+
+
+@router.put("/sessions/{uid}/archived")
+async def archive_session(
+    uid: str, body: ArchivedRequest, request: Request
+) -> Dict[str, Any]:
+    """Archive a session — hidden from the list unless ``?archived=true`` — or bring it back (MH-43)."""
+    from agent_runtimes.loop.apps.sessions import session_of
+
+    if session_of(uid) is not None:
+        live, _ = await _held(uid, request)
+        return dict(live.set_archived(body.archived))
+    return await _titled_in_record(uid, request, title=None, archived=body.archived)
 
 
 @router.get("/sessions/{uid}/messages")
@@ -2011,8 +2185,9 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
     from agent_runtimes.loop.apps.sessions import (
         SessionRefused,
         agent_app,
-        conversation_from_record,
+        apply_rules,
         new_session,
+        rebuilt_from_record,
         session_of,
     )
 
@@ -2046,7 +2221,9 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         acts_as = await _acts_as(instance, authorized.caller, bearer, app)
         # Opened again: its user signed again, when its application takes only that (D-21).
         user = _signed_user(app, instance, body.user_token)
-        messages = await conversation_from_record(uid, app, instance, bearer)
+        # The whole conversation (MH-03): turns, tool rows and displays,
+        # files, the session's Rules, its title and lineage.
+        rebuilt = await rebuilt_from_record(uid, app, instance, bearer)
         _prune()
         live = new_session(
             agent_id=body.agent,
@@ -2055,10 +2232,15 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
             opened_by=authorized.caller,
             acts_as=acts_as,
             uid=uid,
-            messages=messages,
+            messages=rebuilt.messages,
+            files=rebuilt.files,
             resumed=True,
             user=user,
+            title=rebuilt.title,
+            archived=rebuilt.archived,
+            lineage=rebuilt.lineage,
         )
+        apply_rules(live, rebuilt.rules)
         return _stream(live.resume(head=live.session_event()))
     except SessionRefused as refused:
         raise _refused(refused) from None

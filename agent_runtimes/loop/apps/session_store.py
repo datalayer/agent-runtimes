@@ -104,7 +104,8 @@ def _page(
             continue
         if query and query.lower() not in session["title"].lower():
             continue
-        if session["archived"] != archived:
+        # `archived` includes the archived; unsaid, they are hidden.
+        if session["archived"] and not archived:
             continue
         kept.append(session)
     kept.sort(key=lambda s: s["started_at"], reverse=True)
@@ -260,6 +261,11 @@ Reader = Callable[[str, str], Awaitable[List[Dict[str, Any]]]]
 
 async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
     """A session's record, read from ai-agents as the caller."""
+    if not bearer:
+        raise SessionStoreError(
+            401,
+            f"Session {session_uid} cannot be read back: the record is read with your token, and none was sent.",
+        )
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -293,6 +299,11 @@ def _as_entries(answered: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 async def _list_sessions(bearer: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """A person's sessions from ai-agents (MH-P01's route): ``{sessions, has_more}``."""
+    if not bearer:
+        raise SessionStoreError(
+            401,
+            "Sessions cannot be listed: the record is read with your token, and none was sent.",
+        )
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -317,6 +328,11 @@ async def _list_sessions(bearer: str, params: Dict[str, Any]) -> Dict[str, Any]:
 
 async def _copy_record(bearer: str, body: Dict[str, Any]) -> int:
     """Copy a session's entries under a new uid, server-side (MH-P02's route)."""
+    if not bearer:
+        raise SessionStoreError(
+            401,
+            f"Session {body.get('from')} cannot be cloned: the record is read with your token, and none was sent.",
+        )
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -428,8 +444,12 @@ FILE_STORE = FileSessionStore()
 
 
 def use_record_reader(reader: Optional[Reader]) -> None:
-    """Who reads a session's record back for the record store; ``None`` for ai-agents (a test)."""
+    """Who reads a session's record back for the record store, which a
+    reader given makes the active store; ``None`` puts ai-agents and the
+    configured store back (a test).
+    """
     RECORD_STORE.reader = reader or _read_record
+    use_session_store(RECORD_STORE if reader else None)
 
 
 def configured_store_name() -> str:

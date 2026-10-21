@@ -105,7 +105,8 @@ def test_the_shape_in_the_record_and_describe(
         "turn": "idle",
         "held": True,
         "harness": None,
-        "title": "",
+        # The first turn's first line, until the person gives one (MH-43).
+        "title": "One",
         "archived": False,
         "lineage": {"forked_from": None, "imported_from": None},
         "runs_on": {"kind": "runtime", "uid": "local"},

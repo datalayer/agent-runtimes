@@ -142,7 +142,7 @@ SESSION_STATES = ("open", "paused", "ended")
 #: sent (R-37), and that it asked the person and waits (`asked`, what
 #: ai-agents tells them of, M-023).
 ALWAYS_KEPT = frozenset(
-    {"session", "run", "notification", "thread", "asked", *SESSION_KINDS}
+    {"session", "run", "notification", "thread", "asked", "rule", *SESSION_KINDS}
 )
 
 #: How a run ended, in the `output` entry that ends it (`AppRecorder.ended`):
@@ -923,6 +923,47 @@ class AppRecorder:
                 "file_version": file_version,
                 "current_version": current_version,
                 "source_uid": source_uid,
+            },
+        )
+
+    def ruled(
+        self, session: str, *, rule: Optional[Dict[str, Any]] = None, removed: str = ""
+    ) -> None:
+        """A rule the person added to the session, or took back (MH-03): kept
+        always, so a session resumed from its record has its Rules again.
+        """
+        self._session_entry(
+            session,
+            "rule",
+            f"Rule {removed!r} taken back"
+            if removed
+            else f"Rule {str((rule or {}).get('name') or '')!r} added",
+            {"removed": removed} if removed else {"rule": dict(rule or {})},
+        )
+
+    def filed(
+        self,
+        session: str,
+        *,
+        name: str,
+        media_type: str,
+        size: int,
+        digest: str,
+        path: str,
+    ) -> None:
+        """A file given to the conversation (MH-01): its name, type, size,
+        digest and place in the sandbox — never its bytes.
+        """
+        _SESSION.set(session)
+        self.add(
+            "file",
+            f"File {name} ({size} bytes)" + (f" at {path}" if path else ""),
+            {
+                "name": name,
+                "type": media_type,
+                "size": size,
+                "digest": digest,
+                "path": path,
             },
         )
 
