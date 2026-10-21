@@ -63,6 +63,7 @@ from .routes import (
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
+    harnesses_router,
     health_router,
     history_router,
     identity_router,
@@ -1602,6 +1603,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # page's plugin of the same name (F-15).
     app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
+    # The harness catalogue, as `loop harnesses` prints it (VS-03).
+    app.include_router(harnesses_router, prefix=config.api_prefix)
     # An application's computer, shown where the person is (R-23).
     app.include_router(computer_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)

@@ -55,6 +55,7 @@ from .app_plugins import router as app_plugins_router
 from .apps import router as apps_router
 from .checkpoints import router as checkpoints_router
 from .configure import router as configure_router
+from .harnesses import router as harnesses_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
@@ -99,6 +100,7 @@ __all__ = [
     "get_a2a_mounts",
     "get_agui_app",
     "get_agui_mounts",
+    "harnesses_router",
     "health_router",
     "history_router",
     "identity_router",
