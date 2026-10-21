@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.77
+
+22 October 2026. An imported session's export imports again.
+
+- **An import's lineage is the format's** (META_HARNESS MH-37): `imported_from` says the file's digest, when and by whom it was exported; the redactions are the `imported` entry's. The lineage carried them too, and the file format refuses an extra field, so exporting an imported session gave a file no runtime would import.
+
 ## 1.5.76
 
 22 October 2026. A team seat's completed task leaves its session on the run.
