@@ -17,6 +17,9 @@ from typing import Any
 
 from agent_runtimes.plugins.points import (
     HARNESSES,
+    SESSION_CARRY,
+    SESSION_FORMATS,
+    SESSION_HOOKS,
     SESSION_STORES,
     HarnessContribution,
 )
@@ -44,6 +47,23 @@ def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
     for store in (RECORD_STORE, FILE_STORE):
         contributions.contribute(
             SESSION_STORES, store, contribution_id=store.name, order=order
+        )
+    from agent_runtimes.loop.apps.session_carry import DEFAULT_CARRY
+    from agent_runtimes.loop.apps.session_files import DATALAYER_SESSION_FORMAT
+    from agent_runtimes.loop.apps.session_hooks import AUDIT_HOOK, OTEL_HOOK
+
+    contributions.contribute(
+        SESSION_FORMATS,
+        DATALAYER_SESSION_FORMAT,
+        contribution_id=DATALAYER_SESSION_FORMAT.id,
+        order=order,
+    )
+    contributions.contribute(
+        SESSION_CARRY, DEFAULT_CARRY, contribution_id="default", order=order
+    )
+    for hook in (AUDIT_HOOK, OTEL_HOOK):
+        contributions.contribute(
+            SESSION_HOOKS, hook, contribution_id=hook.name, order=order
         )
 
 

@@ -753,10 +753,37 @@ class LiveSession:
         shield = self._shield()
         return str(shield.harness.id) if shield is not None else None
 
+    @property
+    def agent_spec(self) -> str:
+        """The agentspec bound to its agent now: what the record's ``agent`` names."""
+        from agent_runtimes.routes.agents import get_stored_agent_spec
+
+        stored = get_stored_agent_spec(self.agent_id) or {}
+        return str(stored.get("agent_spec_id") or self.agent_id)
+
+    @property
+    def agent_name(self) -> str:
+        """What its agent is called, for a sentence: the harness's name, else the agentspec's."""
+        shield = self._shield()
+        if shield is not None:
+            return str(shield.harness.name)
+        from agent_runtimes.routes.agents import get_stored_agent_spec
+
+        stored = get_stored_agent_spec(self.agent_id) or {}
+        return str(stored.get("name") or self.agent_spec)
+
+    @property
+    def capabilities(self) -> Dict[str, Any]:
+        """Its harness's capabilities table (MH-20), or ``{}`` for a framework agent."""
+        shield = self._shield()
+        if shield is None:
+            return {}
+        return shield.harness.capabilities.model_dump(mode="json")
+
     def facts(self) -> Dict[str, Any]:
         """The session's shape as its record says it (MH-01, §2)."""
         return {
-            "agent": self.agent_id,
+            "agent": self.agent_spec,
             "harness": self.harness,
             "runs_on": dict(self.runs_on),
             "title": self.title,
@@ -856,7 +883,7 @@ class LiveSession:
         """The session as the API says it."""
         return {
             "uid": self.uid,
-            "agent": self.agent_id,
+            "agent": self.agent_spec,
             "app": {
                 "id": self.app.id,
                 "version": self.app.version,
@@ -1462,6 +1489,7 @@ class LiveSession:
 
     async def _open_code(self, woken_by: Optional[Dict[str, Any]] = None) -> None:
         """The record begins, and the code's ``start`` runs."""
+        await run_hooks("open", self, {"agent": self.agent_spec, "woken_by": woken_by})
         self.recorder.start(self.uid, woken_by=woken_by, facts=self.facts())
         await self.recorder.flush(self.uid)
         if self.host is not None and self.session is None:
@@ -2101,6 +2129,7 @@ class LiveSession:
             raise SessionRefused(
                 409, f"Session {self.uid} ended already; there is nothing to end."
             )
+        await run_hooks("end", self, {"by": "end"})
         await self._close()
         if self.host is not None and self.session is not None:
             # Nobody reads what it shows: the conversation is closed.
@@ -2167,6 +2196,9 @@ class LiveSession:
             # Opened again on this runtime: a `session` entry with `state: open`
             # and `runs_on` rewritten (MH-01), whether or not this runtime
             # wrote its first.
+            await run_hooks(
+                "resume", self, {"held": not self.resumed, "runs_on": self.runs_on}
+            )
             self.recorder.forget_started(self.uid)
             self.recorder.start(self.uid, resumed=True, facts=self.facts())
             await self.recorder.flush(self.uid)
@@ -2522,6 +2554,28 @@ FILES_PREFIX = "/api/v1/apps/files"
 MAX_PRESSES = 16
 
 
+async def run_hooks(
+    event: str, session: "LiveSession", facts: Mapping[str, Any]
+) -> None:
+    """The ``session.hook`` contributions before an operation (MH-F06): a
+    refusal is the operation's, in the hook's sentence.
+
+    Raises
+    ------
+    SessionRefused
+        A hook refused (its status and sentence), or failed (500, naming it).
+    """
+    from agent_runtimes.loop.apps.session_hooks import HookFailed, fire
+    from agent_runtimes.plugins.points import HookRefused
+
+    try:
+        await fire(event, session, facts)
+    except HookRefused as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
+    except HookFailed as failed:
+        raise SessionRefused(500, str(failed)) from None
+
+
 def _forget_rules(session: str) -> None:
     """The person's rules of a session go with it."""
     from agent_runtimes.guardrails.session_rules import session_rules
@@ -2835,6 +2889,7 @@ __all__ = [
     "question_in_words",
     "question_of",
     "record_entries",
+    "run_hooks",
     "session_of",
     "text_in_words",
     "use_record_reader",
