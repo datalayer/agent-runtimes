@@ -770,6 +770,20 @@ class AppRecorder:
                 # the session (found on r1, 21 October 2026).
                 self._started.add(session)
                 _RECORDERS[session] = self
+                # And who the session is: its opener, as signed, and what woke
+                # it — or every entry of the new agent's turns goes to the
+                # record with no opener, and the person's own read of the
+                # session leaves them out (found on r1, 22 October 2026: a
+                # Codex turn after a swap had its `turn` row unread).
+                for kept, given in (
+                    (self._opened, earlier._opened),
+                    (self._opener_names, earlier._opener_names),
+                    (self._signed, earlier._signed),
+                    (self._woken, earlier._woken),
+                    (self._turns, earlier._turns),
+                ):
+                    if session in given:
+                        kept[session] = given[session]
                 return
             self._started.add(session)
             _RECORDERS[session] = self

@@ -201,3 +201,31 @@ def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening
     assert sent[0]["entries"][0]["payload"]["agent"] == "example-harness-claude-code"
     assert sent[2]["entries"][0]["payload"]["agent"] == "example-agentic-chat"
     assert sent[2]["entries"][0]["payload"]["resumed"] is True
+
+
+def test_a_swapped_in_recorder_keeps_the_sessions_opener() -> None:
+    """The new agent's turns after a swap are sent with the session's opener,
+    so the person's read of the session has them (r1, 22 October 2026: a
+    Codex turn after a swap had its `turn` row left out of the read)."""
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    async def run() -> None:
+        app = recorder_of_triage([]).app
+        first = AppRecorder(app=app, send=send)
+        first.opened("s-4", "ada", "Ada")
+        first.start("s-4", facts={"agent": "example-harness-claude-code"})
+        first.ran("s-4")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        second = AppRecorder(app=app, send=send)
+        second.start("s-4")
+        assert second.opener("s-4") == "ada"
+        second.ran("s-4")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+    asyncio.run(run())
+    assert [body.get("opened_by") for body in sent] == ["ada", "ada"]
