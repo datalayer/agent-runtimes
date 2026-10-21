@@ -7,6 +7,15 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.74
+
+22 October 2026. A team seat's *ask me first* reaches a person and the seat goes on in the same session.
+
+- **A delegated task's approval is the control plane's to file and answer** (META_HARNESS MH-42): the orchestration A2A adapter takes the control plane's approvals responder, as the ACP adapter does — a task waiting as `input-required` with `approvalRequest` is handed over as a permission request, answered on the same task with the option the person chose (a refusal when none), and followed to its end; a re-attach to a waiting task does the same. The worker waits on a delegated task's approval for a day (`DELEGATED_APPROVAL_TIMEOUT`), the control plane's deadline deciding first, so the attempt is not lost to the worker's own 300 s.
+- **A refused turn is a turn**: a harness turn that stopped, a seat task that stopped and a run a rule or check stopped keep their `turn` row (*Stopped: …*), so a session whose only turn was refused is counted, listed and resumable.
+- **Sessions on a kept runtime** (META_HARNESS MH-37): a swapped-in recorder adopts the session another recorder started instead of writing a second opening (9095ace5), and the session list and read-back routes hand the store the caller's bearer.
+- **portable**: an approval names the team seat that asked (`seatOfApproval`, `seatSaid`; `normalizeApproval` carries `execution_id`, `team`, `seat`), on the shared card's `seat` line and its row's `summary`.
+
 ## 1.5.73
 
 21 October 2026. The package installs whole on a case-insensitive file system.
