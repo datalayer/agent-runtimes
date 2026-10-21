@@ -26,6 +26,8 @@ from agent_runtimes.context.delegation import (
     CHECKPOINT_FIELD,
     CREDENTIAL_FIELD,
     EXECUTION_FIELD,
+    SEAT_FIELD,
+    SESSION_FIELD,
 )
 from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 
@@ -127,6 +129,17 @@ def delegation_meta(
         }
     if resumed_from:
         ours[CHECKPOINT_FIELD] = {"checkpointId": resumed_from}
+    # A team's seat works inside an apps session (MH-38): the worker is told
+    # which seat it is, and — on the seat's next task — the session the
+    # control plane carries for it on its binding (MH-P05), to resume rather
+    # than open.
+    from .teams import team_seat
+
+    seat = team_seat(execution.agent.agent_id)
+    if seat is not None:
+        ours[SEAT_FIELD] = {"team": seat.team.id, "seat": seat.seat}
+        if execution.agent.session_id:
+            ours[SESSION_FIELD] = {"uid": execution.agent.session_id}
     return {DELEGATION_META_KEY: ours} if ours else None
 
 

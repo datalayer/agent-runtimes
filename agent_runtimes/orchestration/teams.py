@@ -301,6 +301,67 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
     return fields
 
 
+#: What a team's application records of its seats' sessions: the conversation,
+#: the harnesses' actions and decisions, their diffs and terminals.
+TEAM_RECORD_INCLUDE = ("conversations", "actions", "decisions", "approvals", "diffs", "terminals")
+
+
+def team_app(team: TeamSpec) -> dict[str, Any]:
+    """
+    The application a team's seats' sessions are of (MH-38).
+
+    A seat's task is a turn of an apps session; a session is of an
+    application, and a team's is the team itself: a ``loop.app/v1`` document
+    naming the team (``team:``), whose record keeps what the seats say and
+    do. Loaded by ``agent_runtimes.loop.apps.loading.load_app``.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+
+    Returns
+    -------
+    dict[str, Any]
+        The application's document.
+    """
+    return {
+        "schema": "loop.app/v1",
+        "id": f"team-{team.id}",
+        "name": team.name,
+        "kind": "chat",
+        "team": team.id,
+        "record": {"keep_for": "30_days", "include": list(TEAM_RECORD_INCLUDE)},
+    }
+
+
+def seat_instance(team: TeamSpec) -> dict[str, Any]:
+    """
+    The instance a seat's session serves: the team as the platform names it.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{app_uid, deployment_uid, version}``: ``team:<id>``, no deployment, the spec's version.
+    """
+    version = str(team.version or "0").split(".")[-1]
+    return {
+        "app_uid": f"team:{team.id}",
+        "deployment_uid": "",
+        "version": int(version) if version.isdigit() else 0,
+    }
+
+
+def seat_runs_on(execution_id: str, seat: str) -> dict[str, Any]:
+    """Where a seat's session runs: ``{kind: team_run, execution_id, seat}`` (§2 of the session model)."""
+    return {"kind": "team_run", "execution_id": execution_id, "seat": seat}
+
+
 def briefing(produced: list[tuple[TeamAgentspec, str]]) -> str:
     """
     What a supervisor is told its members produced, before it answers.

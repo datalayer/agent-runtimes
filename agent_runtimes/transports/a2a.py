@@ -1004,8 +1004,22 @@ class A2AWorker(_FastA2AWorker):
                     "this runtime, so the run cannot resume from it."
                 )
             conversation = [dict(message) for message in checkpoint.messages]
+        # A team seat works inside an apps session (MH-38): the task is a
+        # turn of the seat's session — opened at its first task, resumed at
+        # the next from the uid the control plane hands it — and the
+        # session's conversation is the run's history. The session's uid is
+        # the adapter's session: a harness keeps its own session per (uid,
+        # agent), loaded again on the next task (MH-04).
+        from ..orchestration.seat_sessions import SeatRefused, seat_run
+
+        try:
+            seat = await seat_run(self.agent, self.agent_id, meta, credential, prompt)
+        except SeatRefused as refused:
+            raise RuntimeError(str(refused)) from None
+        if seat is not None:
+            conversation = seat.history()
         context = AgentContext(
-            session_id=context_id,
+            session_id=seat.uid if seat is not None else context_id,
             conversation_history=conversation,
             metadata={
                 "a2a": {
@@ -1068,6 +1082,8 @@ class A2AWorker(_FastA2AWorker):
                     )
                 elif event.type == "tool_call":
                     called = _tool_call_payload(event.data)
+                    if seat is not None:
+                        seat.tool_called(called)
                     if called.get("name") == SAY_ALOUD_TOOL and isinstance(
                         called.get("arguments"), dict
                     ):
@@ -1086,6 +1102,8 @@ class A2AWorker(_FastA2AWorker):
                     await self.publish_status(task_id, context_id, "working", said)
                 elif event.type == "tool_result":
                     answered = _tool_result_payload(event.data)
+                    if seat is not None:
+                        seat.tool_answered(answered)
                     said = _agent_message(
                         context_id,
                         Part(data={"tool_result": answered}),
@@ -1140,6 +1158,10 @@ class A2AWorker(_FastA2AWorker):
                     if isinstance(event.data, ModelBudgetReached):
                         raise ModelBudgetExceeded(event.data)
                     raise RuntimeError(str(event.data))
+        except BaseException as stopped:
+            if seat is not None:
+                await seat.failed(redact(str(stopped) or type(stopped).__name__))
+            raise
         finally:
             close_steering(task_id)
 
@@ -1168,7 +1190,9 @@ class A2AWorker(_FastA2AWorker):
                 await self.storage.update_task(task_id, state="canceled")
                 stopped = _agent_message(context_id, Part(text="Paused."))
                 kept = merged_meta(
-                    paused_meta(checkpoint.id), spent_meta(turn.settle())
+                    paused_meta(checkpoint.id),
+                    spent_meta(turn.settle()),
+                    await seat.failed("Paused.") if seat is not None else None,
                 )
                 if kept:
                     stopped["metadata"] = kept
@@ -1185,7 +1209,10 @@ class A2AWorker(_FastA2AWorker):
             logger.info("A2A task %s for agent %s stopped", task_id, self.agent.name)
             await self.storage.update_task(task_id, state="canceled")
             halted = _agent_message(context_id, Part(text=STOPPED))
-            spent = spent_meta(turn.settle())
+            spent = merged_meta(
+                spent_meta(turn.settle()),
+                await seat.failed(STOPPED) if seat is not None else None,
+            )
             if spent:
                 halted["metadata"] = spent
             await self.publish_status(task_id, context_id, "canceled", halted)
@@ -1222,7 +1249,12 @@ class A2AWorker(_FastA2AWorker):
         # and the stream ended here rather than by the base, whose final status
         # carries no message.
         finished = _agent_message(context_id, Part(text=output))
-        spent = spent_meta(turn.settle())
+        # The seat's session, answered to the control plane with what the
+        # turn spent: kept on the run, handed to the seat's next task (MH-P05).
+        spent = merged_meta(
+            spent_meta(turn.settle()),
+            await seat.answered(output) if seat is not None else None,
+        )
         if spent:
             finished["metadata"] = spent
         await self.publish_status(task_id, context_id, "completed", finished)
