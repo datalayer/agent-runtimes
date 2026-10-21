@@ -47,6 +47,7 @@ from agent_runtimes.commands.agent_mcp_servers import (
 from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
 from agent_runtimes.commands.agents import app as agents_app
 from agent_runtimes.commands.apps import app as apps_app
+from agent_runtimes.commands.plugins import app as plugins_app
 from agent_runtimes.commands.benchmarks import app as benchmarks_app
 from agent_runtimes.commands.checkpoints import app as checkpoints_app
 from agent_runtimes.commands.console import app as console_app
@@ -567,6 +568,7 @@ app.add_typer(snapshots_app)
 app.add_typer(ray_app)
 app.add_typer(schedules_app)
 app.add_typer(apps_app)
+app.add_typer(plugins_app)
 app.add_typer(scenes_app)
 app.command("events-list")(events_list)
 app.command("event-ls")(events_ls)

@@ -381,6 +381,10 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 # Commerce, each with its points (PAP's plugins are the PAP SDK's own).
 [project.entry-points."datalayer.reactor.extensions"]
 agent-protocols = "agent_runtimes.protocols.extension:extension"
+# The session's points (harness, session.store, session.format,
+# session.carry, session.hook) and what agent-runtimes contributes to each,
+# delivered as the `agent-runtimes` Reactor Extension (MH-F01).
+agent-runtimes = "agent_runtimes.plugins.extension:extension"
 
 [tool.hatch.metadata]
 allow-direct-references = true
