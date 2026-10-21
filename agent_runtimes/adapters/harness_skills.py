@@ -17,6 +17,13 @@ way, as its instructions file (``CLAUDE.md``, ``AGENTS.md``, ``GEMINI.md``,
 ``.goosehints`` — ``instructions_file`` of the harness spec), generated from
 the Appspec.
 
+A folder's own instructions file — a person's ``CLAUDE.md``, one Datalayer
+did not write (every file Datalayer writes starts with :data:`LENT_MARK`) —
+is **kept as it is** (VSCODE VS-23): the application's instructions are
+written beside it, under ``.datalayer/``, and reach the harness ahead of the
+session's first prompt (:meth:`ACPAgent._traced_prompt`); the session's
+first line says so (:func:`kept_said`).
+
 What is written is **read-only to the agent**: a write or an edit of these
 paths is refused by the Shield in a sentence (:meth:`ACPAgent.decide`), and a
 skill the harness writes elsewhere is a file write — shown, decided,
@@ -37,9 +44,12 @@ from typing import Any, Sequence
 from agent_runtimes.types import HarnessSpec, SkillSpec
 
 __all__ = [
+    "LENT_DIR",
+    "LENT_MARK",
     "LentFiles",
     "SKILL_FORMATS",
     "instructions_markdown",
+    "kept_said",
     "skill_markdown",
     "skill_specs_of",
     "write_lent_files",
@@ -52,6 +62,17 @@ SKILL_FORMATS = ("skill-md", "none")
 #: refusal is the gate, and the mode says what the file is.
 READ_ONLY = 0o444
 
+#: The first line of every instructions file Datalayer writes: what tells a
+#: file of Datalayer's from a folder's own (VSCODE VS-23). A file without
+#: it is the person's and is never written over.
+LENT_MARK = (
+    "<!-- Written by Datalayer from the application: read-only to the agent. -->"
+)
+
+#: Where the application's instructions go when the folder has its own
+#: instructions file: beside it, under this directory, never over it.
+LENT_DIR = ".datalayer"
+
 
 @dataclass(frozen=True)
 class LentFiles:
@@ -59,10 +80,21 @@ class LentFiles:
 
     #: The ``SKILL.md`` files written, one per skill.
     skills: list[Path] = field(default_factory=list)
-    #: The instructions file, when the harness spec names one.
+    #: The instructions file, when the harness spec names one: the harness's
+    #: own (``CLAUDE.md``), or the one beside the folder's own (``.datalayer/CLAUDE.md``).
     instructions: Path | None = None
+    #: The folder's own instructions file, kept as it is: the harness reads
+    #: it as its own, and the application's instructions reach it with its
+    #: first prompt (VS-23). ``None`` when the harness's file is Datalayer's.
+    kept: Path | None = None
     #: Paths the agent may not write: the skill folders and the instructions file.
     protected: list[Path] = field(default_factory=list)
+
+    def preface(self) -> str:
+        """The application's instructions to hand the harness ahead of its first prompt, when its file is not the harness's own; ``''`` otherwise."""
+        if self.kept is None or self.instructions is None:
+            return ""
+        return self.instructions.read_text(encoding="utf-8")
 
     def protects(self, path: Path) -> bool:
         """Whether ``path`` (resolved) is one of the lent files, or inside a lent folder."""
@@ -73,6 +105,7 @@ class LentFiles:
 
 
 def _refused(sentence: str) -> Exception:
+    """A refusal in a sentence, as the harness launch raises it."""
     from .acp_agent import HarnessRefused
 
     return HarnessRefused(sentence)
@@ -161,6 +194,7 @@ def _shipped_markdown(spec: SkillSpec) -> str | None:
 
 
 def _frontmatter(fields: Sequence[tuple[str, Any]]) -> str:
+    """The YAML front matter of a ``SKILL.md``, from its fields in order."""
     lines = ["---"]
     for name, value in fields:
         if isinstance(value, list):
@@ -247,6 +281,7 @@ def skill_markdown(spec: SkillSpec, harness: HarnessSpec) -> str:
 
 
 def _rules_in_words(app: Any) -> list[str]:
+    """The application's Rules as lines a harness reads: the action, its classes, what to do."""
     words = {
         "do_it": "do it",
         "if_asked": "do it if the person asked",
@@ -290,6 +325,7 @@ def instructions_markdown(
         str(item).partition(":")[0] for item in getattr(app, "skills", None) or []
     ]
     lines = [
+        LENT_MARK,
         f"# {name}",
         "",
         *([description, ""] if description else []),
@@ -336,7 +372,47 @@ def instructions_markdown(
     return "\n".join(lines)
 
 
+def _is_datalayers(path: Path) -> bool:
+    """Whether an instructions file at ``path`` is one Datalayer wrote (its first line says so)."""
+    try:
+        with path.open(encoding="utf-8") as file:
+            return file.readline().rstrip("\n") == LENT_MARK
+    except OSError:
+        return False
+
+
+def kept_said(lent: LentFiles, harness: HarnessSpec, workspace: Path) -> str:
+    """
+    The sentence said first in a session whose folder's own instructions file was kept.
+
+    Parameters
+    ----------
+    lent : LentFiles
+        What was written.
+    harness : HarnessSpec
+        The harness, named.
+    workspace : Path
+        The workspace, so the paths are said relative to it.
+
+    Returns
+    -------
+    str
+        The sentence, or ``''`` when nothing of the folder's was in the way.
+    """
+    if lent.kept is None or lent.instructions is None:
+        return ""
+    root = workspace.resolve()
+    own = lent.kept.relative_to(root).as_posix()
+    beside = lent.instructions.relative_to(root).as_posix()
+    return (
+        f"Your {own} is kept as it is: {harness.name} reads it as its own. The "
+        f"application's instructions were written beside it, as {beside}, and go to "
+        f"{harness.name} ahead of this session's first prompt."
+    )
+
+
 def _write_read_only(path: Path, content: str) -> None:
+    """Write ``content`` at ``path`` (made writable first when it exists) and leave it read-only."""
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         os.chmod(path, 0o644)
@@ -383,6 +459,7 @@ def write_lent_files(
         written.append(page)
         protected.append(folder)
     instructions: Path | None = None
+    kept: Path | None = None
     if harness.instructions_file:
         instructions = (root / harness.instructions_file).resolve()
         if root not in instructions.parents:
@@ -390,6 +467,15 @@ def write_lent_files(
                 f"The harness {harness.id!r} names an instructions file outside the "
                 f"workspace ({harness.instructions_file}): nothing is written there."
             )
+        # The folder's own file — one Datalayer did not write — is kept as it
+        # is (VS-23): the application's instructions go beside it, and reach
+        # the harness ahead of its first prompt; a file Datalayer wrote is
+        # written again in place.
+        if instructions.exists() and not _is_datalayers(instructions):
+            kept = instructions
+            instructions = (root / LENT_DIR / harness.instructions_file).resolve()
         _write_read_only(instructions, instructions_markdown(app, harness, lent))
         protected.append(instructions)
-    return LentFiles(skills=written, instructions=instructions, protected=protected)
+    return LentFiles(
+        skills=written, instructions=instructions, kept=kept, protected=protected
+    )

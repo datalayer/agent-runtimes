@@ -113,7 +113,7 @@ from .base import (
     ToolResult,
 )
 from .harness_displays import display_meta_of
-from .harness_skills import LentFiles, write_lent_files
+from .harness_skills import LentFiles, kept_said, write_lent_files
 
 logger = logging.getLogger(__name__)
 
@@ -796,6 +796,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: The turns since this agent was swapped away, by ACP session: replayed
         #: as text with the first prompt after a swap back (MH-04).
         self._since: dict[str, str] = {}
+        #: The harness's sessions whose first prompt still owes the application's
+        #: instructions (VS-23): the folder's own instructions file was kept.
+        self._preface_due: set[str] = set()
         self.harness = harness
         self._name = name or harness.name
         self._description = description or harness.description
@@ -1157,6 +1160,21 @@ class ACPAgent(BaseAgent, ShieldProxy):
         since = self._since.pop(acp_session, "")
         return f"{since}\n\n{prompt}" if since else prompt
 
+    def _prompt_blocks(self, prompt: str, acp_session: str) -> list[Any]:
+        """
+        The blocks of a turn's prompt: the application's instructions first, once per
+        harness session, when the folder's own instructions file was kept (VS-23);
+        then the prompt with the turns since a swap.
+        """
+        blocks: list[Any] = []
+        if acp_session in self._preface_due:
+            self._preface_due.discard(acp_session)
+            preface = self.lent_files.preface()
+            if preface:
+                blocks.append(text_block(preface))
+        blocks.append(text_block(self._prompt_with_since(prompt, acp_session)))
+        return blocks
+
     async def _traced_prompt(
         self, prompt: str, acp_session: str, runtime_session: str
     ) -> PromptResponse:
@@ -1183,9 +1201,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                     carry(handle, traceparent)
             # The turn inside this span: `ShieldProxy.prompt` would open a second.
             return await ShieldProxy.run_turn(
-                self,
-                [text_block(self._prompt_with_since(prompt, acp_session))],
-                acp_session,
+                self, self._prompt_blocks(prompt, acp_session), acp_session
             )
 
     # -- sessions -----------------------------------------------------------------
@@ -1264,6 +1280,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 )
             if since:
                 self._since[kept] = since
+            self._preface_due.add(kept)
+            kept_line = kept_said(self.lent_files, self.harness, self.workspace)
+            if kept_line:
+                opening.insert(0, _said(kept_line))
             return kept, opening
         sentence = ""
         if kept and not self.loads_sessions:
@@ -1294,7 +1314,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self.sessions[acp_session].rules_from = self._rules_from(runtime_session)
         native = native_session_id_of(self.harness, getattr(answer, "field_meta", None))
         await self._keep_session(runtime_session, acp_session, native)
-        return acp_session, [_said(sentence)] if sentence else []
+        # The folder's own instructions file kept (VS-23): said first, and the
+        # application's instructions owed to the harness with its first prompt.
+        self._preface_due.add(acp_session)
+        kept_line = kept_said(self.lent_files, self.harness, self.workspace)
+        opening = [_said(kept_line)] if kept_line else []
+        return acp_session, opening + ([_said(sentence)] if sentence else [])
 
     # -- what was written for it is read-only to it (SH-21) ------------------------------
 

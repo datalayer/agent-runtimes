@@ -35,6 +35,7 @@ from agent_runtimes.adapters.acp_agent import (
 )
 from agent_runtimes.adapters.base import AgentContext, StreamEvent
 from agent_runtimes.adapters.harness_skills import (
+    LENT_MARK,
     instructions_markdown,
     skill_markdown,
     skill_specs_of,
@@ -1191,7 +1192,8 @@ class TestSkillsLentInTheHarnessFormat:
         assert "run_skill_script" in text and "fetch_page" in text
         assert lent.instructions == tmp_path / "CLAUDE.md"
         instructions = lent.instructions.read_text()
-        assert instructions.startswith("# Coder\n\nWrites the code")
+        # Marked as Datalayer's on its first line (VS-23), then the application.
+        assert instructions.startswith(LENT_MARK + "\n# Coder\n\nWrites the code")
         assert "Be brief. Never touch the tests." in instructions
         assert "- delete anything (delete): leave it to the person." in instructions
         assert "earthdata" in instructions and "`.claude/skills/`" in instructions
@@ -1249,8 +1251,8 @@ class TestSkillsLentInTheHarnessFormat:
         agent = an_agent(workspace, harness=harness, lent_files=lent)
         try:
             read = await turn(agent, "read CLAUDE.md")
-            # The fake shows the first forty characters of what it read.
-            assert "# Coder" in str(of(read, "tool_result"))
+            # The fake shows the first forty characters of what it read: the mark.
+            assert LENT_MARK[:40] in str(of(read, "tool_result"))
             skill = await turn(agent, "read .claude/skills/crawl/SKILL.md")
             assert "name: crawl" in str(of(skill, "tool_result"))
             refused = await turn(agent, "write CLAUDE.md")

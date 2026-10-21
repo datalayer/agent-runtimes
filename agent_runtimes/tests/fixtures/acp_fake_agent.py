@@ -169,11 +169,20 @@ class FakeAgent(Agent):
         if session_id not in self._sessions:
             raise RequestError.resource_not_found(session_id)
         self._cancelled.discard(session_id)
-        text = " ".join(
+        texts = [
             block.text for block in prompt if getattr(block, "type", None) == "text"
-        )
+        ]
+        # The command is the last text block; what comes before it is the
+        # instructions a harness reads first (VS-23), said back by their first line.
+        text = texts[-1] if texts else ""
         say = self.client.session_update
         await say(session_id=session_id, update=update_agent_thought_text("thinking"))
+        for given in texts[:-1]:
+            first = given.strip().splitlines()[0] if given.strip() else ""
+            await say(
+                session_id=session_id,
+                update=update_agent_message_text(f"instructions: {first}\n"),
+            )
         if text.startswith("tool:"):
             await self._tool(session_id, json.loads(text.split(":", 1)[1]))
             return PromptResponse(stop_reason="end_turn")
