@@ -64,7 +64,9 @@ def fake_harness(**overrides: Any) -> HarnessSpec:
         acp=HarnessAcpSpec(
             command=sys.executable, args=[str(FAKE)], mcp="lend", load_session=True
         ),
-        terms=HarnessTermsSpec(served_to_third_parties="permitted"),
+        terms=HarnessTermsSpec(
+            served_to_third_parties="permitted", licence="Apache-2.0 (the fake agent)"
+        ),
         skills=HarnessSkillsSpec(format="none"),
         honours=HarnessHonoursSpec(model=False, subagents=True),
         capabilities=HarnessCapabilitiesSpec(
@@ -1251,9 +1253,31 @@ class TestSkillsLentInTheHarnessFormat:
     def test_harness_agent_writes_them_before_the_start(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from agent_runtimes.specs import harnesses
+        # A harness is resolved through the `harness` point (MH-F02): the fake
+        # one is contributed, as a package's would be.
+        from reactor import PluginManifest, PluginPlatform, hookimpl
 
-        monkeypatch.setitem(harnesses.HARNESS_CATALOGUE, "fake", reading_skills())
+        from agent_runtimes.adapters.acp_agent import acp_harness_agent
+        from agent_runtimes.loop.apps import plugins as runtime_plugins
+        from agent_runtimes.plugins.points import HARNESSES, HarnessContribution
+
+        platform = PluginPlatform(extension_group="agent-runtimes.tests.extensions")
+        monkeypatch.setattr(runtime_plugins, "PLATFORM", platform)
+
+        class FakeHarness:
+            @hookimpl
+            def provide_contributions(self, contributions: Any) -> None:
+                contributions.contribute(
+                    HARNESSES,
+                    HarnessContribution(
+                        spec=reading_skills(), adapter=acp_harness_agent
+                    ),
+                    contribution_id="fake",
+                )
+
+        platform.register_plugin(
+            PluginManifest(name="fake-harness", version="0.0.1"), FakeHarness()
+        )
         agent = harness_agent("a1", "fake", app=an_app(), workspace=tmp_path)
         assert (tmp_path / "CLAUDE.md").is_file()
         assert (tmp_path / ".claude" / "skills" / "crawl" / "SKILL.md").is_file()

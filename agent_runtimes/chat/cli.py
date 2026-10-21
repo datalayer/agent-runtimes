@@ -2010,10 +2010,12 @@ def harnesses() -> None:
     OpenCode, OpenHands — or any program speaking the Agent Client Protocol,
     run with `loop --harness <id>` in the directory you run from.
     """
-    from agent_runtimes.specs.harnesses import list_harnesses
+    from agent_runtimes.plugins.host import accepted, session_platform
+    from agent_runtimes.plugins.points import HARNESSES
 
-    for spec in list_harnesses():
-        if spec.acp is None:
+    for contribution in accepted(session_platform(), HARNESSES):
+        spec = contribution.value.spec
+        if spec.acp is None or contribution.value.organization:
             continue
         entry = spec.registered
         print(
@@ -2027,6 +2029,15 @@ def harnesses() -> None:
         )
         print(f"    {GRAY}Serving others:{RESET} {served}{tiers}")
         print(f"    {GRAY}Licence:{RESET} {spec.terms.licence}")
+        table = spec.capabilities
+        print(
+            f"    {GRAY}Capabilities:{RESET} resume {table.resume}, fork history {table.fork_history}, "
+            f"interrupt {'yes' if table.interrupt else 'no'}, steering {'yes' if table.steering else 'no'}, "
+            f"images {'yes' if table.images else 'no'}, compaction {table.compaction}, "
+            f"vendor session id {spec.acp.native_session}"
+        )
+        if contribution.plugin != "agent-runtimes.sessions":
+            print(f"    {GRAY}Contributed by:{RESET} {contribution.plugin}")
         print()
 
 

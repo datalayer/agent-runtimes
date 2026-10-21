@@ -104,10 +104,17 @@ class HarnessContribution:
 
     spec: HarnessSpec
     adapter: Callable[..., Any]
+    #: The organization whose own harness this is (``org-…``, SH-46), or ``""``
+    #: for one of the shared catalogue: an organization's is contributed under
+    #: ``<id>@<organization>`` and resolved for that organization alone, so
+    #: it leaks to no other.
+    organization: str = ""
 
     @property
     def id(self) -> str:
-        return self.spec.id
+        return (
+            f"{self.spec.id}@{self.organization}" if self.organization else self.spec.id
+        )
 
 
 @runtime_checkable
@@ -282,12 +289,12 @@ def _check_one(point: ContributionPoint[Any], contribution: Contribution[Any]) -
                     "that is not a HarnessContribution (a spec and its adapter).",
                 )
             )
-        if value.spec.id != contribution.id:
+        if value.id != contribution.id:
             raise ContributionRefused(
                 _sentence(
                     contribution,
                     point,
-                    f"whose spec says id {value.spec.id!r}: a harness is contributed under its own id.",
+                    f"whose spec says id {value.id!r}: a harness is contributed under its own id.",
                 )
             )
         if (

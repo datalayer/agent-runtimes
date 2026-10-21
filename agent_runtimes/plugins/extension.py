@@ -58,6 +58,8 @@ def plugin() -> tuple[PluginManifest, SessionsPlugin]:
 
 def extension() -> ReactorExtension:
     """The entry point (``datalayer.reactor.extensions``)."""
+    from agent_runtimes.guardrails.organization_harnesses import organization_plugin
+
     return ReactorExtension(
         manifest=ExtensionManifest(
             name=EXTENSION,
@@ -69,7 +71,7 @@ def extension() -> ReactorExtension:
             ),
             octicon="versions",
         ),
-        plugins=[plugin()],
+        plugins=[plugin(), organization_plugin()],
     )
 
 

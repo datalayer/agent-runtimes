@@ -197,3 +197,86 @@ def admission_refusal(policies: Sequence[Any], admitted: str) -> Optional[str]:
         f"once an administrator reviewed its command and admitted {admitted!r} on the "
         "organization's policy (harnesses.admit)."
     )
+
+
+# --- the organization's harnesses as contributions (MH-F02) ------------------------------
+
+#: The plugin that contributes an organization's own harnesses, per organization and per
+#: token: what IAM admits when it is read, under ``<id>@<organization>``.
+ORGANIZATION_PLUGIN = "agent-runtimes.organization-harnesses"
+
+#: What each organization's reading contributed, to be taken back when read again.
+_CONTRIBUTED: Dict[str, list] = {}
+
+
+class OrganizationHarnessesPlugin:
+    """Contributes nothing at start: an organization's harnesses are read from IAM
+    with the caller's token when one of its applications asks for one
+    (:func:`admit_organization`), never ahead of time and never for another.
+    """
+
+
+def organization_plugin() -> Tuple[Any, OrganizationHarnessesPlugin]:
+    """The plugin, as the ``agent-runtimes`` extension delivers it."""
+    from reactor import PluginManifest
+
+    return (
+        PluginManifest(
+            name=ORGANIZATION_PLUGIN,
+            version="1.0.0",
+            description="An organization's own harnesses, read from IAM and admitted by its policy, contributed to `harness` for that organization alone.",
+            tags=["agent-runtimes", "harnesses"],
+        ),
+        OrganizationHarnessesPlugin(),
+    )
+
+
+def admit_organization(
+    platform: Any, organization_uid: str, read: Reader
+) -> Dict[str, Any]:
+    """Read an organization's harnesses and contribute each to ``harness`` under
+    ``<id>@<organization>``, taking back what an earlier reading contributed;
+    the contributions by harness id.
+
+    Raises
+    ------
+    OrganizationHarnessRefused
+        When IAM cannot be read; a harness IAM holds that does not validate is
+        left out, and said in the log — the rest is served.
+    """
+    import logging
+
+    from agent_runtimes.adapters.acp_agent import acp_harness_agent
+    from agent_runtimes.plugins.points import HARNESSES, HarnessContribution
+
+    if not organization_uid:
+        raise OrganizationHarnessRefused(
+            "An organization's own harnesses are read for an organization: this application belongs to none."
+        )
+    kept = dict(read(organization_uid))
+    for dispose in _CONTRIBUTED.pop(organization_uid, []):
+        dispose()
+    contributions = platform.contributions_for(ORGANIZATION_PLUGIN)
+    admitted: Dict[str, Any] = {}
+    disposers = []
+    for harness_id in kept:
+        try:
+            spec, _ = organization_harness(
+                str(harness_id),
+                organization_uid=organization_uid,
+                read=lambda _uid: kept,
+            )
+        except OrganizationHarnessRefused as refused:
+            logging.getLogger(__name__).warning("%s", refused)
+            continue
+        contribution = HarnessContribution(
+            spec=spec, adapter=acp_harness_agent, organization=organization_uid
+        )
+        disposers.append(
+            contributions.contribute(
+                HARNESSES, contribution, contribution_id=contribution.id
+            )
+        )
+        admitted[spec.id] = contribution
+    _CONTRIBUTED[organization_uid] = disposers
+    return admitted

@@ -24,11 +24,11 @@ from agent_runtimes.plugins.points import (
 
 def catalogue_harnesses() -> list[HarnessContribution]:
     """The catalogue's harnesses, each with the ACP adapter that drives it."""
-    from agent_runtimes.adapters.acp_agent import harness_agent
+    from agent_runtimes.adapters.acp_agent import acp_harness_agent
     from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
 
     return [
-        HarnessContribution(spec=spec, adapter=harness_agent)
+        HarnessContribution(spec=spec, adapter=acp_harness_agent)
         for spec in HARNESS_CATALOGUE.values()
     ]
 

@@ -49,6 +49,15 @@ SPEC: dict[str, Any] = {
     },
     "skills": {"format": "none"},
     "honours": {"model": False, "subagents": True},
+    "capabilities": {
+        "resume": "load",
+        "fork_history": "replay",
+        "interrupt": True,
+        "steering": False,
+        "images": False,
+        "compaction": "own",
+        "modes": [],
+    },
 }
 REGISTER = {
     "adapter": "acp-fake-agent",

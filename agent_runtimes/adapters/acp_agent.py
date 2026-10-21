@@ -1802,13 +1802,16 @@ def harness_agent(
     organization_uid: str = "",
     read_organization: Any = None,
 ) -> ACPAgent:
-    """An ``ACPAgent`` on a catalogue harness, resolved here: not yet started.
+    """An agent on a harness, resolved through the ``harness`` registry (MH-F02): not yet started.
 
-    An ``org-…`` harness is the organization's own (SH-46): read from IAM for
-    ``organization_uid`` with ``credential`` (``read_organization`` stands in
-    for IAM in tests), served only once the policies in force admit its
+    The catalogue contributes its harnesses; a third party's package
+    contributes its own; an ``org-…`` harness is the organization's own
+    (SH-46), read from IAM for ``organization_uid`` with ``credential``
+    (``read_organization`` stands in for IAM in tests) and contributed for
+    that organization alone, served only once the policies in force admit its
     reviewed command (``<id>@<digest>``). A harness of the register's listed
-    tier is refused *listed, not drilled yet* (SH-57).
+    tier is refused *listed, not drilled yet* (SH-57). The contribution's
+    adapter makes the agent: :func:`acp_harness_agent` for every ACP harness.
 
     Parameters
     ----------
@@ -1827,16 +1830,17 @@ def harness_agent(
 
     from agent_runtimes.guardrails.organization_harnesses import (
         OrganizationHarnessRefused,
-        admission_refusal,
+        admit_organization,
         is_organization_harness,
-        organization_harness,
         read_organization_harnesses,
     )
-    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+    from agent_runtimes.plugins.host import accepted, session_platform
+    from agent_runtimes.plugins.points import HARNESSES
 
-    harness = HARNESS_CATALOGUE.get(harness_id)
-    admitted_as = ""
-    if harness is None and is_organization_harness(harness_id):
+    platform = session_platform()
+    contributions = {c.id: c.value for c in accepted(platform, HARNESSES)}
+    contribution = None
+    if is_organization_harness(harness_id):
         if read_organization is None:
             from datalayer_core.utils.urls import DatalayerURLs
 
@@ -1847,18 +1851,77 @@ def harness_agent(
                     uid, iam_url=iam_url, token=credential or None
                 )
 
-        try:
-            harness, admitted_as = organization_harness(
-                harness_id, organization_uid=organization_uid, read=read_organization
+        if not organization_uid:
+            raise HarnessRefused(
+                f"The harness {harness_id!r} is an organization's own, and this application "
+                "belongs to no organization: it is served only for its organization's applications."
             )
+        try:
+            admitted = admit_organization(platform, organization_uid, read_organization)
         except OrganizationHarnessRefused as unread:
             raise HarnessRefused(str(unread)) from None
-    if harness is None:
+        contribution = admitted.get(harness_id)
+        if contribution is None:
+            raise HarnessRefused(
+                f"Organization {organization_uid} has no harness named {harness_id!r}."
+            )
+    else:
+        contribution = contributions.get(harness_id)
+    if contribution is None:
         listed = listed_refusal(harness_id)
+        shared = sorted(c.spec.id for c in contributions.values() if not c.organization)
         raise HarnessRefused(
             listed
-            or f"There is no harness named {harness_id!r}: one of {', '.join(sorted(HARNESS_CATALOGUE))}."
+            or f"There is no harness named {harness_id!r}: one of {', '.join(shared)}."
         )
+    return contribution.adapter(
+        agent_id,
+        contribution.spec,
+        app=app,
+        recorder=recorder,
+        approvals=approvals,
+        credential=credential,
+        name=name,
+        description=description,
+        environment=environment,
+        workspace=workspace,
+        state_store=state_store,
+        organization_uid=contribution.organization,
+    )
+
+
+def acp_harness_agent(
+    agent_id: str,
+    harness: HarnessSpec,
+    *,
+    app: Any = None,
+    recorder: Any = None,
+    approvals: ToolApprovalManager | None = None,
+    credential: str = "",
+    name: str = "",
+    description: str = "",
+    environment: Mapping[str, str] | None = None,
+    workspace: Path | None = None,
+    state_store: Any = None,
+    organization_uid: str = "",
+) -> ACPAgent:
+    """An ``ACPAgent`` on a harness spec: the adapter every ACP harness contribution names.
+
+    The policies in force (SH-50) admit it — an organization's own by its
+    reviewed command's digest — the application's skills and instructions are
+    written for it (SH-21), and the sidecar bridge (SH-40) runs it when the
+    pod has one.
+
+    Raises
+    ------
+    HarnessRefused
+        As :func:`harness_agent` says.
+    """
+    from agentspecs.harnesses import admission_id
+
+    from agent_runtimes.guardrails.organization_harnesses import admission_refusal
+
+    admitted_as = admission_id(harness) if organization_uid else ""
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
     lent_names = [item.name for item in lent]
@@ -1869,12 +1932,12 @@ def harness_agent(
         policies = policies_in_force(app, lent_names, token=credential or None)
     except PolicyUnavailable as unavailable:
         raise HarnessRefused(
-            f"The harness {harness_id!r} is refused: {unavailable}."
+            f"The harness {harness.id!r} is refused: {unavailable}."
         ) from None
     refused = (
         admission_refusal(policies, admitted_as)
         if admitted_as
-        else harness_refusal(policies, harness_id)
+        else harness_refusal(policies, harness.id)
     )
     if refused is None and admitted_as:
         refused = harness_refusal(policies, admitted_as)
@@ -1921,6 +1984,7 @@ __all__ = [
     "LentFiles",
     "LentToolset",
     "RecordAudit",
+    "acp_harness_agent",
     "advertised_problems",
     "harness_agent",
     "harness_environment",

@@ -74,7 +74,10 @@ def test_the_points_are_registered_at_start(platform: PluginPlatform) -> None:
         "session.hook",
     ]
     [held] = [e for e in platform.list_extensions() if e["name"] == host.EXTENSION]
-    assert held["plugins"] == [host.BUILTIN_PLUGIN]
+    assert held["plugins"] == [
+        host.BUILTIN_PLUGIN,
+        "agent-runtimes.organization-harnesses",
+    ]
     [manifest] = [
         p for p in platform.list_plugins() if p["name"] == host.BUILTIN_PLUGIN
     ]
@@ -194,8 +197,9 @@ def test_loop_plugins_lists_extensions_contributions_and_what_was_refused(
     assert host.discover(platform, TEST_GROUP) == []
     described = host.describe_plugins(platform)
     assert [e["name"] for e in described["extensions"]] == [host.EXTENSION]
-    [plugin] = described["extensions"][0]["plugins"]
+    plugin, organization = described["extensions"][0]["plugins"]
     assert plugin["name"] == host.BUILTIN_PLUGIN and plugin["enabled"]
+    assert organization["contributions"] == []
     assert {(c["point"], c["id"]) for c in plugin["contributions"]} >= {
         ("harness", "claude-code"),
         ("harness", "codex"),
@@ -253,7 +257,10 @@ def test_the_command_prints_the_entry_point_and_the_error(
 def test_a_contribution_is_its_extension_s_when_registered_through_it() -> None:
     delivered = extension()
     assert delivered.name == host.EXTENSION
-    assert [manifest.name for manifest, _ in delivered.plugins] == [host.BUILTIN_PLUGIN]
+    assert [manifest.name for manifest, _ in delivered.plugins] == [
+        host.BUILTIN_PLUGIN,
+        "agent-runtimes.organization-harnesses",
+    ]
     assert points.HOOK_EVENTS == (
         "open",
         "resume",
@@ -263,3 +270,154 @@ def test_a_contribution_is_its_extension_s_when_registered_through_it() -> None:
         "import",
         "end",
     )
+
+
+# --- the catalogue behind the point (MH-F02) ------------------------------------------
+
+
+def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_agent(
+    platform: PluginPlatform,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
+    from agent_runtimes.chat.cli import harnesses
+    from agent_runtimes.loop.apps import plugins as runtime_plugins
+
+    monkeypatch.setattr(runtime_plugins, "PLATFORM", platform)
+    made: list[Any] = []
+
+    def adapter(agent_id: str, spec: Any, **facts: Any) -> str:
+        made.append((agent_id, spec.id, facts["organization_uid"]))
+        return f"an agent on {spec.id}"
+
+    aider = HarnessContribution(
+        spec=HARNESS_CATALOGUE["goose"].model_copy(
+            update={"id": "aider", "name": "Aider"}
+        ),
+        adapter=adapter,
+    )
+    _register(platform, "aider-harness", (HARNESSES, aider, "aider"))
+    _register(
+        platform,
+        "aider-again",
+        (
+            HARNESSES,
+            HarnessContribution(spec=HARNESS_CATALOGUE["claude-code"], adapter=adapter),
+            "claude-code",
+        ),
+    )
+    harnesses()
+    import re
+
+    out = re.sub(r"\x1b\[[0-9;]*m", "", capsys.readouterr().out)
+    assert (
+        "Aider" in out
+        and "loop --harness aider" in out
+        and "Contributed by: aider-harness" in out
+    )
+    assert (
+        "Capabilities: resume none, fork history replay, interrupt yes, steering no, images false".replace(
+            "images false", "images no"
+        )
+        in out
+    )
+    assert "vendor session id none" in out
+    # Resolved through the registry: the contribution's adapter makes the agent.
+    assert harness_agent("a1", "aider", workspace=Path("/tmp")) == "an agent on aider"
+    assert made == [("a1", "aider", "")]
+    # A second claude-code is refused by name; the catalogue's stands.
+    [refusal] = host.refusals(platform)
+    assert refusal.plugin == "aider-again" and refusal.contribution_id == "claude-code"
+    [claude] = [c for c in host.accepted(platform, HARNESSES) if c.id == "claude-code"]
+    assert claude.plugin == host.BUILTIN_PLUGIN
+    with pytest.raises(
+        HarnessRefused,
+        match="There is no harness named 'nope': one of aider, claude-code, codex",
+    ):
+        harness_agent("a1", "nope", workspace=Path("/tmp"))
+
+
+def test_an_organizations_harness_is_contributed_for_its_organization_alone(
+    platform: PluginPlatform, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
+    from agent_runtimes.guardrails import organization_harnesses as org
+    from agent_runtimes.loop.apps import plugins as runtime_plugins
+
+    monkeypatch.setattr(runtime_plugins, "PLATFORM", platform)
+    spec = HARNESS_CATALOGUE["goose"].model_dump(mode="json")
+    spec.update(
+        {
+            "id": "org-acme-coder",
+            "name": "Acme Coder",
+            "acp": {
+                **spec["acp"],
+                "command": "acme-coder",
+                "args": ["acp", "--pinned", "2.4.1"],
+            },
+        }
+    )
+    spec["terms"] = {
+        "served_to_third_parties": "organizations_own",
+        "licence": "Proprietary (Acme)",
+        "tier_restrictions": None,
+    }
+    spec.pop("registered", None)
+    entry = {
+        "adapter": "acme-coder",
+        "version": "2.4.1",
+        "licence": "Proprietary (Acme)",
+        "licence_source": "https://acme.example/licence",
+        "terms_source": "https://acme.example/terms",
+        "credential": "Acme's own key",
+        "served_to_third_parties": "organizations_own",
+    }
+    reads: list[str] = []
+
+    def read(uid: str) -> dict[str, Any]:
+        reads.append(uid)
+        return (
+            {"org-acme-coder": {"spec": spec, "register": entry}}
+            if uid == "org-1"
+            else {}
+        )
+
+    admitted = org.admit_organization(platform, "org-1", read)
+    assert (
+        list(admitted) == ["org-acme-coder"]
+        and admitted["org-acme-coder"].id == "org-acme-coder@org-1"
+    )
+    assert {
+        c.id
+        for c in host.accepted(platform, HARNESSES)
+        if c.plugin == org.ORGANIZATION_PLUGIN
+    } == {"org-acme-coder@org-1"}
+    # Read again: the earlier contribution is taken back, not doubled.
+    org.admit_organization(platform, "org-1", read)
+    assert (
+        len(
+            [
+                c
+                for c in host.accepted(platform, HARNESSES)
+                if c.plugin == org.ORGANIZATION_PLUGIN
+            ]
+        )
+        == 1
+    )
+    # Another organization sees nothing of it; no organization at all is refused.
+    with pytest.raises(
+        HarnessRefused, match="Organization org-2 has no harness named 'org-acme-coder'"
+    ):
+        harness_agent(
+            "a1",
+            "org-acme-coder",
+            organization_uid="org-2",
+            read_organization=read,
+            workspace=Path("/tmp"),
+        )
+    with pytest.raises(HarnessRefused, match="belongs to no organization"):
+        harness_agent(
+            "a1", "org-acme-coder", read_organization=read, workspace=Path("/tmp")
+        )
+    assert reads == ["org-1", "org-1", "org-2"]
