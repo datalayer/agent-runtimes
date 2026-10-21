@@ -755,6 +755,21 @@ class AppRecorder:
         """
         _SESSION.set(session)
         if session not in self._started:
+            earlier = _RECORDERS.get(session)
+            if (
+                earlier is not None
+                and earlier is not self
+                and not resumed
+                and session in earlier._started
+            ):
+                # Started on this runtime by another recorder — the session's
+                # agent was swapped (MH-06) and the new agent's recorder goes
+                # on with the same session: no second opening, which said an
+                # agent of "" and had the record refuse every later entry of
+                # the session (found on r1, 21 October 2026).
+                self._started.add(session)
+                _RECORDERS[session] = self
+                return
             self._started.add(session)
             _RECORDERS[session] = self
             if woken_by:

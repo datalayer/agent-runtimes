@@ -159,3 +159,40 @@ def test_a_run_starts_in_the_record_at_once() -> None:
     asyncio.run(run())
     assert [e["kind"] for e in sent[0]["entries"]] == ["session", "run"]
     assert sent[0]["entries"][1]["summary"] == "Inbox Triage is working"
+
+
+def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening() -> None:
+    """After a swap (MH-06) the new agent's recorder adopts the session another
+    recorder started on this runtime: no second opening, which said an agent of
+    ``""`` and had the record refuse every later entry (r1, 21 October 2026).
+    A resume still writes its own opening."""
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    async def settle() -> None:
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+    async def run() -> None:
+        app = recorder_of_triage([]).app
+        first = AppRecorder(app=app, send=send)
+        first.start("s-3", facts={"agent": "example-harness-claude-code", "harness": "claude-code"})
+        first.ran("s-3")
+        await settle()
+        second = AppRecorder(app=app, send=send)
+        second.start("s-3")
+        second.ran("s-3")
+        await settle()
+        third = AppRecorder(app=app, send=send)
+        third.start("s-3", resumed=True, facts={"agent": "example-agentic-chat"})
+        third.ran("s-3")
+        await settle()
+
+    asyncio.run(run())
+    kinds = [[e["kind"] for e in body["entries"]] for body in sent]
+    assert kinds == [["session", "run"], ["run"], ["session", "run"]]
+    assert sent[0]["entries"][0]["payload"]["agent"] == "example-harness-claude-code"
+    assert sent[2]["entries"][0]["payload"]["agent"] == "example-agentic-chat"
+    assert sent[2]["entries"][0]["payload"]["resumed"] is True

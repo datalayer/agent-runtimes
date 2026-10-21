@@ -1599,6 +1599,7 @@ async def list_sessions(
     ``?q=`` on the title, ``?archived=true`` to include the archived).
     ``?held=true`` lists what this runtime holds alone.
     """
+    from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps import sessions
     from agent_runtimes.loop.apps.session_store import active_store
     from agent_runtimes.loop.apps.session_workspace import with_workspaces
@@ -1609,6 +1610,10 @@ async def list_sessions(
     except SessionRefused as refused:
         raise _refused(refused) from None
     authorized = await _authorize(request, False)
+    # The record is read as the caller: the store takes the bearer from the
+    # request's context (found on r1, 21 October 2026: `loop sessions list
+    # --cloud` on a kept runtime answered 401, "none was sent").
+    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
     limit = max(1, min(int(limit or 50), 200))
     held_here = [
         live.describe()
@@ -1655,9 +1660,11 @@ async def _recorded(uid: str, request: Request) -> Dict[str, Any]:
     """A session this runtime does not hold, from the record, for its owner:
     a stranger's — an organization's admin included — is a 404.
     """
+    from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps.session_store import active_store
 
     authorized = await _authorize(request, False)
+    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
     described = await _store_refused(active_store().get(uid))
     if described is None:
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
