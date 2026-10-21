@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.80
+
+22 October 2026. Codex reaches ai-inference, not OpenAI.
+
+- **Codex through codex-acp's gateway** (META_HARNESS decision Y): Codex does not read `OPENAI_BASE_URL` — on a Datalayer runtime it went on calling `api.openai.com`. It is now authenticated with codex-acp's `gateway` method: a custom provider whose base URL is ai-inference's OpenAI route and whose `Authorization` header is the runtime's inference token, on the Responses wire API.
+
 ## 1.5.79
 
 22 October 2026. A host that owns the approvals decides each one once.
