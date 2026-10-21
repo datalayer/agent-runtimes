@@ -2248,77 +2248,19 @@ def _ai_agents() -> Any:
     )
 
 
-@app.command(name="threads")
-def apps_threads(
-    app_uid: Optional[str] = typer.Argument(
-        None, help="One application's, by its id; every one otherwise."
-    ),
-    search: str = typer.Option(
-        "", "--search", "-s", help="Only those whose title or questions say it."
-    ),
-    tag: str = typer.Option("", "--tag", help="Only those that carry this tag."),
-    limit: int = typer.Option(50, "--limit", min=1, max=1000),
-) -> None:
-    """List your conversations with an application, newest first (P-24).
+@app.command(name="threads", hidden=True)
+def apps_threads() -> None:
+    """Retired (decision 17): `loop sessions list` lists your conversations."""
+    from agent_runtimes.commands.sessions import retired
 
-    Each under its title — yours, else the one its code gave it, else your
-    first question — with its turns, tags and id: the id `loop apps
-    feedback` takes.
-    """
-    import httpx
-
-    from agent_runtimes.loop.apps.threads import (
-        ThreadsRefused,
-        list_threads,
-        thread_line,
-    )
-
-    try:
-        with _ai_agents() as client:
-            threads = list_threads(
-                client, app_uid=app_uid, search=search, tag=tag, limit=limit
-            )
-    except (ThreadsRefused, httpx.HTTPError) as refused:
-        console.print(f"[red]✗[/red] {refused}")
-        raise typer.Exit(1)
-    if not threads:
-        console.print(
-            "No conversation found."
-            if search or tag
-            else "You had no conversation yet."
-        )
-        return
-    for thread in threads:
-        console.print(thread_line(thread), markup=False)
+    console.print(f"[red]✗[/red] {retired('threads')}")
+    raise typer.Exit(1)
 
 
-@app.command(name="feedback")
-def apps_feedback(
-    session_uid: str = typer.Argument(
-        ..., help="The conversation, by its id (`loop apps threads`)."
-    ),
-) -> None:
-    """List what people said of a conversation's answers (V-18, P-24).
+@app.command(name="feedback", hidden=True)
+def apps_feedback() -> None:
+    """Retired (decision 17): `loop sessions feedback <uid>` reads what people said."""
+    from agent_runtimes.commands.sessions import retired
 
-    Read from its application's record, which its owner reads: each thumb,
-    the answer it is about, who said it and their comment, oldest first.
-    """
-    import httpx
-
-    from agent_runtimes.loop.apps.threads import (
-        ThreadsRefused,
-        feedback_line,
-        thread_feedback,
-    )
-
-    try:
-        with _ai_agents() as client:
-            said = thread_feedback(client, session_uid)
-    except (ThreadsRefused, httpx.HTTPError) as refused:
-        console.print(f"[red]✗[/red] {refused}")
-        raise typer.Exit(1)
-    if not said:
-        console.print(f"Nothing was said of {session_uid}'s answers.")
-        return
-    for each in said:
-        console.print(feedback_line(each), markup=False)
+    console.print(f"[red]✗[/red] {retired('feedback')}")
+    raise typer.Exit(1)

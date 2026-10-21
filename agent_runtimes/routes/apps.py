@@ -1676,7 +1676,13 @@ async def get_session(uid: str, request: Request) -> Dict[str, Any]:
 
     if session_of(uid) is not None:
         live, _ = await _held(uid, request)
-        return dict(live.describe())
+        described = dict(live.describe())
+        # Its harness's row, with the vendor's own session id when the
+        # adapter exposes it (MH-05): what `loop sessions show` prints.
+        shield = live._shield()
+        if shield is not None and hasattr(shield, "harness_row"):
+            described["harness_session"] = await shield.harness_row(uid)
+        return described
     return await _recorded(uid, request)
 
 

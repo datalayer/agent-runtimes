@@ -52,7 +52,22 @@ __all__ = [
 #: lives here rather than in twenty modules so the shape of the help screen is
 #: visible in one place.
 _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Session", ("help", "status", "clear", "cls", "exit", "suggestions")),
+    (
+        "Session",
+        (
+            "help",
+            "status",
+            "clear",
+            "cls",
+            "exit",
+            "suggestions",
+            "sessions",
+            "resume",
+            "swap",
+            "clone",
+            "export",
+        ),
+    ),
     ("Context", ("context", "context_export")),
     (
         "Agents",
@@ -106,6 +121,7 @@ def build_registry(
         browser_document,
         browser_notebook,
         clear,
+        clone,
         cls,
         code_sandbox,
         codemode_toggle,
@@ -114,13 +130,17 @@ def build_registry(
         datalayer,
         decisions,
         exit,
+        export,
         help,
         mcp_servers,
         models,
+        resume,
+        sessions,
         skills,
         status,
         suggestions,
         surface,
+        swap,
         tools,
         tools_last,
         voice,
@@ -151,6 +171,12 @@ def build_registry(
         browser_document,
         suggestions,
         voice,
+        # The session's verbs (MH-18): this conversation as a session.
+        sessions,
+        resume,
+        swap,
+        clone,
+        export,
     ]
 
     # Conditionally add egg commands
