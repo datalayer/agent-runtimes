@@ -15,7 +15,6 @@ every open session it holds.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -34,7 +33,6 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     as_,
     events_of,
-    local,
     remote,
     runtime,
 )
@@ -71,7 +69,8 @@ def _state_entries(made: Runtime, uid: str) -> List[Dict[str, Any]]:
 
 
 def test_the_shape_in_the_record_and_describe(
-    runtime: Runtime, remote: TestClient
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
 ) -> None:
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     _open(remote, "session-0101")
@@ -115,7 +114,8 @@ def test_the_shape_in_the_record_and_describe(
 
 
 def test_describe_after_each_operation_and_the_entries(
-    runtime: Runtime, remote: TestClient
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
 ) -> None:
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     _open(remote, "session-0102")
@@ -180,7 +180,8 @@ def test_describe_after_each_operation_and_the_entries(
 
 
 def test_stopped_posted_answers_422_in_a_sentence(
-    runtime: Runtime, remote: TestClient
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
 ) -> None:
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     refused = remote.get("/api/v1/apps/sessions?state=stopped", headers=as_("ada"))
@@ -210,7 +211,8 @@ def test_stopped_posted_answers_422_in_a_sentence(
 
 
 def test_a_graceful_stop_leaves_paused_entries_for_two_held_sessions(
-    runtime: Runtime, remote: TestClient
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
 ) -> None:
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     _open(remote, "session-0103")
