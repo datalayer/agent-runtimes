@@ -866,14 +866,40 @@ class ACPAgent(BaseAgent, ShieldProxy):
             authorizer=shield_authorizer.runtime_authorizer(
                 self._decision_credential if held else credential
             ),
-            subject=shield_authorizer.runtime_subject(
-                held,
-                self._deployment_served()
-                or shield_authorizer.deployment_of_token(held),
-            ),
+            # The subject is this agent's own property, read when it is
+            # needed (``subject``): built before the keeper hands the
+            # principal token, it would otherwise stay the creator's account.
+            subject=None,
             tool_class=shield_authorizer.lent_tool_class,
             companies=self.companies,
         )
+
+    @property
+    def subject(self) -> Any:
+        """Who the run acts as, read when it is needed: the deployment served, else the credential's account.
+
+        The Shield copies it into each session as the session opens, and
+        IAM answers only a token asking about itself. An agent built before
+        the keeper hands the deployment's principal token — a kept
+        application loads its agent first — kept the subject bound at
+        creation, the creator's account, while ``_decision_credential``
+        moved on to the principal token: every decision answered *403, a
+        principal asks what it may do itself* (found on r1, 21 October
+        2026, the first turn on image 0.0.59). The subject follows the
+        credential now, as the credential follows the keeper.
+        """
+        from agent_runtimes.guardrails import shield_authorizer  # noqa: PLC0415
+
+        held = self._decision_credential()
+        return shield_authorizer.runtime_subject(
+            held,
+            self._deployment_served() or shield_authorizer.deployment_of_token(held),
+        )
+
+    @subject.setter
+    def subject(self, value: Any) -> None:
+        """``ShieldProxy.__init__`` assigns what it is given; this agent reads its own."""
+        return None
 
     def _deployment_served(self) -> str:
         """The deployment this agent serves, or ``""`` (a Preview, a test, no application)."""

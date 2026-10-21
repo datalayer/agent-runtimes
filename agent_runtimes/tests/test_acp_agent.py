@@ -1667,6 +1667,42 @@ class TestPapThroughTheShield:
         )
         assert plain.subject is not None and plain.subject.type == "account"
 
+    def test_the_subject_follows_the_held_principal_token(
+        self, workspace: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A kept application loads its agent before the keeper hands the
+        deployment's principal token. On r1 (21 October 2026, image 0.0.59)
+        the subject stayed the creator's account, bound at creation, while
+        the credential moved on to the principal token, and IAM answered
+        every decision *403: a principal asks what it may do itself*. The
+        subject is read when it is needed, like the credential: the
+        creator's account until the deployment's token is held, the
+        deployment from then on — and in the session the Shield opens."""
+        from agent_runtimes.loop.apps import principal
+        from agent_runtimes.models.models import remember_app_instance
+
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")
+        remember_app_instance("fake", None)
+        agent = an_agent(workspace, credential="owner-key-minted")
+        assert agent.subject is not None and agent.subject.type == "account"
+        assert agent.authorizer is not None
+        assert agent.authorizer._token() == "owner-key-minted"
+        try:
+            # The keeper hands the token after the agent is built.
+            remember_app_instance("fake", {"deployment_uid": "d-9"})
+            principal.give_principal_token("d-9", "principal-1", expires_in=3600)
+            assert agent.authorizer._token() == "principal-1"
+            assert (agent.subject.type, agent.subject.id) == ("deployment", "d-9")
+            session = agent._open("s-1", agent._workspace_for(str(workspace)))
+            assert session.subject is not None and (
+                session.subject.type,
+                session.subject.id,
+            ) == ("deployment", "d-9")
+        finally:
+            principal.forget_principal_token("d-9")
+            remember_app_instance("fake", None)
+            agent.sessions.pop("s-1", None)
+
     def test_a_runtime_pods_workspace_needs_the_authorizer_too(
         self, monkeypatch
     ) -> None:
