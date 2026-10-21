@@ -1268,6 +1268,17 @@ export interface ChatBaseProps {
    */
   showTurnFooter?: boolean;
   /**
+   * The host's row under a message, beside the chat's own (*interrupted*,
+   * read aloud): nothing when it draws nothing. `at.turn` is the person's
+   * turn the message belongs to — the count of their messages up to and
+   * including it — so that an action on a turn's row names the turn
+   * (*Clone from here*).
+   */
+  renderMessageFooter?: (
+    message: ChatMessage,
+    at: { turn: number },
+  ) => ReactNode;
+  /**
    * Show notebook tool results as read-only surfaces in the transcript,
    * addressed to this notebook document id.
    *

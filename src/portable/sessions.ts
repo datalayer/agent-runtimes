@@ -20,6 +20,7 @@ import type { ChatMessage } from '../types/messages';
 import { readRunStream, type AgUiEvent } from './agui';
 import { agUiRefusal, refusalBody } from './agUiRefusal';
 import { messagesOfThread } from './thread';
+import { sessionRowOf, type SessionRow } from './activity';
 
 /** Where a runtime is, and as whom it is asked. */
 export type RuntimeClientOptions = {
@@ -170,6 +171,9 @@ export function appSessionsClient(options: RuntimeClientOptions) {
     end: (uid: string) => json(`${at(uid)}/end`, 'POST'),
     /** What the session is: its state (`open`, `paused`, `ended`), its turn phase, what it asks. */
     describe: (uid: string) => json(at(uid)),
+    /** The session as a row (`sessionRowOf`): its state refused when it is none of the three. */
+    described: async (uid: string): Promise<SessionRow> =>
+      sessionRowOf(await json(at(uid))),
     /** The caller's sessions, held and recorded, paged and filtered (`?app=`, `?agent=`, `?state=`, `?q=`, `?archived=true` includes the archived, `?after=`, `?limit=`). */
     list: (params: Record<string, string | number | boolean> = {}) => {
       const query = new URLSearchParams();

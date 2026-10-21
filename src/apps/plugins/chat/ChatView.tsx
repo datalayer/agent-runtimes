@@ -24,7 +24,13 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { IconButton, SegmentedControl, Text, Truncate } from '@primer/react';
+import {
+  Button,
+  IconButton,
+  SegmentedControl,
+  Text,
+  Truncate,
+} from '@primer/react';
 import { Box, loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { computed, signal } from '@datalayer/reactor';
@@ -133,6 +139,7 @@ import {
   LoopChatSurface,
   LoopChatTurn,
   LoopCommand,
+  type SessionActionContext,
   type SessionFacts,
   LoopFrontendTool,
   LoopRunProps,
@@ -165,10 +172,19 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import { generateMessageId } from '../../../types/messages';
-import { deploymentOfPayload, threadOfVisit } from '../../apps/threads';
+import {
+  deploymentOfPayload,
+  sessionOfSearch,
+  threadOfVisit,
+} from '../../apps/threads';
 import { openThread, THREAD_WORDS } from '../../../portable/thread';
 import { appSessionsClient } from '../../../portable/sessions';
-import { SessionActionsMenu } from './SessionActionsMenu';
+import {
+  SessionActionsMenu,
+  SessionStateLine,
+  TurnActions,
+} from './SessionActionsMenu';
+import { SessionChooseDialog, type SessionChoice } from './SessionChooseDialog';
 import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
 import {
   FaceDrawing,
@@ -1697,9 +1713,46 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * agent holds every visitor's turns, never drawn as this person's.
    */
   const [visitThreadId] = useState(generateMessageId);
+  /*
+   * The web's deep link (MH-27): `?session=<uid>` on the chat's URL opens
+   * that session as the thread when the host gave none — a malformed one is
+   * said, not sent. And the thread an action opened (MH-10, MH-27): a
+   * clone's, an import's, a resumed one's — drawn in place of the given.
+   */
+  const [deepLinked, deepLinkRefused] = useMemo((): [string, string] => {
+    try {
+      return [
+        sessionOfSearch(
+          typeof window === 'undefined' ? '' : window.location.search,
+        ),
+        '',
+      ];
+    } catch (error) {
+      return ['', error instanceof Error ? error.message : String(error)];
+    }
+  }, []);
+  const [actionThread, setActionThread] = useState<ResumedThread | undefined>(
+    undefined,
+  );
   const givenThread = useMemo(
-    () => threadOfVisit(config?.thread, deploymentUid, visitThreadId),
-    [config?.thread, deploymentUid, visitThreadId],
+    () =>
+      actionThread ??
+      threadOfVisit(
+        config?.thread ??
+          (deepLinked && runsApp
+            ? { id: deepLinked, messages: [], fromRuntime: true }
+            : undefined),
+        deploymentUid,
+        visitThreadId,
+      ),
+    [
+      actionThread,
+      config?.thread,
+      deepLinked,
+      runsApp,
+      deploymentUid,
+      visitThreadId,
+    ],
   );
   const [openedThread, setOpenedThread] = useState<{
     given: string;
@@ -1767,6 +1820,80 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ? openedThread.thread
       : undefined
     : givenThread;
+  /*
+   * The session the thread is, as the runtime describes it (MH-27): read
+   * once the thread is known and again after each turn and each action, so
+   * that the header's state words, the lineage line and the menu's entries
+   * say the session as it stands. A thread the runtime holds no session of
+   * yet — a visit before its first message — says nothing.
+   */
+  const threadUid = workspace.thread || chatThread?.id || '';
+  const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
+  const [factsTick, setFactsTick] = useState(0);
+  useEffect(() => {
+    if (!runsApp || !agentServerUrl || !threadUid || busy) {
+      return undefined;
+    }
+    let current = true;
+    sessionsClient.described(threadUid).then(
+      row => current && setFacts(row),
+      () => current && setFacts(undefined),
+    );
+    return () => {
+      current = false;
+    };
+  }, [runsApp, agentServerUrl, threadUid, busy, factsTick, sessionsClient]);
+  /* What an action said — a swap's sentence, a refusal as the runtime said
+     it — shown above the conversation until dismissed; and the picker and
+     the file an action asks with (`choose`, `pickFile`). */
+  const [actionSaid, setActionSaid] = useState(deepLinkRefused);
+  const [choice, setChoice] = useState<SessionChoice | null>(null);
+  const chooseResolver = useRef<((id: string | undefined) => void) | null>(
+    null,
+  );
+  const fileResolver = useRef<((text: string | undefined) => void) | null>(
+    null,
+  );
+  const fileInput = useRef<HTMLInputElement>(null);
+  const sessionContext = useMemo<SessionActionContext>(
+    () => ({
+      client: sessionsClient,
+      say: sentence => {
+        setActionSaid(sentence);
+        setFactsTick(tick => tick + 1);
+      },
+      openThread: uid => {
+        setActionThread({ id: uid, messages: [], fromRuntime: true });
+        setFactsTick(tick => tick + 1);
+      },
+      download: (name, text, mediaType) => {
+        const url = URL.createObjectURL(new Blob([text], { type: mediaType }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      choose: question =>
+        new Promise(resolve => {
+          chooseResolver.current = resolve;
+          setChoice(question);
+        }),
+      pickFile: accept =>
+        new Promise(resolve => {
+          const input = fileInput.current;
+          if (!input) {
+            resolve(undefined);
+            return;
+          }
+          fileResolver.current = resolve;
+          input.accept = accept;
+          input.value = '';
+          input.click();
+        }),
+    }),
+    [sessionsClient],
+  );
   /*
    * None without a server (`noRuntime`): the chat is off and connects to
    * nothing — no address is made up for it.
@@ -2366,6 +2493,52 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             {openedThread.said}
           </Text>
         ) : null}
+        {/* What a session action said (MH-27): a swap's sentence, a clone's
+            new thread, a refusal as the runtime said it — until dismissed. */}
+        {actionSaid ? (
+          <Box
+            display="flex"
+            alignItems="baseline"
+            gap={2}
+            px={3}
+            py={2}
+            fontSize={1}
+            color="fg.muted"
+            role="status"
+            data-session-said=""
+          >
+            <Text sx={{ flex: 1 }}>{actionSaid}</Text>
+            <Button
+              size="small"
+              variant="invisible"
+              onClick={() => setActionSaid('')}
+            >
+              Dismiss
+            </Button>
+          </Box>
+        ) : null}
+        {choice ? (
+          <SessionChooseDialog
+            question={choice}
+            onPick={id => {
+              setChoice(null);
+              chooseResolver.current?.(id);
+              chooseResolver.current = null;
+            }}
+          />
+        ) : null}
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          data-session-file=""
+          onChange={async event => {
+            const file = event.target.files?.[0];
+            const text = file ? await file.text() : undefined;
+            fileResolver.current?.(text);
+            fileResolver.current = null;
+          }}
+        />
         <Box flex="1 1 auto" minHeight={0} display="flex">
           {opening ? (
             <Text
@@ -2579,30 +2752,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       registry holds and applies to this session, read when
                       it opens — nothing for a thread that is no session. */}
                   {runsApp && agentServerUrl ? (
-                    <SessionActionsMenu
-                      uid={controlsRef.current?.thread() || undefined}
-                      describe={async uid =>
-                        (await sessionsClient.describe(
-                          uid,
-                        )) as unknown as SessionFacts
-                      }
-                      context={{
-                        client: sessionsClient,
-                        // Said in the menu itself until the chat has a
-                        // place for a sentence (MH-27).
-                        say: () => undefined,
-                        download: (name, text, mediaType) => {
-                          const url = URL.createObjectURL(
-                            new Blob([text], { type: mediaType }),
-                          );
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = name;
-                          link.click();
-                          URL.revokeObjectURL(url);
-                        },
-                      }}
-                    />
+                    <>
+                      {/* The session's state words and where it comes from
+                          (MH-27, MH-10). */}
+                      <SessionStateLine facts={facts} />
+                      <SessionActionsMenu
+                        uid={threadUid || undefined}
+                        describe={uid => sessionsClient.described(uid)}
+                        context={sessionContext}
+                      />
+                    </>
                   ) : null}
                   {chatHeaderItems.length > 0 ? (
                     <ReactorSlot
@@ -2718,6 +2877,21 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               }
               onContextSnapshot={handleContextSnapshot}
               onLoadingChange={handleLoadingChange}
+              /* Each turn's row offers what the registry places on a turn
+                 (MH-10): *Clone from here*, naming the turn — under the
+                 person's message, for an application's session only. */
+              renderMessageFooter={
+                runsApp && agentServerUrl
+                  ? (message, at) =>
+                      message.role === 'user' ? (
+                        <TurnActions
+                          facts={facts}
+                          turn={at.turn}
+                          context={sessionContext}
+                        />
+                      ) : null
+                  : undefined
+              }
               onSpeakingChange={setSpeaking}
               onItemsChange={handleMessagesChange}
               onDisplayItemsChange={handleDisplayItemsChange}

@@ -30,6 +30,7 @@ import type { AssistantCharacterData } from '../../chat/assistant/formats/types'
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import type { ChatWords } from '../../chat/words';
 import type { ChatViewMode } from '../../types/chat';
+import type { SessionRow } from '../../portable/activity';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -667,33 +668,12 @@ export const LoopChatHeader =
 
 /**
  * A session of an application, as the runtime's session API describes it
- * (`GET /api/v1/apps/sessions/{uid}`): what a thread's menu entry reads to
- * say whether it applies.
+ * (`GET /api/v1/apps/sessions/{uid}`) and as the record lists it: one
+ * shape, `SessionRow` (`portable/activity`), read through `sessionRowOf` —
+ * what a thread's menu entry reads to say whether it applies, and what the
+ * thread's header says of the session (its state, where it comes from).
  */
-export type SessionFacts = {
-  uid: string;
-  /** `open`, `paused` or `ended` — the record's word. */
-  state: 'open' | 'paused' | 'ended';
-  /** The runtime's turn phase of an open session. */
-  turn: 'idle' | 'running' | 'waiting';
-  /** Whether a runtime holds it now. */
-  held: boolean;
-  /** The agentspec bound to it now. */
-  agent: string;
-  harness: string | null;
-  turns: number;
-  title: string;
-  archived: boolean;
-  lineage: {
-    forked_from: { uid: string; at_turn: number } | null;
-    imported_from: {
-      digest: string;
-      exported_at: string;
-      exported_by: string;
-    } | null;
-  };
-  runs_on: Record<string, unknown> | null;
-};
+export type SessionFacts = SessionRow;
 
 /** What a menu entry may do when run: the session API, and the page's ways. */
 export type SessionActionContext = {
@@ -710,14 +690,24 @@ export type SessionActionContext = {
    */
   choose?: (question: {
     title: string;
-    options: { id: string; label: string }[];
+    options: { id: string; label: string; description?: string }[];
+    /** What the pick does, shown before it is sent. */
     says?: (id: string) => Promise<string>;
   }) => Promise<string | undefined>;
+  /**
+   * Ask the person for a file — a session file to import — and give its
+   * text; `undefined` when they decline. A page with no picker leaves it
+   * out, and the entry says so.
+   */
+  pickFile?: (accept: string) => Promise<string | undefined>;
   /** Say a sentence to the person: a refusal, what was done. */
   say: (sentence: string) => void;
   /** The turn a *Clone from here* was pressed on, when it was; else the last. */
   atTurn?: number;
 };
+
+/** Where an entry is offered: the thread's `⋯` menu, each turn's row, or both. */
+export type SessionActionPlacement = 'thread' | 'turn' | 'both';
 
 /**
  * A menu entry on a thread (the thread's `⋯`): *Switch agent…*, *Clone from
@@ -740,21 +730,28 @@ export type SessionActionContribution = {
   order?: number;
   /** Set apart from what precedes it. */
   divider?: boolean;
+  /** Where it is offered; the thread's menu when unsaid. */
+  placement?: SessionActionPlacement;
 };
 
 export const LoopSessionAction =
   defineContributionPoint<SessionActionContribution>('loop.session.action');
 
-/** The entries that apply to a session now, in their order. */
+/** The entries that apply to a session now, for one placement, in their order. */
 export function sessionActionsFor(
   entries: readonly { value: SessionActionContribution }[],
   session: SessionFacts | undefined,
+  placement: 'thread' | 'turn' = 'thread',
 ): SessionActionContribution[] {
   if (!session) {
     return [];
   }
   return entries
     .map(entry => entry.value)
+    .filter(entry => {
+      const offered = entry.placement ?? 'thread';
+      return offered === 'both' || offered === placement;
+    })
     .filter(entry => {
       try {
         return entry.when(session);

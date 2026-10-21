@@ -15,7 +15,9 @@
  * and goes on with it on the same thread.
  *
  * Opening it is `openThread` (`portable/thread`), as every client opens one;
- * here is what a deployment's chat decides of the thread it opens on.
+ * here is what a deployment's chat decides of the thread it opens on — and
+ * the web's deep link to a session, `?session=<uid>` on the chat's URL
+ * (`sessionOfSearch`).
  *
  * @module apps/apps/threads
  */
@@ -59,4 +61,24 @@ export function threadOfVisit(
     return given;
   }
   return { id, messages: [] };
+}
+
+/**
+ * The session a chat's URL names, `?session=<uid>` (the web's deep link):
+ * the chat opens that session as its thread when its host gave none. A
+ * uid is 8 to 128 letters, digits, hyphens or underscores (`SESSION_UID`);
+ * anything else is no session and refused in a sentence rather than sent
+ * to the runtime.
+ */
+export function sessionOfSearch(search: string): string {
+  const uid = (new URLSearchParams(search).get('session') ?? '').trim();
+  if (!uid) {
+    return '';
+  }
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(uid)) {
+    throw new Error(
+      `?session=${uid} names no session: a session uid is 8 to 128 letters, digits, hyphens or underscores.`,
+    );
+  }
+  return uid;
 }

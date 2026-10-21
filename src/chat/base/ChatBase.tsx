@@ -812,6 +812,7 @@ function ChatBaseInner({
   emptyState,
   renderHeader,
   showTurnFooter = true,
+  renderMessageFooter,
   notebookToolSurfacesId,
   footerContent,
   welcome,
@@ -4989,12 +4990,21 @@ function ChatBaseInner({
           )?.id
       : undefined;
   const readAloudFooter =
-    readAnswerAloud || interruptedIds.size
-      ? (message: ChatMessage) => {
+    readAnswerAloud || interruptedIds.size || renderMessageFooter
+      ? (message: ChatMessage, at: { turn: number }) => {
           const text = getMessageText(message);
+          // The host's row, asked once: nothing when it draws nothing.
+          const hosts = renderMessageFooter?.(message, at) ?? null;
+          const interrupted = interruptedIds.has(message.id);
+          const reads = Boolean(
+            readAnswerAloud && readsAloud(message, text, writingId),
+          );
+          if (!hosts && !interrupted && !reads) {
+            return null;
+          }
           return (
             <>
-              {interruptedIds.has(message.id) ? (
+              {interrupted ? (
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                   data-interrupted=""
@@ -5002,9 +5012,10 @@ function ChatBaseInner({
                   interrupted
                 </Text>
               ) : null}
-              {readAnswerAloud && readsAloud(message, text, writingId) ? (
+              {reads && readAnswerAloud ? (
                 <ReadAloud onRead={() => readAnswerAloud(text)} />
               ) : null}
+              {hosts}
             </>
           );
         }

@@ -172,7 +172,10 @@ export interface ChatMessageListProps {
    * that this list has no opinion on. Not called for tool calls or for a
    * `note`, which has no footer of its own.
    */
-  renderMessageFooter?: (message: ChatMessage) => ReactNode;
+  renderMessageFooter?: (
+    message: ChatMessage,
+    at: { turn: number },
+  ) => ReactNode;
   /**
    * The answer a sentence is being said from (VO-65): its row is
    * marked `aria-current` and `data-voice-saying`, with a bar beside it —
@@ -893,6 +896,23 @@ export function ChatMessageList({
     );
   };
 
+  /**
+   * The person's turn an item belongs to: how many of their messages come
+   * up to and including it. A footer's action on a turn names it by this.
+   */
+  const turnOfItem = (item: DisplayItem): number => {
+    let turn = 0;
+    for (const each of displayItems) {
+      if (!isToolCallMessage(each) && each.role === 'user') {
+        turn += 1;
+      }
+      if (each.id === item.id) {
+        break;
+      }
+    }
+    return turn;
+  };
+
   const renderItem = (item: DisplayItem, index: number): ReactNode => {
     // ---- Tool call item ----
     if (isToolCallMessage(item)) {
@@ -1083,8 +1103,11 @@ export function ChatMessageList({
       }
     }
 
-    // The host's footer, asked once: a row only when it draws something.
-    const messageFooter = renderMessageFooter?.(message);
+    // The host's footer, asked once: a row only when it draws something —
+    // told the person's turn the message belongs to.
+    const messageFooter = renderMessageFooter?.(message, {
+      turn: turnOfItem(message),
+    });
     // The answer being said (VO-65): marked by a bar and for assistive tech.
     const said = saidMessageId !== undefined && message.id === saidMessageId;
 

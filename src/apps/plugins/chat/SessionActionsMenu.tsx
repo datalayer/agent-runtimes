@@ -13,8 +13,16 @@
 
 import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
-import { ActionList, ActionMenu, IconButton } from '@primer/react';
+import {
+  ActionList,
+  ActionMenu,
+  Button,
+  IconButton,
+  Label,
+  Text,
+} from '@primer/react';
 import { KebabHorizontalIcon } from '@primer/octicons-react';
+import { Box } from '@datalayer/primer-addons';
 import { useContributions } from '@datalayer/reactor/react';
 import {
   LoopSessionAction,
@@ -22,6 +30,96 @@ import {
   type SessionActionContext,
   type SessionFacts,
 } from '../../core';
+import {
+  sessionLineageSaid,
+  sessionStateSaid,
+} from '../../../portable/activity';
+
+/**
+ * What the thread's header says of its session (MH-27, MH-10): its state
+ * with the turn phase — *Open · answering*, *Paused*, *Ended* — and where it
+ * comes from — *Cloned from e67a52b2 at turn 2*, *Imported from a file…* —
+ * as the record says them. Nothing while the session is not read.
+ */
+export function SessionStateLine({
+  facts,
+}: {
+  facts: SessionFacts | undefined;
+}): JSX.Element | null {
+  if (!facts) {
+    return null;
+  }
+  const lineage = sessionLineageSaid(facts);
+  return (
+    <Box
+      display="inline-flex"
+      alignItems="center"
+      gap={2}
+      data-session-state={facts.state}
+    >
+      <Label
+        size="small"
+        variant={
+          facts.state === 'open'
+            ? 'accent'
+            : facts.state === 'paused'
+              ? 'attention'
+              : 'secondary'
+        }
+      >
+        {sessionStateSaid(facts)}
+      </Label>
+      {lineage ? (
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-session-lineage="">
+          {lineage}
+        </Text>
+      ) : null}
+    </Box>
+  );
+}
+
+/**
+ * The entries offered on a turn's row (MH-10): *Clone from here*, naming
+ * the turn. Drawn under the person's message of that turn; nothing while
+ * the session is not read or nothing applies.
+ */
+export function TurnActions({
+  facts,
+  turn,
+  context,
+}: {
+  facts: SessionFacts | undefined;
+  /** The person's turn the row belongs to. */
+  turn: number;
+  context: SessionActionContext;
+}): JSX.Element | null {
+  const entries = useContributions(LoopSessionAction);
+  const applicable = sessionActionsFor(entries, facts, 'turn');
+  if (!facts || applicable.length === 0 || turn < 1) {
+    return null;
+  }
+  return (
+    <Box display="inline-flex" gap={1} data-turn-actions={turn}>
+      {applicable.map(entry => (
+        <Button
+          key={entry.id}
+          size="small"
+          variant="invisible"
+          data-turn-action={entry.id}
+          onClick={() => {
+            Promise.resolve(
+              entry.run(facts, { ...context, atTurn: turn }),
+            ).catch(error =>
+              context.say(String((error as Error).message ?? error)),
+            );
+          }}
+        >
+          {entry.label}
+        </Button>
+      ))}
+    </Box>
+  );
+}
 
 export type SessionActionsMenuProps = {
   /** The session the thread is, when it is one. */
