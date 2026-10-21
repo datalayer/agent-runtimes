@@ -559,8 +559,9 @@ def session_from_entries(
                 "imported_from": {
                     "digest": str(payload.get("digest") or ""),
                     "exported_at": str(payload.get("exported_at") or ""),
+                    # The schema's ImportedFrom; the redactions stay the
+                    # `imported` entry's (an export of it imports again).
                     "exported_by": str(payload.get("exported_by") or ""),
-                    "redactions": int(payload.get("redactions") or 0),
                 },
             }
     if described["state"] == "ended":

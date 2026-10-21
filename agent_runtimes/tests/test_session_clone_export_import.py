@@ -385,8 +385,8 @@ def test_an_application_keeping_no_conversations_is_not_exported(
     )
 
 
-def _exported(client: TestClient, uid: str) -> str:
-    return client.get(f"/api/v1/apps/sessions/{uid}/export", headers=as_("ada")).text
+def _exported(client: TestClient, uid: str, as_who: str = "ada") -> str:
+    return client.get(f"/api/v1/apps/sessions/{uid}/export", headers=as_(as_who)).text
 
 
 def test_import_answers_a_new_paused_session_that_resumes(
@@ -452,6 +452,19 @@ def test_import_answers_a_new_paused_session_that_resumes(
     assert [
         m["content"].split("\n")[0] for m in snapshot["messages"] if m["role"] == "user"
     ] == ["Hello there", "Two"]
+    # An imported session's own export imports again: its lineage is the
+    # schema's (found on r1, 22 October 2026: refused on `redactions`).
+    assert set(said["lineage"]["imported_from"]) == {
+        "digest",
+        "exported_at",
+        "exported_by",
+    }
+    again = remote.post(
+        "/api/v1/apps/sessions/import",
+        headers={**as_("bob"), "Content-Type": "application/x-ndjson"},
+        content=_exported(remote, said["uid"], as_who="bob"),
+    )
+    assert again.status_code == 201, again.text
 
 
 def test_import_refuses_what_the_spec_refuses_and_says_an_older_version(

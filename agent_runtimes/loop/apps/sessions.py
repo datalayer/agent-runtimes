@@ -3777,8 +3777,11 @@ async def import_session(
         "imported_from": {
             "digest": digest,
             "exported_at": str(head.get("exported_at") or ""),
+            # The schema's ImportedFrom: digest, when, by whom — the
+            # redactions are the `imported` entry's. Found on r1, 22 October
+            # 2026: the export of an imported session was refused at import,
+            # *lineage.imported_from.redactions: Extra inputs are not permitted*.
             "exported_by": str((head.get("exported_by") or {}).get("uid") or ""),
-            "redactions": int(imported.redactions),
         },
     }
     entries: List[Dict[str, Any]] = [
