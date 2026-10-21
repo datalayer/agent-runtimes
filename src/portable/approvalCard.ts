@@ -16,9 +16,12 @@
 
 import {
   messageOfApproval,
+  seatOfApproval,
+  seatSaid,
   whyAsked,
   type ApprovalArgs,
   type MessageAsked,
+  type SeatSource,
 } from './approvals';
 
 /** What every approval card says. */
@@ -35,10 +38,11 @@ export const APPROVAL_CARD_WORDS = {
 } as const;
 
 /** An approval's tool and arguments, under either naming. */
-export type ApprovalCardSource = ApprovalArgs & {
-  tool_name?: string;
-  toolName?: string;
-};
+export type ApprovalCardSource = ApprovalArgs &
+  SeatSource & {
+    tool_name?: string;
+    toolName?: string;
+  };
 
 /** What a card shows of one approval. */
 export type ApprovalCard = {
@@ -46,11 +50,13 @@ export type ApprovalCard = {
   action: string;
   /** Why it asked (its Rule or check), or `''`. */
   why: string;
+  /** The team seat that asked, said (*The coder seat of the coding-agents team*), or `''`. */
+  seat: string;
   /** A message to send, shown whole; `null` for anything else. */
   message: MessageAsked | null;
   /** Every non-private argument, complete, when it is not a message. */
   raw: string;
-  /** One line for a list row: a message's recipients and subject (never its body), else why. */
+  /** One line for a list row: the seat that asked, then a message's recipients and subject (never its body), else why. */
   summary: string;
 };
 
@@ -87,15 +93,19 @@ export function argumentsShown(approval: ApprovalCardSource): string {
 export function approvalCardOf(approval: ApprovalCardSource): ApprovalCard {
   const message = messageOfApproval(approval);
   const why = whyAsked(approval);
+  const asker = seatOfApproval(approval);
+  const seat = asker ? seatSaid(asker) : '';
+  const said = message
+    ? message.subject
+      ? `${message.to} · ${message.subject}`
+      : message.to
+    : why;
   return {
     action: actionOf(String(approval.tool_name ?? approval.toolName ?? '')),
     why,
+    seat,
     message,
     raw: message ? '' : argumentsShown(approval),
-    summary: message
-      ? message.subject
-        ? `${message.to} · ${message.subject}`
-        : message.to
-      : why,
+    summary: [seat, said].filter(Boolean).join(' · '),
   };
 }

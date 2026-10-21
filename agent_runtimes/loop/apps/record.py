@@ -1544,12 +1544,15 @@ class AppRecordCapability(AbstractCapability[Any]):
         return result
 
     async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
-        # A run a rule or a check stopped is recorded too: that is when it matters.
+        # A run a rule or a check stopped is recorded too: that is when it
+        # matters — its turn with it, so a session whose only turn was
+        # refused has a turn to list and resume from (MH-42).
         await self._close(
             ctx,
             "stopped",
             f"Stopped: {_short(error, 300)}",
             {"error": type(error).__name__},
+            answered=f"Stopped: {error}",
         )
         raise error
 

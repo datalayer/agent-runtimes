@@ -40,6 +40,12 @@ export type ApprovalRecord = {
   updated_at?: string;
   updatedAt?: string;
   read?: boolean;
+  /** The execution waiting on it, when a run the control plane dispatched asked (MH-42). */
+  execution_id?: string;
+  executionId?: string;
+  /** The team and the seat that asked, when a team seat did. */
+  team?: string;
+  seat?: string;
 };
 
 function str(value: unknown): string {
@@ -69,6 +75,12 @@ export function normalizeApproval(raw: unknown): ApprovalRecord | null {
   const requestedBy = str(rec.requested_by ?? rec.requestedBy);
   const resolvedAtRaw = str(rec.resolved_at ?? rec.resolvedAt);
   const status = str(rec.status ?? 'pending');
+  const executionId = str(rec.execution_id ?? rec.executionId);
+  const asker = seatOfApproval({
+    agent_id: agent,
+    team: str(rec.team),
+    seat: str(rec.seat),
+  });
   // Keep reviewer metadata from WS payloads. If this is dropped during
   // normalization, downstream pages receive status=approved/rejected but no
   // reviewer/timestamp context and can incorrectly render "review pending".
@@ -109,8 +121,41 @@ export function normalizeApproval(raw: unknown): ApprovalRecord | null {
     updated_at: updated || undefined,
     updatedAt: updated || undefined,
     read: typeof rec.read === 'boolean' ? rec.read : undefined,
+    execution_id: executionId || undefined,
+    executionId: executionId || undefined,
+    team: asker?.team,
+    seat: asker?.seat,
   };
 }
+
+/** The team and the seat an approval was asked by. */
+export type SeatAsked = { team: string; seat: string };
+
+/** Where an approval says who asked: its own fields, or its agent's id. */
+export type SeatSource = {
+  agent_id?: string;
+  agentId?: string;
+  team?: string;
+  seat?: string;
+};
+
+/**
+ * The team seat that asked (MH-42): the approval's `team` and `seat`, else
+ * its agent id when it is a seat's (`team:<team>/<seat>`); `null` for an
+ * approval no team seat asked.
+ */
+export function seatOfApproval(approval: SeatSource): SeatAsked | null {
+  if (approval.team && approval.seat) {
+    return { team: approval.team, seat: approval.seat };
+  }
+  const agent = approval.agent_id ?? approval.agentId ?? '';
+  const named = /^team:([^/]+)\/(.+)$/.exec(agent);
+  return named ? { team: named[1], seat: named[2] } : null;
+}
+
+/** A team seat, said: *The coder seat of the coding-agents team*. */
+export const seatSaid = ({ team, seat }: SeatAsked): string =>
+  `The ${seat} seat of the ${team} team`;
 
 /** An approval's arguments, under either key: the web reads `tool_args`, mobile `toolArgs`. */
 export type ApprovalArgs = {

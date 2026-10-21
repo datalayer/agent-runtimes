@@ -386,6 +386,13 @@ NO_WORDS = frozenset({"no", "n", "reject", "deny", "refuse", "rejected"})
 #: no timeout of their own.
 APPROVAL_TIMEOUT = 300.0
 
+#: How long a delegated task — a team seat's, any run the control plane
+#: dispatched — waits on an approval: the control plane files it as a tool
+#: approval under the execution, keeps the attempt's lease while it waits,
+#: and answers at its own deadline (a day when the execution names none), so
+#: the worker does not answer first with a timeout of its own.
+DELEGATED_APPROVAL_TIMEOUT = 24 * 60 * 60.0
+
 
 def unified_diff(path: str, old_text: str | None, new_text: str) -> str:
     """
@@ -1035,7 +1042,16 @@ class A2AWorker(_FastA2AWorker):
                 "steer_run": task_id,
                 # An approval a harness asks for is raised on this task as
                 # `input-required`, and answered on it (SH-15).
-                "approvals": A2AApprovals(self, task_id, context_id),
+                "approvals": A2AApprovals(
+                    self,
+                    task_id,
+                    context_id,
+                    timeout=(
+                        DELEGATED_APPROVAL_TIMEOUT
+                        if was_delegated(meta)
+                        else APPROVAL_TIMEOUT
+                    ),
+                ),
             },
         )
 

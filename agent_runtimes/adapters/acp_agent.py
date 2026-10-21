@@ -1123,6 +1123,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         queue: asyncio.Queue[Any] = asyncio.Queue()
         said: list[str] = []
         status = "answered"
+        #: Why the turn stopped, kept as its answer when it said nothing.
+        refusal = ""
         acp_session = ""
         turn: asyncio.Task[PromptResponse] | None = None
         try:
@@ -1160,6 +1162,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             if failed:
                 ended["sentence"] = failed
                 status = "stopped"
+                refusal = failed
             yield StreamEvent(type="done", data=ended)
         except (asyncio.CancelledError, GeneratorExit):
             status = "gone"
@@ -1169,17 +1172,21 @@ class ACPAgent(BaseAgent, ShieldProxy):
         except RequestError as exc:
             status = "stopped"
             sentence = f"{self.harness.name} refused the turn: {_message_of(exc)}"
+            refusal = sentence
             self._failures.pop(acp_session, None)
             yield StreamEvent(type="error", data=sentence)
         except HarnessRefused as refused:
             status = "stopped"
+            refusal = str(refused)
             yield StreamEvent(type="error", data=str(refused))
         finally:
             self._queues.pop(acp_session, None)
             self._cancelled.pop(acp_session, None)
             self._approvals_of.pop(acp_session, None)
             if self.recorder is not None:
-                await self._record_end(runtime_session, prompt, "".join(said), status)
+                await self._record_end(
+                    runtime_session, prompt, "".join(said) or refusal, status
+                )
 
     def _prompt_with_since(self, prompt: str, acp_session: str) -> str:
         """The prompt, the turns since a swap away replayed before it, once (MH-04)."""
@@ -1564,8 +1571,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
         token = _SESSION.set(runtime_session)
         try:
-            if status == "answered":
-                recorder.turned(asked, answered)
+            # A refused turn is a turn too: a session whose only turn was
+            # refused has it to count, list and resume from (MH-42).
+            if status in ("answered", "stopped"):
+                recorder.turned(
+                    asked, answered if status == "answered" else f"Stopped: {answered}"
+                )
             recorder.ended(
                 status,
                 answered[:300]

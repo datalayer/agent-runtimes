@@ -110,8 +110,10 @@ from agent_runtimes.subagents.a2a import (
     A2ARemoteAgent,
     A2ARemoteTarget,
     _artifact_text,
+    approval_request_of,
     cancel_remote_task,
     ensure_remote_agent,
+    refusing_option,
     relay_a2a_task,
     spec_id_of,
 )
@@ -306,6 +308,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         poll_interval_seconds: float = 2.0,
         credential: str | None = None,
         account_uid: str | None = None,
+        approvals: Any = None,
     ) -> None:
         """
         Hold the parent's emitter, the polling interval, and the execution's credential and account.
@@ -322,7 +325,14 @@ class A2AWorkerAdapter(WorkerAdapter):
         account_uid : str | None
             The account the execution belongs to, named to a worker that
             speaks the extension, which asks for its children in it (O2-06).
+        approvals : ApprovalResponder | None
+            Who answers an approval the worker's task waits on
+            (``input-required`` carrying ``datalayer.approvalRequest``): the
+            control plane files it as a tool approval under the execution and
+            returns the option the person chose (O1-08). Without it, the
+            task's wait is recorded and nothing answers it.
         """
+        self._approvals = approvals
         self._emit = emit
         self._poll_interval_seconds = poll_interval_seconds
         self._credential = credential
@@ -659,6 +669,18 @@ class A2AWorkerAdapter(WorkerAdapter):
                     )
                 )
             seen.state, first = state, False
+            asked = (
+                approval_request_of(status.get("message"))
+                if state == "input-required" and self._approvals is not None
+                else None
+            )
+            if asked is not None:
+                # Re-attached to a task waiting on an approval: filed and
+                # answered as the dispatch would have (the responder is keyed
+                # on the call, so nobody is asked twice).
+                option = await self._answer(asked) or refusing_option(asked)
+                await self._send_answer(remote, task, option)
+                continue
             await asyncio.sleep(self._poll_interval_seconds)
 
     async def cancel(
@@ -966,9 +988,32 @@ class A2AWorkerAdapter(WorkerAdapter):
                     resumed_from=attempt.resumed_from,
                     account_uid=self._account_uid,
                 ),
+                # An approval the task waits on is the control plane's to
+                # file and answer (O1-08, MH-42).
+                **({"on_input": self._answer} if self._approvals is not None else {}),
             )
         finally:
             queue.put_nowait(None)
+
+    async def _answer(self, asked: Mapping[str, Any]) -> str | None:
+        """
+        The option a person chose for an approval the worker's task waits on.
+
+        The worker's ``approvalRequest`` is said as a permission request
+        (``toolCall {toolCallId, title, kind, rawInput}``, ``options``), the
+        shape the control plane's responder files for ACP workers too.
+
+        Parameters
+        ----------
+        asked : Mapping[str, Any]
+            The ``datalayer.approvalRequest`` of the ``input-required`` status.
+
+        Returns
+        -------
+        str | None
+            The option chosen, ``None`` for none (a refusal).
+        """
+        return await self._approvals(permission_request_of(asked))
 
     def _ending(self, seen: _Seen, detail: str | None) -> list[Observation]:
         """
@@ -1102,6 +1147,40 @@ class A2AWorkerAdapter(WorkerAdapter):
             return artifacts
         return [(answer_artifact(execution, attempt, answer), answer)] if answer else []
 
+    async def _send_answer(
+        self, remote: A2ARemoteAgent, task: Mapping[str, Any], option: str | None
+    ) -> None:
+        """
+        Answer a waiting task with the option chosen, over ``message/send`` naming it.
+
+        Parameters
+        ----------
+        remote : A2ARemoteAgent
+            The worker.
+        task : Mapping[str, Any]
+            The task waiting on the approval.
+        option : str | None
+            The option chosen; ``None`` answers *no*.
+        """
+        import httpx
+        from fasta2a.client import A2AClient
+        from fasta2a.schema import Message, Part
+
+        answer = Message(
+            role="user",
+            parts=[Part(text=option or "no")],
+            message_id=str(uuid.uuid4()),
+            context_id=str(task.get("context_id") or ""),
+            task_id=str(task.get("id") or ""),
+        )
+        if option:
+            answer["metadata"] = {"datalayer": {"approval": {"optionId": option}}}
+        headers = {"Authorization": f"Bearer {remote.token}"} if remote.token else {}
+        async with httpx.AsyncClient(
+            base_url=remote.url, headers=headers, timeout=30.0
+        ) as http:
+            await A2AClient(agent=remote.url, http_client=http).send_message(answer)
+
     async def _get_task(
         self, remote: A2ARemoteAgent, task_id: str | None
     ) -> dict[str, Any] | None:
@@ -1142,6 +1221,36 @@ class A2AWorkerAdapter(WorkerAdapter):
             return None
         result = response.get("result") if isinstance(response, dict) else None
         return result if isinstance(result, dict) else None
+
+
+def permission_request_of(asked: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    An A2A ``approvalRequest`` as a permission request: what a responder reads.
+
+    Parameters
+    ----------
+    asked : Mapping[str, Any]
+        ``{toolCall: {id, title, kind, sentence, …the call's input}, options, expiresAt}``.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{toolCall: {toolCallId, title, kind, rawInput}, options, expiresAt}``.
+    """
+    call = dict(asked.get("toolCall") or {})
+    raw = {
+        key: value for key, value in call.items() if key not in ("id", "title", "kind")
+    }
+    return {
+        "toolCall": {
+            "toolCallId": str(call.get("id") or ""),
+            "title": str(call.get("title") or ""),
+            "kind": str(call.get("kind") or "other"),
+            "rawInput": raw,
+        },
+        "options": [dict(o) for o in asked.get("options") or [] if isinstance(o, dict)],
+        "expiresAt": asked.get("expiresAt"),
+    }
 
 
 def _extension_of(card: Mapping[str, Any] | None) -> Mapping[str, Any] | None:

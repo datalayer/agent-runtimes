@@ -439,12 +439,15 @@ async def test_no_turn_is_kept_unless_conversations_are():
     ]
 
 
-async def test_a_stopped_run_keeps_no_turn():
+async def test_a_stopped_run_keeps_its_turn_said_stopped():
+    """A refused turn is a turn: a session whose only turn was refused lists and resumes (MH-42)."""
     spec = app(["conversations", "outputs", "checks"])
     agent, sent = recorded(spec, ("search", {"q": AWS}), "done")
     with pytest.raises(AppCheckBlockedError):
         await agent.run("go")
-    assert "turn" not in [entry["kind"] for entry in sent[0]["entries"]]
+    [turn] = [entry for entry in sent[0]["entries"] if entry["kind"] == "turn"]
+    assert turn["payload"]["asked"] == "go"
+    assert turn["payload"]["answered"].startswith("Stopped: ")
 
 
 async def test_an_ag_ui_turn_keeps_the_question_from_its_messages():

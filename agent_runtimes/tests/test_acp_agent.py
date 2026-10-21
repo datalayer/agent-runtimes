@@ -1769,3 +1769,17 @@ class TestPapThroughTheShield:
             ).verdict
             == "allow"
         )
+
+
+@pytest.mark.asyncio
+async def test_a_refused_turn_is_kept_as_a_turn(workspace: Path) -> None:
+    """A session whose only turn was refused has its turn in the record (MH-42)."""
+    recorder = Recorder()
+    agent = an_agent(workspace, recorder=recorder)
+    try:
+        await turn(agent, "bad", session="s")
+    finally:
+        await agent.cleanup()
+    turns = [entry for entry in recorder.entries if entry[0] == "turn"]
+    assert [asked for _, asked, _ in turns] == ["bad"], recorder.entries
+    assert turns[0][2]["answered"].startswith("Stopped: ")

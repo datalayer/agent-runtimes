@@ -15,10 +15,14 @@
 export {
   messageOfApproval,
   normalizeApproval,
+  seatOfApproval,
+  seatSaid,
   whyAsked,
   type ApprovalArgs,
   type ApprovalRecord,
   type MessageAsked,
+  type SeatAsked,
+  type SeatSource,
 } from './approvals';
 
 // An approval as every card says it (M-016).

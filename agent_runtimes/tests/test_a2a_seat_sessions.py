@@ -270,3 +270,44 @@ async def test_a_session_of_another_run_and_an_unknown_team_are_refused(
     assert "team 'no-such-team', which the catalogue does not have" in _text(
         unknown.get("message")
     )
+
+
+@pytest.mark.asyncio
+async def test_a_seats_stopped_task_keeps_its_turn() -> None:
+    """A seat session whose only task stopped has that turn: listed, counted, resumable (MH-42)."""
+    from agent_runtimes.orchestration.seat_sessions import SeatRun
+
+    class Recorder:
+        def __init__(self) -> None:
+            self.rows: list[tuple[str, Any]] = []
+
+        def turned(self, asked: str, answered: str) -> None:
+            self.rows.append(("turn", (asked, answered)))
+
+        def ended(self, status: str, summary: str, payload: Any) -> None:
+            self.rows.append(("ended", status))
+
+        async def flush(self, uid: str) -> None:
+            self.rows.append(("flush", uid))
+
+    class Live:
+        uid = "s1"
+        turn = "running"
+        recorder = Recorder()
+
+    live = Live()
+    seat = SeatRun(
+        live=live,
+        team_id=TEAM,
+        seat="coder",
+        execution_id=ROOT,
+        asked="run the tests",
+        opened=True,
+    )
+    meta = await seat.failed("refused by the Shield")
+    assert live.recorder.rows == [
+        ("turn", ("run the tests", "Stopped: refused by the Shield")),
+        ("ended", "stopped"),
+        ("flush", "s1"),
+    ]
+    assert live.turn == "idle" and "s1" in str(meta)

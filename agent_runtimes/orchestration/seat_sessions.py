@@ -160,6 +160,9 @@ class SeatRun:
         from ..loop.apps.record import _short
 
         recorder = self.live.recorder
+        # The task's turn is kept though it stopped: a seat session whose
+        # only turn was refused is still a session of one turn (MH-42).
+        recorder.turned(self.asked, f"Stopped: {reason}")
         recorder.ended(
             "stopped", f"Stopped: {_short(reason, 300)}", {"error": _short(reason, 300)}
         )
