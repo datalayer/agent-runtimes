@@ -1,0 +1,34 @@
+---
+sidebar_position: 4
+title: Harness capabilities
+---
+
+# Harness capabilities
+
+What a session may rely on of each harness, declared in its spec
+(`capabilities:` in `agentspecs/harnesses/*.yaml`) and read by swap, clone
+and resume instead of a branch per harness. `resume` says how the harness's
+own session comes back after its process ended (`none`, `load` through ACP's
+`session/load`, `native` through the vendor's own resume); `fork_history`
+what a clone carries of its history (`none`, `replay` as text, `rebuild` of
+the vendor's file); `interrupt` whether a turn can be cancelled; `steering`
+whether it takes input mid-turn (ACP has none); `images` whether a prompt
+may carry an image; `compaction` who compacts the context; `vendor id`
+whether the adapter exposes the vendor's own session id (`acp.native_session`).
+
+| Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `claude-code` | load | replay | yes | no | yes | own | none |
+| `codex` | load | replay | yes | no | yes | own | none |
+| `fast-agent` | load | replay | yes | no | no | own | none |
+| `gemini-cli` | none | replay | yes | no | yes | own | none |
+| `goose` | none | replay | yes | no | no | own | none |
+| `opencode` | none | replay | yes | no | no | own | none |
+| `openhands` | load | replay | yes | no | no | own | none |
+| `custom` | none | none | yes | no | no | own | — |
+
+A harness whose `resume` is `none` is swapped onto with the warning that a
+swap back to it will start over; its row is still kept for the vendor id.
+`images` is a claim `initialize` must confirm; the vendor session id is
+`none` for every harness until the adapter drill answers it. `loop harnesses`
+prints the table beside each harness's terms.

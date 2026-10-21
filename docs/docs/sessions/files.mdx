@@ -1,0 +1,45 @@
+---
+sidebar_position: 2
+title: The session file
+---
+
+# The session file
+
+`datalayer-session/1`, JSONL: the first line is the session, every other
+line one entry of its record, in order, redacted. The schema lives in
+agentspecs' `sessions/` kind and is generated into this package
+(`agent_runtimes.specs.session_files`), so the runtime, `loop`, the chat and
+agent-teams refuse the same things in the same words.
+
+```jsonl
+{"record_type":"session","format":"datalayer-session/1","uid":"e67a52b2…","app":{"id":"shield-mvp-claude-code","version":3},"agent":"shield-mvp-claude-code","harness":"claude-code","owner":{"uid":"01jq…"},"state":"paused","turns":4,"title":"The refactor","archived":false,"lineage":{"forked_from":null,"imported_from":null},"kinds":["session","turn","tool_call"],"entries":9,"exported_at":"2026-10-21T10:12:00Z","exported_by":{"uid":"01jq…"},"redactions":2}
+{"record_type":"entry","kind":"turn","at":"…","summary":"…","payload":{"asked":"…","answered":"…"}}
+{"record_type":"entry","kind":"tool_call","at":"…","summary":"edit: done","payload":{"tool":"edit","class":"write","display":{…}}}
+```
+
+**In it:** every entry the application's record keeps, in order. **Redacted,
+and counted in `redactions`:** a header named `Authorization`,
+`Proxy-Authorization` or `Cookie`; a value shaped as a credential
+(`Bearer …`, a key, a password field); the value of a secret the harness
+declares, by name; a URL's userinfo; the signed user of an embed. **Never in
+it:** a token, a secret's value, the runtime's uid and addresses, a file's
+bytes — a file given or produced is its entry (name, size, digest, place in
+the sandbox), and an import re-states it as *not present*. The owner is a
+uid, not a handle.
+
+**Import is the inverse, and the file is untrusted data:** read under a size
+cap (64 MB, 20 000 entries; over it, refused with the counts), each line
+parsed against the schema, each entry's kind one the record has, nothing
+executed or replayed through a tool; the importer is the author, the id is
+new, `redactions` is said on the imported session.
+
+```text
+→ 422 The file is datalayer-session/2; this runtime reads datalayer-session/1.
+→ 422 Line 7 is an entry of kind 'shell', which the record does not have: one of session, run, …
+→ 422 The file's agent shield-mvp-claude-code is not on this runtime: name one with ?agent=.
+→ 413 The file has 31 204 entries over 70 MB; a session file holds at most 20 000 entries in 64 MB.
+```
+
+A second format — Omnigent's JSONL, a third party's — is a `session.format`
+contribution reached with `--format <id>` and `?format=`; an unknown id is
+refused naming the formats known (see [Plugins](./plugins.mdx)).

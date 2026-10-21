@@ -48,6 +48,17 @@ const sidebars = {
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },
     { type: 'doc', id: 'protocols/index', label: 'Protocols' },
     { type: 'doc', id: 'harnesses/index', label: 'Harnesses' },
+    {
+      type: 'category',
+      label: 'Sessions',
+      link: { type: 'doc', id: 'sessions/index' },
+      items: [
+        'sessions/cli',
+        'sessions/files',
+        'sessions/plugins',
+        'sessions/harnesses',
+      ],
+    },
     { type: 'doc', id: 'shield/index', label: 'The Shield' },
     { type: 'doc', id: 'identity/index', label: 'Identity' },
     { type: 'doc', id: 'integrations/index', label: 'Integrations' },

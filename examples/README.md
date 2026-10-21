@@ -47,6 +47,11 @@ These examples demonstrate the Datalayer Client and runtime workflows.
 
 - 🔀 [One Objective, Two Protocols](./orchestration/README.md): a parent delegates the same notebook analysis to an A2A worker and an ACP worker over one code path, with the descriptor as the only difference. Both workers are real protocol servers and need no model, so `python orchestration/orchestrate.py` runs anywhere.
 
+## Sessions
+
+- 🔁 [A session's life, in process](./sessions/README.md): open, two turns, the agent swapped in place and told in a sentence, a clone from turn 1, the export as a `datalayer-session/1` file, the import as a new session and its resume, the list — on an in-process runtime with a model that answers what it was told, no key.
+- 🧩 [A harness and a file format from packages of their own](./plugins/README.md): `aider-harness` contributes a harness through the reactor, `omnigent-format` a second session file format; `show_contributed.py` lists them as `loop plugins` would and shows a yaml without terms refused by name.
+
 ## The Shield
 
 - 🛡️ [A coding agent behind the Shield](./shield/README.md): on the local runtime (`loop --harness`), the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff — each on a fake agent with no key, Claude Code the same with one.

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aider-harness"
+version = "0.0.1"
+description = "A third party's harness for agent-runtimes, contributed by a pip package through the reactor."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.entry-points."datalayer.reactor.extensions"]
+aider = "aider_harness:extension"
+
+[tool.setuptools]
+packages = ["aider_harness"]
+
+[tool.setuptools.package-data]
+aider_harness = ["*.yaml"]

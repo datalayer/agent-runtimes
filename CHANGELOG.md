@@ -2,6 +2,19 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## Unreleased
+
+21 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). **The session becomes the unit** of agent-runtimes: one id a person lists, resumes, hands to another agent, clones, exports and ends.
+
+- **The session's shape and states** (MH-01): a session is `open`, `paused` or `ended` — the record's word, written on every change (`paused`, `ended` entries) — and, while open, the runtime says its turn phase beside it (`turn`: `idle`, `running`, `waiting`). `stopped` is no state: posted or read as one, it is refused in a sentence. The opening entry carries the agent, the harness, where it runs, the title and the lineage; a runtime stopping gracefully pauses every session it holds in the record.
+- **The session's points through the reactor** (MH-F01 to MH-F06, MH-F08): `harness`, `session.store`, `session.format`, `session.carry` and `session.hook`, defined by the `agent-runtimes` reactor extension; the catalogue contributes its harnesses (an organization's own are a plugin admitting what IAM holds, for that organization alone), the record store and a file store (`~/.datalayer/sessions`, one active, chosen by configuration), `datalayer-session/1`, the default carry policy, the audit and OTEL hooks; a malformed or duplicate contribution is refused naming the plugin, the host runs with the rest; `loop plugins [<name>]` lists every extension and what was refused. On the web, `loop.session.action` draws a thread's menu from the registry (*Switch agent…*, *Clone from here*, *Export*, *Resume*).
+- **The operations** (MH-02 to MH-09, MH-13, MH-14, MH-31, MH-43): `GET /sessions` lists the held and the recorded, paged and filtered; a resume from the record rebuilds the whole conversation (tool rows and displays, the files given, the session's Rules, title and lineage); `POST /sessions/{uid}/agent` swaps the agent in place, the new agent told in a sentence whose last clause follows the old harness's `resume` capability, the Rules carried, the always answers dropped, the organization's policy pulled for the new harness before its first turn; `POST /sessions/{uid}/clone` cuts a new session at a turn, paused; `GET /sessions/{uid}/export` and `POST /sessions/import` round-trip a redacted `datalayer-session/1` file, always a new uid, the importer its author; `PUT /sessions/{uid}/title` and `/archived`; who may: the opener, an embed's visitor refused clone, export and resume, a stranger's 404. The old `POST /loop/sessions/{id}/agent` answers 410 naming the session route.
+- **The harness rows and the vendor's session id** (MH-04, MH-05, MH-20): one row per (session, agent) in the protocol state store, never deleted on a swap; a swap back loads the agent's own session and compares the replay against its own spans; the vendor's own session id kept when the spec says the adapter exposes it. Every harness declares its capabilities table (agentspecs 0.0.122), printed by `loop harnesses`.
+- **`loop sessions`** `list|show|resume|swap|clone|export|import|end|feedback` (MH-17), `--server` and `--cloud`; `loop apps threads|feedback` retired, each answering with the sentence naming the new verb. In the REPL, `/sessions`, `/resume <uid>`, `/swap <agent>`, `/clone [turn]`, `/export [file]` (MH-18); the context goes out as `/context-export`.
+- **Docs and examples** (MH-45, MH-46, MH-F10): the Sessions section of the documentation; `examples/sessions` (a session's life on an in-process runtime) and `examples/plugins` (a harness and a file format contributed by pip packages of their own, installed and discovered by a test).
+
+Needs agentspecs 0.0.122.
+
 <!-- <END NEW CHANGELOG ENTRY> -->
 
 Each version names the boxes it carries (their ids, as its commits

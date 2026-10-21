@@ -22,6 +22,7 @@ from pathlib import Path
 
 from agent_runtimes.types import (
     HarnessAcpSpec,
+    HarnessCapabilitiesSpec,
     HarnessHonoursSpec,
     HarnessRegisterEntry,
     HarnessSkillsSpec,
@@ -60,9 +61,22 @@ def fake_harness() -> HarnessSpec:
             mcp="lend",
             load_session=True,
         ),
-        terms=HarnessTermsSpec(served_to_third_parties="permitted"),
+        # A harness whose terms are unknown is served nowhere: the fake's are the SDK's.
+        terms=HarnessTermsSpec(
+            served_to_third_parties="permitted", licence="Apache-2.0 (the ACP SDK's fake agent)"
+        ),
         skills=HarnessSkillsSpec(format="none"),
         honours=HarnessHonoursSpec(model=False, subagents=True),
+        # What a session may rely on of it: it loads its sessions in-process,
+        # replays a clone's history as text, can be interrupted.
+        capabilities=HarnessCapabilitiesSpec(
+            resume="load",
+            fork_history="replay",
+            interrupt=True,
+            steering=False,
+            images=False,
+            compaction="own",
+        ),
         registered=HarnessRegisterEntry(adapter="fake", version="0.0.1"),
     )
 

@@ -40,7 +40,11 @@ PY = ROOT / "agent_runtimes"
 GENERATED = ("typescript_api", "python_api")
 KNOWN = Path(__file__).with_name("known_drift.txt")
 #: Folders of runnable examples, each with a README naming its scripts.
-EXAMPLE_FOLDERS = (ROOT / "examples" / "shield",)
+EXAMPLE_FOLDERS = (
+    ROOT / "examples" / "shield",
+    ROOT / "examples" / "sessions",
+    ROOT / "examples" / "plugins",
+)
 README_RUNS = re.compile(r"python (?P<script>[\w-]+\.py)")
 
 FENCE = re.compile(r"^```(\w*)[^\n]*\n(.*?)^```", re.S | re.M)
