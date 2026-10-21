@@ -133,6 +133,7 @@ import {
   LoopChatSurface,
   LoopChatTurn,
   LoopCommand,
+  type SessionFacts,
   LoopFrontendTool,
   LoopRunProps,
   LoopSlots,
@@ -166,6 +167,8 @@ import type { ChatMessage } from '../../../types/messages';
 import { generateMessageId } from '../../../types/messages';
 import { deploymentOfPayload, threadOfVisit } from '../../apps/threads';
 import { openThread, THREAD_WORDS } from '../../../portable/thread';
+import { appSessionsClient } from '../../../portable/sessions';
+import { SessionActionsMenu } from './SessionActionsMenu';
 import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
 import {
   FaceDrawing,
@@ -228,6 +231,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      default palette instead of throwing. */
   const palette = useColorPalette();
   const controlsRef = useRef<ChatControls | null>(null);
+  /** The token the thread's menu calls the session API with (MH-F08). */
+  const iamTokenRef = useRef<string | undefined>(undefined);
   const { setViewControls } = workspace;
   /*
    * Say the thread a message goes on to the workspace: an application's
@@ -1346,6 +1351,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * sending to the host's server — on a hosted page, the page's own origin.
    */
   const agentServerUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);
+  const sessionsClient = useMemo(
+    () =>
+      appSessionsClient({
+        baseUrl: agentServerUrl ?? '',
+        getAccessToken: () => iamTokenRef.current,
+        fetch: (input, init) => fetch(input, init),
+      }),
+    [agentServerUrl],
+  );
 
   /*
    * Who a single request may be addressed to.
@@ -1650,6 +1664,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const embedToken =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
+  iamTokenRef.current = iamToken || undefined;
   /*
    * Its voice asked of the speech service as this chat speaks to its runtime
    * (VO-37, VO-19): the host's token, else this one — a visitor's,
@@ -2560,6 +2575,35 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       drawn: an empty `ReactorSlot` is still an element, and
                       three of them would space a header out around nothing. */}
                   {workspace.chatHeaderActions}
+                  {/* The thread's menu (MH-F08): what the `loop.session.action`
+                      registry holds and applies to this session, read when
+                      it opens — nothing for a thread that is no session. */}
+                  {runsApp && agentServerUrl ? (
+                    <SessionActionsMenu
+                      uid={controlsRef.current?.thread() || undefined}
+                      describe={async uid =>
+                        (await sessionsClient.describe(
+                          uid,
+                        )) as unknown as SessionFacts
+                      }
+                      context={{
+                        client: sessionsClient,
+                        // Said in the menu itself until the chat has a
+                        // place for a sentence (MH-27).
+                        say: () => undefined,
+                        download: (name, text, mediaType) => {
+                          const url = URL.createObjectURL(
+                            new Blob([text], { type: mediaType }),
+                          );
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = name;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        },
+                      }}
+                    />
+                  ) : null}
                   {chatHeaderItems.length > 0 ? (
                     <ReactorSlot
                       slot={LoopSlots.chatHeader}

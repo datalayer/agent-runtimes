@@ -88,10 +88,15 @@ function clientOf({
   const json = async (
     path: string,
     method = 'GET',
+    body?: unknown,
   ): Promise<Record<string, unknown>> => {
     const response = await fetcher(`${root}${path}`, {
       method,
-      headers: headers({ Accept: 'application/json' }),
+      headers: headers({
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      }),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (!response.ok) {
       return refused(response);
@@ -129,7 +134,7 @@ const at = (uid: string): string =>
  * settings, resume (streamed), and stop, end, read (JSON).
  */
 export function appSessionsClient(options: RuntimeClientOptions) {
-  const { json, stream } = clientOf(options);
+  const { json, stream, fetcher, headers, refused, root } = clientOf(options);
   return {
     /** Start a session with its first message. */
     start: (start: SessionStart, streaming: StreamOptions) =>
@@ -163,8 +168,75 @@ export function appSessionsClient(options: RuntimeClientOptions) {
     stop: (uid: string) => json(`${at(uid)}/stop`, 'POST'),
     /** End the conversation for good; its record stays. */
     end: (uid: string) => json(`${at(uid)}/end`, 'POST'),
-    /** What the session is: its state (`open`, `running`, `waiting`, `stopped`) and what it asks. */
+    /** What the session is: its state (`open`, `paused`, `ended`), its turn phase, what it asks. */
     describe: (uid: string) => json(at(uid)),
+    /** The caller's sessions, held and recorded, paged and filtered (`?app=`, `?agent=`, `?state=`, `?q=`, `?archived=true` includes the archived, `?after=`, `?limit=`). */
+    list: (params: Record<string, string | number | boolean> = {}) => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== '' && value !== undefined && value !== false) {
+          query.set(key, String(value));
+        }
+      }
+      const search = query.toString();
+      return json(`/api/v1/apps/sessions${search ? `?${search}` : ''}`);
+    },
+    /** Swap the session's agent in place: the new agent is told in a sentence, said back. */
+    swap: (uid: string, agent: string) =>
+      json(`${at(uid)}/agent`, 'POST', { agent }),
+    /** Clone from a turn: a new session, paused, the same or another agent. */
+    clone: (
+      uid: string,
+      options: { upToTurn?: number; agent?: string; title?: string } = {},
+    ) =>
+      json(`${at(uid)}/clone`, 'POST', {
+        up_to_turn: options.upToTurn ?? null,
+        agent: options.agent ?? null,
+        title: options.title ?? '',
+      }),
+    /** The session as a `datalayer-session/1` file (JSONL text). */
+    exportFile: async (uid: string, format = ''): Promise<string> => {
+      const response = await fetcher(
+        `${root}${at(uid)}/export${format ? `?format=${encodeURIComponent(format)}` : ''}`,
+        { method: 'GET', headers: headers() },
+      );
+      if (!response.ok) {
+        return refused(response);
+      }
+      return response.text();
+    },
+    /** Import a session file: a new session, paused, the importer its author. */
+    importFile: async (
+      text: string,
+      options: { agent?: string; format?: string } = {},
+    ): Promise<Record<string, unknown>> => {
+      const query = new URLSearchParams();
+      if (options.agent) {
+        query.set('agent', options.agent);
+      }
+      if (options.format) {
+        query.set('format', options.format);
+      }
+      const search = query.toString();
+      const response = await fetcher(
+        `${root}/api/v1/apps/sessions/import${search ? `?${search}` : ''}`,
+        {
+          method: 'POST',
+          headers: headers({ 'Content-Type': 'application/x-ndjson' }),
+          body: text,
+        },
+      );
+      if (!response.ok) {
+        return refused(response);
+      }
+      return (await response.json()) as Record<string, unknown>;
+    },
+    /** Rename the session (at most 200 characters). */
+    rename: (uid: string, title: string) =>
+      json(`${at(uid)}/title`, 'PUT', { title }),
+    /** Archive it (hidden from the list unless asked for), or bring it back. */
+    archive: (uid: string, archived: boolean) =>
+      json(`${at(uid)}/archived`, 'PUT', { archived }),
     /** Its conversation as a person reads it (`messagesOfThread`). */
     messages: async (uid: string): Promise<ChatMessage[]> =>
       messagesOfThread((await json(`${at(uid)}/messages`)).messages),

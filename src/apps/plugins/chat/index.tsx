@@ -28,10 +28,12 @@ import {
   LoopFrontendTool,
   LoopDocumentToolbarItem,
   LoopNotebookToolbarItem,
+  LoopSessionAction,
   LoopViewType,
   type EditorToolbarContext,
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
+import { CHAT_SESSION_ACTIONS } from './sessionActions';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import type { AssistantSaying } from '../../../chat/assistant/state';
 import type { ResumedThread, ThemeOverrides } from '../../../types/chat';
@@ -351,6 +353,14 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     return {};
   },
   contributes: [
+    // The thread's menu entries (MH-F08): each says with `when` whether it
+    // applies; the chat draws what the registry holds, a host adds its own.
+    ...CHAT_SESSION_ACTIONS.map(entry =>
+      contribution(LoopSessionAction, entry, {
+        id: entry.id,
+        order: entry.order,
+      }),
+    ),
     contribution(
       LoopViewType,
       {

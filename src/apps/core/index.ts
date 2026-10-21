@@ -666,6 +666,106 @@ export const LoopChatHeader =
   defineContributionPoint<ChatHeaderContribution>('loop.chat.header');
 
 /**
+ * A session of an application, as the runtime's session API describes it
+ * (`GET /api/v1/apps/sessions/{uid}`): what a thread's menu entry reads to
+ * say whether it applies.
+ */
+export type SessionFacts = {
+  uid: string;
+  /** `open`, `paused` or `ended` — the record's word. */
+  state: 'open' | 'paused' | 'ended';
+  /** The runtime's turn phase of an open session. */
+  turn: 'idle' | 'running' | 'waiting';
+  /** Whether a runtime holds it now. */
+  held: boolean;
+  /** The agentspec bound to it now. */
+  agent: string;
+  harness: string | null;
+  turns: number;
+  title: string;
+  archived: boolean;
+  lineage: {
+    forked_from: { uid: string; at_turn: number } | null;
+    imported_from: {
+      digest: string;
+      exported_at: string;
+      exported_by: string;
+    } | null;
+  };
+  runs_on: Record<string, unknown> | null;
+};
+
+/** What a menu entry may do when run: the session API, and the page's ways. */
+export type SessionActionContext = {
+  /** The runtime's session API for this application (`appSessionsClient`). */
+  client: import('../../portable/sessions').AppSessionsClient;
+  /** Open another session as a thread, when the page can. */
+  openThread?: (uid: string) => void;
+  /** Hand the person a file to save, when the page can. */
+  download?: (name: string, text: string, mediaType: string) => void;
+  /**
+   * Ask the person to pick one of several — an agent to switch to — and
+   * say what the pick does; `undefined` when they decline. A page with no
+   * picker leaves it out, and the entry says so.
+   */
+  choose?: (question: {
+    title: string;
+    options: { id: string; label: string }[];
+    says?: (id: string) => Promise<string>;
+  }) => Promise<string | undefined>;
+  /** Say a sentence to the person: a refusal, what was done. */
+  say: (sentence: string) => void;
+  /** The turn a *Clone from here* was pressed on, when it was; else the last. */
+  atTurn?: number;
+};
+
+/**
+ * A menu entry on a thread (the thread's `⋯`): *Switch agent…*, *Clone from
+ * here*, *Export*, *Resume* are the chat plugin's; a host adds its own
+ * (*Open in the Studio*) by contributing here. `when` hides an entry that
+ * does not apply to the session as it stands — no *Resume* on an open
+ * thread, no *Switch agent* while a turn runs.
+ */
+export type SessionActionContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  label: string;
+  /** Whether the entry applies to this session now. */
+  when: (session: SessionFacts) => boolean;
+  run: (
+    session: SessionFacts,
+    context: SessionActionContext,
+  ) => Promise<void> | void;
+  /** Drawn in this order, lowest first. */
+  order?: number;
+  /** Set apart from what precedes it. */
+  divider?: boolean;
+};
+
+export const LoopSessionAction =
+  defineContributionPoint<SessionActionContribution>('loop.session.action');
+
+/** The entries that apply to a session now, in their order. */
+export function sessionActionsFor(
+  entries: readonly { value: SessionActionContribution }[],
+  session: SessionFacts | undefined,
+): SessionActionContribution[] {
+  if (!session) {
+    return [];
+  }
+  return entries
+    .map(entry => entry.value)
+    .filter(entry => {
+      try {
+        return entry.when(session);
+      } catch {
+        return false;
+      }
+    })
+    .sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+}
+
+/**
  * The agent a capacity plugin wants the workspace to run.
  *
  * A capacity plugin — codemode, hooks, guardrails — is a statement about
