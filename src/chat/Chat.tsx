@@ -723,7 +723,7 @@ export function Chat({
       appSessionsClient({
         baseUrl,
         getAccessToken: () => authTokenProp,
-        fetch: (...args) => fetch(...args),
+        fetch: (input, init) => fetch(input, init),
       }),
     [baseUrl, authTokenProp],
   );
