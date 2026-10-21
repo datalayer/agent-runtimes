@@ -7,6 +7,13 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.81
+
+22 October 2026. The session's rules from any chat; a swapped-in agent's turns in the person's record.
+
+- **Rules for this session…** (SHIELD SH-54): every chat's thread menu offers the session section of the Rules card — what decides the session now, the rules the person added, the presets, a rule to add — over the thread, so an application whose layout is the conversation alone offers it too. Entries may show a panel (`SessionActionContext.show`); the menu shows it in a dialog when the host gives no other way.
+- **A swapped-in agent's turns keep the session's opener** (META_HARNESS MH-37): after a swap, the new agent's recorder took no opener, so its turns reached the record without one and the person's read of the session left them out.
+
 ## 1.5.80
 
 22 October 2026. Codex reaches ai-inference, not OpenAI.
