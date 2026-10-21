@@ -161,7 +161,9 @@ def test_a_run_starts_in_the_record_at_once() -> None:
     assert sent[0]["entries"][1]["summary"] == "Inbox Triage is working"
 
 
-def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening() -> None:
+def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening() -> (
+    None
+):
     """After a swap (MH-06) the new agent's recorder adopts the session another
     recorder started on this runtime: no second opening, which said an agent of
     ``""`` and had the record refuse every later entry (r1, 21 October 2026).
@@ -178,7 +180,10 @@ def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening
     async def run() -> None:
         app = recorder_of_triage([]).app
         first = AppRecorder(app=app, send=send)
-        first.start("s-3", facts={"agent": "example-harness-claude-code", "harness": "claude-code"})
+        first.start(
+            "s-3",
+            facts={"agent": "example-harness-claude-code", "harness": "claude-code"},
+        )
         first.ran("s-3")
         await settle()
         second = AppRecorder(app=app, send=send)
