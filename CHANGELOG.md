@@ -2,7 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
-## Unreleased
+<!-- <END NEW CHANGELOG ENTRY> -->
+
+Each version names the boxes it carries (their ids, as its commits
+say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
+
+## 1.5.66
 
 21 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). **The session becomes the unit** of agent-runtimes: one id a person lists, resumes, hands to another agent, clones, exports and ends.
 
@@ -11,14 +16,10 @@
 - **The operations** (MH-02 to MH-09, MH-13, MH-14, MH-31, MH-43): `GET /sessions` lists the held and the recorded, paged and filtered; a resume from the record rebuilds the whole conversation (tool rows and displays, the files given, the session's Rules, title and lineage); `POST /sessions/{uid}/agent` swaps the agent in place, the new agent told in a sentence whose last clause follows the old harness's `resume` capability, the Rules carried, the always answers dropped, the organization's policy pulled for the new harness before its first turn; `POST /sessions/{uid}/clone` cuts a new session at a turn, paused; `GET /sessions/{uid}/export` and `POST /sessions/import` round-trip a redacted `datalayer-session/1` file, always a new uid, the importer its author; `PUT /sessions/{uid}/title` and `/archived`; who may: the opener, an embed's visitor refused clone, export and resume, a stranger's 404. The old `POST /loop/sessions/{id}/agent` answers 410 naming the session route.
 - **The harness rows and the vendor's session id** (MH-04, MH-05, MH-20): one row per (session, agent) in the protocol state store, never deleted on a swap; a swap back loads the agent's own session and compares the replay against its own spans; the vendor's own session id kept when the spec says the adapter exposes it. Every harness declares its capabilities table (agentspecs 0.0.122), printed by `loop harnesses`.
 - **`loop sessions`** `list|show|resume|swap|clone|export|import|end|feedback` (MH-17), `--server` and `--cloud`; `loop apps threads|feedback` retired, each answering with the sentence naming the new verb. In the REPL, `/sessions`, `/resume <uid>`, `/swap <agent>`, `/clone [turn]`, `/export [file]` (MH-18); the context goes out as `/context-export`.
+- **One session row on every client** (MH-28, MH-P06; 4d997216): `portable/activity` reads a session as the record lists it and a runtime describes it — `uid`, `state`, the turn phase, agent and harness, title, archived, `runs_on`, lineage, `turns`, `started_at` — with `sessionRowOf`, `sessionPageOf` and its words (`sessionStateSaid`, `sessionAgentSaid`, `sessionLineageSaid`); the activity's `completed` rows are session rows (no `session_uid`, `kind` or `created_at` on a row; an older row is refused in a sentence), read the same by the Studio, the workspace's Activity feed and the phone.
 - **Docs and examples** (MH-45, MH-46, MH-F10): the Sessions section of the documentation; `examples/sessions` (a session's life on an in-process runtime) and `examples/plugins` (a harness and a file format contributed by pip packages of their own, installed and discovered by a test).
 
 Needs agentspecs 0.0.122.
-
-<!-- <END NEW CHANGELOG ENTRY> -->
-
-Each version names the boxes it carries (their ids, as its commits
-say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
 ## 1.5.65
 
