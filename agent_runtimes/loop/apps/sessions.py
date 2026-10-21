@@ -3191,6 +3191,18 @@ async def rebuilt_from_record(
                     "name": app.name,
                 }
             )
+        elif kind == "swapped":
+            said = str(payload.get("said") or "")
+            if said:
+                messages.append(
+                    {
+                        "id": _new_id(),
+                        "role": "assistant",
+                        "content": said,
+                        "name": app.name,
+                        "agent": str(payload.get("agent") or payload.get("to") or ""),
+                    }
+                )
         elif kind == "rule":
             if payload.get("removed"):
                 rules.pop(str(payload["removed"]), None)
@@ -3227,6 +3239,598 @@ async def rebuilt_from_record(
         agent=str(described["agent"] if described else ""),
         turns=sum(1 for m in messages if m.get("role") == "user"),
     )
+
+
+# --- the session operations over held and recorded sessions (MH-09, MH-13, MH-14) ---
+
+
+@dataclass
+class RecordedSession:
+    """A session this runtime does not hold, as the operations act on it:
+    what the record says of it, with a recorder of its own so the audit rows
+    (`cloned`, `exported`, `imported`) are written through the hooks as a
+    held session's are.
+    """
+
+    uid: str
+    app: AppSpec
+    instance: Dict[str, Any]
+    described: Dict[str, Any]
+    recorder: AppRecorder
+
+    @property
+    def agent_id(self) -> str:
+        return str(self.described.get("agent") or "")
+
+    @property
+    def agent_spec(self) -> str:
+        return str(self.described.get("agent") or "")
+
+    @property
+    def agent_name(self) -> str:
+        harness = self.described.get("harness")
+        if harness:
+            from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+            spec = HARNESS_CATALOGUE.get(str(harness))
+            if spec is not None:
+                return spec.name
+        return self.agent_spec
+
+    @property
+    def harness(self) -> Optional[str]:
+        return self.described.get("harness") or None
+
+    @property
+    def capabilities(self) -> Dict[str, Any]:
+        from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+        spec = HARNESS_CATALOGUE.get(str(self.harness or ""))
+        return spec.capabilities.model_dump(mode="json") if spec is not None else {}
+
+    @property
+    def state(self) -> str:
+        return str(self.described.get("state") or "paused")
+
+    @property
+    def title(self) -> str:
+        return str(self.described.get("title") or "")
+
+    @property
+    def archived(self) -> bool:
+        return bool(self.described.get("archived"))
+
+    @property
+    def lineage(self) -> Dict[str, Any]:
+        return dict(
+            self.described.get("lineage")
+            or {"forked_from": None, "imported_from": None}
+        )
+
+    @property
+    def files(self) -> List[Dict[str, Any]]:
+        return list(self.described.get("files") or [])
+
+    @property
+    def settings(self) -> Dict[str, Any]:
+        return {}
+
+    @property
+    def messages(self) -> List[Dict[str, Any]]:
+        return [{"role": "user", "content": ""}] * int(self.described.get("turns") or 0)
+
+    @property
+    def opened_by(self) -> Caller:
+        return Caller(
+            kind="person",
+            uid=str((self.described.get("opened_by") or {}).get("uid") or ""),
+        )
+
+    def facts(self) -> Dict[str, Any]:
+        return {
+            "agent": self.agent_spec,
+            "harness": self.harness,
+            "runs_on": self.described.get("runs_on") or {},
+            "title": self.title,
+            "archived": self.archived,
+            "lineage": self.lineage,
+        }
+
+    def describe(self) -> Dict[str, Any]:
+        return dict(self.described)
+
+
+def recorded_session(
+    uid: str, described: Dict[str, Any], app: AppSpec, instance: Mapping[str, Any]
+) -> RecordedSession:
+    """A recorded session as the operations act on it, its recorder sending through the active store."""
+    from agent_runtimes.loop.apps.record import send_to_store
+
+    recorder = AppRecorder(
+        app=app,
+        app_uid=str(
+            instance.get("app_uid")
+            or described.get("instance", {}).get("app_uid")
+            or app.id
+        ),
+        deployment_uid=str(instance.get("deployment_uid") or ""),
+        version=int(
+            instance.get("version") or described.get("instance", {}).get("version") or 0
+        ),
+        send=send_to_store,
+    )
+    recorder.opened(uid, str((described.get("opened_by") or {}).get("uid") or ""))
+    return RecordedSession(
+        uid=uid,
+        app=app,
+        instance=dict(instance),
+        described=described,
+        recorder=recorder,
+    )
+
+
+def turns_of(source: Any) -> int:
+    """How many turns the person had in a session, held or recorded."""
+    if isinstance(source, LiveSession):
+        return sum(1 for m in source.messages if m.get("role") == "user")
+    return int(source.described.get("turns") or 0)
+
+
+async def _store():
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreError,
+        SessionStoreRefused,
+        active_store,
+    )
+
+    try:
+        return active_store()
+    except SessionStoreRefused as refused:
+        raise SessionRefused(503, str(refused)) from None
+    except SessionStoreError as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
+
+
+async def _store_call(call: Awaitable[Any]) -> Any:
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreError,
+        SessionStoreRefused,
+    )
+
+    try:
+        return await call
+    except SessionStoreRefused as refused:
+        raise SessionRefused(503, str(refused)) from None
+    except SessionStoreError as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
+
+
+def _opening_entry(
+    *,
+    state: str,
+    agent: str,
+    harness: Optional[str],
+    title: str,
+    archived: bool,
+    lineage: Mapping[str, Any],
+    app_id: str,
+) -> Dict[str, Any]:
+    """A session's opening entry written by an operation, not a runtime: `paused`, on no runtime."""
+    from agent_runtimes.loop.apps.record import session_facts
+
+    return {
+        "kind": "session",
+        "summary": "A session opened " + ("paused" if state == "paused" else state),
+        "payload": {
+            "app": app_id,
+            "state": state,
+            **session_facts(
+                {
+                    "agent": agent,
+                    "harness": harness,
+                    "runs_on": {"kind": "none"},
+                    "title": title,
+                    "archived": archived,
+                    "lineage": lineage,
+                }
+            ),
+        },
+    }
+
+
+async def clone_session(
+    source: Any,
+    *,
+    up_to_turn: Optional[int],
+    agent: str,
+    title: str,
+    caller: Caller,
+) -> Dict[str, Any]:
+    """Clone a session from a turn (MH-09): a new uid, `paused`, on no runtime.
+
+    The entries up to the turn are copied under the new uid through the
+    store; `cloned` on both; the session's Rules go with the entries, the mode
+    starts at the application's default, the harness's own session never
+    carries; `agent` named, the clone is told as a swap is (a `swapped` entry
+    the resume reads as the sentence). An `ended` source clones like any
+    other; a turn the source lacks is 422.
+
+    Raises
+    ------
+    SessionRefused
+        In a sentence.
+    """
+    from agent_runtimes.loop.apps.session_carry import carry_policy
+    from agent_runtimes.specs.agents.agents import get_agent_spec
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    total = turns_of(source)
+    at_turn = total if up_to_turn is None else int(up_to_turn)
+    if at_turn < 0 or at_turn > total:
+        raise SessionRefused(
+            422,
+            f"Session {source.uid} has {total} turn{'s' if total != 1 else ''}; there is no turn {at_turn} to clone it at.",
+        )
+    if len(title) > TITLE_LIMIT:
+        raise SessionRefused(
+            422,
+            f"A session's title is at most {TITLE_LIMIT} characters; this one has {len(title)}.",
+        )
+    target_agent = source.agent_spec
+    target_harness = source.harness
+    target_name = source.agent_name
+    if agent:
+        spec = get_agent_spec(agent)
+        if spec is None:
+            raise SessionRefused(
+                404, f"There is no agentspec {agent!r} on this runtime to clone onto."
+            )
+        target_agent = spec.id
+        harness = HARNESS_CATALOGUE.get(str(getattr(spec, "harness", "") or ""))
+        target_harness = harness.id if harness is not None else None
+        target_name = harness.name if harness is not None else str(spec.name or spec.id)
+    capabilities = (
+        HARNESS_CATALOGUE[target_harness].capabilities.model_dump(mode="json")
+        if target_harness in HARNESS_CATALOGUE
+        else {}
+    )
+    carried = carry_policy().clone(
+        source,
+        {
+            "agent": target_agent,
+            "name": target_name,
+            "harness": target_harness,
+            "at_turn": at_turn,
+            "capabilities": capabilities,
+        },
+    )
+    new_uid = _new_id()
+    await run_hooks(
+        "clone",
+        source,
+        {
+            "to": new_uid,
+            "at_turn": at_turn,
+            "agent": target_agent,
+            "said": carried.said,
+        },
+    )
+    if isinstance(source, LiveSession):
+        await source.recorder.settled(source.uid)
+    store = await _store()
+    copied = await _store_call(store.copy(source.uid, new_uid, up_to_turn=at_turn))
+    lineage = {
+        "forked_from": {"uid": source.uid, "at_turn": at_turn},
+        "imported_from": None,
+    }
+    opening = _opening_entry(
+        state="paused",
+        agent=target_agent,
+        harness=target_harness,
+        title=title or source.title,
+        archived=False,
+        lineage=lineage,
+        app_id=source.app.id,
+    )
+    entries: List[Dict[str, Any]] = [
+        opening,
+        {
+            "kind": "cloned",
+            "summary": f"Cloned from {source.uid} at turn {at_turn}",
+            "payload": {"from": source.uid, "at_turn": at_turn},
+        },
+    ]
+    if carried.said:
+        entries.append(
+            {
+                "kind": "swapped",
+                "summary": f"Cloned onto {target_agent} at turn {at_turn}",
+                "payload": {
+                    "from": source.agent_spec,
+                    "to": target_agent,
+                    "from_harness": source.harness,
+                    "to_harness": target_harness,
+                    "agent": target_agent,
+                    "harness": target_harness,
+                    "at_turn": at_turn,
+                    "said": carried.said,
+                    "carried": dict(carried.carried),
+                    "dropped": dict(carried.dropped),
+                },
+            }
+        )
+    instance = (
+        source.instance if isinstance(source, (LiveSession, RecordedSession)) else {}
+    )
+    await _store_call(
+        store.append(
+            new_uid,
+            entries,
+            app_uid=str(instance.get("app_uid") or source.app.id),
+            deployment_uid=str(instance.get("deployment_uid") or ""),
+            version=int(instance.get("version") or 0),
+            opened_by=caller.uid if caller.kind in ("person", "host") else "",
+        )
+    )
+    return {
+        "uid": new_uid,
+        "state": "paused",
+        "runs_on": None,
+        "turns": at_turn,
+        "entries": copied,
+        "agent": target_agent,
+        "harness": target_harness,
+        "title": title or source.title,
+        "lineage": lineage,
+        "said": carried.said,
+        "dropped": dict(carried.dropped),
+    }
+
+
+def _declared_secret_values(source: Any) -> Dict[str, str]:
+    """The values of the secrets the session's harness declares, by name, from the environment (MH-13)."""
+    import os
+
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    names: List[str] = []
+    harness = HARNESS_CATALOGUE.get(str(source.harness or ""))
+    if harness is not None:
+        names.extend(harness.requires.secrets)
+    return {
+        name: os.environ[name] for name in names if (os.environ.get(name) or "").strip()
+    }
+
+
+async def export_session(
+    source: Any, *, format_id: str, caller: Caller
+) -> Tuple[Any, str]:
+    """Export a session as a file (MH-13): the lines, and the file's digest.
+
+    Refused 409 when the application keeps no conversations in its record;
+    a turn running when the export is asked is not in the record yet, so the
+    file holds the complete turns and its session line says so; `exported`
+    in the record with the digest, through the hooks.
+    """
+    from agent_runtimes.loop.apps.session_files import (
+        SessionFormatRefused,
+        digest_of,
+        format_named,
+    )
+
+    include = {str(getattr(item, "value", item)) for item in source.app.record.include}
+    if "conversations" not in include:
+        raise SessionRefused(
+            409,
+            f"{source.app.name} keeps no conversations in its record, so a session of it cannot be exported.",
+        )
+    try:
+        fmt = format_named(format_id)
+    except SessionFormatRefused as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
+    if isinstance(source, LiveSession):
+        await source.recorder.settled(source.uid)
+    store = await _store()
+    entries = await _store_call(store.entries(source.uid))
+    described = source.describe()
+    exported = fmt.export(
+        described,
+        entries,
+        exported_by=caller.uid,
+        secrets=_declared_secret_values(source),
+    )
+    digest = digest_of(exported.lines)
+    await run_hooks(
+        "export",
+        source,
+        {
+            "by": caller.uid,
+            "entries": exported.entries,
+            "redactions": exported.redactions,
+            "digest": digest,
+        },
+    )
+    if isinstance(source, LiveSession):
+        await source.recorder.settled(source.uid)
+    else:
+        await source.recorder.flush(source.uid)
+    return exported, digest
+
+
+async def import_session(
+    body: bytes,
+    *,
+    format_id: str,
+    agent: str,
+    caller: Caller,
+    app_of: Callable[[str], Optional[Tuple[AppSpec, Dict[str, Any]]]],
+) -> Dict[str, Any]:
+    """Import a session file (MH-14): always a new uid, the importer its
+    author, `paused`, lineage `imported_from`.
+
+    The file is untrusted data: the caps first, then each line by the
+    format; the file's `app.id` must be an application of the runtime
+    (`app_of` answers it, with the instance it serves) else 422; a different
+    `app.version` is said in the `imported` entry (decision P); the file's
+    agent when the runtime has it, else `agent`, else 422 in a sentence; the
+    files' entries re-stated as *not present*.
+    """
+    from agentspecs.sessions import within_caps
+
+    from agent_runtimes.loop.apps.session_files import (
+        SessionFormatRefused,
+        digest_of,
+        format_named,
+    )
+    from agent_runtimes.specs.agents.agents import get_agent_spec
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    if caller.kind not in ("person", "host", "local"):
+        from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+
+        raise SessionRefused(404, NOTHING_KEPT)
+    text = body.decode("utf-8", "replace")
+    lines = text.splitlines()
+    over = within_caps(len(body), max(0, len(lines) - 1))
+    if over:
+        raise SessionRefused(413, over)
+    try:
+        fmt = format_named(format_id)
+        imported = fmt.import_(lines)
+    except SessionFormatRefused as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
+    head = imported.session
+    found = app_of(str(head["app"]["id"]))
+    if found is None:
+        raise SessionRefused(
+            422,
+            f"The file's application {head['app']['id']!r} is not on this runtime: a session is imported where its application runs.",
+        )
+    app, instance = found
+    current_version = int(instance.get("version") or 0)
+    file_version = int(head["app"]["version"])
+    from agent_runtimes.routes.agents import get_stored_agent_spec
+
+    def known(name: str) -> bool:
+        # An agentspec of the library, or an agent this runtime holds.
+        return bool(name) and (
+            get_agent_spec(name) is not None or get_stored_agent_spec(name) is not None
+        )
+
+    file_agent = str(head.get("agent") or "")
+    chosen = file_agent if known(file_agent) else ""
+    if agent:
+        if not known(agent):
+            raise SessionRefused(
+                422,
+                f"There is no agent {agent!r} on this runtime to import the session onto.",
+            )
+        chosen = agent
+    if not chosen:
+        raise SessionRefused(
+            422,
+            f"The file's agent {file_agent} is not on this runtime: name one with ?agent=.",
+        )
+    spec = get_agent_spec(chosen)
+    harness = HARNESS_CATALOGUE.get(str(getattr(spec, "harness", "") or ""))
+    harness_id = harness.id if harness is not None else None
+    new_uid = _new_id()
+    digest = digest_of(lines)
+    lineage = {
+        "forked_from": None,
+        "imported_from": {
+            "digest": digest,
+            "exported_at": str(head.get("exported_at") or ""),
+            "exported_by": str((head.get("exported_by") or {}).get("uid") or ""),
+            "redactions": int(imported.redactions),
+        },
+    }
+    entries: List[Dict[str, Any]] = [
+        _opening_entry(
+            state="paused",
+            agent=chosen,
+            harness=harness_id,
+            title=str(head.get("title") or ""),
+            archived=bool(head.get("archived")),
+            lineage=lineage,
+            app_id=app.id,
+        )
+    ]
+    for entry in imported.entries:
+        kind = str(entry.get("kind") or "")
+        if kind in ("session", "paused", "ended", "imported", "exported", "cloned"):
+            # The file's own state and audit rows are its session's, not this one's.
+            continue
+        payload = dict(entry.get("payload") or {})
+        if kind == "file":
+            payload = {**payload, "present": False, "path": ""}
+        entries.append(
+            {
+                "kind": kind,
+                "summary": str(entry.get("summary") or ""),
+                "payload": payload,
+                "at": entry.get("at") or "",
+                "imported": True,
+            }
+        )
+    described = {
+        "uid": new_uid,
+        "agent": chosen,
+        "harness": harness_id,
+        "app": {"id": app.id, "version": current_version},
+        "instance": {
+            "app_uid": str(instance.get("app_uid") or ""),
+            "deployment_uid": str(instance.get("deployment_uid") or ""),
+            "version": current_version,
+        },
+        "opened_by": {"kind": caller.kind, "uid": caller.uid},
+        "state": "paused",
+        "turn": "idle",
+        "held": False,
+        "title": str(head.get("title") or ""),
+        "archived": bool(head.get("archived")),
+        "lineage": lineage,
+        "runs_on": None,
+        "turns": int(head.get("turns") or 0),
+    }
+    store = await _store()
+    await _store_call(
+        store.append(
+            new_uid,
+            entries,
+            app_uid=str(instance.get("app_uid") or app.id),
+            deployment_uid=str(instance.get("deployment_uid") or ""),
+            version=current_version,
+            opened_by=caller.uid if caller.kind in ("person", "host") else "",
+        )
+    )
+    target = recorded_session(new_uid, described, app, instance)
+    await run_hooks(
+        "import",
+        target,
+        {
+            "digest": digest,
+            "exported_at": str(head.get("exported_at") or ""),
+            "exported_by": lineage["imported_from"]["exported_by"],
+            "redactions": int(imported.redactions),
+            "file_version": file_version,
+            "current_version": current_version,
+            "source_uid": str(head.get("uid") or ""),
+        },
+    )
+    await target.recorder.flush(new_uid)
+    return {
+        "uid": new_uid,
+        "state": "paused",
+        "runs_on": None,
+        "turns": int(head.get("turns") or 0),
+        "redactions": int(imported.redactions),
+        "agent": chosen,
+        "harness": harness_id,
+        "title": described["title"],
+        "lineage": lineage,
+        "versions": {"file": file_version, "current": current_version},
+    }
 
 
 def apply_rules(live: "LiveSession", rules: List[Dict[str, Any]]) -> List[str]:
@@ -3271,8 +3875,14 @@ __all__ = [
     "code_of",
     "serve_agent_code",
     "Rebuilt",
+    "RecordedSession",
     "TITLE_LIMIT",
     "apply_rules",
+    "clone_session",
+    "export_session",
+    "import_session",
+    "recorded_session",
+    "turns_of",
     "conversation_from_record",
     "first_line_title",
     "forget_sessions",

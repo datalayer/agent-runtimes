@@ -142,6 +142,21 @@ NOT_CLONED = frozenset(
 )
 
 
+def cloned_entries(
+    entries: List[Dict[str, Any]], up_to_turn: Optional[int]
+) -> List[Dict[str, Any]]:
+    """What a clone copies: the entries up to the turn, without the source's
+    own state and audit rows, and the session's Rules whole — a rule is the
+    session's, not a turn's, wherever it was added.
+    """
+    kept = [
+        e for e in _up_to_turn(entries, up_to_turn) if e.get("kind") not in NOT_CLONED
+    ]
+    seen = {id(e) for e in kept}
+    kept.extend(e for e in entries if e.get("kind") == "rule" and id(e) not in seen)
+    return kept
+
+
 @dataclass
 class FileSessionStore:
     """Sessions in files: ``<root>/<uid>/entries.jsonl``."""
@@ -235,11 +250,7 @@ class FileSessionStore:
     async def copy(
         self, uid: str, to_uid: str, *, up_to_turn: Optional[int] = None
     ) -> int:
-        entries = [
-            e
-            for e in _up_to_turn(self._read(uid), up_to_turn)
-            if e.get("kind") not in NOT_CLONED
-        ]
+        entries = cloned_entries(self._read(uid), up_to_turn)
         if self._file(to_uid).exists():
             raise SessionStoreError(
                 409, f"Session {to_uid} is kept already; a clone is a new uid."
@@ -542,6 +553,7 @@ __all__ = [
     "SessionStoreError",
     "SessionStoreRefused",
     "active_store",
+    "cloned_entries",
     "configured_store_name",
     "send_through_store",
     "use_record_reader",

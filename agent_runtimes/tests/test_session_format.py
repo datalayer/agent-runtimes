@@ -155,7 +155,7 @@ def test_export_redacts_by_the_rules_and_counts_each() -> None:
     assert tool["secret"] == REDACTED
     # The signed user and the runtime are dropped from the opening entry.
     assert "signed" not in lines[0]["payload"] and "runs_on" not in lines[0]["payload"]
-    assert head["redactions"] == exported.redactions == 6
+    assert head["redactions"] == exported.redactions == 5
     assert (
         digest_of(exported.lines).startswith("sha256:")
         and len(digest_of(exported.lines)) == 71

@@ -90,6 +90,13 @@ class Redactor:
         self.by_rule[rule] = self.by_rule.get(rule, 0) + times
 
     def text(self, value: str) -> str:
+        # What the record withheld as it was written (a credential's shape,
+        # a declared secret's value) reads as redacted here, and counts: the
+        # file says how many of its values are redacted, whoever did it.
+        withheld = value.count(WITHHELD)
+        if withheld:
+            self._hit("bearer_token", withheld)
+            value = value.replace(WITHHELD, REDACTED)
         for name, secret in self.secrets.items():
             if secret and secret in value:
                 value = value.replace(secret, REDACTED)
@@ -116,12 +123,21 @@ class Redactor:
             out: Dict[str, Any] = {}
             for inner_key, inner in value.items():
                 if str(inner_key) in DROPPED_KEYS:
-                    self._hit(
-                        "runtime_address"
-                        if str(inner_key)
-                        in ("runs_on", "host", "sandbox_host", "runtime_uid")
-                        else "signed_user"
-                    )
+                    if str(inner_key) in (
+                        "runs_on",
+                        "host",
+                        "sandbox_host",
+                        "runtime_uid",
+                    ):
+                        # The runtime's address: dropped from every file, a
+                        # fact of the format rather than a secret found —
+                        # noted by rule, not counted (a clean session exports
+                        # with zero redactions).
+                        self.by_rule["runtime_address"] = (
+                            self.by_rule.get("runtime_address", 0) + 1
+                        )
+                    else:
+                        self._hit("signed_user")
                     continue
                 out[str(inner_key)] = self.value(inner, key=str(inner_key))
             return out

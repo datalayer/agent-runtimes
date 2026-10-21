@@ -1723,6 +1723,142 @@ async def _titled_in_record(
     return {**described, "title": new_title, "archived": new_archived}
 
 
+def _app_of(app_id: str) -> Optional[Tuple[AppSpec, Dict[str, Any]]]:
+    """The application an agent of this runtime runs, by the application's id or `app` item, with its instance."""
+    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.routes.agents import _agentspecs
+
+    for stored in _agentspecs.values():
+        spec = (stored or {}).get("app_spec")
+        if not spec:
+            continue
+        instance = dict((stored or {}).get("app_instance") or {})
+        try:
+            app = load_app(spec)
+        except Exception:  # noqa: BLE001 - another agent's spec, not this one's
+            continue
+        if app.id == app_id or str(instance.get("app_uid") or "") == app_id:
+            return app, instance
+    return None
+
+
+async def _source(uid: str, request: Request) -> Tuple[Any, Caller]:
+    """A session the caller may clone, export or resume (MH-31): held here,
+    or recorded, for its owner; an embed's visitor refused with
+    `NOTHING_KEPT`; a stranger's — an organization's admin included — 404.
+    """
+    from agent_runtimes.loop.apps.sessions import recorded_session, session_of
+    from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+
+    if session_of(uid) is not None:
+        live, _ = await _held(uid, request)
+        if live.opened_by.kind in ("visitor", "embed"):
+            raise HTTPException(status_code=404, detail=NOTHING_KEPT)
+        return live, live.opened_by
+    authorized = await _authorize(request, False)
+    if authorized.caller.kind in ("visitor", "embed"):
+        raise HTTPException(status_code=404, detail=NOTHING_KEPT)
+    described = await _recorded(uid, request)
+    found = _app_of(str(described["instance"]["app_uid"] or described["app"]["id"]))
+    if found is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Session {uid} is of {described['app']['id']}, which no agent of this runtime runs.",
+        )
+    app, instance = found
+    return recorded_session(uid, described, app, instance), authorized.caller
+
+
+class CloneRequest(BaseModel):
+    """Where to cut a clone, and what it runs on (MH-09)."""
+
+    up_to_turn: Optional[int] = Field(
+        None, description="The turn to cut at; the last one unsaid"
+    )
+    agent: Optional[str] = Field(
+        None, description="Another agentspec for the clone; the same unsaid"
+    )
+    title: str = Field("", description="The clone's title; the source's unsaid")
+
+
+@router.post("/sessions/{uid}/clone", status_code=201)
+async def clone_session_route(
+    uid: str, body: CloneRequest, request: Request
+) -> Dict[str, Any]:
+    """Clone a session from a turn (MH-09): a new session, `paused`, on no
+    runtime; the entries up to the turn copied under the new uid; `cloned`
+    on both; the same agent unless another is named, the clone then told
+    as a swap is; a turn the source lacks is 422.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused, clone_session
+
+    source, caller = await _source(uid, request)
+    try:
+        return await clone_session(
+            source,
+            up_to_turn=body.up_to_turn,
+            agent=str(body.agent or ""),
+            title=body.title.strip(),
+            caller=caller,
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.get("/sessions/{uid}/export")
+async def export_session_route(uid: str, request: Request, format: str = "") -> Any:
+    """Export a session as a `datalayer-session/1` file (MH-13): the session
+    line first, every entry after it, redacted and counted; the files as
+    entries, never bytes; refused 409 when the application keeps no
+    conversations; `exported` in the record with the digest.
+    """
+    from fastapi.responses import Response
+
+    from agent_runtimes.loop.apps.sessions import SessionRefused, export_session
+
+    source, caller = await _source(uid, request)
+    try:
+        exported, digest = await export_session(source, format_id=format, caller=caller)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    return Response(
+        content="\n".join(exported.lines) + "\n",
+        media_type="application/x-ndjson",
+        headers={
+            "Content-Disposition": f'attachment; filename="{uid}.session.jsonl"',
+            "X-Session-Digest": digest,
+            "X-Session-Turns": str(exported.turns),
+            "X-Session-Redactions": str(exported.redactions),
+        },
+    )
+
+
+@router.post("/sessions/import", status_code=201)
+async def import_session_route(
+    request: Request, agent: str = "", format: str = ""
+) -> Dict[str, Any]:
+    """Import a session file (MH-14): the file as the body; always a new
+    uid, the importer its author, `paused`, lineage `imported_from`; the
+    caps, the format's refusals, an application the runtime lacks (422), an
+    agent it lacks (422 unless `?agent=` names one), a different application
+    version said.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused, import_session
+
+    authorized = await _authorize(request, False)
+    body = await request.body()
+    try:
+        return await import_session(
+            body,
+            format_id=format,
+            agent=agent,
+            caller=authorized.caller,
+            app_of=_app_of,
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
 class SwapRequest(BaseModel):
     """Which agentspec the session goes on with (MH-06)."""
 
@@ -1785,7 +1921,10 @@ async def swap_agent(uid: str, body: SwapRequest, request: Request) -> Dict[str,
                 refused.status_code,
                 f"Session {uid} was not swapped to {target['agent']}: {refused.detail}",
             ) from None
-        return live.swapped_to(target, carried)
+        answer = live.swapped_to(target, carried)
+        # The `swapped` row is on the record when the swap is answered.
+        await live.recorder.settled(live.uid)
+        return answer
     except SessionRefused as refused:
         raise _refused(refused) from None
 
