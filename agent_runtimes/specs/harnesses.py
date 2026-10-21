@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 
 from agent_runtimes.types import (
     HarnessAcpSpec,
+    HarnessCapabilitiesSpec,
     HarnessHonoursSpec,
     HarnessRegisterEntry,
     HarnessRequiresSpec,
@@ -37,6 +38,7 @@ CLAUDE_CODE_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=["default", "plan", "acceptEdits", "bypassPermissions"],
         env={},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["ANTHROPIC_API_KEY"],
@@ -54,6 +56,15 @@ CLAUDE_CODE_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="load",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=True,
+        compaction="own",
+        modes=["default", "plan", "acceptEdits", "bypassPermissions"],
     ),
     instructions_file="CLAUDE.md",
     registered=HarnessRegisterEntry(
@@ -83,6 +94,7 @@ CODEX_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=["read-only", "workspace-write", "agent", "agent-full-access"],
         env={"NO_BROWSER": "1"},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["OPENAI_API_KEY"],
@@ -100,6 +112,15 @@ CODEX_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="load",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=True,
+        compaction="own",
+        modes=["read-only", "workspace-write", "agent", "agent-full-access"],
     ),
     instructions_file="AGENTS.md",
     registered=HarnessRegisterEntry(
@@ -139,6 +160,15 @@ CUSTOM_HARNESS_0_0_1 = HarnessSpec(
         model=False,
         subagents=False,
     ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="none",
+        fork_history="none",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=[],
+    ),
     instructions_file="",
     registered=HarnessRegisterEntry(
         adapter="The organization's own",
@@ -167,6 +197,7 @@ FAST_AGENT_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=[],
         env={},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["ANTHROPIC_API_KEY"],
@@ -184,6 +215,15 @@ FAST_AGENT_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="load",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=[],
     ),
     instructions_file="AGENTS.md",
     registered=HarnessRegisterEntry(
@@ -213,6 +253,7 @@ GEMINI_CLI_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=["default", "auto_edit", "yolo", "plan"],
         env={},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["GEMINI_API_KEY"],
@@ -230,6 +271,15 @@ GEMINI_CLI_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="none",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=True,
+        compaction="own",
+        modes=["default", "auto_edit", "yolo", "plan"],
     ),
     instructions_file="GEMINI.md",
     registered=HarnessRegisterEntry(
@@ -259,6 +309,7 @@ GOOSE_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=[],
         env={"GOOSE_PROVIDER": "anthropic"},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["ANTHROPIC_API_KEY"],
@@ -276,6 +327,15 @@ GOOSE_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="none",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=[],
     ),
     instructions_file=".goosehints",
     registered=HarnessRegisterEntry(
@@ -305,6 +365,7 @@ OPENCODE_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=[],
         env={},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["ANTHROPIC_API_KEY"],
@@ -322,6 +383,15 @@ OPENCODE_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="none",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=[],
     ),
     instructions_file="AGENTS.md",
     registered=HarnessRegisterEntry(
@@ -357,6 +427,7 @@ OPENHANDS_HARNESS_0_0_1 = HarnessSpec(
         mcp="lend",
         modes=["always-ask", "always-approve", "llm-approve"],
         env={},
+        native_session="none",
     ),
     requires=HarnessRequiresSpec(
         secrets=["LLM_API_KEY"],
@@ -374,6 +445,15 @@ OPENHANDS_HARNESS_0_0_1 = HarnessSpec(
     honours=HarnessHonoursSpec(
         model=True,
         subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="load",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=["always-ask", "always-approve", "llm-approve"],
     ),
     instructions_file="AGENTS.md",
     registered=HarnessRegisterEntry(

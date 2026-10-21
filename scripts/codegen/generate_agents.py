@@ -1782,6 +1782,7 @@ export * from './protocols';
 export * from './frames';
 export * from './cogs';
 export * from './harnesses';
+export * from './sessionFiles';
 export * from './policies';
 export * from './guards';
 export * from './gates';

@@ -29,6 +29,10 @@ from versioning import ensure_spec_version, version_suffix
 MCP = ("lend", "own", "none")
 THIRD_PARTIES = ("api_key_only", "permitted", "refused", "organizations_own")
 SKILLS_FORMATS = ("skill-md", "none")
+RESUMES = ("none", "load", "native")
+FORK_HISTORIES = ("none", "replay", "rebuild")
+COMPACTIONS = ("own", "none")
+NATIVE_SESSIONS = ("meta", "none")
 REGISTER = "register.yaml"
 
 
@@ -76,6 +80,34 @@ def load_harness_specs(specs_dir: Path) -> list[dict[str, Any]]:
         skills = spec.get("skills") or {}
         if skills.get("format") not in SKILLS_FORMATS:
             raise ValueError(f"{yaml_file.name}: skills.format one of {SKILLS_FORMATS}")
+        # The capabilities table (MH-20): required, its words known, agreeing with acp.
+        caps = spec.get("capabilities")
+        if not isinstance(caps, dict):
+            raise ValueError(f"{yaml_file.name}: a harness declares its capabilities table")
+        if caps.get("resume") not in RESUMES:
+            raise ValueError(f"{yaml_file.name}: capabilities.resume one of {RESUMES}")
+        if caps.get("fork_history") not in FORK_HISTORIES:
+            raise ValueError(
+                f"{yaml_file.name}: capabilities.fork_history one of {FORK_HISTORIES}"
+            )
+        if caps.get("compaction") not in COMPACTIONS:
+            raise ValueError(f"{yaml_file.name}: capabilities.compaction one of {COMPACTIONS}")
+        for flag in ("interrupt", "steering", "images"):
+            if not isinstance(caps.get(flag), bool):
+                raise ValueError(f"{yaml_file.name}: capabilities.{flag} is true or false")
+        if acp is not None:
+            if acp.get("native_session", "none") not in NATIVE_SESSIONS:
+                raise ValueError(
+                    f"{yaml_file.name}: acp.native_session one of {NATIVE_SESSIONS}"
+                )
+            if bool(acp.get("load_session")) != (caps["resume"] != "none"):
+                raise ValueError(
+                    f"{yaml_file.name}: capabilities.resume and acp.load_session disagree"
+                )
+            if list(caps.get("modes") or []) != list(acp.get("modes") or []):
+                raise ValueError(
+                    f"{yaml_file.name}: capabilities.modes and acp.modes disagree"
+                )
         spec["_register"] = entry
         specs.append(spec)
     return specs
@@ -114,6 +146,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from agent_runtimes.types import (",
         "    HarnessAcpSpec,",
+        "    HarnessCapabilitiesSpec,",
         "    HarnessHonoursSpec,",
         "    HarnessRegisterEntry,",
         "    HarnessRequiresSpec,",
@@ -128,6 +161,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         terms = spec.get("terms") or {}
         skills = spec.get("skills") or {}
         honours = spec.get("honours") or {}
+        caps = spec["capabilities"]
         entry = spec["_register"]
         lines += [
             "",
@@ -152,6 +186,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"        mcp={_s(acp['mcp'])},",
                 f"        modes={json.dumps(list(acp.get('modes') or []))},",
                 f"        env={json.dumps(dict(acp.get('env') or {}))},",
+                f"        native_session={_s(acp.get('native_session', 'none'))},",
                 "    ),",
             ]
         lines += [
@@ -171,6 +206,15 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    honours=HarnessHonoursSpec(",
             f"        model={bool(honours.get('model', False))},",
             f"        subagents={bool(honours.get('subagents', False))},",
+            "    ),",
+            "    capabilities=HarnessCapabilitiesSpec(",
+            f"        resume={_s(caps['resume'])},",
+            f"        fork_history={_s(caps['fork_history'])},",
+            f"        interrupt={bool(caps['interrupt'])},",
+            f"        steering={bool(caps['steering'])},",
+            f"        images={bool(caps['images'])},",
+            f"        compaction={_s(caps['compaction'])},",
+            f"        modes={json.dumps(list(caps.get('modes') or []))},",
             "    ),",
             f"    instructions_file={_s(spec.get('instructions_file'))},",
             "    registered=HarnessRegisterEntry(",
@@ -248,6 +292,7 @@ def generate_typescript_code(
         terms = spec.get("terms") or {}
         skills = spec.get("skills") or {}
         honours = spec.get("honours") or {}
+        caps = spec["capabilities"]
         entry = spec["_register"]
         lines += [
             "",
@@ -270,6 +315,7 @@ def generate_typescript_code(
                 f"    mcp: {_t(acp['mcp'])},",
                 f"    modes: {json.dumps(list(acp.get('modes') or []))},",
                 f"    env: {json.dumps(dict(acp.get('env') or {}))},",
+                f"    nativeSession: {_t(acp.get('native_session', 'none'))},",
                 "  },",
             ]
         lines += [
@@ -293,6 +339,15 @@ def generate_typescript_code(
             "  honours: {",
             f"    model: {json.dumps(bool(honours.get('model', False)))},",
             f"    subagents: {json.dumps(bool(honours.get('subagents', False)))},",
+            "  },",
+            "  capabilities: {",
+            f"    resume: {_t(caps['resume'])},",
+            f"    forkHistory: {_t(caps['fork_history'])},",
+            f"    interrupt: {json.dumps(bool(caps['interrupt']))},",
+            f"    steering: {json.dumps(bool(caps['steering']))},",
+            f"    images: {json.dumps(bool(caps['images']))},",
+            f"    compaction: {_t(caps['compaction'])},",
+            f"    modes: {json.dumps(list(caps.get('modes') or []))},",
             "  },",
             f"  instructionsFile: {_t(spec.get('instructions_file'))},",
             "  registered: {",

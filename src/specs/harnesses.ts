@@ -31,6 +31,7 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: ['default', 'plan', 'acceptEdits', 'bypassPermissions'],
     env: {},
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['ANTHROPIC_API_KEY'],
@@ -48,6 +49,15 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'load',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: true,
+    compaction: 'own',
+    modes: ['default', 'plan', 'acceptEdits', 'bypassPermissions'],
   },
   instructionsFile: 'CLAUDE.md',
   registered: {
@@ -79,6 +89,7 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: ['read-only', 'workspace-write', 'agent', 'agent-full-access'],
     env: { NO_BROWSER: '1' },
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['OPENAI_API_KEY'],
@@ -95,6 +106,15 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'load',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: true,
+    compaction: 'own',
+    modes: ['read-only', 'workspace-write', 'agent', 'agent-full-access'],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -136,6 +156,15 @@ export const CUSTOM_HARNESS_0_0_1: HarnessSpec = {
     model: false,
     subagents: false,
   },
+  capabilities: {
+    resume: 'none',
+    forkHistory: 'none',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: [],
+  },
   instructionsFile: '',
   registered: {
     adapter: "The organization's own",
@@ -165,6 +194,7 @@ export const FAST_AGENT_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: [],
     env: {},
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['ANTHROPIC_API_KEY'],
@@ -181,6 +211,15 @@ export const FAST_AGENT_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'load',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -212,6 +251,7 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: ['default', 'auto_edit', 'yolo', 'plan'],
     env: {},
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['GEMINI_API_KEY'],
@@ -231,6 +271,15 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'none',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: true,
+    compaction: 'own',
+    modes: ['default', 'auto_edit', 'yolo', 'plan'],
   },
   instructionsFile: 'GEMINI.md',
   registered: {
@@ -263,6 +312,7 @@ export const GOOSE_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: [],
     env: { GOOSE_PROVIDER: 'anthropic' },
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['ANTHROPIC_API_KEY'],
@@ -279,6 +329,15 @@ export const GOOSE_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'none',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: [],
   },
   instructionsFile: '.goosehints',
   registered: {
@@ -310,6 +369,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: [],
     env: {},
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['ANTHROPIC_API_KEY'],
@@ -326,6 +386,15 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'none',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -363,6 +432,7 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
     mcp: 'lend',
     modes: ['always-ask', 'always-approve', 'llm-approve'],
     env: {},
+    nativeSession: 'none',
   },
   requires: {
     secrets: ['LLM_API_KEY'],
@@ -379,6 +449,15 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
   honours: {
     model: true,
     subagents: false,
+  },
+  capabilities: {
+    resume: 'load',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: ['always-ask', 'always-approve', 'llm-approve'],
   },
   instructionsFile: 'AGENTS.md',
   registered: {

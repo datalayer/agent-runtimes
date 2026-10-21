@@ -182,6 +182,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
 	agent_runtimes/specs/harnesses.py \
+	agent_runtimes/specs/session_files.py \
 	agent_runtimes/specs/policies.py \
 	agent_runtimes/specs/standards.py \
 	agent_runtimes/specs/guards.py \
@@ -535,6 +536,15 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/harnesses \
 	  --python-output agent_runtimes/specs/harnesses.py \
 	  --typescript-output src/specs/harnesses.ts
+	$(call step,Generating session file specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/sessions" ]; then \
+	  python scripts/codegen/generate_session_files.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/sessions \
+	    --python-output agent_runtimes/specs/session_files.py \
+	    --typescript-output src/specs/sessionFiles.ts; \
+	else \
+	  echo "Skipping session file specifications: $(AGENTSPECS_DIR)/agentspecs/sessions not found (agentspecs < 0.0.119)"; \
+	fi
 	$(call step,Generating policy specifications)
 	python scripts/codegen/generate_policies.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/policies \

@@ -82,6 +82,57 @@ class TestTheHarnessCatalogue:
             )
 
 
+class TestTheCapabilitiesTable:
+    """What a session may rely on of each harness (MH-20), declared, never guessed in code."""
+
+    def test_the_seven_harnesses_tables(self) -> None:
+        tables = {spec.id: spec.capabilities for spec in list_harnesses()}
+        assert {h: t.resume for h, t in tables.items()} == {
+            "claude-code": "load",
+            "codex": "load",
+            "fast-agent": "load",
+            "openhands": "load",
+            "gemini-cli": "none",
+            "goose": "none",
+            "opencode": "none",
+            "custom": "none",
+        }
+        for spec in list_harnesses():
+            table = spec.capabilities
+            assert table.interrupt and not table.steering
+            assert table.compaction == "own"
+            assert table.fork_history == ("none" if spec.id == "custom" else "replay")
+            if spec.acp is not None:
+                assert table.modes == spec.acp.modes
+                assert (table.resume != "none") == spec.acp.load_session
+                # The vendor's own session id: none declared until the adapter drill answers it.
+                assert spec.acp.native_session == "none"
+
+    def test_the_generator_refuses_a_harness_without_the_table(self, tmp_path) -> None:
+        import shutil
+
+        import yaml
+
+        sys.path.insert(0, str(CODEGEN))
+        try:
+            from generate_harnesses import load_harness_specs
+        finally:
+            sys.path.remove(str(CODEGEN))
+        source = REPO / "agentspecs" / "agentspecs" / "harnesses"
+        for path in source.glob("*.yaml"):
+            shutil.copy(path, tmp_path / path.name)
+        spec = yaml.safe_load((tmp_path / "codex.yaml").read_text())
+        del spec["capabilities"]
+        (tmp_path / "codex.yaml").write_text(yaml.safe_dump(spec))
+        with pytest.raises(ValueError, match="codex.yaml: a harness declares its capabilities table"):
+            load_harness_specs(tmp_path)
+        spec = yaml.safe_load((source / "codex.yaml").read_text())
+        spec["capabilities"]["resume"] = "none"
+        (tmp_path / "codex.yaml").write_text(yaml.safe_dump(spec))
+        with pytest.raises(ValueError, match="capabilities.resume and acp.load_session disagree"):
+            load_harness_specs(tmp_path)
+
+
 class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
     def test_a_built_in_harness_honours_everything(self) -> None:
         assert (

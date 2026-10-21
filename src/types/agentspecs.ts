@@ -233,6 +233,8 @@ export interface HarnessAcpSpec {
   modes: string[];
   /** Plain variables the launch needs, never a secret. */
   env: Record<string, string>;
+  /** Whether the adapter exposes the vendor's own session id (`meta`) or not (`none`). */
+  nativeSession: 'meta' | 'none';
 }
 
 /**
@@ -377,6 +379,24 @@ export interface ListedHarness {
   note: string;
 }
 
+/** The capabilities table of a harness (`capabilities:` in `agentspecs/harnesses`). */
+export interface HarnessCapabilitiesSpec {
+  /** How its own session comes back after its process ended. */
+  resume: 'none' | 'load' | 'native';
+  /** What a clone carries of its history. */
+  forkHistory: 'none' | 'replay' | 'rebuild';
+  /** Whether a running turn can be cancelled. */
+  interrupt: boolean;
+  /** Whether it takes input mid-turn (false for every ACP harness). */
+  steering: boolean;
+  /** Whether a prompt may carry an image. */
+  images: boolean;
+  /** Who compacts the context window. */
+  compaction: 'own' | 'none';
+  /** The session modes a swap or a clone may set, as `acp.modes` names them. */
+  modes: string[];
+}
+
 export interface HarnessSpec {
   /** What `harness:` names (e.g. 'claude-code'). */
   id: string;
@@ -403,6 +423,11 @@ export interface HarnessSpec {
   skills: { format: 'skill-md' | 'none'; dir: string };
   /** What of an agent spec it can honour; the rest is refused at load. */
   honours: { model: boolean; subagents: boolean };
+  /**
+   * What a session may rely on of it (MH-20): read by swap, clone and
+   * resume instead of branching on the harness's id.
+   */
+  capabilities: HarnessCapabilitiesSpec;
   /** The workspace file it reads its instructions from. */
   instructionsFile: string;
   /** The register's line: what was checked, and where. */

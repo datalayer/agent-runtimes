@@ -56,7 +56,9 @@ dependencies = [
     # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
     # agentspecs 0.0.116: interface.avatar (was interface.assistant, now refused) and the 3D avatar, {kind: model3d, url};
     # 0.0.117: the examples' app.py say avatar too.
-    "agentspecs>=0.0.117",
+    # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file, MH-12) and every
+    # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
+    "agentspecs>=0.0.120",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

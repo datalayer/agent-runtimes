@@ -45,6 +45,7 @@ from agent_runtimes.guardrails.tool_approvals import ToolApprovalRejectedError
 from agent_runtimes.types import (
     AppRuleSpec,
     HarnessAcpSpec,
+    HarnessCapabilitiesSpec,
     HarnessHonoursSpec,
     HarnessRegisterEntry,
     HarnessSkillsSpec,
@@ -66,6 +67,14 @@ def fake_harness(**overrides: Any) -> HarnessSpec:
         terms=HarnessTermsSpec(served_to_third_parties="permitted"),
         skills=HarnessSkillsSpec(format="none"),
         honours=HarnessHonoursSpec(model=False, subagents=True),
+        capabilities=HarnessCapabilitiesSpec(
+            resume="load",
+            fork_history="replay",
+            interrupt=True,
+            steering=False,
+            images=False,
+            compaction="own",
+        ),
         registered=HarnessRegisterEntry(adapter="fake", version="0.0.1"),
     )
     fields.update(overrides)

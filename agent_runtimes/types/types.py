@@ -441,6 +441,28 @@ class HarnessAcpSpec(BaseModel):
         default_factory=dict,
         description="Plain variables the launch needs, never a secret",
     )
+    native_session: str = Field(
+        default="none",
+        description="meta when the adapter exposes the vendor's own session id, none otherwise",
+    )
+
+
+class HarnessCapabilitiesSpec(BaseModel):
+    """What a session may rely on of a harness (MH-20): declared by the spec,
+    read by swap, clone and resume instead of branching on the harness's id.
+    """
+
+    resume: str = Field(..., description="none, load or native: how its own session comes back")
+    fork_history: str = Field(
+        ..., description="none, replay or rebuild: what a clone carries of its history"
+    )
+    interrupt: bool = Field(..., description="Whether a running turn can be cancelled")
+    steering: bool = Field(..., description="Whether it takes input mid-turn")
+    images: bool = Field(..., description="Whether a prompt may carry an image")
+    compaction: str = Field(..., description="own or none: who compacts the context")
+    modes: List[str] = Field(
+        default_factory=list, description="The session modes a swap or a clone may set"
+    )
 
 
 class HarnessRequiresSpec(BaseModel):
@@ -580,6 +602,7 @@ class HarnessSpec(BaseModel):
     terms: HarnessTermsSpec
     skills: HarnessSkillsSpec
     honours: HarnessHonoursSpec
+    capabilities: HarnessCapabilitiesSpec
     instructions_file: str = Field(
         default="", description="The workspace file it reads its instructions from"
     )
