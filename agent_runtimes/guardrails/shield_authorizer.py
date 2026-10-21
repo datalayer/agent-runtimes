@@ -106,10 +106,15 @@ def deployment_of_token(credential: str) -> str:
     return pieces[1] if len(pieces) >= 2 and pieces[0] == "deployment" else ""
 
 
-def runtime_authorizer(credential: str) -> Optional[Any]:
+def runtime_authorizer(credential: "str | Callable[[], str]") -> Optional[Any]:
     """
     Answer IAM's authorizer with the run's credential, or ``None`` (said) when no IAM is named.
 
+    ``credential`` is the token, or a callable read at each decision — the
+    deployment's principal token the runtime holds *now*, renewed by its
+    keeper — so a harness relaunched under a short-lived minted key does not
+    keep asking IAM with that key once it expired (every decision answered
+    *the authorizer answered 401* after fifteen minutes, SH-12's finding).
     Every class a policy lists under ``authorize:`` is then refused — never a fail-open.
     """
     iam_url = (os.environ.get(IAM_URL_VARIABLE) or "").strip().rstrip("/")

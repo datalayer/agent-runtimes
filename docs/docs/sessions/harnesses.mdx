@@ -14,18 +14,23 @@ what a clone carries of its history (`none`, `replay` as text, `rebuild` of
 the vendor's file); `interrupt` whether a turn can be cancelled; `steering`
 whether it takes input mid-turn (ACP has none); `images` whether a prompt
 may carry an image; `compaction` who compacts the context; `vendor id`
-whether the adapter exposes the vendor's own session id (`acp.native_session`).
+whether the adapter exposes the vendor's own session id (`acp.native_session`);
+`runs unasked` how many command families the harness runs without asking its
+client (`auto_run`: its own read-only allowlist, as data — `cat`, `wc`, `ls`,
+`git status`… for Claude Code, read from the version its adapter pins), which
+the Shield's *ask me first* on a command knowingly excludes: a run of one is
+never an action against an application's rules.
 
-| Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `claude-code` | load | replay | yes | no | yes | own | none |
-| `codex` | load | replay | yes | no | yes | own | none |
-| `fast-agent` | load | replay | yes | no | no | own | none |
-| `gemini-cli` | none | replay | yes | no | yes | own | none |
-| `goose` | none | replay | yes | no | no | own | none |
-| `opencode` | none | replay | yes | no | no | own | none |
-| `openhands` | load | replay | yes | no | no | own | none |
-| `custom` | none | none | yes | no | no | own | — |
+| Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id | runs unasked |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `claude-code` | load | replay | yes | no | yes | own | none | 8 |
+| `codex` | load | replay | yes | no | yes | own | none | 0 |
+| `fast-agent` | load | replay | yes | no | no | own | none | 0 |
+| `gemini-cli` | none | replay | yes | no | yes | own | none | 0 |
+| `goose` | none | replay | yes | no | no | own | none | 0 |
+| `opencode` | none | replay | yes | no | no | own | none | 0 |
+| `openhands` | load | replay | yes | no | no | own | none | 0 |
+| `custom` | none | none | yes | no | no | own | — | 0 |
 
 A harness whose `resume` is `none` is swapped onto with the warning that a
 swap back to it will start over; its row is still kept for the vendor id.

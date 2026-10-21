@@ -16,8 +16,11 @@ session rules route does — ``POST /api/v1/apps/sessions/{uid}/rules`` calls
 3. ``read README.md`` again — refused in the session rule's sentence.
 4. A rule that would allow commands freely, refused because the
    organization's rules ask first (the ``above`` the runtime reads from IAM;
-   given here as a document).
-5. The rule taken back (``DELETE …/rules/no reads``): reading is done again.
+   given here as a document) — the application's own Rules let commands run.
+5. A rule that would allow sending freely, refused because the application's
+   Rules say nothing of sending and its implicit default — reading is done,
+   anything else asks first — is part of the ceiling (decided 21 October 2026).
+6. The rule taken back (``DELETE …/rules/no reads``): reading is done again.
 
 Run it from this folder::
 
@@ -96,18 +99,40 @@ async def main() -> int:
 
         await turn(agent, "read README.md")
 
+        # The application's own Rules let commands run; the organization's
+        # document above them asks: a session rule saying *do it* is refused
+        # in the organization's sentence.
+        permissive = Policy(
+            scope="team",
+            rules=[Rule(name="Run commands", decision="allow", classes=["execute"])],
+        )
         try:
             session_rules().add(
                 SESSION,
                 rule_from(
                     {"name": "run freely", "decision": "allow", "classes": ["execute"]}
                 ),
-                application=None,
+                application=permissive,
                 above=[ORGANIZATION],
             )
         except SessionRuleRefused as refused:
             refused_loosening = str(refused)
             print(f"\nRefused    {refused_loosening}")
+
+        # The application's implicit default is a ceiling too: on a class its
+        # Rules do not name, anything but reading asks first, so *do it* on
+        # sending is refused in a sentence naming that default.
+        try:
+            session_rules().add(
+                SESSION,
+                rule_from(
+                    {"name": "send freely", "decision": "allow", "classes": ["send"]}
+                ),
+                application=None,
+                above=[ORGANIZATION],
+            )
+        except SessionRuleRefused as refused:
+            print(f"\nRefused    {refused}")
 
         session_rules().remove(SESSION, "no reads")
         print("\nRemoved    no reads")

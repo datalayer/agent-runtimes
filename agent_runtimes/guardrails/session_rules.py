@@ -13,7 +13,11 @@ sentences of :func:`agent_shield.policy.check_tightens`, and one that would
 permit more than the **application's own Rules** (the Appspec's ``rules``,
 read as :func:`agent_runtimes.guardrails.shield_policy.rules_policy`) is
 refused when it is added, in a sentence naming the application's rule it
-conflicts with — never accepted to be overruled later at decision time.
+conflicts with — never accepted to be overruled later at decision time. The
+application's **implicit default** is part of that ceiling (decided by the
+user, 21 October 2026): on a class its Rules do not name, reading is done
+and anything else asks first, so *do it* on such a class is refused in a
+sentence naming the default (:data:`IMPLICIT_DEFAULT`).
 
 One registry per runtime, by session uid, read at every decision:
 
@@ -43,6 +47,7 @@ from pydantic import ValidationError
 from agent_runtimes.guardrails.managed_policies import runtime_policies
 
 __all__ = [
+    "IMPLICIT_DEFAULT",
     "SessionRuleRefused",
     "application_widening",
     "SessionRules",
@@ -152,12 +157,44 @@ class SessionRules:
         ]
 
 
+#: What an application says of a class its Rules do not name — its implicit
+#: default, part of the ceiling a session rule tightens under (decided by the
+#: user, 21 October 2026): reading is done, anything else asks first.
+IMPLICIT_DEFAULT: Dict[str, str] = {
+    "read": "allow",
+    "write": "ask",
+    "send": "ask",
+    "buy": "ask",
+    "delete": "ask",
+    "execute": "ask",
+}
+
+
+def _classes_of(rule: Rule) -> List[str]:
+    """The classes a rule names, or every class when it names none (a rule on kinds names theirs)."""
+    if rule.classes:
+        return list(rule.classes)
+    if rule.kinds:
+        from agent_shield.policy import class_of
+
+        found = {cls for cls in (class_of(kind) for kind in rule.kinds) if cls}
+        return sorted(found)
+    return list(IMPLICIT_DEFAULT)
+
+
 def application_widening(rule: Rule, application: Optional[Policy]) -> List[str]:
-    """Every rule of the application that ``rule`` would loosen, in sentences; empty when it only tightens."""
-    if application is None:
-        return []
+    """Every rule of the application that ``rule`` would loosen, in sentences; empty when it only tightens.
+
+    The application's implicit default is part of its ceiling: on a class its
+    Rules do not name, reading is done and anything else asks first, so a
+    session rule saying *do it* on writing, sending, buying, deleting or
+    running a command the application said nothing of is refused in a
+    sentence naming that default.
+    """
     found: List[str] = []
-    for ceiling in application.rules:
+    named: set[str] = set()
+    for ceiling in application.rules if application is not None else []:
+        named.update(ceiling.classes or [])
         if _PERMITS[rule.decision] > _PERMITS[ceiling.decision] and overlaps(
             rule, ceiling
         ):
@@ -165,6 +202,16 @@ def application_widening(rule: Rule, application: Optional[Policy]) -> List[str]
                 f"the session rule '{rule.name}' says {VERDICT_WORDS[rule.decision]} where the "
                 f"application's rule '{ceiling.name}' says {VERDICT_WORDS[ceiling.decision]}; "
                 "a session rule may only tighten the application's Rules"
+            )
+    for cls in _classes_of(rule):
+        if cls in named:
+            continue
+        default = IMPLICIT_DEFAULT.get(cls, "ask")
+        if _PERMITS[rule.decision] > _PERMITS[default]:
+            found.append(
+                f"the session rule '{rule.name}' says {VERDICT_WORDS[rule.decision]} on {cls}, "
+                f"of which the application's Rules say nothing, so its default holds: "
+                f"{VERDICT_WORDS[default]}; a session rule may only tighten the application's Rules"
             )
     return found
 

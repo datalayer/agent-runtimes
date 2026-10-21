@@ -848,6 +848,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
         from agent_runtimes.guardrails import shield_authorizer  # noqa: PLC0415
 
         self.companies: list[str] = list(companies)
+        # The authorizer reads the credential at each decision
+        # (``_decision_credential``): the deployment's principal token the
+        # runtime holds now, not the creator's key kept from the start.
+        held = self._decision_credential()
         ShieldProxy.__init__(
             self,
             list(command),
@@ -856,13 +860,44 @@ class ACPAgent(BaseAgent, ShieldProxy):
             workspace=workspace,
             agent_env=dict(environment or {}),
             connect_url=connect_url,
-            authorizer=shield_authorizer.runtime_authorizer(credential),
+            authorizer=shield_authorizer.runtime_authorizer(
+                self._decision_credential if held else credential
+            ),
             subject=shield_authorizer.runtime_subject(
-                credential, shield_authorizer.deployment_of_token(credential)
+                held,
+                self._deployment_served()
+                or shield_authorizer.deployment_of_token(held),
             ),
             tool_class=shield_authorizer.lent_tool_class,
             companies=self.companies,
         )
+
+    def _deployment_served(self) -> str:
+        """The deployment this agent serves, or ``""`` (a Preview, a test, no application)."""
+        from agent_runtimes.loop.apps.principal import deployment_of
+        from agent_runtimes.models.models import app_instance_of
+
+        return deployment_of(app_instance_of(self._agent_id))
+
+    def _decision_credential(self) -> str:
+        """The credential the Shield's authorizer asks IAM with, read at each decision.
+
+        The deployment's principal token the runtime holds now — renewed by
+        its keeper while the deployment is kept on — else the run's own. A
+        harness the keeper relaunched starts under the owner's minted key,
+        which lives fifteen minutes: bound at creation it outlived nothing,
+        and every decision after that answered *the authorizer answered 401*
+        (found on r1, 21 October 2026, SH-12). As ``_bearer_of`` does for
+        the gateway, the token is read when it is needed.
+        """
+        from agent_runtimes.loop.apps.principal import principal_token
+
+        deployment = self._deployment_served()
+        if deployment:
+            held = principal_token(deployment)
+            if held:
+                return held
+        return self.credential
 
     # -- the policies while running (SH-50, SH-54) ---------------------------------------
 

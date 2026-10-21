@@ -452,7 +452,9 @@ class HarnessCapabilitiesSpec(BaseModel):
     read by swap, clone and resume instead of branching on the harness's id.
     """
 
-    resume: str = Field(..., description="none, load or native: how its own session comes back")
+    resume: str = Field(
+        ..., description="none, load or native: how its own session comes back"
+    )
     fork_history: str = Field(
         ..., description="none, replay or rebuild: what a clone carries of its history"
     )
@@ -462,6 +464,14 @@ class HarnessCapabilitiesSpec(BaseModel):
     compaction: str = Field(..., description="own or none: who compacts the context")
     modes: List[str] = Field(
         default_factory=list, description="The session modes a swap or a clone may set"
+    )
+    auto_run: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The commands the harness runs without asking its client, one anchored regular "
+            "expression per family (Claude Code's read-only allowlist); empty when it asks "
+            "about every command"
+        ),
     )
 
 

@@ -64,7 +64,7 @@ def test_the_capabilities_page_says_the_catalogue() -> None:
     for spec in HARNESS_CATALOGUE.values():
         table = spec.capabilities
         row = re.search(
-            rf"^\| `{re.escape(spec.id)}` \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| ([\w—]+) \|",
+            rf"^\| `{re.escape(spec.id)}` \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| (\w+) \| ([\w—]+) \| (\d+) \|",
             page,
             re.M,
         )
@@ -80,6 +80,7 @@ def test_the_capabilities_page_says_the_catalogue() -> None:
             and row.group(6) == table.compaction
         )
         assert row.group(7) == (spec.acp.native_session if spec.acp else "—")
+        assert int(row.group(8)) == len(table.auto_run), spec.id
 
 
 def test_the_pages_are_in_the_sidebar_and_name_nothing_private() -> None:

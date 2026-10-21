@@ -19,7 +19,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - **One session row on every client** (MH-28, MH-P06; 4d997216): `portable/activity` reads a session as the record lists it and a runtime describes it — `uid`, `state`, the turn phase, agent and harness, title, archived, `runs_on`, lineage, `turns`, `started_at` — with `sessionRowOf`, `sessionPageOf` and its words (`sessionStateSaid`, `sessionAgentSaid`, `sessionLineageSaid`); the activity's `completed` rows are session rows (no `session_uid`, `kind` or `created_at` on a row; an older row is refused in a sentence), read the same by the Studio, the workspace's Activity feed and the phone.
 - **Docs and examples** (MH-45, MH-46, MH-F10): the Sessions section of the documentation; `examples/sessions` (a session's life on an in-process runtime) and `examples/plugins` (a harness and a file format contributed by pip packages of their own, installed and discovered by a test).
 
-Needs agentspecs 0.0.122.
+- **The Shield's authorizer reads its credential at each decision** (SHIELD SH-12's finding on r1): a harness the keeper relaunched starts under the owner's minted key, which lives fifteen minutes, and `ACPAgent` bound IAM's authorizer to it at creation — every decision after that answered *the authorizer answered 401*. The authorizer now asks IAM with the deployment's principal token the runtime holds *now* (renewed by its keeper), else the run's own, as `_bearer_of` does for the gateway; the subject is the deployment served.
+- **The application's implicit default is part of the ceiling** (decided by the user, 21 October 2026): on a class the application's Rules do not name, reading is done and anything else asks first, so a session rule saying *do it* on writing, sending, buying, deleting or running a command the application said nothing of is refused in a sentence naming that default (`session_rules.IMPLICIT_DEFAULT`, `application_widening`).
+- **What a harness runs unasked** (agentspecs 0.0.123): the harness catalogue carries `capabilities.auto_run` — Claude Code's read-only command allowlist in eight families, read from the version its adapter pins — printed by `loop harnesses` and on the capabilities page; the platform's W-09 reads it from the deployed spec, so a `cat` Claude Code ran without asking is never an action against the rules.
+- Takes agent-shield 0.2.13: a command line that deletes is classed delete, a tool call streamed before its input is whole is decided again with its command, the report's *The Shield* section counts the sessions' history apart (MH-30).
+
+Needs agentspecs 0.0.123 and datalayer-agent-shield 0.2.13.
 
 ## 1.5.65
 

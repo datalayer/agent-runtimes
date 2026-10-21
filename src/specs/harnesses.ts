@@ -58,6 +58,16 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
     images: true,
     compaction: 'own',
     modes: ['default', 'plan', 'acceptEdits', 'bypassPermissions'],
+    autoRun: [
+      '^(cal|uptime|cat|head|tail|wc|stat|strings|hexdump|od|nl|id|uname|free|df|du|locale|groups|nproc|basename|dirname|realpath|cut|paste|tr|column|tac|rev|fold|expand|unexpand|fmt|comm|cmp|numfmt|readlink|diff|true|false|sleep|which|type|expr|seq|tsort|pr)(\\s|$)',
+      '^(pwd|whoami|alias|history|arch|ifconfig|ip addr)(\\s|$)',
+      '^(claude (-h|--help)|node (-v|--version)|python3? --version)$',
+      '^(echo|uniq|jq|cd|ls|find)(\\s|$)',
+      '^(xargs|file|sed|sort|man|help|netstat|ps|base64|grep|egrep|fgrep|rg|sha256sum|sha1sum|md5sum|tree|date|hostname|lsof|pgrep|tput|ss|fd|fdfind|test)(\\s|$)',
+      '^git (diff|log|show|shortlog|reflog|stash (list|show)|ls-remote|status|blame|ls-files|config --get|remote( show)?|merge-base|rev-parse|rev-list|describe|cat-file|for-each-ref|grep|worktree list|tag|branch)(\\s|$)',
+      '^gh (pr (view|list|diff|checks|status)|issue (view|list|status)|repo view|run (list|view)|auth status|release (list|view)|workflow (list|view)|label list|search (repos|issues|prs|commits|code))(\\s|$)',
+      '^docker (ps|images|logs|inspect)(\\s|$)',
+    ],
   },
   instructionsFile: 'CLAUDE.md',
   registered: {
@@ -115,6 +125,7 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
     images: true,
     compaction: 'own',
     modes: ['read-only', 'workspace-write', 'agent', 'agent-full-access'],
+    autoRun: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -164,6 +175,7 @@ export const CUSTOM_HARNESS_0_0_1: HarnessSpec = {
     images: false,
     compaction: 'own',
     modes: [],
+    autoRun: [],
   },
   instructionsFile: '',
   registered: {
@@ -220,6 +232,7 @@ export const FAST_AGENT_HARNESS_0_0_1: HarnessSpec = {
     images: false,
     compaction: 'own',
     modes: [],
+    autoRun: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -280,6 +293,7 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
     images: true,
     compaction: 'own',
     modes: ['default', 'auto_edit', 'yolo', 'plan'],
+    autoRun: [],
   },
   instructionsFile: 'GEMINI.md',
   registered: {
@@ -338,6 +352,7 @@ export const GOOSE_HARNESS_0_0_1: HarnessSpec = {
     images: false,
     compaction: 'own',
     modes: [],
+    autoRun: [],
   },
   instructionsFile: '.goosehints',
   registered: {
@@ -395,6 +410,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
     images: false,
     compaction: 'own',
     modes: [],
+    autoRun: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {
@@ -458,6 +474,7 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
     images: false,
     compaction: 'own',
     modes: ['always-ask', 'always-approve', 'llm-approve'],
+    autoRun: [],
   },
   instructionsFile: 'AGENTS.md',
   registered: {

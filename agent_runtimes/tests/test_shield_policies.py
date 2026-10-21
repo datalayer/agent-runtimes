@@ -486,11 +486,16 @@ class TestSessionRules:
             application=None,
             above=above,
         )
+        # The application lets commands run; the organization's document, above it, asks.
+        permissive = Policy(
+            scope="team",
+            rules=[Rule(name="Run commands", decision="allow", classes=["execute"])],
+        )
         with pytest.raises(SessionRuleRefused) as refused:
             rules.add(
                 "s",
                 Rule(name="run freely", decision="allow", classes=["execute"]),
-                application=None,
+                application=permissive,
                 above=above,
             )
         assert str(refused.value).startswith(
@@ -664,6 +669,71 @@ class TestTheApplicationsRulesAreACeiling:
                 application=self.APP_RULES,
                 above=[],
             )
+
+    def test_the_implicit_default_is_part_of_the_ceiling(self) -> None:
+        """Decided by the user, 21 October 2026: on a class the application's Rules
+        do not name, reading is done and anything else asks first — a session rule
+        that would do more is refused in a sentence naming that default."""
+        rules = SessionRules()
+        with pytest.raises(SessionRuleRefused) as refused:
+            rules.add(
+                "s",
+                Rule(name="send freely", decision="allow", classes=["send"]),
+                application=self.APP_RULES,
+                above=[],
+            )
+        assert str(refused.value) == (
+            "The session rule is refused, it would permit more than the application's Rules: "
+            "the session rule 'send freely' says do it on send, of which the application's "
+            "Rules say nothing, so its default holds: ask me first; a session rule may only "
+            "tighten the application's Rules."
+        )
+        # A rule naming no class names every class: *do it* on all of them is refused on each unnamed one.
+        with pytest.raises(SessionRuleRefused, match="on buy, of which") as everything:
+            rules.add(
+                "s",
+                Rule(name="anything", decision="allow"),
+                application=self.APP_RULES,
+                above=[],
+            )
+        assert "on send, of which" in str(everything.value) and "on read" not in str(
+            everything.value
+        )
+        # An application with no Rules at all has the same default.
+        with pytest.raises(
+            SessionRuleRefused,
+            match="on execute, of which the application's Rules say nothing, so its default holds: ask me first",
+        ):
+            rules.add(
+                "s",
+                Rule(name="run freely", decision="allow", kinds=["execute"]),
+                application=None,
+                above=[],
+            )
+        # Reading is the default's *do it*: allowed, as is asking on what asks already.
+        rules.add(
+            "s",
+            Rule(name="read freely", decision="allow", classes=["read"]),
+            application=None,
+            above=[],
+        )
+        rules.add(
+            "s",
+            Rule(name="ask to send", decision="ask", classes=["send"]),
+            application=self.APP_RULES,
+            above=[],
+        )
+        rules.add(
+            "s",
+            Rule(name="never buy", decision="deny", classes=["buy"]),
+            application=None,
+            above=[],
+        )
+        assert [r.name for r in rules.of("s")] == [
+            "ask to send",
+            "never buy",
+            "read freely",
+        ]
 
     def test_tightening_the_applications_rules_is_kept(self) -> None:
         rules = SessionRules()

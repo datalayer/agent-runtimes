@@ -20,6 +20,7 @@ Usage:
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -83,7 +84,9 @@ def load_harness_specs(specs_dir: Path) -> list[dict[str, Any]]:
         # The capabilities table (MH-20): required, its words known, agreeing with acp.
         caps = spec.get("capabilities")
         if not isinstance(caps, dict):
-            raise ValueError(f"{yaml_file.name}: a harness declares its capabilities table")
+            raise ValueError(
+                f"{yaml_file.name}: a harness declares its capabilities table"
+            )
         if caps.get("resume") not in RESUMES:
             raise ValueError(f"{yaml_file.name}: capabilities.resume one of {RESUMES}")
         if caps.get("fork_history") not in FORK_HISTORIES:
@@ -91,10 +94,14 @@ def load_harness_specs(specs_dir: Path) -> list[dict[str, Any]]:
                 f"{yaml_file.name}: capabilities.fork_history one of {FORK_HISTORIES}"
             )
         if caps.get("compaction") not in COMPACTIONS:
-            raise ValueError(f"{yaml_file.name}: capabilities.compaction one of {COMPACTIONS}")
+            raise ValueError(
+                f"{yaml_file.name}: capabilities.compaction one of {COMPACTIONS}"
+            )
         for flag in ("interrupt", "steering", "images"):
             if not isinstance(caps.get(flag), bool):
-                raise ValueError(f"{yaml_file.name}: capabilities.{flag} is true or false")
+                raise ValueError(
+                    f"{yaml_file.name}: capabilities.{flag} is true or false"
+                )
         if acp is not None:
             if acp.get("native_session", "none") not in NATIVE_SESSIONS:
                 raise ValueError(
@@ -104,6 +111,12 @@ def load_harness_specs(specs_dir: Path) -> list[dict[str, Any]]:
                 raise ValueError(
                     f"{yaml_file.name}: capabilities.resume and acp.load_session disagree"
                 )
+            for pattern in caps.get("auto_run") or []:
+                if not isinstance(pattern, str) or not pattern.startswith("^"):
+                    raise ValueError(
+                        f"{yaml_file.name}: capabilities.auto_run patterns are anchored with ^"
+                    )
+                re.compile(pattern)
             if list(caps.get("modes") or []) != list(acp.get("modes") or []):
                 raise ValueError(
                     f"{yaml_file.name}: capabilities.modes and acp.modes disagree"
@@ -215,6 +228,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f"        images={bool(caps['images'])},",
             f"        compaction={_s(caps['compaction'])},",
             f"        modes={json.dumps(list(caps.get('modes') or []))},",
+            f"        auto_run={json.dumps(list(caps.get('auto_run') or []))},",
             "    ),",
             f"    instructions_file={_s(spec.get('instructions_file'))},",
             "    registered=HarnessRegisterEntry(",
@@ -348,6 +362,7 @@ def generate_typescript_code(
             f"    images: {json.dumps(bool(caps['images']))},",
             f"    compaction: {_t(caps['compaction'])},",
             f"    modes: {json.dumps(list(caps.get('modes') or []))},",
+            f"    autoRun: {json.dumps(list(caps.get('auto_run') or []))},",
             "  },",
             f"  instructionsFile: {_t(spec.get('instructions_file'))},",
             "  registered: {",

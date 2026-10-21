@@ -137,6 +137,35 @@ class TestTheCapabilitiesTable:
             load_harness_specs(tmp_path)
 
 
+class TestWhatAHarnessRunsUnasked:
+    """The catalogue says what each harness runs without asking its client."""
+
+    def test_claude_code_lists_its_read_only_allowlist_and_the_others_nothing(
+        self,
+    ) -> None:
+        """`capabilities.auto_run` (agentspecs 0.0.123): the commands a harness runs
+        without asking its client, as data; the platform's W-09 reads it from the
+        deployed spec so a `cat` Claude Code ran unasked is never an incident."""
+        import re
+
+        from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+        patterns = [
+            re.compile(p)
+            for p in HARNESS_CATALOGUE["claude-code"].capabilities.auto_run
+        ]
+        assert len(patterns) == 8
+        for command in ("cat hello.txt", "wc -c hello.txt", "git status", "ls -la"):
+            assert any(p.search(command) for p in patterns), command
+        for command in ("rm hello.txt", "git push origin main", "python app.py"):
+            assert not any(p.search(command) for p in patterns), command
+        assert all(
+            not spec.capabilities.auto_run
+            for name, spec in HARNESS_CATALOGUE.items()
+            if name != "claude-code"
+        )
+
+
 class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
     def test_a_built_in_harness_honours_everything(self) -> None:
         assert (

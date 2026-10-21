@@ -395,6 +395,8 @@ export interface HarnessCapabilitiesSpec {
   compaction: 'own' | 'none';
   /** The session modes a swap or a clone may set, as `acp.modes` names them. */
   modes: string[];
+  /** The commands it runs without asking its client, one anchored regular expression per family; empty when it asks about every command. */
+  autoRun: string[];
 }
 
 export interface HarnessSpec {

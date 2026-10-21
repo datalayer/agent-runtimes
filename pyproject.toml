@@ -58,7 +58,7 @@ dependencies = [
     # 0.0.117: the examples' app.py say avatar too.
     # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file, MH-12) and every
     # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
-    "agentspecs>=0.0.122",
+    "agentspecs>=0.0.123",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -84,7 +84,7 @@ dependencies = [
     # 0.2.7: its sentences and the policy schema without decision numbers.
     # 0.2.11: ShieldProxy.run_turn, the turn inside the `shield.turn` span the
     # host opened (ACPAgent opens its own; 0.2.9-0.2.10 nested a second one).
-    "datalayer-agent-shield>=0.2.11,<0.3",
+    "datalayer-agent-shield>=0.2.13,<0.3",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (D-14), in 1.5.0;

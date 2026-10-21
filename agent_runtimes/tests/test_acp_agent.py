@@ -1604,6 +1604,50 @@ class TestPapThroughTheShield:
         assert authorizer.url == "https://prod1.datalayer.run/api/iam/v1/authz/evaluate"
         assert shield_authorizer.runtime_authorizer("") is None
 
+    def test_the_authorizer_reads_the_held_principal_token_at_each_decision(
+        self, workspace: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A harness the keeper relaunched starts under the owner's minted key
+        (fifteen minutes): bound at creation, every decision after its life
+        answered 401 (SH-12, r1). The authorizer now asks IAM with the
+        deployment's principal token the runtime holds *now*, renewed by the
+        keeper, and the subject is the deployment served."""
+        import time
+
+        from agent_runtimes.loop.apps import principal
+        from agent_runtimes.models.models import remember_app_instance
+
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")
+        remember_app_instance("fake", {"deployment_uid": "d-9"})
+        principal.give_principal_token("d-9", "principal-1", expires_in=3600)
+        try:
+            agent = an_agent(workspace, credential="owner-key-minted")
+            assert agent.authorizer is not None
+            assert agent.authorizer._token() == "principal-1"
+            assert agent.subject is not None and (
+                agent.subject.type,
+                agent.subject.id,
+            ) == ("deployment", "d-9")
+            # The keeper renewed it: the next decision asks with the new one.
+            principal.give_principal_token("d-9", "principal-2", expires_in=3600)
+            assert agent.authorizer._token() == "principal-2"
+            # Past the owner's key's life, nothing changes: the held token is what is read.
+            now = time.time()
+            monkeypatch.setattr(time, "time", lambda: now + 16 * 60)
+            assert agent.authorizer._token() == "principal-2"
+            # The held token expired and nothing renewed it: the run's own, as before — never a fail-open.
+            monkeypatch.setattr(time, "time", lambda: now + 4000)
+            assert agent.authorizer._token() == "owner-key-minted"
+        finally:
+            principal.forget_principal_token("d-9")
+            remember_app_instance("fake", None)
+        # Outside a deployment, the run's credential as a value, as before.
+        plain = an_agent(workspace, credential="tok-caller")
+        assert (
+            plain.authorizer is not None and plain.authorizer._token() == "tok-caller"
+        )
+        assert plain.subject is not None and plain.subject.type == "account"
+
     def test_a_runtime_pods_workspace_needs_the_authorizer_too(
         self, monkeypatch
     ) -> None:

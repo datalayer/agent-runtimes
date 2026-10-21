@@ -2034,7 +2034,8 @@ def harnesses() -> None:
             f"    {GRAY}Capabilities:{RESET} resume {table.resume}, fork history {table.fork_history}, "
             f"interrupt {'yes' if table.interrupt else 'no'}, steering {'yes' if table.steering else 'no'}, "
             f"images {'yes' if table.images else 'no'}, compaction {table.compaction}, "
-            f"vendor session id {spec.acp.native_session}"
+            f"vendor session id {spec.acp.native_session}, "
+            f"runs unasked {len(table.auto_run)} command families"
         )
         if contribution.plugin != "agent-runtimes.sessions":
             print(f"    {GRAY}Contributed by:{RESET} {contribution.plugin}")
