@@ -751,13 +751,13 @@ def test_settings_change_stop_and_resume(runtime: Runtime, local: TestClient) ->
         "tone": "Warm"
     }
     stopped = local.post("/api/v1/apps/sessions/session-0004/stop").json()
-    assert stopped["state"] == "stopped"
+    assert (stopped["state"], stopped["turn"]) == ("paused", "idle")
     refused = local.post(
         "/api/v1/apps/sessions/session-0004/messages", json={"text": "Two"}
     )
     assert (refused.status_code, refused.json()["detail"]) == (
         409,
-        "Session session-0004 is stopped: resume it before going on.",
+        "Session session-0004 is paused: resume it before going on.",
     )
     resumed = events_of(
         local.post("/api/v1/apps/sessions/session-0004/resume", json={})
@@ -1258,7 +1258,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     [offer] = shown["actions"]
     assert offer["name"] == "reactor.answer"
     waiting = local.get("/api/v1/apps/sessions/session-0007").json()
-    assert (waiting["state"], waiting["asking"]["kind"]) == ("waiting", "file")
+    assert (waiting["state"], waiting["turn"], waiting["asking"]["kind"]) == ("open", "waiting", "file")
     assert local.post(
         "/api/v1/apps/sessions/session-0007/messages", json={"text": "hm"}
     ).json()["detail"] == (

@@ -282,7 +282,7 @@ def test_interrupt_keeps_the_session_open_and_reaches_app_interrupted(
     refused = mounted.post("/listener/api/v1/apps/sessions/session-a-006/interrupt")
     assert (refused.status_code, refused.json()["detail"]) == (
         409,
-        "Session session-a-006 is stopped: resume it before going on.",
+        "Session session-a-006 is paused: resume it before going on.",
     )
 
 

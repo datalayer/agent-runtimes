@@ -1440,6 +1440,17 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         yield
 
+        # The sessions this runtime holds are paused in their record before
+        # it goes (MH-01): a listing from the record then says the truth.
+        try:
+            from .loop.apps.sessions import pause_held
+
+            paused = await pause_held()
+            if paused:
+                logger.info("Paused %d session(s) as the runtime stops", len(paused))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("The held sessions were not paused: %s", exc)
+
         if _visitors_task is not None and not _visitors_task.done():
             _visitors_task.cancel()
 

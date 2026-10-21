@@ -111,13 +111,39 @@ INCLUDED_BY = {
     # What the person said, as sound, with their consent (VO-63): kept by
     # ai-agents in its object store, the record pointing at it.
     "audio": "audio",
+    # A file given to the conversation or produced by it (MH-01): its name,
+    # size, digest and place in the sandbox — never its bytes.
+    "file": "conversations",
 }
+
+#: The session's own entries (MH-01): its state as the record says it —
+#: `session` (opened, or opened again on a resume: `open`), `paused`, `ended`
+#: — and what was done to it as a session: `swapped`, `cloned`, `imported`,
+#: `exported`, `titled`. Kept whatever `record.include` says: the record is
+#: the session's truth, and a listing of sessions the runtime no longer holds
+#: reads them.
+SESSION_KINDS = (
+    "paused",
+    "ended",
+    "swapped",
+    "cloned",
+    "imported",
+    "exported",
+    "titled",
+)
+
+#: A session's state, as the record says it (decision 14): `open` (held by a
+#: runtime, a turn may run), `paused` (nothing runs; held or not), `ended`.
+#: `stopped` is not one: it is refused wherever a state is read or written.
+SESSION_STATES = ("open", "paused", "ended")
 
 #: Kept whatever `record.include` says: a session's start, a run's start
 #: (what Activity reads as in progress, R-15), what its channels were
 #: sent (R-37), and that it asked the person and waits (`asked`, what
 #: ai-agents tells them of, M-023).
-ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread", "asked"})
+ALWAYS_KEPT = frozenset(
+    {"session", "run", "notification", "thread", "asked", *SESSION_KINDS}
+)
 
 #: How a run ended, in the `output` entry that ends it (`AppRecorder.ended`):
 #: it answered, it stopped (a rule, a check, an error), or its client went
@@ -390,6 +416,59 @@ async def keep_sound_in_ai_agents(
 KeepSound = Callable[..., Awaitable[None]]
 
 
+def runtime_runs_on() -> Dict[str, Any]:
+    """Where a session of this runtime runs (MH-01): ``{kind: runtime, uid}``,
+    the runtime's uid as the platform names it (``DATALAYER_RUNTIME_ID``),
+    ``local`` for a runtime started by hand.
+    """
+    return {
+        "kind": "runtime",
+        "uid": (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip() or "local",
+    }
+
+
+def no_lineage() -> Dict[str, Any]:
+    """A session that was neither cloned nor imported: both keys said, each ``None``."""
+    return {"forked_from": None, "imported_from": None}
+
+
+def session_facts(facts: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    """The session's shape on its ``session`` entry (MH-01), every key said:
+    ``agent``, ``harness``, ``runs_on``, ``title``, ``archived``, ``lineage``.
+    """
+    given = dict(facts or {})
+    return {
+        "agent": str(given.get("agent") or ""),
+        "harness": given.get("harness") or None,
+        "runs_on": dict(given.get("runs_on") or runtime_runs_on()),
+        "title": str(given.get("title") or "")[:200],
+        "archived": bool(given.get("archived", False)),
+        "lineage": dict(given.get("lineage") or no_lineage()),
+    }
+
+
+def session_state_of(entries: List[Dict[str, Any]]) -> str:
+    """A session's state from its record (MH-01): the last of its ``session``,
+    ``paused`` and ``ended`` entries says it; ``open`` when none does.
+
+    Raises
+    ------
+    ValueError
+        When an entry says a state that is not one (``stopped`` included):
+        the record is not read as a default.
+    """
+    state = "open"
+    for entry in entries:
+        if entry.get("kind") in ("session", "paused", "ended"):
+            said = str((entry.get("payload") or {}).get("state") or "open")
+            if said not in SESSION_STATES:
+                raise ValueError(
+                    f"There is no session state {said!r}: one of {', '.join(SESSION_STATES)}."
+                )
+            state = said
+    return state
+
+
 @dataclass
 class AppRecorder:
     """The entries of an application's sessions, kept until they are sent."""
@@ -541,11 +620,17 @@ class AppRecorder:
         *,
         woken_by: Optional[Dict[str, Any]] = None,
         resumed: bool = False,
+        facts: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Make ``session`` the one entries are added to, and say it started.
 
         A session resumed from its record (R-04) says it resumed, in an
         entry of the same session: its record goes on where it stopped.
+
+        ``facts`` is the session's shape (MH-01, §2 of the session model):
+        ``agent``, ``harness``, ``runs_on``, ``title``, ``archived`` and
+        ``lineage`` — written on the ``session`` entry with ``state: open``,
+        so the record says what the session is without the runtime.
         """
         _SESSION.set(session)
         if session not in self._started:
@@ -561,10 +646,173 @@ class AppRecorder:
                 + (f", woken by its {woken.get('kind')}" if woken else ""),
                 {
                     "app": self.app.id,
+                    "state": "open",
                     **({"woken_by": woken} if woken else {}),
                     **({"resumed": True} if resumed else {}),
+                    **session_facts(facts),
                 },
             )
+
+    def forget_started(self, session: str) -> None:
+        """Let ``start`` say ``session`` started again: a resume on this
+        runtime writes its own ``session`` entry (MH-01), as a first open does.
+        """
+        self._started.discard(session)
+
+    # --- the session's own entries (MH-01) ---------------------------------------
+
+    def _session_entry(
+        self, session: str, kind: str, summary: str, payload: Dict[str, Any]
+    ) -> None:
+        """One of the session's own entries, sent at once when a loop runs."""
+        _SESSION.set(session)
+        self.add(kind, summary, payload)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        send_later(session, self.flush(session))
+
+    def paused(
+        self, session: str, *, cancelled: Optional[Dict[str, bool]] = None
+    ) -> None:
+        """The session is paused: nothing runs, held or not. ``cancelled``
+        says what the pause cut short — a running turn, a question asked.
+        """
+        cut = {k: bool(v) for k, v in (cancelled or {}).items() if v}
+        self._session_entry(
+            session,
+            "paused",
+            f"A session of {self.app.name} paused"
+            + (
+                " (" + " and ".join(f"the {what} cancelled" for what in cut) + ")"
+                if cut
+                else ""
+            ),
+            {"state": "paused", "cancelled": cut},
+        )
+
+    def session_ended(self, session: str, *, by: str) -> None:
+        """The session ended: its code's ``end`` ran, or the person signed out
+        (``by``: ``end``, ``logout``, ``app``, ``run``); the record stays.
+        """
+        self._session_entry(
+            session,
+            "ended",
+            f"A session of {self.app.name} ended",
+            {"state": "ended", "by": by},
+        )
+
+    def swapped(
+        self,
+        session: str,
+        *,
+        from_agent: str,
+        to_agent: str,
+        from_harness: Optional[str],
+        to_harness: Optional[str],
+        at_turn: int,
+        said: str,
+        carried: Dict[str, Any],
+        dropped: Dict[str, Any],
+    ) -> None:
+        """The session's agent was swapped in place (MH-06): the new agent on
+        the entry, as the ``session`` entry names the first.
+        """
+        self._session_entry(
+            session,
+            "swapped",
+            f"Swapped from {from_agent} to {to_agent} at turn {at_turn}",
+            {
+                "from": from_agent,
+                "to": to_agent,
+                "from_harness": from_harness,
+                "to_harness": to_harness,
+                "agent": to_agent,
+                "harness": to_harness,
+                "at_turn": at_turn,
+                "said": said,
+                "carried": dict(carried),
+                "dropped": dict(dropped),
+            },
+        )
+
+    def cloned(
+        self, session: str, *, source: str = "", target: str = "", at_turn: int
+    ) -> None:
+        """A clone (MH-09): on the source, ``to`` the clone; on the clone,
+        ``from`` the source — both at the turn it was cut at.
+        """
+        if bool(source) == bool(target):
+            raise ValueError("A cloned entry names its source or its target, not both.")
+        self._session_entry(
+            session,
+            "cloned",
+            f"Cloned from {source} at turn {at_turn}"
+            if source
+            else f"Cloned to {target} at turn {at_turn}",
+            {
+                **({"from": source} if source else {"to": target}),
+                "at_turn": at_turn,
+            },
+        )
+
+    def exported(
+        self, session: str, *, by: str, entries: int, redactions: int, digest: str
+    ) -> None:
+        """The session was exported (MH-13): who, how many entries, how many
+        values redacted, the file's digest.
+        """
+        self._session_entry(
+            session,
+            "exported",
+            f"Exported {entries} entries, {redactions} redactions",
+            {"by": by, "entries": entries, "redactions": redactions, "digest": digest},
+        )
+
+    def imported(
+        self,
+        session: str,
+        *,
+        digest: str,
+        exported_at: str,
+        exported_by: str,
+        redactions: int,
+        file_version: int,
+        current_version: int,
+        source_uid: str,
+    ) -> None:
+        """The session was imported from a file (MH-14): its lineage, said
+        with the application versions when they differ (decision P).
+        """
+        self._session_entry(
+            session,
+            "imported",
+            f"Imported from a file exported {exported_at} ({redactions} redactions)"
+            + (
+                f"; the file is version {file_version} of the application, this is {current_version}"
+                if file_version != current_version
+                else ""
+            ),
+            {
+                "digest": digest,
+                "exported_at": exported_at,
+                "exported_by": exported_by,
+                "redactions": redactions,
+                "file_version": file_version,
+                "current_version": current_version,
+                "source_uid": source_uid,
+            },
+        )
+
+    def titled(self, session: str, *, title: str, archived: bool) -> None:
+        """The session's title and archive flag (MH-43), as they stand now."""
+        self._session_entry(
+            session,
+            "titled",
+            title or ("Archived" if archived else "Untitled"),
+            {"title": title, "archived": archived},
+        )
 
     def _body(self, session: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
         """What is sent to ai-agents for a session's entries."""
@@ -1137,6 +1385,12 @@ __all__ = [
     "COMMENT_LIMIT",
     "INCLUDED_BY",
     "RUN_ENDS",
+    "SESSION_KINDS",
+    "SESSION_STATES",
+    "no_lineage",
+    "runtime_runs_on",
+    "session_facts",
+    "session_state_of",
     "RecordNotSent",
     "TURN_LIMIT",
     "agent_recorder",

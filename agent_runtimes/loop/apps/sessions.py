@@ -113,7 +113,7 @@ from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_e
 from agent_runtimes.loop.apps.forms import field_title, form_fields
 from agent_runtimes.loop.apps.host_user import HostUser, reads_user, signed_host_context
 from agent_runtimes.loop.apps.pages import LOOP_PAGE, page_values
-from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
+from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder, runtime_runs_on
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
     Closed,
@@ -165,7 +165,26 @@ FILES_DIR = "files"
 SESSION_UID = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 
 #: The states of a session.
-STATES = ("open", "running", "waiting", "stopped", "ended")
+#: A session's states (decision 14): `open` (held by a runtime, a turn may
+#: run), `paused` (nothing runs; held or not), `ended` (its code's `end` ran;
+#: the record stays). `stopped` is not one, and is refused wherever a state
+#: is read or written (`check_state`). The runtime's run end `stopped`
+#: (`record.RUN_ENDS`) is another vocabulary, untouched.
+STATES = ("open", "paused", "ended")
+
+#: The turn phases of an `open` session (decision O): the runtime's, said as
+#: `turn` beside `state`, never a state of the record.
+TURNS = ("idle", "running", "waiting")
+
+
+def check_state(word: str) -> str:
+    """A state word as the API takes it; refused in a sentence when it is not one."""
+    if word not in STATES:
+        raise SessionRefused(
+            422, f"There is no session state {word!r}: one of {', '.join(STATES)}."
+        )
+    return word
+
 
 #: The kinds of file read as text, besides ``text/*``.
 TEXT_TYPES = frozenset(
@@ -660,6 +679,18 @@ class LiveSession:
     user: Optional[HostUser] = None
     """Embedded, the user the host's server signed (D-21): who `host_context` says, and its code's user."""
     state: str = "open"
+    """One of `STATES`: open, paused or ended."""
+    turn: str = "idle"
+    """One of `TURNS`: what the runtime does in an open session — idle, running, waiting for an answer."""
+    title: str = ""
+    """The person's title, else the first turn's first line (MH-43); ``""`` until one is."""
+    archived: bool = False
+    lineage: Dict[str, Any] = field(
+        default_factory=lambda: {"forked_from": None, "imported_from": None}
+    )
+    """`forked_from: {uid, at_turn}` and `imported_from: {digest, exported_at, exported_by}`, each or None."""
+    runs_on: Dict[str, Any] = field(default_factory=dict)
+    """Where it runs: `{kind: runtime, uid}` here; a team seat's says `{kind: team_run, execution_id, seat}`."""
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
     files: List[Dict[str, Any]] = field(default_factory=list)
@@ -715,6 +746,23 @@ class LiveSession:
     def written_in_python(self) -> bool:
         """Whether its application's code reacts to it."""
         return self.host is not None
+
+    @property
+    def harness(self) -> Optional[str]:
+        """The harness its agent runs on, when it is one; ``None`` otherwise."""
+        shield = self._shield()
+        return str(shield.harness.id) if shield is not None else None
+
+    def facts(self) -> Dict[str, Any]:
+        """The session's shape as its record says it (MH-01, §2)."""
+        return {
+            "agent": self.agent_id,
+            "harness": self.harness,
+            "runs_on": dict(self.runs_on),
+            "title": self.title,
+            "archived": self.archived,
+            "lineage": dict(self.lineage),
+        }
 
     # --- the rules while running (SH-54) --------------------------------
 
@@ -825,6 +873,13 @@ class LiveSession:
             "opened_by": {"kind": self.opened_by.kind, "uid": self.opened_by.uid},
             "user": self.user.as_value() if self.user is not None else None,
             "state": self.state,
+            "turn": self.turn,
+            "held": True,
+            "harness": self.harness,
+            "title": self.title,
+            "archived": self.archived,
+            "lineage": dict(self.lineage),
+            "runs_on": dict(self.runs_on),
             "settings": dict(self.settings),
             "profile": self.profile or None,
             "asking": question_of(self._question) if self._question else None,
@@ -918,6 +973,25 @@ class LiveSession:
             if not ended and self._queue is queue and self._task is not None:
                 self._task.cancel()
 
+    def _may_go_on(self) -> None:
+        """Refuse a turn of a session that is paused or ended, or whose turn runs."""
+        if self.state == "paused":
+            raise SessionRefused(
+                409, f"Session {self.uid} is paused: resume it before going on."
+            )
+        if self.state == "ended":
+            raise SessionRefused(
+                409,
+                f"Session {self.uid} ended; an ended session is not resumed — clone it to go on from it.",
+            )
+        if self.turn in ("running", "waiting"):
+            raise SessionRefused(
+                409,
+                f"Session {self.uid} is "
+                + ("answering" if self.turn == "running" else "waiting for an answer")
+                + ": wait, or stop it.",
+            )
+
     def _start_turn(
         self,
         work: Callable[[], Awaitable[None]],
@@ -936,17 +1010,7 @@ class LiveSession:
         """
         from ag_ui.core import RunErrorEvent, RunFinishedEvent, RunStartedEvent
 
-        if self.state == "stopped":
-            raise SessionRefused(
-                409, f"Session {self.uid} is stopped: resume it before going on."
-            )
-        if self.state in ("running", "waiting"):
-            raise SessionRefused(
-                409,
-                f"Session {self.uid} is "
-                + ("answering" if self.state == "running" else "waiting for an answer")
-                + ": wait, or stop it.",
-            )
+        self._may_go_on()
         visitor = self.opened_by.kind == "visitor"
         if visitor and counts:
             from agent_runtimes.loop.apps.visitors import admit_turn
@@ -955,7 +1019,7 @@ class LiveSession:
             if refusal:
                 raise SessionRefused(429, refusal)
         queue = self._open_stream(run_id)
-        self.state = "running"
+        self.turn = "running"
         # The caller's token, set by the route: what they allow is read with it.
         token = get_request_user_jwt() or ""
 
@@ -1003,8 +1067,7 @@ class LiveSession:
                 self._question = None
                 self._answer = None
                 self._asked = None
-                if self.state != "stopped":
-                    self.state = "open"
+                self.turn = "idle"
                 if not cancelled:
                     # The stream ends once the turn is on the record: a
                     # scheduler stopping the runtime as it ends loses
@@ -1345,7 +1408,7 @@ class LiveSession:
                 result={"asking": question_of(question)},
             )
         )
-        self.state = "waiting"
+        self.turn = "waiting"
         # Its record says it waits: whoever opened it is told (M-023).
         self.recorder.start(self.uid)
         self.recorder.asked(self.uid, question_of(question).get("kind", ""))
@@ -1380,7 +1443,7 @@ class LiveSession:
             )
         self._asked = None
         queue = self._open_stream(run_id)
-        self.state = "running"
+        self.turn = "running"
         self._question = None
         self._answer = None
         self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))
@@ -1399,7 +1462,7 @@ class LiveSession:
 
     async def _open_code(self, woken_by: Optional[Dict[str, Any]] = None) -> None:
         """The record begins, and the code's ``start`` runs."""
-        self.recorder.start(self.uid, woken_by=woken_by)
+        self.recorder.start(self.uid, woken_by=woken_by, facts=self.facts())
         await self.recorder.flush(self.uid)
         if self.host is not None and self.session is None:
             self.session = await self.host.open(
@@ -1638,7 +1701,7 @@ class LiveSession:
         before the code goes on; the person's words are the conversation's.
         """
         question, asked = self._question, self._asked
-        if self.state != "waiting" or question is None or asked is None:
+        if self.turn != "waiting" or question is None or asked is None:
             raise SessionRefused(409, f"{self.app.name} asks nothing now.")
         if press.display_id != asked.id:
             raise SessionRefused(409, "That question is no longer asked.")
@@ -1682,7 +1745,7 @@ class LiveSession:
         text = text.strip()
         if not text:
             raise SessionRefused(422, "Nothing to send: write a message first.")
-        if self.state == "waiting":
+        if self.turn == "waiting":
             return self._answer_waiting(text=text, head=head)
         if self.host is not None:
             return self._start_turn(
@@ -1715,7 +1778,7 @@ class LiveSession:
         """
         if press.action == ANSWER_ACTION:
             return self._answered(press, run_id=run_id, head=head)
-        if self.state == "waiting":
+        if self.turn == "waiting":
             raise SessionRefused(409, self._waiting_for())
         given = list(files or [])
         refused = given_refused(self.app, given)
@@ -1740,7 +1803,7 @@ class LiveSession:
                 422,
                 f"{self.app.name} has no page of its code (@app.page) here: nothing runs it.",
             )
-        if self.state == "waiting":
+        if self.turn == "waiting":
             raise SessionRefused(409, self._waiting_for())
         try:
             page_values(self.app, inputs)
@@ -1842,7 +1905,7 @@ class LiveSession:
             )
         except InvalidAnswer as wrong:
             raise SessionRefused(422, str(wrong)) from None
-        if self.state == "waiting":
+        if self.turn == "waiting":
             answered = self._answer_waiting(values=values, head=head)
             self.settings = updated
             return answered
@@ -1916,7 +1979,7 @@ class LiveSession:
         from agent_runtimes.voice import hear
         from agent_runtimes.voice.protocol_audio import AudioNotHeard
 
-        if self.state == "waiting":
+        if self.turn == "waiting":
             raise SessionRefused(
                 409,
                 self._waiting_for() + " Answer it in words: it is not heard.",
@@ -1994,22 +2057,34 @@ class LiveSession:
         """
         from ag_ui.core import CustomEvent
 
-        if self.state == "stopped":
+        if self.state == "paused":
             raise SessionRefused(
-                409, f"Session {self.uid} is stopped: resume it before going on."
+                409, f"Session {self.uid} is paused: resume it before going on."
             )
         self.emit(CustomEvent(name=VOICE_INTERRUPTED_EVENT, value={}))
         await self._close()
-        if self.state != "stopped":
-            self.state = "open"
+        self.turn = "idle"
         if self.host is not None and self.session is not None:
             # Nothing left to cancel; told to the code, and to the ui socket.
             await self.host.interrupt(self.session)
 
     async def stop(self) -> None:
-        """Stop: what runs is cancelled, the code's ``stop`` runs, and the session waits to be resumed."""
+        """Stop: what runs is cancelled, the code's ``stop`` runs, and the
+        session is ``paused`` — in the record too (MH-01) — until resumed.
+        A question waited on is cancelled, and said.
+        """
+        if self.state == "paused":
+            raise SessionRefused(409, f"Session {self.uid} is paused already.")
+        if self.state == "ended":
+            raise SessionRefused(
+                409, f"Session {self.uid} ended; an ended session is not stopped."
+            )
+        cancelled = {"turn": self.turn == "running", "question": self.turn == "waiting"}
         await self._close()
-        self.state = "stopped"
+        self.state = "paused"
+        self.turn = "idle"
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.paused(self.uid, cancelled=cancelled)
         if self.host is not None and self.session is not None:
             # Its own `stop` has nothing left to cancel: it runs, and what it
             # shows is kept in the conversation for whoever resumes it.
@@ -2019,25 +2094,33 @@ class LiveSession:
         """End: what runs is cancelled, the code's ``end`` runs, and the
         runtime no longer holds the session (P-14).
 
-        Its record stays: it is resumed from it, as any session this runtime
-        no longer holds.
+        Its record stays, with an ``ended`` entry: it is read, cloned and
+        exported from it, never resumed (a clone is the way on).
         """
+        if self.state == "ended":
+            raise SessionRefused(
+                409, f"Session {self.uid} ended already; there is nothing to end."
+            )
         await self._close()
         if self.host is not None and self.session is not None:
             # Nobody reads what it shows: the conversation is closed.
             await self.host.end(self.session)
-        self.state = "ended"
-        _SESSIONS.pop(self.uid, None)
-        UI_HUB.forget(self.uid)
-        UI_FILES.discard(self.uid)
-        _forget_rules(self.uid)
+        await self._ended(by="end")
 
     async def logout(self) -> None:
         """The person signed out: the code's ``logout`` runs, then the session ends (P-14)."""
         await self._close()
         if self.host is not None and self.session is not None:
             await self.host.logout(self.session)
+        await self._ended(by="logout")
+
+    async def _ended(self, *, by: str) -> None:
+        """The session ended: said in the record, sent, and let go of."""
         self.state = "ended"
+        self.turn = "idle"
+        self.recorder.start(self.uid, facts=self.facts())
+        self.recorder.session_ended(self.uid, by=by)
+        await self.recorder.settled(self.uid)
         _SESSIONS.pop(self.uid, None)
         UI_HUB.forget(self.uid)
         UI_FILES.discard(self.uid)
@@ -2060,11 +2143,15 @@ class LiveSession:
         """Resume: the conversation so far, then the code's ``resume``; open again."""
         from ag_ui.core import MessagesSnapshotEvent
 
-        if self.state != "stopped":
+        if self.state == "ended":
             raise SessionRefused(
-                409, f"Session {self.uid} is {self.state}, not stopped."
+                409,
+                f"Session {self.uid} ended; an ended session is not resumed — clone it to go on from it.",
             )
+        if self.state != "paused":
+            raise SessionRefused(409, f"Session {self.uid} is open, not paused.")
         self.state = "open"
+        self.turn = "idle"
 
         async def work() -> None:
             """The turn."""
@@ -2077,7 +2164,11 @@ class LiveSession:
                     self.show_op(ShowOp(scope=self.uid, id=display["id"], body=display))
             for shown in self._elements.values():
                 self.show_op(self._element_op(shown))
-            self.recorder.start(self.uid, resumed=self.resumed)
+            # Opened again on this runtime: a `session` entry with `state: open`
+            # and `runs_on` rewritten (MH-01), whether or not this runtime
+            # wrote its first.
+            self.recorder.forget_started(self.uid)
+            self.recorder.start(self.uid, resumed=True, facts=self.facts())
             await self.recorder.flush(self.uid)
             if self.host is not None:
                 state = dict(self.session.state) if self.session is not None else {}
@@ -2313,7 +2404,7 @@ class LiveSession:
             return self.pressed(
                 self._take_press(loop.get("press")), files=files, run_id=run_id
             )
-        if self.state == "waiting":
+        if self.turn == "waiting":
             # The chat answers by pressing what the question offered — a file
             # by the ref its upload answered (RU-4, RU-6).
             raise SessionRefused(409, self._waiting_for())
@@ -2519,8 +2610,15 @@ def new_session(
     resumed: bool = False,
     profile: str = "",
     user: Optional[HostUser] = None,
+    title: str = "",
+    lineage: Optional[Mapping[str, Any]] = None,
+    runs_on: Optional[Mapping[str, Any]] = None,
+    archived: bool = False,
 ) -> LiveSession:
     """A session of an application's agent on this runtime, kept by uid.
+
+    A session resumed from its record (``resumed``) is held ``paused`` until
+    its ``resume`` runs; its title, lineage and archive flag are the record's.
 
     ``user`` is the user the host's server signed, embedded (D-21,
     `host_user_of`): verified before it is made.
@@ -2576,6 +2674,12 @@ def new_session(
         resumed=resumed,
         profile=profile,
         user=user,
+        title=str(title or "")[:200],
+        archived=bool(archived),
+        lineage=dict(lineage)
+        if lineage
+        else {"forked_from": None, "imported_from": None},
+        runs_on=dict(runs_on) if runs_on else runtime_runs_on(),
     )
     application = code_of(app, agent_id)
     if application is not None:
@@ -2588,9 +2692,29 @@ def new_session(
             agent_maker=_agent_maker(agent_id),
         )
     if resumed:
-        live.state = "stopped"
+        live.state = "paused"
     _SESSIONS[uid] = live
     return live
+
+
+async def pause_held() -> List[str]:
+    """Pause every open session this runtime holds, as it stops gracefully
+    (MH-01): each gets its ``paused`` entry, sent before the runtime goes,
+    so a listing from the record says the truth. The uids paused.
+    """
+    paused: List[str] = []
+    for live in list(_SESSIONS.values()):
+        if live.state != "open":
+            continue
+        try:
+            await live.stop()
+            await live.recorder.settled(live.uid)
+            paused.append(live.uid)
+        except Exception as error:  # noqa: BLE001 - said, the rest still paused
+            logger.warning(
+                "Session %s was not paused as the runtime stops: %s", live.uid, error
+            )
+    return paused
 
 
 # --- the record, read back -------------------------------------------------------------
@@ -2692,6 +2816,7 @@ __all__ = [
     "MAX_FILE_BYTES",
     "MAX_TEXT_CHARACTERS",
     "STATES",
+    "TURNS",
     "MAX_PRESSES",
     "QUESTION_DISPLAY_TYPE",
     "STEP_DISPLAY_TYPE",
@@ -2702,6 +2827,7 @@ __all__ = [
     "StepShown",
     "SessionRefused",
     "agent_app",
+    "check_state",
     "code_of",
     "serve_agent_code",
     "conversation_from_record",
@@ -2709,6 +2835,7 @@ __all__ = [
     "given_files",
     "is_text",
     "new_session",
+    "pause_held",
     "placed_in_words",
     "put_in_sandbox",
     "question_in_words",

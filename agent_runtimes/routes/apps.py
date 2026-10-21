@@ -1354,7 +1354,7 @@ def _prune() -> None:
     from agent_runtimes.loop.apps import sessions
 
     held = sessions._SESSIONS
-    idle = [uid for uid, live in held.items() if live.state in ("open", "stopped")]
+    idle = [uid for uid, live in held.items() if live.turn == "idle"]
     for uid in idle[: max(0, len(held) - SESSIONS_HELD + 1)]:
         held.pop(uid, None)
 
@@ -1558,16 +1558,26 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
 
 
 @router.get("/sessions")
-async def list_sessions(request: Request, agent: str = "") -> Dict[str, Any]:
-    """The caller's sessions held by this runtime, of one agent or all."""
+async def list_sessions(
+    request: Request, agent: str = "", state: str = ""
+) -> Dict[str, Any]:
+    """The caller's sessions held by this runtime, of one agent or all;
+    ``?state=`` one of open, paused, ended — any other word is 422.
+    """
     from agent_runtimes.loop.apps import sessions
+    from agent_runtimes.loop.apps.sessions import SessionRefused, check_state
 
+    try:
+        wanted = check_state(state) if state else ""
+    except SessionRefused as refused:
+        raise _refused(refused) from None
     authorized = await _authorize(request, False)
     return {
         "sessions": [
             live.describe()
             for live in sessions._SESSIONS.values()
             if (not agent or live.agent_id == agent)
+            and (not wanted or live.state == wanted)
             and live.answers_to(authorized.caller)
         ]
     }
@@ -1948,19 +1958,31 @@ async def session_ui(websocket: WebSocket) -> None:
 
 @router.post("/sessions/{uid}/stop")
 async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
-    """Stop a session: what runs is cancelled; it waits to be resumed."""
+    """Stop a session: what runs is cancelled; it is ``paused`` until resumed.
+    A paused one answers 409.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
     live, _ = await _held(uid, request)
-    await live.stop()
+    try:
+        await live.stop()
+    except SessionRefused as refused:
+        raise _refused(refused) from None
     return dict(live.describe())
 
 
 @router.post("/sessions/{uid}/end")
 async def end_session(uid: str, request: Request) -> Dict[str, Any]:
     """End a session: what runs is cancelled, a Python application's ``end`` runs,
-    and the runtime no longer holds it (P-14). Its record stays.
+    and the runtime no longer holds it (P-14). Its record stays, ``ended``.
     """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
     live, _ = await _held(uid, request)
-    await live.end()
+    try:
+        await live.end()
+    except SessionRefused as refused:
+        raise _refused(refused) from None
     return dict(live.describe())
 
 
@@ -1982,7 +2004,9 @@ async def logout_sessions(request: Request) -> Dict[str, Any]:
 
 @router.post("/sessions/{uid}/resume")
 async def resume_session(uid: str, body: ResumeSessionRequest, request: Request) -> Any:
-    """Resume a stopped session — or, from its record, one this runtime no longer holds."""
+    """Resume a paused session — or, from its record, one this runtime no
+    longer holds. An ended session is not resumed: 409, naming clone.
+    """
     from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps.sessions import (
         SessionRefused,
