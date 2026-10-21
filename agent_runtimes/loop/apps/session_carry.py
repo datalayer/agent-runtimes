@@ -102,6 +102,7 @@ class DefaultCarry:
         """``target``: ``{agent, name, harness, capabilities: {resume, …}, model}``."""
         rules = _rules_of(session)
         always = _always(rules)
+        kept_by_harness = int(getattr(session, "allow_always_count", lambda: 0)() or 0)
         old_capabilities = dict(getattr(session, "capabilities", None) or {})
         new_capabilities = dict(target.get("capabilities") or {})
         turns = sum(
@@ -122,7 +123,7 @@ class DefaultCarry:
             "workspace": True,
         }
         dropped: Dict[str, Any] = {
-            "allow_always": len(always),
+            "allow_always": len(always) + kept_by_harness,
             "harness_state": "kept for a swap back"
             if old_capabilities.get("resume", "none") != "none"
             else "gone",

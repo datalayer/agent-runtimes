@@ -707,6 +707,8 @@ class LiveSession:
     """`forked_from: {uid, at_turn}` and `imported_from: {digest, exported_at, exported_by}`, each or None."""
     runs_on: Dict[str, Any] = field(default_factory=dict)
     """Where it runs: `{kind: runtime, uid}` here; a team seat's says `{kind: team_run, execution_id, seat}`."""
+    bound_agent: str = ""
+    """The agentspec a swap bound (MH-06); ``""`` until one, then the record's `agent`."""
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
     files: List[Dict[str, Any]] = field(default_factory=list)
@@ -772,10 +774,110 @@ class LiveSession:
     @property
     def agent_spec(self) -> str:
         """The agentspec bound to its agent now: what the record's ``agent`` names."""
+        if self.bound_agent:
+            return self.bound_agent
         from agent_runtimes.routes.agents import get_stored_agent_spec
 
         stored = get_stored_agent_spec(self.agent_id) or {}
         return str(stored.get("agent_spec_id") or self.agent_id)
+
+    def allow_always_count(self) -> int:
+        """How many *always* answers the harness keeps for this session: the
+        Shield's own session rules, which go with its process on a swap.
+        """
+        shield = self._shield()
+        if shield is None:
+            return 0
+        acp = shield._acp_of.get(self.uid)
+        state = shield.sessions.get(acp) if acp else None
+        return len(getattr(state, "session_rules", []) or []) if state else 0
+
+    def swap_target(self, agent: str) -> Dict[str, Any]:
+        """What a swap to ``agent`` would bind (MH-06): the agentspec, its
+        name, its harness and the harness's capabilities table — a framework
+        agent's is empty; refused while a turn runs or the harness is still
+        loading its session (409), for an agentspec the runtime does not
+        know (404), for the agent already bound (409), and when the settings
+        do not fit the target application's inputs (422).
+        """
+        from agent_runtimes.specs.agents.agents import get_agent_spec
+        from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+        if self.state != "open":
+            raise SessionRefused(
+                409,
+                f"Session {self.uid} is {self.state}: "
+                + (
+                    "resume it, then swap."
+                    if self.state == "paused"
+                    else "an ended session is cloned, not swapped."
+                ),
+            )
+        if self.turn in ("running", "waiting"):
+            turns = sum(1 for m in self.messages if m.get("role") == "user")
+            raise SessionRefused(
+                409,
+                f"Session {self.uid} is answering turn {turns}: swap it when the turn is over, or interrupt it first."
+                if self.turn == "running"
+                else f"Session {self.uid} is waiting for an answer to turn {turns}: answer it, or stop the session, then swap.",
+            )
+        shield = self._shield()
+        if shield is not None and self.uid in getattr(shield, "loading", set()):
+            raise SessionRefused(
+                409,
+                f"Session {self.uid}: {shield.harness.name} is still loading its session; swap it once it is loaded.",
+            )
+        spec = get_agent_spec(agent)
+        if spec is None:
+            raise SessionRefused(
+                404, f"There is no agentspec {agent!r} on this runtime to swap to."
+            )
+        if spec.id == self.agent_spec:
+            raise SessionRefused(409, f"Session {self.uid} is with {spec.id} already.")
+        harness_id = str(getattr(spec, "harness", "") or "")
+        harness = HARNESS_CATALOGUE.get(harness_id)
+        try:
+            form_values(self.app.interface.settings, dict(self.settings))
+        except InvalidAnswer as wrong:
+            raise SessionRefused(
+                422,
+                f"The settings of {self.uid} do not fit {spec.name}: {wrong} — change the settings, then swap.",
+            ) from None
+        return {
+            "agent": spec.id,
+            "name": harness.name if harness is not None else str(spec.name or spec.id),
+            "harness": harness.id if harness is not None else None,
+            "capabilities": harness.capabilities.model_dump(mode="json")
+            if harness is not None
+            else {},
+            "model": str(getattr(spec, "model", "") or ""),
+        }
+
+    def swapped_to(self, target: Mapping[str, Any], carried: Any) -> Dict[str, Any]:
+        """After the rebind (MH-06): the new agent is the session's, the
+        sentence is appended to the conversation — the new agent reads it
+        with its first turn — and the swap is answered.
+        """
+        self.bound_agent = str(target["agent"])
+        if carried.said:
+            self.messages.append(
+                {
+                    "id": _new_id(),
+                    "role": "assistant",
+                    "content": carried.said,
+                    "name": self.app.name,
+                    "agent": self.bound_agent,
+                }
+            )
+        return {
+            "uid": self.uid,
+            "agent": self.bound_agent,
+            "harness": target.get("harness"),
+            "state": self.state,
+            "said": carried.said,
+            "carried": dict(carried.carried),
+            "dropped": dict(carried.dropped),
+        }
 
     @property
     def agent_name(self) -> str:
@@ -1676,7 +1778,15 @@ class LiveSession:
             if parts
             else text
         )
-        self.messages.append({"id": _new_id(), "role": "user", "content": content})
+        self.messages.append(
+            {
+                "id": _new_id(),
+                "role": "user",
+                "content": content,
+                # Which agent had the turn (MH-04): a swap back compares its own spans.
+                "agent": self.agent_spec,
+            }
+        )
         return list(self.messages)
 
     async def _message_code(self, text: str) -> None:
@@ -2622,6 +2732,48 @@ FILES_PREFIX = "/api/v1/apps/files"
 MAX_PRESSES = 16
 
 
+async def _rebind_through_configure(
+    live: "LiveSession", agent: str, request: Any
+) -> None:
+    """Bind another agentspec to the session's agent in place — through
+    `configure-from-spec`, the one way to reconfigure a running agent (MH-06):
+    the old agent is deleted (a harness's process ended, its row kept) and the
+    new one created under the same id, with the same application.
+    """
+    from agent_runtimes.routes.agents import (
+        ConfigureFromSpecRequest,
+        configure_from_spec_endpoint,
+        get_stored_agent_spec,
+    )
+
+    stored = get_stored_agent_spec(live.agent_id) or {}
+    await configure_from_spec_endpoint(
+        request,
+        ConfigureFromSpecRequest(
+            agent_spec_id=agent,
+            agent_id=live.agent_id,
+            app_spec=stored.get("app_spec"),
+            app_instance=stored.get("app_instance"),
+        ),
+    )
+
+
+Rebinder = Callable[["LiveSession", str, Any], Awaitable[None]]
+
+#: What binds another agent to a session's agent: configure-from-spec, or a test's double.
+_rebinder: Dict[str, Rebinder] = {"rebind": _rebind_through_configure}
+
+
+def use_rebinder(rebinder: Optional[Rebinder]) -> None:
+    """What rebinds a session's agent on a swap; ``None`` for configure-from-spec (a test)."""
+    _rebinder["rebind"] = rebinder or _rebind_through_configure
+
+
+async def rebind(live: "LiveSession", agent: str, request: Any) -> None:
+    """Rebind through what is installed."""
+    await _rebinder["rebind"](live, agent, request)
+
+
 async def run_hooks(
     event: str, session: "LiveSession", facts: Mapping[str, Any]
 ) -> None:
@@ -3132,10 +3284,12 @@ __all__ = [
     "put_in_sandbox",
     "question_in_words",
     "question_of",
+    "rebind",
     "rebuilt_from_record",
     "record_entries",
     "run_hooks",
     "session_of",
     "text_in_words",
+    "use_rebinder",
     "use_record_reader",
 ]

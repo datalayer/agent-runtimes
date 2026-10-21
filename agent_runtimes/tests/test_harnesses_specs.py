@@ -124,12 +124,16 @@ class TestTheCapabilitiesTable:
         spec = yaml.safe_load((tmp_path / "codex.yaml").read_text())
         del spec["capabilities"]
         (tmp_path / "codex.yaml").write_text(yaml.safe_dump(spec))
-        with pytest.raises(ValueError, match="codex.yaml: a harness declares its capabilities table"):
+        with pytest.raises(
+            ValueError, match="codex.yaml: a harness declares its capabilities table"
+        ):
             load_harness_specs(tmp_path)
         spec = yaml.safe_load((source / "codex.yaml").read_text())
         spec["capabilities"]["resume"] = "none"
         (tmp_path / "codex.yaml").write_text(yaml.safe_dump(spec))
-        with pytest.raises(ValueError, match="capabilities.resume and acp.load_session disagree"):
+        with pytest.raises(
+            ValueError, match="capabilities.resume and acp.load_session disagree"
+        ):
             load_harness_specs(tmp_path)
 
 

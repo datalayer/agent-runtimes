@@ -39,47 +39,25 @@ ARGS = (
 
 
 async def _use(tux: "CliTux", agent_id: str) -> None:
-    """Bind this session to another agent."""
+    """Swap this session's agent in place, through the session route (MH-07)."""
+    from agent_runtimes.loop.session import LoopRefused
+
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
-    session = getattr(tux, "loop_session", None)
-    session_id = (
-        getattr(session, "conversation_id", None)
-        or getattr(tux, "agent_id", "")
-        or "session"
-    )
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{tux.server_url}/api/v1/loop/sessions/{session_id}/agent",
-                json={"agent_id": agent_id},
-                timeout=120.0,
-            )
-            if response.status_code == 404:
-                tux.console.print(f"[red]Unknown agent: {agent_id}[/red]")
-                tux.console.print(
-                    "  /agents to see what is available.", style=STYLE_MUTED
-                )
-                return
-            response.raise_for_status()
-            payload = response.json()
-    except Exception as error:  # noqa: BLE001
-        tux.console.print(f"[red]Could not switch agent: {error}[/red]")
+    session = getattr(tux, "loop_session", None) or getattr(tux, "session", None)
+    if session is None:
+        tux.console.print("[red]No session to swap.[/red]")
         return
-
-    if session is not None:
-        session.agent_id = payload.get("agent_id", agent_id)
-        session.model = payload.get("model") or session.model
-    tux.agent_id = payload.get("agent_id", agent_id)
-
+    try:
+        session.with_agent(agent_id)
+    except LoopRefused as refused:
+        tux.console.print(f"[red]{refused}[/red]")
+        return
+    tux.agent_id = session.agent_id
     tux.console.print()
-    tux.console.print(f"● {payload.get('name', agent_id)}", style=STYLE_PRIMARY)
-    tux.console.print(f"  {payload.get('agent_id')}", style=STYLE_MUTED)
-    if payload.get("model"):
-        tux.console.print(f"  model: {payload['model']}", style=STYLE_MUTED)
-    if payload.get("sandbox_variant"):
-        tux.console.print(f"  sandbox: {payload['sandbox_variant']}", style=STYLE_MUTED)
+    tux.console.print(f"● {session.agent_id}", style=STYLE_PRIMARY)
+    if session.said:
+        tux.console.print(f"  {session.said}", style=STYLE_MUTED)
     tux.console.print()
 
 

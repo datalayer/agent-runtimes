@@ -1723,6 +1723,73 @@ async def _titled_in_record(
     return {**described, "title": new_title, "archived": new_archived}
 
 
+class SwapRequest(BaseModel):
+    """Which agentspec the session goes on with (MH-06)."""
+
+    agent: str = Field(
+        ...,
+        description="An agentspec of this runtime: a harness agent or a framework agent",
+    )
+
+
+@router.post("/sessions/{uid}/agent")
+async def swap_agent(uid: str, body: SwapRequest, request: Request) -> Dict[str, Any]:
+    """Swap the session's agent in place (MH-06): refused while a turn runs
+    or the harness is still loading (409); the current harness's process
+    ended, its row kept; the new agent bound through configure-from-spec —
+    a harness or a framework agent alike; the conversation carried, the
+    sentence of what carries appended to it and read by the new agent with
+    its first turn; the session's Rules carried, its *always* answers
+    dropped, the organization's policy pulled for the new harness before its
+    first turn, fail closed (MH-08); ``swapped`` in the record.
+    """
+    from agent_runtimes.adapters.acp_agent import HarnessRefused
+    from agent_runtimes.guardrails.shield_policy import (
+        PolicyUnavailable,
+        policies_in_force,
+    )
+    from agent_runtimes.loop.apps.session_carry import carry_policy
+    from agent_runtimes.loop.apps.sessions import SessionRefused, rebind, run_hooks
+
+    live, bearer = await _held(uid, request)
+    try:
+        target = live.swap_target(body.agent)
+        carried = carry_policy().swap(live, target)
+        at_turn = sum(1 for m in live.messages if m.get("role") == "user")
+        facts = {
+            "from_agent": live.agent_spec,
+            "to_agent": target["agent"],
+            "from_harness": live.harness,
+            "to_harness": target["harness"],
+            "at_turn": at_turn,
+            "said": carried.said,
+            "carried": carried.carried,
+            "dropped": carried.dropped,
+        }
+        await run_hooks("swap", live, facts)
+        if target["harness"]:
+            # The organization's policy for the new harness, before its first
+            # turn: none readable, none served (fail closed, as SH-50).
+            try:
+                policies_in_force(live.app, token=bearer or None)
+            except PolicyUnavailable as unavailable:
+                raise SessionRefused(
+                    503, f"The harness {target['harness']!r} is refused: {unavailable}."
+                ) from None
+        try:
+            await rebind(live, target["agent"], request)
+        except HarnessRefused as refused:
+            raise SessionRefused(503, str(refused)) from None
+        except HTTPException as refused:
+            raise SessionRefused(
+                refused.status_code,
+                f"Session {uid} was not swapped to {target['agent']}: {refused.detail}",
+            ) from None
+        return live.swapped_to(target, carried)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
 @router.put("/sessions/{uid}/title")
 async def retitle_session(
     uid: str, body: TitleRequest, request: Request
