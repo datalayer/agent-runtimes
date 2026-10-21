@@ -7,6 +7,15 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.71
+
+22 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). The seams the desktop and the VS Code extension pin.
+
+- **Portable modules for a host that runs a local runtime** (DESKTOP DK-25, decision D-13; 12f82438): the local runtime (finding `loop`, the version floor, the environment handed, the loopback origins a policy admits), the sessions list, attention and the local approvals as host-agnostic modules under `@datalayer/agent-runtimes/lib/portable/<name>`, one copy for the extension host and the desktop's main process.
+- **A harness session's row says its folder** (DESKTOP DK-26; c9ea8d56): `GET /sessions` rows carry `workspace`, the folder a harness session works in, so a host lists a session beside the folder it belongs to.
+
+Needs agentspecs 0.0.123 and datalayer-agent-shield 0.2.13.
+
 ## 1.5.70
 
 22 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions), [Shield](https://agent-runtimes.datalayer.tech/docs/shield)). 1.5.69's content, published: 1.5.68 and 1.5.69 failed their release build on a TypeScript error in `Chat.tsx` (the sessions client's `fetch` spread its arguments), fixed here; neither reached PyPI or npm.
