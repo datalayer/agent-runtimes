@@ -65,6 +65,25 @@ def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def _a_recorder_per_session_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Each test starts with no session started by any recorder.
+
+    A recorder adopts a session another recorder started on this runtime (a
+    swapped-in agent goes on with it: no second opening); a test reusing a
+    session uid (``s-1``) must not find another test's recorder holding it.
+
+    Yields
+    ------
+    None
+        Control to the test, with the recorders' sessions empty.
+    """
+    from agent_runtimes.loop.apps import record
+
+    monkeypatch.setattr(record, "_RECORDERS", {})
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _app_instances_kept() -> Iterator[None]:
     """Each test leaves the application instances its runtime serves as it found them.
 
