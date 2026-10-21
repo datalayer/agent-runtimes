@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.78
+
+22 October 2026. Codex runs on Datalayer without the account's OpenAI key in the runtime.
+
+- **Codex through ai-inference** (META_HARNESS decision Y): on a Datalayer runtime, Codex is given ai-inference's OpenAI route as `OPENAI_BASE_URL` and the runtime's inference token as its `OPENAI_API_KEY`; ai-inference calls OpenAI on the account's own key and meters the call. The harness is authenticated with codex-acp's `api-key` method after `initialize`. `harness_inference.ROUTES` says, per harness, the secret, the route and the variables; Claude Code's route is unchanged.
+
 ## 1.5.77
 
 22 October 2026. An imported session's export imports again.
