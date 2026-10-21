@@ -112,7 +112,7 @@ export interface SessionLineage {
   importedFrom: {
     digest: string;
     exportedAt: string;
-    exportedBy: { uid: string };
+    exportedBy: string;
   } | null;
 }
 
@@ -134,7 +134,7 @@ export interface SessionLine {
     imported_from: {
       digest: string;
       exported_at: string;
-      exported_by: { uid: string };
+      exported_by: string;
     } | null;
   };
   kinds: string[];
@@ -172,7 +172,7 @@ export interface TeamSessionLine {
     imported_from: {
       digest: string;
       exported_at: string;
-      exported_by: { uid: string };
+      exported_by: string;
     } | null;
   };
   exported_at: string;
@@ -267,7 +267,7 @@ export const SESSION_FILE_SCHEMA: Record<string, unknown> = {
     ImportedFrom: {
       additionalProperties: false,
       description:
-        "An import's source: the file's digest, when and by whom it was exported.",
+        "An import's source: the file's digest, when and by whom it was exported.\n\n``exported_by`` is the exporter's uid, a string — the shape the record's\n``imported`` entry and the services' listing say it in (one shape, no\nsecond one for older readers).",
       properties: {
         digest: {
           pattern: '^sha256:[0-9a-f]{64}$',
@@ -280,7 +280,10 @@ export const SESSION_FILE_SCHEMA: Record<string, unknown> = {
           type: 'string',
         },
         exported_by: {
-          $ref: '#/$defs/Owner',
+          description: "The exporter's uid",
+          minLength: 1,
+          title: 'Exported By',
+          type: 'string',
         },
       },
       required: ['digest', 'exported_at', 'exported_by'],

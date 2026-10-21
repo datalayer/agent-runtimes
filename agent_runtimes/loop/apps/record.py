@@ -559,7 +559,7 @@ def session_from_entries(
                 "imported_from": {
                     "digest": str(payload.get("digest") or ""),
                     "exported_at": str(payload.get("exported_at") or ""),
-                    "exported_by": {"uid": str(payload.get("exported_by") or "")},
+                    "exported_by": str(payload.get("exported_by") or ""),
                     "redactions": int(payload.get("redactions") or 0),
                 },
             }
