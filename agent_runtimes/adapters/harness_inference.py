@@ -52,8 +52,11 @@ class Route:
 
 
 #: The harnesses whose model calls go through ai-inference on Datalayer.
-#: Codex (codex-acp) reads ``OPENAI_BASE_URL`` and ``OPENAI_API_KEY`` and is
-#: authenticated with its ``api-key`` method (META_HARNESS decision Y).
+#: Codex (codex-acp) ignores ``OPENAI_BASE_URL`` (found on r1, 22 October
+#: 2026: it called api.openai.com): it is authenticated with codex-acp's
+#: ``gateway`` method — a custom provider whose base URL is ai-inference's
+#: route and whose ``Authorization`` header carries the runtime's token, on
+#: the Responses wire API (META_HARNESS decision Y).
 ROUTES: dict[str, Route] = {
     "claude-code": Route(
         "ANTHROPIC_API_KEY", ANTHROPIC_ROUTE, BASE_URL_VARIABLE, AUTH_TOKEN_VARIABLE
@@ -63,7 +66,7 @@ ROUTES: dict[str, Route] = {
         OPENAI_ROUTE,
         "OPENAI_BASE_URL",
         "OPENAI_API_KEY",
-        auth_method="api-key",
+        auth_method="gateway",
     ),
 }
 

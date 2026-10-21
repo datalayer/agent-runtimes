@@ -1417,7 +1417,7 @@ class TestResolvingACatalogueHarness:
             harness_environment(codex, {})
 
     @pytest.mark.asyncio
-    async def test_a_routed_codex_is_authenticated_with_its_api_key_method(
+    async def test_a_routed_codex_is_authenticated_with_the_gateway_method(
         self, tmp_path: Path
     ) -> None:
         from types import SimpleNamespace
@@ -1443,15 +1443,24 @@ class TestResolvingACatalogueHarness:
                 asked.append((method, params))
                 return {}
 
-        offered = SimpleNamespace(
-            auth_methods=[SimpleNamespace(id="api-key"), SimpleNamespace(id="chat-gpt")]
-        )
-        await agent._authenticate_routed(Channel(), offered)
-        assert asked == [("authenticate", {"methodId": "api-key"})]
-        # A harness that offers no such method is not asked.
-        asked.clear()
+        # codex-acp's gateway method, whatever it advertised: ai-inference's
+        # route as the provider's base URL, the runtime's token as its header.
         await agent._authenticate_routed(Channel(), SimpleNamespace(auth_methods=[]))
-        assert asked == []
+        assert asked == [
+            (
+                "authenticate",
+                {
+                    "methodId": "gateway",
+                    "_meta": {
+                        "gateway": {
+                            "baseUrl": "https://r1.example/api/ai-inference/v1/openai/v1",
+                            "headers": {"Authorization": "Bearer the-inference-token"},
+                            "providerName": "Datalayer",
+                        }
+                    },
+                },
+            )
+        ]
 
     @pytest.mark.asyncio
     async def test_a_routed_harness_with_no_token_is_refused_before_it_starts(

@@ -1061,12 +1061,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
         )
 
     async def _authenticate_routed(self, channel: Any, answer: Any) -> None:
-        """Authenticate a routed harness that asks for it, with the routed credential.
+        """Authenticate a routed harness that needs it, with the routed credential.
 
-        Codex (codex-acp) opens no session before ``authenticate``; routed
-        through ai-inference it is given the runtime's token as its API key
-        (``OPENAI_API_KEY``) and authenticated with its ``api-key`` method,
-        which reads it from its environment (META_HARNESS decision Y).
+        Codex (codex-acp) opens no session before ``authenticate`` and does not
+        read ``OPENAI_BASE_URL``: routed through ai-inference it is
+        authenticated with codex-acp's ``gateway`` method — a custom provider
+        whose ``baseUrl`` is ai-inference's OpenAI route and whose
+        ``Authorization`` header carries the runtime's token (META_HARNESS
+        decision Y). Another method is asked only when the harness offers it.
         """
         from agent_runtimes.adapters import harness_inference
 
@@ -1077,14 +1079,25 @@ class ACPAgent(BaseAgent, ShieldProxy):
             or route.base_url_variable not in self.agent_env
         ):
             return
-        offered = {
-            str(getattr(method, "id", "") or "")
-            for method in (getattr(answer, "auth_methods", None) or [])
-        }
-        if route.auth_method not in offered:
-            return
+        params: dict[str, Any] = {"methodId": route.auth_method}
+        if route.auth_method == "gateway":
+            token = self.agent_env.get(route.token_variable, "")
+            params["_meta"] = {
+                "gateway": {
+                    "baseUrl": self.agent_env[route.base_url_variable],
+                    "headers": {"Authorization": f"Bearer {token}"},
+                    "providerName": "Datalayer",
+                }
+            }
+        else:
+            offered = {
+                str(getattr(method, "id", "") or "")
+                for method in (getattr(answer, "auth_methods", None) or [])
+            }
+            if route.auth_method not in offered:
+                return
         try:
-            await channel.request("authenticate", {"methodId": route.auth_method})
+            await channel.request("authenticate", params)
         except Exception as exc:
             await self.stop_agent()
             raise HarnessRefused(
