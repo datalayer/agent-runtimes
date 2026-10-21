@@ -2,13 +2,20 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
-- **The standalone `<Chat>` opens a session and draws its menu** (VSCODE VS-24): `<Chat thread>` is forwarded to `ChatBase` — a `ResumedThread` read from its runtime by uid when `fromRuntime` is set (`GET …/apps/sessions/{uid}/messages`, else its record), the chat remounted on another thread's id, one that cannot be opened said and a new one started; `<Chat sessionActions>` draws the thread's `⋯` menu from the `loop.session.action` registry of the Reactor registered on the page (`SessionActionsMenu`, the apps' chat view's, reused — nothing copied), the host lending its ways (`download`, `choose`, `pickFile`) and told what an entry said or opened; `onSendReady` forwarded; and `onToolCallUpdate` on `<Chat>` and `ChatBase`, fired each time a running tool call's display is updated by the stream (`datalayer.harness.tool_call`: a terminal's output as it streams, a diff as it grows), so an editor's terminal follows the command as it runs.
-- **The folder's own instructions file is kept** (VSCODE VS-23, SHIELD SH-21): a person's `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` or `.goosehints` — one Datalayer did not write; every file Datalayer writes starts with the mark `LENT_MARK` — is never written over on a harness launch. The application's instructions are written beside it, under `.datalayer/` (read-only to the agent, as before), reach the harness as a text block ahead of the session's first prompt (`ACPAgent._prompt_blocks`, once per harness session), and the session's first line says so (`kept_said`); a file Datalayer wrote is written again in place. `LentFiles.kept`, `LentFiles.preface()`.
-
 <!-- <END NEW CHANGELOG ENTRY> -->
 
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
+
+## 1.5.70
+
+22 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions), [Shield](https://agent-runtimes.datalayer.tech/docs/shield)). 1.5.69's content, published: 1.5.68 and 1.5.69 failed their release build on a TypeScript error in `Chat.tsx` (the sessions client's `fetch` spread its arguments), fixed here; neither reached PyPI or npm.
+
+- **The Shield's subject follows the held principal token** (SHIELD, 9b032e7b): the subject of each decision is the deployment's principal the runtime holds now, never the person's account bound at the agent's creation — IAM answered 403 *a principal asks what it may do itself* on the runtime image 0.0.59 and W-09 paused the deployment.
+- **The standalone `<Chat>` opens a session and draws its menu** (VSCODE VS-24): `<Chat thread>` is forwarded to `ChatBase` — a `ResumedThread` read from its runtime by uid when `fromRuntime` is set (`GET …/apps/sessions/{uid}/messages`, else its record), the chat remounted on another thread's id, one that cannot be opened said and a new one started; `<Chat sessionActions>` draws the thread's `⋯` menu from the `loop.session.action` registry of the Reactor registered on the page (`SessionActionsMenu`, the apps' chat view's, reused — nothing copied), the host lending its ways (`download`, `choose`, `pickFile`) and told what an entry said or opened; `onSendReady` forwarded; and `onToolCallUpdate` on `<Chat>` and `ChatBase`, fired each time a running tool call's display is updated by the stream (`datalayer.harness.tool_call`: a terminal's output as it streams, a diff as it grows), so an editor's terminal follows the command as it runs.
+- **The folder's own instructions file is kept** (VSCODE VS-23, SHIELD SH-21): a person's `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` or `.goosehints` — one Datalayer did not write; every file Datalayer writes starts with the mark `LENT_MARK` — is never written over on a harness launch. The application's instructions are written beside it, under `.datalayer/` (read-only to the agent, as before), reach the harness as a text block ahead of the session's first prompt (`ACPAgent._prompt_blocks`, once per harness session), and the session's first line says so (`kept_said`); a file Datalayer wrote is written again in place. `LentFiles.kept`, `LentFiles.preface()`.
+
+Needs agentspecs 0.0.123 and datalayer-agent-shield 0.2.13.
 
 ## 1.5.68
 
