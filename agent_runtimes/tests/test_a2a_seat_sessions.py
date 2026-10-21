@@ -25,11 +25,11 @@ import pytest
 
 from agent_runtimes.adapters.acp_agent import ACPAgent
 from agent_runtimes.context.delegation import hold
+from agent_runtimes.guardrails.shield_policy import policies_of
 from agent_runtimes.loop.apps import sessions
 from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.protocol_state.a2a import DurableStorage
 from agent_runtimes.routes import a2a as a2a_routes
-from agent_runtimes.guardrails.shield_policy import policies_of
 from agent_runtimes.tests.test_a2a_harness_worker import (  # noqa: F401 - fixtures
     _statuses,
     _text,
@@ -59,12 +59,20 @@ def harness_agent(workspace: Path, state: Any) -> ACPAgent:
 
 #: The execution's token, which the seat's session is opened in the name of: its `sub`.
 PERSON = "ada"
-CREDENTIAL = jwt.encode({"sub": PERSON, "user": {"firstName": "Ada"}}, "a-secret", algorithm="HS256")
+CREDENTIAL = jwt.encode(
+    {"sub": PERSON, "user": {"firstName": "Ada"}}, "a-secret", algorithm="HS256"
+)
 
 
 @pytest.fixture
 def store(tmp_path: Path) -> Iterator[FileSessionStore]:
-    """The file session store, in the test's folder: what the seat's record is written to."""
+    """The file session store, in the test's folder: what the seat's record is written to.
+
+    Yields
+    ------
+    FileSessionStore
+        The store, active for the test.
+    """
     kept = FileSessionStore(root=tmp_path / "sessions")
     use_session_store(kept)
     yield kept
@@ -127,7 +135,11 @@ async def _tasks(
                 task = await storage.submit_task(message["context_id"], message)
                 # The execution's token, as the A2A route holds it for the worker (O1-17).
                 hold(task["id"], CREDENTIAL)
-                params = {"id": task["id"], "context_id": message["context_id"], "message": message}
+                params = {
+                    "id": task["id"],
+                    "context_id": message["context_id"],
+                    "message": message,
+                }
                 events: list[dict[str, Any]] = []
                 async with broker.event_bus.subscribe(task["id"]) as receive:
                     await broker.run_task(params)
@@ -149,22 +161,35 @@ async def test_two_tasks_of_one_seat_share_a_session_and_its_record_holds_both_t
     state: Any, workspace: Path, store: FileSessionStore
 ) -> None:
     agent = harness_agent(workspace, state)
-    [first] = await _tasks(state, agent, [_delegated("plan edit", execution_id="exec_seat_1")], cleanup=False)
+    [first] = await _tasks(
+        state,
+        agent,
+        [_delegated("plan edit", execution_id="exec_seat_1")],
+        cleanup=False,
+    )
     assert first["state"] == "completed", _text(first.get("message"))
     opened = _session_of(first)
     uid = opened["uid"]
     assert opened == {"uid": uid, "seat": "coder", "executionId": ROOT}
     # The next task, handed the uid, is the same session's next turn.
     [second] = await _tasks(
-        state, agent, [_delegated("say hello again", execution_id="exec_seat_2", session=uid)]
+        state,
+        agent,
+        [_delegated("say hello again", execution_id="exec_seat_2", session=uid)],
     )
     assert second["state"] == "completed", _text(second.get("message"))
     assert _session_of(second)["uid"] == uid
     entries = await store.entries(uid)
     kinds = [entry["kind"] for entry in entries]
     [head] = [entry for entry in entries if entry["kind"] == "session"]
-    assert head["payload"]["runs_on"] == {"kind": "team_run", "execution_id": ROOT, "seat": "coder"}
-    assert head["payload"]["app"] == f"team-{TEAM}" and head["app_uid"] == f"team:{TEAM}"
+    assert head["payload"]["runs_on"] == {
+        "kind": "team_run",
+        "execution_id": ROOT,
+        "seat": "coder",
+    }
+    assert (
+        head["payload"]["app"] == f"team-{TEAM}" and head["app_uid"] == f"team:{TEAM}"
+    )
     assert head["payload"]["agent"] == agent.spec_id
     assert head["opened_by"] == PERSON
     assert kinds.count("turn") == 2
@@ -183,7 +208,9 @@ async def test_a_harness_seats_second_task_on_a_new_worker_loads_its_session_fro
     state: Any, workspace: Path, store: FileSessionStore
 ) -> None:
     first_agent = harness_agent(workspace, state)
-    [first] = await _tasks(state, first_agent, [_delegated("plan edit", execution_id="exec_seat_1")])
+    [first] = await _tasks(
+        state, first_agent, [_delegated("plan edit", execution_id="exec_seat_1")]
+    )
     uid = _session_of(first)["uid"]
     acp_before = await first_agent._kept_session(uid)
     assert acp_before, "the harness kept its session under the seat's session uid"
@@ -191,7 +218,10 @@ async def test_a_harness_seats_second_task_on_a_new_worker_loads_its_session_fro
     sessions.forget_sessions()
     second_agent = harness_agent(workspace, state)
     [second] = await _tasks(
-        state, second_agent, [_delegated("say hello again", execution_id="exec_seat_2", session=uid)], cleanup=False
+        state,
+        second_agent,
+        [_delegated("say hello again", execution_id="exec_seat_2", session=uid)],
+        cleanup=False,
     )
     assert second["state"] == "completed", _text(second.get("message"))
     assert _session_of(second)["uid"] == uid
@@ -201,7 +231,9 @@ async def test_a_harness_seats_second_task_on_a_new_worker_loads_its_session_fro
     entries = await store.entries(uid)
     heads = [entry["payload"] for entry in entries if entry["kind"] == "session"]
     assert len(heads) == 2 and heads[1].get("resumed") is True
-    assert [entry["payload"]["asked"] for entry in entries if entry["kind"] == "turn"] == [
+    assert [
+        entry["payload"]["asked"] for entry in entries if entry["kind"] == "turn"
+    ] == [
         "plan edit",
         "say hello again",
     ]
@@ -217,15 +249,24 @@ async def test_a_session_of_another_run_and_an_unknown_team_are_refused(
     [other] = await _tasks(
         state,
         agent,
-        [_delegated("go on", execution_id="exec_seat_9", root="exec_team_2", session=uid)],
+        [
+            _delegated(
+                "go on", execution_id="exec_seat_9", root="exec_team_2", session=uid
+            )
+        ],
         cleanup=False,
     )
     assert other["state"] == "failed"
-    assert f"Session {uid} is not this run's: it runs on team run {ROOT}, and the task names run exec_team_2." in _text(
-        other.get("message")
+    assert (
+        f"Session {uid} is not this run's: it runs on team run {ROOT}, and the task names run exec_team_2."
+        in _text(other.get("message"))
     )
     [unknown] = await _tasks(
-        state, agent, [_delegated("go on", seat={"team": "no-such-team", "seat": "coder"})]
+        state,
+        agent,
+        [_delegated("go on", seat={"team": "no-such-team", "seat": "coder"})],
     )
     assert unknown["state"] == "failed"
-    assert "team 'no-such-team', which the catalogue does not have" in _text(unknown.get("message"))
+    assert "team 'no-such-team', which the catalogue does not have" in _text(
+        unknown.get("message")
+    )

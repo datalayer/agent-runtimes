@@ -47,8 +47,6 @@ from agent_runtimes.commands.agent_mcp_servers import (
 from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
 from agent_runtimes.commands.agents import app as agents_app
 from agent_runtimes.commands.apps import app as apps_app
-from agent_runtimes.commands.plugins import app as plugins_app
-from agent_runtimes.commands.sessions import app as sessions_app
 from agent_runtimes.commands.benchmarks import app as benchmarks_app
 from agent_runtimes.commands.checkpoints import app as checkpoints_app
 from agent_runtimes.commands.console import app as console_app
@@ -82,6 +80,7 @@ from agent_runtimes.commands.mcp_servers_config import (
     list_mcp_servers_config,
 )
 from agent_runtimes.commands.memory import app as memory_app
+from agent_runtimes.commands.plugins import app as plugins_app
 from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
@@ -94,6 +93,7 @@ from agent_runtimes.commands.serve import (
     ServeError,
     serve_server,
 )
+from agent_runtimes.commands.sessions import app as sessions_app
 
 logging.basicConfig(
     level=logging.INFO,

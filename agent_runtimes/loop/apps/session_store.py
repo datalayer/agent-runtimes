@@ -301,7 +301,7 @@ async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
 
 
 def _as_entries(answered: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """ai-agents' entries in the store's shape: ``created_at`` said as ``at``."""
+    """The entries ai-agents answered, in the store's shape: ``created_at`` said as ``at``."""
     return [
         {**entry, "at": str(entry.get("created_at") or entry.get("at") or "")}
         for entry in answered

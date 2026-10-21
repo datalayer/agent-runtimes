@@ -71,8 +71,15 @@ OWN = {
     ("GET", "/api/v1/apps/current"),
     ("POST", "/api/v1/apps/decide"),
     ("POST", "/api/v1/apps/feedback"),
-    # Each person's own sessions and chat (R-04).
+    # Each person's own sessions and chat (R-04); the session's operations
+    # (MH-09, MH-13, MH-14, MH-06, MH-43) are the person's own too.
     ("POST", "/api/v1/apps/sessions"),
+    ("POST", "/api/v1/apps/sessions/{uid}/clone"),
+    ("GET", "/api/v1/apps/sessions/{uid}/export"),
+    ("POST", "/api/v1/apps/sessions/import"),
+    ("POST", "/api/v1/apps/sessions/{uid}/agent"),
+    ("PUT", "/api/v1/apps/sessions/{uid}/title"),
+    ("PUT", "/api/v1/apps/sessions/{uid}/archived"),
     ("GET", "/api/v1/apps/sessions"),
     ("GET", "/api/v1/apps/sessions/{uid}"),
     ("GET", "/api/v1/apps/sessions/{uid}/messages"),

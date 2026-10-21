@@ -93,6 +93,10 @@ def test_the_generator_refuses_another_format(tmp_path):
         from generate_session_files import load_spec
     finally:
         sys.path.remove(str(CODEGEN))
+    if not SPECS.is_dir():
+        pytest.skip(
+            "the generator reads the agentspecs clone beside this one, which is not here"
+        )
     for path in SPECS.iterdir():
         if path.is_file():
             shutil.copy(path, tmp_path / path.name)

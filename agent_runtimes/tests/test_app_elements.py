@@ -208,7 +208,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     assert ops[1]["body"]["data"]["where"] == "page"
     # A resume draws again what was open beside the conversation, and its
     # code can still close it.
-    live.state = "stopped"
+    live.state = "paused"
     before = sessions.UI_HUB.last(live.uid)
     async for _ in live.resume():
         pass

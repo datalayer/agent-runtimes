@@ -44,7 +44,8 @@ FRAMEWORK_AGENT = next(
 def rebinder() -> Any:
     """A double of configure-from-spec, recording what it was asked to bind;
     and IAM stood in for, serving the organization's policy the new harness
-    is admitted by (MH-08: pulled before its first turn, fail closed)."""
+    is admitted by (MH-08: pulled before its first turn, fail closed).
+    """
     from agent_shield.policy import Harnesses, Policy
 
     from agent_runtimes.guardrails import managed_policies

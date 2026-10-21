@@ -23,7 +23,12 @@ import pytest
 
 from agent_runtimes.adapters.acp_agent import ACPAgent
 from agent_runtimes.guardrails.shield_policy import policies_of
-from agent_runtimes.tests.test_acp_agent import FAKE, Approvals, fake_harness
+from agent_runtimes.tests.test_acp_agent import (
+    FAKE,
+    Approvals,
+    catalogued_fake,
+    fake_harness,
+)
 from agent_runtimes.transports.agui_stream import (
     agui_app_of,
     agui_events,
@@ -338,9 +343,8 @@ class TestTheRuntimeStartedWithAHarness:
         from agent_runtimes.adapters.acp_agent import WORKSPACE_VARIABLE
         from agent_runtimes.app import _create_harness_agent
         from agent_runtimes.routes import agents as agents_route
-        from agent_runtimes.specs import harnesses as catalogue
 
-        monkeypatch.setitem(catalogue.HARNESS_CATALOGUE, "fake", fake_harness())
+        catalogued_fake(monkeypatch)
         monkeypatch.setenv(WORKSPACE_VARIABLE, str(workspace))
         monkeypatch.setenv("AGENT_RUNTIMES_AGENT_NAME", "chat")
         app = FastAPI()

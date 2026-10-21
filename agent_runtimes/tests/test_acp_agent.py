@@ -56,6 +56,23 @@ from agent_runtimes.types import (
 FAKE = Path(__file__).parent / "fixtures" / "acp_fake_agent.py"
 
 
+def catalogued_fake(monkeypatch: Any, **overrides: Any) -> HarnessSpec:
+    """The fake harness in the catalogue, on a platform of the test's own:
+    the harness contributions are read off the catalogue when the runtime's
+    extension is registered, so a catalogue patched after the shared
+    platform was built would not be seen (CI's full run builds it early).
+    """
+    from reactor import PluginPlatform
+
+    from agent_runtimes.loop.apps import plugins as runtime_plugins
+    from agent_runtimes.specs import harnesses as catalogue
+
+    harness = fake_harness(**overrides)
+    monkeypatch.setitem(catalogue.HARNESS_CATALOGUE, "fake", harness)
+    monkeypatch.setattr(runtime_plugins, "PLATFORM", PluginPlatform())
+    return harness
+
+
 def fake_harness(**overrides: Any) -> HarnessSpec:
     fields: dict[str, Any] = dict(
         id="fake",

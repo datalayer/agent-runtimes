@@ -892,7 +892,7 @@ class LiveSession:
 
     @property
     def capabilities(self) -> Dict[str, Any]:
-        """Its harness's capabilities table (MH-20), or ``{}`` for a framework agent."""
+        """Say its harness's capabilities table (MH-20), or ``{}`` for a framework agent."""
         shield = self._shield()
         if shield is None:
             return {}
@@ -3029,6 +3029,28 @@ async def record_entries(
         raise SessionRefused(refused.status, refused.reason) from None
 
 
+def _store_reads_with_a_token() -> bool:
+    """Whether the active session store reads a session back with the
+    caller's token: the record store does (ai-agents answers for the
+    bearer); the file store reads its own files, so a local resume — the
+    REPL's, a seat's on a self-hosted runtime — needs none.
+
+    Raises
+    ------
+    SessionRefused
+        When the store cannot be named, in its sentence (503).
+    """
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreRefused,
+        active_store,
+    )
+
+    try:
+        return str(getattr(active_store(), "name", "") or "") == "record"
+    except SessionStoreRefused as refused:
+        raise SessionRefused(503, str(refused)) from None
+
+
 @dataclass
 class Rebuilt:
     """A session rebuilt from its record (MH-03): everything a resume gives back."""
@@ -3064,37 +3086,50 @@ _ROW_FACTS = (
 def _row_shown(entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """A tool row, a step, a decision or an approval of the record as a
     display (`StepShown`), re-shown on a resume as the live one was.
+
+    Kept as the wire form (`DisplayWire`), the shape a message's ``shows``
+    has for a live row: it is what the page received, and what the resume
+    shows again as a ``ShowOp`` — a display's own dump has no ``type`` or
+    ``text`` and the op refuses it.
     """
     kind = str(entry.get("kind") or "")
     payload = dict(entry.get("payload") or {})
     at = str(entry.get("at") or "")
     if kind == "step":
-        return StepShown(
-            id=str(payload.get("id") or _new_id()),
-            name=str(payload.get("name") or payload.get("event") or "step"),
-            kind=str(payload.get("kind") or "step"),
-            parent_id=payload.get("parent_id") or None,
-            input=payload.get("input"),
-            output=payload.get("output") or payload.get("what"),
-            error=str(payload.get("error") or ""),
-            started_at=str(payload.get("started_at") or at),
-            ended_at=payload.get("ended_at") or at,
-        ).model_dump(mode="json")
+        return (
+            StepShown(
+                id=str(payload.get("id") or _new_id()),
+                name=str(payload.get("name") or payload.get("event") or "step"),
+                kind=str(payload.get("kind") or "step"),
+                parent_id=payload.get("parent_id") or None,
+                input=payload.get("input"),
+                output=payload.get("output") or payload.get("what"),
+                error=str(payload.get("error") or ""),
+                started_at=str(payload.get("started_at") or at),
+                ended_at=payload.get("ended_at") or at,
+            )
+            .wire()
+            .model_dump(mode="json")
+        )
     if kind in ("tool_call", "decision", "approval"):
         name = str(payload.get("tool") or payload.get("name") or kind)
         facts = {key: value for key, value in payload.items() if key in _ROW_FACTS}
-        return StepShown(
-            id=str(payload.get("tool_call_id") or _new_id()) + f"-{kind}",
-            name=name,
-            kind="tool" if kind == "tool_call" else kind,
-            input=facts or None,
-            output=payload.get("display")
-            or payload.get("output")
-            or str(entry.get("summary") or ""),
-            error=str(payload.get("refused") or ""),
-            started_at=at,
-            ended_at=at,
-        ).model_dump(mode="json")
+        return (
+            StepShown(
+                id=str(payload.get("tool_call_id") or _new_id()) + f"-{kind}",
+                name=name,
+                kind="tool" if kind == "tool_call" else kind,
+                input=facts or None,
+                output=payload.get("display")
+                or payload.get("output")
+                or str(entry.get("summary") or ""),
+                error=str(payload.get("refused") or ""),
+                started_at=at,
+                ended_at=at,
+            )
+            .wire()
+            .model_dump(mode="json")
+        )
     return None
 
 
@@ -3120,7 +3155,8 @@ async def rebuilt_from_record(
     ------
     SessionRefused
         When the application keeps no conversations, the caller has no token
-        to read the record with, the record is not this application's, the
+        to read the record with (the record store's; the file store reads
+        its own files and asks for none), the record is not this application's, the
         session ended (409, naming clone), or the record holds no turn of it.
     """
     from agent_runtimes.loop.apps.record import session_from_entries
@@ -3132,7 +3168,7 @@ async def rebuilt_from_record(
             f"{app.name} keeps no conversations in its record, so a session of it "
             "cannot be resumed from there.",
         )
-    if not bearer:
+    if not bearer and _store_reads_with_a_token():
         raise SessionRefused(
             401,
             f"Session {session_uid} is read back from its record with your token: send one.",

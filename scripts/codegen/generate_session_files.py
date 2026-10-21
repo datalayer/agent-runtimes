@@ -36,7 +36,9 @@ def load_spec(specs_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     spec = yaml.safe_load((specs_dir / SPEC).read_text()) or {}
     schema = json.loads((specs_dir / SCHEMA).read_text())
     if spec.get("format") != "datalayer-session/1":
-        raise ValueError(f"{SPEC}: the format is datalayer-session/1, not {spec.get('format')!r}")
+        raise ValueError(
+            f"{SPEC}: the format is datalayer-session/1, not {spec.get('format')!r}"
+        )
     if tuple(spec.get("states") or ()) != STATES:
         raise ValueError(f"{SPEC}: the states are {STATES}")
     for key in ("entry_kinds", "redaction_rules", "refusals", "caps"):
@@ -99,7 +101,10 @@ def generate_python_code(spec: dict[str, Any], schema: dict[str, Any]) -> str:
         "",
         "#: Said, word for word, by whoever refuses a file; `{…}` are filled in.",
         "SESSION_FILE_REFUSALS: Dict[str, str] = {",
-        *[f"    {_s(name)}: {_s(sentence)}," for name, sentence in spec["refusals"].items()],
+        *[
+            f"    {_s(name)}: {_s(sentence)},"
+            for name, sentence in spec["refusals"].items()
+        ],
         "}",
         "",
         "",
@@ -111,7 +116,9 @@ def generate_python_code(spec: dict[str, Any], schema: dict[str, Any]) -> str:
         "#: The JSON Schema of one line of the file: the session, the team session or an entry.",
         "SESSION_FILE_SCHEMA: Dict[str, Any] = json.loads(",
         "    "
-        + json.dumps(json.dumps(schema, sort_keys=True, ensure_ascii=False), ensure_ascii=False),
+        + json.dumps(
+            json.dumps(schema, sort_keys=True, ensure_ascii=False), ensure_ascii=False
+        ),
         ")",
         "",
     ]
@@ -163,7 +170,10 @@ def generate_typescript_code(spec: dict[str, Any], schema: dict[str, Any]) -> st
         "",
         "/** Said, word for word, by whoever refuses a file; `{…}` are filled in. */",
         "export const SESSION_FILE_REFUSALS: Record<string, string> = {",
-        *[f"  {_s(name)}: {_s(sentence)}," for name, sentence in spec["refusals"].items()],
+        *[
+            f"  {_s(name)}: {_s(sentence)},"
+            for name, sentence in spec["refusals"].items()
+        ],
         "};",
         "",
         "/** The spec's sentence for a refusal, its facts filled in. */",
@@ -176,7 +186,7 @@ def generate_typescript_code(spec: dict[str, Any], schema: dict[str, Any]) -> st
         "    (whole, key) =>",
         "      key in facts",
         "        ? whole.endsWith('!r}')",
-        "          ? JSON.stringify(String(facts[key])).replace(/^\"|\"$/g, \"'\")",
+        '          ? JSON.stringify(String(facts[key])).replace(/^"|"$/g, "\'")',
         "          : String(facts[key])",
         "        : whole,",
         "  );",

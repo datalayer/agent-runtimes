@@ -127,15 +127,23 @@ def test_the_resume_rebuilds_turns_rows_files_rules_and_facts(
         "One",
         "Two",
     ]
+    # The resume ran to its end: what it showed again was shown as the page
+    # receives it, never refused on the stream.
+    assert [e["type"] for e in resumed if e["type"].startswith("RUN_")] == [
+        "RUN_STARTED",
+        "RUN_FINISHED",
+    ]
     live = sessions.session_of("session-r001")
     assert live is not None and live.state == "open"
-    # The tool row, as a display re-shown under the thread.
+    # The tool row, as a display re-shown under the thread — kept in the
+    # wire form a live row's is (type, text, data), what a `ShowOp` carries.
     rows = [m for m in live.messages if m.get("shows")]
-    [edit] = [m for m in rows if m["shows"]["name"] == "edit"]
-    assert (
-        edit["shows"]["kind"] == "tool" and edit["shows"]["output"]["display"] == "diff"
-    )
-    assert edit["shows"]["input"] == {"kind": "edit", "class": "write", "path": "a.py"}
+    [edit] = [m for m in rows if m["shows"]["data"]["name"] == "edit"]
+    assert edit["shows"]["type"] == sessions.STEP_DISPLAY_TYPE
+    assert edit["shows"]["text"] == "tool step edit ended"
+    shown = edit["shows"]["data"]
+    assert shown["kind"] == "tool" and shown["output"]["display"] == "diff"
+    assert shown["input"] == {"kind": "edit", "class": "write", "path": "a.py"}
     # The file given, its place in the sandbox re-stated.
     assert live.files == [
         {
@@ -190,6 +198,42 @@ def test_an_ended_session_is_not_resumed_naming_clone(
     assert (refused.status_code, refused.json()["detail"]) == (
         409,
         "Session session-r002 ended; an ended session is not resumed — clone it to go on from it.",
+    )
+
+
+def test_the_file_store_rebuilds_without_a_token_and_the_record_store_asks_for_one(
+    store: FileSessionStore,
+    runtime: Runtime,  # noqa: F811 - the fixture
+) -> None:
+    """A local resume — the REPL's, a seat's on a self-hosted runtime —
+    reads the file store's own files: no bearer is needed. The record
+    store reads ai-agents for the bearer, and asks for one."""
+    runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
+    asyncio.run(
+        store.append(
+            "session-r003", ENTRIES, app_uid="app-1", opened_by="ada", version=3
+        )
+    )
+    app, instance = sessions.agent_app("notes-assistant")
+    rebuilt = asyncio.run(
+        sessions.rebuilt_from_record("session-r003", app, instance, "")
+    )
+    assert rebuilt.turns == 2 and rebuilt.title == "The refactor"
+
+    async def reader(uid: str, bearer: str) -> List[Dict[str, Any]]:
+        """ai-agents, never asked: the refusal comes before the read."""
+        raise AssertionError("the record is not read without a token")
+
+    sessions.use_record_reader(reader)
+    try:
+        with pytest.raises(sessions.SessionRefused) as refused:
+            asyncio.run(sessions.rebuilt_from_record("session-r003", app, instance, ""))
+    finally:
+        sessions.use_record_reader(None)
+        use_session_store(store)
+    assert (refused.value.status, refused.value.reason) == (
+        401,
+        "Session session-r003 is read back from its record with your token: send one.",
     )
 
 

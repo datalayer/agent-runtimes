@@ -182,6 +182,52 @@ def test_the_redactor_names_what_each_rule_replaced() -> None:
     }
 
 
+def test_a_credential_is_redacted_wherever_it_is_not_only_under_a_header() -> None:
+    """`Bearer …` under a key that is no header (`arguments.token`), inside
+    a sentence, and the value of a key, secret or password field by its
+    name — each replaced and counted under `bearer_token`; a count named
+    `tokens` and a path under `key` are left as they are."""
+    redactor = Redactor()
+    assert redactor.value(
+        {
+            "arguments": {
+                "token": "Bearer sk-secret-1",
+                "tokens": 120,
+                "key": "a.py",
+                "note": "sent with Basic Zm9vOmJhcg== then token abc",
+                "client_secret": "x1",
+            },
+            "password": "hunter2",
+            "already": f"Bearer {REDACTED}",
+        }
+    ) == {
+        "arguments": {
+            "token": REDACTED,
+            "tokens": 120,
+            "key": "a.py",
+            "note": f"sent with Basic {REDACTED} then token {REDACTED}",
+            "client_secret": REDACTED,
+        },
+        "password": REDACTED,
+        "already": f"Bearer {REDACTED}",
+    }
+    assert redactor.by_rule == {"bearer_token": 5} and redactor.count == 5
+    # Through the export, the file holds none of them and says how many.
+    entries = [
+        *ENTRIES[:2],
+        {
+            "kind": "tool_call",
+            "at": "2026-10-21T10:00:02Z",
+            "summary": "edit",
+            "payload": {"tool": "edit", "arguments": {"token": "Bearer sk-secret-1"}},
+        },
+    ]
+    exported = DATALAYER_SESSION_FORMAT.export(SESSION, entries, exported_by="01jq")
+    assert "sk-secret-1" not in "\n".join(exported.lines)
+    assert json.loads(exported.lines[-1])["payload"]["arguments"] == {"token": REDACTED}
+    assert json.loads(exported.lines[0])["redactions"] == exported.redactions == 2
+
+
 def test_import_reads_the_file_as_untrusted_data_in_the_specs_sentences() -> None:
     exported = DATALAYER_SESSION_FORMAT.export(SESSION, ENTRIES[:4], exported_by="01jq")
     imported = DATALAYER_SESSION_FORMAT.import_(exported.lines)

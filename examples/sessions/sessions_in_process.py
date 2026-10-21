@@ -101,7 +101,13 @@ class Answers:
     async def stream(
         self, messages: List[ModelMessage], info: AgentInfo
     ) -> AsyncIterator[str]:
-        """A run streams: the answer in two pieces, as a model's would come."""
+        """A run streams: the answer in two pieces, as a model's would come.
+
+        Yields
+        ------
+        str
+            A piece of the answer.
+        """
         text = self.said(messages)
         yield text[:5]
         yield text[5:]

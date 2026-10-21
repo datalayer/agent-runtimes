@@ -119,6 +119,10 @@ class TestTheCapabilitiesTable:
         finally:
             sys.path.remove(str(CODEGEN))
         source = REPO / "agentspecs" / "agentspecs" / "harnesses"
+        if not source.is_dir():
+            pytest.skip(
+                "the generator reads the agentspecs clone beside this one, which is not here"
+            )
         for path in source.glob("*.yaml"):
             shutil.copy(path, tmp_path / path.name)
         spec = yaml.safe_load((tmp_path / "codex.yaml").read_text())

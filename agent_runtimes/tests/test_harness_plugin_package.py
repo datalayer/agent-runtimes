@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib
 import os
 import re
-import subprocess
+import shutil
 import sys
 from pathlib import Path
 from typing import Any, Iterator
@@ -30,29 +30,41 @@ from agent_runtimes.plugins.points import HARNESSES, SESSION_FORMATS
 PACKAGES = Path(__file__).resolve().parents[2] / "examples" / "plugins"
 
 
+def _install(package: Path, target: Path) -> None:
+    """The package placed on the path as `pip install --target` would place it
+    — its modules, and a `dist-info` with the entry points its pyproject
+    declares, which is what the reactor discovers it by. Without pip: CI's
+    virtual environment has none, and a pure package needs no build.
+    """
+    import tomllib
+
+    project = tomllib.loads((package / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]
+    name, version = str(project["name"]), str(project["version"])
+    for module in (package / "pyproject.toml").parent.iterdir():
+        if module.is_dir() and (module / "__init__.py").is_file():
+            shutil.copytree(module, target / module.name, dirs_exist_ok=True)
+    info = target / f"{name.replace('-', '_')}-{version}.dist-info"
+    info.mkdir(parents=True, exist_ok=True)
+    (info / "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n", encoding="utf-8"
+    )
+    groups = project.get("entry-points") or {}
+    lines = []
+    for group, entries in groups.items():
+        lines.append(f"[{group}]")
+        lines.extend(f"{key} = {value}" for key, value in entries.items())
+        lines.append("")
+    (info / "entry_points.txt").write_text("\n".join(lines), encoding="utf-8")
+
+
 @pytest.fixture(scope="module")
 def installed(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     """Both packages installed into a folder of their own, on the path."""
     target = tmp_path_factory.mktemp("site")
-    done = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--quiet",
-            "--no-deps",
-            "--no-build-isolation",
-            "--target",
-            str(target),
-            str(PACKAGES / "aider-harness"),
-            str(PACKAGES / "omnigent-format"),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
-    assert done.returncode == 0, done.stdout + done.stderr[-3000:]
+    for package in ("aider-harness", "omnigent-format"):
+        _install(PACKAGES / package, target)
     sys.path.insert(0, str(target))
     importlib.invalidate_caches()
     try:

@@ -6,6 +6,7 @@ and size by the Appspec, refused by the runtime when the page was bypassed,
 and a file sent without being asked handed to ``@app.file``.
 """
 
+import hashlib
 from typing import Any, Dict, Iterator, List
 
 import pytest
@@ -151,7 +152,13 @@ def test_an_image_sent_without_being_asked_goes_to_the_model_whole(
     assert asked["content"][1]["type"] == "image"
     assert asked["content"][1]["source"]["mimeType"] == "image/png"
     assert live.describe()["files"] == [
-        {"name": "p.png", "type": "image/png", "size": len(png), "path": ""}
+        {
+            "name": "p.png",
+            "type": "image/png",
+            "size": len(png),
+            "path": "",
+            "digest": "sha256:" + hashlib.sha256(png).hexdigest(),
+        }
     ]
     # The conversation drawn again says the words, not the bytes.
     assert (

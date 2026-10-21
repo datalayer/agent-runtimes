@@ -13,8 +13,11 @@ it, the caps, the entry kinds, the redaction rules and the refusal sentences
 
 **Export** (MH-13) redacts at the source, by the rules the spec names, each
 counted: a header or key named ``Authorization``, ``Proxy-Authorization``
-or ``Cookie``; a value shaped as a credential (``Bearer …``, a key, a
-password field — the runtime's own :func:`~agent_runtimes.guardrails.credentials.redact`);
+or ``Cookie``; a value shaped as a credential **wherever it is** — the
+runtime's own :func:`~agent_runtimes.guardrails.credentials.redact` (an API
+key, a signed token, a private key), ``Bearer …``, ``Basic …`` or ``token …``
+under any key or inside a sentence, and the value of a key, secret or
+password field by its name (``arguments.token``, ``client_secret``);
 the value of a declared secret, by name; a URL's userinfo; the signed user of
 an embed; the runtime's uid and addresses. A file's bytes are never in it: a
 file is its entry (name, size, digest, place in the sandbox).
@@ -65,6 +68,21 @@ DROPPED_KEYS = frozenset(
 
 _USERINFO = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)([^/\s@:]+(?::[^/\s@]*)?)@")
 
+#: A value that reads as a credential by its scheme, wherever it is — under
+#: any key, inside a sentence (`bearer_token`): the scheme kept, what
+#: follows it replaced; a value already redacted is left as it reads.
+_SCHEMED = re.compile(r"(?i)\b(bearer|basic|token)\s+(?!\[redacted\])(\S+)")
+
+#: A key whose value is a credential by its name — a key, secret or
+#: password field, under any entry (`bearer_token`): `password`, `secret`,
+#: `token`, `api_key`, `access_key`, `private_key`, `credential`, and any key
+#: ending in one of them (`client_secret`, `refresh_token`, `aws_secret_key`).
+#: Not `tokens` (a count), not a bare `key` (a path's, a column's).
+_CREDENTIAL_KEY = re.compile(
+    r"(?i)^(?:.*[_.-])?(?:password|passwd|passphrase|secret|token|api_?key|"
+    r"access_key|secret_key|private_key|credentials?)$"
+)
+
 
 class SessionFormatRefused(ValueError):
     """A file this format refuses, in the spec's sentence; the status to say it with."""
@@ -107,6 +125,13 @@ class Redactor:
                 "bearer_token", max(1, shaped.count(WITHHELD) - value.count(WITHHELD))
             )
             value = shaped.replace(WITHHELD, REDACTED)
+        # `Bearer …`, `Basic …`, `token …` wherever they read — a value under
+        # a key that is no header (`arguments.token`), a sentence — not only
+        # under an Authorization header or in a shape the guardrail knows.
+        schemed, times = _SCHEMED.subn(rf"\1 {REDACTED}", value)
+        if times:
+            self._hit("bearer_token", times)
+            value = schemed
         stripped = _USERINFO.sub(r"\1", value)
         if stripped != value:
             self._hit("url_userinfo")
@@ -116,6 +141,16 @@ class Redactor:
     def value(self, value: Any, *, key: str = "") -> Any:
         if key.lower() in HEADER_KEYS and value not in (None, "", REDACTED):
             self._hit("authorization_header")
+            return REDACTED
+        if (
+            key
+            and _CREDENTIAL_KEY.match(key)
+            and not isinstance(value, (Mapping, list, tuple))
+            and value not in (None, "", REDACTED)
+        ):
+            # A key, secret or password field: its value is a credential
+            # whatever it reads as (`bearer_token`), anywhere in the entry.
+            self._hit("bearer_token")
             return REDACTED
         if isinstance(value, str):
             return self.text(value)

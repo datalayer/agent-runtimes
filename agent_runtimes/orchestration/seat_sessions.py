@@ -28,7 +28,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional
 
-from ..context.delegation import execution_of, run_execution, seat_of, session_meta, session_of_meta
+from ..context.delegation import (
+    execution_of,
+    run_execution,
+    seat_of,
+    session_meta,
+    session_of_meta,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +58,10 @@ def history_of(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     history: List[Dict[str, Any]] = []
     for message in messages:
         role = "user" if message.get("role") == "user" else "assistant"
-        item: Dict[str, Any] = {"role": role, "content": _text_of(message.get("content"))}
+        item: Dict[str, Any] = {
+            "role": role,
+            "content": _text_of(message.get("content")),
+        }
         if message.get("agent"):
             item["agent"] = message["agent"]
         history.append(item)
@@ -67,7 +76,8 @@ async def _drained(stream: Any) -> None:
 async def _resumed(live: Any) -> None:
     """A seat's session opened again on this worker: the record's and the hooks' part of
     ``LiveSession.resume`` — a ``session`` entry with ``state: open`` and ``runs_on``
-    rewritten (MH-01) — without its replay on a socket a seat does not have."""
+    rewritten (MH-01) — without its replay on a socket a seat does not have.
+    """
     from ..loop.apps.sessions import run_hooks
 
     if live.state == "ended":
@@ -122,7 +132,9 @@ class SeatRun:
             {
                 "tool": name,
                 "arguments": _short(called.get("arguments")),
-                "result": _short(answered.get("result") or answered.get("error") or "", 300),
+                "result": _short(
+                    answered.get("result") or answered.get("error") or "", 300
+                ),
                 **({"error": True} if answered.get("error") else {}),
             },
         )
@@ -133,7 +145,9 @@ class SeatRun:
         from ..loop.apps.sessions import _new_id
 
         if text:
-            self.live.messages.append({"id": _new_id(), "role": "assistant", "content": text})
+            self.live.messages.append(
+                {"id": _new_id(), "role": "assistant", "content": text}
+            )
         recorder = self.live.recorder
         recorder.turned(self.asked, text)
         recorder.ended("answered", _short(text, 300), {"length": len(text)})
@@ -146,7 +160,9 @@ class SeatRun:
         from ..loop.apps.record import _short
 
         recorder = self.live.recorder
-        recorder.ended("stopped", f"Stopped: {_short(reason, 300)}", {"error": _short(reason, 300)})
+        recorder.ended(
+            "stopped", f"Stopped: {_short(reason, 300)}", {"error": _short(reason, 300)}
+        )
         await recorder.flush(self.uid)
         self.live.turn = "idle"
         return self.meta()
@@ -172,15 +188,23 @@ def _caller_of(credential: Optional[str]) -> Any:
     claims = _unverified_claims(credential)
     subject = str(claims.get("sub") or claims.get("uid") or "")
     if not subject:
-        raise SeatRefused("The execution's token names nobody to open the seat's session as.")
+        raise SeatRefused(
+            "The execution's token names nobody to open the seat's session as."
+        )
     agent = str(claims.get("agent_uid") or "")
     if agent and agent == subject:
-        return Caller(kind="principal", uid=agent, app_uid=str(claims.get("app_uid") or ""))
+        return Caller(
+            kind="principal", uid=agent, app_uid=str(claims.get("app_uid") or "")
+        )
     return Caller(kind="person", uid=subject, name=person_name(claims))
 
 
 async def seat_run(
-    agent: Any, agent_id: Optional[str], meta: Any, credential: Optional[str], prompt: str
+    agent: Any,
+    agent_id: Optional[str],
+    meta: Any,
+    credential: Optional[str],
+    prompt: str,
 ) -> Optional[SeatRun]:
     """
     The seat's session for a task, opened or resumed, with the task as its next turn.
@@ -232,7 +256,9 @@ async def seat_run(
         raise SeatRefused(
             f"The task names seat {seat['seat']!r} of team {seat['team']!r}, which the catalogue does not have."
         )
-    if seat["seat"] != "supervisor" and all(one.id != seat["seat"] for one in team.agents):
+    if seat["seat"] != "supervisor" and all(
+        one.id != seat["seat"] for one in team.agents
+    ):
         raise SeatRefused(f"Team {team.id} has no seat {seat['seat']!r}.")
     app = load_app(team_app(team))
     instance = seat_instance(team)

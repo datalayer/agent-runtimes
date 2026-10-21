@@ -23,6 +23,9 @@ def run(folder: str, script: str) -> str:
     environment = dict(os.environ)
     environment.pop("DATALAYER_IAM_URL", None)
     environment.pop("DATALAYER_API_KEY", None)
+    # The example keeps its sessions in a folder of its own: never the test
+    # process's store (conftest names one), which other tests fill.
+    environment.pop("AGENT_RUNTIMES_SESSIONS_PATH", None)
     done = subprocess.run(
         [sys.executable, script],
         cwd=EXAMPLES / folder,

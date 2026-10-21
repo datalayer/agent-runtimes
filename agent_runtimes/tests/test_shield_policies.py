@@ -67,7 +67,7 @@ from agent_runtimes.loop.apps.rules import SESSION_RULE
 from agent_runtimes.routes import agents
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.routes.agui import unregister_agui_agent
-from agent_runtimes.tests.test_acp_agent import an_agent, fake_harness
+from agent_runtimes.tests.test_acp_agent import an_agent, catalogued_fake, fake_harness
 from agent_runtimes.tests.test_app_sessions import (
     ASSISTANT,
     Runtime,
@@ -233,9 +233,7 @@ class TestManagedFromIam:
     def test_without_iam_and_without_a_copy_the_harness_is_refused_naming_iam(
         self, managed: FakeIam, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from agent_runtimes.specs import harnesses
-
-        monkeypatch.setitem(harnesses.HARNESS_CATALOGUE, "fake", fake_harness())
+        catalogued_fake(monkeypatch)
         managed.answer = PolicyUnavailable(
             "IAM at https://iam.test could not be reached (timed out)"
         )
@@ -392,9 +390,7 @@ class TestAdmittedHarnesses:
     def test_a_harness_the_organization_does_not_admit_is_refused_in_a_sentence(
         self, managed: FakeIam, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from agent_runtimes.specs import harnesses
-
-        monkeypatch.setitem(harnesses.HARNESS_CATALOGUE, "fake", fake_harness())
+        catalogued_fake(monkeypatch)
         policies = policies_in_force()
         assert harness_refusal(policies, "fake") is None
         assert harness_refusal(policies, "codex") == (

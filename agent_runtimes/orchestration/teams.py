@@ -303,7 +303,14 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
 
 #: What a team's application records of its seats' sessions: the conversation,
 #: the harnesses' actions and decisions, their diffs and terminals.
-TEAM_RECORD_INCLUDE = ("conversations", "actions", "decisions", "approvals", "diffs", "terminals")
+TEAM_RECORD_INCLUDE = (
+    "conversations",
+    "actions",
+    "decisions",
+    "approvals",
+    "diffs",
+    "terminals",
+)
 
 
 def team_app(team: TeamSpec) -> dict[str, Any]:

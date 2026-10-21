@@ -63,7 +63,8 @@ def fake_harness() -> HarnessSpec:
         ),
         # A harness whose terms are unknown is served nowhere: the fake's are the SDK's.
         terms=HarnessTermsSpec(
-            served_to_third_parties="permitted", licence="Apache-2.0 (the ACP SDK's fake agent)"
+            served_to_third_parties="permitted",
+            licence="Apache-2.0 (the ACP SDK's fake agent)",
         ),
         skills=HarnessSkillsSpec(format="none"),
         honours=HarnessHonoursSpec(model=False, subagents=True),
