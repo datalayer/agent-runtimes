@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.75
+
+22 October 2026. 1.5.74 published: its release's tests failed on a test reusing a session uid another test's recorder had started (a recorder adopts a session another started, 9095ace5); each test now starts with no session started by any recorder. The content is 1.5.74's.
+
 ## 1.5.74
 
 22 October 2026. A team seat's *ask me first* reaches a person and the seat goes on in the same session.
