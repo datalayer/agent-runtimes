@@ -1592,7 +1592,8 @@ async def list_sessions(
 ) -> Dict[str, Any]:
     """The caller's sessions, held by this runtime **and** recorded (MH-02):
     each with its state, turn phase, whether it is held here, agent, harness,
-    turns, title, lineage, where it runs and when it started; newest first,
+    turns, title, lineage, where it runs and when it started, and the folder
+    (``workspace``) of a harness session from its harness row; newest first,
     paged (``?limit=``, 50 and at most 200; ``?after=<uid>``; ``has_more``),
     filtered (``?app=``, ``?agent=``, ``?state=`` — an unknown word is 422 —,
     ``?q=`` on the title, ``?archived=true`` to include the archived).
@@ -1600,6 +1601,7 @@ async def list_sessions(
     """
     from agent_runtimes.loop.apps import sessions
     from agent_runtimes.loop.apps.session_store import active_store
+    from agent_runtimes.loop.apps.session_workspace import with_workspaces
     from agent_runtimes.loop.apps.sessions import SessionRefused, check_state
 
     try:
@@ -1623,7 +1625,7 @@ async def list_sessions(
         and live.answers_to(authorized.caller)
     ]
     if held:
-        return {"sessions": held_here, "has_more": False}
+        return {"sessions": await with_workspaces(held_here), "has_more": False}
     page = await _store_refused(
         active_store().list(
             _owner_of(authorized.caller),
@@ -1645,7 +1647,8 @@ async def list_sessions(
     if not after:
         # Held sessions the record does not list yet (its write in flight): first.
         listed = [*by_uid.values(), *listed]
-    return {"sessions": listed, "has_more": page.has_more}
+    # A harness session's row says its folder (DESKTOP DK-26).
+    return {"sessions": await with_workspaces(listed), "has_more": page.has_more}
 
 
 async def _recorded(uid: str, request: Request) -> Dict[str, Any]:

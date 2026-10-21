@@ -309,3 +309,62 @@ def test_a_title_from_the_first_turn_renamed_and_archived(
         ).status_code
         == 404
     )
+
+
+def test_a_harness_sessions_row_says_its_folder_and_a_model_agents_does_not(
+    store: FileSessionStore,
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """DESKTOP DK-26: `workspace` on the list's row of a harness session, from its harness row."""
+    from agent_runtimes.protocol_state.store import use_protocol_state_store
+    from agent_runtimes.tests.test_acp_agent import Store
+
+    harness_rows = Store()
+    use_protocol_state_store(harness_rows)  # type: ignore[arg-type]
+    try:
+        asyncio.run(
+            harness_rows.put(
+                "harness_session",
+                "shield-mvp-claude-code:session-w001",
+                {
+                    "acp_session_id": "acp-1",
+                    "harness": "claude-code",
+                    "agent": "shield-mvp-claude-code",
+                    "workspace": "/home/ada/project",
+                },
+            )
+        )
+        harness_opened = {
+            **OPENED,
+            "payload": {
+                **OPENED["payload"],
+                "app": "shield-mvp-claude-code",
+                "agent": "shield-mvp-claude-code",
+                "harness": "claude-code",
+            },
+        }
+        _seed(
+            store,
+            "session-w001",
+            [
+                harness_opened,
+                _turn("a"),
+                {"kind": "paused", "payload": {"state": "paused", "cancelled": {}}},
+            ],
+        )
+        _seed(store, "session-w002", [harness_opened, _turn("b")])
+        _seed(store, "session-w003", [OPENED, _turn("c")])
+        rows = {
+            s["uid"]: s
+            for s in remote.get("/api/v1/apps/sessions", headers=as_("ada")).json()[
+                "sessions"
+            ]
+        }
+        assert rows["session-w001"]["workspace"] == "/home/ada/project"
+        # A harness session whose row names no folder says so, as empty.
+        assert rows["session-w002"]["workspace"] == ""
+        # A model agent's row says nothing of a folder.
+        assert "workspace" not in rows["session-w003"]
+    finally:
+        use_protocol_state_store(None)
