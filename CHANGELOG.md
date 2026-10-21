@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.72
+
+21 October 2026. The npm package loads under Node, not only under a bundler.
+
+- **`lib/` is loadable by Node's ESM loader** (DESKTOP DK-15): `tsc` kept the sources' relative specifiers as written (`'./approvals'`, `'./chat'`), which a bundler resolves and Node refuses — it adds no extension and reads no folder's `index.js`. So a consumer that loads the package without bundling it (vitest's externalized dependencies; a Node service importing `lib/portable`) failed with `ERR_MODULE_NOT_FOUND` on files the tarball carried (1.5.70's `lib/portable/approvals`, `lib/apps/core/canvasBlocks`). The build now writes every relative specifier of `lib/**/*.js` whole (`scripts/fully-specify-lib.mjs`, after `tsc -b`, in `build` and `build:lib`), and `npm run check:pack` (`scripts/check-npm-pack.mjs`, in `build.yaml` and before `release.yaml` packs) refuses a tarball whose `lib/` imports a file it does not carry or one Node cannot load as written. The orphan `AppExamples2` scaffold no longer imports an svg the repository does not have.
+
 ## 1.5.71
 
 22 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). The seams the desktop and the VS Code extension pin.

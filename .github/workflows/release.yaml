@@ -100,6 +100,15 @@ jobs:
       - name: Test the portable entries
         run: npx vitest run --project=unit src/__tests__/portable.unit.test.ts src/portable/__tests__ src/portable/hosts/__tests__
 
+      # Every relative import of lib/ names a file the tarball carries,
+      # written whole ('./approvals.js'): Node's ESM loader adds no
+      # extension, so a consumer that loads lib/ without a bundler (vitest's
+      # externalized dependencies, a Node service) failed on 1.5.70's
+      # './approvals' though the file was there. The build writes them whole
+      # (scripts/fully-specify-lib.mjs); this refuses a tarball that misses one.
+      - name: Check the tarball carries what lib/ imports
+        run: npm run check:pack
+
       - name: Pack the npm package
         run: |
           set -euo pipefail

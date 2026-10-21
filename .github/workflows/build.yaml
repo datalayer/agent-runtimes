@@ -50,6 +50,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      # What release.yaml refuses before it packs: a relative import of lib/
+      # that names no file of the tarball, or one Node cannot load as written.
+      - name: Check the tarball carries what lib/ imports
+        run: npm run check:pack
+
       # The build makes the `<datalayer-app>` embed too (D-08), as the
       # release does: it prints every file's size and fails over the initial
       # load's budget (vite.embed.config.ts), so a pull request sees what it costs.
