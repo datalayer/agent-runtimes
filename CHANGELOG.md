@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.79
+
+22 October 2026. A host that owns the approvals decides each one once.
+
+- **`<Chat pendingApprovals>` hands the decision to the host only** (DESKTOP DK-13): with the approvals passed in, Approve and Deny call `onApproveApproval` / `onRejectApproval` and nothing else. The chat also sent the decision over its own runtime and ai-agents sockets (and queued a retry), so the host's decision and the chat's raced: whichever came second found the request already decided, and the person read *This approval was answered elsewhere* after their own click. A chat that holds its own approvals decides as before.
+
 ## 1.5.78
 
 22 October 2026. Codex runs on Datalayer without the account's OpenAI key in the runtime.

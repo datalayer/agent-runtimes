@@ -1355,6 +1355,13 @@ function ChatBaseInner({
         .approvals.find(a => a.id === approvalId);
       const resolvedToolCallId = approval?.tool_call_id ?? toolCallId;
       rememberResolvedToolCall(resolvedToolCallId);
+      // The host owns the approvals (it passed pendingApprovals): it decides,
+      // once, its own way. The chat's sockets would send the same decision a
+      // second time, and the later one is answered elsewhere.
+      if (pendingApprovalsProp) {
+        await onApproveApprovalProp?.(approvalId, note);
+        return;
+      }
       // Persist approval decision to the ai-agents backend WS (single source
       // of truth). This drives SaaS Tool Approvals state and broadcast events.
       const persistedViaBackend = sendAiAgentsApprovalDecision(
@@ -1400,6 +1407,7 @@ function ChatBaseInner({
       activeAgentId,
       rememberResolvedToolCall,
       onApproveApprovalProp,
+      pendingApprovalsProp,
       persistApprovalDecision,
       queueApprovalDecisionRetry,
       requestAiAgentsApprovalHistory,
@@ -1413,6 +1421,13 @@ function ChatBaseInner({
         .approvals.find(a => a.id === approvalId);
       const resolvedToolCallId = approval?.tool_call_id ?? toolCallId;
       rememberResolvedToolCall(resolvedToolCallId);
+      // The host owns the approvals (it passed pendingApprovals): it decides,
+      // once, its own way. The chat's sockets would send the same decision a
+      // second time, and the later one is answered elsewhere.
+      if (pendingApprovalsProp) {
+        await onRejectApprovalProp?.(approvalId, note);
+        return;
+      }
       const persistedViaBackend = sendAiAgentsApprovalDecision(
         approvalId,
         false,
@@ -1453,6 +1468,7 @@ function ChatBaseInner({
       activeAgentId,
       rememberResolvedToolCall,
       onRejectApprovalProp,
+      pendingApprovalsProp,
       queueApprovalDecisionRetry,
       requestAiAgentsApprovalHistory,
       sendAiAgentsApprovalDecision,
