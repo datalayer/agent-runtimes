@@ -9,9 +9,9 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## 1.5.67
+## 1.5.68
 
-21 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). Three defects of the session round, found by the team session's builder, and what 1.5.66's release workflow reported.
+22 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). Three defects of the session round, found by the team session's builder, and what 1.5.66's release workflow reported (1.5.67 was tagged with a test that read a TOML file through `tomllib`, which Python 3.10 lacks, so it was not published; this is 1.5.67 with the test reading the file as lines, and the public-words test of MH-P08).
 
 - **A local resume needs no token** (MH-03): a session rebuilt from its record asks for the caller's token only when the active session store is the record's — the file store reads its own files, so a resume on a self-hosted runtime, or a seat's on its worker, is not refused 401.
 - **A rebuilt tool row is shown again** (MH-03): the displays a resume rebuilds from the record — tool rows, steps, decisions, approvals — are kept in the wire form a live row's is (`type`, `text`, `data`), so the resume shows them again on the page instead of failing on the stream.
