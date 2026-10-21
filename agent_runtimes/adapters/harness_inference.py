@@ -21,17 +21,54 @@ takes the key from the environment, as its spec declares.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from typing import Mapping
-
-#: The harnesses whose model calls go through ai-inference on Datalayer, and
-#: the secret each would otherwise be given.
-ROUTED: dict[str, str] = {"claude-code": "ANTHROPIC_API_KEY"}
 
 #: Where ai-inference serves Anthropic's Messages API, under its v1 root.
 ANTHROPIC_ROUTE = "/anthropic"
 
+#: Where ai-inference serves OpenAI's API (``/v1/responses`` and the rest),
+#: under its v1 root: what Codex is given as ``OPENAI_BASE_URL``.
+OPENAI_ROUTE = "/openai/v1"
+
 BASE_URL_VARIABLE = "ANTHROPIC_BASE_URL"
 AUTH_TOKEN_VARIABLE = "ANTHROPIC_AUTH_TOKEN"
+
+
+@dataclass(frozen=True)
+class Route:
+    """How one harness's model calls go through ai-inference."""
+
+    #: The account's secret the harness would otherwise be given; ai-inference reads it.
+    secret: str
+    #: ai-inference's route, under its v1 root.
+    path: str
+    #: The variable the harness reads its base URL from.
+    base_url_variable: str
+    #: The variable the harness reads its credential from: given the runtime's token.
+    token_variable: str
+    #: The ACP auth method the harness is authenticated with after ``initialize``, when it asks for one.
+    auth_method: str | None = None
+
+
+#: The harnesses whose model calls go through ai-inference on Datalayer.
+#: Codex (codex-acp) reads ``OPENAI_BASE_URL`` and ``OPENAI_API_KEY`` and is
+#: authenticated with its ``api-key`` method (META_HARNESS decision Y).
+ROUTES: dict[str, Route] = {
+    "claude-code": Route(
+        "ANTHROPIC_API_KEY", ANTHROPIC_ROUTE, BASE_URL_VARIABLE, AUTH_TOKEN_VARIABLE
+    ),
+    "codex": Route(
+        "OPENAI_API_KEY",
+        OPENAI_ROUTE,
+        "OPENAI_BASE_URL",
+        "OPENAI_API_KEY",
+        auth_method="api-key",
+    ),
+}
+
+#: The harnesses routed, and the secret each would otherwise be given.
+ROUTED: dict[str, str] = {harness: route.secret for harness, route in ROUTES.items()}
 
 
 def on_datalayer(environment: Mapping[str, str] | None = None) -> bool:
@@ -52,6 +89,26 @@ def routed_secret(
     if harness_id in ROUTED and on_datalayer(environment):
         return ROUTED[harness_id]
     return None
+
+
+def route_of(
+    harness_id: str, environment: Mapping[str, str] | None = None
+) -> Route | None:
+    """How a harness's calls go through ai-inference here, or ``None`` when they do not."""
+    if harness_id in ROUTES and on_datalayer(environment):
+        return ROUTES[harness_id]
+    return None
+
+
+def base_url(route: Route, environment: Mapping[str, str] | None = None) -> str:
+    """``<ai-inference>/api/ai-inference/v1`` and the route's path."""
+    from agent_runtimes.models.models import _normalize_ai_inference_base_url
+
+    source = os.environ if environment is None else environment
+    return (
+        _normalize_ai_inference_base_url(source.get("DATALAYER_AI_INFERENCE_URL"))
+        + route.path
+    )
 
 
 def anthropic_base_url(environment: Mapping[str, str] | None = None) -> str:
@@ -77,6 +134,11 @@ def routed_token() -> tuple[str | None, str | None]:
 
 __all__ = [
     "ANTHROPIC_ROUTE",
+    "OPENAI_ROUTE",
+    "ROUTES",
+    "Route",
+    "base_url",
+    "route_of",
     "AUTH_TOKEN_VARIABLE",
     "BASE_URL_VARIABLE",
     "ROUTED",

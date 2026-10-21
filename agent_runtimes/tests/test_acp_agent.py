@@ -1390,6 +1390,69 @@ class TestResolvingACatalogueHarness:
             "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
         }
 
+    def test_on_datalayer_codex_calls_through_ai_inferences_openai_route(
+        self, monkeypatch
+    ) -> None:
+        """META_HARNESS decision Y: Codex gets ai-inference's OpenAI route and the runtime's token as its key."""
+        from agent_runtimes.models import offered
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+        datalayer = {
+            "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+            "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+        }
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        given = harness_environment(codex, datalayer)
+        assert (
+            given["OPENAI_BASE_URL"]
+            == "https://r1.example/api/ai-inference/v1/openai/v1"
+        )
+        assert given["OPENAI_API_KEY"] == "the-inference-token"
+        # Off Datalayer, the person's own key is required, as the spec says.
+        with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
+            harness_environment(codex, {})
+
+    @pytest.mark.asyncio
+    async def test_a_routed_codex_is_authenticated_with_its_api_key_method(
+        self, tmp_path: Path
+    ) -> None:
+        from types import SimpleNamespace
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+        agent = ACPAgent(
+            agent_id="routed-codex",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment={
+                "OPENAI_BASE_URL": "https://r1.example/api/ai-inference/v1/openai/v1",
+                "OPENAI_API_KEY": "the-inference-token",
+            },
+        )
+        asked: list = []
+
+        class Channel:
+            async def request(self, method, params=None):
+                asked.append((method, params))
+                return {}
+
+        offered = SimpleNamespace(
+            auth_methods=[SimpleNamespace(id="api-key"), SimpleNamespace(id="chat-gpt")]
+        )
+        await agent._authenticate_routed(Channel(), offered)
+        assert asked == [("authenticate", {"methodId": "api-key"})]
+        # A harness that offers no such method is not asked.
+        asked.clear()
+        await agent._authenticate_routed(Channel(), SimpleNamespace(auth_methods=[]))
+        assert asked == []
+
     @pytest.mark.asyncio
     async def test_a_routed_harness_with_no_token_is_refused_before_it_starts(
         self, monkeypatch, tmp_path: Path
