@@ -280,6 +280,72 @@ def harness_workspace(environment: Mapping[str, str] | None = None) -> Path:
     return workspace
 
 
+#: What a `_meta` key must say to be read as the vendor's own session id (MH-05).
+_SESSION_ID_WORDS = ("session", "thread", "conversation")
+
+
+def native_session_id_of(harness: HarnessSpec, meta: Any) -> str | None:
+    """The vendor's own session id from ``session/new``'s ``_meta``, when the
+    harness's spec says the adapter exposes it (``acp.native_session: meta``);
+    ``None`` — said absent, and logged — when the spec says so or the adapter
+    gave none.
+    """
+    acp = harness.acp
+    if acp is None or str(acp.native_session) != "meta":
+        return None
+    if isinstance(meta, Mapping):
+        for key, value in meta.items():
+            if (
+                isinstance(value, str)
+                and value.strip()
+                and any(word in str(key).lower() for word in _SESSION_ID_WORDS)
+            ):
+                return value.strip()
+    logger.warning(
+        "%s's spec says its adapter exposes the vendor's session id in _meta, and it did not: the drill's claim drifted",
+        harness.name,
+    )
+    return None
+
+
+def own_and_since(
+    history: Sequence[Mapping[str, Any]], spec_id: str
+) -> tuple[list[Mapping[str, Any]], str]:
+    """A conversation split for a swap back (MH-04): the person's turns that
+    are this agent's own (tagged ``agent``, or untagged — the agent's when it
+    was the only one), and the turns since it was swapped away, as text.
+    """
+    own: list[Mapping[str, Any]] = []
+    since: list[str] = []
+    after_own = False
+    for message in history:
+        role = _role_of(message)
+        agent = str(message.get("agent") or "")
+        if role == "user" and (not agent or agent == spec_id) and not after_own:
+            own.append(message)
+            continue
+        if role == "user" and agent and agent != spec_id:
+            after_own = True
+        if after_own and role in ("user", "assistant"):
+            text = message.get("content")
+            if isinstance(text, list):
+                text = " ".join(
+                    str(part.get("text") or "")
+                    for part in text
+                    if isinstance(part, Mapping)
+                )
+            since.append(
+                f"{'The person' if role == 'user' else 'The other agent'}: {str(text or '').strip()}"
+            )
+    replayed = ""
+    if since:
+        replayed = (
+            "While another agent had this conversation, this was said:\n"
+            + "\n".join(since)
+        )
+    return own, replayed
+
+
 def advertised_problems(harness: HarnessSpec, answer: InitializeResponse) -> list[str]:
     """What the harness's spec asked that the agent, at ``initialize``, did not advertise."""
     problems: list[str] = []
@@ -717,9 +783,19 @@ class ACPAgent(BaseAgent, ShieldProxy):
         policy_maker: Callable[[list[Policy]], list[Policy]] | None = None,
         connect_url: str | None = None,
         companies: Sequence[str] = (),
+        spec_id: str = "",
     ) -> None:
         """Build the agent on a harness, its command resolved (or the sidecar's URL), its policies given."""
         self._agent_id = agent_id
+        #: The agentspec bound: what a session's harness row is kept under
+        #: (MH-04, per (session, agent)), the runtime's agent id when none.
+        self.spec_id = spec_id or agent_id
+        #: The runtime sessions whose harness session is being loaded: a
+        #: swap waits for them (MH-06).
+        self.loading: set[str] = set()
+        #: The turns since this agent was swapped away, by ACP session: replayed
+        #: as text with the first prompt after a swap back (MH-04).
+        self._since: dict[str, str] = {}
         self.harness = harness
         self._name = name or harness.name
         self._description = description or harness.description
@@ -1041,6 +1117,11 @@ class ACPAgent(BaseAgent, ShieldProxy):
             if self.recorder is not None:
                 await self._record_end(runtime_session, prompt, "".join(said), status)
 
+    def _prompt_with_since(self, prompt: str, acp_session: str) -> str:
+        """The prompt, the turns since a swap away replayed before it, once (MH-04)."""
+        since = self._since.pop(acp_session, "")
+        return f"{since}\n\n{prompt}" if since else prompt
+
     async def _traced_prompt(
         self, prompt: str, acp_session: str, runtime_session: str
     ) -> PromptResponse:
@@ -1066,7 +1147,11 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 with contextlib.suppress(ValueError, OSError):
                     carry(handle, traceparent)
             # The turn inside this span: `ShieldProxy.prompt` would open a second.
-            return await ShieldProxy.run_turn(self, [text_block(prompt)], acp_session)
+            return await ShieldProxy.run_turn(
+                self,
+                [text_block(self._prompt_with_since(prompt, acp_session))],
+                acp_session,
+            )
 
     # -- sessions -----------------------------------------------------------------
 
@@ -1101,9 +1186,11 @@ class ACPAgent(BaseAgent, ShieldProxy):
             self._queues[kept] = queue
             self._runtime_of[kept] = runtime_session
             self._replayed[kept] = 0
+            self.loading.add(runtime_session)
             try:
                 await self.load_session(str(self.workspace), servers, kept)
             except RequestError as exc:
+                self.loading.discard(runtime_session)
                 self.sessions.pop(kept, None)
                 self._queues.pop(kept, None)
                 return await self._new_session(
@@ -1113,7 +1200,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
                     servers,
                     authority,
                 )
-            await self._channel_drain(kept)
+            try:
+                await self._channel_drain(kept)
+            finally:
+                self.loading.discard(runtime_session)
             self._acp_of[runtime_session] = kept
             self._lent_authority[kept] = authority
             self._replayed.pop(kept, None)
@@ -1124,17 +1214,21 @@ class ACPAgent(BaseAgent, ShieldProxy):
             while not queue.empty():
                 if isinstance(queue.get_nowait(), UserText):
                     replayed += 1
-            turns = sum(
-                1 for m in context.conversation_history if _role_of(m) == "user"
-            )
+            # Compared with this agent's own spans of the record (MH-04): a
+            # session swapped away at turn 4 and back at turn 6 loads turns
+            # 1–4; turns 5–6, another agent's, are replayed as text below.
+            own, since = own_and_since(context.conversation_history, self.spec_id)
+            turns = len(own)
             opening: list[StreamEvent] = []
             if replayed != turns:
                 opening.append(
                     _said(
                         f"{self.harness.name} replayed {replayed} turn(s) of its session {kept}; "
-                        f"the record holds {turns}: they differ."
+                        f"the record holds {turns} of its own: they differ."
                     )
                 )
+            if since:
+                self._since[kept] = since
             return kept, opening
         sentence = ""
         if kept and not self.loads_sessions:
@@ -1163,7 +1257,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._acp_of[runtime_session] = acp_session
         self._runtime_of[acp_session] = runtime_session
         self.sessions[acp_session].rules_from = self._rules_from(runtime_session)
-        await self._keep_session(runtime_session, acp_session)
+        native = native_session_id_of(self.harness, getattr(answer, "field_meta", None))
+        await self._keep_session(runtime_session, acp_session, native)
         return acp_session, [_said(sentence)] if sentence else []
 
     # -- what was written for it is read-only to it (SH-21) ------------------------------
@@ -1299,7 +1394,13 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     @property
     def loads_sessions(self) -> bool:
-        """Whether the harness advertised ``loadSession``."""
+        """Whether the harness advertised ``loadSession`` — and its spec's
+        capabilities table says its session comes back (``resume`` not
+        ``none``): a harness declared ``none`` starts over, said, whatever
+        it advertises (MH-20).
+        """
+        if self.harness.capabilities.resume == "none":
+            return False
         capabilities = self.advertised.agent_capabilities if self.advertised else None
         return bool(capabilities and capabilities.load_session)
 
@@ -1308,26 +1409,48 @@ class ACPAgent(BaseAgent, ShieldProxy):
         if self._channel is not None:
             await self._channel.drain(session_id)
 
-    async def _kept_session(self, runtime_session: str) -> str | None:
-        """The harness's session kept for the runtime's, from the protocol state store."""
+    def row_key(self, runtime_session: str) -> str:
+        """The harness row's key: per (session, agent) — ``<agentspec>:<uid>``."""
+        return f"{self.spec_id}:{runtime_session}"
+
+    async def harness_row(self, runtime_session: str) -> dict[str, Any] | None:
+        """The harness's row for the runtime's session, as kept (MH-04, MH-05)."""
         if self.state_store is None:
             return None
-        record = await self.state_store.get(
-            HARNESS_SESSION_KIND, f"{self._agent_id}:{runtime_session}"
+        return await self.state_store.get(
+            HARNESS_SESSION_KIND, self.row_key(runtime_session)
         )
+
+    async def _kept_session(self, runtime_session: str) -> str | None:
+        """The harness's session kept for the runtime's, from the protocol state store."""
+        record = await self.harness_row(runtime_session)
         return str(record.get("acp_session_id") or "") or None if record else None
 
-    async def _keep_session(self, runtime_session: str, acp_session: str) -> None:
-        """Keep the harness's session for the runtime's in the protocol state store."""
+    async def _keep_session(
+        self,
+        runtime_session: str,
+        acp_session: str,
+        native_session_id: str | None = None,
+    ) -> None:
+        """Keep the harness's session for the runtime's in the protocol state
+        store: one row per (session, agent), never deleted on a swap (MH-04);
+        the vendor's own session id beside the ACP one when the adapter
+        exposes it, said absent when it does not (MH-05).
+        """
         if self.state_store is None:
             return
+        acp = self.harness.acp
         await self.state_store.put(
             HARNESS_SESSION_KIND,
-            f"{self._agent_id}:{runtime_session}",
+            self.row_key(runtime_session),
             {
                 "acp_session_id": acp_session,
                 "harness": self.harness.id,
+                "agent": self.spec_id,
                 "workspace": str(self.workspace),
+                "native_session": str(acp.native_session) if acp else "none",
+                "native_session_id": native_session_id or None,
+                "resume": self.harness.capabilities.resume,
             },
         )
 
@@ -1801,6 +1924,7 @@ def harness_agent(
     state_store: Any = None,
     organization_uid: str = "",
     read_organization: Any = None,
+    spec_id: str = "",
 ) -> ACPAgent:
     """An agent on a harness, resolved through the ``harness`` registry (MH-F02): not yet started.
 
@@ -1887,6 +2011,7 @@ def harness_agent(
         workspace=workspace,
         state_store=state_store,
         organization_uid=contribution.organization,
+        spec_id=spec_id,
     )
 
 
@@ -1904,6 +2029,7 @@ def acp_harness_agent(
     workspace: Path | None = None,
     state_store: Any = None,
     organization_uid: str = "",
+    spec_id: str = "",
 ) -> ACPAgent:
     """An ``ACPAgent`` on a harness spec: the adapter every ACP harness contribution names.
 
@@ -1969,6 +2095,7 @@ def acp_harness_agent(
         description=description,
         state_store=state_store,
         companies=companies_of(app) if app is not None else (),
+        spec_id=spec_id,
     )
 
 
@@ -1991,5 +2118,7 @@ __all__ = [
     "harness_workspace",
     "launch_command",
     "lent_toolsets",
+    "native_session_id_of",
+    "own_and_since",
     "sidecar_url",
 ]

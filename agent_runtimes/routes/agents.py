@@ -1465,6 +1465,8 @@ async def _harness_agent_of(
             organization_uid=str(
                 (request.app_instance or {}).get("organization_uid") or ""
             ).strip(),
+            # The agentspec bound: the harness row's key, per (session, agent).
+            spec_id=str(request.agent_spec_id or "").strip(),
         )
         await agent.initialize()
     except HarnessRefused as refused:

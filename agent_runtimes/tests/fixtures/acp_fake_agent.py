@@ -130,6 +130,12 @@ class FakeAgent(Agent):
             file=sys.stderr,
             flush=True,
         )
+        if os.environ.get("FAKE_AGENT_SESSION_META"):
+            # The vendor's own session id beside the ACP one (MH-05).
+            return NewSessionResponse(
+                session_id=session_id,
+                _meta={"claudeSessionId": f"vendor-{session_id}"},
+            )
         return NewSessionResponse(session_id=session_id)
 
     async def load_session(

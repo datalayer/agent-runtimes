@@ -846,7 +846,7 @@ class TestSessionsAndTheRecord:
         finally:
             await third.cleanup()
         assert (
-            "replayed 0 turn(s) of its session fake_1; the record holds 1: they differ"
+            "replayed 0 turn(s) of its session fake_1; the record holds 1 of its own: they differ"
             in texts(events)
         )
         assert texts(events).endswith("done")
