@@ -53,7 +53,7 @@ import {
   webglAvailable,
   type AssistantModel3D,
   type Pose3D,
-} from './avatar3d';
+} from './avatar3dModel';
 import type { AssistantState } from './state';
 
 export interface Avatar3DProps {

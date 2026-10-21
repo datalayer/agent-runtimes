@@ -67,7 +67,7 @@ import type { ResumedThread, ThemeOverrides } from '../../types/chat';
 import { generateMessageId } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
-import type { AssistantModel3D } from '../../chat/assistant/avatar3d';
+import type { AssistantModel3D } from '../../chat/assistant/avatar3dModel';
 import { ChatFloating } from '../../chat/ChatFloating';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import {

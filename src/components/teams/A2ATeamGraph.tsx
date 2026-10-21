@@ -38,7 +38,7 @@
  * @module components/teams/A2ATeamGraph
  */
 
-import type { AssistantModel3D } from '../../chat/assistant/avatar3d';
+import type { AssistantModel3D } from '../../chat/assistant/avatar3dModel';
 import type { JSX, KeyboardEvent } from 'react';
 import {
   createContext,

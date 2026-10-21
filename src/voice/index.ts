@@ -23,7 +23,7 @@ export * from './capture';
 export * from './hearing';
 export * from './serverHearing';
 export * from './sayAloud';
-export * from './handsFree';
+export * from './handsFreeRules';
 export { HandsFree, type HandsFreeProps } from './HandsFree';
 export * from './speaker';
 export * from './consent';

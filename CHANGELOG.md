@@ -7,6 +7,12 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.73
+
+21 October 2026. The package installs whole on a case-insensitive file system.
+
+- **No two modules differ only in case** (VSCODE VS-14): three pure modules shared a name with a component but for its case — `voice/handsFree` and `voice/HandsFree`, `chat/assistant/avatar3d` and `chat/assistant/Avatar3D`, `components/teams/sceneTranscript` and `components/teams/SceneTranscript` — so on macOS and Windows one file of each pair overwrote the other when the package was installed, and a bundler found the component where the rules were asked for (*export 'answerSpokenOver' was not found in '../../voice/handsFree'*). The pure modules are now `voice/handsFreeRules`, `chat/assistant/avatar3dModel` and `components/teams/sceneTranscriptRules`, with every importer moved; the old paths are gone. `npm run check:pack` also refuses a tarball with two paths that differ only in case.
+
 ## 1.5.72
 
 21 October 2026. The npm package loads under Node, not only under a bundler.

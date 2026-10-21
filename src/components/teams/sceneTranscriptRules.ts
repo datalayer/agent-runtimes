@@ -21,7 +21,7 @@
  * Pure: spans or entries in, lines out, so that a test reads a scripted
  * scene and a page draws a live one the same way ({@link SceneTranscript}).
  *
- * @module components/teams/sceneTranscript
+ * @module components/teams/sceneTranscriptRules
  */
 
 import type { OtelSpan } from '@datalayer/core/lib/otel/types';

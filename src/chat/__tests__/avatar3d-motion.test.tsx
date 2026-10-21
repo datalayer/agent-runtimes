@@ -20,7 +20,7 @@ import {
   CROSSFADE_SECONDS,
   OUT_OF_FRAME,
   assistantModel3D,
-} from '../assistant/avatar3d';
+} from '../assistant/avatar3dModel';
 
 const three = vi.hoisted(() => {
   type Listener = (event: { action: unknown }) => void;

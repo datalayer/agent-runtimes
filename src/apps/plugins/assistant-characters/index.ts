@@ -27,7 +27,7 @@ import type { AssistantCharacterData } from '../../../chat/assistant/formats/typ
 import {
   assistantModel3D,
   type AssistantModel3D,
-} from '../../../chat/assistant/avatar3d';
+} from '../../../chat/assistant/avatar3dModel';
 import type { AppAvatar } from '../../../types/agentspecs';
 import {
   LoopAssistantCharacter,

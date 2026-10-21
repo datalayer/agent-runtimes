@@ -38,7 +38,7 @@ import {
 import { ThemedProvider } from './utils/themedProvider';
 import { useExampleThemeStore } from './utils/themeStore';
 import { AssistantStage } from '../chat/assistant/AssistantStage';
-import { isAssistantModel3D } from '../chat/assistant/avatar3d';
+import { isAssistantModel3D } from '../chat/assistant/avatar3dModel';
 import { useViewportDrag } from '../chat/useViewportDrag';
 import type { AssistantAway, AssistantState } from '../chat/assistant/state';
 import type { BalloonExpandTarget } from '../chat/assistant/BalloonVisual';

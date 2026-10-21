@@ -25,7 +25,7 @@ import {
   handsFreeState,
   heardOverPlayback,
   turnEnded,
-} from '../handsFree';
+} from '../handsFreeRules';
 import { BARGE_IN_POLL_MS, HandsFree } from '../HandsFree';
 import { chatVoiceOf } from '../chatVoice';
 import type { HeardSoFar, Hearing } from '../hearing';

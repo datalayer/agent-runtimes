@@ -91,7 +91,7 @@ import {
   balloonHover,
   graceRuns,
 } from './balloonHover';
-import { isAssistantModel3D, type AssistantModel3D } from './avatar3d';
+import { isAssistantModel3D, type AssistantModel3D } from './avatar3dModel';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
 import {

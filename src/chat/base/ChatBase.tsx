@@ -143,7 +143,7 @@ import {
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
 import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
-import { answerSpokenOver } from '../../voice/handsFree';
+import { answerSpokenOver } from '../../voice/handsFreeRules';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
 import type { SpokenMetadata } from '../../voice/types';
 import { settledVoice } from '../../voice/chatVoice';

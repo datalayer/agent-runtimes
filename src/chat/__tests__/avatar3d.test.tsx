@@ -40,7 +40,7 @@ import {
   talkingMorphIndices,
   walkClipName,
   webglAvailable,
-} from '../assistant/avatar3d';
+} from '../assistant/avatar3dModel';
 
 vi.mock('three', () => {
   throw new Error('three.js is loaded only when WebGL can draw it');

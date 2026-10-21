@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatVoice } from '../index';
 import { SILENCE_MS, settledVoice } from '../chatVoice';
 import { PAUSE_CHOICES } from '../choices';
-import { TURN_SILENCE_MS } from '../handsFree';
+import { TURN_SILENCE_MS } from '../handsFreeRules';
 import {
   RATE_RANGE,
   VOICE_SETTINGS_KEY,

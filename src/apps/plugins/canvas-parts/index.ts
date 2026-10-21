@@ -28,7 +28,7 @@ import { getSkillSpecs } from '../../../specs/skills';
 import { listProtocolSpecs } from '../../../specs/protocols';
 import { listUI } from '../../../specs/ui';
 import { ASSISTANT_CHARACTERS } from '../../../chat/assistant/characters';
-import { AVATAR_3D_ID } from '../../../chat/assistant/avatar3d';
+import { AVATAR_3D_ID } from '../../../chat/assistant/avatar3dModel';
 import {
   LoopCanvasPart,
   type CanvasPartContribution,

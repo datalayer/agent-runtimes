@@ -21,7 +21,7 @@
  * - **Paused**: the person paused it (`Esc`, *Pause*), or nothing was said
  *   for `IDLE_PAUSE_MS`; nothing is heard until resumed.
  *
- * @module voice/handsFree
+ * @module voice/handsFreeRules
  */
 
 /** What hands-free is doing, shown at all times (VO-12). */

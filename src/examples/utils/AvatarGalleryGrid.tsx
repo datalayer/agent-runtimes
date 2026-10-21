@@ -28,7 +28,7 @@ import type { AssistantCharacterData } from '../../chat/assistant/formats/types'
 import {
   assistantModel3D,
   type AssistantModel3D,
-} from '../../chat/assistant/avatar3d';
+} from '../../chat/assistant/avatar3dModel';
 import {
   AssistantCharactersPlugin,
   assistantCharactersOf,

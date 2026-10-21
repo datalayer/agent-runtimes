@@ -54,7 +54,7 @@
  * writes to `.env.local`, never committed.
  */
 
-import { avatarShown } from '../chat/assistant/avatar3d';
+import { avatarShown } from '../chat/assistant/avatar3dModel';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flash, Heading, Text, Textarea } from '@primer/react';

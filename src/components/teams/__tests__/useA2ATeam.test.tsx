@@ -439,7 +439,7 @@ describe('a button pressed on what a peer showed', () => {
       await import('@datalayer/core/lib/otel/live');
     const { traceA2AFetch } = await import('../../inspector/a2aSpans');
     const { PERSON, transcriptOfSpans, lineText } =
-      await import('../sceneTranscript');
+      await import('../sceneTranscriptRules');
     let now = 1000;
     const tracer = createOtelLiveTracer({
       serviceName: 'Sales',

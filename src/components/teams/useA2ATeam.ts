@@ -82,7 +82,7 @@ import {
   type A2ATeamConnection,
   type A2ATeamFlow,
 } from './a2aTeamFlow';
-import { PERSON } from './sceneTranscript';
+import { PERSON } from './sceneTranscriptRules';
 import {
   toolLineOfStep,
   type BalloonToolLine,

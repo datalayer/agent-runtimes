@@ -21,7 +21,7 @@
  * @module chat/ChatFloating
  */
 
-import type { AssistantModel3D } from './assistant/avatar3d';
+import type { AssistantModel3D } from './assistant/avatar3dModel';
 import React, {
   useCallback,
   useEffect,

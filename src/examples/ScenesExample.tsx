@@ -27,7 +27,7 @@
  * Inspector over the page, on the one tracer every member records into.
  */
 
-import { avatarShown } from '../chat/assistant/avatar3d';
+import { avatarShown } from '../chat/assistant/avatar3dModel';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {

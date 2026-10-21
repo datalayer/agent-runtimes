@@ -10,9 +10,12 @@
  * Lists the tarball with `npm pack --dry-run --json` and reads every
  * `lib/**\/*.js` in it: each relative specifier must name a file the
  * tarball carries, written whole (`'./approvals.js'`, not `'./approvals'`:
- * Node's ESM loader adds no extension and looks up no `index.js`). Prints
- * each one that does not, and exits 1. Run it after the build and before
- * `npm pack`.
+ * Node's ESM loader adds no extension and looks up no `index.js`). And no
+ * two files of the tarball may have paths that differ only in case: on a
+ * case-insensitive file system (macOS, Windows) one overwrites the other
+ * when the package is installed (`voice/HandsFree.js` and
+ * `voice/handsFree.js` did). Prints each refusal and exits 1. Run it after
+ * the build and before `npm pack`.
  *
  * Usage: node scripts/check-npm-pack.mjs
  */
@@ -32,6 +35,18 @@ const packed = new Set(listing[0].files.map(({ path }) => path));
 const isFile = path => packed.has(path);
 
 const refused = [];
+
+const byFolded = new Map();
+for (const path of packed) {
+  const folded = path.toLowerCase();
+  const other = byFolded.get(folded);
+  if (other) {
+    refused.push(`${other} and ${path} differ only in case`);
+  } else {
+    byFolded.set(folded, path);
+  }
+}
+
 let read = 0;
 let specifiers = 0;
 for (const file of [...packed].filter(

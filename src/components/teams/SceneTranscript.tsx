@@ -27,7 +27,7 @@ import {
   transcriptText,
   type SceneTranscriptLine,
   type SceneTranscriptMember,
-} from './sceneTranscript';
+} from './sceneTranscriptRules';
 
 /** The transcript of a tracer's spans, kept current as they change. */
 export function useSceneTranscript(

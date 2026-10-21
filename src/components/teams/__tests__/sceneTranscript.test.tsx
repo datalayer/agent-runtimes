@@ -31,7 +31,7 @@ import {
   transcriptOfSpans,
   transcriptText,
   type SceneTranscriptMember,
-} from '../sceneTranscript';
+} from '../sceneTranscriptRules';
 import { SceneTranscript } from '../SceneTranscript';
 import { SceneView } from '../SceneView';
 import type { A2ATeamConnection } from '../a2aTeamFlow';

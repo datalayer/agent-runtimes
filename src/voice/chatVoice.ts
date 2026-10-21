@@ -15,7 +15,7 @@
 import { voiceFor } from '../specs/voices';
 import type { AppVoiceSpec } from '../types/agentspecs';
 import type { VoiceEngines } from './types';
-import { TURN_SILENCE_MS } from './handsFree';
+import { TURN_SILENCE_MS } from './handsFreeRules';
 import {
   heldVoiceSettings,
   saneVoiceSettings,

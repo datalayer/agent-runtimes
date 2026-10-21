@@ -22,7 +22,7 @@ import {
   transcriptOfRecord,
   transcriptOfSpans,
   type SceneTranscriptMember,
-} from '../sceneTranscript';
+} from '../sceneTranscriptRules';
 import type { RecordEntry } from '../../../apps/apps/records';
 
 type Fixture = {

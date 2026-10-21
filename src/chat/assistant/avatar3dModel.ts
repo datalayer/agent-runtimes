@@ -12,7 +12,7 @@
  * can draw 3D at all — so it is tested without WebGL; `Avatar3D` draws it,
  * loading three.js only when one is shown.
  *
- * @module chat/assistant/avatar3d
+ * @module chat/assistant/avatar3dModel
  */
 
 import type { AppAvatarModel3D } from '../../types/agentspecs';

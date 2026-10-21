@@ -19,7 +19,7 @@ export * from './usePeerSandbox';
 export * from './A2ATeamGraph';
 export * from './TeamNotebook';
 export * from './NotebookPreview';
-export * from './sceneTranscript';
+export * from './sceneTranscriptRules';
 export * from './SceneTranscript';
 export * from './SceneView';
 export * from './useBalloonRoom';

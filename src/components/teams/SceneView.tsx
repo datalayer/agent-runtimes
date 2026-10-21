@@ -25,7 +25,7 @@ import { SceneTranscript, useSceneTranscript } from './SceneTranscript';
 import type {
   SceneTranscriptLine,
   SceneTranscriptMember,
-} from './sceneTranscript';
+} from './sceneTranscriptRules';
 
 /** Which of the two the scene shows. */
 export type SceneViewChoice = 'graph' | 'transcript';
