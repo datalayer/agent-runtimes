@@ -412,6 +412,32 @@ async def keep_sound_in_ai_agents(
         )
 
 
+async def send_to_store(body: Dict[str, Any]) -> None:
+    """Send a session's entries through the active session store (MH-F03):
+    ai-agents for the record store, a file for the file store.
+
+    Raises
+    ------
+    RecordNotSent
+        As :func:`send_to_ai_agents` does; a file that cannot be written too.
+    """
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreRefused,
+        send_through_store,
+    )
+
+    try:
+        await send_through_store(body)
+    except SessionStoreRefused as refused:
+        raise RecordNotSent(
+            f"The record of {body.get('app_uid')} is not sent: {refused}"
+        ) from None
+    except OSError as refused:
+        raise RecordNotSent(
+            f"The record of {body.get('app_uid')} is not kept: {refused}"
+        ) from None
+
+
 #: Sends a turn's sound to keep: ``(sound, content_type=, params=)``.
 KeepSound = Callable[..., Awaitable[None]]
 
@@ -445,6 +471,101 @@ def session_facts(facts: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
         "archived": bool(given.get("archived", False)),
         "lineage": dict(given.get("lineage") or no_lineage()),
     }
+
+
+def session_from_entries(
+    uid: str, entries: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """A session as the record says it (MH-01, §2), from its entries in order
+    — the shape ``GET /sessions`` lists and ``GET /sessions/{uid}`` answers
+    for a session no runtime holds: ``None`` when the entries hold no
+    ``session`` entry (a session that cannot be listed, never a default).
+
+    Raises
+    ------
+    ValueError
+        When an entry says a state that is none (``stopped`` included).
+    """
+    opened = next((e for e in entries if e.get("kind") == "session"), None)
+    if opened is None:
+        return None
+    facts = session_facts(opened.get("payload") or {})
+    payload = opened.get("payload") or {}
+    described: Dict[str, Any] = {
+        "uid": uid,
+        "agent": facts["agent"],
+        "harness": facts["harness"],
+        "app": {
+            "id": str(payload.get("app") or ""),
+            "version": int(opened.get("version") or 0),
+        },
+        "instance": {
+            "app_uid": str(opened.get("app_uid") or ""),
+            "deployment_uid": str(opened.get("deployment_uid") or ""),
+            "version": int(opened.get("version") or 0),
+        },
+        "preview": not str(opened.get("deployment_uid") or ""),
+        "opened_by": {
+            "kind": "person" if opened.get("opened_by") else "nobody",
+            "uid": str(opened.get("opened_by") or ""),
+        },
+        "state": "open",
+        "turn": "idle",
+        "held": False,
+        "title": facts["title"],
+        "archived": facts["archived"],
+        "lineage": facts["lineage"],
+        "runs_on": facts["runs_on"],
+        "turns": 0,
+        "started_at": str(opened.get("at") or ""),
+        "resumed": False,
+        "kinds": sorted({str(e.get("kind") or "") for e in entries}),
+    }
+    for entry in entries:
+        kind, payload = entry.get("kind"), entry.get("payload") or {}
+        if kind in ("session", "paused", "ended"):
+            said = str(payload.get("state") or "open")
+            if said not in SESSION_STATES:
+                raise ValueError(
+                    f"There is no session state {said!r}: one of {', '.join(SESSION_STATES)}."
+                )
+            described["state"] = said
+            if kind == "session":
+                described["runs_on"] = dict(
+                    payload.get("runs_on") or described["runs_on"]
+                )
+                described["resumed"] = bool(payload.get("resumed"))
+        elif kind == "turn":
+            described["turns"] += 1
+        elif kind == "swapped":
+            described["agent"] = str(
+                payload.get("agent") or payload.get("to") or described["agent"]
+            )
+            described["harness"] = payload.get("harness") or payload.get("to_harness")
+        elif kind == "titled":
+            described["title"] = str(payload.get("title") or "")[:200]
+            described["archived"] = bool(payload.get("archived", described["archived"]))
+        elif kind == "cloned" and payload.get("from"):
+            described["lineage"] = {
+                **described["lineage"],
+                "forked_from": {
+                    "uid": str(payload["from"]),
+                    "at_turn": int(payload.get("at_turn") or 0),
+                },
+            }
+        elif kind == "imported":
+            described["lineage"] = {
+                **described["lineage"],
+                "imported_from": {
+                    "digest": str(payload.get("digest") or ""),
+                    "exported_at": str(payload.get("exported_at") or ""),
+                    "exported_by": {"uid": str(payload.get("exported_by") or "")},
+                    "redactions": int(payload.get("redactions") or 0),
+                },
+            }
+    if described["state"] == "ended":
+        described["runs_on"] = None
+    return described
 
 
 def session_state_of(entries: List[Dict[str, Any]]) -> str:
@@ -487,7 +608,7 @@ class AppRecorder:
     #: The agent only visitors without an account talk to, on the runtime its
     #: deployment is kept on (R-30): nothing of it is kept, as on theirs.
     visitors: bool = False
-    send: Send = send_to_ai_agents
+    send: Send = send_to_store
     keep_sound: KeepSound = keep_sound_in_ai_agents
 
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
@@ -1389,7 +1510,9 @@ __all__ = [
     "SESSION_STATES",
     "no_lineage",
     "runtime_runs_on",
+    "send_to_store",
     "session_facts",
+    "session_from_entries",
     "session_state_of",
     "RecordNotSent",
     "TURN_LIMIT",

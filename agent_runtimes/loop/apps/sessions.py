@@ -2720,43 +2720,37 @@ async def pause_held() -> List[str]:
 # --- the record, read back -------------------------------------------------------------
 
 
-async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
-    """A session's record, read from ai-agents as the caller."""
-    import httpx
-    from datalayer_core.utils.urls import DatalayerURLs
-
-    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
-    if not url:
-        raise SessionRefused(
-            503,
-            f"Session {session_uid} cannot be read back: no ai-agents is configured.",
-        )
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(
-            f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
-            params={"session_uid": session_uid, "limit": 1000},
-            headers={"Authorization": f"Bearer {bearer}"},
-        )
-    if response.status_code >= 300:
-        raise SessionRefused(
-            502,
-            f"The record of session {session_uid} could not be read "
-            f"({response.status_code}): {response.text[:200]}",
-        )
-    return list((response.json() or {}).get("entries") or [])
-
-
-#: Who reads a session's record back: ai-agents, or a test.
-_reader: Dict[str, Callable[[str, str], Awaitable[List[Dict[str, Any]]]]] = {
-    "read": _read_record
-}
-
-
 def use_record_reader(
     reader: Optional[Callable[[str, str], Awaitable[List[Dict[str, Any]]]]],
 ) -> None:
-    """Who reads a session's record back; ``None`` for ai-agents."""
-    _reader["read"] = reader or _read_record
+    """Who reads a session's record back for the record store; ``None`` for ai-agents (a test)."""
+    from agent_runtimes.loop.apps.session_store import use_record_reader as use
+
+    use(reader)
+
+
+async def record_entries(
+    session_uid: str, up_to_turn: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """A session's entries from the active session store (MH-F03).
+
+    Raises
+    ------
+    SessionRefused
+        When the store cannot answer, in its sentence.
+    """
+    from agent_runtimes.loop.apps.session_store import (
+        SessionStoreError,
+        SessionStoreRefused,
+        active_store,
+    )
+
+    try:
+        return await active_store().entries(session_uid, up_to_turn=up_to_turn)
+    except SessionStoreRefused as refused:
+        raise SessionRefused(503, str(refused)) from None
+    except SessionStoreError as refused:
+        raise SessionRefused(refused.status, refused.reason) from None
 
 
 async def conversation_from_record(
@@ -2785,7 +2779,7 @@ async def conversation_from_record(
             401,
             f"Session {session_uid} is read back from its record with your token: send one.",
         )
-    entries = await _reader["read"](session_uid, bearer)
+    entries = await record_entries(session_uid)
     app_uid = str(instance.get("app_uid") or app.id)
     if any(str(entry.get("app_uid") or app_uid) != app_uid for entry in entries):
         raise SessionRefused(
@@ -2840,6 +2834,7 @@ __all__ = [
     "put_in_sandbox",
     "question_in_words",
     "question_of",
+    "record_entries",
     "session_of",
     "text_in_words",
     "use_record_reader",

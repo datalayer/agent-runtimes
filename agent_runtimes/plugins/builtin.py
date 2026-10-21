@@ -15,7 +15,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_runtimes.plugins.points import HARNESSES, HarnessContribution
+from agent_runtimes.plugins.points import (
+    HARNESSES,
+    SESSION_STORES,
+    HarnessContribution,
+)
 
 
 def catalogue_harnesses() -> list[HarnessContribution]:
@@ -29,11 +33,17 @@ def catalogue_harnesses() -> list[HarnessContribution]:
     ]
 
 
-def contribute_builtins(contributions: Any, *, order: int = 100) -> None:
+def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
     """Contribute today's implementations, as the built-in plugin."""
+    from agent_runtimes.loop.apps.session_store import FILE_STORE, RECORD_STORE
+
     for harness in catalogue_harnesses():
         contributions.contribute(
             HARNESSES, harness, contribution_id=harness.id, order=order
+        )
+    for store in (RECORD_STORE, FILE_STORE):
+        contributions.contribute(
+            SESSION_STORES, store, contribution_id=store.name, order=order
         )
 
 

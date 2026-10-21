@@ -1121,6 +1121,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         nonlocal _mcp_toolsets_task, _mcp_servers_task, _durable_lifecycle
         logger.info("Starting agent-runtimes server...")
 
+        # One session store, chosen by configuration (MH-F03): two named, or
+        # one nothing contributes, refuse the host before it serves a session.
+        from .loop.apps.session_store import active_store
+
+        logger.info("Sessions are kept in the %s store", active_store().name)
+
         # ---- DBOS Durable Execution ----
         from .durable import DurableConfig, DurableLifecycle
 
