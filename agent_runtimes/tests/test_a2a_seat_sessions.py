@@ -20,6 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterator
 
+import jwt
 import pytest
 
 from agent_runtimes.adapters.acp_agent import ACPAgent
@@ -28,8 +29,6 @@ from agent_runtimes.loop.apps import sessions
 from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.protocol_state.a2a import DurableStorage
 from agent_runtimes.routes import a2a as a2a_routes
-from agent_runtimes.routes import apps as apps_routes
-from agent_runtimes.tests.test_app_sessions import Verifier
 from agent_runtimes.guardrails.shield_policy import policies_of
 from agent_runtimes.tests.test_a2a_harness_worker import (  # noqa: F401 - fixtures
     _statuses,
@@ -58,17 +57,16 @@ def harness_agent(workspace: Path, state: Any) -> ACPAgent:
     )
 
 
-#: The execution's token, which the seat's session is opened with: the person it names.
-CREDENTIAL = "ada"
+#: The execution's token, which the seat's session is opened in the name of: its `sub`.
+PERSON = "ada"
+CREDENTIAL = jwt.encode({"sub": PERSON, "user": {"firstName": "Ada"}}, "a-secret", algorithm="HS256")
 
 
 @pytest.fixture
-def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[FileSessionStore]:
+def store(tmp_path: Path) -> Iterator[FileSessionStore]:
     """The file session store, in the test's folder: what the seat's record is written to."""
     kept = FileSessionStore(root=tmp_path / "sessions")
     use_session_store(kept)
-    # The execution's token is the person it names, as the apps tests verify one.
-    monkeypatch.setattr(apps_routes, "VERIFIER", Verifier())
     yield kept
     use_session_store(None)
     sessions.forget_sessions()
@@ -168,7 +166,7 @@ async def test_two_tasks_of_one_seat_share_a_session_and_its_record_holds_both_t
     assert head["payload"]["runs_on"] == {"kind": "team_run", "execution_id": ROOT, "seat": "coder"}
     assert head["payload"]["app"] == f"team-{TEAM}" and head["app_uid"] == f"team:{TEAM}"
     assert head["payload"]["agent"] == agent.spec_id
-    assert head["opened_by"] == CREDENTIAL
+    assert head["opened_by"] == PERSON
     assert kinds.count("turn") == 2
     turns = [entry["payload"] for entry in entries if entry["kind"] == "turn"]
     assert turns[0]["asked"] == "plan edit" and turns[1]["asked"] == "say hello again"

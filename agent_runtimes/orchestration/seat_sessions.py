@@ -155,17 +155,28 @@ class SeatRun:
         return session_meta(self.uid, self.seat, self.execution_id)
 
 
-async def _caller_of(credential: Optional[str]) -> Any:
-    """Who the task runs as: the execution's credential verified by the platform, else the machine itself."""
-    from ..loop.apps.callers import LOCAL, CallerRefused
-    from ..routes import apps as apps_routes
+def _caller_of(credential: Optional[str]) -> Any:
+    """Who the seat's session is opened as: the person — or the principal — the
+    execution's token names, else the machine itself.
+
+    The token is the execution's own: the control plane exchanged it for the
+    run (O1-17) and the route that carried the task authenticated the request
+    it came on; the worker already acts with it. Its claims say whose name the
+    session is in; the platform is not asked a second time (a pool pod's
+    worker has no IAM to ask in every setting).
+    """
+    from ..loop.apps.callers import LOCAL, Caller, _unverified_claims, person_name
 
     if not credential:
         return LOCAL
-    try:
-        return await apps_routes.VERIFIER.verify(credential)
-    except CallerRefused as refused:
-        raise SeatRefused(f"The execution's token opens no session: {refused.reason}") from None
+    claims = _unverified_claims(credential)
+    subject = str(claims.get("sub") or claims.get("uid") or "")
+    if not subject:
+        raise SeatRefused("The execution's token names nobody to open the seat's session as.")
+    agent = str(claims.get("agent_uid") or "")
+    if agent and agent == subject:
+        return Caller(kind="principal", uid=agent, app_uid=str(claims.get("app_uid") or ""))
+    return Caller(kind="person", uid=subject, name=person_name(claims))
 
 
 async def seat_run(
@@ -228,7 +239,7 @@ async def seat_run(
     runs_on = seat_runs_on(root, seat["seat"])
     uid = session_of_meta(meta) or ""
     bound = str(getattr(agent, "spec_id", "") or "")
-    caller = await _caller_of(credential)
+    caller = _caller_of(credential)
     acts_as = {"kind": str(caller.kind), "uid": str(caller.uid or "")}
     opened = False
     try:
