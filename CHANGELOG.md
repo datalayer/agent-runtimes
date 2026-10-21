@@ -7,6 +7,17 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.67
+
+21 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). Three defects of the session round, found by the team session's builder, and what 1.5.66's release workflow reported.
+
+- **A local resume needs no token** (MH-03): a session rebuilt from its record asks for the caller's token only when the active session store is the record's — the file store reads its own files, so a resume on a self-hosted runtime, or a seat's on its worker, is not refused 401.
+- **A rebuilt tool row is shown again** (MH-03): the displays a resume rebuilds from the record — tool rows, steps, decisions, approvals — are kept in the wire form a live row's is (`type`, `text`, `data`), so the resume shows them again on the page instead of failing on the stream.
+- **A credential is redacted wherever it is** (MH-13): the file format replaces `Bearer …`, `Basic …` and `token …` under any key or inside a sentence, and the value of a key, secret or password field by its name (`arguments.token`, `client_secret`), each counted under `bearer_token`; a count named `tokens` and a path under `key` are left as they are.
+- The release's tests: the plugin packages of `examples/plugins` are placed on the path without pip, the generator tests skip without the agentspecs clone beside, the sessions example keeps a store of its own, the fake harness of the tests is contributed on a platform of their own, `loop apps threads|feedback` are asserted retired, a file given carries its digest, the session operations are the person's own routes on a kept deployment's runtime.
+
+Needs agentspecs 0.0.123 and datalayer-agent-shield 0.2.13.
+
 ## 1.5.66
 
 21 October 2026 ([Sessions](https://agent-runtimes.datalayer.tech/docs/sessions)). **The session becomes the unit** of agent-runtimes: one id a person lists, resumes, hands to another agent, clones, exports and ends.
