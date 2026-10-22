@@ -1366,6 +1366,7 @@ CHAT_UI_0_0_1 = UISpec(
             "loop.command",
             "loop.document.toolbar.item",
             "loop.notebook.toolbar.item",
+            "loop.session.action",
             "loop.viewType",
         ],
         commands=["chat"],
