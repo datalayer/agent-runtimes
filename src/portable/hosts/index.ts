@@ -4,7 +4,7 @@
  */
 
 /**
- * What a chat host service (Slack, Discord) shares, on Node: the ai-agents
+ * What a chat host service (Slack, Discord, WhatsApp) shares, on Node: the ai-agents
  * host contracts and client, the agent client over the session API, the
  * semantic events a turn is reduced to, approval renderers, deliveries, the
  * turn's state, application resolution, the durable queue, quotas, secrets

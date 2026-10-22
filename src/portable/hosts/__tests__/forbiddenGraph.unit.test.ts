@@ -65,6 +65,7 @@ describe('the forbidden production graph', () => {
       '@datalayer/reactor',
       '@datalayer/slack',
       '@datalayer/discord',
+      '@datalayer/whatsapp',
       '@primer/react',
       'react',
     ])

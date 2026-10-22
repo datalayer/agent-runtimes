@@ -400,7 +400,7 @@ def test_a_turn_carries_its_provenance_as_the_contract_says(
     # The fields' own caps keep the largest provenance within the limit.
     largest = routes.TurnProvenance(
         host_kind="h" * 32,
-        place={"kind": "channel", "id": "c" * 128},
+        place={"kind": "channel", "id": "c" * 255},
         thread="t" * 128,
         message_id="m" * 128,
     )
@@ -419,6 +419,68 @@ def test_a_turn_carries_its_provenance_as_the_contract_says(
             provenance=wrong,
         )
         assert refused.status_code == 422, (wrong, refused.text)
+
+
+def test_a_whatsapp_turn_carries_its_chat_and_its_message(
+    runtime: Runtime, remote: TestClient, hosted: Any
+) -> None:
+    """WhatsApp's forms of the contract: a 1:1 chat is a direct place named
+    by the person's business-scoped user id — the longest one too — a group a
+    channel, and the message its wamid; the session uid is the contract's."""
+    whatsapp = CONTRACTS["whatsapp"]
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    session = whatsapp["session"]["uid"]
+    first = _turn(
+        events_of(
+            _start(
+                remote,
+                "host:alice:dep-1",
+                session,
+                external_event_id=whatsapp["provenance"]["message_id"],
+                provenance=whatsapp["provenance"],
+            )
+        )
+    )
+    assert first["replayed"] is False and first["session"] == session
+    longest = {
+        **whatsapp["provenance"],
+        "place": {"kind": "direct", "id": whatsapp["external_user_id_longest"]},
+        "message_id": "wamid.longest",
+    }
+    assert (
+        _start(
+            remote,
+            "host:alice:dep-1",
+            "whatsapp-longest-0001",
+            external_event_id="wamid.longest",
+            provenance=longest,
+        ).status_code
+        == 200
+    )
+    group = {
+        **whatsapp["provenance"],
+        "place": whatsapp["group"]["place"],
+        "message_id": "wamid.group",
+    }
+    started = _start(
+        remote,
+        "host:alice:dep-1",
+        whatsapp["group_session"]["uid"],
+        external_event_id="wamid.group",
+        provenance=group,
+    )
+    assert _turn(events_of(started))["session"] == whatsapp["group_session"]["uid"]
+    too_long = {**longest, "place": {"kind": "direct", "id": "U" * 256}}
+    assert (
+        _start(
+            remote,
+            "host:alice:dep-1",
+            "whatsapp-refused-0001",
+            external_event_id="wamid.refused",
+            provenance=too_long,
+        ).status_code
+        == 422
+    )
 
 
 def test_an_external_turn_holds_to_the_shared_contract(

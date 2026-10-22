@@ -16,7 +16,9 @@ import { createHash } from 'node:crypto';
  * `<kind>-<40 hex>`: the SHA-256 of the thread's parts joined by `:`, and
  * `:<generation>` once the thread started over or switched application. The
  * same parts give the same uid (Slack: app, enterprise or `-`, team,
- * channel, thread ts; Discord: application, guild, channel, thread).
+ * channel, thread ts; Discord: application, guild, channel, thread;
+ * WhatsApp: WABA, phone number id, and the person's BSUID for a chat or the
+ * group's id for a group).
  */
 export function hostSessionUid(
   kind: string,

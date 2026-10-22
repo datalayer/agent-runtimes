@@ -28,6 +28,7 @@ export const FORBIDDEN: readonly RegExp[] = [
   /^@datalayer\/reactor$/,
   /^@datalayer\/slack$/,
   /^@datalayer\/discord$/,
+  /^@datalayer\/whatsapp$/,
 ];
 
 /** A package reached, with the chain of dependencies that reached it. */

@@ -8,7 +8,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
 /**
- * The generic Datalayer host contracts, as ai-agents answers them, for every chat host (Slack, Discord).
+ * The generic Datalayer host contracts, as ai-agents answers them, for every chat host (Slack, Discord, WhatsApp).
  * These shapes are shared with ai-agents through `contracts.json`, beside
  * this file and byte-identical to ai-agents' `tests/fixtures/hosts/`, which
  * both sides test. A delivery's `target` stays opaque here: each host

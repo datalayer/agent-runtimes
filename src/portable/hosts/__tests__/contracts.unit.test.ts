@@ -42,6 +42,22 @@ const contracts = JSON.parse(
   };
   headers: Record<string, string>;
   presentation: { example: unknown; version: number };
+  exchange: { place_kinds: string[] };
+  external_turn: { provenance_limit_bytes: number };
+  whatsapp: {
+    waba_id: string;
+    phone_number_id: string;
+    bind_request: { external_id: string };
+    external_user_id: string;
+    direct: { place: { kind: string; id: string } };
+    group: { id: string; place: { kind: string; id: string } };
+    provenance: {
+      host_kind: string;
+      place: { kind: string; id: string };
+      message_id: string;
+    };
+    target: Record<string, string>;
+  };
 };
 
 describe('Datalayer host contracts', () => {
@@ -133,5 +149,33 @@ describe('Datalayer host contracts', () => {
         state: 'pending',
       }),
     ).toThrow();
+  });
+
+  it("holds WhatsApp's forms: one number, a BSUID never a phone number, a chat direct and a group a channel", () => {
+    const whatsapp = contracts.whatsapp;
+    expect(whatsapp.bind_request.external_id).toBe(
+      `${whatsapp.waba_id}:${whatsapp.phone_number_id}`,
+    );
+    expect(whatsapp.external_user_id).toMatch(/^[A-Z]{2}\.[\x21-\x7e]+$/);
+    expect(contracts.exchange.place_kinds).toContain(
+      whatsapp.direct.place.kind,
+    );
+    expect(whatsapp.direct.place).toEqual({
+      kind: 'direct',
+      id: whatsapp.external_user_id,
+    });
+    expect(whatsapp.group.place).toEqual({
+      kind: 'channel',
+      id: whatsapp.group.id,
+    });
+    expect(whatsapp.provenance.host_kind).toBe('whatsapp');
+    expect(whatsapp.provenance.message_id).toMatch(/^wamid\./);
+    expect(
+      Buffer.byteLength(JSON.stringify(whatsapp.provenance)),
+    ).toBeLessThanOrEqual(contracts.external_turn.provenance_limit_bytes);
+    expect(whatsapp.target).toEqual({
+      phoneNumberId: whatsapp.phone_number_id,
+      userId: whatsapp.external_user_id,
+    });
   });
 });

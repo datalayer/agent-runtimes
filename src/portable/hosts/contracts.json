@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The generic host contracts of the chat hosts, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and agent-runtimes (src/portable/hosts, read by the Slack and Discord adapters from lib/portable/hosts): each side's tests check its half against this file.",
+  "about": "The generic host contracts of the chat hosts, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and agent-runtimes (src/portable/hosts, read by the Slack, Discord and WhatsApp adapters from lib/portable/hosts): each side's tests check its half against this file.",
   "headers": {
     "host_key": "X-Datalayer-Host-Key",
     "signature": "X-Datalayer-Signature",
@@ -492,6 +492,64 @@
       "messageId": "456789012345678901",
       "threadId": "456789012345678901",
       "userId": "567890123456789012"
+    }
+  },
+  "whatsapp": {
+    "about": "WhatsApp's forms of the generic contracts: the installation is <waba_id>:<phone_number_id>, one per connected business number; a person is their business-scoped user id (BSUID: a country code, a period and up to 128 characters; never the phone number), which the external id pattern admits as it is, no hash in between; a 1:1 chat is a direct place named by the BSUID, a group a channel named by its group id; the session uid is hostSessionUid(\"whatsapp\", [waba_id, phone_number_id, user_id]) for a chat and [waba_id, phone_number_id, group_id] for a group; a turn's provenance names the message by its wamid.",
+    "waba_id": "102290129340398",
+    "phone_number_id": "106540352242922",
+    "bind_request": {
+      "code": "dlhc_…",
+      "external_id": "102290129340398:106540352242922",
+      "name": "Acme"
+    },
+    "external_user_id": "US.13491208655302741918",
+    "external_user_name": "Alice",
+    "external_user_id_longest": "US.11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+    "direct": {
+      "place": {
+        "kind": "direct",
+        "id": "US.13491208655302741918"
+      }
+    },
+    "group": {
+      "id": "120363025246125486",
+      "place": {
+        "kind": "channel",
+        "id": "120363025246125486"
+      }
+    },
+    "session": {
+      "parts": [
+        "102290129340398",
+        "106540352242922",
+        "US.13491208655302741918"
+      ],
+      "uid": "whatsapp-870e7e8165519947ec9c7df03d378b342cee380e"
+    },
+    "group_session": {
+      "parts": [
+        "102290129340398",
+        "106540352242922",
+        "120363025246125486"
+      ],
+      "uid": "whatsapp-49aeadff03b2d02e6359121f9a55bae904640b35"
+    },
+    "provenance": {
+      "host_kind": "whatsapp",
+      "place": {
+        "kind": "direct",
+        "id": "US.13491208655302741918"
+      },
+      "message_id": "wamid.HBgLMTU1NTEyMzQ1NjcVAgASGBQzQUY3RjU0QjRFRjc2MzBCNkJCNAA="
+    },
+    "target": {
+      "phoneNumberId": "106540352242922",
+      "userId": "US.13491208655302741918"
+    },
+    "group_target": {
+      "phoneNumberId": "106540352242922",
+      "groupId": "120363025246125486"
     }
   }
 }

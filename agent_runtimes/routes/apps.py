@@ -1012,12 +1012,17 @@ PROVENANCE_LIMIT_BYTES = 1024
 
 
 class TurnPlace(BaseModel):
-    """Where in the host a turn was asked: a channel (a thread as its parent), or a direct conversation."""
+    """Where in the host a turn was asked: a channel (a thread as its parent), or a direct conversation.
+
+    Its id is as long as ai-agents lets a host name one of its users (255): a
+    WhatsApp chat is named by the person's business-scoped user id, which
+    runs to 131 characters.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     kind: str = Field(..., pattern=r"^(channel|direct)$")
-    id: str = Field(..., min_length=1, max_length=128)
+    id: str = Field(..., min_length=1, max_length=255)
 
 
 class TurnProvenance(BaseModel):
