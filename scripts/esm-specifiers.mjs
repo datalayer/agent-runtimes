@@ -20,7 +20,8 @@
  */
 
 import ts from 'typescript';
-import { posix } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, posix } from 'node:path';
 
 /**
  * Every relative specifier of `text`, with the offset of its first
@@ -73,4 +74,73 @@ export function resolveSpecifier(from, specifier, isFile) {
     }
   }
   return { status: 'missing' };
+}
+
+/**
+ * The deep specifiers of a module into another package — `'@datalayer/core/lib/state'`,
+ * `'pkg/lib/x'` — with where each starts in the text. A package's bare name
+ * (`'react'`, `'@datalayer/core'`) is not one: its `main` or `exports` decides.
+ */
+export function deepSpecifiers(text) {
+  const { importedFiles } = ts.preProcessFile(text, true, true);
+  const found = [];
+  for (const { fileName, pos } of importedFiles) {
+    if (fileName.startsWith('.') || fileName.startsWith('/')) continue;
+    if (fileName.includes(':') || /[?#]/.test(fileName)) continue;
+    const parts = fileName.split('/');
+    const nameLength = fileName.startsWith('@') ? 2 : 1;
+    if (parts.length <= nameLength) continue;
+    const start = text.indexOf(fileName, pos);
+    if (start < 0) {
+      throw new Error(`the specifier ${fileName} is not at ${pos}`);
+    }
+    found.push({
+      specifier: fileName,
+      start,
+      pkg: parts.slice(0, nameLength).join('/'),
+      subpath: parts.slice(nameLength).join('/'),
+    });
+  }
+  return found;
+}
+
+/**
+ * Where a package is installed, looked up from `fromDir` upwards as Node
+ * does; `null` when it is not.
+ */
+export function packageDirOf(pkg, fromDir) {
+  let dir = fromDir;
+  for (;;) {
+    const candidate = join(dir, 'node_modules', pkg);
+    if (existsSync(join(candidate, 'package.json'))) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/**
+ * A deep specifier written whole, as Node's ESM loader needs it in a
+ * package with no `exports` map: `'<pkg>/lib/x'` becomes `'<pkg>/lib/x.js'`
+ * or `'<pkg>/lib/x/index.js'`. `whole` when it already names a file or its
+ * package maps its own paths (`exports`), `partial` with the rewrite, and
+ * `missing` when the package or the file is not there.
+ */
+export function resolveDeepSpecifier({ specifier, pkg, subpath }, fromDir) {
+  const dir = packageDirOf(pkg, fromDir);
+  if (!dir) return { status: 'missing' };
+  const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+  if (manifest.exports !== undefined) return { status: 'whole' };
+  const target = join(dir, subpath);
+  if (posix.extname(subpath) && existsSync(target)) return { status: 'whole' };
+  if (existsSync(`${target}.js`)) {
+    return { status: 'partial', whole: `${specifier}.js` };
+  }
+  if (existsSync(join(target, 'index.js'))) {
+    return {
+      status: 'partial',
+      whole: `${specifier.replace(/\/$/, '')}/index.js`,
+    };
+  }
+  return existsSync(target) ? { status: 'whole' } : { status: 'missing' };
 }

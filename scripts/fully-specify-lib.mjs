@@ -9,14 +9,22 @@
  * `'./approvals'` becomes `'./approvals.js'`, `'./chat'` (a folder)
  * `'./chat/index.js'`, so Node's ESM loader reads `lib/` as a bundler does.
  * A specifier that already names a file, or names none, is left as it is
- * (`check-npm-pack.mjs` refuses the second). Run again, it changes nothing.
+ * (`check-npm-pack.mjs` refuses the second). A deep import into a package
+ * with no `exports` map is written whole the same way, against the package
+ * installed (`'@datalayer/core/lib/state/substates/IAMState'` becomes
+ * `'…/IAMState.js'`): Node refuses it otherwise. Run again, it changes nothing.
  *
  * Usage: node scripts/fully-specify-lib.mjs [lib]
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { relativeSpecifiers, resolveSpecifier } from './esm-specifiers.mjs';
+import {
+  deepSpecifiers,
+  relativeSpecifiers,
+  resolveDeepSpecifier,
+  resolveSpecifier,
+} from './esm-specifiers.mjs';
 
 const root = resolve(process.argv[2] ?? 'lib');
 const posixOf = path => relative(root, path).split(sep).join('/');
@@ -44,6 +52,13 @@ for (const file of files.filter(name => name.endsWith('.js'))) {
       start,
       ...resolveSpecifier(file, specifier, isFile),
     }))
+    .concat(
+      deepSpecifiers(text).map(deep => ({
+        specifier: deep.specifier,
+        start: deep.start,
+        ...resolveDeepSpecifier(deep, process.cwd()),
+      })),
+    )
     .filter(({ status }) => status === 'partial');
   if (edits.length === 0) continue;
   let out = text;

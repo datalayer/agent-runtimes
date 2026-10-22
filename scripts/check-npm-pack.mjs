@@ -22,7 +22,12 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { relativeSpecifiers, resolveSpecifier } from './esm-specifiers.mjs';
+import {
+  deepSpecifiers,
+  relativeSpecifiers,
+  resolveDeepSpecifier,
+  resolveSpecifier,
+} from './esm-specifiers.mjs';
 
 const listing = JSON.parse(
   execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
@@ -53,7 +58,19 @@ for (const file of [...packed].filter(
   path => path.startsWith('lib/') && path.endsWith('.js'),
 )) {
   read += 1;
-  for (const { specifier } of relativeSpecifiers(readFileSync(file, 'utf8'))) {
+  const text = readFileSync(file, 'utf8');
+  // A deep import into a package with no `exports` map must name its file:
+  // the package found is the one installed, as Node would find it.
+  for (const deep of deepSpecifiers(text)) {
+    const { status, whole } = resolveDeepSpecifier(deep, process.cwd());
+    if (status === 'partial') {
+      specifiers += 1;
+      refused.push(
+        `${file}: '${deep.specifier}' is not written whole (Node needs '${whole}')`,
+      );
+    }
+  }
+  for (const { specifier } of relativeSpecifiers(text)) {
     specifiers += 1;
     const { status, whole } = resolveSpecifier(file, specifier, isFile);
     if (status === 'missing') {
@@ -74,4 +91,6 @@ if (refused.length > 0) {
   console.error(`check-npm-pack: ${refused.length} refused`);
   process.exit(1);
 }
-console.log('check-npm-pack: every relative import of lib/ is in the tarball');
+console.log(
+  'check-npm-pack: every relative import of lib/ is in the tarball, every deep import written whole',
+);
