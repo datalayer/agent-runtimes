@@ -2113,7 +2113,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         variant: {
           $ref: '#/$defs/ThemeVariant',
           description:
-            'The theme: `datalayer`, `spatial`, `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun` or `loop`',
+            'The theme: `datalayer`, `spatial`, `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `loop` or `vscode`',
         },
         mode: {
           anyOf: [
@@ -2690,6 +2690,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'ivory',
         'sun',
         'loop',
+        'vscode',
       ],
       title: 'ThemeVariant',
       type: 'string',

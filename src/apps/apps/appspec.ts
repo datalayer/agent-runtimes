@@ -116,6 +116,7 @@ export const APP_THEME_VARIANTS: AppThemeVariant[] = [
   'ivory',
   'sun',
   'loop',
+  'vscode',
 ];
 
 /** The colour modes a theme is worn in. */

@@ -735,7 +735,8 @@ export type AppThemeVariant =
   | 'sand'
   | 'ivory'
   | 'sun'
-  | 'loop';
+  | 'loop'
+  | 'vscode';
 
 /** The colour mode it is worn in: `auto` follows the device. */
 export type AppThemeMode = 'light' | 'dark' | 'auto';

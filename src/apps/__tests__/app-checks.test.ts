@@ -614,7 +614,7 @@ describe('the instant checks', () => {
     const said = (theme: unknown) =>
       checkAppspec({ ...BASE, interface: { theme } }).problems;
     expect(said({ variant: 'neon' })).toContain(
-      'interface.theme.variant: is one of datalayer, spatial, lovely, matrix, earth, sand, ivory, sun, loop.',
+      'interface.theme.variant: is one of datalayer, spatial, lovely, matrix, earth, sand, ivory, sun, loop, vscode.',
     );
     expect(said({ variant: 'sun', mode: 'night' })).toContain(
       'interface.theme.mode: is one of light, dark, auto.',
