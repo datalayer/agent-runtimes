@@ -1021,8 +1021,8 @@ class A2AWorker(_FastA2AWorker):
 
         try:
             seat = await seat_run(self.agent, self.agent_id, meta, credential, prompt)
-        except SeatRefused as refused:
-            raise RuntimeError(str(refused)) from None
+        except SeatRefused as seat_refused:
+            raise RuntimeError(str(seat_refused)) from None
         if seat is not None:
             conversation = seat.history()
         context = AgentContext(
@@ -1174,9 +1174,9 @@ class A2AWorker(_FastA2AWorker):
                     if isinstance(event.data, ModelBudgetReached):
                         raise ModelBudgetExceeded(event.data)
                     raise RuntimeError(str(event.data))
-        except BaseException as stopped:
+        except BaseException as stopped_by:
             if seat is not None:
-                await seat.failed(redact(str(stopped) or type(stopped).__name__))
+                await seat.failed(redact(str(stopped_by) or type(stopped_by).__name__))
             raise
         finally:
             close_steering(task_id)

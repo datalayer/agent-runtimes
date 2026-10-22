@@ -224,7 +224,8 @@ def test_a_graceful_stop_leaves_paused_entries_for_two_held_sessions(
     assert sorted(paused) == ["session-0103", "session-0104"]
     for uid in ("session-0103", "session-0104"):
         assert [e["state"] for e in _state_entries(runtime, uid)] == ["open", "paused"]
-        assert sessions.session_of(uid).state == "paused"
+        held = sessions.session_of(uid)
+        assert held is not None and held.state == "paused"
     # Already paused: a second graceful stop pauses nothing more.
     assert asyncio.run(sessions.pause_held()) == []
 

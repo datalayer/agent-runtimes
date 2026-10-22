@@ -775,13 +775,14 @@ class AppRecorder:
                 # record with no opener, and the person's own read of the
                 # session leaves them out (found on r1, 22 October 2026: a
                 # Codex turn after a swap had its `turn` row unread).
-                for kept, given in (
+                carried: List[Tuple[Dict[str, Any], Dict[str, Any]]] = [
                     (self._opened, earlier._opened),
                     (self._opener_names, earlier._opener_names),
                     (self._signed, earlier._signed),
                     (self._woken, earlier._woken),
                     (self._turns, earlier._turns),
-                ):
+                ]
+                for kept, given in carried:
                     if session in given:
                         kept[session] = given[session]
                 return

@@ -79,6 +79,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Union,
 )
 
 from pydantic import BaseModel
@@ -2775,7 +2776,9 @@ async def rebind(live: "LiveSession", agent: str, request: Any) -> None:
 
 
 async def run_hooks(
-    event: str, session: "LiveSession", facts: Mapping[str, Any]
+    event: str,
+    session: Union["LiveSession", "RecordedSession"],
+    facts: Mapping[str, Any],
 ) -> None:
     """The ``session.hook`` contributions before an operation (MH-F06): a
     refusal is the operation's, in the hook's sentence.
@@ -3412,7 +3415,7 @@ def turns_of(source: Any) -> int:
     return int(source.described.get("turns") or 0)
 
 
-async def _store():
+async def _store() -> Any:
     from agent_runtimes.loop.apps.session_store import (
         SessionStoreError,
         SessionStoreRefused,
@@ -3772,7 +3775,7 @@ async def import_session(
     harness_id = harness.id if harness is not None else None
     new_uid = _new_id()
     digest = digest_of(lines)
-    lineage = {
+    lineage: Dict[str, Any] = {
         "forked_from": None,
         "imported_from": {
             "digest": digest,

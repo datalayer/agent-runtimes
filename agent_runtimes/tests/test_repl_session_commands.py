@@ -54,7 +54,9 @@ def tux(
 
     use_session_store(FileSessionStore(root=tmp_path / "sessions"))
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
-    agent_recorder("notes-assistant").send = send_to_store
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
 
     def request(
         method: str, url: str, headers: Any = None, timeout: Any = None, **kwargs: Any

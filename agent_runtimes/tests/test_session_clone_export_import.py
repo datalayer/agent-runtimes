@@ -53,7 +53,9 @@ def through_store(runtime: Runtime) -> Runtime:  # noqa: F811 - the fixture
     from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
 
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
-    agent_recorder("notes-assistant").send = send_to_store
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
     return runtime
 
 
@@ -237,7 +239,9 @@ def test_export_redacts_counts_carries_files_as_entries_and_writes_the_digest(
         },
     }
     through_store.make("notes-assistant", acting, {"app_uid": "app-1", "version": 3})
-    agent_recorder("notes-assistant").send = send_to_store
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
     _open(remote, "session-e001")
     _say(remote, "session-e001", "Two")
     live = sessions.session_of("session-e001")
@@ -264,7 +268,7 @@ def test_export_redacts_counts_carries_files_as_entries_and_writes_the_digest(
     asyncio.run(live.recorder.flush("session-e001"))
     # The harness declares OPENAI_API_KEY: its value is redacted by name.
     live.bound_agent = HARNESS_AGENT
-    live._shield = lambda: type(
+    live._shield = lambda: type(  # type: ignore[method-assign]
         "S",
         (),
         {
@@ -282,7 +286,7 @@ def test_export_redacts_counts_carries_files_as_entries_and_writes_the_digest(
             "_acp_of": {},
             "sessions": {},
         },
-    )()  # type: ignore[method-assign]
+    )()
     response = remote.get(
         "/api/v1/apps/sessions/session-e001/export", headers=as_("ada")
     )

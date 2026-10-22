@@ -1648,7 +1648,7 @@ async def list_sessions(
     for recorded in page.sessions:
         # A session held here is said as the runtime holds it: its turn phase
         # and what it asks are the runtime's, not the record's.
-        listed.append(by_uid.pop(recorded["uid"], None) or {**recorded, "held": False})
+        listed.append(by_uid.pop(recorded["uid"], {}) or {**recorded, "held": False})
     if not after:
         # Held sessions the record does not list yet (its write in flight): first.
         listed = [*by_uid.values(), *listed]
@@ -1751,7 +1751,7 @@ def _app_of(app_id: str) -> Optional[Tuple[AppSpec, Dict[str, Any]]]:
         instance = dict((stored or {}).get("app_instance") or {})
         try:
             app = load_app(spec)
-        except Exception:  # noqa: BLE001 - another agent's spec, not this one's
+        except Exception:  # nosec B112  # noqa: BLE001 - another agent's spec, not this one's
             continue
         if app.id == app_id or str(instance.get("app_uid") or "") == app_id:
             return app, instance

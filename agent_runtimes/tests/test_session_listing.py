@@ -30,7 +30,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     runtime,
 )
 
-OPENED = {
+OPENED: Dict[str, Any] = {
     "kind": "session",
     "summary": "started",
     "payload": {
@@ -300,7 +300,8 @@ def test_a_title_from_the_first_turn_renamed_and_archived(
         json={"title": "Kept"},
     ).json()
     assert renamed["title"] == "Kept"
-    assert asyncio.run(store.get("session-l031"))["title"] == "Kept"
+    kept = asyncio.run(store.get("session-l031"))
+    assert kept is not None and kept["title"] == "Kept"
     assert (
         remote.put(
             "/api/v1/apps/sessions/session-l031/title",

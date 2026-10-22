@@ -232,6 +232,7 @@ class DatalayerSessionFormat:
             lines.append(json.dumps(line, ensure_ascii=False, default=str))
             kept += 1
         counted = sum(1 for e in entries if e.get("kind") == "turn")
+        head_turns = counted if turns is None else int(turns)
         head = {
             "record_type": "session",
             "format": self.id,
@@ -247,7 +248,7 @@ class DatalayerSessionFormat:
             "harness": session.get("harness") or None,
             "owner": {"uid": str((session.get("opened_by") or {}).get("uid") or "")},
             "state": str(session.get("state") or "paused"),
-            "turns": counted if turns is None else int(turns),
+            "turns": head_turns,
             "title": str(session.get("title") or "")[:200],
             "archived": bool(session.get("archived", False)),
             "lineage": dict(
@@ -269,7 +270,7 @@ class DatalayerSessionFormat:
         return Exported(
             lines=[json.dumps(head, ensure_ascii=False, default=str), *lines],
             redactions=redactor.count,
-            turns=head["turns"],
+            turns=head_turns,
             entries=kept,
         )
 

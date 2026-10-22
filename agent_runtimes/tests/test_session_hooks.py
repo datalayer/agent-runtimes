@@ -223,6 +223,7 @@ def test_the_audit_hook_writes_the_rows_and_the_otel_hook_a_span_each(
                 _platform(("otel-test", otel, "otel-test")),
             )
         )
+    assert otel.spans is not None
     assert [s["name"] for s in otel.spans] == [f"session.{e}" for e in HOOK_EVENTS]
     assert (
         otel.spans[0]["session"] == "session-h003"

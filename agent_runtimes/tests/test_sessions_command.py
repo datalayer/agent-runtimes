@@ -50,7 +50,9 @@ def fake(runtime: Runtime, remote: TestClient, tmp_path: Path) -> Iterator[Runti
 
     use_session_store(FileSessionStore(root=tmp_path / "sessions"))
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
-    agent_recorder("notes-assistant").send = send_to_store
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
     command.use_client(lambda server, cloud: Signed(remote))
     sessions.use_rebinder(lambda live, agent, request: _rebound(live, agent))
     try:

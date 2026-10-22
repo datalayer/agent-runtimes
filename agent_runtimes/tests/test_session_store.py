@@ -43,7 +43,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     runtime,
 )
 
-OPENED = {
+OPENED: Dict[str, Any] = {
     "kind": "session",
     "summary": "A session of Notes started",
     "payload": {
@@ -358,7 +358,9 @@ def test_a_session_opened_with_the_file_store_is_kept_whole_and_read_back(
     # The recorder sends through the active store: its default, not the test's capture.
     from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
 
-    agent_recorder("notes-assistant").send = send_to_store
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
     events_of(
         remote.post(
             "/api/v1/apps/sessions",
