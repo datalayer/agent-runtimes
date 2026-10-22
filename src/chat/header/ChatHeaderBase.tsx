@@ -16,7 +16,11 @@
 import { type ReactNode } from 'react';
 import { Heading, IconButton, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
+import {
+  KernelIndicator,
+  type ExecutionState,
+  type KernelIndicatorPosition,
+} from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
   PlusIcon,
@@ -95,6 +99,8 @@ export interface ChatBaseHeaderProps {
   kernelIndicatorState?: ExecutionState;
   /** Horizontal placement for the kernel indicator in the title row. */
   kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+  /** Where the kernel indicator's details open (`s`, `se`, …). */
+  kernelIndicatorPosition?: KernelIndicatorPosition;
   /**
    * Runtime status from agent-runtimes sandbox status stream.
    * Uses the same execution-state model as KernelIndicator.
@@ -159,6 +165,7 @@ export function ChatBaseHeader({
   padding,
   kernelIndicatorState,
   kernelIndicatorPlacement = 'left',
+  kernelIndicatorPosition = 's',
   runtimeStatus,
   kernel,
   kernelEnvironmentName,
@@ -202,7 +209,7 @@ export function ChatBaseHeader({
       cpu={kernelCpu}
       memory={kernelMemory}
       gpu={kernelGpu}
-      position="s"
+      position={kernelIndicatorPosition}
       bordered={false}
     />
   ) : effectiveIndicatorState ? (
@@ -212,7 +219,7 @@ export function ChatBaseHeader({
       cpu={kernelCpu}
       memory={kernelMemory}
       gpu={kernelGpu}
-      position="s"
+      position={kernelIndicatorPosition}
       bordered={false}
     />
   ) : null;

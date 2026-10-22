@@ -11,7 +11,10 @@
 
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { ComponentType, ReactNode } from 'react';
-import type { ICollaborationProvider } from '@datalayer/jupyter-react';
+import type {
+  ICollaborationProvider,
+  KernelIndicatorPosition,
+} from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
 import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
@@ -770,6 +773,14 @@ export interface ChatCommonProps {
   kernelIndicatorPlacement?: 'left' | 'center' | 'right';
 
   /**
+   * Where the header kernel indicator's details open: `s` below it, centred
+   * (the default); `se` below and to the right, for a chat whose indicator sits
+   * at the left edge of a narrow panel (a sidebar), where a centred overlay is
+   * cut by the panel's edge. @default 's'
+   */
+  kernelIndicatorPosition?: KernelIndicatorPosition;
+
+  /**
    * Live kernel connection of the companion notebook/document sandbox.
    * When provided, it is forwarded to the chat header's `<KernelIndicator>`
    * so the indicator reflects the surface's runtime.
@@ -1137,6 +1148,14 @@ export interface ChatBaseProps {
 
   /** Horizontal placement for the header kernel indicator. @default 'left' */
   kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+
+  /**
+   * Where the header kernel indicator's details open: `s` below it, centred
+   * (the default); `se` below and to the right, for a chat whose indicator sits
+   * at the left edge of a narrow panel (a sidebar), where a centred overlay is
+   * cut by the panel's edge. @default 's'
+   */
+  kernelIndicatorPosition?: KernelIndicatorPosition;
 
   /**
    * Live notebook kernel connection. When provided, the chat header

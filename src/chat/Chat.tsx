@@ -390,6 +390,7 @@ export function Chat({
   sandboxStatusData,
   kernel,
   kernelIndicatorPlacement,
+  kernelIndicatorPosition,
   kernelEnvironmentName,
   kernelCpu,
   kernelMemory,
@@ -1050,6 +1051,7 @@ export function Chat({
                 sandboxStatusData={sandboxStatusData}
                 kernel={kernel}
                 kernelIndicatorPlacement={kernelIndicatorPlacement}
+                kernelIndicatorPosition={kernelIndicatorPosition}
                 kernelEnvironmentName={kernelEnvironmentName}
                 kernelCpu={kernelCpu}
                 kernelMemory={kernelMemory}

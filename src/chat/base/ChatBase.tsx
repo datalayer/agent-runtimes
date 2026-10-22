@@ -785,6 +785,7 @@ function ChatBaseInner({
   headerActions,
   kernelIndicatorState,
   kernelIndicatorPlacement = 'left',
+  kernelIndicatorPosition = 's',
   kernel,
   kernelEnvironmentName,
   kernelCpu,
@@ -5319,6 +5320,7 @@ function ChatBaseInner({
     padding,
     kernelIndicatorState,
     kernelIndicatorPlacement,
+    kernelIndicatorPosition,
     runtimeStatus: sandboxStatusData ?? sandboxStatusQuery.data,
     kernel: notebookVisible
       ? (notebookKernel ?? kernel)
