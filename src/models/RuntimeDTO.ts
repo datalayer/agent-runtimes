@@ -217,6 +217,18 @@ export class RuntimeDTO {
     return new Date(Number(this._data.expired_at) * 1000);
   }
 
+  /** The deployment this runtime serves, `''` when it serves none. */
+  get deploymentUid(): string {
+    this._checkDeleted();
+    return this._data.deployment_uid ?? '';
+  }
+
+  /** The application of the deployment this runtime serves, `''` for none. */
+  get appUid(): string {
+    this._checkDeleted();
+    return this._data.app_uid ?? '';
+  }
+
   /** Environment title for display. */
   get environmentTitle(): string {
     this._checkDeleted();

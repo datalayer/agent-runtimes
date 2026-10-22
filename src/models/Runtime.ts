@@ -114,6 +114,14 @@ export interface IRuntimeRecord {
    * cpu.`, or an image that cannot be pulled — or empty once it runs.
    */
   waiting?: string;
+  /**
+   * The deployment this runtime serves, `''` for none. A deployment's
+   * runtime answers only its application's own routes (the session API),
+   * never an agent picked by name.
+   */
+  deployment_uid?: string;
+  /** The application of the deployment this runtime serves, `''` for none. */
+  app_uid?: string;
 }
 
 /**
