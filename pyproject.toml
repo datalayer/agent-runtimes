@@ -148,7 +148,10 @@ dependencies = [
     # tasks and ACP sessions in (`protocol_state`); the runtime image installs
     # only these dependencies.
     "psycopg[binary]>=3.2.8",
-    "pydantic-ai-slim[mcp]>=2.35.0,<3",
+    # Below 2.60: it records an answer asked again as a RetryFeedbackPart and a
+    # tool asked again as a ToolReturnPart (outcome="retried"), not the
+    # RetryPromptPart the session, the guardrails and the adapter read.
+    "pydantic-ai-slim[mcp]>=2.35.0,<2.60",
     "pydantic-graph>=2.35.0,<3",
     "pydantic-settings>=2.14.2",
     "pydantic[email]>=2.13.3",
@@ -173,7 +176,7 @@ anthropic = [
     # pydantic-ai 2.34+ builds on the anthropic SDK 1.x; nothing here calls
     # the SDK directly, so the floor follows pydantic-ai`s.
     "anthropic>=1.0.0,<2.0.0",
-    "pydantic-ai-slim[anthropic]>=2.35.0,<3",
+    "pydantic-ai-slim[anthropic]>=2.35.0,<2.60",
 ]
 openai = [
     # The ceiling is the next MAJOR of the SDK, not the current one.
@@ -184,18 +187,18 @@ openai = [
     # is `AsyncAzureOpenAI`, whose arguments are unchanged in 3.x, so the
     # ceiling was holding back the ecosystem rather than protecting anything.
     "openai>=2.29.0,<4.0.0",
-    "pydantic-ai-slim[openai]>=2.35.0,<3",
+    "pydantic-ai-slim[openai]>=2.35.0,<2.60",
 ]
 google = [
     "google-auth>=2.52.0",
     "google-api-core>=2.30.3",
-    "pydantic-ai-slim[google]>=2.35.0,<3",
+    "pydantic-ai-slim[google]>=2.35.0,<2.60",
 ]
 aws = [
     # pydantic-ai-slim[bedrock] asks for boto3>=1.42.63; capping the minor
     # collided with litellm 1.98 (boto3>=1.43.1) in a shared environment.
     "boto3>=1.42.96,<2",
-    "pydantic-ai-slim[bedrock]>=2.35.0,<3",
+    "pydantic-ai-slim[bedrock]>=2.35.0,<2.60",
 ]
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
@@ -266,7 +269,7 @@ memory = [
 ]
 durable = [
     "dbos",
-    "pydantic-ai-slim[dbos]>=2.35.0,<3",
+    "pydantic-ai-slim[dbos]>=2.35.0,<2.60",
 ]
 # Opt-in and out of `all`: every logfire release up to 5.1.1 caps
 # `opentelemetry-sdk<1.45`, so this extra cannot resolve against the OTEL floor
