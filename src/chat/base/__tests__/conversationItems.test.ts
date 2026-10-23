@@ -15,6 +15,7 @@ import {
   emptyChatLayer,
   rowIdOf,
   toolCallOf,
+  withToolSummaries,
   type ChatLayer,
 } from '../conversationItems';
 import {
@@ -195,5 +196,42 @@ describe('the conversation drawn', () => {
     expect(
       rowIdOf({ id: 'm', role: 'user', content: '', createdAt: new Date() }),
     ).toBe('m');
+  });
+});
+
+describe('withToolSummaries', () => {
+  const card = (result?: unknown): ToolCallMessage => ({
+    id: 'tool-c1',
+    type: 'tool-call',
+    toolCallId: 'c1',
+    toolName: 'datalayer_insertCell',
+    args: { source: 'x' },
+    status: result === undefined ? 'executing' : 'complete',
+    ...(result === undefined ? {} : { result }),
+  });
+  const tools = [
+    {
+      name: 'datalayer_insertCell',
+      summaryOf: (_args: unknown, result: unknown) =>
+        (result as { editor?: { name?: string } }).editor?.name
+          ? `on ${(result as { editor: { name: string } }).editor.name}`
+          : undefined,
+    },
+  ];
+
+  it('says what a returned call ran on', () => {
+    const items = [card({ editor: { name: 'analysis.ipynb' } })];
+    const [said] = withToolSummaries(items, tools) as ToolCallMessage[];
+    expect(said.summary).toBe('on analysis.ipynb');
+  });
+
+  it('leaves a running call, another tool and an empty summary as drawn', () => {
+    const running = [card()];
+    expect(withToolSummaries(running, tools)).toBe(running);
+    const other = [{ ...card({ editor: { name: 'a' } }), toolName: 'other' }];
+    expect(withToolSummaries(other, tools)).toBe(other);
+    const unnamed = [card({ ok: true })];
+    expect(withToolSummaries(unnamed, tools)).toBe(unnamed);
+    expect(withToolSummaries(unnamed)).toBe(unnamed);
   });
 });

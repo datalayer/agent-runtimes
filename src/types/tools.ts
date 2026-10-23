@@ -190,6 +190,13 @@ export interface FrontendToolDefinition<
   handler?: (args: TArgs) => Promise<TResult>;
 
   /**
+   * What its card says in place of its arguments' summary, from what it
+   * returned (`on analysis.ipynb`, the file a host's editor tool ran on);
+   * `undefined` keeps the arguments' summary. Asked only once it returned.
+   */
+  summaryOf?: (args: TArgs, result: TResult) => string | undefined;
+
+  /**
    * Optional render function for custom UI during execution
    */
   render?: (props: ToolRenderProps<TArgs, TResult>) => ReactNode;

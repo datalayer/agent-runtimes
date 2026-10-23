@@ -29,6 +29,8 @@ import type {
   ToolCallMessage,
 } from '../../types/chat';
 import type { ChatMessage, MessageSpeaker } from '../../types/messages';
+import type { FrontendToolDefinition } from '../../types/tools';
+import { isToolCallMessage } from '../../utils';
 
 type ToolItem = Extract<ConversationItem, { kind: 'tool' }>;
 type MessageItem = Extract<ConversationItem, { kind: 'message' }>;
@@ -105,6 +107,39 @@ export function toolCallOf(item: ToolItem): ToolCallMessage {
       : {}),
     ...(item.exitCode !== null ? { exitCode: item.exitCode } : {}),
   };
+}
+
+/**
+ * The cards of the page's own tools, with what each says of its call
+ * (`summaryOf`) once it returned. A card nothing changes is the one drawn,
+ * so React leaves it as it was.
+ */
+export function withToolSummaries(
+  items: DisplayItem[],
+  tools: readonly Pick<FrontendToolDefinition, 'name' | 'summaryOf'>[] = [],
+): DisplayItem[] {
+  const summarizing = tools.filter(tool => tool.summaryOf);
+  if (summarizing.length === 0) {
+    return items;
+  }
+  let changed = false;
+  const said = items.map(item => {
+    if (!isToolCallMessage(item)) {
+      return item;
+    }
+    const call = item;
+    const tool = summarizing.find(entry => entry.name === call.toolName);
+    if (!tool?.summaryOf || call.result === undefined) {
+      return item;
+    }
+    const summary = tool.summaryOf(call.args, call.result)?.trim();
+    if (!summary || summary === call.summary) {
+      return item;
+    }
+    changed = true;
+    return { ...call, summary };
+  });
+  return changed ? said : items;
 }
 
 /**

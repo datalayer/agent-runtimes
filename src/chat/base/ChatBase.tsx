@@ -111,6 +111,7 @@ import {
   emptyChatLayer,
   rowIdOf,
   toolCallOf,
+  withToolSummaries,
   type ChatLayer,
   type MessageExtras,
 } from './conversationItems';
@@ -1825,8 +1826,9 @@ function ChatBaseInner({
     [],
   );
   const displayItems = useMemo(
-    () => drawConversation(conversation, layer),
-    [drawConversation, conversation, layer],
+    () =>
+      withToolSummaries(drawConversation(conversation, layer), frontendTools),
+    [drawConversation, conversation, layer, frontendTools],
   );
   const displayItemsRef = useRef(displayItems);
   displayItemsRef.current = displayItems;
