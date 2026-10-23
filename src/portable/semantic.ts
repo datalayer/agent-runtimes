@@ -16,6 +16,8 @@
  * @module portable/semantic
  */
 
+import type { PapSignInWaiting } from './signIn';
+
 export const SEMANTIC_EVENTS_VERSION = 1;
 
 export const SEMANTIC_KINDS = [
@@ -30,6 +32,7 @@ export const SEMANTIC_KINDS = [
   'completion',
   'stop',
   'error',
+  'sign-in',
 ] as const;
 export type SemanticKind = (typeof SEMANTIC_KINDS)[number];
 
@@ -69,7 +72,19 @@ export type SemanticEvent =
   | Readonly<{ kind: 'ask'; question: AskQuestion }>
   | Readonly<{ kind: 'completion'; text?: string }>
   | Readonly<{ kind: 'stop' }>
-  | Readonly<{ kind: 'error'; message: string }>;
+  | Readonly<{ kind: 'error'; message: string }>
+  | Readonly<{
+      /**
+       * A company's sign-in waiting for the person (`pap_sign_in`, or a
+       * business's `pact_sign_in`): its page (https only), mode and code,
+       * as `signIn.ts` reads them. A host shows it as a button or the code
+       * with the page; the turn goes on once the person has signed in.
+       */
+      kind: 'sign-in';
+      toolCallId: string;
+      toolName: string;
+      signIn: PapSignInWaiting;
+    }>;
 
 /** Whether an event ends the turn's presentation. */
 export function isTerminal(event: SemanticEvent): boolean {

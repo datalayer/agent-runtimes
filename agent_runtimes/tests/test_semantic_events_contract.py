@@ -77,10 +77,10 @@ def _emitted_types() -> set[str]:
     return types
 
 
-def test_the_fixture_is_version_1_with_its_eleven_kinds():
+def test_the_fixture_is_version_1_with_its_twelve_kinds():
     fixture = _fixture()
     assert fixture["version"] == 1
-    assert len(fixture["kinds"]) == 11
+    assert len(fixture["kinds"]) == 12
     assert sorted(fixture["producers"]) == sorted(fixture["kinds"])
 
 

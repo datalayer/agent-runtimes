@@ -22,6 +22,7 @@
 
 import type { AgUiEvent } from './agui';
 import type { AskQuestion, SemanticEvent } from './semantic';
+import { isPapSignInTool, readPapSignIn } from './signIn';
 
 /** What one turn says of itself: its id, and whether it is a replay. */
 export type TurnInfo = Readonly<{
@@ -123,9 +124,20 @@ export function semanticOf(
         return [{ kind: 'approval', toolCallId: id, toolName: name }];
       }
       const failed = result?.success === false || result?.isError === true;
-      return [
-        { kind: 'tool', id, name, status: failed ? 'failed' : 'complete' },
-      ];
+      const done: SemanticEvent = {
+        kind: 'tool',
+        id,
+        name,
+        status: failed ? 'failed' : 'complete',
+      };
+      // A company's sign-in waiting for the person: the host shows its page.
+      // A page that is not https is never shown: the tool's row says it.
+      const signIn = isPapSignInTool(name)
+        ? readPapSignIn(event.content)
+        : null;
+      return signIn && !('refused' in signIn)
+        ? [done, { kind: 'sign-in', toolCallId: id, toolName: name, signIn }]
+        : [done];
     }
     case 'STEP_STARTED':
       return typeof event.stepName === 'string' && event.stepName

@@ -42,7 +42,7 @@ const fixture = JSON.parse(
 ) as Fixture;
 
 describe('the semantic agent events contract (version 1)', () => {
-  it('names the version and the eleven kinds a host renders', () => {
+  it('names the version and the twelve kinds a host renders', () => {
     expect(fixture.version).toBe(SEMANTIC_EVENTS_VERSION);
     expect(fixture.kinds).toEqual([...SEMANTIC_KINDS]);
     expect(Object.keys(fixture.producers).sort()).toEqual(
