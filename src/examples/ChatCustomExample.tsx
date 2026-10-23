@@ -63,20 +63,16 @@ Be concise, helpful, and provide working code examples when appropriate.`,
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100vh',
-            backgroundColor: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          height="100vh"
+          backgroundColor="canvas.default"
         >
           <Box
             as="header"
-            sx={{
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              padding: 3,
-            }}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            padding={3}
           >
             <Text
               sx={{
@@ -94,38 +90,32 @@ Be concise, helpful, and provide working code examples when appropriate.`,
           </Box>
           <Box
             as="main"
-            sx={{
-              flex: 1,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+            flex={1}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
           >
             {isLoading ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  gap: 3,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                height="100%"
+                gap={3}
               >
                 <Spinner size="large" />
                 <Text sx={{ color: 'fg.muted' }}>Initializing agent...</Text>
               </Box>
             ) : error ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  gap: 3,
-                  p: 4,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                height="100%"
+                gap={3}
+                p={4}
               >
                 <Text sx={{ color: 'danger.fg', fontWeight: 'bold' }}>
                   Failed to initialize agent

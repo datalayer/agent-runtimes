@@ -75,14 +75,12 @@ export type LoopWorkspaceEmbedProps = LoopWorkspaceExampleProps & {
 function WorkspaceLoading(): JSX.Element {
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 3,
-      }}
+      height="100%"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      gap={3}
     >
       <Spinner />
       <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
@@ -96,16 +94,14 @@ function WorkspaceLoading(): JSX.Element {
 function WorkspaceUnavailable(): JSX.Element {
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        px: 4,
-        textAlign: 'center',
-      }}
+      height="100%"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      gap={2}
+      px={4}
+      textAlign="center"
     >
       <Text sx={{ fontSize: 2, fontWeight: 'semibold' }}>
         The live workspace could not start in this browser.

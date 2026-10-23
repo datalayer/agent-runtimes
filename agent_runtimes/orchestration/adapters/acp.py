@@ -1,20 +1,27 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ACP binding, client side (PLAN_ORCHESTRATOR.md, sections 7.4, O0-07).
+"""The ACP binding, client side (O0-07).
 
 Datalayer is the client here and the coding agent is the worker, which is
 the opposite of the ACP route this repository already serves. The mapping is
-the plan's table: create or attach is ``session/new`` or ``session/load``, a
+the mapping table: create or attach is ``session/new`` or ``session/load``, a
 delegation and a steer are ``session/prompt``, progress is session updates,
 an approval is a permission request, and a cancel is ``session/cancel``.
 
-An ACP session is a projection of an execution, never the other way round
-(19.8, decision 6). Nothing here keeps a connection between operations: each
+An ACP session is a projection of an execution, never the other way round.
+Nothing here keeps a connection between operations: each
 one connects, does its work and closes, so the adapter survives the step
 boundaries of the durable worker it will run inside (O1-03). The session
 identifier on the attempt is what makes that possible, and it is why every
 observation that learns one carries it back.
+
+A harness's file edits come back as artifacts (SH-45, the mapping on the client side):
+every ``diff`` content of the turn's tool calls —
+``{path, oldText, newText}`` — is registered once per file at the turn's end
+as a ``text/x-diff`` artifact named by its path, the unified diff hashed in
+its provenance, as the A2A worker publishes them; a file changed twice is
+one diff from what it first held to what it last holds.
 
 Two things this module is honest about rather than quiet about.
 
@@ -23,7 +30,7 @@ session update, no checkpoint, no pause, no resume, no session close, and no
 artifact — a turn's answer is registered as one artifact and file edits stay
 tool-call content until O1-10 commits them. All of it is in
 ``ACP_CAPABILITIES`` and reaches the execution as the first observation of a
-dispatch (19.8, decision 5's rule, applied to the other protocol).
+dispatch (the same reporting rule, applied to the other protocol).
 
 An agent that declares the Datalayer orchestration extension at initialize,
 under ``agentCapabilities._meta.datalayer.extensions``, gets three of them
@@ -33,35 +40,19 @@ back from the agent rather than invented here (O2-05): it is resolved with
 a checkpoint, and a turn that answers ``cancelled`` naming the checkpoint it
 kept is read as a pause; and a resume is a new attempt whose prompt names it.
 
-The second is the state of the client this is built on.
-``transports/clients/acp_client.py`` owns the connection, the receive loop
-and ``initialize``, and this adapter uses that rather than opening a second
-ACP client. What that client does not own is the rest, and what it does own
-does not currently work against the installed ``acp`` SDK. Both are stated
-here rather than worked around, because a client that is quietly bypassed is
-a client nobody ever fixes:
+The second is what carries the connection. The ``ACPChannel`` port below is
+the narrow surface this adapter needs — request, notify, respond, listen,
+close — and its one implementation, ``ShieldChannel``, is built on the
+``agent-shield`` package's client-side channels (SH-02): the
+**stdio** channel, which launches a local agent as a subprocess (what 7.4
+asked for), and the **WebSocket** channel, both over the official ``acp`` SDK
+0.7. An endpoint ``stdio:<command line>`` launches; a ``ws://`` or ``wss://``
+endpoint connects. The client this adapter was first built on
+(``transports/clients/acp_client.py``, whose ``connect()`` did not work
+against the installed SDK) is no longer under it; the ``loop connect -t acp``
+command still uses that client and is its only caller.
 
-- ``run()`` yields at most one session update per prompt: its loop breaks as
-  soon as the prompt response is in hand. Streaming a turn therefore reads
-  the notification channel directly.
-- There is no wrapper for ``session/load``, ``session/cancel`` or for
-  sending a notification at all, and ``respond_to_permission`` builds a
-  ``RequestPermissionResponse`` without the ``outcome`` the schema requires.
-- ``connect()`` raises against the installed SDK: ``InitializeRequest``
-  requires ``protocolVersion`` and none is sent, ``AGENT_METHODS`` is a
-  ``dict`` addressed as an object, and ``CLIENT_METHODS.session_notification``
-  no longer exists. Until that is fixed in the client, this adapter reaches
-  a real agent no further than that call does.
-
-``ACPChannel`` is therefore the narrow surface this adapter needs — request,
-notify, respond, listen, close — with one implementation over that client's
-connection. The wrappers belong in the client module, and O0-07 may not
-edit it, so they are named here instead of rediscovered later.
-
-``ACPChannel`` is also where stdio arrives (7.4 asks for it): a stdio
-channel is one more implementation of this port, not a second adapter.
-
-The trace (section 10, O0-11) goes on the connection's headers, because a
+The trace (O0-11) goes on the connection's headers, because a
 WebSocket has no per-message header to stamp and the ``httpx`` instrumentation
 that carries it for A2A never sees this socket. Since every operation opens
 its own connection, each carries the context of whatever asked for it.
@@ -71,13 +62,20 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
+import shlex
 from abc import ABC, abstractmethod
+from collections import deque
 from typing import Any, AsyncIterator, Awaitable, Callable, Mapping, Sequence
 
 from acp import AGENT_METHODS, CLIENT_METHODS
-from acp.schema import AgentCapabilities, LoadSessionRequest, NewSessionRequest
+from acp.exceptions import RequestError
+from acp.schema import (
+    AgentCapabilities,
+    LoadSessionRequest,
+    NewSessionRequest,
+    RequestPermissionResponse,
+)
 from datalayer_core.orchestration import (
     AcknowledgementKind,
     AgentBinding,
@@ -91,6 +89,7 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
+from agent_runtimes.adapters.acp_agent import RUNTIME_CLIENT_INFO
 from agent_runtimes.context.delegation import (
     EXTENSION_URI,
     STEER_METHOD,
@@ -116,7 +115,7 @@ from agent_runtimes.orchestration.adapter import (
 )
 from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
 from agent_runtimes.subagents.a2a import caller_token
-from agent_runtimes.transports.clients.acp_client import ACPClient
+from agent_runtimes.transports.a2a import DIFF_MEDIA_TYPE, unified_diff
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +123,8 @@ __all__ = [
     "ACP_CAPABILITIES",
     "ACP_EXTENDED_CAPABILITIES",
     "ACPChannel",
-    "ACPClientChannel",
     "ACPWorkerAdapter",
+    "ShieldChannel",
 ]
 
 #: Who answers a permission request. It is given the request's parameters
@@ -236,10 +235,10 @@ ACP_CAPABILITIES = AdapterCapabilities(
         "that a worker took the work, and it is reported as 'started' (6.3).",
         _NO_CHECKPOINTED,
         _STEER_IS_A_TURN,
-        "No stdio yet: the client this adapter is built on speaks WebSocket "
-        "only, so a local stdio agent needs a stdio ACPChannel (7.4).",
         "No artifacts in ACP: the turn's answer is registered as one "
-        "artifact, and file edits stay tool-call content until O1-10.",
+        "artifact, and each file a tool call's diff content changed as a "
+        "text/x-diff artifact, both registered at the turn's end and "
+        "committed by O1-10.",
         "A permission request is reported on the execution and, with no "
         "approval responder configured, refused rather than left hanging; "
         "answering it is the control plane's (O1-08).",
@@ -248,7 +247,7 @@ ACP_CAPABILITIES = AdapterCapabilities(
         "leaves open; this adapter opens a connection per operation, so "
         "each one carries the context of whatever asked for it, and an "
         "agent that ignores the header is a broken link in the tree's "
-        "trace rather than a second trace (section 10, O0-11).",
+        "trace rather than a second trace (O0-11).",
     ),
 )
 
@@ -362,25 +361,101 @@ class ACPChannel(ABC):
         """
 
 
-class ACPClientChannel(ACPChannel):
-    """The channel over ``transports/clients/acp_client.py``'s connection.
+class _Relay:
+    """What the agent asks of its client, relayed to the adapter's loop.
 
-    It reaches into that client for the four things it does not expose: the
-    request path, the response path, the notification handler list and the
-    socket a notification is written to. The module docstring says why that
-    is here and not there.
+    Notifications and requests reach the adapter as raw messages through
+    ``listen``; a permission request waits here for the adapter's
+    ``respond``; the client methods this adapter never declared (files,
+    terminals) are refused as the SDK refuses an unknown method.
     """
 
-    def __init__(self, client: ACPClient) -> None:
-        """
-        Wrap a connected client.
+    def __init__(self) -> None:
+        """Hold the requests waiting for the adapter's answer."""
+        self.pending_ids: deque[Any] = deque()
+        self.answers: dict[Any, asyncio.Future[Mapping[str, Any] | None]] = {}
 
-        Parameters
-        ----------
-        client : ACPClient
-            The connected ACP client.
-        """
-        self._client = client
+    def saw(self, message: Mapping[str, Any]) -> None:
+        """Note a permission request's id as it arrives, before the SDK dispatches it."""
+        if (
+            message.get("method") == CLIENT_METHODS["session_request_permission"]
+            and "id" in message
+        ):
+            self.pending_ids.append(message["id"])
+
+    async def session_update(self, session_id: str, update: Any, **kwargs: Any) -> None:
+        """Hear an update; the adapter reads it raw through ``listen``."""
+        return None
+
+    async def request_permission(
+        self, options: list[Any], session_id: str, tool_call: Any, **kwargs: Any
+    ) -> Any:
+        """Wait for the adapter's ``respond`` to the request that just arrived."""
+        if not self.pending_ids:
+            raise RequestError.internal_error(
+                {"details": "a permission request nobody saw arrive"}
+            )
+        request_id = self.pending_ids.popleft()
+        future: asyncio.Future[Mapping[str, Any] | None] = (
+            asyncio.get_running_loop().create_future()
+        )
+        self.answers[request_id] = future
+        try:
+            result = await future
+        finally:
+            self.answers.pop(request_id, None)
+        if result is None:
+            # -32601: the method is not one this client declared.
+            raise RequestError.method_not_found(
+                CLIENT_METHODS["session_request_permission"]
+            )
+        return RequestPermissionResponse.model_validate(dict(result))
+
+    def respond(self, request_id: Any, result: Mapping[str, Any] | None) -> bool:
+        """Answer a waiting request; ``False`` when none waits under this id."""
+        future = self.answers.get(request_id)
+        if future is None or future.done():
+            return False
+        future.set_result(result)
+        return True
+
+    async def _undeclared(self, *args: Any, **kwargs: Any) -> Any:
+        """Refuse a client method this orchestrator never declared."""
+        raise RequestError.method_not_found(
+            "a client method this orchestrator does not offer"
+        )
+
+    read_text_file = write_text_file = create_terminal = _undeclared
+    terminal_output = wait_for_terminal_exit = kill_terminal = release_terminal = (
+        _undeclared
+    )
+
+    async def elicitation(self, session_id: str, params: dict[str, Any]) -> Any:
+        """Refuse a question: an orchestrator has nobody to ask."""
+        raise RequestError.method_not_found("elicitation/create")
+
+    async def ext_method(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Refuse an extension method."""
+        raise RequestError.method_not_found(f"_{method}")
+
+    async def ext_notification(self, method: str, params: dict[str, Any]) -> None:
+        """Hear an extension notification and do nothing with it."""
+        return None
+
+
+class ShieldChannel(ACPChannel):
+    """The channel over ``agent_shield.acp``'s client-side channels: stdio or WebSocket.
+
+    ``connect`` launches or connects and runs ``initialize`` (protocol
+    version 1, no ``fs`` or ``terminal`` capability: an orchestrator answers
+    neither), so ``agent_capabilities`` is known as soon as the channel is.
+    """
+
+    def __init__(self, inner: Any, relay: _Relay, launch: Any) -> None:
+        """Wrap a connected channel, its relay and the context that launched it."""
+        self._inner = inner
+        self._relay = relay
+        self._launch = launch
 
     @classmethod
     async def connect(
@@ -388,136 +463,110 @@ class ACPClientChannel(ACPChannel):
         endpoint: str,
         headers: Mapping[str, str] | None = None,
         timeout: float = 60.0,
-    ) -> "ACPClientChannel":
+    ) -> "ShieldChannel":
         """
         Open and initialize one connection to an ACP agent.
 
         Parameters
         ----------
         endpoint : str
-            The agent's WebSocket URL.
+            ``stdio:<command line>`` to launch a local agent, or its
+            ``ws://``/``wss://`` URL.
         headers : Mapping[str, str] | None
-            Headers for the connection, which is where the caller's token goes.
+            Headers for a WebSocket connection, which is where the caller's
+            token and the trace go; a stdio agent has no connection to
+            stamp, and gets neither.
         timeout : float
-            How long a request may take. A turn can be long, so this is not
-            the client's own default.
+            Unused: the SDK's requests have no timeout of their own; a turn
+            is as long as the agent makes it, and ``cancel`` is how it ends.
 
         Returns
         -------
-        ACPClientChannel
-            The connected channel.
+        ShieldChannel
+            The connected, initialized channel.
         """
-        client = ACPClient(endpoint, dict(headers or {}), timeout)
-        await client.connect()
-        return cls(client)
+        from acp.schema import ClientCapabilities
+        from agent_shield.acp import StdioACPChannel, WebSocketACPChannel
+
+        relay = _Relay()
+        if endpoint.startswith("stdio:"):
+            argv = shlex.split(endpoint[len("stdio:") :])
+            if not argv:
+                raise ValueError(
+                    "A stdio endpoint names the agent's command: stdio:<command line>."
+                )
+            launch = StdioACPChannel.launch(relay, argv[0], *argv[1:])
+        elif endpoint.startswith(("ws://", "wss://")):
+            launch = WebSocketACPChannel.connect(relay, endpoint, headers=headers)
+        else:
+            raise ValueError(
+                f"An ACP endpoint is stdio:<command line>, ws:// or wss://; not {endpoint!r}."
+            )
+        inner = await launch.__aenter__()
+        try:
+            inner.listen(
+                lambda message: (
+                    relay.saw(message)
+                    if message.get("direction") == "incoming"
+                    else None
+                )
+            )
+            await inner.initialize(
+                client_capabilities=ClientCapabilities(),
+                client_info=RUNTIME_CLIENT_INFO,
+            )
+        except BaseException:
+            await launch.__aexit__(None, None, None)
+            raise
+        return cls(inner, relay, launch)
 
     async def request(
         self, method: str, params: Mapping[str, Any]
     ) -> dict[str, Any] | None:
-        """
-        Send a request and wait for its result.
-
-        Parameters
-        ----------
-        method : str
-            The ACP method.
-        params : Mapping[str, Any]
-            Its parameters.
-
-        Returns
-        -------
-        dict[str, Any] | None
-            The result.
-        """
-        return await self._client._send_request(method, dict(params))
+        """Send a request and wait for its result."""
+        result = await self._inner.request(method, params)
+        return dict(result) if isinstance(result, Mapping) else None
 
     async def notify(self, method: str, params: Mapping[str, Any]) -> None:
-        """
-        Write a notification to the socket the client already holds.
-
-        Parameters
-        ----------
-        method : str
-            The ACP method.
-        params : Mapping[str, Any]
-            Its parameters.
-        """
-        socket = self._client._websocket
-        if socket is None:
-            raise RuntimeError("The ACP channel is not connected.")
-        await socket.send(
-            json.dumps({"jsonrpc": "2.0", "method": method, "params": dict(params)})
-        )
+        """Send a notification."""
+        await self._inner.notify(method, params)
 
     async def respond(
         self, request_id: str | int, result: Mapping[str, Any] | None = None
     ) -> None:
         """
-        Answer the agent, or refuse a method we never declared.
+        Answer a permission request the agent made, or refuse it (``None``).
 
-        Parameters
-        ----------
-        request_id : str | int
-            The id of the agent's request.
-        result : Mapping[str, Any] | None
-            The result, or ``None`` to refuse.
+        A request this adapter never declared a method for (files,
+        terminals) was already refused by the SDK's router when it arrived;
+        answering it here is a no-op.
         """
-        if result is not None:
-            await self._client._send_response(request_id, dict(result))
-            return
-        socket = self._client._websocket
-        if socket is None:
-            raise RuntimeError("The ACP channel is not connected.")
-        await socket.send(
-            json.dumps(
-                {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    # -32601: the method is not one this client declared.
-                    "error": {"code": -32601, "message": "Method not supported"},
-                }
-            )
-        )
+        self._relay.respond(request_id, result)
 
     def listen(self, handler: Callable[[dict[str, Any]], None]) -> Callable[[], None]:
-        """
-        Hear every notification and request on this connection.
+        """Hear every notification and request the agent sends, raw."""
 
-        Parameters
-        ----------
-        handler : Callable[[dict[str, Any]], None]
-            Called with each raw message.
+        def incoming(message: dict[str, Any]) -> None:
+            """Hand an incoming message to the handler, without the channel's direction mark."""
+            if message.get("direction") != "incoming" or "method" not in message:
+                return
+            handler(
+                {key: value for key, value in message.items() if key != "direction"}
+            )
 
-        Returns
-        -------
-        Callable[[], None]
-            Stop listening.
-        """
-        handlers = self._client._notification_handlers
-        handlers.append(handler)
-
-        def stop() -> None:
-            """Remove the handler, once."""
-            if handler in handlers:
-                handlers.remove(handler)
-
-        return stop
+        return self._inner.listen(incoming)
 
     async def close(self) -> None:
-        """Close the connection."""
-        await self._client.disconnect()
+        """End the connection and, for stdio, the agent's process."""
+        if self._launch is None:
+            return
+        launch, self._launch = self._launch, None
+        await launch.__aexit__(None, None, None)
 
     @property
     def agent_capabilities(self) -> AgentCapabilities | None:
-        """
-        What the agent declared at initialize.
-
-        Returns
-        -------
-        AgentCapabilities | None
-            Its capabilities.
-        """
-        return self._client.agent_capabilities
+        """What the agent declared at ``initialize``."""
+        return self._inner.agent_capabilities
 
 
 class ACPWorkerAdapter(WorkerAdapter):
@@ -526,9 +575,9 @@ class ACPWorkerAdapter(WorkerAdapter):
     Parameters
     ----------
     connect : Callable[..., Awaitable[ACPChannel]]
-        How a connection is opened. The default is the WebSocket channel
-        above; a test passes a fake, and 7.4's stdio agents arrive as
-        another implementation of ``ACPChannel`` rather than as a branch.
+        How a connection is opened. The default is ``ShieldChannel.connect``
+        — stdio for a ``stdio:`` endpoint, WebSocket for a URL; a test
+        passes a fake.
     approvals : ApprovalResponder | None
         Who answers a permission request. Nobody, by default, and then the
         request is reported and refused.
@@ -544,6 +593,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         timeout_seconds: float = 600.0,
         credential: str | None = None,
         account_uid: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         """
         Hold how to connect, who approves, how long a turn may take, and the execution's credential and account.
@@ -562,8 +612,17 @@ class ACPWorkerAdapter(WorkerAdapter):
         account_uid : str | None
             The account the execution belongs to, named to an agent that
             speaks the extension, which asks for its children in it (O2-06).
+        workspace : str | None
+            The directory a session works in, absolute as ACP requires its
+            ``cwd`` to be: a Shield in front of the agent refuses a session
+            outside the workspace it guards (SH-45). This process's
+            directory by default; a runtime's ACP route answers in its own.
         """
-        self._connect = connect or ACPClientChannel.connect
+        import os
+        from pathlib import Path
+
+        self._workspace = str(Path(workspace or os.getcwd()).resolve())
+        self._connect = connect or ShieldChannel.connect
         self._approvals = approvals
         self._timeout_seconds = timeout_seconds
         self._credential = credential
@@ -696,6 +755,8 @@ class ACPWorkerAdapter(WorkerAdapter):
             extended = EXTENSION_URI in worker.capabilities.extensions
             channel = await self._open(_endpoint(worker))
             answer: list[str] = []
+            # Each file the turn's tool calls changed, by path (SH-45).
+            diffs: dict[str, tuple[str | None, str]] = {}
             try:
                 try:
                     session_id = await self._session(channel, worker, attempt)
@@ -741,6 +802,7 @@ class ACPWorkerAdapter(WorkerAdapter):
                         message = await queue.get()
                         if message is _DONE:
                             break
+                        _collect_diffs(message, session_id, diffs)
                         async for observation in self._translate(
                             channel,
                             session_id,
@@ -777,6 +839,12 @@ class ACPWorkerAdapter(WorkerAdapter):
                         session_id=session_id,
                     )
                     return
+                for path, (old_text, new_text) in diffs.items():
+                    text = unified_diff(path, old_text, new_text)
+                    yield Observation.produced(
+                        diff_artifact_of(execution, attempt, path, text),
+                        data={"text": text, "path": path},
+                    )
                 for observation in self._ending(
                     turn.result(),
                     execution,
@@ -801,7 +869,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         lost. Loading the session replays the conversation, so the work done
         while we were away is visible as updates, but whether the turn ended
         and why is not. The execution stays where it is and the control
-        plane reconciles — which is exactly section 6.4's instruction to
+        plane reconciles — which is exactly the delivery rules' instruction to
         treat a lost lease as unknown rather than as a failure.
 
         Parameters
@@ -852,7 +920,9 @@ class ACPWorkerAdapter(WorkerAdapter):
                 await channel.request(
                     AGENT_METHODS["session_load"],
                     LoadSessionRequest(
-                        session_id=attempt.session_id, cwd=".", mcp_servers=[]
+                        session_id=attempt.session_id,
+                        cwd=self._workspace,
+                        mcp_servers=[],
                     ).model_dump(by_alias=True, exclude_none=True),
                 )
             finally:
@@ -1145,7 +1215,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         ``httpx`` instrumentation that carries it for A2A never sees this
         socket. ``with_trace`` is the injector this repository already uses
         for outgoing calls, so there is one place that decides what a
-        traceparent looks like on the wire (section 10, O0-11).
+        traceparent looks like on the wire (O0-11).
 
         Parameters
         ----------
@@ -1187,7 +1257,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         _SessionRefused
             When the attempt names a session the agent cannot load. Opening
             a new one instead would be a different conversation under the
-            same execution, which is the kind of quiet substitution the plan
+            same execution, which is the kind of quiet substitution the design
             is written to prevent.
         """
         if attempt.session_id:
@@ -1202,13 +1272,13 @@ class ACPWorkerAdapter(WorkerAdapter):
             await channel.request(
                 AGENT_METHODS["session_load"],
                 LoadSessionRequest(
-                    session_id=attempt.session_id, cwd=".", mcp_servers=[]
+                    session_id=attempt.session_id, cwd=self._workspace, mcp_servers=[]
                 ).model_dump(by_alias=True, exclude_none=True),
             )
             return attempt.session_id
         response = await channel.request(
             AGENT_METHODS["session_new"],
-            NewSessionRequest(cwd=".", mcp_servers=[]).model_dump(
+            NewSessionRequest(cwd=self._workspace, mcp_servers=[]).model_dump(
                 by_alias=True, exclude_none=True
             ),
         )
@@ -1647,6 +1717,75 @@ def _session_of(params: Mapping[str, Any]) -> str | None:
     """
     session = params.get("sessionId") or params.get("session_id")
     return str(session) if session else None
+
+
+def _collect_diffs(
+    message: Any, session_id: str, diffs: dict[str, tuple[str | None, str]]
+) -> None:
+    """
+    Keep the ``diff`` contents of a session's tool calls, by path (SH-45).
+
+    A file changed twice keeps what it first held and what it last holds.
+
+    Parameters
+    ----------
+    message : Any
+        A raw JSON-RPC message from the agent.
+    session_id : str
+        The session dispatched; another's updates are not this turn's.
+    diffs : dict
+        Where they are kept: path → (old text, new text).
+    """
+    if not isinstance(message, Mapping):
+        return
+    if message.get("method") != CLIENT_METHODS["session_update"]:
+        return
+    params = message.get("params") or {}
+    if _session_of(params) not in (None, session_id):
+        return
+    update = params.get("update")
+    if not isinstance(update, Mapping) or update.get("sessionUpdate") not in {
+        "tool_call",
+        "tool_call_update",
+    }:
+        return
+    for block in update.get("content") or []:
+        if not isinstance(block, Mapping) or block.get("type") != "diff":
+            continue
+        path = str(block.get("path") or "")
+        if not path:
+            continue
+        old = block.get("oldText")
+        first = diffs.get(path, (None if old is None else str(old), ""))[0]
+        diffs[path] = (first, str(block.get("newText") or ""))
+
+
+def diff_artifact_of(
+    execution: Execution, attempt: Attempt, path: str, text: str
+) -> Any:
+    """
+    One file a harness changed, registered as a ``text/x-diff`` artifact named by its path.
+
+    Parameters
+    ----------
+    execution : Execution
+        The execution.
+    attempt : Attempt
+        The attempt whose turn changed it.
+    path : str
+        The file, as the agent named it.
+    text : str
+        The unified diff.
+
+    Returns
+    -------
+    Artifact
+        Registered, its provenance carrying the diff's hash.
+    """
+    artifact = answer_artifact(execution, attempt, text, name=path)
+    return artifact.model_copy(
+        update={"media_type": DIFF_MEDIA_TYPE, "summary": f"Changed {path}"}
+    )
 
 
 def _read_update(params: Mapping[str, Any]) -> tuple[str, str]:

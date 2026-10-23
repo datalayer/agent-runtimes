@@ -10,7 +10,7 @@ This example demonstrates how to integrate **agent-codemode** and **agent-skills
 
 The `CodemodeIntegration` class provides a unified interface to:
 
-- **Code Mode**: Execute Python code in isolated sandboxes with tool composition
+- **Codemode**: Execute Python code in isolated sandboxes with tool composition
 - **Skills**: Discover and run reusable skill patterns
 - **MCP Servers**: Connect to Model Context Protocol servers for tool access
 

@@ -354,14 +354,12 @@ export function CommandPlugin({
           to the word being typed. */}
       <Box
         ref={anchorRef}
-        sx={{
-          position: 'fixed',
-          left: query.rect.left,
-          top: query.rect.top,
-          width: 1,
-          height: query.rect.height || 16,
-          pointerEvents: 'none',
-        }}
+        position="fixed"
+        left={query.rect.left}
+        top={query.rect.top}
+        width={1}
+        height={query.rect.height || 16}
+        pointerEvents="none"
       />
       <Overlay
         returnFocusRef={anchorRef as React.RefObject<HTMLElement>}
@@ -435,7 +433,7 @@ export function CommandPlugin({
         {/* The width again, held from the inside. The overlay is positioned
             `fixed`, so nothing in the layout constrains it; without a bounded
             child, a long description sets the width of everything above it. */}
-        <Box sx={{ width: '100%', maxWidth: MENU_WIDTH, minWidth: 0 }}>
+        <Box width="100%" maxWidth={MENU_WIDTH} minWidth={0}>
           <ActionList selectionVariant="single">
             {matches.map(command => {
               const index = choosable.indexOf(command);

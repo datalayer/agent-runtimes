@@ -488,7 +488,7 @@ export function CodeSandboxLauncher(
        * A user environment's entry says "v3", and sending that pins it: a
        * promotion made while this dialog was open cannot change what the
        * person accepted. A platform environment has no version, and the
-       * request is then the one it has always been (PLAN_ENV.md, E1-19).
+       * request is then the one it has always been (E1-19).
        */
       const environmentVersion = spec
         ? codeSandboxEnvironmentVersion(spec)

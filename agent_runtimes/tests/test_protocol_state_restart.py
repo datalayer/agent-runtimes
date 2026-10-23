@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A runtime restarted mid-run keeps its A2A task and its ACP session (ORCHESTRATOR.md, O1-11).
+"""A runtime restarted mid-run keeps its A2A task and its ACP session (O1-11).
 
 Each test starts the runtime as a process of its own with uvicorn, kills it
 with SIGKILL — no shutdown, nothing flushed on the way out — and starts

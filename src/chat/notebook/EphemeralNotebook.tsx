@@ -25,13 +25,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
+  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
   type ToolbarItem,
 } from '@datalayer/primer-addons';
-import { Box } from '@primer/react';
 import {
   Notebook,
   NotebookToolbar,
@@ -269,7 +269,16 @@ export function EphemeralNotebook({
   // deliberately NO fallback to "first running" or `runtimes[0]`: the ephemeral
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
-  const { runtimes, refetchRuntimes } = useAgentsRuntimes();
+  //
+  // Asked only when there is a pod to look up: a host that hands its own
+  // manager (a browser sandbox) or an endpoint has nothing to find there,
+  // and a page that never needs the runtimes list does not poll it.
+  const { runtimes, refetchRuntimes } = useAgentsRuntimes(undefined, {
+    enabled:
+      Boolean(String(runtimeName || '').trim()) &&
+      !externalServiceManager &&
+      !String(runtimeOverride?.baseUrl || '').trim(),
+  });
   const resolvedRuntime = useMemo(() => {
     const preferredRuntime = String(runtimeName || '').trim();
     if (!preferredRuntime) {
@@ -632,14 +641,12 @@ export function EphemeralNotebook({
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        bg: 'canvas.default',
-      }}
+      flex={1}
+      minHeight={0}
+      height="100%"
+      position="relative"
+      overflow="hidden"
+      bg="canvas.default"
     >
       {activeServiceManager && notebookReady ? (
         <ThemeRoot

@@ -34,7 +34,7 @@ import {
   useExampleAgentProtocol,
 } from './hooks/useExampleAgentProtocol';
 import { runsInBrowser } from '../runtimes/variants';
-import { EXAMPLE_SIMPLE_AGENTSPEC_0_0_1 } from '../specs/agents/agents';
+import { AGENTSPECS } from '../specs/agents/agents';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -43,7 +43,7 @@ setupPrimerPortals();
 const AGENTSPEC_ID = 'example-simple';
 const AGENT_NAME = 'simple';
 
-const SPEC = EXAMPLE_SIMPLE_AGENTSPEC_0_0_1;
+const SPEC = AGENTSPECS[AGENTSPEC_ID];
 
 const AgentRuntimeChatExample: React.FC = () => {
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
@@ -75,15 +75,13 @@ const AgentRuntimeChatExample: React.FC = () => {
     return (
       <ThemedProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>

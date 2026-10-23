@@ -1,0 +1,206 @@
+{
+  "says": "The UI plugins an application is drawn with (R8), by its kind, layout, outputs, PAP sign-in and own components: agentspecs' `ui_for` (agent_runtimes/tests/test_app_ui.py) and agent-runtimes' `uiFor` (src/apps/__tests__/app-ui.test.ts) are both held to it. `layout` absent: the kind's own.",
+  "cases": [
+    {
+      "name": "a blank chat",
+      "kind": "chat",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        }
+      ]
+    },
+    {
+      "name": "a blank widget: its page",
+      "kind": "widget",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "page-layout"
+        },
+        {
+          "plugin": "app-page"
+        },
+        {
+          "plugin": "canvas-blocks"
+        }
+      ]
+    },
+    {
+      "name": "a blank decision: its page alone",
+      "kind": "decision",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "app-page"
+        }
+      ]
+    },
+    {
+      "name": "a blank worker: its split layout",
+      "kind": "worker",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "page-layout"
+        },
+        {
+          "plugin": "app-page"
+        },
+        {
+          "plugin": "canvas-blocks"
+        }
+      ]
+    },
+    {
+      "name": "a chat answering with A2UI surfaces",
+      "kind": "chat",
+      "outputs": ["text/markdown", "application/json+a2ui"],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "a2ui-surface",
+          "renderer": "a2ui"
+        }
+      ]
+    },
+    {
+      "name": "a chat that signs people in at companies",
+      "kind": "chat",
+      "outputs": [],
+      "signs_in": true,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "pap-sign-in"
+        }
+      ]
+    },
+    {
+      "name": "a chat laid out as a page",
+      "kind": "chat",
+      "layout": "page",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "page-layout"
+        },
+        {
+          "plugin": "app-page"
+        },
+        {
+          "plugin": "canvas-blocks"
+        }
+      ]
+    },
+    {
+      "name": "a widget laid out as a chat",
+      "kind": "widget",
+      "layout": "chat",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": false,
+      "ui": [
+        {
+          "plugin": "chat"
+        }
+      ]
+    },
+    {
+      "name": "a worker with its own components",
+      "kind": "worker",
+      "outputs": [],
+      "signs_in": false,
+      "own_components": true,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "page-layout"
+        },
+        {
+          "plugin": "app-page"
+        },
+        {
+          "plugin": "canvas-blocks"
+        },
+        {
+          "plugin": "app-components"
+        }
+      ]
+    },
+    {
+      "name": "everything, in order",
+      "kind": "worker",
+      "layout": "split",
+      "outputs": ["application/json+a2ui"],
+      "signs_in": true,
+      "own_components": true,
+      "ui": [
+        {
+          "plugin": "chat"
+        },
+        {
+          "plugin": "a2ui-surface",
+          "renderer": "a2ui"
+        },
+        {
+          "plugin": "pap-sign-in"
+        },
+        {
+          "plugin": "page-layout"
+        },
+        {
+          "plugin": "app-page"
+        },
+        {
+          "plugin": "canvas-blocks"
+        },
+        {
+          "plugin": "app-components"
+        }
+      ]
+    },
+    {
+      "name": "a decision says nothing else, whatever it has",
+      "kind": "decision",
+      "layout": "split",
+      "outputs": ["application/json+a2ui"],
+      "signs_in": true,
+      "own_components": true,
+      "ui": [
+        {
+          "plugin": "app-page"
+        }
+      ]
+    }
+  ]
+}

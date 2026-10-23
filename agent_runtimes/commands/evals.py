@@ -63,16 +63,34 @@ app = typer.Typer(
     name="evals",
     help="Launch and monitor SaaS evalsets, experiments, runs, and live monitoring.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
-evals_app = typer.Typer(name="evalsets", help="Manage evalsets.")
-experiments_app = typer.Typer(name="experiments", help="Manage evalset experiments.")
-runs_app = typer.Typer(name="runs", help="Launch and monitor evalset runs.")
+evals_app = typer.Typer(
+    name="evalsets",
+    help="Manage evalsets.",
+    pretty_exceptions_show_locals=False,
+)
+experiments_app = typer.Typer(
+    name="experiments",
+    help="Manage evalset experiments.",
+    pretty_exceptions_show_locals=False,
+)
+runs_app = typer.Typer(
+    name="runs",
+    help="Launch and monitor evalset runs.",
+    pretty_exceptions_show_locals=False,
+)
 launches_app = typer.Typer(
     name="launches",
-    help="Launches: one submission of a benchmark across its experiments (BENCHMARK.md, B2-03).",
+    help="Launches: one submission of a benchmark across its experiments (B2-03).",
+    pretty_exceptions_show_locals=False,
 )
-live_app = typer.Typer(name="live", help="Inspect live evalset monitoring.")
+live_app = typer.Typer(
+    name="live",
+    help="Inspect live evalset monitoring.",
+    pretty_exceptions_show_locals=False,
+)
 
 console = Console()
 
@@ -699,7 +717,7 @@ def evals_run(
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
     """Run a benchmark: import the spec if needed, one experiment per subject,
-    validate, launch, and follow the launch (BENCHMARK.md, B2-15).
+    validate, launch, and follow the launch (B2-15).
 
     On the cloud the platform executes the launch on a pool of sandboxes as
     you, grades it, and keeps the evidence; the command exits 0 when the

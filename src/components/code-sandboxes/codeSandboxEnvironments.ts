@@ -7,8 +7,8 @@
  * What the environment dropdown says about an environment, as rules.
  *
  * The listing now holds two kinds of thing: the platform's environments, which
- * have always been there, and the environments people build (PLAN_ENV.md,
- * E1-01). They are told apart, grouped, priced and — where a variant was never
+ * have always been there, and the environments people build (E1-01).
+ * They are told apart, grouped, priced and — where a variant was never
  * built — refused here rather than in the components, so the launcher and the
  * picker cannot come to different conclusions about the same entry, and so the
  * rules can be read and tested without a DOM.

@@ -5,7 +5,7 @@
 
 An ``*.evalset.json`` file is what the CLI, the SDK, the GitHub Action and
 the UI's import all turn into a ``POST /evalsets``. The four used to agree
-by habit; this is the agreement written down (BENCHMARK.md, B0-03): a spec
+by habit; this is the agreement written down (B0-03): a spec
 that validates here creates the same evalset from any of them, and a spec
 that does not is refused before a request is made, with the path that is
 wrong.

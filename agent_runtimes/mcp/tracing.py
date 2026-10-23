@@ -87,14 +87,35 @@ async def _inject_on_request(request: Any) -> None:
             request.headers[name] = value
 
 
+#: How long an MCP server's HTTP exchange may take, in seconds: the default of
+#: :func:`tracing_client`. httpx's own default is 5 s for every phase, which
+#: cut an MCP session in two ways (PAP browser pass, 2026-10-12): a tool whose
+#: answer takes longer than 5 s (`pap_ask` waits 10 s for the company) came
+#: back "Connection closed", and the session's idle GET stream timed out every
+#: 5 s and reconnected into the gateway's 409 "Only one SSE stream is allowed
+#: per session". A read waits as long as an MCP request may (pydantic-ai's
+#: `read_timeout`, 5 minutes); connecting, writing and the pool, 30 s.
+MCP_HTTP_READ_TIMEOUT = 300.0
+MCP_HTTP_TIMEOUT_SECONDS = 30.0
+
+
+def mcp_http_timeout() -> Any:
+    """The `httpx.Timeout` an MCP server's client is given by default."""
+    import httpx  # noqa: PLC0415
+
+    return httpx.Timeout(MCP_HTTP_TIMEOUT_SECONDS, read=MCP_HTTP_READ_TIMEOUT)
+
+
 def tracing_client(**kwargs: Any) -> Any:
     """An `httpx.AsyncClient` that carries the trace on every request.
 
     Handed to `MCPToolset(http_client=...)`. The hook runs per request, which
-    is the whole point: the client outlives any one span.
+    is the whole point: the client outlives any one span. Without a `timeout`
+    of its own it is given :func:`mcp_http_timeout`, never httpx's 5 s.
     """
     import httpx  # noqa: PLC0415
 
     hooks = dict(kwargs.pop("event_hooks", None) or {})
     hooks["request"] = [*hooks.get("request", []), _inject_on_request]
+    kwargs.setdefault("timeout", mcp_http_timeout())
     return httpx.AsyncClient(event_hooks=hooks, **kwargs)

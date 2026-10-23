@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an artifact becomes on the platform (PLAN_ORCHESTRATOR.md, O1-10).
+"""What an artifact becomes on the platform (O1-10).
 
 A worker's artifact is registered with a summary and a content hash; its body
 is what the adapter saw — a turn's text, an A2A artifact's parts. Writing it
@@ -30,6 +30,7 @@ __all__ = [
     "NOTEBOOK_MEDIA_TYPE",
     "PlatformObject",
     "artifact_document",
+    "markdown_document",
     "notebook_of",
     "platform_object",
 ]
@@ -93,8 +94,12 @@ def _text(content: str, fmt: int = 0) -> dict[str, Any]:
 
 
 def _block(
-    kind: str, children: list[dict[str, Any]], mark: dict[str, Any], **extra: Any
+    kind: str,
+    children: list[dict[str, Any]],
+    mark: dict[str, Any] | None,
+    **extra: Any,
 ) -> dict[str, Any]:
+    # Unmarked (``None``), a block is anybody's to edit: a page a person saved.
     return {
         "children": children,
         "direction": "ltr",
@@ -102,7 +107,7 @@ def _block(
         "indent": 0,
         "type": kind,
         "version": 1,
-        "$": {"evidence": mark},
+        **({"$": {"evidence": mark}} if mark is not None else {}),
         **extra,
     }
 
@@ -174,7 +179,7 @@ def _inline_nodes(text: str) -> list[dict[str, Any]]:
     return nodes or [_text("")]
 
 
-def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
+def _markdown_blocks(body: str, mark: dict[str, Any] | None) -> list[dict[str, Any]]:
     """A worker's whole answer, as headings, lists and paragraphs — a blank
     line still separates paragraphs and a single one is still a soft break
     within one, exactly as plain text was read before; a line is read as a
@@ -254,6 +259,38 @@ def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
     flush_paragraph()
     flush_list()
     return blocks
+
+
+def markdown_document(title: str, body: str) -> dict[str, Any]:
+    """
+    A document of a title and a text in markdown, its blocks unmarked — an
+    editable page, anybody's to change: what an application saves once a
+    person approved it (R-24).
+
+    Parameters
+    ----------
+    title : str
+        Its heading.
+    body : str
+        Its text: headings, lists and paragraphs, read as `artifact_document` reads them.
+
+    Returns
+    -------
+    dict[str, Any]
+        The serialized Lexical editor state.
+    """
+    children = [_block("heading", [_text(title)], None, tag="h1")]
+    children.extend(_markdown_blocks(body, None))
+    return {
+        "root": {
+            "children": children,
+            "direction": "ltr",
+            "format": "",
+            "indent": 0,
+            "type": "root",
+            "version": 1,
+        }
+    }
 
 
 def artifact_document(

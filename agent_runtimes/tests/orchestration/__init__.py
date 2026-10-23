@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The conformance suite (PLAN_ORCHESTRATOR.md, section 13, O0-12).
+"""The conformance suite (O0-12).
 
-Section 13's scenarios, written once and run against every registered
+The conformance scenarios, written once and run against every registered
 adapter. That is the point of the item and the exit criterion of Phase 0:
 the same orchestration scenario runs through both bindings without any
 orchestration logic changing between them, so a scenario here may never ask

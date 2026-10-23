@@ -1,0 +1,791 @@
+{
+  "slug": "account-tokens",
+  "title": "Account Tokens",
+  "description": "Refresh, rotation, narrowing, re-consent, and revocation of the Account Token Atlas holds for Ada at Manzanita, which never leaves the host's vault.",
+  "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "sdk": "personal-agent-protocol 0.25.0",
+  "parties": [
+    {
+      "id": "user",
+      "name": "Ada",
+      "role": "person",
+      "initial": "A"
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "role": "Ada's personal agent",
+      "domain": "atlas.example",
+      "initial": "At"
+    },
+    {
+      "id": "manzanita",
+      "name": "Manzanita Outfitters",
+      "role": "company",
+      "domain": "manzanita.example",
+      "initial": "M"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Atlas finds Manzanita",
+      "channel": "Discovery + Session",
+      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Connect Atlas to my Manzanita account."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/poppy.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "protocol_version": "0.2",
+              "organization": {
+                "name": "Manzanita Outfitters",
+                "domain": "manzanita.example"
+              },
+              "auth": {
+                "issuer": "https://manzanita.example",
+                "direct": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "device": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "mediated": {
+                  "endpoint": "https://manzanita.example/poppy/sign-in",
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
+                },
+                "custom_scopes": {
+                  "orders:read": "See your orders",
+                  "orders:write": "Exchange and return items"
+                }
+              },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://manzanita.example/poppy/conversations"
+                  }
+                ]
+              },
+              "apis": [
+                {
+                  "type": "openapi",
+                  "url": "https://manzanita.example/api/openapi.json",
+                  "description": "Orders and exchanges"
+                },
+                {
+                  "type": "mcp",
+                  "url": "https://manzanita.example/mcp",
+                  "description": "Orders and exchanges, as MCP tools"
+                }
+              ],
+              "web": {
+                "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
+              },
+              "feedback": {
+                "endpoint": "https://manzanita.example/poppy/feedback"
+              },
+              "extensions": {
+                "operations": {
+                  "version": "1",
+                  "endpoint": "https://manzanita.example/poppy/operations"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-authorization-server",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "issuer": "https://manzanita.example",
+              "token_endpoint": "https://manzanita.example/oauth/token",
+              "revocation_endpoint": "https://manzanita.example/oauth/revoke",
+              "poppy_domains": ["manzanita.example"],
+              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
+              "device_1": "https://manzanita.example/oauth/device",
+              "authorization_endpoint": "https://manzanita.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+              "assertion": "‹session assertion›",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "",
+              "session_id": "ses_1",
+              "signed_in": false
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Signed in: an Account Token",
+      "channel": "Device Sign-In",
+      "summary": "Ada approves on Manzanita's page. The sign-in returns a Session Token and an Account Token; the host stores the Account Token behind an opaque reference.",
+      "chat": [
+        {
+          "speaker": "manzanita",
+          "kind": "page",
+          "title": "manzanita.example/device",
+          "text": "Ada signs in and approves Atlas."
+        },
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "Connected to Manzanita."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/device",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
+            },
+            "body": {
+              "scope": "orders:read orders:write",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "device_code": "‹device code›",
+              "user_code": "‹user code›",
+              "verification_uri": "https://manzanita.example/device",
+              "verification_uri_complete": "https://manzanita.example/device?user_code=‹user code›",
+              "expires_in": 600,
+              "interval": 5
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 400,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+              "device_code": "‹device code›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "error": "authorization_pending"
+            }
+          }
+        },
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "manzanita",
+          "label": "Signs in on manzanita.example/device, enters the code, approves Atlas"
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+              "device_code": "‹device code›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3590,
+              "scope": "orders:read orders:write",
+              "session_id": "ses_1",
+              "signed_in": true,
+              "refresh_token": "‹account token›"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Refresh and rotation",
+      "channel": "refresh_token grant",
+      "summary": "The Session expired; Atlas signs it in again with the Account Token, a fresh client assertion, and a fresh DPoP proof. Manzanita rotates the token; the new one replaces the old before the call returns (rotated: True).",
+      "chat": [
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "(Signed in again in the background.)"
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "2 · 1 not revoked"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "refresh_token",
+              "refresh_token": "‹account token›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "orders:read orders:write",
+              "session_id": "ses_1",
+              "signed_in": true,
+              "refresh_token": "‹account token›"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Narrower, then wider",
+      "channel": "Scope narrowing",
+      "summary": "A refresh for fewer scopes is granted (orders:read). A wider one is the company's invalid_scope, reported as re_consent_required: the host must ask Ada to sign in again, not retry.",
+      "chat": [
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "To do more than read your orders, I'd need you to sign in again."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "orders:read"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "orders:read"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "3 · 1 not revoked"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "refresh_token",
+              "refresh_token": "‹account token›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›",
+              "scope": "orders:read"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "orders:read",
+              "session_id": "ses_1",
+              "signed_in": true,
+              "refresh_token": "‹account token›"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/token",
+          "status": 400,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "refresh_token",
+              "refresh_token": "‹account token›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›",
+              "scope": "orders:read orders:admin"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "error": "invalid_scope"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Revocation",
+      "channel": "RFC 7009",
+      "summary": "Atlas revokes the Account Token at Manzanita and deletes its copy once the company answered. A later refresh finds nothing to use: signed_out, without a request.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Disconnect Atlas from Manzanita."
+        },
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "Done. I can no longer sign in to your Manzanita account."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "3 · 0 not revoked"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Disconnects Atlas from Manzanita"
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/oauth/revoke",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
+            },
+            "body": {
+              "token": "‹account token›",
+              "token_type_hint": "refresh_token",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {}
+          }
+        }
+      ]
+    }
+  ]
+}

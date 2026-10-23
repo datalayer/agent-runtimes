@@ -27,11 +27,11 @@
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 
 const NotebookPageAgent: React.FC = () => (
   <ThemedProvider>
-    <Box sx={{ height: '100vh', minHeight: 0 }}>
+    <Box height="100vh" minHeight={0}>
       <LoopEmbed
         target="browser"
         /* The Analyst is the team's front door; the team puts the other

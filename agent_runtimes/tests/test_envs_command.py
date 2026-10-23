@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``datalayer envs``, every command against a fake client (PLAN_ENV.md, E1-20).
+"""``datalayer envs``, every command against a fake client (E1-20).
 
 The fake is ``AgentClient`` over a fake ``_fetch``. Each route answers what
 E1-01's routes answered in ``environments_registry_recorded.json``, so a
@@ -705,7 +705,7 @@ def test_resolve_follows_the_build_that_resolves(registry: Registry) -> None:
     """The solve runs on the platform, in the version's own base image, so it
     is queued as a build that stops once the lock is stored. `--follow` is on
     by default because a solve takes minutes, and its log is where it says why
-    it refused (PLAN_ENVS.md E1-26)."""
+    it refused (E1-26)."""
     follow_routes(registry)
     queued = {
         "resolved": False,
@@ -877,7 +877,7 @@ def test_diff_reads_each_lock_from_its_own_route(registry: Registry) -> None:
     kilobytes and every listing would carry it — so `diff` reads the document
     itself. Before that route existed it could only say "whose content the
     service does not answer yet", which is what it said on r1 on 2026-09-16
-    (PLAN_ENVS.md E1-20)."""
+    (E1-20)."""
     before = locked(1, ["geopandas==1.1.1"], None)
     after = locked(2, ["geopandas==1.1.2"], None)
     registry.on("GET", f"/environment-versions/{before['uid']}", ok(before))
@@ -1485,8 +1485,8 @@ A_PUBLICATION = {
 
 def test_publish_names_everything_that_becomes_public(registry: Registry) -> None:
     """A version is made public once and the snapshot is frozen at that moment,
-    so the command prints the list rather than a confirmation — section 14.5 of
-    PLAN_BENCHMARKS.md publishes nothing by implication (PLAN_ENVS.md E2-16)."""
+    so the command prints the list rather than a confirmation — the publication
+    rules publish nothing by implication (E2-16)."""
     registry.on("GET", f"/environment-versions/{READY_UID}", ok(READY))
     registry.on("POST", f"/environment-versions/{READY_UID}/publish", ok(A_PUBLICATION))
 

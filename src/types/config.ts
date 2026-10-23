@@ -50,8 +50,8 @@ export interface AgentConfig {
   protocol?: Protocol;
   /** Optional agent spec ID for server-side spec-based creation. */
   agentSpecId?: string;
-  /** Optional custom tools payload. */
-  tools?: unknown[];
+  /** Backend tool ids (agentspecs/backend-tools) to enable: they run on the runtime. */
+  backendTools?: unknown[];
   /** Enable skills for this agent. */
   enableSkills?: boolean;
   /** Optional inference provider override (e.g. local, datalayer). */
@@ -70,7 +70,27 @@ export interface AgentConfig {
  * Remote configuration from server
  */
 export interface RemoteConfig {
+  /**
+   * The models on offer — for an agent, its `model` and `model_additionals` —
+   * each saying whether it can be used.
+   */
   models: ModelConfig[];
+  /**
+   * Who decided which models can be used: ai-inference's own list, or the
+   * runtime's configuration when it did not route through ai-inference or
+   * ai-inference did not answer.
+   */
+  modelsSource?: 'ai-inference' | 'local';
+  /** That decision in a sentence. */
+  modelsNote?: string;
+  /**
+   * The typed-decision models ai-inference serves (Jev), apart from `models`:
+   * a decision asks them, no agent runs on them, so they are never offered
+   * as the agent's model.
+   */
+  decisionModels: ModelConfig[];
+  /** What a typed-decision model is for, in a sentence. */
+  decisionsNote: string;
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];

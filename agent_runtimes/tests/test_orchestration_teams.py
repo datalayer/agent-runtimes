@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A catalogued team, as the control plane runs it (ORCHESTRATOR.md, O2-09).
+"""A catalogued team, as the control plane runs it (O2-09).
 
 Each seat in a team is an agent id the control plane can place and durable
 can bring a worker up for. The members run in the order their dependencies

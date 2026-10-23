@@ -81,17 +81,15 @@ export function MessageDetailView({ message }: { message: MessageDetail }) {
 
   return (
     <Box
-      sx={{
-        p: 2,
-        mb: 1,
-        bg: message.inContext ? 'canvas.default' : 'canvas.inset',
-        border: '1px solid',
-        borderColor: message.inContext ? 'border.default' : 'border.muted',
-        borderRadius: 2,
-        opacity: message.inContext ? 1 : 0.7,
-      }}
+      p={2}
+      mb={1}
+      bg={message.inContext ? 'canvas.default' : 'canvas.inset'}
+      border="1px solid"
+      borderColor={message.inContext ? 'border.default' : 'border.muted'}
+      borderRadius={2}
+      opacity={message.inContext ? 1 : 0.7}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Box display="flex" alignItems="center" gap={2} mb={1}>
         <RoleIcon size={14} />
         <Text
           sx={{
@@ -129,13 +127,11 @@ export function MessageDetailView({ message }: { message: MessageDetail }) {
       </Box>
 
       <Box
-        sx={{
-          borderWidth: '2px',
-          borderStyle: 'solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          overflow: 'hidden',
-        }}
+        borderWidth="2px"
+        borderStyle="solid"
+        borderColor="border.default"
+        borderRadius={2}
+        overflow="hidden"
       >
         <TextPart
           text={text}
@@ -183,25 +179,21 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
   }, [messages]);
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box mb={2}>
       <Box
         as="button"
         onClick={() => setExpanded(!expanded)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          width: '100%',
-          p: 2,
-          bg: 'canvas.subtle',
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          cursor: 'pointer',
-          '&:hover': {
-            bg: 'canvas.inset',
-          },
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        width="100%"
+        p={2}
+        bg="canvas.subtle"
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        cursor="pointer"
+        hover={{ bg: 'canvas.inset' }}
       >
         {expanded ? (
           <ChevronDownIcon size={16} />
@@ -224,20 +216,18 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
 
       {expanded && (
         <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderTop: 'none',
-            borderRadius: '0 0 6px 6px',
-            p: 2,
-          }}
+          border="1px solid"
+          borderColor="border.default"
+          borderTop="none"
+          borderRadius="0 0 6px 6px"
+          p={2}
         >
           {!messages || messages.length === 0 ? (
             <Text sx={{ color: 'fg.muted', fontSize: 1 }}>No messages yet</Text>
           ) : (
             <>
               {outOfContextMessages.length > 0 && (
-                <Box sx={{ mb: 3 }}>
+                <Box mb={3}>
                   <Text
                     sx={{
                       fontWeight: 'semibold',

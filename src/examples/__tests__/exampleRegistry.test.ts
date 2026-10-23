@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXAMPLES, getExampleEntries } from '../example-selector';
+import { EXAMPLE_GROUP_ORDER, getExampleGroup } from '../exampleGroups';
 
 describe('the example registry', () => {
   it('lists every example exactly once', () => {
@@ -53,5 +54,57 @@ describe('the A2UI Jupyter output example', () => {
   it('lands in the A2UI group, by the id the grouping reads', () => {
     // `getExampleGroup` in the shell keys off this prefix.
     expect(entry()?.id.startsWith('A2Ui')).toBe(true);
+  });
+});
+
+describe('the Avatar group', () => {
+  it('holds the avatar and its gallery, under their own names', () => {
+    const ids = getExampleEntries().map(entry => entry.id);
+    expect(ids).toContain('AvatarExample');
+    expect(ids).toContain('AvatarGalleryExample');
+    expect(ids.some(id => id.startsWith('ChatAssistant'))).toBe(false);
+    expect(ids.some(id => id.startsWith('Assistant'))).toBe(false);
+    expect(getExampleGroup('AvatarExample')).toBe('Avatar');
+    expect(getExampleGroup('AvatarGalleryExample')).toBe('Avatar');
+    expect(getExampleEntries().find(e => e.id === 'AvatarExample')?.title).toBe(
+      'Avatar',
+    );
+  });
+
+  it('comes right before A2UI', () => {
+    const at = EXAMPLE_GROUP_ORDER.indexOf('Avatar');
+    expect(at).toBeGreaterThan(-1);
+    expect(EXAMPLE_GROUP_ORDER[at + 1]).toBe('A2UI');
+    expect(getExampleGroup('ChatExample')).toBe('Chat');
+  });
+});
+
+describe('the Personal Agent Protocol group', () => {
+  it('contains the PAP examples beside the protocol groups', () => {
+    const papIds = getExampleEntries()
+      .map(entry => entry.id)
+      .filter(id => id.startsWith('Pap'));
+
+    expect(papIds).toEqual([
+      'PapCompanyDiscoveryExample',
+      'PapAgentIdentityExample',
+      'PapAuthorizationBoundaryExample',
+      'PapDpopProofExample',
+      'PapSessionLifecycleExample',
+      'PapGuidedJourneyExample',
+      'PapUserWithACompanyExample',
+      'PapTwoCompaniesExample',
+      'PapAccountTokensExample',
+      'PapMediatedSignInExample',
+      'PapConversationStreamingExample',
+      'PapConversationControlExample',
+      'PapOperationsExample',
+      'PapSignInDisplayExample',
+    ]);
+    for (const id of papIds) {
+      expect(getExampleGroup(id)).toBe('Personal Agent Protocol');
+    }
+    const a2a = EXAMPLE_GROUP_ORDER.indexOf('A2A');
+    expect(EXAMPLE_GROUP_ORDER[a2a + 1]).toBe('Personal Agent Protocol');
   });
 });

@@ -76,6 +76,13 @@ class RuntimeModel(BaseModel):
     expired_at: Optional[str] = Field(
         default=None, description="Expiration time for the runtime"
     )
+    unmetered: bool = Field(
+        default=False,
+        description=(
+            "Whether the runtime was started on the platform's magic key: "
+            "it consumes no credits and never expires"
+        ),
+    )
 
     # Runtime state fields.
     runtime: Optional[Dict[str, Any]] = Field(

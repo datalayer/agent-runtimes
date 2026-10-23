@@ -381,10 +381,15 @@ Environment variables are automatically expanded using `${VAR_NAME}` syntax.
 
 ```python
 from pydantic_ai import Agent
-from agent_runtimes.mcp import get_mcp_toolsets
+from agent_runtimes.mcp import (
+    get_config_mcp_toolsets,
+    initialize_config_mcp_toolsets,
+)
 
-# Get pre-loaded MCP toolsets
-mcp_toolsets = get_mcp_toolsets()
+# Start the MCP servers of mcp.json (the agent-runtimes server does this at startup)
+await initialize_config_mcp_toolsets()
+# The toolsets that started, ready for Pydantic AI
+mcp_toolsets = get_config_mcp_toolsets()
 
 # Create agent with MCP tools
 agent = Agent(

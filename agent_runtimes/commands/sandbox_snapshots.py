@@ -16,6 +16,7 @@ app = typer.Typer(
     name="sandbox-snapshots",
     help="Runtime snapshots management commands",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

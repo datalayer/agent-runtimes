@@ -1,0 +1,71 @@
+---
+sidebar_position: 3
+title: Plugins and points
+---
+
+# The session's plugin points
+
+The session is extended through the [reactor](../plugins/index.mdx) and
+nothing else: each of the following is a contribution point of the
+`agent-runtimes` reactor extension (`agent_runtimes.plugins`), delivered
+under `datalayer.reactor.extensions` beside `agent-protocols`. The catalogue
+contributes itself, the platform its stores and hooks, a third party a
+harness or a format from a pip package by the same route.
+
+| Point | Value | Built in |
+| --- | --- | --- |
+| `harness` | A `HarnessContribution`: a harness spec (its capabilities table is the spec's) and the adapter that drives it, under the spec's id | The catalogue's eight harnesses; an organization's own, read from IAM, for that organization alone |
+| `session.store` | A `SessionStore`: `list`, `get`, `entries`, `append`, `copy`, `lineage` | The record store (ai-agents) and the file store; one active |
+| `session.format` | A `SessionFormat`: `id`, `export`, `import_` | `datalayer-session/1` |
+| `session.carry` | A `SessionCarry`: `swap(session, target)` and `clone(session, target)` answering what carries, what is dropped and the sentence said | The default policy |
+| `session.hook` | `on_open`, `on_resume`, `on_swap`, `on_clone`, `on_export`, `on_import`, `on_end` — each may refuse in a sentence | The audit rows in the record; an OTEL span per operation |
+
+**Fail fast at the seam.** A contribution whose value is not the point's
+shape, or whose id another plugin contributed first, is refused with the
+plugin's name and the reason — the host runs with the rest, and
+`loop plugins` says what was refused. A `session.store` configured with two
+active stores refuses to start. A hook that raises stops the operation,
+naming the hook.
+
+## A new harness as a pip package
+
+`examples/plugins/aider-harness` is a package of its own. It declares
+
+```toml
+[project.entry-points."datalayer.reactor.extensions"]
+aider = "aider_harness:extension"
+```
+
+and its `extension()` returns a `ReactorExtension` with one plugin whose
+`provide_contributions` does
+
+```python
+from agent_runtimes.plugins.points import HARNESSES, HarnessContribution
+
+contributions.contribute(
+    HARNESSES,
+    HarnessContribution(spec=spec, adapter=acp_harness_agent),
+    contribution_id="aider",
+)
+```
+
+the yaml beside it in the same schema as the catalogue's
+(`acp.command`, `requires`, `terms`, `capabilities`). Installed beside
+agent-runtimes, `loop harnesses` lists *aider* with its terms and
+capabilities, an agent spec says `harness: aider` and the runtime resolves it
+through the registry; a session on it swaps, clones and exports like any
+other. A yaml missing `terms` is refused at start — *a harness whose terms
+are unknown is not served* — and a second package contributing `aider` is
+refused by name. Nothing in agent-runtimes is edited.
+
+## A new export format
+
+`examples/plugins/omnigent-format` contributes a `SessionFormat` under
+`omnigent-jsonl/1`: its importer reads another tool's `session_meta` +
+`item` lines into the record's entries (a `message` item a `turn`, a
+`function_call` a `tool_call`, the rest refused by kind, in a sentence), its
+exporter the inverse. `loop sessions import --format omnigent-jsonl/1 file.jsonl`
+and `POST /sessions/import?format=` reach it; the built-in format is
+contributed the same way, so the second is no special case of the first.
+
+Run them: [`examples/plugins/README.md`](https://github.com/datalayer/agent-runtimes/tree/main/examples/plugins).

@@ -590,7 +590,7 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
 
   if (loading && runs.length === 0) {
     return (
-      <Box sx={{ color: 'fg.muted', fontSize: 1, py: 2 }}>
+      <Box color="fg.muted" fontSize={1} py={2}>
         Loading OTEL traces…
       </Box>
     );
@@ -598,7 +598,7 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
 
   if (error && runs.length === 0) {
     return (
-      <Box sx={{ color: 'danger.fg', fontSize: 0, py: 1 }}>
+      <Box color="danger.fg" fontSize={0} py={1}>
         OTEL trace fetch failed: {error}
       </Box>
     );
@@ -606,7 +606,7 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
 
   if (!option) {
     return (
-      <Box sx={{ color: 'fg.muted', fontSize: 1, py: 2 }}>
+      <Box color="fg.muted" fontSize={1} py={2}>
         No graph trace data yet — run a pydantic-graph agent to see execution
         turns here.
       </Box>
@@ -614,35 +614,27 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box display="flex" flexDirection="column" gap={1}>
       {/* Run selector */}
       {runs.length > 1 && (
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 1,
-            flexWrap: 'wrap',
-            mb: 1,
-          }}
-        >
+        <Box display="flex" gap={1} flexWrap="wrap" mb={1}>
           {runs.slice(0, 8).map((run, idx) => (
             <Box
               key={run.traceId}
               onClick={() => setSelectedIdx(idx)}
-              sx={{
-                px: 2,
-                py: '2px',
-                borderRadius: 2,
-                fontSize: 0,
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor:
-                  idx === selectedIdx ? 'accent.emphasis' : 'border.default',
-                bg: idx === selectedIdx ? 'accent.subtle' : 'canvas.subtle',
-                color: idx === selectedIdx ? 'accent.fg' : 'fg.muted',
-                userSelect: 'none',
-                whiteSpace: 'nowrap',
-              }}
+              px={2}
+              py="2px"
+              borderRadius={2}
+              fontSize={0}
+              cursor="pointer"
+              border="1px solid"
+              borderColor={
+                idx === selectedIdx ? 'accent.emphasis' : 'border.default'
+              }
+              bg={idx === selectedIdx ? 'accent.subtle' : 'canvas.subtle'}
+              color={idx === selectedIdx ? 'accent.fg' : 'fg.muted'}
+              userSelect="none"
+              whiteSpace="nowrap"
             >
               #{runs.length - idx} &nbsp;
               {run.startTime.toLocaleTimeString([], {
@@ -658,38 +650,37 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
 
       {/* Legend — mirrors the pydantic-graph beta node vocabulary. */}
       <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          fontSize: 0,
-          color: 'fg.muted',
-          px: 1,
-          py: '2px',
-        }}
+        display="flex"
+        gap={2}
+        flexWrap="wrap"
+        alignItems="center"
+        fontSize={0}
+        color="fg.muted"
+        px={1}
+        py="2px"
         aria-label="Graph node legend"
       >
         {LEGEND_ENTRIES.map(entry => (
           <Box
             key={entry.type}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            display="flex"
+            alignItems="center"
+            gap={1}
             title={entry.description}
           >
             <Box
               aria-hidden
-              sx={{
-                width: 10,
-                height: 10,
-                borderRadius:
-                  entry.type === 'decision'
-                    ? 0
-                    : entry.type === 'broadcast' || entry.type === 'spread'
-                      ? '2px'
-                      : '50%',
-                transform: entry.type === 'decision' ? 'rotate(45deg)' : 'none',
-                bg: NODE_COLORS[entry.type] ?? NODE_COLORS.default,
-              }}
+              width={10}
+              height={10}
+              borderRadius={
+                entry.type === 'decision'
+                  ? 0
+                  : entry.type === 'broadcast' || entry.type === 'spread'
+                    ? '2px'
+                    : '50%'
+              }
+              transform={entry.type === 'decision' ? 'rotate(45deg)' : 'none'}
+              bg={NODE_COLORS[entry.type] ?? NODE_COLORS.default}
             />
             <Text sx={{ fontSize: 0 }}>{entry.label}</Text>
           </Box>

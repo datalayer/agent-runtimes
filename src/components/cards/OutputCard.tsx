@@ -20,6 +20,7 @@ import {
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../../chat/messages/markdownWithoutHtml';
 
 import { streamdownMarkdownStyles } from '../../chat/styles/streamdownStyles';
 
@@ -57,37 +58,25 @@ export function OutputCard({
 
   return (
     <Box
-      sx={{
-        minWidth: 0,
-        maxWidth: '100%',
-        overflow: 'hidden',
-        p: 3,
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: event.read ? 'border.default' : 'accent.muted',
-        bg: event.read ? 'canvas.default' : 'accent.subtle',
-      }}
+      minWidth={0}
+      maxWidth="100%"
+      overflow="hidden"
+      p={3}
+      borderRadius={2}
+      border="1px solid"
+      borderColor={event.read ? 'border.default' : 'accent.muted'}
+      bg={event.read ? 'canvas.default' : 'accent.subtle'}
     >
       {/* Header */}
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 2,
-          mb: 2,
-          minWidth: 0,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        gap={2}
+        mb={2}
+        minWidth={0}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
+        <Box display="flex" alignItems="center" gap={2} minWidth={0} flex={1}>
           <Label variant="success">output</Label>
           <Truncate
             maxWidth="50%"
@@ -109,9 +98,7 @@ export function OutputCard({
             </Truncate>
           )}
         </Box>
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-        >
+        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
           {event.agent_id && onOpenAgent && (
             <Button
               size="small"
@@ -161,16 +148,14 @@ export function OutputCard({
       {/* Output content */}
       {outputText && (
         <Box
-          sx={{
-            p: 2,
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.muted',
-            bg: 'canvas.subtle',
-          }}
+          p={2}
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.muted"
+          bg="canvas.subtle"
         >
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box display="flex" alignItems="flex-start" gap={1}>
+            <Box flex={1} minWidth={0}>
               <details open={isOutputExpanded}>
                 <summary
                   onClick={e => {
@@ -185,26 +170,22 @@ export function OutputCard({
                   }}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      minWidth: 0,
-                      width: '100%',
-                      flexWrap: 'nowrap',
-                    }}
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
+                    minWidth={0}
+                    width="100%"
+                    flexWrap="nowrap"
                   >
                     <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: 'fg.muted',
-                        flexShrink: 0,
-                        transition: 'transform 0.15s ease',
-                        transform: isOutputExpanded
-                          ? 'rotate(180deg)'
-                          : 'rotate(0deg)',
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      color="fg.muted"
+                      flexShrink={0}
+                      transition="transform 0.15s ease"
+                      transform={
+                        isOutputExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }
                     >
                       <ChevronDownIcon size={12} />
                     </Box>
@@ -231,9 +212,11 @@ export function OutputCard({
                     </Truncate>
                   </Box>
                 </summary>
-                <Box sx={{ mt: 2 }}>
+                <Box mt={2}>
                   <Box sx={streamdownMarkdownStyles}>
-                    <Streamdown>{outputText}</Streamdown>
+                    <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+                      {outputText}
+                    </Streamdown>
                   </Box>
                 </Box>
               </details>

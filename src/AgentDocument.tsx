@@ -316,16 +316,14 @@ const LexicalPanel = React.memo(function LexicalPanel({
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        borderRight: '1px solid',
-        borderColor: 'border.default',
-      }}
+      flex={1}
+      display="flex"
+      flexDirection="column"
+      overflow="auto"
+      borderRight="1px solid"
+      borderColor="border.default"
     >
-      <Box sx={{ padding: 3 }}>
+      <Box padding={3}>
         <LexicalConfigProvider
           lexicalId={DOCUMENT_ID}
           serviceManager={serviceManager}
@@ -395,13 +393,11 @@ interface ChatPanelProps {
 const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools, kernel }) => {
   return (
     <Box
-      sx={{
-        width: '420px',
-        minWidth: '320px',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
+      width="420px"
+      minWidth="320px"
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
     >
       <Chat
         protocol="ag-ui"
@@ -581,15 +577,13 @@ export const AgentDocument: React.FC = () => {
         themeStyles={themeConfig.themeStyles}
       >
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>Connecting to agent {agentId}…</Text>
@@ -607,15 +601,13 @@ export const AgentDocument: React.FC = () => {
         themeStyles={themeConfig.themeStyles}
       >
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <AlertIcon size={48} />
           <Text sx={{ color: 'danger.fg', fontSize: 2 }}>
@@ -635,37 +627,26 @@ export const AgentDocument: React.FC = () => {
       themeStyles={themeConfig.themeStyles}
     >
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          width: '100vw',
-          overflow: 'hidden',
-          bg: 'canvas.default',
-        }}
+        display="flex"
+        flexDirection="column"
+        height="100vh"
+        width="100vw"
+        overflow="hidden"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flexShrink: 0,
-          }}
+          display="flex"
+          justifyContent="flex-end"
+          alignItems="center"
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flexShrink={0}
         >
           <AppearanceControlsWithStore useStore={useAgentDocumentThemeStore} />
         </Box>
-        <Box
-          sx={{
-            display: 'flex',
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
-          }}
-        >
+        <Box display="flex" flex={1} minHeight={0} overflow="hidden">
           {serviceManager && kernelResolved && (
             <LexicalPanel
               serviceManager={serviceManager}

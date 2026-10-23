@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The report as a Lexical document (BENCHMARK.md, B3-03).
+"""The report as a Lexical document (B3-03).
 
 The report engine answers one structured report; this hydrates it into a
-serialized Lexical editor state a person can open, read in the order of
-section 13.0 and keep working in: overview and rankings, pairwise deltas,
+serialized Lexical editor state a person can open, read in the report's
+reading order and keep working in: overview and rankings, pairwise deltas,
 per-task outcomes, failure diagnostics, then methodology, benchmark and
 version, subject configurations, dataset and environment versions, cost and
 duration, limitations, and the reproduction command.
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 ANALYSIS_MIME = "application/vnd.datalayer.evals.analysis+json"
 
-#: The reading order of section 13.0, and the headings the document uses.
+#: The report's reading order, and the headings the document uses.
 REPORT_SECTIONS: tuple[tuple[str, str], ...] = (
     ("overview", "Overview and rankings"),
     ("pairwise", "Pairwise deltas"),
@@ -335,7 +335,7 @@ def build_eval_report_lexical(
     run: dict[str, Any] | None = None,
     cases: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """The report as a serialized editor state, in the section 13.0 order.
+    """The report as a serialized editor state, in the report's reading order.
 
     `report` is what `build_eval_report` answers. `evalset` adds what the
     report does not carry (version, category, dataset reference); `launch`

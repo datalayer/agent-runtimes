@@ -7,12 +7,21 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-docs.yaml'
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
     
+# The registry times out now and then: a fetch is tried again rather than the run lost.
+env:
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_mintimeout: '20000'
+  npm_config_fetch_retry_maxtimeout: '120000'
+
 jobs:
   deploy-docs:
     runs-on: ubuntu-latest
@@ -23,42 +32,60 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: conda-incubator/setup-miniconda@v4
-        with:
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/25.3.0-3/Miniforge3-25.3.0-3-Linux-x86_64.sh
-          auto-update-conda: true
-          activate-environment: datalayer
+      # Before the slow build: a page's example names a call that exists, and
+      # its links to other pages resolve (docs/scripts/check_examples.py).
+      - name: Check the examples
+        run: python3 docs/scripts/check_examples.py
 
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          python-version: "3.13"
+          activate-environment: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-docs-${{ runner.os }}-${{ hashFiles('**/package.json') }}
+          restore-keys: npm-docs-${{ runner.os }}-
+
+      # The package and the doc generators — not its test or examples extras
+      # (torch, scikit-learn, streamlit), which no page is generated from.
       - name: Install dependencies
-        shell: bash -el {0}
         run: |
-          conda install boto3 python=3.13 make "nodejs>=22,<23" uv pip
-          uv pip install ".[test,examples]"
-          uv pip uninstall anthropic
-          uv pip install npdoc_to_md pydoc-markdown
-          uv pip list
-          npm install
+          # Editable: a build of the package needs the frontend built first.
+          uv pip install -e . pydoc-markdown
+          npm install --no-audit --no-fund
+          cd docs && npm install --no-audit --no-fund
 
       - name: Generate API docs
-        shell: bash -el {0}
         run: |
           make typedoc
           make pydoc
 
       - name: Generate docs
-        shell: bash -el {0}
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
         run: |
           cd docs
-          npm install
-          make build
+          npm run build
 
       - name: Publish docs
         if: (github.ref == 'refs/heads/main' && github.event_name == 'push')
-        shell: bash -el {0}
         env:
           AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        # The site is built already: publish it, without building it again.
         run: |
           cd docs
-          make deploy
+          aws s3 rm s3://datalayer-agent-runtimes/ --recursive
+          aws s3 cp ./build s3://datalayer-agent-runtimes/ --recursive
+          aws cloudfront create-invalidation --distribution-id E1QMGQ241PAS26 --paths "/*"

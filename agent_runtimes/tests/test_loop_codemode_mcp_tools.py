@@ -66,7 +66,9 @@ def _register_codemode_agent(monkeypatch: pytest.MonkeyPatch) -> str:
     ]
     toolset = _FakeCodemodeToolset(_FakeRegistry(tools))
     adapter = _FakeAdapter([toolset])
-    monkeypatch.setitem(acp._agents, agent_id, (adapter, object()))
+    # The only agent: one an earlier test left registered (a real codemode
+    # agent, with every tool of its servers) would be listed beside it.
+    monkeypatch.setattr(acp, "_agents", {agent_id: (adapter, object())})
     return agent_id
 
 

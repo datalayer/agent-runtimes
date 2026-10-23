@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The orchestrator as one agent, with a tree of executions behind it (ORCHESTRATOR.md, 7.4, O2-08).
+"""The orchestrator as one agent, with a tree of executions behind it (O2-08).
 
 It is registered on the ACP route as any agent is, so an IDE or a coding
 agent sees one agent. Each turn is a root execution: the prompt is delegated,

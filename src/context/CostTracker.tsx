@@ -12,7 +12,8 @@
  * @module components/context/CostTracker
  */
 
-import { Box, Heading, Text, ProgressBar, Flash, Label } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Heading, Text, ProgressBar, Flash, Label } from '@primer/react';
 import { CreditCardIcon, AlertIcon } from '@primer/octicons-react';
 
 /**
@@ -79,7 +80,7 @@ export function CostTracker({
 
   if (!costData) {
     return (
-      <Box sx={{ p: 2 }}>
+      <Box p={2}>
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
           Waiting for websocket snapshot...
         </Text>
@@ -109,15 +110,7 @@ export function CostTracker({
   // Compact: single row summary
   if (compact) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 2,
-          py: 1,
-        }}
-      >
+      <Box display="flex" alignItems="center" gap={2} px={2} py={1}>
         <CreditCardIcon size={14} />
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           Cumulative: {displayUsd(costData.cumulativeCostUsd)}
@@ -168,23 +161,15 @@ export function CostTracker({
       )}
 
       <Box
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
       >
         {/* Cumulative cost */}
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
+        <Box mb={3}>
+          <Box display="flex" justifyContent="space-between" mb={1}>
             <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Cumulative</Text>
             <Text sx={{ fontSize: 1 }}>
               {displayUsd(costData.cumulativeCostUsd)}
@@ -208,14 +193,8 @@ export function CostTracker({
         </Box>
 
         {/* Last turn cost */}
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
+        <Box mb={3}>
+          <Box display="flex" justifyContent="space-between" mb={1}>
             <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Last turn</Text>
             <Text sx={{ fontSize: 1 }}>
               {displayUsd(lastTurnCostUsd)}
@@ -234,13 +213,11 @@ export function CostTracker({
 
         {/* Stats summary */}
         <Box
-          sx={{
-            display: 'flex',
-            gap: 3,
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-            pt: 2,
-          }}
+          display="flex"
+          gap={3}
+          borderTop="1px solid"
+          borderColor="border.default"
+          pt={2}
         >
           <Box>
             <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
@@ -262,14 +239,7 @@ export function CostTracker({
 
         {/* Model breakdown */}
         {costData.modelBreakdown.length > 0 && (
-          <Box
-            sx={{
-              mt: 2,
-              pt: 2,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box mt={2} pt={2} borderTop="1px solid" borderColor="border.default">
             <Text
               sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 1 }}
             >
@@ -278,12 +248,10 @@ export function CostTracker({
             {costData.modelBreakdown.map(m => (
               <Box
                 key={m.model}
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  py: '2px',
-                }}
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                py="2px"
               >
                 <Text sx={{ fontSize: 0 }}>{m.model}</Text>
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>

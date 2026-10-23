@@ -1,0 +1,80 @@
+{
+  "description": "A ready_for_complete checkout of the test merchant and its revision: both languages compute the same digest (PR-51).",
+  "ucp_version": "2026-08-25",
+  "checkout": {
+    "ucp": {
+      "version": "2026-08-25",
+      "status": "success",
+      "capabilities": {
+        "dev.ucp.shopping.checkout": [
+          {
+            "version": "2026-08-25"
+          }
+        ]
+      },
+      "payment_handlers": {
+        "com.example.test_pay": [
+          {
+            "id": "test_pay_1",
+            "version": "2026-08-25",
+            "available_instruments": [
+              {
+                "type": "card"
+              }
+            ],
+            "config": {}
+          }
+        ]
+      }
+    },
+    "id": "chk_fixture",
+    "status": "ready_for_complete",
+    "currency": "USD",
+    "line_items": [
+      {
+        "id": "li_1",
+        "item": {
+          "id": "tea_sencha",
+          "title": "Sencha green tea, 100 g",
+          "price": 1250
+        },
+        "quantity": 2,
+        "totals": [
+          {
+            "type": "subtotal",
+            "amount": 2500
+          },
+          {
+            "type": "total",
+            "amount": 2500
+          }
+        ]
+      }
+    ],
+    "totals": [
+      {
+        "type": "subtotal",
+        "amount": 2500
+      },
+      {
+        "type": "tax",
+        "amount": 200
+      },
+      {
+        "type": "total",
+        "amount": 2700
+      }
+    ],
+    "links": [
+      {
+        "type": "terms_of_service",
+        "url": "https://store.example/terms"
+      }
+    ],
+    "buyer": {
+      "email": "ana@example.com"
+    }
+  },
+  "revision": "8054c0bb970579c3a0c853ae09cf995fb9a8ff24a0def57ec13793ff7ffb90c5",
+  "summary": "Buy 2 × Sencha green tea, 100 g at store.example for USD 27.00"
+}

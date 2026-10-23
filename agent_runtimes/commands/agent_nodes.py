@@ -17,6 +17,7 @@ app = typer.Typer(
     name="agent-nodes",
     help="Agent Node management commands",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

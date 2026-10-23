@@ -6,7 +6,7 @@
 One engine renders the Markdown and CSV the CLI prints, the GitHub Action
 uploads and the AI Agents service serves, and its deep links live in
 customers' pull requests for months. This freezes what it produces for the
-reference benchmark (BENCHMARK.md, B0-05 and B0-13): a change to a section,
+reference benchmark (B0-05 and B0-13): a change to a section,
 a column or a link is a deliberate edit to the golden files here, never a
 surprise in a CI artifact.
 
@@ -468,7 +468,7 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
 def test_the_comparisons_are_components_with_the_direction_written_down(frozen_report):
     """Heatmaps and pairwise deltas render as components, and A - B is fixed.
 
-    `BENCHMARK.md` section 12.2 fixes the direction and B3-10 asks for these
+    The benchmark design fixes the direction and B3-10 asks for these
     two kinds: **A is the candidate, B is the baseline, delta is `A - B`**. Two
     readers who disagree about the sign of a delta disagree about whether a
     change helped, so the convention travels in the payload rather than in

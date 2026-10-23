@@ -4,7 +4,6 @@
  */
 
 import { useState } from 'react';
-import reactLogo from './assets/react.svg';
 import { useJupyter, JupyterReactTheme } from '@datalayer/jupyter-react';
 import { CellExample } from './examples2/CellExample';
 import { NotebookExample } from './examples2/NotebookExample';
@@ -30,9 +29,6 @@ export function App() {
         </JupyterReactTheme>
       </>
       <div>
-        <a href="https://reactjs.org" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
         <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
           <img src="/vite.svg" className="logo" alt="Vite logo" />
         </a>
@@ -51,9 +47,7 @@ export function App() {
           components in the preview and open the code in the editor!
         </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <p className="read-the-docs">Click on the Vite logo to learn more</p>
     </div>
   );
 }

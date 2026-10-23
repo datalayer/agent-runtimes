@@ -167,7 +167,7 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
            * here — see the editor's container in
            * `ChatLexicalAgentExampleInner`.
            */}
-          <Box sx={{ position: 'relative', width: '100%' }}>
+          <Box position="relative" width="100%">
             <div ref={onRef}>
               <ContentEditable
                 placeholder={
@@ -273,30 +273,19 @@ export function ChatLexicalAgentExampleInner({
   return (
     <>
       <Box
-        sx={{
-          height: 'calc(100vh - 70px)',
-          width: '100vw',
-          display: 'flex',
-          overflow: 'hidden',
-        }}
+        height="calc(100vh - 70px)"
+        width="100vw"
+        display="flex"
+        overflow="hidden"
       >
         {/* Main content area */}
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+        <Box flex={1} display="flex" flexDirection="column" overflow="hidden">
           {/* Header */}
           <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              bg: 'canvas.default',
-            }}
+            p={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            bg="canvas.default"
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
               Lexical Agent Sidebar Example
@@ -309,14 +298,12 @@ export function ChatLexicalAgentExampleInner({
           {/* Editor. This is the element that scrolls — see the note on the
               editor's own Box for why it cannot be one further in. */}
           <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'auto',
-              bg: 'canvas.default',
-            }}
+            flex={1}
+            minHeight={0}
+            display="flex"
+            flexDirection="column"
+            overflow="auto"
+            bg="canvas.default"
           >
             <LexicalEditor
               serviceManager={serviceManager}
@@ -371,16 +358,14 @@ export function ChatLexicalAgentExampleInner({
 
       {chatError && (
         <Box
-          sx={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            padding: 3,
-            backgroundColor: 'danger.subtle',
-            color: 'danger.fg',
-            borderRadius: 2,
-            maxWidth: 300,
-          }}
+          position="fixed"
+          bottom={20}
+          right={20}
+          padding={3}
+          backgroundColor="danger.subtle"
+          color="danger.fg"
+          borderRadius={2}
+          maxWidth={300}
         >
           <strong>Error:</strong> {chatError}
         </Box>

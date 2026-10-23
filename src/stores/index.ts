@@ -53,7 +53,7 @@ export {
   useChatConfig,
   useChatReady,
   useChatInferenceProvider,
-  useChatExtensionRegistry,
+  useChatUIPluginRegistry,
   defaultChatConfig,
   type ChatStore,
   type ChatState,

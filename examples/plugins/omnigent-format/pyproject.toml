@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnigent-session-format"
+version = "0.0.1"
+description = "A second session file format for agent-runtimes, contributed by a pip package."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.entry-points."datalayer.reactor.extensions"]
+omnigent-session-format = "omnigent_session_format:extension"
+
+[tool.setuptools]
+packages = ["omnigent_session_format"]

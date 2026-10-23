@@ -10,6 +10,8 @@
  * @module types/messages
  */
 
+import type { Display } from '@datalayer/reactor/ui';
+
 /**
  * Message role enumeration
  */
@@ -153,6 +155,13 @@ export interface ChatMessage {
 
   /** Optional metadata */
   metadata?: Record<string, unknown>;
+
+  /**
+   * What the message shows besides its words: the displays sent under it
+   * (`reactor.ui`, RU-2), in the order they came; each drawn by
+   * the renderer a plugin contributed for its type.
+   */
+  displays?: Display[];
 
   /** Tool calls for assistant messages */
   toolCalls?: ToolCallContentPart[];

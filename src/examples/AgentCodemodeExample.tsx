@@ -37,12 +37,12 @@ import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { uniqueAgentId } from './utils/agentId';
 import { useAIAgentsWebSocket } from '../hooks';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import {
   AgentCodemodePlugin,
   AgentNoCodemodePlugin,
-} from '../loop/plugins/agent-codemode';
-import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
+} from '../apps/plugins/agent-codemode';
+import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import {
   ContextPanel,
   type ContextSnapshotResponse,
@@ -450,17 +450,15 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
 
   return (
     <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        overflow: 'hidden',
-        minHeight: 560,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      overflow="hidden"
+      minHeight={560}
+      display="flex"
+      flexDirection="column"
     >
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box flex={1} minHeight={0}>
         {/* The variants stay visible: hidden, the Loop pins the agent to the
             page, and this pane's whole point is the server it runs on. */}
         <LoopEmbed
@@ -673,24 +671,16 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <CodeIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -715,24 +705,22 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
         </SegmentedControl>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         {DEMO_AGENT_CONFIGS.filter(c => c.key === 'no-codemode').map(config =>
           (() => {
             const outcome = outcomeFor(config.key);
             return (
               <Box
                 key={config.key}
-                sx={{
-                  width: 320,
-                  borderRight: '1px solid',
-                  borderColor: 'border.default',
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 3,
-                  flexShrink: 0,
-                  overflow: 'auto',
-                }}
+                width={320}
+                borderRight="1px solid"
+                borderColor="border.default"
+                p={3}
+                display="flex"
+                flexDirection="column"
+                gap={3}
+                flexShrink={0}
+                overflow="auto"
               >
                 <Box>
                   <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
@@ -768,17 +756,15 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                   </Text>
                 </Box>
                 <Box
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    bg: outcome.bg,
-                    borderColor: outcome.borderColor,
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                  }}
+                  p={2}
+                  borderRadius={2}
+                  border="1px solid"
+                  bg={outcome.bg}
+                  borderColor={outcome.borderColor}
+                  textAlign="center"
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
                 >
                   <Text sx={{ fontSize: 4, lineHeight: 1, mb: 1 }}>
                     {outcome.emoji}
@@ -813,13 +799,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     flexShrink: 0,
                   }}
                 />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                  }}
-                >
+                <Box display="flex" justifyContent="space-between" gap={2}>
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
                   <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
                     {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
@@ -839,14 +819,12 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
         )}
 
         <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-          }}
+          flex={1}
+          minWidth={0}
+          p={3}
+          display="flex"
+          flexDirection="column"
+          overflow="auto"
         >
           {DEMO_AGENT_CONFIGS.map(config => (
             <AgentRuntimePane
@@ -867,17 +845,15 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
             return (
               <Box
                 key={config.key}
-                sx={{
-                  width: 320,
-                  borderLeft: '1px solid',
-                  borderColor: 'border.default',
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 3,
-                  flexShrink: 0,
-                  overflow: 'auto',
-                }}
+                width={320}
+                borderLeft="1px solid"
+                borderColor="border.default"
+                p={3}
+                display="flex"
+                flexDirection="column"
+                gap={3}
+                flexShrink={0}
+                overflow="auto"
               >
                 <Box>
                   <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
@@ -913,17 +889,15 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                   </Text>
                 </Box>
                 <Box
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    bg: outcome.bg,
-                    borderColor: outcome.borderColor,
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                  }}
+                  p={2}
+                  borderRadius={2}
+                  border="1px solid"
+                  bg={outcome.bg}
+                  borderColor={outcome.borderColor}
+                  textAlign="center"
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
                 >
                   <Text sx={{ fontSize: 4, lineHeight: 1, mb: 1 }}>
                     {outcome.emoji}
@@ -958,13 +932,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     flexShrink: 0,
                   }}
                 />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                  }}
-                >
+                <Box display="flex" justifyContent="space-between" gap={2}>
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
                   <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
                     {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens

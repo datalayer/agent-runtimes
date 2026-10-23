@@ -168,6 +168,61 @@ def get_agui_app(agent_id: str) -> Starlette | None:
     return _agui_apps.get(agent_id)
 
 
+class AGUIDispatch:
+    """The AG-UI app of an agent *as it is registered now*.
+
+    A mount holds the app it was given. An agent recreated under the same id
+    — `configure-from-spec` does that to `default` — registered a new app
+    that the old mount never reached: the runtime went on answering with the
+    agent it started with, without the application's rules, checks and
+    record. Mounted once, this finds the current app on every request.
+    """
+
+    def __init__(self, agent_id: str) -> None:
+        self.agent_id = agent_id
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        app = _agui_apps.get(self.agent_id)
+        if app is None:
+            from starlette.responses import JSONResponse
+
+            response = JSONResponse(
+                {"detail": f"No AG-UI agent '{self.agent_id}'."}, status_code=404
+            )
+            await response(scope, receive, send)
+            return
+        await app(scope, receive, send)
+
+
+def is_agui_mounted(routes: Any, path: str) -> bool:
+    """Whether an AG-UI dispatch is mounted at `path` already."""
+    return any(
+        getattr(route, "path", None) == path
+        and isinstance(getattr(route, "app", None), AGUIDispatch)
+        for route in routes
+    )
+
+
+def ensure_agui_dispatch(app: Any, path: str, agent_id: str) -> None:
+    """One mount at `path`: the dispatch to the agent registered now.
+
+    A mount holding an app of its own — made at startup, or by an older
+    registration — answers before any mounted after it, with the agent it
+    was given. It is taken away, so that the dispatch answers.
+    """
+    routes = app.router.routes
+    stale = [
+        route
+        for route in routes
+        if getattr(route, "path", None) == path
+        and not isinstance(getattr(route, "app", None), AGUIDispatch)
+    ]
+    for route in stale:
+        routes.remove(route)
+    if not is_agui_mounted(routes, path):
+        app.mount(path, AGUIDispatch(agent_id), name=f"agui-{agent_id}")
+
+
 def get_agui_adapter(agent_id: str) -> "AGUITransport | None":
     """
     Get an AG-UI adapter by ID.
@@ -199,9 +254,10 @@ def get_agui_mounts() -> list[Mount]:
         List of Starlette Mount objects for each AG-UI agent.
     """
     mounts = []
-    for agent_id, app in _agui_apps.items():
-        # Mount each AG-UI app at /api/v1/ag-ui/{agent_id}
-        mount = Mount(f"/{agent_id}", app=app)
+    for agent_id in _agui_apps:
+        # Mount each AG-UI agent at /api/v1/ag-ui/{agent_id}, by its id: the
+        # app answering is the one registered when the request comes.
+        mount = Mount(f"/{agent_id}", app=AGUIDispatch(agent_id))
         mounts.append(mount)
     return mounts
 

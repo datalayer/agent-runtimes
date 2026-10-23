@@ -1,0 +1,44 @@
+# A harness a third party contributes: the same schema as the catalogue's
+# (agentspecs/harnesses/claude-code.yaml). The command is the ACP SDK's fake
+# agent of agent-runtimes' tests, so the example runs with no key.
+id: aider
+version: 0.0.1
+name: Aider
+description: Aider, an AI pair programmer, driven over ACP by a third party's adapter.
+docs: https://aider.chat/docs
+
+acp:
+  command: python
+  args: ["-m", "agent_runtimes.tests.fixtures.acp_fake_agent"]
+  protocol_version: 1
+  load_session: true
+  mcp: lend
+  modes: []
+  native_session: none
+
+requires:
+  secrets: []
+  binaries: [python]
+
+terms:
+  served_to_third_parties: permitted
+  licence: Apache-2.0 (adapter and agent)
+
+skills:
+  format: none
+
+honours:
+  model: true
+  subagents: false
+
+capabilities:
+  resume: load
+  fork_history: replay
+  interrupt: true
+  steering: false
+  images: false
+  compaction: own
+  modes: []
+
+instructions_file: CONVENTIONS.md
+tags: [harness]

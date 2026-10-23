@@ -1,0 +1,40 @@
+{
+  "name": "@datalayer/slack",
+  "lockfileVersion": 3,
+  "packages": {
+    "": {
+      "name": "@datalayer/slack",
+      "dependencies": {
+        "@slack/bolt": "5.1.0",
+        "@datalayer/agent-runtimes": "1.5.44"
+      },
+      "devDependencies": { "vitest": "4.1.11" }
+    },
+    "node_modules/@slack/bolt": {
+      "version": "5.1.0",
+      "dependencies": { "express": "5.0.0" }
+    },
+    "node_modules/express": { "version": "5.0.0" },
+    "node_modules/@datalayer/agent-runtimes": {
+      "version": "1.5.44",
+      "dependencies": { "@datalayer/jupyter-react": "2.0.0" }
+    },
+    "node_modules/@datalayer/jupyter-react": {
+      "version": "2.0.0",
+      "dependencies": {
+        "@jupyterlab/services": "7.0.0",
+        "@lumino/widgets": "2.0.0"
+      }
+    },
+    "node_modules/@datalayer/jupyter-react/node_modules/@jupyterlab/services": {
+      "version": "7.0.0"
+    },
+    "node_modules/@lumino/widgets": { "version": "2.0.0" },
+    "node_modules/vitest": {
+      "version": "4.1.11",
+      "dev": true,
+      "dependencies": { "react-dom": "19.0.0" }
+    },
+    "node_modules/react-dom": { "version": "19.0.0", "dev": true }
+  }
+}

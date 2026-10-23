@@ -22,15 +22,7 @@ export const FooterMetrics: React.FC<FooterMetricsProps> = ({
   cost,
 }) => {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 3,
-        py: 2,
-        px: 3,
-      }}
-    >
+    <Box display="flex" alignItems="center" gap={3} py={2} px={3}>
       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
         Tokens:{' '}
         <Text as="span" sx={{ fontWeight: 'bold', color: 'fg.default' }}>

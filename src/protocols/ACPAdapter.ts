@@ -659,15 +659,24 @@ export class ACPAdapter extends BaseProtocolAdapter {
     }
 
     if (updateType === 'tool_call_update') {
-      const progress = update as { rawOutput?: unknown; status?: string };
-      this.emit({
-        type: 'tool-result',
-        toolResult: {
-          success: progress.status !== 'failed',
-          result: progress.rawOutput,
-        },
-        timestamp: new Date(),
-      });
+      // A call's result, once it says it ended; its progress before then is
+      // not a result. ACP names the call it updates.
+      const progress = update as {
+        toolCallId?: string;
+        rawOutput?: unknown;
+        status?: string;
+      };
+      if (progress.status === 'completed' || progress.status === 'failed') {
+        this.emit({
+          type: 'tool-result',
+          toolResult: {
+            toolCallId: progress.toolCallId ?? '',
+            success: progress.status === 'completed',
+            result: progress.rawOutput,
+          },
+          timestamp: new Date(),
+        });
+      }
     }
 
     if (updateType === 'agent_thought_chunk') {

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a delegation hands its worker, and what the worker hands back (ORCHESTRATOR.md, O1-17, O2-05).
+"""What a delegation hands its worker, and what the worker hands back (O1-17, O2-05).
 
 **The credential.** The control plane sends an execution's own token with the
 delegation, under ``datalayer.credential`` in the A2A message's ``metadata``
@@ -62,10 +62,16 @@ __all__ = [
     "SPENT_FIELD",
     "STEER_METHOD",
     "WITHHELD",
+    "DELEGATED_CREDENTIAL",
+    "SEAT_FIELD",
+    "SESSION_FIELD",
     "CredentialLost",
     "SteerCapability",
     "checkpoint_of",
     "close_steering",
+    "seat_of",
+    "session_meta",
+    "session_of_meta",
     "deliver_steer",
     "enter_execution",
     "execution_of",
@@ -93,7 +99,7 @@ __all__ = [
 # `CREDENTIAL_FIELD`, `EXECUTION_FIELD`, `CHECKPOINT_FIELD`, `PAUSED_FIELD`,
 # `PAUSE_FIELD` and `STEER_METHOD` are imported above, from the standalone
 # package this runtime's own delegation metadata is checked against
-# (ORCHESTRATOR.md, O3-02), rather than declared here — a rename on either
+# (O3-02), rather than declared here — a rename on either
 # side is now a real import error, not a silent drift between two
 # hand-maintained copies of the same strings. What has no equivalent in that
 # package — held credentials, the current run's `ContextVar`,
@@ -105,6 +111,18 @@ SPENT_FIELD = USAGE_FIELD
 
 #: What the message keeps in the credential's place: that one was sent, and not what it was.
 WITHHELD = "withheld"
+
+#: Where a run's ``AgentContext.metadata`` holds the credential its delegation
+#: carried (ACP ``_meta`` or A2A ``metadata``), apart from ``user_token``, which
+#: any caller's token may be: the narrowest authority the run holds, so a
+#: harness's lent MCP is scoped by it before anything else (SH-33).
+DELEGATED_CREDENTIAL = "delegated_credential"
+
+#: A team seat's facts on a delegation (MH-38): which seat of which team the
+#: worker is, and the seat's apps session to go on with — ``{team, seat}``
+#: and ``{uid}`` under the ``datalayer`` entry.
+SEAT_FIELD = "seat"
+SESSION_FIELD = "session"
 
 #: Run id -> the credential delegated for it. Process memory only.
 _held: dict[str, str] = {}
@@ -283,6 +301,74 @@ def checkpoint_of(meta: Any) -> str | None:
     return checkpoint_id if isinstance(checkpoint_id, str) and checkpoint_id else None
 
 
+def seat_of(meta: Any) -> dict[str, str] | None:
+    """
+    The team seat a delegation is for (MH-38), when the control plane named one.
+
+    Parameters
+    ----------
+    meta : Any
+        The A2A message's ``metadata`` or the ACP prompt's ``_meta``.
+
+    Returns
+    -------
+    dict[str, str] | None
+        ``{team, seat}``, or ``None`` for a run that is nobody's seat.
+    """
+    ours = _ours(meta)
+    seat = ours.get(SEAT_FIELD) if ours is not None else None
+    if not isinstance(seat, Mapping):
+        return None
+    team, place = str(seat.get("team") or ""), str(seat.get("seat") or "")
+    return {"team": team, "seat": place} if team and place else None
+
+
+def session_of_meta(meta: Any) -> str | None:
+    """
+    The seat's apps session the control plane hands a task (MH-38, MH-P05):
+    the uid the seat's earlier task answered, which this one resumes.
+
+    Parameters
+    ----------
+    meta : Any
+        The A2A message's ``metadata`` or the ACP prompt's ``_meta``.
+
+    Returns
+    -------
+    str | None
+        The session uid, or ``None`` for a seat's first task.
+    """
+    ours = _ours(meta)
+    session = ours.get(SESSION_FIELD) if ours is not None else None
+    uid = session.get("uid") if isinstance(session, Mapping) else None
+    return uid if isinstance(uid, str) and uid else None
+
+
+def session_meta(uid: str, seat: str, execution_id: str) -> dict[str, Any]:
+    """
+    What a seat's worker answers a task with about the session it worked in (MH-38).
+
+    Parameters
+    ----------
+    uid : str
+        The seat's apps session.
+    seat : str
+        The seat.
+    execution_id : str
+        The team run the session belongs to (its root execution).
+
+    Returns
+    -------
+    dict[str, Any]
+        The A2A status message's ``metadata``, merged with what the turn spent.
+    """
+    return {
+        DELEGATION_META_KEY: {
+            SESSION_FIELD: {"uid": uid, "seat": seat, "executionId": execution_id}
+        }
+    }
+
+
 def paused_meta(checkpoint_id: str) -> dict[str, Any]:
     """
     What a paused worker answers with: the checkpoint a resume names.
@@ -355,7 +441,7 @@ def spent_of(meta: Any) -> Usage | None:
     -------
     Usage | None
         The usage; ``None`` when the worker reported none, or something that is
-        not one — a worker's numbers are shown, and cannot break a move (section 9).
+        not one — a worker's numbers are shown, and cannot break a move.
     """
     ours = _ours(meta)
     spent = ours.get(SPENT_FIELD) if ours is not None else None

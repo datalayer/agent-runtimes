@@ -13,6 +13,16 @@ import type { ProtocolAdapterConfig, AGUI } from '../types';
 import type { ChatMessage, ContentPart } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
+import { agUiRefusal, refusalBody } from '../portable/agUiRefusal';
+import {
+  AgUiFrames,
+  type AgUiEvent,
+  endsRun,
+  REACTOR_UI_NAME,
+  RUN_CUT_SHORT,
+  toolResultOf,
+  UI_ON_RUN,
+} from '../portable/agui';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**
@@ -21,6 +31,11 @@ import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 export interface AGUIAdapterConfig extends ProtocolAdapterConfig {
   /** Runtime URL (e.g., /api/copilotkit) */
   runtimeUrl?: string;
+  /**
+   * An application's sessions (`…/api/v1/apps/sessions`): Stop is the
+   * thread's session's (`ProtocolConfig.appSessions`).
+   */
+  appSessions?: string;
 }
 
 /**
@@ -127,8 +142,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     // Abort every ongoing fetch request, not merely the newest.
     this.stopGeneration();
 
-    // Send terminate request to backend if we have a thread ID
-    if (this.currentThreadId) {
+    // Send terminate request to backend if we have a thread ID. Never an
+    // application's session: a page going away, or the chat rebuilt with a
+    // fresh token, is not the person's Stop — it waits for them to come back.
+    if (this.currentThreadId && !this.aguiConfig.appSessions) {
       this.terminateAgent(this.currentThreadId).catch(err => {
         console.warn('[AGUIAdapter] Failed to terminate agent:', err);
       });
@@ -141,13 +158,18 @@ export class AGUIAdapter extends BaseProtocolAdapter {
    * Terminate a running agent thread on the backend
    */
   async terminateAgent(threadId?: string): Promise<void> {
+    const sessions = this.aguiConfig.appSessions;
+    if (sessions) {
+      await this.stopSession(sessions, threadId || this.currentThreadId);
+      return;
+    }
     try {
       // Derive the terminate endpoint from the base URL
       // e.g., http://localhost:8765/api/v1/ag-ui/default -> http://localhost:8765/api/v1/ag-ui/terminate
       const baseUrl = new URL(this.aguiConfig.baseUrl);
       const terminateUrl = `${baseUrl.origin}/api/v1/ag-ui/terminate`;
 
-      const response = await fetch(terminateUrl, {
+      const response = await this.fetchOf()(terminateUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,6 +187,59 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       // else: Successfully terminated, no action needed
     } catch {
       // Ignore errors - agent may have already completed
+    }
+  }
+
+  /**
+   * The person spoke over the agent (VO-46, VO-13): an application's
+   * session is told (`POST {sessions}/{uid}/interrupt`) — what runs is
+   * cancelled, its code's `@app.interrupted` runs, and it stays open for
+   * what is said next, where Stop would leave it waiting to be resumed.
+   * Another agent's run is stopped, as Stop stops it.
+   */
+  async interruptSession(threadId?: string): Promise<void> {
+    const sessions = this.aguiConfig.appSessions;
+    const thread = threadId || this.currentThreadId;
+    if (!sessions) {
+      await this.terminateAgent(threadId);
+      return;
+    }
+    if (!thread) {
+      return;
+    }
+    const url = `${sessions.replace(/\/+$/, '')}/${encodeURIComponent(thread)}/interrupt`;
+    const response = await this.fetchOf()(url, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `The session ${thread} could not be told it was spoken over (${response.status}).`,
+      );
+    }
+  }
+
+  /**
+   * Stop an application's session (`POST {sessions}/{uid}/stop`): what runs
+   * is cancelled and it waits to be resumed. Its thread is the session; with
+   * none, nothing was sent and there is nothing to stop.
+   */
+  private async stopSession(
+    sessions: string,
+    threadId: string | null | undefined,
+  ): Promise<void> {
+    if (!threadId) {
+      return;
+    }
+    const url = `${sessions.replace(/\/+$/, '')}/${encodeURIComponent(threadId)}/stop`;
+    const response = await this.fetchOf()(url, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `The session ${threadId} could not be stopped (${response.status}).`,
+      );
     }
   }
 
@@ -192,6 +267,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         provider: string;
         accessToken: string;
       }>;
+      /** What goes with the run besides the conversation (AG-UI's). */
+      forwardedProps?: Record<string, unknown>;
     },
   ): Promise<void> {
     // Held in a local as well as the field: by the time the `finally` below
@@ -289,7 +366,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         skills: options.skills,
       }),
       context: [],
-      forwardedProps: null,
+      forwardedProps: options?.forwardedProps ?? null,
       // Include model for per-request model override
       ...(options?.model && { model: options.model }),
       // Include identities for tool execution with OAuth tokens
@@ -308,7 +385,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
 
     try {
-      const response = await fetch(this.aguiConfig.baseUrl, {
+      const response = await this.fetchOf()(this.aguiConfig.baseUrl, {
         method: 'POST',
         headers: this.buildHeaders({
           Accept: 'text/event-stream',
@@ -318,8 +395,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       });
 
       if (!response.ok) {
+        // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+        // address means the agent is not on this runtime, which the status
+        // alone never said.
         throw new Error(
-          `AG-UI request failed: ${response.status} ${response.statusText}`,
+          agUiRefusal(
+            response.status,
+            response.statusText,
+            await refusalBody(response),
+          ),
         );
       }
 
@@ -545,7 +629,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
 
     const decoder = new TextDecoder();
-    let buffer = '';
+    // The stream's frames, read as every client reads them (portable/agui).
+    const frames = new AgUiFrames(data =>
+      console.warn('[AGUIAdapter] Failed to parse event data:', data),
+    );
 
     // Always start fresh — each turn gets its own message bubble.
     // Continuations will naturally appear AFTER the tool calls in the
@@ -568,51 +655,48 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
     this._streamParsingDepth++;
 
+    // Whether the run said how it ended. A stream that closes without
+    // RUN_FINISHED or RUN_ERROR is a run cut short — by the runtime, a proxy
+    // or the network — and the page says so instead of waiting for an answer
+    // that is not coming (a Preview gave no answer for minutes, 2026-10-12).
+    let ended = false;
+
+    const handle = (events: AgUiEvent[]) => {
+      for (const event of events) {
+        if (endsRun(event)) {
+          ended = true;
+        }
+        this.handleAGUIEvent(event, {
+          getCurrentMessageId: () => currentMessageId,
+          setCurrentMessageId: id => {
+            currentMessageId = id;
+          },
+          getCurrentContent: () => currentContent,
+          appendContent: content => {
+            currentContent += content;
+          },
+          resetContent: () => {
+            currentContent = '';
+          },
+          appendTurnContent: content => {
+            currentTurnContent += content;
+          },
+          getCurrentTurnContent: () => currentTurnContent,
+        });
+      }
+    };
+
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            // Event type (currently unused)
-            // const eventType = line.slice(7);
-            // Handle event type if needed
-          } else if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-
-            try {
-              const event = JSON.parse(data) as AGUI.Event;
-              this.handleAGUIEvent(
-                event as unknown as Record<string, unknown>,
-                {
-                  getCurrentMessageId: () => currentMessageId,
-                  setCurrentMessageId: id => {
-                    currentMessageId = id;
-                  },
-                  getCurrentContent: () => currentContent,
-                  appendContent: content => {
-                    currentContent += content;
-                  },
-                  resetContent: () => {
-                    currentContent = '';
-                  },
-                  appendTurnContent: content => {
-                    currentTurnContent += content;
-                  },
-                  getCurrentTurnContent: () => currentTurnContent,
-                },
-              );
-            } catch (e) {
-              // Non-JSON data, might be raw content
-              console.warn('[AGUIAdapter] Failed to parse event data:', e);
-            }
+        if (done) {
+          handle(frames.end());
+          if (!ended) {
+            throw new Error(RUN_CUT_SHORT);
           }
+          break;
         }
+        handle(frames.push(decoder.decode(value, { stream: true })));
       }
     } finally {
       reader.releaseLock();
@@ -626,6 +710,18 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         resolve?.();
       }
     }
+  }
+
+  /**
+   * A `reactor.ui` op on the run stream: refused, and said as an error. The
+   * ops come over the conversation's ui socket (RU-W).
+   */
+  private refuseUiOnRun(): void {
+    this.emit({
+      type: 'error',
+      error: new Error(UI_ON_RUN),
+      timestamp: new Date(),
+    });
   }
 
   /**
@@ -800,40 +896,18 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         // AG-UI uses camelCase (toolCallId)
         const toolCallId =
           (event.toolCallId as string) || (event.tool_call_id as string);
-        let content = event.content as unknown;
-
-        // Parse JSON content if it's a string
-        if (typeof content === 'string') {
-          try {
-            content = JSON.parse(content);
-          } catch {
-            // Keep as string if not valid JSON
-          }
-        }
 
         if (toolCallId) {
-          // Check for execution errors in the result
-          // ExecutionResult format: { execution_ok, execution_error, code_error, ... }
-          const contentObj = content as Record<string, unknown> | undefined;
-          const isError =
-            contentObj?.execution_ok === false ||
-            contentObj?.code_error != null ||
-            (contentObj?.error != null && !contentObj?.success);
-          const errorMessage =
-            (contentObj?.execution_error as string) ||
-            (contentObj?.error as string) ||
-            (contentObj?.code_error
-              ? `${(contentObj.code_error as { name?: string })?.name || 'Error'}: ${(contentObj.code_error as { value?: string })?.value || ''}`
-              : undefined);
-
-          // Emit tool result event with the actual content
+          // Read as every client reads it (portable/agui): JSON when it is,
+          // failed when the execution result says so.
+          const said = toolResultOf(event.content);
           this.emit({
             type: 'tool-result',
             toolResult: {
               toolCallId,
-              success: !isError,
-              result: content,
-              error: isError ? errorMessage : undefined,
+              success: said.success,
+              result: said.result,
+              error: said.error,
             },
             timestamp: new Date(),
           });
@@ -866,14 +940,28 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         break;
       }
 
+      case 'ACTIVITY_SNAPSHOT':
+      case 'ACTIVITY_DELTA': {
+        // `reactor.ui` ops come over the conversation's ui socket, never
+        // the run stream (RU-W): one here is refused. Any other
+        // activity is nobody's here.
+        if (event.activityType === REACTOR_UI_NAME) {
+          this.refuseUiOnRun();
+        }
+        break;
+      }
+
       case 'CUSTOM': {
         const name = event.name as string | undefined;
-        const value = event.value;
+        if (name === REACTOR_UI_NAME) {
+          this.refuseUiOnRun();
+          break;
+        }
         this.emit({
           type: 'activity',
           activity: {
             type: name || 'custom',
-            data: value,
+            data: event.value,
           },
           timestamp: new Date(),
         });

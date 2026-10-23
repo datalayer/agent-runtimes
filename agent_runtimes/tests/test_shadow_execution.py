@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A gateway-started run recorded as its own execution (ORCHESTRATOR.md, O4-05)."""
+"""A gateway-started run recorded as its own execution (O4-05)."""
 
 from __future__ import annotations
 

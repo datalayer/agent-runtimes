@@ -1,0 +1,167 @@
+---
+sidebar_position: 2
+title: An application's presence
+---
+
+# An application's presence
+
+An application meets the person as itself: its face, its name and its
+welcome, and one line saying what it is doing — never an agent's id, a
+robot icon or token counters. This is its **presence**.
+
+## Its face, name and welcome
+
+An application names an emoji (its face), a name and a welcome in its
+Appspec. In its chat:
+
+- the **header** shows the face beside the name, with the line of status;
+- the **empty state** shows the face at the page's size, 72px (the largest
+  of the three sizes a face is drawn at, `--loop-face-large`), the name as its
+  heading, and the welcome under it — the first thing a person reads, before
+  anyone writes — with the application's starters as chips;
+- the token and context counters under the prompt are **off**: a person
+  using an application is not asking about tokens;
+- the session's controls under the prompt — the agents, the model, the tools
+  and their servers, the skills — are **gone**: a person using an application
+  is not choosing them, its builder did in its spec. An agent's chat keeps
+  them.
+
+An application without a face of its own shows the product's mark in its
+place.
+
+### The same drawing on every platform
+
+A face given as an emoji is drawn in Fluent Emoji (Microsoft, MIT, Flat
+style), not by the system's emoji font, so it is the same face on every
+device: `FaceDrawing` (in `chat/presence/Presence.tsx`) hands the string to
+`FluentEmoji` from `@datalayer/core/lib/components/emoji`, at the size asked
+— 20px in the header, 72px in the empty state, 20px on the embed's floating
+button. Each drawing is a module of its own in core's bundle, fetched the
+first time it is drawn: no request leaves for a third party. Core ships a
+drawing of every emoji in `FACE_EMOJIS` (the eyes, every example's, and the
+ones an application is offered); any other emoji is drawn by the system, as
+text. A host that passes its own drawing as the face (a React node) keeps
+it.
+
+## The line of status
+
+One line beside the face says what the application is doing, in plain words
+(`PRESENCE_LINES`, in `chat/presence/presenceStatus.ts`):
+
+| State | The line | What it means |
+| --- | --- | --- |
+| `idle` | *Ready* | No turn is running: the application waits for a message. |
+| `thinking` | *Thinking…* | A turn is running and no tool is open: the model is reading and writing. |
+| `working` | *Working…* | A tool has been called and has not returned. |
+| `waiting` | *Waiting for you* | A tool waits on the person's approval. The line is set in bold. |
+| `paused` | *Paused* | Its owner paused its deployment: it answers nobody until it is resumed. |
+
+The state is read from the chat, never from the model's words
+(`presenceState`, `presenceToolOf`): whether a turn is running, and the
+newest tool call — open until it is complete or failed, and waiting when its
+result says an approval is pending. *Waiting for you* is said whether or not
+the turn is still streaming, since the stream may end while the approval is
+asked. A tool left open by a stopped turn is not work: the line says
+*Ready*.
+
+*Paused* is not read from the chat: it is the deployment's state, which its
+host knows and says (`presence.paused`, `AppRenderer`'s `paused`). It wins
+over everything the last turn left behind.
+
+The line is a polite live region (`role="status"`), so a screen reader hears
+it change.
+
+## The ring around the face
+
+The face is never redrawn. The state is said by the line and by a quiet
+motion around the face (`PresenceFace`, in `chat/presence/Presence.tsx`):
+
+- *Thinking…* and *Working…*: a soft ring in the accent breathes around the
+  face;
+- *Waiting for you*: the ring stands, still;
+- *Paused*: a still, muted dashed circle, and the face dimmed and greyed —
+  dimmed, not redrawn;
+- *Ready*: no ring.
+
+The ring fades in and out at the theme's status pace
+(`--theme-motion-status`, `--theme-motion-easing`), and takes the accent
+(`--theme-accent`), whatever the theme. For a reader whose system asks for
+reduced motion, the ring does not breathe.
+
+## `ChatPresence`, for a host
+
+The chat plugin of the [Loop workspace](/apps) takes who is answering as
+`presence` (`ChatPresence`, in `apps/plugins/chat`):
+
+```ts
+interface ChatPresence {
+  /** Its name, in the header and the empty state. */
+  name: string;
+  /** An emoji: its face. */
+  face?: string;
+  /** What it says before anyone writes. */
+  welcome?: string;
+  /** Its deployment is paused: the line says *Paused*, its assistant dozes. */
+  paused?: boolean;
+  /** Told what it is doing as it changes: idle, thinking, working, waiting, paused. */
+  onPresence?: (state: PresenceState) => void;
+}
+```
+
+The chat also hands the state to whoever reads its turn
+(`LoopChatTurn`'s `presence` signal): the [floating
+assistant](./floating-assistant.mdx) acts it out from there.
+
+`LoopEmbed` passes `presence` and `showTokenUsage` through to the plugin. A
+chat without `presence` keeps its header as it is: the agent's name and
+mark, no line of status.
+
+`AppRenderer` sets all of this from the application itself — its name, its
+emoji, its welcome (or its description), with the counters off and the
+conversation in the `loop` theme. A host only adds `onPresence` when it
+wants to know, and `paused` when the deployment it shows is paused.
+
+## `onPresence`: a host that frames the face itself
+
+A page that draws the application's face in a frame of its own — the home
+page's hero does — is told the state as it changes:
+
+```tsx
+import { useState } from 'react';
+import { AppRenderer } from '@datalayer/agent-runtimes/lib/apps';
+import type { PresenceState } from '@datalayer/agent-runtimes/lib/chat/presence/presenceStatus';
+import { PRESENCE_LINES } from '@datalayer/agent-runtimes/lib/chat/presence/presenceStatus';
+
+export function Hero({ app }) {
+  const [presence, setPresence] = useState<PresenceState>('idle');
+  return (
+    <section>
+      <figure data-presence={presence}>
+        <span aria-hidden>{app.emoji}</span>
+        <figcaption>{PRESENCE_LINES[presence]}</figcaption>
+      </figure>
+      {/* A state setter is stable: pass it as it is. */}
+      <AppRenderer app={app} onPresence={setPresence} />
+    </section>
+  );
+}
+```
+
+`onPresence` is read once, when the workspace is built: pass a stable
+function, such as a state setter, not a new arrow on every render.
+
+## What is verified, and what is not
+
+**Verified.** The state, from a turn and the newest tool call, is unit
+tested (`presence-status.test.ts`): ready between turns, thinking during a
+turn, working while a tool has not returned, waiting while an approval is
+asked (streaming or not), not working on a tool a stopped turn left
+open, and paused while its deployment is, whatever the turn left.
+
+**Not verified yet.** No test renders an application's chat to check the
+face, name, welcome and line in its header and empty state, or the ring
+around the face; the ring's contrast in every accent, light and dark, is not
+measured.
+
+The same state drives the [floating assistant](./floating-assistant.mdx)'s
+motions.

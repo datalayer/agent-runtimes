@@ -1,0 +1,115 @@
+{
+  "model": "kokoro-82m",
+  "runtime": "kokoro-onnx 0.6.1, onnxruntime CPU",
+  "load_ms": 814,
+  "spoken": [
+    {
+      "voice": "kokoro-af-heart",
+      "language": "en",
+      "text": "Hello. I read the answers aloud, sentence by sentence, as they are written.",
+      "synthesis_ms": 1080,
+      "audio_s": 4.54,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Hello, I read the answers aloud, sentenced by sentence as they are written."
+    },
+    {
+      "voice": "kokoro-af-heart",
+      "language": "en",
+      "text": "Open the notebook and run the first cell.",
+      "synthesis_ms": 674,
+      "audio_s": 2.11,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "1. Open the notebook and run the first cell"
+    },
+    {
+      "voice": "kokoro-af-heart",
+      "language": "en",
+      "text": "Datalayer saved the report at three forty five.",
+      "synthesis_ms": 817,
+      "audio_s": 2.79,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Data layer saved the report at 345."
+    },
+    {
+      "voice": "kokoro-af-heart",
+      "language": "en",
+      "text": "Ask the agent to compare the two suppliers.",
+      "synthesis_ms": 750,
+      "audio_s": 2.43,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Ask the agent to compare the two suppliers."
+    },
+    {
+      "voice": "kokoro-bf-emma",
+      "language": "en",
+      "text": "Hello. I read the answers aloud, sentence by sentence, as they are written.",
+      "synthesis_ms": 1382,
+      "audio_s": 4.33,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Hello, I read the answers aloud, sentenced by sentence as they are written."
+    },
+    {
+      "voice": "kokoro-bf-emma",
+      "language": "en",
+      "text": "Open the notebook and run the first cell.",
+      "synthesis_ms": 722,
+      "audio_s": 2.13,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Open the notebook and run the first cell"
+    },
+    {
+      "voice": "kokoro-bf-emma",
+      "language": "en",
+      "text": "Datalayer saved the report at three forty five.",
+      "synthesis_ms": 599,
+      "audio_s": 2.67,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Data layer saved the report at 345."
+    },
+    {
+      "voice": "kokoro-bf-emma",
+      "language": "en",
+      "text": "Ask the agent to compare the two suppliers.",
+      "synthesis_ms": 737,
+      "audio_s": 2.43,
+      "heard_by": "moonshine-tiny-en",
+      "heard": "Ask the agent to compare the two suppliers."
+    },
+    {
+      "voice": "kokoro-ff-siwis",
+      "language": "fr",
+      "text": "Bonjour. Je lis les réponses à voix haute, phrase par phrase, à mesure qu'elles s'écrivent.",
+      "synthesis_ms": 992,
+      "audio_s": 4.69,
+      "heard_by": "whisper-base",
+      "heard": "Bonjour, je lis les réponses à voix haute, phrase par phrase à mesure qu'elle s'écrive."
+    },
+    {
+      "voice": "kokoro-ff-siwis",
+      "language": "fr",
+      "text": "Ouvre le notebook et lance la première cellule.",
+      "synthesis_ms": 631,
+      "audio_s": 3.05,
+      "heard_by": "whisper-base",
+      "heard": "ouvre le T-Node BookFull et lance la première cellule."
+    },
+    {
+      "voice": "kokoro-ff-siwis",
+      "language": "fr",
+      "text": "Le rapport est prêt, je l'envoie à l'équipe.",
+      "synthesis_ms": 648,
+      "audio_s": 2.2,
+      "heard_by": "whisper-base",
+      "heard": "Le rapport est prêt, je l'envoie à l'équipe."
+    },
+    {
+      "voice": "kokoro-ff-siwis",
+      "language": "fr",
+      "text": "Demande à l'agent de comparer les deux fournisseurs.",
+      "synthesis_ms": 769,
+      "audio_s": 2.6,
+      "heard_by": "whisper-base",
+      "heard": "demandent à l'agent de comparer les deux fournisseurs."
+    }
+  ]
+}

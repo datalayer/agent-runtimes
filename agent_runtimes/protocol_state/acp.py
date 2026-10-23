@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-ACP sessions that outlive the runtime (ORCHESTRATOR.md, O1-11).
+ACP sessions that outlive the runtime (O1-11).
 
 A session is a record of the runtime's protocol state store, and so is each
 turn of its conversation, so ``session/load`` on a restarted runtime finds the

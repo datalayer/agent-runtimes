@@ -52,13 +52,11 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
   if (!serviceManager) {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: 'fg.muted',
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        color="fg.muted"
       >
         Loading Simple services...
       </Box>
@@ -129,30 +127,19 @@ export function AgentRuntimeNotebookExampleInner({
   return (
     <>
       <Box
-        sx={{
-          height: 'calc(100vh - 70px)',
-          width: '100vw',
-          display: 'flex',
-          overflow: 'hidden',
-        }}
+        height="calc(100vh - 70px)"
+        width="100vw"
+        display="flex"
+        overflow="hidden"
       >
         {/* Main content area */}
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+        <Box flex={1} display="flex" flexDirection="column" overflow="hidden">
           {/* Header */}
           <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              bg: 'canvas.default',
-            }}
+            p={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            bg="canvas.default"
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
               Notebook Chat Sidebar Example
@@ -164,22 +151,18 @@ export function AgentRuntimeNotebookExampleInner({
 
           {/* Notebook */}
           <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              overflow: 'hidden',
-              bg: 'canvas.default',
-              p: 3,
-            }}
+            flex={1}
+            display="flex"
+            overflow="hidden"
+            bg="canvas.default"
+            p={3}
           >
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                overflow: 'hidden',
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              overflow="hidden"
             >
               <NotebookUI serviceManager={serviceManager} />
             </Box>
@@ -228,17 +211,15 @@ export function AgentRuntimeNotebookExampleInner({
 
         {chatError && (
           <Box
-            sx={{
-              position: 'fixed',
-              bottom: 20,
-              right: 20,
-              padding: 3,
-              backgroundColor: 'danger.subtle',
-              color: 'danger.fg',
-              borderRadius: 2,
-              maxWidth: 320,
-              zIndex: 999,
-            }}
+            position="fixed"
+            bottom={20}
+            right={20}
+            padding={3}
+            backgroundColor="danger.subtle"
+            color="danger.fg"
+            borderRadius={2}
+            maxWidth={320}
+            zIndex={999}
           >
             <strong>Error:</strong> {chatError}
           </Box>

@@ -84,7 +84,7 @@ mcp_servers: []
 
 skills: []
 
-tools: []
+backend_tools: []
 
 frontend_tools: []
 

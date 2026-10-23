@@ -25,37 +25,94 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
+    # An application is a Reactor plugin on a PluginPlatform (P-35):
+    # its contributions, its extension, its commands and routes.
+    # `reactor.ui` (1.1.0): a tool's display, its model view for the model and
+    # its wire for the page (RU-1); 1.1.1 (unreleased): the ui
+    # channel's WebSocket, `reactor.ui.ws` (RU-W).
+    "datalayer_reactor>=1.3.0",
+    # PAP is a runtime protocol capability, not an example-only dependency.
+    # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
+    # orchestration and a root-published TypeScript package.
+    # 0.7.0: `personal_agent_protocol.ui.PapSignIn`, the gateway's sign-in
+    # display, read back here for its model view (the `ui` extra).
+    # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
+    # tested against (Sessions, Device Sign-In, conversations, Operations,
+    # the reference company of PapCompanyCapability; PR-03).
+    # 0.25.0: PAP draft 0.2 (Device Sign-In names the company, assertions name
+    # its issuer, token_for_mcp); a 0.2 personal agent uses only 0.2 companies.
+    "personal-agent-protocol[ui]>=0.25.0,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    "agentspecs>=0.0.16",
+    # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
+    # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
+    # An Appspec's `a2a` extensions (PR-02): an older one refuses the field.
+    # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SH-50).
+    # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SH-60).
+    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
+    # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
+    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
+    # agentspecs 0.0.116: interface.avatar (was interface.assistant, now refused) and the 3D avatar, {kind: model3d, url};
+    # 0.0.117: the examples' app.py say avatar too.
+    # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file, MH-12) and every
+    # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
+    # agentspecs 0.0.124: interface.theme.variant may be vscode (T-30), as primer-addons 1.0.41 lists it.
+    "agentspecs>=0.0.124",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
-    # each re-declaring its own copy of the same strings (ORCHESTRATOR.md,
-    # O3-02). Unconditional, not under the `a2a` extra below: delegation
+    # each re-declaring its own copy of the same strings (O3-02).
+    # Unconditional, not under the `a2a` extra below: delegation
     # metadata is read on the ACP path too. 1.0.0 is the first release under
     # semver proper (the 0.0.x releases made no compatibility promise across
     # even a patch bump, hence the one-release-wide pin until then); the
     # field-name constants it exports are the ones 0.0.3 made public.
     "agent-teams>=1.0.0,<2",
+    # Agent Shield: the Shield's engine —
+    # the policy model and `decide`, the ACP channel and proxy, the audit
+    # vocabulary, the SaaS client. agent-runtimes hosts it; it never imports
+    # agent-runtimes. Distribution `datalayer-agent-shield`, import `agent_shield`
+    # (PyPI refused `agent-shield`); 0.1.1 is the first real release (the ACP
+    # channel and proxy, the policy, the register, the audit), published from
+    # the v0.1.1 tag on 15 October 2026.
+    # 0.1.6: agent_shield.conformance and agent_shield.report, the evidence map and the
+    # conformance report ai-agents serves (SH-61, SH-62).
+    # 0.2.0: the authorizer port, the PAP classes and the company role (SH-74, SH-70, SH-71).
+    # 0.2.4: agent_shield.acp.credential (SH-33: the lending the adapter reuses), a terminal's
+    # output pushed while it runs (SH-13, SH-16), the audit's credential shapes fixed.
+    # 0.2.7: its sentences and the policy schema without decision numbers.
+    # 0.2.11: ShieldProxy.run_turn, the turn inside the `shield.turn` span the
+    # host opened (ACPAgent opens its own; 0.2.9-0.2.10 nested a second one).
+    "datalayer-agent-shield>=0.2.13,<0.3",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
-    # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0;
+    # the environments client is typed with (D-14), in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
     "croniter",
+    # Web Bot Auth's signature bases (PR-20): RFC 9651
+    # structured fields; the RFC 9421 library of PyPI ignores `;key=`.
+    "http-sfv>=0.9.9,<0.10",
+    # UCP's own Pydantic models, generated against the 2026-08-25 schemas
+    # (PR-30): 0.5.x is that version.
+    "ucp-sdk>=0.5.0,<0.6",
+    # PACT's JWTs and receipts are verified with it (PR-12).
+    "PyJWT[crypto]>=2.10",
+    # A component placed from Python (`Application.component`) is checked
+    # against its JSON Schema, as its properties form checks it.
+    "jsonschema>=4.18",
     # `datalayer_core.orchestration.Usage`, what an attempt spent as its worker
     # reported it, arrived in 1.2.2.
     # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable
     # descriptor: `from_agentspec` reads the contract and gives it an A2A
-    # endpoint (ORCHESTRATOR.md, O2-07). Below it, every capability query
+    # endpoint (O2-07). Below it, every capability query
     # answers nothing.
     # 1.2.8 sends a secret's value as it is, with no marker and nothing to
     # decode: one representation end to end, which is what
-    # `datalayer secrets create` writes with (PLAN_ENVS.md E3-05).
+    # `datalayer secrets create` writes with (E3-05).
     "datalayer-core>=1.2.12",
     "fastapi",
     "filelock>=3.20.3",
@@ -71,33 +128,39 @@ dependencies = [
     "fastmcp-slim[client]>=4.0.0b3,<5",
     # OTEL: floors, and no ceiling below the next major.
     #
-    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.44.0`
-    # requires `opentelemetry-api == 1.44.0` and
-    # `opentelemetry-semantic-conventions == 0.65b0`, and each exporter
+    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.45.0`
+    # requires `opentelemetry-api == 1.45.0` and
+    # `opentelemetry-semantic-conventions == 0.66b0`, and each exporter
     # requires `opentelemetry-sdk ~= its own version`. So a ceiling here does
     # not narrow a range, it selects one release of the whole stack, and
     # anything else in the environment with an opinion about OTEL then has
     # nowhere to go. `<0.66` on the two 0.x packages was doing exactly that.
-    "opentelemetry-api>=1.44.0,<2.0.0",
-    "opentelemetry-sdk>=1.44.0,<2.0.0",
-    "opentelemetry-semantic-conventions>=0.65b0,<1.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
-    "opentelemetry-instrumentation>=0.65b0,<1.0",
+    "opentelemetry-api>=1.45.0,<2.0.0",
+    "opentelemetry-sdk>=1.45.0,<2.0.0",
+    "opentelemetry-semantic-conventions>=0.66b0,<1.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.0,<2.0.0",
+    "opentelemetry-instrumentation>=0.66b0,<1.0",
     # `instrument_worker_transports` patches httpx through it, so the A2A
     # relay and the ACP client carry the trace out to the worker.
-    "opentelemetry-instrumentation-httpx>=0.65b0,<1.0",
+    "opentelemetry-instrumentation-httpx>=0.66b0,<1.0",
     # The agent-memories PostgreSQL a runtime on Kubernetes keeps its A2A
     # tasks and ACP sessions in (`protocol_state`); the runtime image installs
     # only these dependencies.
     "psycopg[binary]>=3.2.8",
-    "pydantic-ai-slim[mcp]>=2.35.0,<3",
+    # Below 2.60: it records an answer asked again as a RetryFeedbackPart and a
+    # tool asked again as a ToolReturnPart (outcome="retried"), not the
+    # RetryPromptPart the session, the guardrails and the adapter read.
+    "pydantic-ai-slim[mcp]>=2.35.0,<2.60",
     "pydantic-graph>=2.35.0,<3",
     "pydantic-settings>=2.14.2",
     "pydantic[email]>=2.13.3",
     "tiktoken>=0.5.0",
     "typer>=0.16.0",
     "urllib3>=2.6.3",
+    # The DevTools protocol of the browser on an application's computer
+    # (R-23, `loop/apps/browser.py`).
+    "websockets>=13",
 ]
 dynamic = ["version"]
 
@@ -113,7 +176,7 @@ anthropic = [
     # pydantic-ai 2.34+ builds on the anthropic SDK 1.x; nothing here calls
     # the SDK directly, so the floor follows pydantic-ai`s.
     "anthropic>=1.0.0,<2.0.0",
-    "pydantic-ai-slim[anthropic]>=2.35.0,<3",
+    "pydantic-ai-slim[anthropic]>=2.35.0,<2.60",
 ]
 openai = [
     # The ceiling is the next MAJOR of the SDK, not the current one.
@@ -124,50 +187,61 @@ openai = [
     # is `AsyncAzureOpenAI`, whose arguments are unchanged in 3.x, so the
     # ceiling was holding back the ecosystem rather than protecting anything.
     "openai>=2.29.0,<4.0.0",
-    "pydantic-ai-slim[openai]>=2.35.0,<3",
+    "pydantic-ai-slim[openai]>=2.35.0,<2.60",
 ]
 google = [
     "google-auth>=2.52.0",
     "google-api-core>=2.30.3",
-    "pydantic-ai-slim[google]>=2.35.0,<3",
+    "pydantic-ai-slim[google]>=2.35.0,<2.60",
 ]
 aws = [
     # pydantic-ai-slim[bedrock] asks for boto3>=1.42.63; capping the minor
     # collided with litellm 1.98 (boto3>=1.43.1) in a shared environment.
     "boto3>=1.42.96,<2",
-    "pydantic-ai-slim[bedrock]>=2.35.0,<3",
+    "pydantic-ai-slim[bedrock]>=2.35.0,<2.60",
 ]
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
-    # 2.0: the worker publishes through its helpers and leaves the end of
-    # the stream to it, on Pydantic AI 2.
-    #
-    # Ceiling added 2026-09-12. The floor alone left every build re-resolve
-    # to whatever was newest on PyPI, and somewhere within 2.0.x
-    # `A2AClient.__init__` renamed its worker-URL argument from `base_url`
-    # to `agent`. Nothing failed at import or at startup — the two call
-    # sites that build one are wrapped in a `try` or run fine until asked
-    # to do something — so the first thing to notice was a team member`s
-    # dispatch on prod1 answering `A2AClient.__init__() got an unexpected
-    # keyword argument `base_url``. Every A2A dispatch through
-    # `relay_a2a_task` was broken until then, silently. `<2.1` matches the
-    # `agent=` constructor this pin was fixed against; move it only with
-    # the call sites that use it.
-    "fasta2a>=2.0.1,<2.1",
+    # 2.1 speaks A2A 1.0 JSON-RPC, which `@a2a-js/sdk` 1.x in the browser
+    # uses, and writes `security_schemes` on the agent card; 2.1.1 takes the
+    # card's output modes and hands the worker the modes a request accepts
+    # (`accepted_output_modes`), which output formats rest on. The ceiling stays:
+    # a fasta2a minor release has changed its API before (`A2AClient`'s
+    # `base_url` became `agent`), so move it with the call sites.
+    "fasta2a>=2.1.1,<2.2",
 ]
 # The ACP client the orchestration adapter speaks, and the route serves.
 #
 # It was imported and declared nowhere — the same defect O0-17 found in
 # ai-agents, and with the same failure: a dependency reached for at the
 # moment of doing the work is missing in every deployment that did not
-# happen to have it. The durable worker runs both adapters (19.8), so it is
+# happen to have it. The durable worker runs both adapters, so it is
 # `agent-runtimes[a2a,acp]` that it needs, and neither extra is optional
 # there.
+# agent-client-protocol: the code uses names every release from 0.7.1 to
+# 0.12.1 has (McpServerStdio, not StdioMcpServer, which 0.8 removed), and its
+# ACP tests pass on 0.12.1. datalayer-agent-shield, a core dependency, still
+# caps it below 0.8 (its code imports names 0.9 renamed): that cap, not this
+# floor, is what an install resolves until agent-shield moves.
 acp = [
     "agent-client-protocol>=0.7.1",
 ]
+# Voice at the terminal (VO-16): the microphone and speaker of the
+# machine, faster-whisper to hear and Kokoro to say answers here; never a
+# default dependency. `python -m agent_runtimes.voice.store` fills the store
+# (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
+# or when `loop` runs on Datalayer, the person's token hears and says on
+# Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
+# espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
+# the person on their own machine, never in a browser bundle (
+# the register's notes, VO-01).
+voice = [
+    "sounddevice>=0.5.0",
+    "faster-whisper>=1.2.1,<2",
+    "kokoro-onnx>=0.6.1,<0.7",
+]
 ui = [
-    "ag-ui-protocol>=0.1.19",
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
@@ -184,22 +258,25 @@ ui = [
 # Nothing in the runtime needs it: the converter took one versioned
 # specification URL from it, which `agent_runtimes/a2ui/executions.py` now
 # carries as a literal it verifies against the SDK wherever the SDK is present.
-# What is left is the examples, which is what this extra is for. The OTEL
-# ceiling is restated here so that installing it resolves in seconds instead of
-# discovering the same cap through sixty google-adk releases.
+# What is left is the examples (and the A2UI routes and backend tool that load
+# them), which is what this extra is for. Against the OTEL floor above it does
+# not resolve at all: install `a2ui-agent-sdk` with `--no-deps` to run them.
 a2ui = [
-    "a2ui-agent-sdk>=0.6.0",
+    "a2ui-agent-sdk>=0.7.0",
 ]
 memory = [
     "mem0ai>=2.0.1",
 ]
 durable = [
     "dbos",
-    "pydantic-ai-slim[dbos]>=2.35.0,<3",
+    "pydantic-ai-slim[dbos]>=2.35.0,<2.60",
 ]
+# Opt-in and out of `all`: every logfire release up to 5.1.1 caps
+# `opentelemetry-sdk<1.45`, so this extra cannot resolve against the OTEL floor
+# above until one lifts it. Install it with `--no-deps` (it runs on 1.45) or wait.
 logfire = [
-    "logfire>=4.32.1",
-    "logfire-api>=4.33.0",
+    "logfire>=5.1.1",
+    "logfire-api>=5.1.1",
 ]
 docs = [
     "npdoc_to_md>=2.0.1",
@@ -214,6 +291,8 @@ examples = [
     "uvicorn",
 ]
 cli = [
+    # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
@@ -222,6 +301,9 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
+    # `loop apps package` builds an application's wheel (P-29).
+    "build",
+    "hatchling",
 ]
 chat = [
     "jupyter-nbmodel-client",
@@ -235,8 +317,22 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
+# An application's agent written with another framework (P-23,
+# `app.agent`): its runs become the session's steps, its tool calls decided by
+# the application's rules. Opt-in and out of `all`: each brings a framework of
+# its own, and `app.agent` refuses one that is missing with the extra to install.
+langchain = [
+    "langchain-core>=1.0.0,<2",
+]
+langgraph = [
+    "langchain-core>=1.0.0,<2",
+    "langgraph>=1.0.0,<2",
+]
+llamaindex = [
+    "llama-index-core>=0.14.0,<0.15",
+]
 all = [
-    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
+    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
@@ -256,7 +352,14 @@ test = [
     "python-dotenv>=1.1.1",
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
-    "datalayer_reactor>=1.0.4",
+    # The build hook's own test imports it (test_agent_pages).
+    "hatchling",
+    # The word error rate of the voice checks (VO-51).
+    "jiwer>=4.0.0",
+    # A notebook an application writes analyses in pandas and charts in
+    # matplotlib; its test runs one (test_output_formats).
+    "matplotlib",
+    "pandas",
 ]
 
 [project.scripts]
@@ -276,6 +379,17 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 [project.entry-points."datalayer.reactor.cli"]
 agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
+# The agent protocols, each a Reactor plugin, delivered together as the
+# `agent-protocols` Reactor Extension: a host that
+# discovers extensions gets MCP, A2A, Web Bot Auth, PACT, UCP and Agentic
+# Commerce, each with its points (PAP's plugins are the PAP SDK's own).
+[project.entry-points."datalayer.reactor.extensions"]
+agent-protocols = "agent_runtimes.protocols.extension:extension"
+# The session's points (harness, session.store, session.format,
+# session.carry, session.hook) and what agent-runtimes contributes to each,
+# delivered as the `agent-runtimes` Reactor Extension (MH-F01).
+agent-runtimes = "agent_runtimes.plugins.extension:extension"
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
@@ -288,9 +402,14 @@ path = "agent_runtimes/_version.py"
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
 
+# What building the wheel reads, and no more (hatchling adds pyproject.toml,
+# the README and the licence): the Python package, the hook, package.json for
+# the version and the Jupyter config. No built frontend, no frontend sources,
+# no npm tarball: the wheel alone carries the frontend (see hatch_build.py),
+# and the release builds both from the repository.
 [tool.hatch.build.targets.sdist]
-artifacts = ["agent_runtimes/static/dist"]
-exclude = [".github", "binder"]
+only-include = ["agent_runtimes", "jupyter-config", "hatch_build.py", "package.json"]
+exclude = ["agent_runtimes/static/dist"]
 
 [tool.hatch.build.targets.wheel]
 artifacts = ["agent_runtimes/static/dist"]
@@ -336,6 +455,13 @@ ignore_errors = true
 module = "agent_runtimes.evals.saas.runner"
 ignore_errors = true
 
+# Generated by datamodel-code-generator (scripts/codegen/generate_agentic_commerce.sh):
+# its constrained types (`conint(...)`, `constr(...)`) are pydantic's, which mypy
+# reads as calls in annotations. The module is regenerated, never edited.
+[[tool.mypy.overrides]]
+module = "agent_runtimes.protocols.agentic_commerce.models"
+ignore_errors = true
+
 [[tool.mypy.overrides]]
 module = "yaml"
 ignore_missing_imports = true
@@ -346,6 +472,10 @@ disable_error_code = ["import-untyped"]
 
 [tool.ruff.lint]
 extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_runtimes"]
+known-third-party = ["agentspecs"]
 
 [tool.poetry]
 version = "0.1.0"
@@ -411,4 +541,12 @@ skips = [
 
 [tool.interrogate]
 fail-under = 79.0
-exclude = ["agent_runtimes/tests", "scripts"]
+exclude = [
+    "agent_runtimes/tests",
+    "agentspecs/tests",
+    "tests",
+    "scripts",
+    "node_modules",
+    # Generated (scripts/codegen/generate_agentic_commerce.sh), never edited.
+    "agent_runtimes/protocols/agentic_commerce/models.py",
+]

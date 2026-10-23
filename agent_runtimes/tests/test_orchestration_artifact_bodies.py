@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an artifact becomes on the platform, and the body that gets it there (PLAN_ORCHESTRATOR.md, O1-10).
+"""What an artifact becomes on the platform, and the body that gets it there (O1-10).
 
 An adapter registers an artifact with a summary and a hash, and hands its
 whole body along on the observation, for the durable worker to write into the

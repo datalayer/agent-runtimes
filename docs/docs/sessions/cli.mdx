@@ -1,0 +1,66 @@
+---
+sidebar_position: 1
+title: loop sessions
+---
+
+# `loop sessions`
+
+The session's verbs, against a runtime that runs the application: `--server`
+names it (`AGENT_RUNTIMES_URL`, else the local server on port 8000);
+`--cloud` signs the calls with the token `datalayer login` left (or
+`DATALAYER_API_KEY`), for a runtime on Datalayer. Progress goes to standard
+error, the answers to standard output; every refusal is the runtime's
+sentence and the command exits 1.
+
+| Verb | What it does |
+| --- | --- |
+| `loop sessions list [--app <id>] [--all] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--all` includes the archived. |
+| `loop sessions show <uid>` | What a session is: state, turn, agent and harness, turns, lineage, where it runs, its harness row with the vendor's session id when the adapter exposes it. |
+| `loop sessions resume <uid> [--agent <id>]` | Resume a paused session — held, or from its record on a runtime of its application (`--agent` names the application's agent there). |
+| `loop sessions swap <uid> --agent <spec>` | Swap the session's agent in place; the new agent is told in a sentence, printed. |
+| `loop sessions clone <uid> [--at <turn>] [--agent <spec>] [--title <t>]` | A new session, paused, cut at the turn, the same or another agent. |
+| `loop sessions export <uid> [-o file] [--format <id>]` | The session as a `datalayer-session/1` file. |
+| `loop sessions import <file> [--agent <spec>] [--format <id>]` | A new session, paused, you its author. |
+| `loop sessions end <uid>` | End it for good; its record stays. |
+| `loop sessions feedback <uid>` | What people said of its answers. |
+
+`loop apps threads` and `loop apps feedback` are retired: each answers with
+the sentence naming the verb above.
+
+A session from the terminal, in words:
+
+```text
+$ loop sessions list --app shield-mvp
+e67a52b2  open    shield-mvp-codex        5 turns  on runtime 01m5d3e8  — The refactor
+c1a9f0e3  paused  shield-mvp-claude-code  2 turns  not running  cloned from e67a52b2 at turn 2  — Before the refactor
+$ loop sessions resume c1a9f0e3 --agent shield-mvp-claude-code
+Resuming c1a9f0e3 on runtime 01m5d3e8 (shield-mvp-claude-code): 2 turns replayed.
+$ loop sessions swap c1a9f0e3 --agent shield-mvp-codex
+shield-mvp-codex is told: "This conversation was with Claude Code until turn 2; from here it is with Codex. What was said stays; what Claude Code kept for itself waits for a swap back."
+1 allow-always answer dropped.
+Swapped. shield-mvp-codex answers from turn 3.
+$ loop sessions export c1a9f0e3 -o ~/before-the-refactor.session.jsonl
+Exported 2 turns, 9 entries, 0 redactions → /home/ada/before-the-refactor.session.jsonl (sha256:…).
+$ loop sessions import ~/before-the-refactor.session.jsonl --agent shield-mvp-claude-code
+Imported as 7d2c4b10 (paused, 2 turns, 0 redactions). Resume it: loop sessions resume 7d2c4b10
+$ loop sessions clone e67a52b2 --at 7
+✗ Session e67a52b2 has 5 turns; there is no turn 7 to clone it at.
+```
+
+## In the REPL
+
+In `loop`'s prompt the same verbs act on the session this conversation is:
+`/sessions` lists yours, `/resume <uid>` opens one here, then `/swap <agent>`
+(the sentence shown), `/clone [turn]` and `/export [file]` act on it. Before
+a `/resume`, each says *This conversation is not an application session*.
+`/browser` keeps handing the conversation to the browser; the prompt's own
+turns still go to its agent's endpoint, and `/context-export` exports the
+context (it was `/export` before).
+
+## `loop plugins`
+
+`loop plugins [<name>]` lists every reactor extension the runtime holds, its
+plugins and what each contributes to the session's points, then what was
+refused — a malformed contribution with the plugin's name and the reason,
+an entry point that did not load with the entry point and the error. One
+name given, that extension alone. See [Plugins](./plugins.mdx).

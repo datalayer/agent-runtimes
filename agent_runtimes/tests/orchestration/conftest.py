@@ -8,7 +8,7 @@ and a binding added to ``BINDINGS`` is run through all of them without a
 scenario being edited. A test that wanted only one protocol would have to
 say so out loud, which is the point.
 
-The suite also reports what it came to (O1-14): section 16's cross-framework
+The suite also reports what it came to (O1-14): the cross-framework
 conformance rate is the share of the scenarios each binding could run that it
 passed. Each scenario's outcome against each binding is recorded as
 ``orchestration.conformance.scenarios`` — exported when the process has a

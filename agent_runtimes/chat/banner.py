@@ -60,7 +60,7 @@ GOODBYE_URL = "https://datalayer.ai"
 #: wide in a terminal, so the banner's own padding counts it as two.
 LOOP_WORDMARK = "L\U0001f440P"
 #: The same mark as a verb, for a line that reads as a sentence.
-LOOP_WORDMARK_VERB = "L\U0001f440ping"
+LOOP_WORDMARK_VERB = "L\U0001f440PING"
 #: The version the terminal shows: the library's own, so it cannot drift from
 #: what is installed. (`agent_runtimes.__init__` does not import this package,
 #: so reading it here is no cycle.)
@@ -69,7 +69,7 @@ LOOP_VERSION = __import__("agent_runtimes").__version__
 TOKENS_UP = "\u25b2"
 TOKENS_DOWN = "\u25bc"
 GOODBYE_MESSAGE = (
-    f"Keep {LOOP_WORDMARK_VERB} Your agents stay warm. See you soon at ☰ Datalayer!"
+    f"Keep {LOOP_WORDMARK_VERB} — Your agents stay warm. See you at ☰ Datalayer"
 )
 
 
@@ -80,7 +80,7 @@ def _osc8_link(url: str, label: str | None = None) -> str:
 
 def format_goodbye() -> str:
     """Return the one-line, colorized goodbye for raw ANSI terminals."""
-    return f"{GREEN_LIGHT}{GOODBYE_MESSAGE}  {GRAY}· {_osc8_link(GOODBYE_URL)}{RESET}"
+    return f"{GREEN_LIGHT}{GOODBYE_MESSAGE} {GRAY}· {_osc8_link(GOODBYE_URL)}{RESET}"
 
 
 def print_goodbye(console: Any = None) -> None:

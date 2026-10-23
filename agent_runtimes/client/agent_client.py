@@ -291,7 +291,7 @@ def ensure_local_agent(
         "transport": transport,
         "agent_spec_id": agent_spec_id,
         "enable_skills": enable_skills,
-        "tools": [],
+        "backendTools": [],
         "disableToolApprovals": disable_tool_approvals,
         **(fields or {}),
     }
@@ -550,14 +550,21 @@ def _post_vercel_ai_chat(
     prompt: str,
     timeout: int,
     source_label: str,
+    chat_id: str = "",
 ) -> dict[str, Any]:
-    """POST a single prompt to a Vercel AI chat endpoint."""
+    """POST a single prompt to a Vercel AI chat endpoint.
+
+    ``chat_id`` is the chat's id, the conversation the runtime records the
+    turn under (an application's session, R-07): a caller that reads
+    the record afterwards (the Evals engine, V-08) names it; one is
+    made up otherwise.
+    """
     message_id = f"chat-{int(time.time() * 1000)}"
     parts = [{"type": "text", "text": prompt}]
     message = {"id": message_id, "role": "user", "parts": parts}
     body = {
         "trigger": "submit-message",
-        "id": f"chat-{message_id}",
+        "id": chat_id or f"chat-{message_id}",
         "message": message,
         "messages": [message],
     }
@@ -681,8 +688,13 @@ def run_cloud_agent_chat(
     prompt: str,
     route_candidates: list[str],
     timeout: int = 300,
+    chat_id: str = "",
 ) -> dict[str, Any]:
-    """Send a single prompt to a cloud runtime agent via Vercel AI."""
+    """Send a single prompt to a cloud runtime agent via Vercel AI.
+
+    ``chat_id`` names the chat — the session an application records the
+    turn under — for a caller that reads that record afterwards.
+    """
     base_url = build_agent_runtimes_base_url(ingress)
     candidates = [c for c in route_candidates if str(c or "").strip()]
     if not candidates:
@@ -699,6 +711,7 @@ def run_cloud_agent_chat(
             prompt=prompt,
             timeout=timeout,
             source_label="Cloud agent",
+            chat_id=chat_id,
         )
         if str(result.get("status") or "").strip().lower() == "completed":
             return result
@@ -726,6 +739,197 @@ def run_cloud_agent_chat(
             ).strip()
             failure_cause["attempted_urls"] = attempted
     return last_result
+
+
+#: What a turn of a test's conversation does: exactly one of these (E-01).
+TURN_DOINGS = ("say", "choose", "press")
+
+
+def _conversation_turn(raw: Any) -> dict[str, Any]:
+    """A turn of a test's conversation as its case carries it, checked: what
+    it says, chooses or presses — exactly one — and a press's payload.
+    """
+    if not isinstance(raw, dict):
+        raise ValueError(f"A turn of a test's conversation is a mapping, not {raw!r}.")
+    does = [key for key in TURN_DOINGS if str(raw.get(key) or "").strip()]
+    if len(does) != 1:
+        raise ValueError(
+            f"A turn of a test's conversation says, chooses or presses one thing: {raw!r}."
+        )
+    payload = raw.get("payload") or {}
+    if not isinstance(payload, dict) or (payload and does[0] != "press"):
+        raise ValueError(f"A turn's payload is a mapping, with a press: {raw!r}.")
+    return {"does": does[0], "what": str(raw[does[0]]).strip(), "payload": payload}
+
+
+def _turn_in_words(turn: dict[str, Any]) -> str:
+    """A turn as the judge reads it in the conversation."""
+    if turn["does"] == "say":
+        return f"The person says: {turn['what']}"
+    if turn["does"] == "choose":
+        return f"The person chooses: {turn['what']}"
+    given = json.dumps(turn["payload"], ensure_ascii=False) if turn["payload"] else ""
+    return f"The person presses {turn['what']}" + (f" with {given}" if given else "")
+
+
+def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
+    """The actions a session offers, by name, as its ``loop.session`` event
+    says them (RU-5): each with the display that offers it and its
+    token.
+    """
+    offers: dict[str, dict[str, Any]] = {}
+    for line in lines:
+        if not line.startswith("data:"):
+            continue
+        try:
+            event = json.loads(line[len("data:") :].strip())
+        except ValueError:
+            continue
+        if (
+            isinstance(event, dict)
+            and event.get("type") == "CUSTOM"
+            and event.get("name") == "loop.session"
+        ):
+            for offer in (event.get("value") or {}).get("actions") or []:
+                offers[str(offer["name"])] = offer
+    return offers
+
+
+def run_cloud_app_conversation(
+    *,
+    ingress: str,
+    token: str,
+    agent: str,
+    session: str,
+    turns: list[Any],
+    timeout: int = 300,
+) -> dict[str, Any]:
+    """Play a test that is a conversation (E-01) on an application's
+    session, as its page has it: the session opened on the session API
+    (``/api/v1/apps/sessions``, named ``session`` — the record it is kept
+    under), then each turn sent once the one before was answered — a message
+    for what the person says, the option's words for a choice they pick (as
+    the chat answers a choice), and for what they press the action the
+    session offered under that name, its token and its payload
+    (``/sessions/{uid}/press``, RU-5) — an action it did not offer
+    is a failure. ``agent`` is the application's agent on the runtime, made on
+    AG-UI, which the session API runs on.
+
+    Answers ``status`` ``completed`` with the whole conversation in words
+    (``output.text``) and each turn with what it answered (``turns``), or
+    ``failed`` with ``failure_cause`` when a request was refused or a turn
+    failed — a question left waiting is an answer, not a failure.
+    """
+    from agent_runtimes.loop.apps.deployments import UNFINISHED, session_result
+
+    played = [_conversation_turn(raw) for raw in turns]
+    if not played:
+        raise ValueError("A test's conversation has at least one turn.")
+    base = build_agent_runtimes_base_url(ingress).rstrip("/") + "/api/v1/apps/sessions"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        "Authorization": f"Bearer {token}",
+    }
+    lines: list[str] = []
+    said: list[dict[str, Any]] = []
+    # What the session offers of its code's actions, with their tokens: each
+    # stream starts with what the session is (``loop.session``).
+    offered: dict[str, dict[str, Any]] = {}
+
+    def failed(kind: str, message: str, detail: str, url: str) -> dict[str, Any]:
+        return {
+            "status": "failed",
+            "output": {"text": "\n".join(lines), "raw_stream_excerpt": detail[:2000]},
+            "turns": said,
+            "failure_cause": {
+                "stage": "runtime_execution",
+                "type": kind,
+                "message": message,
+                "detail_excerpt": detail[:2000] or message,
+                "execution_url": url,
+            },
+        }
+
+    def send(
+        url: str, body: dict[str, Any], words: str, *, framed: bool = True
+    ) -> Optional[dict[str, Any]]:
+        try:
+            response = requests.post(
+                url, json=body, headers=headers, timeout=timeout, stream=True
+            )
+        except requests.exceptions.RequestException as exc:
+            message = f"The application's session could not be reached: {exc}"
+            return failed("runtime_unreachable", message, message, url)
+        with response:
+            if response.status_code >= 300:
+                detail = response.text or ""
+                return failed(
+                    "runtime_http_error",
+                    f"The session refused the turn (HTTP {response.status_code})",
+                    detail,
+                    url,
+                )
+            response.encoding = "utf-8"
+            streamed = list(response.iter_lines(decode_unicode=True))
+            _, result = session_result(streamed)
+            offered.update(_session_offers(streamed))
+        answer = str((result.get("output") or {}).get("text") or "").strip()
+        if words:
+            lines.append(words)
+        if answer:
+            lines.append(f"It says: {answer}")
+        said.append({"turn": words, "answer": answer, "status": result["status"]})
+        cause = str(result.get("failure_cause") or "")
+        # An opening with nothing to say runs nothing of an application
+        # without code: no run frames it, and it is not a failure.
+        if result["status"] == "failed" and (framed or cause != UNFINISHED):
+            return failed("turn_failed", cause or "The turn failed.", cause, url)
+        return None
+
+    # The first thing the person says opens the session, as the page's first
+    # message does; a conversation that starts with a choice opens it bare,
+    # its code asking first.
+    first = played[0]
+    opener = first["what"] if first["does"] == "say" else ""
+    if opener:
+        played = played[1:]
+    stopped = send(
+        base,
+        {"agent": agent, "session": session, "opener": opener},
+        _turn_in_words(first) if opener else "",
+        framed=bool(opener),
+    )
+    if stopped is not None:
+        return stopped
+    for number, turn in enumerate(played):
+        if turn["does"] == "press":
+            url = f"{base}/{session}/press"
+            offer = offered.get(turn["what"])
+            if offer is None:
+                message = (
+                    f"The session offered no action {turn['what']!r}: it offers "
+                    f"{', '.join(sorted(offered)) or 'none'}."
+                )
+                return failed("press_not_offered", message, message, url)
+            body: dict[str, Any] = {
+                "action": turn["what"],
+                "display_id": offer["display_id"],
+                "token": offer["token"],
+                "payload": turn["payload"],
+                "idempotency_id": f"{session}-{number}",
+            }
+        else:
+            url = f"{base}/{session}/messages"
+            body = {"text": turn["what"]}
+        stopped = send(url, body, _turn_in_words(turn))
+        if stopped is not None:
+            return stopped
+    return {
+        "status": "completed",
+        "output": {"text": "\n".join(lines), "raw_stream_excerpt": ""},
+        "turns": said,
+    }
 
 
 class AgentClient(
@@ -757,7 +961,7 @@ class AgentClient(
         List all available environments.
 
         The platform's, then the user environments of the caller and of its
-        organizations (PLAN_ENV.md, E1-01), every page of them.
+        organizations (E1-01), every page of them.
 
         Parameters
         ----------
@@ -890,6 +1094,7 @@ class AgentClient(
         from_snapshot_uid: Optional[str] = None,
         parent_reservation_uid: Optional[str] = None,
         version: Optional[Union[int, str]] = None,
+        app_spec: Optional[dict[str, Any]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -901,8 +1106,7 @@ class AgentClient(
         environment : str, optional
             Environment type (e.g., "ai-agents-env"). Type of resources needed
             (cpu, gpu, etc.). A user environment is named through the same
-            argument, as ``<account-handle>/<name>`` or by its uid (PLAN_ENV.md,
-            D-2).
+            argument, as ``<account-handle>/<name>`` or by its uid (D-2).
         version : Optional[Union[int, str]], optional
             The version of a user environment to launch: its number, or a
             version uid. Without one the promoted version launches (E1-19).
@@ -919,12 +1123,15 @@ class AgentClient(
             a Volume attachment mounts its Volume.
         from_snapshot_uid : Optional[str], optional
             The uid of the snapshot to restore into the runtime, when the caller
-            holds the uid rather than the name (a benchmark task's sandbox is
-            restored from the snapshot its result names, BENCHMARK.md B3-05).
+            holds the uid rather than the name (a benchmark task's sandbox is restored from the snapshot its result names, B3-05).
             ``snapshot_name`` looks the uid up by name; this skips the lookup.
         parent_reservation_uid : Optional[str], optional
-            The execution tree the runtime is metered against (ORCHESTRATOR.md,
-            O1-07): its reservation gets no more than the tree has left.
+            The execution tree the runtime is metered against (O1-07):
+            its reservation gets no more than the tree has left.
+        app_spec : Optional[dict[str, Any]], optional
+            The Appspec of the application the runtime is launched for: its
+            connections' secrets are given to it before its agent is made
+            (R-19), as `loop apps run --cloud` launches one.
 
         Returns
         -------
@@ -937,7 +1144,7 @@ class AgentClient(
             # What a second costs is READ FROM THE LISTING, never written
             # here: a platform entry carries its pool's rate, and a user
             # environment the rate of the size class its promoted version
-            # names (PLAN_ENV.md, D-4, E1-19).
+            # names (D-4, E1-19).
             burning_rate, size_class = entry.burning_rate, entry.size_class
         else:
             # Somebody else's published version is in nobody's listing but
@@ -997,6 +1204,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
+                app_spec=app_spec or None,
             )
         else:
             # Create runtime without snapshot
@@ -1013,6 +1221,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
+                app_spec=app_spec or None,
             )
 
         # Process the response and create RuntimesService object
@@ -1057,6 +1266,7 @@ class AgentClient(
             burning_rate=runtime_data.get("burning_rate"),
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
+            unmetered=bool(runtime_data.get("unmetered", False)),
         )
         return runtime
 
@@ -1104,6 +1314,7 @@ class AgentClient(
                     iam_url=self._urls.iam_url,
                     started_at=runtime["started_at"],
                     expired_at=runtime["expired_at"],
+                    unmetered=bool(runtime.get("unmetered", False)),
                 )
             )
         return runtime_services
@@ -1288,6 +1499,7 @@ class AgentClient(
             iam_url=self._urls.iam_url,
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
+            unmetered=bool(runtime_data.get("unmetered", False)),
         )
 
     def update_runtime(

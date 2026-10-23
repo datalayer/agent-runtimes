@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-What a runtime keeps of its protocols across restarts (ORCHESTRATOR.md, O1-11).
+What a runtime keeps of its protocols across restarts (O1-11).
 
 ``store`` is where: the agent-memories PostgreSQL on Kubernetes, a SQLite
 file anywhere else. ``a2a`` keeps fasta2a's tasks, contexts and the work still

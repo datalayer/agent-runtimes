@@ -1,0 +1,109 @@
+---
+sidebar_position: 5
+title: What an application remembers
+---
+
+# What an application remembers
+
+An application remembers when its Appspec says so:
+
+```yaml
+memory: mem0
+```
+
+`mem0` is the memory of the catalogue enabled today. Any other is not enabled,
+and the application's setup notes say so; without `memory`, it remembers
+nothing between conversations. Its **agent's** memory setting does not apply:
+an application has what its Appspec names.
+
+## Per person and application
+
+What it learns is kept in mem0 under two keys:
+
+- **the person**: whoever opened the conversation — the runtime's owner, the
+  trusted identity the runtime is launched with (`DATALAYER_USER_UID`), or a
+  visitor signed in, under the uid of the token the platform verified for
+  them; never anything a caller says of themselves;
+- **the application**: `app:<its uid>`, the `app` item the platform keeps it
+  as — or `app:<its id>` for an application run from its file, which has none.
+
+Its Preview and every deployment of it remember together: a **deployment has
+no memories of its own**. That is why a deployment's *Reset* leaves them, and
+says where they are forgotten.
+
+On Datalayer the store is the shared pgvector database every runtime of the
+person reaches; on a laptop, a FAISS index on disk
+(`AGENT_RUNTIMES_MEM0_DIR`).
+
+## Each person apart
+
+An application remembers each person apart: a visitor at its address is
+remembered under their own uid, separately from its owner and from every other
+visitor, and reads only what it learned of them. Each of them reads, corrects
+and forgets their own (the routes below, or the runtimes service).
+
+Nobody is never its owner. A visitor who is not signed in — or one in an
+embed, which does not know who its visitor is — has nothing remembered and
+nothing read: the memory tools answer in a sentence, *Nothing is remembered in
+this conversation: its visitor is not signed in…*. A run outside a session —
+the scheduler waking a worker, as its owner — remembers as its owner.
+
+## Shared with the applications a person allows
+
+An application's agent reads what it remembers of the person, and — only when
+that person allows it — what other applications remember of them. It never
+reads another application's memories otherwise, and it writes what it learns
+under its own key only. A memory read from another application is marked
+with the application that remembered it (`remembered_by`), after its own.
+
+The allowances are the person's, kept by the runtimes service beside the
+memories, one per person and pair of applications: *`reader` may use what
+`source` remembers of me*. The runtime reads them once per turn, with the
+caller's token, at `DATALAYER_RUNTIMES_URL`; a turn without a token (the
+machine itself, the scheduler's tick) reads its own only. A runtime with a
+token but no `DATALAYER_RUNTIMES_URL`, or a service that refuses, reads
+nothing that turn and says why in its log: it never guesses what was allowed.
+
+| Route of the runtimes service | What it does |
+| --- | --- |
+| `GET /api/runtimes/v1/memory-shares?source=app:<uid>` | Who reads what the application remembers of the caller: `{shares: [{source, reader, allowed_at}]}`. With `?reader=app:<uid>`, what the application reads besides its own. |
+| `PUT /api/runtimes/v1/memory-shares` | Allow: `{source, reader}`, both `app:<uid>`; allowed again, kept as it was. An application is refused as its own reader (422). |
+| `DELETE /api/runtimes/v1/memory-shares?source=…&reader=…` | Stop sharing; what was never allowed is not found (404). |
+
+The TypeScript client has them as `listRuntimeMemoryShares`,
+`allowRuntimeMemoryShare` and `stopRuntimeMemoryShare`, and on
+`AgentRuntimesClient`.
+
+## The routes
+
+On the runtime, under `/api/v1/apps`, for the person calling — what the
+application remembers of **them**: its owner (or the machine itself), or a
+visitor signed in. A caller who is not a person signed in is refused (401,
+403).
+
+| Route | What it does |
+| --- | --- |
+| `GET /memories/{app}` | What it remembers, newest first: `{app, count, memories: [{id, memory, created_at, updated_at, corrected_by, corrected_at}]}`. `?limit=` up to 1000. |
+| `PATCH /memories/{app}/{memory_id}` | **Correct**: one thing in place, with `{memory}` the words it should remember. mem0 embeds them again; the correction is kept with who made it and when (`corrected_by`, `corrected_at`); when it was learned stays. Empty words, or more than 2000 characters, are refused (422); another application's, or somebody else's, is not found (404). Answers `{corrected, memory}`. |
+| `DELETE /memories/{app}/{memory_id}` | **Forget this**: one thing. Another application's, or somebody else's, is not found (404). |
+| `DELETE /memories/{app}?count=N` | **Forget everything** it remembers of the caller, no more than the `N` they were shown and confirmed: when it remembers more now, nothing is forgotten (409). Answers `{forgotten}`. |
+
+`{app}` is its uid, or its id when it runs from its file. A runtime without
+mem0 installed answers 503 in a sentence.
+
+## Without a runtime
+
+On Datalayer, the runtimes service reads the same store for the person, so an
+application's page shows what it remembers whether or not a runtime is running:
+
+| Route of the runtimes service | What it does |
+| --- | --- |
+| `GET /api/runtimes/v1/memories?agent_id=app:<uid>` | The caller's memories of the application. |
+| `PATCH /api/runtimes/v1/memories/{memory_id}` | Correct one of the caller's own in place, `{memory}` its new words, kept with `corrected_by` and `corrected_at`; somebody else's is not found. The service has no embedder: the memory keeps the vector of its old words, and is found by meaning as it was until it is learned again. Its words, and the words it is found by keyword, are the new ones. |
+| `DELETE /api/runtimes/v1/memories/{memory_id}` | Forget one of the caller's own; somebody else's is not found. |
+| `DELETE /api/runtimes/v1/memories?agent_id=app:<uid>&count=N` | Forget everything the application remembers of the caller, no more than `N` (409 otherwise). |
+
+The TypeScript client has them as `listRuntimeMemories`,
+`correctRuntimeMemory`, `forgetRuntimeMemory` and `forgetRuntimeMemories`
+(`@datalayer/agent-runtimes/lib/api/runtimes/runtimes`), and on
+`AgentRuntimesClient`.

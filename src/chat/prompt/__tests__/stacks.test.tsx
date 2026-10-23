@@ -16,6 +16,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { BelowPromptFooter, BelowPromptHeader, InPromptHeader } from '..';
+import { clearOfAssistant, spaceLength } from '../stack';
 
 async function render(element: React.ReactElement) {
   const container = document.createElement('div');
@@ -168,6 +169,51 @@ describe('how a band lays out', () => {
     )!;
     expect(window.getComputedStyle(band).display).not.toBe('flex');
 
+    await act(async () => root.unmount());
+  });
+});
+
+describe('a band clear of the floating assistant (T-27)', () => {
+  it("pads its right end by the assistant's clearance, else its own padding", () => {
+    // On an application's page the character stands in the bottom-right
+    // corner, over the right end of the composer's session controls — the
+    // microphone, the voice menu, *Talk with it* — and took their clicks.
+    expect(clearOfAssistant('16px')).toBe('var(--assistant-clearance, 16px)');
+    expect(spaceLength(2)).toBe('8px');
+    expect(spaceLength(3, ['0', '4px', '8px', '16px'])).toBe('16px');
+    expect(spaceLength(1, [0, 4])).toBe('4px');
+    // A theme with a shorter scale falls back on Primer's.
+    expect(spaceLength(4, ['0'])).toBe('24px');
+  });
+
+  it('marks and pads only the band that asks', async () => {
+    const { container, root } = await render(
+      <BelowPromptFooter
+        stacks={[
+          {
+            id: 'session-controls',
+            px: 3,
+            clearsAssistant: true,
+            content: <button type="button">mic</button>,
+          },
+          { id: 'other', content: <span>b</span> },
+        ]}
+      />,
+    );
+    const clear = container.querySelector<HTMLElement>(
+      '[data-prompt-stack="session-controls"]',
+    )!;
+    const other = container.querySelector<HTMLElement>(
+      '[data-prompt-stack="other"]',
+    )!;
+    expect(clear.hasAttribute('data-clears-assistant')).toBe(true);
+    expect(other.hasAttribute('data-clears-assistant')).toBe(false);
+    expect(window.getComputedStyle(clear).paddingRight).toBe(
+      'var(--assistant-clearance, 16px)',
+    );
+    expect(window.getComputedStyle(other).paddingRight).not.toContain(
+      '--assistant-clearance',
+    );
     await act(async () => root.unmount());
   });
 });

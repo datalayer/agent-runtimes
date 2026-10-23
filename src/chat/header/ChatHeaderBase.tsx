@@ -16,7 +16,11 @@
 import { type ReactNode } from 'react';
 import { Heading, IconButton, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
+import {
+  KernelIndicator,
+  type ExecutionState,
+  type KernelIndicatorPosition,
+} from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
   PlusIcon,
@@ -95,6 +99,8 @@ export interface ChatBaseHeaderProps {
   kernelIndicatorState?: ExecutionState;
   /** Horizontal placement for the kernel indicator in the title row. */
   kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+  /** Where the kernel indicator's details open (`s`, `se`, …). */
+  kernelIndicatorPosition?: KernelIndicatorPosition;
   /**
    * Runtime status from agent-runtimes sandbox status stream.
    * Uses the same execution-state model as KernelIndicator.
@@ -129,6 +135,8 @@ export interface ChatBaseHeaderProps {
   onChatViewModeChange?: (mode: ChatViewMode) => void;
   /** Modes shown greyed out: the sidebar, when the host has no mount point. */
   disabledViewModes?: readonly ChatViewMode[];
+  /** The modes the toggle offers; all of them when unsaid. */
+  offeredViewModes?: readonly ChatViewMode[];
   /** Show the companion-surface segmented control (None / Notebook / Document). */
   showEphemeralSurfaceControl?: boolean;
   /** Whether the Notebook option is available in the surface control. */
@@ -157,6 +165,7 @@ export function ChatBaseHeader({
   padding,
   kernelIndicatorState,
   kernelIndicatorPlacement = 'left',
+  kernelIndicatorPosition = 's',
   runtimeStatus,
   kernel,
   kernelEnvironmentName,
@@ -170,6 +179,7 @@ export function ChatBaseHeader({
   chatViewMode,
   onChatViewModeChange,
   disabledViewModes = [],
+  offeredViewModes,
   showEphemeralSurfaceControl = false,
   enableEphemeralNotebookOption = false,
   enableEphemeralDocumentOption = false,
@@ -199,7 +209,7 @@ export function ChatBaseHeader({
       cpu={kernelCpu}
       memory={kernelMemory}
       gpu={kernelGpu}
-      position="s"
+      position={kernelIndicatorPosition}
       bordered={false}
     />
   ) : effectiveIndicatorState ? (
@@ -209,49 +219,41 @@ export function ChatBaseHeader({
       cpu={kernelCpu}
       memory={kernelMemory}
       gpu={kernelGpu}
-      position="s"
+      position={kernelIndicatorPosition}
       bordered={false}
     />
   ) : null;
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
+      borderBottom="1px solid"
+      borderColor="border.default"
     >
       {/* Title row */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          p: padding,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        p={padding}
       >
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            minWidth: 0,
-            flex: '1 1 auto',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          minWidth={0}
+          flex="1 1 auto"
         >
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
           {(title || subtitle) && (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-                maxWidth: '100%',
-              }}
+              display="flex"
+              flexDirection="column"
+              minWidth={0}
+              maxWidth="100%"
             >
               {title && (
                 <Heading
@@ -305,9 +307,7 @@ export function ChatBaseHeader({
           {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-        >
+        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
           {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
@@ -353,6 +353,7 @@ export function ChatBaseHeader({
               value={chatViewMode}
               onChange={onChatViewModeChange}
               disabledModes={disabledViewModes}
+              modes={offeredViewModes}
             />
           )}
           {/* Custom header actions */}

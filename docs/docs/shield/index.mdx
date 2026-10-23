@@ -1,0 +1,119 @@
+---
+title: The Shield
+description: The boundary, the audit and the trace around any agent a Datalayer runtime drives over ACP
+---
+
+<!--
+  ~ Copyright (c) 2025-2026 Datalayer, Inc.
+  ~ Distributed under the terms of the Modified BSD License.
+-->
+
+# The Shield
+
+A harness — Claude Code, Codex, any agent that speaks the Agent Client Protocol — runs **inside** a Datalayer runtime, and the runtime is its Shield: the pod's boundary, the gateway's tools, the Rules and the record around it. This page says what the Shield does today — the boundary, the audit, the trace, the policies with their limits and the session's rules — as built (read again on 16 October 2026, agent-runtimes 1.5.42, Phase 2, SH-30, SH-31, SH-32, SH-34, SH-35, SH-50, SH-51, SH-54), with the [examples](#examples) that run it. The harness itself and the transports it is served over are on [the harnesses page](../harnesses/) and [its transports](../harnesses/transports).
+
+## The boundary: what a pod can reach
+
+The Operator writes, with every runtime pod — pooled, assigned, kept, the visitors' — what the pod may reach, and refuses the rest **at the pod**:
+
+| Reached | Why |
+|---|---|
+| ai-inference | the models; a harness's own model call goes through ai-inference's provider route when the platform's key runs it |
+| the MCP gateway (`mcp.datalayer.run`) | the only tools a harness gets, lent with the run's credential |
+| IAM, Spacer | who is calling, the declared secrets, an embed token |
+| the runtimes' host | ai-agents' `/ws` (the approvals), Contents, other runtimes it delegates to |
+| the OTEL ingest | every container's export, under the deployment's account |
+| the CDN | images, the speech models |
+| DNS, the Kubernetes API, Vault, the broker | what the companion sidecar already calls |
+
+Two objects say it, from one table (`services/egress.py` in the Operator): an **init container** that writes `iptables` rules in the pod's own network namespace — the mechanism the pod already used to refuse the cloud metadata address — run last among the init containers, so an environment's clone is not refused before the boundary stands; and a **`NetworkPolicy` the pod owns**, the declarative twin a policy-enforcing network plugin applies. r1 and prod1 run flannel, which enforces no `NetworkPolicy`, so the init container is what holds there; a non-root container cannot undo it. A hostname is resolved by the Operator when the pod is made (neither `iptables` nor a policy takes a name); one that resolves to nothing is refused and named on the policy's annotation.
+
+Proved on r1 (15 October 2026, operator 1.0.94): from a fresh pool pod, `example.com`, `pypi.org` and `api.anthropic.com` are refused at once (`Network unreachable`); the gateway, ai-inference and IAM answer; the sandbox container is held the same.
+
+An Appspec's own allowance (a host its harness must reach itself) is written into the pod's `NetworkPolicy` at assignment, and holds where a plugin enforces it — not on flannel. Until then a harness that needs the web gets it through the gateway's `signed-fetch` toolset, a tool call with a class, a Rule and a record.
+
+## The audit: every action in the record
+
+Every Shield row reaches the application's **record** in A-01's safe vocabulary, extended with ACP's kinds:
+
+| Row | Record entry | What it carries |
+|---|---|---|
+| a tool call the policy decided | `decision` | the kind and class, the path or command, the verdict, the rule and scope that decided, who decided |
+| a tool call done, a file read or written, a terminal created or exited | `tool_call` | the kind, the path, the command, the diff's hash and size, the exit code |
+| a permission the person answered | `approval` | approved or declined, what was chosen |
+| a limit reached, a refusal | `decision` | the limit, the sentence |
+| the session opened or loaded, a prompt, a turn ended, a plan | `step` | the event, the stop reason, the plan's step count and statuses |
+
+The record keeps what its `record.include` names. A **diff is kept whole** — the file's old and new text — only when the include names `diffs`; otherwise its path, hash and size. A **terminal's output** is kept only when it names `terminals`; otherwise its command and exit. Credentials are redacted at the row before anything keeps, logs or counts it (`agent_shield.audit.redacted_row`, the Shield's own environment values by value), and a file's content never enters a log. Activity, Usage and `/apps/activity` read these entries as they read every protocol action.
+
+```yaml
+record:
+  include: [conversations, actions, approvals, decisions, diffs, terminals]
+```
+
+## The trace: one across the chain
+
+Every Shield exports to Datalayer's observability under the deployment's account. The ACP session is a **trace**, each prompt a span (`shield.turn`, with the harness, the agent and the session), and each audit row an event of it and a count — `shield.actions`, `shield.decisions`, `shield.refusals`, `shield.limits`, by verdict, class, kind, who decided, harness and deployment. The *Shield* dashboard of the OTEL service draws them.
+
+The W3C trace context arrives with the face — an A2A or AG-UI request's `traceparent` — and runs through the chain:
+
+1. the request's `traceparent` becomes the request's span (`TraceContextMiddleware`; a request without one opens no span — no trace, no header, never an invented one);
+2. the turn is a child of it, so the audit's events are on the caller's trace;
+3. the harness is handed it in the prompt's **`_meta.traceparent`**, the key ACP reserves, so a harness that honours it continues the trace into its own tool calls;
+4. the lent gateway toolset carries it: as a header of the HTTP server the session opened with, and, over the stdio shim, **per call of the current turn** (the runtime carries each turn's context to the shim's handle; the shim reads it per request);
+5. a sub-agent reached through an orchestration delegation gets it as orchestration's tracing already carries it.
+
+Proved locally through the A2A face with the ACP SDK's fake agent: one trace id on the turn's span, in the harness's `_meta.traceparent` and on the shim's outgoing header. On r1 the runtime's spans reach prod1's ingest under the deployment's account; the gateway's own spans do not leave r1 (its collector address exists on prod1 only — a plane setting).
+
+## The policies: three levels, from IAM
+
+The Shield decides with **three documents of one schema** (agentspecs' `policies/` kind, the `agent-shield` package's schema carried verbatim), strictest first, the first decision winning:
+
+1. the **organization's** (and its teams'), written in IAM as the `shield` rule of the organization's policy layer (`PUT /mcp-policies/organization/{uid}` with `{"shield": {...}}`), validated by the Shield's own model — a team's refused when it would permit more than its organization's, in the engine's sentences;
+2. the **application's** Rules, read into the `team` scope (`guardrails/shield_policy.py`);
+3. the **session's**: the platform's default plus what a person allows or tightens while it runs.
+
+A managed runtime pulls the organization's documents for the account at the agent's creation (`GET /mcp-policies/shield/accounts/{account_uid}` with the runtime's token; `guardrails/managed_policies.py`), keeps them until the `expires` IAM stamped (ten minutes), and is told of a change over ai-agents' `/ws` (`shield_policy_changed`, pulled at once; 1.5.40) beside a thirty-second poll: an administrator's change reaches a running harness within seconds, a minute at most (`ACPAgent.replace_policies`). Drilled on r1: 15 seconds by the poll, 0.2 seconds by the push. Administrators write the document on the organization's *Policies* page of the landing (the *Shield rules* form, versioned; a moved version is a conflict, never an overwrite) or through IAM's route. It **fails closed**: with IAM unreachable and no unexpired copy the harness is refused at creation in a sentence naming IAM, and every further action of a running one is refused until IAM answers. A runtime with no token, or a token and no `DATALAYER_IAM_URL` — the terminal's `loop`, a test — is unmanaged, says so once, and decides with the application's Rules and the default alone (1.5.40; 1.5.36 refused the second case). The `harnesses` section is honoured: a harness the organization does not admit is refused, and so is a `platform` credentials rule (a runtime lends the account's own declared secret).
+
+**The limits** (SH-32): beside tool calls, terminals and bytes written, `limits.model_tokens` (the model budget) and `limits.spend` (credits, 100 a USD), each soft then hard. `guardrails/shield_budget.py` holds every model request of an application's agent to them: past a soft threshold the person is asked once through the tool approvals, past a hard one the run ends in a sentence saying what would let it go on; what each response spent is counted from its usage and its price, per session — a response whose stream the client left early reconciled from the run's own usage at its end (1.5.40). Drilled on r1: soft 1 asked once, hard 3000 refused the second request of a turn in the sentence.
+
+**A rule on a running session** (SH-54) — the contract the page and the phone share:
+
+| Route | Body | Answer |
+|---|---|---|
+| `GET /api/v1/apps/sessions/{uid}/rules` | — | `{uid, harness, managed, policies: [documents strictest first], session_rules: [rules], unavailable: sentence or null}` |
+| `POST /api/v1/apps/sessions/{uid}/rules` | `{name, decision: allow\|ask\|deny, classes?: [read\|write\|send\|buy\|delete\|execute], kinds?, where?, paths?, commands?, reason?}` | the same, with the rule in force; `422` with the sentence when it would permit more than the organization's |
+| `DELETE /api/v1/apps/sessions/{uid}/rules/{name}` | — | the same; `404` for a name that is no rule |
+
+The caller is the session's (its bearer, as every session route). A harness session reads the rules at every decision through the Shield's own state; a pydantic-ai application's calls are tightened in `AppRulesCapability.decide` (*Your rule for this session “…”: leave it to you*). A rule may only tighten: one that would permit more than the application's Rules, or than the organization's documents, is refused in a sentence naming the rule it conflicts with — and the application's implicit default is part of that ceiling (decided 21 October 2026): on a class its Rules do not name, reading is done and anything else asks first, so *do it* on writing, sending, buying, deleting or running a command the application said nothing of is refused naming that default. The rules are gone with the session and never written to the deployment. The web's Rules card (`src/apps/plugins/app-rules`, the *This session* section) speaks to these routes with `@datalayer/agent-runtimes`' `apps/sessionRules`.
+
+**The conformance table** (SH-35): `test_shield_policies.py` and the package's `test_conformance.py` hold the same action, over MCP, A2A, ACP, AG-UI and the embed, to the same answer from the one agent.
+
+## Can an agent go around the Shield? The drills
+
+The Shield's decisive question: **can the agent reach a protected resource without passing through the enforcement layer?** Seven ways round were tried (SH-37), each with the ACP SDK's fake agent (no model key), each refused and recorded somewhere a person can read it:
+
+| The way round | Where it was tried | Refused by | Recorded in |
+|---|---|---|---|
+| An outside `curl` from the pod | a fresh pool pod on r1, 15 October 2026 | the pod's boundary: `Network unreachable` for `example.com`, `pypi.org`, `api.anthropic.com` | nothing reaches out to record; the boundary is the Operator's, per pod |
+| A write outside the workspace | the Shield's `fs/write_text_file` | the Shield, before any rule, in a sentence naming the workspace | a `decision` row |
+| A secret in a tool argument | the Shield's classes | a command naming a credential is `execute` and asked about | the row, the key `[redacted]` |
+| A runtime reached at its own port | a kept deployment's runtime on r1 | the runtime: `404` *This runtime serves a deployment: it answers only the application's own routes* | no session, so nothing to record |
+| A sub-agent's MCP write under a read-only manifest | the r1 gateway, the credential a read-only token handed in the prompt's `_meta` (16 October 2026) | the gateway: *No Space is granted to you to write in* | the gateway's record |
+| A `git push` without asking | a local runtime's Shield (16 October 2026) | the person, asked over ACP by the session's rule *git push* | a `permission` row, `deny`, by the person |
+| A read of another person's notebook | the r1 gateway, a sub-agent acting as a platform member on a private notebook of another account (16 October 2026) | the gateway: *No notebook of yours matches …*; the cells never reached the agent | ai-agents' events of the caller's agent (`tool.use_notebook`, `failed`) |
+
+**The answer, for these seven: no.** Each path the agent took passed a layer that could refuse it, and did. What the drills also showed, said plainly:
+
+- A sub-agent that calls the gateway itself is decided and recorded **by the gateway**, not by the Shield's own audit; the Shield's rows hold the session and the turn. One thread across both is SH-51's trace.
+- A platform administrator may read any notebook — that is the platform's rule, not a way round; the notebook drill was run as a platform member for that reason.
+- On the funded side, a real harness (Claude Code and the others) has not been drilled: no funded key exists yet, so these are the fake agent's paths, which are the ACP paths a harness takes.
+
+## Examples
+
+Runnable from the repository's [`examples/shield`](https://github.com/datalayer/agent-runtimes/tree/main/examples/shield) on the ACP SDK's fake agent, no key, each output in its README:
+`session_rule.py` (a rule added to a running session, one that would loosen the organization's refused, one that would loosen the application's implicit default refused), `audit_read_back.py` (the record of a turn: decisions, an approval, a diff and a terminal kept whole, a key redacted), `harness_on_the_runtime.py` (the runtime `loop --harness` starts), `proxy_from_python.py` (the standalone Shield, `agent-shield run`, and its audit), `delegate_to_a_harness.py` (A2A). The examples app's *Shield Policy* page draws a document with `@datalayer/agent-shield`'s types and `describeDecision`. The [harnesses page](../harnesses/#examples-sh-23) lists them all.
+
+## What is not built yet
+
+The Shield report (SH-36: the conformance report's Shield section exists, SH-62; the report of a period on its own does not); the deployment's own spend limit (read into `limits.spend` since 1.5.43, soft at 80% and hard at the limit, held by `TestTheDeploymentsSpendLimit`) crossed inside a session on Datalayer (SH-32); a rule added from the page's card drilled on r1 (the routes are; SH-54); the bypass drills with a funded harness rather than the fake agent (SH-37: all seven [drilled](#can-an-agent-go-around-the-shield-the-drills) with the fake agent).

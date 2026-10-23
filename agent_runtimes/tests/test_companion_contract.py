@@ -29,6 +29,11 @@ from agent_runtimes.routes import agents_router, configure_router, history_route
 #: Exactly what the companion calls on `127.0.0.1:8765`, with the API prefix
 #: stripped — the shape the sidecar depends on.
 COMPANION_CALLS: tuple[tuple[str, str, str], ...] = (
+    (
+        "POST",
+        "/agents/declared-secrets",
+        "run-start-hooks asks which secrets to give (R-19)",
+    ),
     ("POST", "/agents/configure-from-spec", "run-start-hooks configures the agent"),
     ("POST", "/agents/prepare-checkpoint", "checkpoint flushes DBOS state"),
     ("POST", "/agents/post-restore", "restore relaunches DBOS"),

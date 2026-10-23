@@ -13,7 +13,8 @@ import {
   Outlet,
   Navigate,
 } from 'react-router-dom';
-import { Box, Button, Heading, Text, TextInput } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Button, Heading, Text, TextInput } from '@primer/react';
 import { useNavigate, useLocation, useParams, useHistory } from '../hooks';
 
 /**
@@ -31,16 +32,14 @@ const NavigationLogger: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        p: 2,
-        mb: 3,
-        bg: 'canvas.subtle',
-        borderRadius: 2,
-        fontSize: 0,
-        fontFamily: 'mono',
-        maxHeight: 150,
-        overflowY: 'auto',
-      }}
+      p={2}
+      mb={3}
+      bg="canvas.subtle"
+      borderRadius={2}
+      fontSize={0}
+      fontFamily="mono"
+      maxHeight={150}
+      overflowY="auto"
     >
       <Text as="div" sx={{ fontWeight: 'bold', mb: 1 }}>
         Navigation Log:
@@ -88,20 +87,18 @@ const NavigationControls: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        p: 3,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        mb: 3,
-      }}
+      p={3}
+      borderWidth={1}
+      borderStyle="solid"
+      borderColor="border.default"
+      borderRadius={2}
+      mb={3}
     >
       <Heading as="h3" sx={{ mb: 3 }}>
         Navigation Controls
       </Heading>
 
-      <Box sx={{ mb: 3 }}>
+      <Box mb={3}>
         <Text as="label" sx={{ display: 'block', mb: 1, fontSize: 1 }}>
           Custom Path:
         </Text>
@@ -115,7 +112,7 @@ const NavigationControls: React.FC = () => {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 3 }}>
+      <Box mb={3}>
         <Text as="label" sx={{ display: 'block', mb: 1, fontSize: 1 }}>
           State Value:
         </Text>
@@ -130,7 +127,7 @@ const NavigationControls: React.FC = () => {
         </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+      <Box display="flex" gap={2} flexWrap="wrap" mb={3}>
         <Button onClick={() => history.back()} variant="default">
           ← Back
         </Button>
@@ -151,7 +148,7 @@ const NavigationControls: React.FC = () => {
         </Button>
       </Box>
 
-      <Box sx={{ p: 2, bg: 'canvas.inset', borderRadius: 1 }}>
+      <Box p={2} bg="canvas.inset" borderRadius={1}>
         <Text as="div" sx={{ fontSize: 0, fontFamily: 'mono' }}>
           <strong>Current Location:</strong>
           <br />
@@ -176,15 +173,13 @@ const Layout: React.FC = () => {
     <Box>
       <Box
         as="nav"
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          mb: 3,
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderBottom="1px solid"
+        borderColor="border.default"
+        mb={3}
       >
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <Box display="flex" gap={3} flexWrap="wrap">
           <NavLink
             to="/"
             style={({ isActive }) => ({
@@ -242,14 +237,12 @@ const Layout: React.FC = () => {
       <NavigationControls />
 
       <Box
-        sx={{
-          p: 3,
-          borderWidth: 1,
-          borderStyle: 'solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          minHeight: 200,
-        }}
+        p={3}
+        borderWidth={1}
+        borderStyle="solid"
+        borderColor="border.default"
+        borderRadius={2}
+        minHeight={200}
       >
         <Outlet />
       </Box>
@@ -286,7 +279,7 @@ const DashboardLayout: React.FC = () => (
     <Heading as="h1" sx={{ mb: 2 }}>
       Dashboard
     </Heading>
-    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+    <Box display="flex" gap={2} mb={3}>
       <RouterLink to="/dashboard">Overview</RouterLink>
       <RouterLink to="/dashboard/analytics">Analytics</RouterLink>
       <RouterLink to="/dashboard/reports">Reports</RouterLink>
@@ -303,7 +296,7 @@ const DashboardOverview: React.FC = () => {
         Overview
       </Heading>
       {location.state && (
-        <Box sx={{ p: 2, bg: 'success.subtle', borderRadius: 1, mb: 2 }}>
+        <Box p={2} bg="success.subtle" borderRadius={1} mb={2}>
           <Text>State received: {JSON.stringify(location.state)}</Text>
         </Box>
       )}
@@ -320,7 +313,7 @@ const DashboardAnalytics: React.FC = () => {
         Analytics
       </Heading>
       {location.state && (
-        <Box sx={{ p: 2, bg: 'success.subtle', borderRadius: 1, mb: 2 }}>
+        <Box p={2} bg="success.subtle" borderRadius={1} mb={2}>
           <Text>State received: {JSON.stringify(location.state)}</Text>
         </Box>
       )}
@@ -351,7 +344,7 @@ const ProductList: React.FC = () => {
       <Heading as="h1" sx={{ mb: 3 }}>
         Products
       </Heading>
-      <Box sx={{ display: 'grid', gap: 2 }}>
+      <Box display="grid" gap={2}>
         {products.map(product => (
           <Button
             key={product.id}
@@ -385,7 +378,7 @@ const ProductDetail: React.FC = () => {
       </Heading>
       <Text as="p">Product ID: {params.id}</Text>
       <Text as="p">All params: {JSON.stringify(params)}</Text>
-      <Box sx={{ mt: 3 }}>
+      <Box mt={3}>
         <Button
           onClick={() => navigate(`/products/${params.id}/reviews`)}
           variant="primary"
@@ -451,7 +444,7 @@ const DocsPage: React.FC = () => {
       </Heading>
       <Text as="p">Current hash: {location.hash || '(none)'}</Text>
       {location.hash === '#installation' && (
-        <Box sx={{ p: 2, bg: 'attention.subtle', borderRadius: 1, mt: 2 }}>
+        <Box p={2} bg="attention.subtle" borderRadius={1} mt={2}>
           <Heading as="h2" sx={{ mb: 1 }}>
             Installation
           </Heading>
@@ -470,7 +463,7 @@ const SettingsPage: React.FC = () => {
         Settings
       </Heading>
       {location.state?.replaced && (
-        <Box sx={{ p: 2, bg: 'attention.subtle', borderRadius: 1, mb: 2 }}>
+        <Box p={2} bg="attention.subtle" borderRadius={1} mb={2}>
           <Text>This page replaced the previous history entry!</Text>
           <Text>
             Time: {new Date(location.state.time).toLocaleTimeString()}
@@ -512,8 +505,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 export const ReactRouterAdvancedExample: React.FC = () => {
   return (
     <BrowserRouter>
-      <Box sx={{ minHeight: '100vh', p: 4 }}>
-        <Box sx={{ mb: 4, p: 3, bg: 'canvas.subtle', borderRadius: 2 }}>
+      <Box minHeight="100vh" p={4}>
+        <Box mb={4} p={3} bg="canvas.subtle" borderRadius={2}>
           <Heading as="h1" sx={{ mb: 2 }}>
             Advanced React Router Navigation Example
           </Heading>

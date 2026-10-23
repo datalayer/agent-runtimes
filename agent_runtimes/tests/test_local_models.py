@@ -187,7 +187,7 @@ class TestCatalogEndpoint:
         )
         from agent_runtimes.routes.configure import list_catalog_models
 
-        return asyncio.run(list_catalog_models())
+        return asyncio.run(list_catalog_models(agent_id=None))
 
     def test_local_models_report_reachability_not_env_vars(
         self, monkeypatch: pytest.MonkeyPatch
@@ -225,6 +225,34 @@ class TestCatalogEndpoint:
         ]
         assert "ollama:mystery-model:7b" not in {m["id"] for m in payload["models"]}
 
+    def test_through_ai_inference_only_what_it_serves_is_listed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No local model, runtime or install: ai-inference decides, not this machine."""
+        from agent_runtimes.models.offered import (
+            InferenceModels,
+            give_inference_token,
+            set_inference_models,
+        )
+
+        sonnet = "bedrock:us.anthropic.claude-sonnet-4-6"
+        monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+        give_inference_token("the-runtime-token")
+        set_inference_models(
+            InferenceModels(served=(sonnet,), url="u", note="ai-inference serves it.")
+        )
+        payload = self._payload(monkeypatch, {"ollama": ("mystery-model:7b",)})
+
+        assert [(m["id"], m["available"]) for m in payload["models"]] == [
+            (sonnet, True)
+        ]
+        assert payload["local_runtimes"] == {}
+        assert payload["uncatalogued_local"] == []
+        assert (payload["source"], payload["note"]) == (
+            "ai-inference",
+            "ai-inference serves it.",
+        )
+
     def test_hosted_models_report_missing_env_vars(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -244,6 +272,8 @@ class TestModelsCommand:
                 pass
 
         class FakeResponse:
+            status_code = 200
+
             def __init__(self, payload: dict) -> None:
                 self._payload = payload
 
@@ -260,9 +290,28 @@ class TestModelsCommand:
             async def __aexit__(self, *exc) -> None:
                 return None
 
-            async def get(self, url: str, timeout: float = 0) -> FakeResponse:
+            async def get(
+                self, url: str, timeout: float = 0, params: dict | None = None
+            ) -> FakeResponse:
+                if url.endswith("/api/v1/configure/models"):
+                    # The runtime offers the agent these, all usable.
+                    return FakeResponse(
+                        {
+                            "models": [
+                                {"id": model_id, "local": True, "reachable": True}
+                                for model_id in (
+                                    "ollama:llama3.1:8b",
+                                    "ollama:gemma3:4b",
+                                )
+                            ],
+                            "decision_models": [],
+                            "source": "local",
+                            "note": "This runtime calls the providers itself.",
+                        }
+                    )
+                # The agent's creation spec, as the runtime answers it.
                 return FakeResponse(
-                    {"spec": {"id": "loop-shell", "model": "openai:gpt-4o"}}
+                    {"agent_spec_id": "loop-shell", "model": "openai:gpt-4o"}
                 )
 
             async def post(self, url: str, json: dict, timeout: float = 0):
@@ -292,6 +341,8 @@ class TestModelsCommand:
     ) -> None:
         body = self._switch(monkeypatch, "ollama:llama3.1:8b")
 
+        # The agent loop talks to, recreated from the spec it came from.
+        assert (body["agent_spec_id"], body["agent_id"]) == ("loop-shell", "loop-shell")
         # D5: the code stays where the tokens do.
         assert body["agent_spec"]["model"] == "ollama:llama3.1:8b"
         assert body["agent_spec"]["sandbox_variant"] == LOCAL_SANDBOX_VARIANT

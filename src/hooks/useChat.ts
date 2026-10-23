@@ -14,12 +14,25 @@ import { useCallback, useMemo } from 'react';
 import { useChatStore } from '../stores';
 import type { ChatMessage } from '../types/messages';
 import type { InferenceRequestOptions } from '../types/inference';
+import type { ProtocolEvent } from '../types/protocol';
+import { createUserMessage, generateMessageId } from '../types/messages';
+import { isToolCallMessage } from '../utils';
 import {
-  createUserMessage,
-  createAssistantMessage,
-  generateMessageId,
-} from '../types/messages';
-import { sanitizeAssistantContent } from '../utils';
+  BROWSER_LIMITS,
+  emptyConversation,
+  reduceConversation,
+  withPrompt,
+  type ConversationState,
+} from '../portable/conversation';
+import {
+  conversationEventsOf,
+  snapshotOfMessages,
+} from '../portable/adapterEvents';
+import type { AgUiEvent } from '../portable/agui';
+import {
+  conversationDrawer,
+  emptyChatLayer,
+} from '../chat/base/conversationItems';
 
 /**
  * Return type for useChat hook
@@ -117,14 +130,18 @@ export function useChat(): UseChatReturn {
   const clearMessages = useChatStore(state => state.clearMessages);
   const setLoading = useChatStore(state => state.setLoading);
   const setError = useChatStore(state => state.setError);
+  const setMessages = useChatStore(state => state.setMessages);
   const startStreaming = useChatStore(state => state.startStreaming);
-  const appendToStream = useChatStore(state => state.appendToStream);
   const stopStreaming = useChatStore(state => state.stopStreaming);
   const setSuggestions = useChatStore(state => state.setSuggestions);
   const getTools = useChatStore(state => state.getTools);
 
   /**
-   * Send a user message and get AI response
+   * Send a user message and get the AI's response. The conversation is
+   * `reduceConversation`'s (M-030), as in ChatBase and on the phone:
+   * every adapter event read by `conversationEventsOf`, an inference
+   * provider's deltas as AG-UI text events, and the store's messages drawn
+   * from it.
    */
   const sendMessage = useCallback(
     async (content: string, options?: InferenceRequestOptions) => {
@@ -136,139 +153,131 @@ export function useChat(): UseChatReturn {
         return;
       }
 
-      // Create and add user message
       const userMessage = createUserMessage(content);
-      addMessage(userMessage);
+      const draw = conversationDrawer(words => words);
+      let conversation: ConversationState = withPrompt(
+        reduceConversation(
+          emptyConversation(BROWSER_LIMITS),
+          snapshotOfMessages(messages),
+        ),
+        userMessage.id,
+        content,
+      );
+      const show = (next: ConversationState) => {
+        conversation = next;
+        setMessages(
+          draw(conversation, emptyChatLayer()).filter(
+            (item): item is ChatMessage => !isToolCallMessage(item),
+          ),
+        );
+      };
+      const reduce = (events: AgUiEvent[]) => {
+        if (events.length) {
+          show(
+            events.reduce(
+              (kept, event) => reduceConversation(kept, event),
+              conversation,
+            ),
+          );
+        }
+      };
+      /** An adapter's event, as the conversation reads it; its failure is the chat's error. */
+      const read = (event: ProtocolEvent) => {
+        if (event.type === 'error') {
+          if (event.error) {
+            setError(event.error);
+          }
+          return;
+        }
+        try {
+          reduce(conversationEventsOf(event, conversation));
+        } catch (failure) {
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+        }
+      };
 
-      // Clear error and set loading
+      show(conversation);
       setError(null);
       setLoading(true);
+      startStreaming(generateMessageId());
 
       try {
-        // Get registered tools
         const tools = getTools();
-
-        // Merge options
         const requestOptions: InferenceRequestOptions = {
           ...options,
           tools: tools.length > 0 ? tools : undefined,
         };
-
-        // Get all messages for context
+        // Every message so far, for context.
         const allMessages = [...messages, userMessage];
 
-        // Create placeholder for assistant message
-        const assistantMessageId = generateMessageId();
-        const assistantMessage = createAssistantMessage('');
-        assistantMessage.id = assistantMessageId;
-        addMessage(assistantMessage);
-
-        // Stream the response
-        startStreaming(assistantMessageId);
-
-        // Use protocol adapter if available (for ag-ui, a2a, acp)
-        // Otherwise fall back to inference provider (for vercel-ai, OpenAI-compatible)
+        // A protocol adapter (ag-ui, a2a, acp) when there is one; else the
+        // inference provider (vercel-ai, OpenAI-compatible).
         if (protocolAdapter) {
-          // Track pending tool calls for this run
+          // The calls this run asks the page's tools for, run once it ends.
           const pendingToolCalls: Map<
             string,
             { toolName: string; args: Record<string, unknown> }
           > = new Map();
-          let currentAssistantContent = '';
-
-          // Subscribe to adapter events
           const unsubscribe = protocolAdapter.subscribe(event => {
-            switch (event.type) {
-              case 'message':
-                // AG-UI sends incremental messages with accumulating content
-                if (event.message) {
-                  const rawContent =
-                    typeof event.message.content === 'string'
-                      ? event.message.content
-                      : '';
-                  currentAssistantContent =
-                    sanitizeAssistantContent(rawContent);
-                  // Update the assistant message with the current content
-                  updateMessage(assistantMessageId, {
-                    content: currentAssistantContent,
-                    toolCalls: event.message.toolCalls,
-                  });
-                }
-                break;
-
-              case 'tool-call':
-                // Track tool call for execution after stream completes
-                if (event.toolCall) {
-                  console.log(
-                    '[useChat] Tool call received:',
-                    event.toolCall.toolCallId,
-                    event.toolCall.toolName,
-                  );
-                  pendingToolCalls.set(event.toolCall.toolCallId, {
-                    toolName: event.toolCall.toolName,
-                    args: event.toolCall.args,
-                  });
-                }
-                break;
-
-              case 'error':
-                if (event.error) {
-                  setError(event.error);
-                }
-                break;
+            if (event.type === 'tool-call' && event.toolCall) {
+              pendingToolCalls.set(event.toolCall.toolCallId, {
+                toolName: event.toolCall.toolName,
+                args: event.toolCall.args,
+              });
             }
+            read(event);
           });
 
           try {
-            // Send the initial message
             await protocolAdapter.sendMessage(userMessage, {
               tools: requestOptions.tools,
               messages: allMessages,
             });
 
-            // After stream completes, execute any pending tool calls
             if (pendingToolCalls.size > 0 && toolExecutor) {
-              console.log(
-                '[useChat] Executing',
-                pendingToolCalls.size,
-                'tool calls',
-              );
-
-              // Execute tool calls and collect results
               const toolResults: Array<{
                 toolCallId: string;
                 toolName: string;
                 result: unknown;
                 isError: boolean;
               }> = [];
-
               for (const [toolCallId, { toolName, args }] of pendingToolCalls) {
-                console.log(
-                  '[useChat] Executing tool:',
-                  toolName,
-                  'with args:',
-                  args,
-                );
                 const result = await toolExecutor.execute({
                   toolCallId,
                   toolName,
                   args,
                 });
-                console.log('[useChat] Tool result:', result);
                 toolResults.push({
                   toolCallId,
                   toolName,
                   result: result.result,
                   isError: !result.success,
                 });
+                // The call answered, in the conversation.
+                reduce(
+                  conversationEventsOf(
+                    {
+                      type: 'tool-result',
+                      toolResult: {
+                        toolCallId,
+                        success: result.success,
+                        result: result.result,
+                        ...(result.success ? {} : { error: result.error }),
+                      },
+                    },
+                    conversation,
+                  ),
+                );
               }
 
-              // Build messages array with tool results for continuation
-              // Include the assistant message with tool calls
+              // The run continued with the results: the assistant's calls,
+              // then one `tool` message per result (AG-UI).
               const assistantWithToolCalls: ChatMessage = {
-                id: assistantMessageId,
+                id: generateMessageId(),
                 role: 'assistant',
-                content: currentAssistantContent,
+                content: '',
                 createdAt: new Date(),
                 toolCalls: Array.from(pendingToolCalls.entries()).map(
                   ([toolCallId, { toolName, args }]) => ({
@@ -280,8 +289,6 @@ export function useChat(): UseChatReturn {
                   }),
                 ),
               };
-
-              // Create tool result messages
               const toolResultMessages: ChatMessage[] = toolResults.map(tr => ({
                 id: generateMessageId(),
                 role: 'tool' as const,
@@ -293,117 +300,76 @@ export function useChat(): UseChatReturn {
                   isError: tr.isError,
                 },
               }));
-
-              // Update stored messages
-              updateMessage(assistantMessageId, assistantWithToolCalls);
-              toolResultMessages.forEach(msg => addMessage(msg));
-
-              // Create new assistant message for the continuation
-              const continuationAssistantId = generateMessageId();
-              const continuationMessage = createAssistantMessage('');
-              continuationMessage.id = continuationAssistantId;
-              addMessage(continuationMessage);
-              startStreaming(continuationAssistantId);
-
-              // Subscribe to continuation events
-              const unsubscribeContinuation = protocolAdapter.subscribe(
-                event => {
-                  if (event.type === 'message' && event.message) {
-                    const rawContent =
-                      typeof event.message.content === 'string'
-                        ? event.message.content
-                        : '';
-                    const content = sanitizeAssistantContent(rawContent);
-                    updateMessage(continuationAssistantId, {
-                      content,
-                      toolCalls: event.message.toolCalls,
-                    });
-                  } else if (event.type === 'error' && event.error) {
-                    setError(event.error);
-                  }
+              await protocolAdapter.sendMessage(
+                toolResultMessages[toolResultMessages.length - 1],
+                {
+                  tools: requestOptions.tools,
+                  messages: [
+                    ...allMessages,
+                    assistantWithToolCalls,
+                    ...toolResultMessages,
+                  ],
                 },
               );
-
-              try {
-                // Build the full message history for continuation
-                const continuationMessages: ChatMessage[] = [
-                  ...allMessages,
-                  assistantWithToolCalls,
-                  ...toolResultMessages,
-                ];
-
-                // Send continuation request with tool results
-                // AG-UI expects tool results as messages with role: "tool"
-                await protocolAdapter.sendMessage(
-                  toolResultMessages[toolResultMessages.length - 1],
-                  {
-                    tools: requestOptions.tools,
-                    messages: continuationMessages,
-                  },
-                );
-              } finally {
-                unsubscribeContinuation();
-              }
             }
           } finally {
             unsubscribe();
           }
         } else if (inferenceProvider) {
+          const answerId = generateMessageId();
+          reduce([
+            { type: 'RUN_STARTED' },
+            {
+              type: 'TEXT_MESSAGE_START',
+              messageId: answerId,
+              role: 'assistant',
+            },
+          ]);
           const response = await inferenceProvider.streamMessage(
             allMessages,
             requestOptions,
             event => {
-              switch (event.type) {
-                case 'content-delta':
-                  if (event.delta?.delta.content) {
-                    appendToStream(
-                      assistantMessageId,
-                      event.delta.delta.content,
-                    );
-                  }
-                  break;
-
-                case 'tool-call-start':
-                  // Handle tool call UI update
-                  if (event.toolCall) {
-                    // Tool calls are handled by the tool executor
-                    console.log('[useChat] Tool call started:', event.toolCall);
-                  }
-                  break;
-
-                case 'error':
-                  if (event.error) {
-                    setError(event.error);
-                  }
-                  break;
+              if (
+                event.type === 'content-delta' &&
+                event.delta?.delta.content
+              ) {
+                reduce([
+                  {
+                    type: 'TEXT_MESSAGE_CONTENT',
+                    messageId: answerId,
+                    delta: event.delta.delta.content,
+                  },
+                ]);
+              } else if (event.type === 'error' && event.error) {
+                setError(event.error);
               }
             },
           );
+          // The answer as the provider gave it whole, then the run's end.
+          const said = conversationEventsOf(
+            {
+              type: 'message',
+              message: {
+                id: answerId,
+                role: 'assistant',
+                content:
+                  typeof response.message.content === 'string'
+                    ? response.message.content
+                    : '',
+              },
+            },
+            conversation,
+          );
+          reduce([...said, { type: 'RUN_FINISHED' }]);
 
-          // Update final message with complete content and tool calls
-          const finalAssistantContent =
-            typeof response.message.content === 'string'
-              ? sanitizeAssistantContent(response.message.content)
-              : response.message.content;
-          updateMessage(assistantMessageId, {
-            content: finalAssistantContent,
-            toolCalls: response.message.toolCalls,
-          });
-
-          // Handle tool calls if present
-          if (
-            response.message.toolCalls &&
-            response.message.toolCalls.length > 0
-          ) {
-            // Tool calls are executed by the tool executor if configured
-            if (toolExecutor) {
-              for (const toolCall of response.message.toolCalls) {
-                await toolExecutor.execute({
-                  toolCallId: toolCall.toolCallId,
-                  toolName: toolCall.toolName,
-                  args: toolCall.args,
-                });
-              }
+          // The page's tools run the calls it asked for.
+          if (toolExecutor && response.message.toolCalls?.length) {
+            for (const toolCall of response.message.toolCalls) {
+              await toolExecutor.execute({
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
+              });
             }
           }
         }
@@ -419,12 +385,10 @@ export function useChat(): UseChatReturn {
       protocolAdapter,
       toolExecutor,
       messages,
-      addMessage,
-      updateMessage,
+      setMessages,
       setLoading,
       setError,
       startStreaming,
-      appendToStream,
       stopStreaming,
       getTools,
     ],

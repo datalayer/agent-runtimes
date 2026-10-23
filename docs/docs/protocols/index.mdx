@@ -9,6 +9,19 @@ Agent Runtimes supports multiple runtime and extension protocols. This page
 covers protocol selection, protocol capabilities, and extension-layer
 protocols for rich UI experiences.
 
+## Agent protocols
+
+The protocols an agent speaks with the world — MCP, A2A, Web Bot Auth,
+PAP, PACT, UCP and the Agentic Commerce Protocol, as
+[poppy.md/compare](https://poppy.md/compare) maps them — are Reactor
+plugins whose extensions are contribution points: see
+[Agent protocols as plugins](./agent-protocols), then a page per protocol:
+[MCP and A2A](./mcp-and-a2a),
+[Web Bot Auth](./web-bot-auth), [UCP](./ucp),
+[Agentic Commerce](./agentic-commerce), [PACT](./pact),
+[PAP and PACT side by side](./pap-and-pact), and the
+[Personal Agent Protocol](../integrations/personal-agent-protocol).
+
 ## Runtime Protocols
 
 Runtime protocols define how clients and agents communicate.
@@ -267,23 +280,31 @@ A2UI enables agents to communicate with user interfaces through a standardized p
 
 | Endpoint | Description |
 |----------|-------------|
-| `/api/v1/a2ui/` | A2UI protocol endpoint |
-| `/api/v1/a2ui/agents` | List A2UI-enabled agents |
+| `POST /api/v1/a2ui/restaurant/` | The restaurant-finder example agent: a `query`, or an `action` with its `context` |
+| `POST /api/v1/a2ui/support-assistant/` | The support-assistant example agent |
+| `GET /api/v1/a2ui/{agent}/health` | Whether the example agent is available |
+
+Each answers with A2A-style parts: a `text` part, then one `data` part per A2UI v0.9 message.
 
 ### Usage
 
+The package has no A2UI client class (the `A2UIAdapter` an earlier version of this page showed is gone). A page posts to the endpoint and hands the A2UI messages to an A2UI v0.9 renderer (`@a2ui/react/v0_9`), as the A2UI examples in `src/examples/` do; in the LOOP workspace, the A2UI plugins render surfaces for you.
+
 ```typescript
-import { A2UIAdapter } from '@datalayer/agent-runtimes';
+import type { A2uiMessage } from '@a2ui/web_core/v0_9';
 
-const adapter = new A2UIAdapter({
-  agentId: 'my-agent',
-  baseUrl: 'http://localhost:8765',
+const response = await fetch('http://localhost:8765/api/v1/a2ui/restaurant/', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: 'Top 5 Chinese restaurants in New York' }),
 });
-
-// Connect and receive UI events
-adapter.connect((event) => {
-  console.log('UI event:', event);
-});
+const parts: { kind: string; text?: string; data?: unknown }[] =
+  await response.json();
+const messages = parts
+  .filter(part => part.kind === 'data')
+  .map(part => part.data as A2uiMessage);
+// Pass `messages` to your A2UI message processor, and render its surfaces.
+// A button click comes back as { action, context } in the next POST.
 ```
 
 ## MCP-UI

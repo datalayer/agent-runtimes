@@ -51,7 +51,7 @@ export type UseBrowserAgentOptions = CreateBrowserAgentOptions & {
  * ```tsx
  * const frontendTools = useNotebookTools(notebookId);
  * const { messages, sendMessage, status } = useBrowserAgent({
- *   spec: JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1,
+ *   spec: AGENTSPECS['jupyter-notebook-compactor'],
  *   frontendTools,
  *   inference: { inferenceUrl, token },
  * });

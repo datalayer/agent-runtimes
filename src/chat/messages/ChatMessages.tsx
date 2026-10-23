@@ -16,11 +16,12 @@ import { Box, useThemeStore, getColorPalette } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import type { ChatMessage, ContentPart } from '../../types/messages';
-import type { ExtensionRegistry } from '../../extensions/ExtensionRegistry';
+import type { UIPluginRegistry } from '../../ui-plugins/UIPluginRegistry';
 import {
   useChatMessages,
-  useChatExtensionRegistry,
+  useChatUIPluginRegistry,
 } from '../../stores/chatStore';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * ChatMessages props
@@ -47,8 +48,8 @@ export interface ChatMessagesProps {
   /** Custom class name */
   className?: string;
 
-  /** Optional extension registry (defaults to store value) */
-  extensionRegistry?: ExtensionRegistry;
+  /** Optional plugin registry (defaults to store value) */
+  uiPluginRegistry?: UIPluginRegistry;
 }
 
 /**
@@ -61,11 +62,12 @@ export function ChatMessages({
   showAvatars = true,
   autoScroll = true,
   className,
-  extensionRegistry: extensionRegistryProp,
+  uiPluginRegistry: uiPluginRegistryProp,
 }: ChatMessagesProps) {
+  const chatText = useChatWords();
   const messages = useChatMessages();
-  const storeExtensionRegistry = useChatExtensionRegistry();
-  const extensionRegistry = extensionRegistryProp ?? storeExtensionRegistry;
+  const storeUIPluginRegistry = useChatUIPluginRegistry();
+  const uiPluginRegistry = uiPluginRegistryProp ?? storeUIPluginRegistry;
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
@@ -88,14 +90,12 @@ export function ChatMessages({
       return messageRenderer(message);
     }
 
-    // Check extension registry for custom renderer
-    if (extensionRegistry) {
-      const messageRenderers = extensionRegistry.getMessageRenderers();
-      const extensionRenderer = messageRenderers.find(r =>
-        r.canRender(message),
-      );
-      if (extensionRenderer) {
-        return extensionRenderer.render({
+    // Check plugin registry for custom renderer
+    if (uiPluginRegistry) {
+      const messageRenderers = uiPluginRegistry.getMessageRenderers();
+      const pluginRenderer = messageRenderers.find(r => r.canRender(message));
+      if (pluginRenderer) {
+        return pluginRenderer.render({
           message,
           isStreaming: false,
         });
@@ -107,13 +107,13 @@ export function ChatMessages({
       <Box
         ref={isLast ? lastMessageRef : undefined}
         key={message.id}
+        display="flex"
+        gap={3}
+        p={3}
+        borderColor="border.muted"
+        bg={message.role === 'assistant' ? 'canvas.subtle' : 'canvas.default'}
         sx={{
-          display: 'flex',
-          gap: 3,
-          p: 3,
           borderBottom: '1px solid',
-          borderColor: 'border.muted',
-          bg: message.role === 'assistant' ? 'canvas.subtle' : 'canvas.default',
           '&:last-child': {
             borderBottom: 'none',
           },
@@ -121,26 +121,26 @@ export function ChatMessages({
       >
         {/* Avatar */}
         {showAvatars && (
-          <Box sx={{ flexShrink: 0 }}>
+          <Box flexShrink={0}>
             <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bg:
-                  message.role === 'user'
-                    ? 'neutral.muted'
-                    : message.role === 'assistant'
-                      ? 'accent.emphasis'
-                      : 'attention.emphasis',
-                color:
-                  message.role === 'user'
-                    ? 'fg.default'
-                    : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
-              }}
+              width={32}
+              height={32}
+              borderRadius="50%"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bg={
+                message.role === 'user'
+                  ? 'neutral.muted'
+                  : message.role === 'assistant'
+                    ? 'accent.emphasis'
+                    : 'attention.emphasis'
+              }
+              color={
+                message.role === 'user'
+                  ? 'fg.default'
+                  : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+              }
             >
               {message.role === 'user' ? (
                 <PersonIcon size={16} />
@@ -154,16 +154,9 @@ export function ChatMessages({
         )}
 
         {/* Content */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           {/* Header */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              mb: 1,
-            }}
-          >
+          <Box display="flex" alignItems="center" gap={2} mb={1}>
             <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
               {message.role === 'user'
                 ? 'You'
@@ -180,11 +173,11 @@ export function ChatMessages({
           </Box>
 
           {/* Message content */}
-          <Box sx={{ fontSize: 1, lineHeight: 1.5 }}>
+          <Box fontSize={1} lineHeight={1.5}>
             {renderMessageContent(
               message,
               activityRenderer,
-              extensionRegistry ?? undefined,
+              uiPluginRegistry ?? undefined,
             )}
           </Box>
         </Box>
@@ -196,34 +189,23 @@ export function ChatMessages({
     return (
       <Box
         className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          p: 4,
-          color: 'fg.muted',
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        p={4}
+        color="fg.muted"
       >
         <AiAgentIcon colored size={48} />
-        <Text sx={{ mt: 3, fontSize: 2 }}>Start a conversation</Text>
-        <Text sx={{ mt: 1, fontSize: 1 }}>
-          Send a message to begin chatting
-        </Text>
+        <Text sx={{ mt: 3, fontSize: 2 }}>{chatText.startConversation}</Text>
+        <Text sx={{ mt: 1, fontSize: 1 }}>{chatText.sendToBegin}</Text>
       </Box>
     );
   }
 
   return (
-    <Box
-      ref={containerRef}
-      className={className}
-      sx={{
-        flex: 1,
-        overflow: 'auto',
-      }}
-    >
+    <Box ref={containerRef} className={className} flex={1} overflow="auto">
       {messages.map((message, index) =>
         renderMessage(message, index === messages.length - 1),
       )}
@@ -240,7 +222,7 @@ function renderMessageContent(
     type: string;
     data: unknown;
   }) => React.ReactNode,
-  extensionRegistry?: ExtensionRegistry,
+  uiPluginRegistry?: UIPluginRegistry,
 ): React.ReactNode {
   const { content } = message;
 
@@ -252,9 +234,9 @@ function renderMessageContent(
   // Array of content parts
   if (Array.isArray(content)) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box display="flex" flexDirection="column" gap={2}>
         {content.map((part, index) =>
-          renderContentPart(part, index, activityRenderer, extensionRegistry),
+          renderContentPart(part, index, activityRenderer, uiPluginRegistry),
         )}
       </Box>
     );
@@ -273,7 +255,7 @@ function renderContentPart(
     type: string;
     data: unknown;
   }) => React.ReactNode,
-  extensionRegistry?: ExtensionRegistry,
+  uiPluginRegistry?: UIPluginRegistry,
 ): React.ReactNode {
   switch (part.type) {
     case 'text':
@@ -298,15 +280,13 @@ function renderContentPart(
       return (
         <Box
           key={index}
-          sx={{
-            p: 2,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-          }}
+          p={2}
+          bg="canvas.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <Box display="flex" alignItems="center" gap={2} mb={1}>
             <ToolsIcon size={16} />
             <Text sx={{ fontWeight: 'semibold', fontSize: 0 }}>
               Tool: {part.toolName}
@@ -314,14 +294,12 @@ function renderContentPart(
           </Box>
           <Box
             as="pre"
-            sx={{
-              fontSize: 0,
-              overflow: 'auto',
-              m: 0,
-              p: 2,
-              bg: 'canvas.inset',
-              borderRadius: 1,
-            }}
+            fontSize={0}
+            overflow="auto"
+            m={0}
+            p={2}
+            bg="canvas.inset"
+            borderRadius={1}
           >
             {JSON.stringify(part.args, null, 2)}
           </Box>
@@ -338,25 +316,16 @@ function renderContentPart(
       return (
         <Box
           key={index}
-          sx={{
-            p: 2,
-            bg: isSuccess ? 'success.subtle' : 'danger.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: isSuccess ? 'success.muted' : 'danger.muted',
-          }}
+          p={2}
+          bg={isSuccess ? 'success.subtle' : 'danger.subtle'}
+          borderRadius={2}
+          border="1px solid"
+          borderColor={isSuccess ? 'success.muted' : 'danger.muted'}
         >
           <Text sx={{ fontWeight: 'semibold', fontSize: 0, mb: 1 }}>
             Result: {part.toolName}
           </Text>
-          <Box
-            as="pre"
-            sx={{
-              fontSize: 0,
-              overflow: 'auto',
-              m: 0,
-            }}
-          >
+          <Box as="pre" fontSize={0} overflow="auto" m={0}>
             {result?.error || JSON.stringify(result, null, 2)}
           </Box>
         </Box>
@@ -376,9 +345,9 @@ function renderContentPart(
         );
       }
 
-      // Check extension registry
-      if (extensionRegistry) {
-        const renderer = extensionRegistry.getActivityRenderer(
+      // Check plugin registry
+      if (uiPluginRegistry) {
+        const renderer = uiPluginRegistry.getActivityRenderer(
           part.activityType || 'unknown',
         );
         if (renderer) {
@@ -398,27 +367,17 @@ function renderContentPart(
       return (
         <Box
           key={index}
-          sx={{
-            p: 2,
-            bg: 'accent.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'accent.muted',
-          }}
+          p={2}
+          bg="accent.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="accent.muted"
         >
           <Text sx={{ fontWeight: 'semibold', fontSize: 0 }}>
             Activity: {part.activityType}
           </Text>
           {part.data != null && (
-            <Box
-              as="pre"
-              sx={{
-                fontSize: 0,
-                overflow: 'auto',
-                mt: 1,
-                m: 0,
-              }}
-            >
+            <Box as="pre" fontSize={0} overflow="auto" mt={1} m={0}>
               {String(
                 typeof part.data === 'object'
                   ? JSON.stringify(part.data, null, 2)

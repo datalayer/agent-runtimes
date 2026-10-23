@@ -1,0 +1,216 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Threads (P-24): a thread opened from a person's history is read from
+ * the runtime — held there, else resumed from its record — and feedback
+ * names the answer it is about.
+ */
+
+import { describe, expect, it, vi } from 'vitest';
+import { answerIdOf, sendFeedback } from '../apps/feedback';
+import { deploymentOfPayload, threadOfVisit } from '../apps/threads';
+import {
+  openThread,
+  snapshotOfStream,
+  THREAD_WORDS,
+} from '../../portable/thread';
+import { askedOf } from '../../portable/records';
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+const stream = (...events: unknown[]) =>
+  new Response(
+    events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+    { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+  );
+
+const SAID = [
+  { id: 'm1', role: 'user', content: 'How do I export?' },
+  { id: 'm2', role: 'assistant', content: 'From the File menu.' },
+];
+
+describe('a thread opened from the history', () => {
+  it('is read from the runtime that holds it', async () => {
+    const fetcher = vi.fn(async () =>
+      json(200, { uid: 's-1', messages: SAID }),
+    );
+    const messages = await openThread({
+      agentBaseUrl: 'https://pod.example/',
+      agentId: 'desk',
+      uid: 's-1',
+      token: 't0k',
+      fetcher,
+    });
+    expect(messages.map(m => [m.id, m.role, m.content])).toEqual([
+      ['m1', 'user', 'How do I export?'],
+      ['m2', 'assistant', 'From the File menu.'],
+    ]);
+    const [url, init] = fetcher.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe('https://pod.example/api/v1/apps/sessions/s-1/messages');
+    expect(init.headers).toEqual({ Authorization: 'Bearer t0k' });
+  });
+
+  it('is resumed from its record when the runtime no longer holds it', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json(404, { detail: 'No session s-1 is held here.' }),
+      )
+      .mockResolvedValueOnce(
+        stream(
+          { type: 'CUSTOM', name: 'loop.session', value: { uid: 's-1' } },
+          { type: 'MESSAGES_SNAPSHOT', messages: SAID },
+          { type: 'RUN_FINISHED' },
+        ),
+      );
+    const messages = await openThread({
+      agentBaseUrl: 'https://pod.example',
+      agentId: 'desk',
+      uid: 's-1',
+      fetcher,
+    });
+    expect(messages).toHaveLength(2);
+    const [url, init] = fetcher.mock.calls[1] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe('https://pod.example/api/v1/apps/sessions/s-1/resume');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({ agent: 'desk' });
+  });
+
+  it('says why it could not be opened', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(json(404, {}))
+      .mockResolvedValueOnce(
+        json(409, { detail: 'Desk keeps no conversations in its record.' }),
+      );
+    await expect(
+      openThread({
+        agentBaseUrl: 'https://pod.example',
+        agentId: 'desk',
+        uid: 's-1',
+        fetcher,
+      }),
+    ).rejects.toThrow('Desk keeps no conversations in its record.');
+    expect(THREAD_WORDS.notOpened('no.')).toMatch(/this is a new one: no\.$/);
+  });
+
+  it('reads the last snapshot of a stream, and nothing from one without', () => {
+    expect(
+      snapshotOfStream('data: {"type":"RUN_STARTED"}\n\n'),
+    ).toBeUndefined();
+    expect(
+      snapshotOfStream(
+        'data: {"type":"MESSAGES_SNAPSHOT","messages":[1]}\n\ndata: not json\n\n',
+      ),
+    ).toEqual([1]);
+  });
+});
+
+describe('a turn a personal agent asked (decided 2026-10-14)', () => {
+  const TOLD =
+    '<asked-for>Asked over PAP by the personal agent https://agent.example ' +
+    'for a person signed in here, their account 01JV, who granted it: ' +
+    'orders:read.</asked-for>';
+
+  it("is opened again with the person's words only", async () => {
+    const fetcher = vi.fn(async () =>
+      json(200, {
+        uid: 's-1',
+        messages: [
+          { id: 'm1', role: 'user', content: `${TOLD}\n\nWhere is my order?` },
+          { id: 'm2', role: 'assistant', content: 'Delivered.' },
+        ],
+      }),
+    );
+    const messages = await openThread({
+      agentBaseUrl: 'https://pod.example',
+      agentId: 'desk',
+      uid: 's-1',
+      fetcher,
+    });
+    expect(messages.map(m => [m.role, m.content])).toEqual([
+      ['user', 'Where is my order?'],
+      ['assistant', 'Delivered.'],
+    ]);
+  });
+
+  it('leaves what the person wrote as they wrote it', () => {
+    expect(askedOf('Where is my order?')).toBe('Where is my order?');
+    expect(askedOf(`Quote: ${TOLD}`)).toBe(`Quote: ${TOLD}`);
+    expect(askedOf(`${TOLD}\n\nWhere is my <asked-for> order?`)).toBe(
+      'Where is my <asked-for> order?',
+    );
+    expect(() => askedOf('<asked-for>Asked over PAP')).toThrow(
+      'never closes it',
+    );
+  });
+});
+
+describe("a deployment's visit (found on r1 2026-10-14)", () => {
+  it('opens a new thread of its own, never the runtime agent of every visitor', () => {
+    expect(threadOfVisit(undefined, 'dep-7', 'visit-1')).toEqual({
+      id: 'visit-1',
+      messages: [],
+    });
+  });
+
+  it('keeps the thread its host gave, opened from the history or not', () => {
+    const given = { id: 's-1', messages: [], fromRuntime: true };
+    expect(threadOfVisit(given, 'dep-7', 'visit-1')).toBe(given);
+  });
+
+  it('leaves a Preview, which runs no deployment, as it was', () => {
+    expect(threadOfVisit(undefined, '', 'visit-1')).toBeUndefined();
+  });
+
+  it('reads the deployment from the payload the agent is created with', () => {
+    // As `appDatalayerCreatePayload` writes it: the Appspec dumped, the instance beside it.
+    const payload = {
+      app_spec: { id: 'shop' },
+      app_instance: { app_uid: '01APP', deployment_uid: 'dep-7', version: 1 },
+    };
+    expect(deploymentOfPayload(payload)).toBe('dep-7');
+    expect(
+      deploymentOfPayload({
+        ...payload,
+        app_instance: { app_uid: '01APP', deployment_uid: '' },
+      }),
+    ).toBe('');
+    expect(deploymentOfPayload({ app_spec: { id: 'shop' } })).toBe('');
+    expect(deploymentOfPayload(undefined)).toBe('');
+  });
+});
+
+describe('feedback on an answer', () => {
+  it('names the answer by its place in the conversation', async () => {
+    expect(answerIdOf(0)).toBeUndefined();
+    expect(answerIdOf(3)).toBe('answer-3');
+    const fetcher = vi.fn(async () =>
+      json(200, { kept: true, summary: 'Did not like it', heard: true }),
+    );
+    await sendFeedback(
+      { session: 's-1', liked: false, comment: '', message: 'answer-3' },
+      { agentBaseUrl: 'https://pod.example', fetcher },
+    );
+    const [, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      session: 's-1',
+      liked: false,
+      comment: '',
+      message: 'answer-3',
+    });
+  });
+});

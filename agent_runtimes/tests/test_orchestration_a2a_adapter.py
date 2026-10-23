@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the A2A binding (PLAN_ORCHESTRATOR.md, sections 7.1, O0-06).
+"""Tests for the A2A binding (O0-06).
 
 A worker that has never heard of Datalayer runs an execution to completion,
 its artifacts are registered, the parent's ``agent.subagent`` events keep
@@ -230,6 +230,38 @@ class TestDelegation:
         assert provenance.attempt_id == attempt.attempt_id
 
     @pytest.mark.asyncio
+    async def test_a_completed_seat_task_leaves_its_session_on_the_attempt(
+        self, monkeypatch
+    ):
+        # MH-38/MH-42: the seat's apps session, on the completed status, is the
+        # attempt's — what the run swaps, clones and exports (found on r1, 22
+        # October 2026: a completed seat's attempt carried none).
+        ended = (
+            "status",
+            {
+                "taskId": "task-1",
+                "state": "completed",
+                "metadata": {
+                    "datalayer": {
+                        "session": {
+                            "uid": "s-seat",
+                            "seat": "coder",
+                            "executionId": "exec_1",
+                        }
+                    }
+                },
+            },
+        )
+        _relay(monkeypatch, [*GOOD_RUN[:-1], ended])
+        _no_task_lookup(monkeypatch)
+        store = InMemoryExecutionStore()
+
+        execution, _, _ = await _dispatch(A2AWorkerAdapter(), store)
+
+        (attempt,) = await store.attempts(execution.execution_id)
+        assert attempt.session_id == "s-seat"
+
+    @pytest.mark.asyncio
     async def test_the_attempt_keeps_what_the_worker_says_it_spent(self, monkeypatch):
         # O2-10: the status that ends the task says what the task spent.
         spent = {
@@ -351,7 +383,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_reduced_guarantees_land_on_the_execution(self, monkeypatch):
-        """19.8, decision 5: the reduction is reported, not hidden."""
+        """The reduction is reported, not hidden."""
         _relay(monkeypatch, GOOD_RUN)
         _no_task_lookup(monkeypatch)
         store = InMemoryExecutionStore()
@@ -459,7 +491,7 @@ class TestEndings:
 class TestRecoveryAndCancellation:
     @pytest.mark.asyncio
     async def test_re_attaching_reports_where_the_task_stands(self, monkeypatch):
-        """Conformance scenario 4, on the polling decision 5 allows.
+        """Conformance scenario 4, on the polling the design allows.
 
         The first look is progress, not a state change: an execution that
         was running before the disconnect is still running, and saying so

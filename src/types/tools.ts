@@ -6,7 +6,7 @@
 /**
  * Runtime binding metadata for a tool implementation.
  */
-export interface ToolRuntimeSpec {
+export interface BackendToolRuntimeSpec {
   /** Implementation language */
   language: 'python' | 'typescript';
   /** Module/package containing the implementation */
@@ -18,7 +18,7 @@ export interface ToolRuntimeSpec {
 /**
  * Specification for a runtime tool.
  */
-export interface ToolSpec {
+export interface BackendToolSpec {
   /** Unique tool identifier */
   id: string;
   /** Version */
@@ -38,10 +38,10 @@ export interface ToolSpec {
   /** Whether tool requires human approval before execution */
   requiresApproval?: boolean;
   /** Runtime binding metadata */
-  runtime: ToolRuntimeSpec;
-  /** Icon identifier */
+  runtime: BackendToolRuntimeSpec;
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 
@@ -86,9 +86,9 @@ export interface FrontendToolSpec {
    * read and edit a notebook but must never delete from it.
    */
   toolset: string | string[];
-  /** Icon identifier */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 
@@ -188,6 +188,13 @@ export interface FrontendToolDefinition<
    * Required when location is 'frontend' (default)
    */
   handler?: (args: TArgs) => Promise<TResult>;
+
+  /**
+   * What its card says in place of its arguments' summary, from what it
+   * returned (`on analysis.ipynb`, the file a host's editor tool ran on);
+   * `undefined` keeps the arguments' summary. Asked only once it returned.
+   */
+  summaryOf?: (args: TArgs, result: TResult) => string | undefined;
 
   /**
    * Optional render function for custom UI during execution

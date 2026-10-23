@@ -4,7 +4,7 @@
 """
 The work both workers do, so that neither is the one doing it better.
 
-PLAN_ORCHESTRATOR.md O0-13 asks for one objective delegated to an A2A worker
+O0-13 asks for one objective delegated to an A2A worker
 and to an ACP worker with only the descriptor differing. If the two workers
 analysed the notebook differently, a difference in the answers would say
 nothing about orchestration — so the analysis is here, once, and each worker

@@ -14,14 +14,42 @@ import { Box } from '@datalayer/primer-addons';
 import { AiModelIcon } from '@primer/octicons-react';
 
 import type { ModelConfig } from '../../../types';
+import type { Decisions } from '../../base/modelChoice';
+
+/**
+ * The typed-decision models, read-only under the models.
+ *
+ * A decision asks them through `/decisions`; an agent cannot run on one, so
+ * no row here selects anything. Each says so, in the runtime's sentence, and
+ * why it cannot be used when it cannot — the same rule as the models above.
+ */
+export function DecisionsGroup({ decisions }: { decisions: Decisions }) {
+  return (
+    <ActionList.Group selectionVariant={false}>
+      <ActionList.GroupHeading>Decisions</ActionList.GroupHeading>
+      {decisions.models.map(model => (
+        <ActionList.Item key={model.id} disabled sx={{ color: 'fg.muted' }}>
+          {model.name}
+          <ActionList.Description variant="block">
+            {model.isAvailable === false
+              ? `${model.unavailableReason ?? 'Not usable here'} · ${decisions.note}`
+              : decisions.note}
+          </ActionList.Description>
+        </ActionList.Item>
+      ))}
+    </ActionList.Group>
+  );
+}
 
 export function ModelSelector({
   models,
+  decisions,
   selectedModel,
   onModelSelect,
   isA2AProtocol,
 }: {
   models: ModelConfig[];
+  decisions?: Decisions;
   selectedModel: string;
   onModelSelect: (modelId: string) => void;
   isA2AProtocol: boolean;
@@ -38,13 +66,7 @@ export function ModelSelector({
     : `${active?.name ?? 'none selected'} · ${models.length} to choose from`;
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-      }}
-    >
+    <Box display="flex" flexDirection="column" alignItems="flex-end">
       <ActionMenu>
         <ActionMenu.Anchor>
           <Tooltip text={`Model — ${summary}`} direction="n">
@@ -91,6 +113,12 @@ export function ModelSelector({
                 )}
               </ActionList.Item>
             ))}
+            {decisions && decisions.models.length > 0 && (
+              <>
+                <ActionList.Divider />
+                <DecisionsGroup decisions={decisions} />
+              </>
+            )}
           </ActionList>
         </ActionMenu.Overlay>
       </ActionMenu>

@@ -3,7 +3,7 @@
 
 """The addresses of the product that the evals tooling prints and embeds.
 
-One place for them (BENCHMARK.md, B4-08). The runner's messages, the CLI,
+One place for them (B4-08). The runner's messages, the CLI,
 and every link a report embeds — in the Markdown, the CSV and the console —
 point at the pages people use, the benchmark at `/benchmarks/{id}` and the
 run at `/runs/{launch}`, on the deployment `DATALAYER_UI_URL` names. A report

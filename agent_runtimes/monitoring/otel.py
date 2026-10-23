@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """OTEL capability hooks for pydantic-ai lifecycle events, and the
-orchestration trace (PLAN_ORCHESTRATOR.md, section 10, O0-11).
+orchestration trace (O0-11).
 
 Two things share this module because they share one telemetry path. The
 capability hooks below emit an agent run's counters and histograms through
@@ -11,7 +11,7 @@ execution tree one trace. Both resolve the account the same way — from the
 request's own JWT — because spans and metrics that landed under different
 accounts would be two stories about the same work.
 
-What the orchestration half is for, in section 10's words: one trace across
+What the orchestration half is for, in a sentence: one trace across
 the complete execution tree, carrying root, parent, execution, attempt,
 agent, session and protocol identifiers. There is a span per execution and a
 span per attempt, and every canonical event the store appends is added to
@@ -66,7 +66,7 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.mcp.tracing import trace_headers
+from agent_runtimes.mcp.tracing import TRACE_HEADERS, trace_headers
 
 try:
     from datalayer_core.otel.emitter import OTelEmitter
@@ -209,7 +209,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
 
 
 # ---------------------------------------------------------------------------
-# One trace across the execution tree (section 10, O0-11)
+# One trace across the execution tree (O0-11)
 # ---------------------------------------------------------------------------
 
 #: The service the orchestration spans are emitted under. The adapters and
@@ -222,7 +222,7 @@ ORCHESTRATION_SERVICE = "agent-runtimes"
 EXECUTION_SPAN = "orchestration.execution"
 ATTEMPT_SPAN = "orchestration.attempt"
 
-#: Section 10's correlation identifiers, in its order. They live under
+#: The correlation identifiers, in their order. They live under
 #: ``orchestration.`` rather than reusing the ``agent.id`` and ``session.id``
 #: the agent tracer already emits, because an orchestration ``agentId`` is a
 #: descriptor and a ``sessionId`` is a protocol handle: joining them to a
@@ -288,7 +288,7 @@ def account_attributes() -> dict[str, str]:
 
 def correlation_of(event: ExecutionEvent) -> dict[str, str]:
     """
-    Section 10's identifiers, read off the event the store already stamped.
+    The correlation identifiers, read off the event the store already stamped.
 
     Parameters
     ----------
@@ -365,7 +365,7 @@ def current_trace() -> Trace:
 
 def command_with_trace(command: CommandT) -> CommandT:
     """
-    The command, carrying the trace it belongs to (section 10, 6.2).
+    The command, carrying the trace it belongs to.
 
     Every command is stamped, mutating or not, because a read that is part
     of a tree's story belongs in the tree's trace too. A command that
@@ -438,7 +438,7 @@ def restored(trace: Trace | None) -> Iterator[None]:
 @contextmanager
 def execution_span(execution: Execution) -> Iterator[Any]:
     """
-    The span one execution's life happens inside (section 10).
+    The span one execution's life happens inside.
 
     Opened by whoever owns that life: ``OrchestrationWorkflow`` from Phase 1
     (O1-03), the conformance harness before it. The execution's own
@@ -638,3 +638,51 @@ def _recording() -> bool:
     """
     span = _current_span()
     return span is not None and span.is_recording()
+
+
+class TraceContextMiddleware:
+    """Continue the trace a caller sent (W3C ``traceparent``) into the request (SH-51).
+
+    Nothing instruments the server itself, so without this an A2A or AG-UI
+    request arrives with a ``traceparent`` header nobody reads, fasta2a
+    captures an invalid span for its worker, and the harness's turn starts a
+    trace of its own. With it, a request that carries a context runs inside a
+    server span whose parent is the caller's; a request without one gets no
+    span — no trace, no header, and never an invented one. Pure ASGI, so it
+    wraps the mounted A2A and AG-UI apps as well as the routes.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in scope.get("headers") or []
+        }
+        if "traceparent" not in headers:
+            await self.app(scope, receive, send)
+            return
+        try:
+            from opentelemetry import context as otel_context
+            from opentelemetry import trace as otel_trace
+            from opentelemetry.propagate import extract
+        except Exception:  # noqa: BLE001 - telemetry is optional
+            await self.app(scope, receive, send)
+            return
+        parent = extract({k: headers[k] for k in TRACE_HEADERS if k in headers})
+        token = otel_context.attach(parent)
+        try:
+            with otel_trace.get_tracer(ORCHESTRATION_SERVICE).start_as_current_span(
+                f"{scope.get('method', 'HTTP')} {scope.get('path', '')}",
+                attributes={
+                    "http.request.method": str(scope.get("method", "")),
+                    "url.path": str(scope.get("path", "")),
+                },
+            ):
+                await self.app(scope, receive, send)
+        finally:
+            otel_context.detach(token)

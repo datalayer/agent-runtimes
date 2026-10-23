@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-One objective, two protocols, one code path (PLAN_ORCHESTRATOR.md, O0-13).
+One objective, two protocols, one code path (O0-13).
 
 A parent asks for a notebook to be analysed and delegates it twice: once to a
 worker that speaks A2A and once to a worker that speaks ACP. Everything below
@@ -15,17 +15,17 @@ make and the thing it prints at the end.
 What the run does, in the order a control plane does it:
 
 1. Resolve the worker the descriptor names, and read back what it turned out
-   to be able to do (section 7; decision 5 of 19.8 requires a reduction to be
+   to be able to do (the design requires a reduction to be
    reported on the execution rather than hidden, so the first observation of
    every dispatch is the adapter's capability report).
 2. Create the execution under the delegating command's idempotency key, with
    the notebook named as a ``datalayer:notebook/<uid>@<version>`` reference
-   rather than copied into the prompt (section 2).
+   rather than copied into the prompt.
 3. Record the first attempt and assign it. Choosing a worker is a control
    plane decision and never something an adapter observes.
 4. Dispatch, and record every observation as canonical state — which is the
-   seam of section 4: adapters report, the control plane decides.
-5. Arbitrate the commit. The first attempt to reach commit wins (decision 4).
+   seam: adapters report, the control plane decides.
+5. Arbitrate the commit. The first attempt to reach commit wins.
 
 Nothing here is protocol-specific except one dictionary from a protocol to
 its adapter, which is what a registry is.
@@ -93,7 +93,7 @@ ADAPTERS: dict[AgentProtocol, type[WorkerAdapter]] = {
     AgentProtocol.ACP: ACPWorkerAdapter,
 }
 
-#: A W3C traceparent, so both runs hang under one trace (section 10).
+#: A W3C traceparent, so both runs hang under one trace.
 TRACEPARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 
 
@@ -167,7 +167,7 @@ def execution_for(descriptor: AgentDescriptor, notebook_uri: str) -> Execution:
     """
     The delegation: what is wanted, of which notebook, under what limits.
 
-    The notebook is *named*, never inlined. Section 2 asks for context to be
+    The notebook is *named*, never inlined. Context is to be
     passed by reference so that two workers analysing the same notebook are
     demonstrably analysing the same version of it, and so that a worker's
     access to it can be authorized rather than assumed.
@@ -226,7 +226,7 @@ class Run:
     events : list[ExecutionEvent]
         Its event stream, in order.
     acknowledgements : list[Acknowledgement]
-        The milestones of section 6.3 it reached.
+        The acknowledgement milestones it reached.
     artifacts : list[Artifact]
         What it produced.
     reductions : list[str]
@@ -246,7 +246,7 @@ class Run:
         The worker's answer, as the artifact carries it.
 
         The artifact keeps a summary and a hash of the answer rather than the
-        answer itself: registering it is section 5.4's typed reference with
+        answer itself: registering it is the artifact model's typed reference with
         provenance, and putting the body somewhere durable is O1-10's.
 
         Returns

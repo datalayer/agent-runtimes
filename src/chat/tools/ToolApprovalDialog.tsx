@@ -11,16 +11,11 @@
  */
 
 import { useCallback, useState } from 'react';
-import {
-  Box,
-  Button,
-  Text,
-  Heading,
-  FormControl,
-  Checkbox,
-} from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Button, Text, Heading, FormControl, Checkbox } from '@primer/react';
 import { Dialog } from '@primer/react/experimental';
 import { AlertIcon, ToolsIcon, CheckIcon, XIcon } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * ToolApprovalDialog props
@@ -64,6 +59,7 @@ export function ToolApprovalDialog({
   onClose,
   showRememberChoice = true,
 }: ToolApprovalDialogProps) {
+  const chatText = useChatWords();
   const [rememberChoice, setRememberChoice] = useState(false);
 
   const handleApprove = useCallback(() => {
@@ -81,16 +77,16 @@ export function ToolApprovalDialog({
   return (
     <Dialog onClose={onClose} aria-labelledby="tool-approval-title">
       <Dialog.Header>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           <AlertIcon size={16} />
-          Tool Approval Required
+          {chatText.approvalTitle}
         </Box>
       </Dialog.Header>
 
-      <Box sx={{ p: 3 }}>
+      <Box p={3}>
         {/* Tool info */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box mb={3}>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
             <ToolsIcon size={20} />
             <Heading as="h4" sx={{ fontSize: 2 }}>
               {toolName}
@@ -105,7 +101,7 @@ export function ToolApprovalDialog({
         </Box>
 
         {/* Arguments */}
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <Text
             sx={{
               fontWeight: 'semibold',
@@ -114,20 +110,18 @@ export function ToolApprovalDialog({
               display: 'block',
             }}
           >
-            Arguments:
+            {chatText.arguments}
           </Text>
           <Box
             as="pre"
-            sx={{
-              p: 3,
-              bg: 'canvas.subtle',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              overflow: 'auto',
-              maxHeight: 200,
-              fontSize: 0,
-            }}
+            p={3}
+            bg="canvas.subtle"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            overflow="auto"
+            maxHeight={200}
+            fontSize={0}
           >
             {JSON.stringify(args, null, 2)}
           </Box>
@@ -135,19 +129,14 @@ export function ToolApprovalDialog({
 
         {/* Warning */}
         <Box
-          sx={{
-            p: 3,
-            bg: 'attention.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'attention.muted',
-            mb: 3,
-          }}
+          p={3}
+          bg="attention.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="attention.muted"
+          mb={3}
         >
-          <Text sx={{ fontSize: 1 }}>
-            This tool will perform an action on your behalf. Please review the
-            arguments before approving.
-          </Text>
+          <Text sx={{ fontSize: 1 }}>{chatText.approvalWarning}</Text>
         </Box>
 
         {/* Remember choice */}
@@ -157,23 +146,21 @@ export function ToolApprovalDialog({
               checked={rememberChoice}
               onChange={e => setRememberChoice(e.target.checked)}
             />
-            <FormControl.Label>
-              Remember my choice for this tool
-            </FormControl.Label>
+            <FormControl.Label>{chatText.rememberChoice}</FormControl.Label>
           </FormControl>
         )}
 
         {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        <Box display="flex" justifyContent="flex-end" gap={2}>
           <Button variant="danger" onClick={handleDeny} leadingVisual={XIcon}>
-            Deny
+            {chatText.deny}
           </Button>
           <Button
             variant="primary"
             onClick={handleApprove}
             leadingVisual={CheckIcon}
           >
-            Approve
+            {chatText.approve}
           </Button>
         </Box>
       </Box>
