@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.85
+
+23 October 2026. A frontend tool says what its call did on its card: `summaryOf`, from what it returned, in place of its arguments' summary (a host's editor tool names the file it ran on).
+
 ## 1.5.81
 
 22 October 2026. The session's rules from any chat; a swapped-in agent's turns in the person's record.
