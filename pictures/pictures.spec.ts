@@ -205,6 +205,14 @@ for (const mode of MODES) {
         .all()) {
         await expect(cell).toHaveAttribute('data-assistant-aside', 'obstacle');
       }
+      // The orb's swirl is SMIL, which neither disabled animations nor
+      // reduced motion stop: every drawing is held at its first frame.
+      await page.evaluate(() =>
+        document.querySelectorAll('svg').forEach(svg => {
+          svg.pauseAnimations();
+          svg.setCurrentTime(0);
+        }),
+      );
       await expect(page).toHaveScreenshot(`assistant-gallery-${mode}.png`);
     });
   });
