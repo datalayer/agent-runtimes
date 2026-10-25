@@ -53,12 +53,14 @@ describe('the characters of the floating assistant', () => {
       'wizard',
       'cat',
       'eyes',
+      'orb',
+      'orb-theme',
       'own',
     ]);
     expect(assistantCharacterNamed(reactor, 'own')).toBe(robot);
   });
 
-  it("are Datalayer's four when its plugin is enabled", async () => {
+  it("are Datalayer's four drawings and its orb when its plugin is enabled", async () => {
     const reactor = buildReactorFromPlugins([AssistantCharactersPlugin]);
     await reactor.start();
     expect(assistantCharactersOf(reactor).map(entry => entry.id)).toEqual([
@@ -66,6 +68,8 @@ describe('the characters of the floating assistant', () => {
       'wizard',
       'cat',
       'eyes',
+      'orb',
+      'orb-theme',
     ]);
     expect(assistantCharacterNamed(reactor, 'wizard')).toHaveProperty(
       'Drawing',

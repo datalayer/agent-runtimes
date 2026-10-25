@@ -61,7 +61,8 @@ import {
   XIcon,
 } from '@primer/octicons-react';
 import { Dialog, Text } from '@primer/react';
-import { assistantCharacter, type AssistantCharacter } from './characters';
+import type { AssistantCharacter } from './characters';
+import { shippedAssistantCharacter } from './catalogue';
 import {
   BalloonHistoryLarge,
   SpeechBalloon,
@@ -783,7 +784,7 @@ export function AssistantStage({
   const model = isAssistantModel3D(character) ? character : undefined;
   const shipped =
     typeof character === 'string'
-      ? assistantCharacter(character)
+      ? shippedAssistantCharacter(character)
       : !model && 'Drawing' in character
         ? character
         : undefined;
@@ -1232,7 +1233,12 @@ export function AssistantStage({
           </Box>
         )}
         {shipped ? (
-          <shipped.Drawing size={size} mode={colorMode} />
+          <shipped.Drawing
+            size={size}
+            mode={colorMode}
+            state={state}
+            mouthLevel={mouthLevel}
+          />
         ) : model ? (
           <Suspense
             fallback={

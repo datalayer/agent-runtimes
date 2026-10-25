@@ -236,8 +236,10 @@ export interface ChatFloatingProps extends ChatCommonProps {
     | 'panel';
 
   /**
-   * The character of the floating assistant: one Datalayer ships, by id
-   * (`ASSISTANT_CHARACTERS`, T-25), or one a person loaded from a file
+   * The character of the floating assistant: one this package draws, by id
+   * (`SHIPPED_ASSISTANT_CHARACTERS`: the orb, `orb` or `orb-theme`, thinking
+   * while a turn runs; the clippy.js characters, `clippy-js-merlin`,
+   * fetched from jsDelivr; Datalayer's drawings, T-25), or one a person loaded from a file
    * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
    * @default 'paperclip'
    */

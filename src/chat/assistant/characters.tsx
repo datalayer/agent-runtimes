@@ -24,6 +24,7 @@
 
 import type { JSX } from 'react';
 import { loopColors } from '@datalayer/primer-addons/lib/theme';
+import type { AssistantState } from './state';
 
 /** The colour mode a character is drawn for: the chat's own. */
 export type AssistantColorMode = 'light' | 'dark';
@@ -47,6 +48,43 @@ export interface AssistantCharacterKeyColours {
   };
 }
 
+/**
+ * The families a picker lists the avatars under, in its order: Datalayer's
+ * orb, the clippy.js characters (Microsoft's, fetched), Datalayer's drawings
+ * (the paper clip and the others), then the 3D models.
+ */
+export type AssistantCharacterFamily = 'orb' | 'clippy-js' | 'drawing';
+
+/** The heading of each family, and what is said under it, in the order a picker lists them. */
+export const ASSISTANT_CHARACTER_FAMILIES: ReadonlyArray<{
+  family: AssistantCharacterFamily | 'model3d';
+  label: string;
+  note?: string;
+}> = [
+  { family: 'orb', label: 'Datalayer’s orb' },
+  {
+    family: 'clippy-js',
+    label: 'clippy.js characters',
+    note: 'Microsoft’s characters, as the clippy.js package publishes them: fetched from jsDelivr when one is shown, never kept by Datalayer.',
+  },
+  { family: 'drawing', label: 'Paper clips and drawings' },
+  { family: 'model3d', label: '3D models' },
+];
+
+/** The props a drawing is drawn with. */
+export interface AssistantDrawingProps {
+  size: number;
+  /** The chat's colour mode; light when unsaid. */
+  mode?: AssistantColorMode;
+  /**
+   * What the assistant acts out (T-22), for a drawing that shows it itself
+   * (the orb thinks while a turn runs); the others animate by class.
+   */
+  state?: AssistantState;
+  /** How loud its voice is now, between 0 and 1, for a drawing with a mouth. */
+  mouthLevel?: () => number;
+}
+
 /** A character Datalayer ships. */
 export interface AssistantCharacter {
   id: string;
@@ -56,9 +94,17 @@ export interface AssistantCharacter {
    * The drawing, at the size asked, for the chat's colour mode (light when
    * unsaid); its parts animate by class.
    */
-  Drawing: (props: { size: number; mode?: AssistantColorMode }) => JSX.Element;
+  Drawing: (props: AssistantDrawingProps) => JSX.Element;
   /** Its key colours in each mode, for the contrast test (T-25). */
   keyColours?: Record<AssistantColorMode, AssistantCharacterKeyColours>;
+  /** The family a picker lists it under; a drawing when unsaid. */
+  family?: AssistantCharacterFamily;
+  /**
+   * Where it is fetched from when it is drawn, said where it is offered: it
+   * is not in Datalayer's code. A list may show its name alone rather than
+   * fetch it.
+   */
+  fetchedFrom?: string;
 }
 
 const INK = loopColors.ink;

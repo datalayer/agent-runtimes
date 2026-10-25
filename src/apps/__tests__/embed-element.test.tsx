@@ -184,7 +184,7 @@ describe('AppEmbed, the React component', () => {
     const two = await render(<AppEmbed app={app} mode="assistant" />);
     expect(seen.floating).toHaveLength(0);
     expect(two.container.textContent).toBe(
-      'This application names the avatar “owl”, which nothing enabled here draws; the avatars are paperclip, wizard, cat, eyes.',
+      'This application names the avatar “owl”, which nothing enabled here draws; the avatars are paperclip, wizard, cat, eyes, orb, orb-theme, clippy-js-clippy, clippy-js-merlin, clippy-js-links, clippy-js-rover, clippy-js-genie, clippy-js-genius, clippy-js-f1, clippy-js-peedy, clippy-js-rocky, clippy-js-bonzi.',
     );
     await act(async () => two.root.unmount());
   });

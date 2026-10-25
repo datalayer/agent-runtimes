@@ -5,8 +5,11 @@
 
 /**
  * Datalayer's own characters for the floating assistant, contributed
- * (T-24, T-25): the paper clip, the wizard, the cat and the L👀P eyes.
- * Disabled, they leave the catalogue; another plugin may contribute others.
+ * (T-24, T-25): the orb (the design library's, in two tones), the paper
+ * clip, the wizard, the cat and the L👀P eyes; and, in a plugin of their
+ * own, the characters clippy.js publishes — Microsoft's, fetched from
+ * jsDelivr when one is drawn. Disabled, they leave the catalogue; another
+ * plugin may contribute others.
  *
  * @module apps/plugins/assistant-characters
  */
@@ -24,6 +27,11 @@ import {
   type AssistantCharacter,
 } from '../../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../../chat/assistant/formats/types';
+import { ASSISTANT_ORB_CHARACTERS } from '../../../chat/assistant/orbCharacters';
+import {
+  CLIPPY_JS_ASSISTANT_CHARACTERS,
+  CLIPPY_JS_VERSION,
+} from '../../../chat/assistant/clippyJsCharacters';
 import {
   assistantModel3D,
   type AssistantModel3D,
@@ -52,9 +60,37 @@ export const AssistantCharactersPlugin: ReactorPlugin<
   name: ASSISTANT_CHARACTERS_PLUGIN_NAME,
   displayName: 'Assistant avatars',
   description:
-    "Datalayer's own avatars for the floating assistant: a paper clip, a wizard, a cat and the L👀P eyes.",
+    "Datalayer's own avatars for the floating assistant: a paper clip, a wizard, a cat and the L👀P eyes, and the orb in two tones.",
   octicon: 'paperclip',
-  contributes: ASSISTANT_CHARACTERS.map(character =>
+  contributes: [...ASSISTANT_CHARACTERS, ...ASSISTANT_ORB_CHARACTERS].map(
+    character =>
+      contribution(
+        LoopAssistantCharacter,
+        { id: character.id, character },
+        { id: character.id },
+      ),
+  ),
+});
+
+export const CLIPPY_JS_CHARACTERS_PLUGIN_NAME =
+  '@datalayer/loop-plugin-assistant-characters-clippy-js';
+
+/**
+ * The characters clippy.js publishes, one avatar each (`clippy-js-merlin`):
+ * Microsoft's characters, fetched from the `clippyjs` package on jsDelivr
+ * when one is drawn, read as text and never run; nothing of them is in this
+ * package. Offline, or jsDelivr down, the paper clip stands in and says why.
+ */
+export const ClippyJsCharactersPlugin: ReactorPlugin<
+  Record<string, never>,
+  unknown,
+  unknown
+> = definePlugin({
+  name: CLIPPY_JS_CHARACTERS_PLUGIN_NAME,
+  displayName: 'clippy.js avatars',
+  description: `The characters clippy.js publishes — Clippy, Merlin, Rover and the others — as avatars: Microsoft's, fetched from jsDelivr (clippyjs ${CLIPPY_JS_VERSION}) when one is shown.`,
+  octicon: 'paperclip',
+  contributes: CLIPPY_JS_ASSISTANT_CHARACTERS.map(character =>
     contribution(
       LoopAssistantCharacter,
       { id: character.id, character },
@@ -62,6 +98,12 @@ export const AssistantCharactersPlugin: ReactorPlugin<
     ),
   ),
 });
+
+/** The plugins of the avatars this package contributes: Datalayer's, then clippy.js's. */
+export const ASSISTANT_CHARACTER_PLUGINS = [
+  AssistantCharactersPlugin,
+  ClippyJsCharactersPlugin,
+];
 
 /**
  * A plugin contributing one character (T-24, T-26): a character a

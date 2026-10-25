@@ -27,7 +27,11 @@ import { listChatModels } from '../../../specs/models';
 import { getSkillSpecs } from '../../../specs/skills';
 import { listProtocolSpecs } from '../../../specs/protocols';
 import { listUI } from '../../../specs/ui';
-import { ASSISTANT_CHARACTERS } from '../../../chat/assistant/characters';
+import { ASSISTANT_CHARACTER_FAMILIES } from '../../../chat/assistant/characters';
+import {
+  SHIPPED_ASSISTANT_CHARACTERS,
+  familyOf,
+} from '../../../chat/assistant/catalogue';
 import { AVATAR_3D_ID } from '../../../chat/assistant/avatar3dModel';
 import {
   LoopCanvasPart,
@@ -277,20 +281,31 @@ export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
   enabled: true,
 }));
 
+const familyWords = (family: string) =>
+  ASSISTANT_CHARACTER_FAMILIES.find(each => each.family === family);
+
 /**
- * The avatars of its floating assistant, dropped on the agent (PS-05):
- * Datalayer's own drawings, by id, and a 3D model (the default robot; its
- * `url` is changed in the Appspec).
+ * The avatars of its floating assistant, dropped on the agent (PS-05), by
+ * family: Datalayer's orb, the clippy.js characters (Microsoft's, fetched
+ * from jsDelivr when shown), Datalayer's drawings, by id, and a 3D model
+ * (the default robot; its `url` is changed in the Appspec).
  */
 export const AVATAR_PARTS: CanvasPartContribution[] = [
-  ...ASSISTANT_CHARACTERS.map(character => ({
-    id: `avatar:${character.id}`,
-    kind: 'avatar' as const,
-    label: character.name,
-    says: `Its floating assistant shows ${character.name}.`,
-    example: character.id,
-    enabled: true,
-  })),
+  ...SHIPPED_ASSISTANT_CHARACTERS.map(character => {
+    const family = familyWords(familyOf(character));
+    return {
+      id: `avatar:${character.id}`,
+      kind: 'avatar' as const,
+      label: character.name,
+      says: character.fetchedFrom
+        ? `Its floating assistant shows ${character.name}, a Microsoft character fetched from ${character.fetchedFrom} when it is shown.`
+        : `Its floating assistant shows ${character.name}.`,
+      example: character.id,
+      enabled: true,
+      group: family?.label,
+      ...(family?.note ? { groupNote: family.note } : {}),
+    };
+  }),
   {
     id: `avatar:${AVATAR_3D_ID}`,
     kind: 'avatar',
@@ -298,6 +313,7 @@ export const AVATAR_PARTS: CanvasPartContribution[] = [
     says: 'Its floating assistant shows a 3D model, idle while quiet and talking with its voice: a robot unless its `url` names another `.glb`.',
     example: { kind: 'model3d' },
     enabled: true,
+    group: familyWords('model3d')?.label,
   },
 ];
 

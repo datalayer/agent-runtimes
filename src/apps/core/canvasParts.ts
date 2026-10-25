@@ -59,6 +59,14 @@ export type CanvasPartContribution = {
   example: unknown;
   /** Whether what it names is enabled today; a part that is not is offered, and its application's setup notes say so. */
   enabled: boolean;
+  /**
+   * The heading it is listed under within its kind, where the kind has
+   * several: an avatar's family (`Datalayer’s orb`, `clippy.js characters`,
+   * `Paper clips and drawings`, `3D models`).
+   */
+  group?: string;
+  /** What is said under that heading, once: the clippy.js characters are Microsoft's, fetched. */
+  groupNote?: string;
 };
 
 export const LoopCanvasPart =

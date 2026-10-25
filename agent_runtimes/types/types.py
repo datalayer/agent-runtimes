@@ -3129,8 +3129,11 @@ class AppInterfaceSpec(BaseModel):
         default=None,
         description=(
             "The avatar its floating assistant shows: by the id a plugin "
-            "contributes it under (`paperclip`, `wizard`, `cat`, `eyes` are "
-            "Datalayer's drawings), or a 3D model, `{kind: model3d, url}`; "
+            "contributes it under (`orb` and `orb-theme` are Datalayer's orb; "
+            "`paperclip`, `wizard`, `cat`, `eyes` Datalayer's drawings; "
+            "`clippy-js-clippy` to `clippy-js-bonzi` the clippy.js characters, "
+            "Microsoft's, fetched from jsDelivr when shown), or a 3D model, "
+            "`{kind: model3d, url}`; "
             "the paper clip when unsaid"
         ),
     )

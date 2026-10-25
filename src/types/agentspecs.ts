@@ -753,9 +753,12 @@ export interface AppThemeSpec {
 
 /**
  * An avatar named by id (T-24): the id an enabled plugin contributes it
- * under to `loop.assistant.character` — Datalayer's own drawings are
- * `paperclip`, `wizard`, `cat` and `eyes`; a plugin may bring a Microsoft
- * Agent character. The spec checks its shape (`APP_ASSISTANT_AVATAR_ID`);
+ * under to `loop.assistant.character` — Datalayer's orb is `orb`
+ * (iridescent) and `orb-theme` (the theme's colours); its own drawings are
+ * `paperclip`, `wizard`, `cat` and `eyes`; the characters clippy.js
+ * publishes, Microsoft's and fetched from jsDelivr when shown, are
+ * `clippy-js-clippy` to `clippy-js-bonzi`; a plugin may bring another
+ * Microsoft Agent character. The spec checks its shape (`APP_ASSISTANT_AVATAR_ID`);
  * whether a plugin gives it is known only where the plugins are.
  */
 export type AppAvatarId = string;

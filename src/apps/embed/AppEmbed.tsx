@@ -77,7 +77,7 @@ import {
 } from '../apps/AppRenderer';
 import type { ChatSaid } from '../plugins/chat';
 import {
-  AssistantCharactersPlugin,
+  ASSISTANT_CHARACTER_PLUGINS,
   assistantCharacterFor,
   assistantCharactersFrom,
   type AssistantCharacterChosen,
@@ -450,7 +450,7 @@ const NO_PLUGINS: PluginRef[] = [];
 /**
  * The avatar the assistant mode draws (T-24, D-07): the application's own
  * (`interface.avatar`), else the paper clip, from what Datalayer's
- * avatars and the host's plugins contribute — as a page decides it, with
+ * avatars (the clippy.js characters among them) and the host's plugins contribute — as a page decides it, with
  * no person's choice, since a visitor to another product has none here.
  */
 export function embedAssistantCharacter(
@@ -458,7 +458,12 @@ export function embedAssistantCharacter(
   plugins: PluginRef[] = NO_PLUGINS,
 ): AssistantCharacterChosen {
   return assistantCharacterFor(
-    assistantCharactersFrom([AssistantCharactersPlugin, ...plugins]),
+    assistantCharactersFrom([
+      ...ASSISTANT_CHARACTER_PLUGINS.filter(
+        plugin => !plugins.includes(plugin),
+      ),
+      ...plugins,
+    ]),
     { app: app.interface.avatar },
   );
 }
