@@ -5,8 +5,8 @@
 
 /**
  * The floating assistant's avatars, every one in every pose, small, for
- * a quick visual check (T-16, T-22, T-24 to T-27): Datalayer's four and
- * the owl as the enabled plugins contribute them to
+ * a quick visual check (T-16, T-22, T-24 to T-27): Datalayer's six (its
+ * four and the orb's two) and the owl as the enabled plugins contribute them to
  * `loop.assistant.character`, a test sprite read through the clippy.js
  * reader, and the 3D robot. Each cell is the real `AssistantStage`, set in
  * the grid's flow rather than fixed to the window; stepped aside is the real
