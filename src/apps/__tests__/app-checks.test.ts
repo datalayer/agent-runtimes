@@ -63,9 +63,11 @@ describe('the instant checks', () => {
     }
     expect(checks['web-research'].verdict).toBe(PASSES);
     expect(checks['web-research'].setup).toEqual([]);
-    expect(checks['inbox-triage'].setup).toEqual([
-      'The agent “worker-mail-triage:0.0.1” is not enabled.',
-      'The MCP server “google-workspace:0.0.1” is not enabled.',
+    // Offered since agentspecs 0.0.128 (W-02): nothing left to set up.
+    expect(checks['inbox-triage'].setup).toEqual([]);
+    expect(checks['accounting'].setup).toEqual([
+      'The agent “worker-accountant:0.0.1” is not enabled.',
+      'The MCP server “odoo-accounting:0.0.1” is not enabled.',
     ]);
   });
 

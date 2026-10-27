@@ -238,7 +238,7 @@ describe('writing an Appspec', () => {
   });
 
   it('writes why it is not offered only when it says so (E-01)', () => {
-    const off = APP_CATALOGUE['inbox-triage'];
+    const off = APP_CATALOGUE['pipeline-report'];
     expect(off.enabled).toBe(false);
     expect(off.unavailable_because).toMatch(/\.$/);
     const written = dumpAppspec(off);
