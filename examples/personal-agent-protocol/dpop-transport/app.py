@@ -21,6 +21,10 @@ from reactor import PluginManifest
 
 from agent_runtimes.loop.apps import Application
 
+#: The Session Key's JWK thumbprint (RFC 7638). Its private half stays with the
+#: host's proof provider.
+SESSION_KEY = "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+
 
 class RecordingProofProvider:
     def __init__(self) -> None:
@@ -51,7 +55,7 @@ app = Application(
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_dpop_transport. Never request or expose a Session Token, "
-        "DPoP proof, nonce, pairwise identity, or protected header."
+        "DPoP proof, nonce, Session Key, or protected header."
     ),
 )
 
@@ -75,7 +79,7 @@ async def explain_dpop_transport() -> dict[str, Any]:
             )
         if calls == 2:
             return httpx.Response(200, json={"order_count": 2})
-        # PAP 0.2 §3: a redirect never gets the token, a proof, or a body: it is refused.
+        # A redirect never gets the token, a proof, or a body (§3): it is refused.
         return httpx.Response(307, headers={"Location": "/orders/current"})
 
     proofs = RecordingProofProvider()
@@ -84,7 +88,9 @@ async def explain_dpop_transport() -> dict[str, Any]:
         token_type="DPoP",
         expires_in=300,
         scope="orders:read",
-        session_id="ses_host_only",
+        # The Session Key's JWK thumbprint: it names the Session, and every proof
+        # for this token is signed with that key.
+        session_key=SESSION_KEY,
         signed_in=True,
     )
     async with httpx.AsyncClient(transport=httpx.MockTransport(company)) as http:
@@ -98,7 +104,6 @@ async def explain_dpop_transport() -> dict[str, Any]:
             "https://api.shop.example/orders",
             token=token,
             tenant_id="example-tenant",
-            pairwise_user_id="usr_host_only",
             issuer="https://auth.shop.example",
         )
         try:
@@ -107,7 +112,6 @@ async def explain_dpop_transport() -> dict[str, Any]:
                 "https://api.shop.example/orders",
                 token=token,
                 tenant_id="example-tenant",
-                pairwise_user_id="usr_host_only",
                 issuer="https://auth.shop.example",
             )
         except TransportError as refused:
@@ -120,7 +124,6 @@ async def explain_dpop_transport() -> dict[str, Any]:
                 "https://api.shop.example/orders",
                 token=token,
                 tenant_id="example-tenant",
-                pairwise_user_id="usr_host_only",
                 issuer="https://auth.shop.example",
                 headers={"Authorization": "Bearer model-controlled"},
             )
@@ -135,6 +138,9 @@ async def explain_dpop_transport() -> dict[str, Any]:
         "fresh_proof_per_attempt": len(proofs.requests) == 3,
         "nonce_retry": [request.nonce for request in proofs.requests]
         == [None, "host-only-company-nonce", None],
+        "every_proof_signed_with_the_session_key": all(
+            request.session_key == SESSION_KEY for request in proofs.requests
+        ),
         "redirect_refused": redirect_refused,
         "protected_headers_rejected": protected_headers_rejected,
         "cross_origin_forwarding": False,

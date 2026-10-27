@@ -9,6 +9,8 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import { Button, Text } from '@primer/react';
 import {
   DpopProofProviders,
+  InMemorySessionKeys,
+  JoseDpopProofProvider,
   SecretValue,
   SessionClient,
   Signers,
@@ -27,8 +29,11 @@ type SessionSummary = {
   nonceRetry: boolean;
   freshAssertions: boolean;
   freshProofs: boolean;
-  renewalBoundToSession: boolean;
-  sessionIdWithheld: true;
+  /** Every proof signed with the Session's own key, the Session Key (PAP draft 0.3 §4.3). */
+  provedWithSessionKey: boolean;
+  /** Nothing names the Session on the wire but its key: no `session_id` (draft 0.3). */
+  noSessionIdOnTheWire: boolean;
+  sessionKeyWithheld: true;
   credentialsWithheld: true;
 };
 
@@ -43,6 +48,9 @@ const PapSessionLifecycleView: React.FC = () => {
     const forms: URLSearchParams[] = [];
     const purposes: string[] = [];
     const proofRequests: DpopProofRequest[] = [];
+    const proofs = new JoseDpopProofProvider({
+      keys: new InMemorySessionKeys(),
+    });
     const localFetch: typeof globalThis.fetch = async (_input, init) => {
       calls += 1;
       forms.push(new URLSearchParams(String(init?.body ?? '')));
@@ -60,9 +68,6 @@ const PapSessionLifecycleView: React.FC = () => {
           access_token: `host-only-session-token-${calls}`,
           token_type: 'DPoP',
           expires_in: 300,
-          scope: 'poppy:read',
-          session_id: 'ses_example',
-          signed_in: false,
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       );
@@ -85,9 +90,13 @@ const PapSessionLifecycleView: React.FC = () => {
         contribution(
           DpopProofProviders,
           {
+            // A real P-256 key per Session (the Session Key), its private half
+            // kept here; each proof is recorded for the evidence only.
+            newSessionKey: options => proofs.newSessionKey(options),
+            discardSessionKey: options => proofs.discardSessionKey(options),
             async create(request) {
               proofRequests.push(request);
-              return new SecretValue(`host-only-proof-${proofRequests.length}`);
+              return proofs.create(request);
             },
           },
           { id: 'example-dpop' },
@@ -107,7 +116,7 @@ const PapSessionLifecycleView: React.FC = () => {
       const started = await client.start(options);
       const renewed = await client.renew({
         ...options,
-        sessionId: started.sessionId,
+        sessionKey: started.sessionKey,
       });
       setSummary({
         startStatus: 'created',
@@ -115,7 +124,7 @@ const PapSessionLifecycleView: React.FC = () => {
         signedIn: false,
         tokenType: 'DPoP',
         scopes: renewed.scopes,
-        sameSession: started.sessionId === renewed.sessionId,
+        sameSession: started.sessionKey === renewed.sessionKey,
         nonceRetry:
           proofRequests.length === 3 &&
           proofRequests[0]?.nonce === undefined &&
@@ -123,8 +132,11 @@ const PapSessionLifecycleView: React.FC = () => {
           proofRequests[2]?.nonce === undefined,
         freshAssertions: purposes.length === 6,
         freshProofs: proofRequests.length === 3,
-        renewalBoundToSession: forms.at(-1)?.has('session_id') === true,
-        sessionIdWithheld: true,
+        provedWithSessionKey: proofRequests.every(
+          request => request.sessionKey === started.sessionKey,
+        ),
+        noSessionIdOnTheWire: forms.every(form => !form.has('session_id')),
+        sessionKeyWithheld: true,
         credentialsWithheld: true,
       });
     } catch (cause) {
@@ -139,7 +151,7 @@ const PapSessionLifecycleView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Signed-out Session"
       title="Start and renew without giving credentials to the agent"
-      description="This Reactor view drives the real PAP SessionClient against a deterministic company transport. It handles a DPoP nonce challenge, generates fresh assertions and proofs, and renews the same Session. Only lifecycle evidence enters React state."
+      description="This Reactor view drives the real PAP SessionClient (draft 0.3) against a deterministic company transport. The Session has its own DPoP key, the Session Key, whose thumbprint names it: no session_id is sent or read. It handles a DPoP nonce challenge, generates fresh assertions and proofs with that key, and renews the same Session. Only lifecycle evidence enters React state."
     >
       <Box
         display="flex"

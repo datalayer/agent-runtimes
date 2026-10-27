@@ -1,11 +1,15 @@
 # PAP Browser Session
 
-This Loop application signs a short-lived `poppy-browser+jwt` assertion,
-passes it through a Reactor-controlled top-level form POST, verifies its
-company and Session bindings, and demonstrates one-use replay rejection.
+This Loop application joins the personal agent's own browser to an existing
+Session through Manzanita's demo world: the browser loads the company's join
+form, which holds a one-time code tied to that browser by a `SameSite=Strict`
+cookie; the host signs a DPoP proof over the code with the Session Key; and the
+browser, contributed on `pap.browserJoin`, submits code and proof. It then
+shows that a replayed code and a code submitted from another browser are
+refused.
 
-Only policy evidence reaches the model. The assertion, pairwise identity,
-Session ID, key, and company cookie remain host-owned.
+Only policy evidence reaches the model. The join codes, proofs, Session Key,
+and company cookie remain host-owned.
 
 ```bash
 loop apps run examples/personal-agent-protocol/browser-session/app.py

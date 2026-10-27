@@ -8,6 +8,6 @@ HTTP transport. Reactor supplies the protected signer and DPoP provider.
 loop apps run examples/personal-agent-protocol/session-lifecycle/app.py
 ```
 
-The pairwise subject, Session ID, assertions, proofs, nonce, and tokens stay in
+The pairwise subject, Session Key, assertions, proofs, nonce, and tokens stay in
 the host. The model sees lifecycle evidence only. See the canonical
 [Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).

@@ -66,7 +66,7 @@ async def follow_conversation() -> dict[str, object]:
                             {
                                 "message": {
                                     "id": "msg_reply",
-                                    "sender": "agent",
+                                    "author": {"type": "agent"},
                                     "role": "company",
                                     "text": "The return is approved.",
                                 }
@@ -100,7 +100,8 @@ async def follow_conversation() -> dict[str, object]:
             access_token=SecretStr("host-only-token"),
             token_type="DPoP",  # noqa: S106 - OAuth token type
             expires_in=300,
-            session_id="ses_demo",
+            # The Session Key's JWK thumbprint names the Session; it stays in the host.
+            session_key="NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
             signed_in=False,
         )
         events = [
@@ -110,7 +111,6 @@ async def follow_conversation() -> dict[str, object]:
                 "cnv_demo",
                 token=token,
                 tenant_id="demo",
-                pairwise_user_id="usr_host_only",
                 issuer="https://auth.shop.example",
                 wait=30,
             )

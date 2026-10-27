@@ -6,7 +6,8 @@ Manzanita Outfitters, with both sides built from the PAP Python SDK and its
 process, with no network and no model.
 
 1. Atlas discovers Manzanita and opens a signed-out, pairwise Session.
-2. Ada asks about her jacket order; Manzanita answers `sign_in_required`.
+2. Ada asks about her jacket order; Manzanita answers `insufficient_scope`,
+   naming the scopes it needs.
 3. Ada approves Atlas on Manzanita's own page (Device Sign-In).
 4. The same conversation continues, signed in; Manzanita proposes the
    exchange as an operation.

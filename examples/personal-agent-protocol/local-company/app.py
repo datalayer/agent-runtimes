@@ -49,7 +49,11 @@ from agent_runtimes.protocols import protocols_platform
 DOMAIN = "orders.example"
 COMPANY = AppPapCompany(
     enabled=True,
-    scopes=["orders:read", "orders:write"],
+    # Its own scopes, each with what it allows (PAP draft 0.3 §4.4).
+    scopes=[
+        {"name": "orders:read", "description": "Read your orders", "changes": "none"},
+        {"name": "orders:write", "description": "Exchange an order you approved"},
+    ],
     extensions=["operations"],
     operations=[
         AppPapOperation(
@@ -194,7 +198,7 @@ async def walk_through() -> dict[str, Any]:
             runtime.unregister_plugin(manifest.name)
     return {
         "company": discovered.model_dump(),
-        "signed_out_answer": signed_out.replies,
+        "signed_out_answer": [line.text for line in signed_out.replies],
         "proposed": proposed.summary,
         "the_person_was_shown": host.shown,
         "confirmed": confirmed.status,

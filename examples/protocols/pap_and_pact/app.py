@@ -26,6 +26,7 @@ from typing import Any, Mapping
 
 import httpx
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -138,7 +139,9 @@ async def _at_manzanita(record: Record) -> str:
         )
 
         def say(text: str) -> Message:
-            return Message(id=generate_message_id(reactor), sender="human", text=text)
+            return Message(
+                id=generate_message_id(reactor), author=Author(type="human"), text=text
+            )
 
         company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
             "manzanita.example"
@@ -155,11 +158,8 @@ async def _at_manzanita(record: Record) -> str:
             token_endpoint=metadata.token_endpoint,
             tenant_id=TENANT,
         )
-        who = {
-            "tenant_id": TENANT,
-            "pairwise_user_id": PAP_USER,
-            "issuer": metadata.issuer,
-        }
+        # The Session Token's key says who: a call names no User ID (PAP draft 0.3).
+        who = {"tenant_id": TENANT, "issuer": metadata.issuer}
         endpoint = company.document.agent.protocols[0].endpoint
         page = await conversations.start(
             endpoint, say("Where is my jacket order?"), token=session, wait=0, **who
@@ -175,10 +175,10 @@ async def _at_manzanita(record: Record) -> str:
             client_id=atlas.client_id,
             scopes=("orders:read",),
             tenant_id=TENANT,
-            pairwise_user_id=PAP_USER,
-            session_id=session.session_id,
+            # The code is bound to the Session's own key (PAP draft 0.3 §4.6).
+            session_key=session.session_key,
             organization=company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         # Ada approves on Manzanita's own page; the code never reaches the model.
         await shop.approve_device(started.user_code, account_id="acct_ada")

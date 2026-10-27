@@ -3,7 +3,7 @@
   "title": "Account Tokens",
   "description": "Refresh, rotation, narrowing, re-consent, and revocation of the Account Token Atlas holds for Ada at Manzanita, which never leaves the host's vault.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.25.0",
+  "sdk": "personal-agent-protocol 0.27.0",
   "parties": [
     {
       "id": "user",
@@ -90,19 +90,13 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.2",
+              "protocol_version": "0.3",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
               },
               "auth": {
                 "issuer": "https://manzanita.example",
-                "direct": {
-                  "scopes": ["orders:read", "orders:write"]
-                },
-                "device": {
-                  "scopes": ["orders:read", "orders:write"]
-                },
                 "mediated": {
                   "endpoint": "https://manzanita.example/poppy/sign-in",
                   "fields": [
@@ -119,9 +113,19 @@
                   ],
                   "scopes": ["orders:read", "orders:write"]
                 },
-                "custom_scopes": {
-                  "orders:read": "See your orders",
-                  "orders:write": "Exchange and return items"
+                "scopes": {
+                  "orders:read": "See your orders, returns and exchanges",
+                  "orders:write": "Exchange or return items in your orders"
+                },
+                "scope_hints": {
+                  "orders:read": {
+                    "changes": "none",
+                    "personal_data": true
+                  },
+                  "orders:write": {
+                    "changes": "reversible",
+                    "personal_data": true
+                  }
                 }
               },
               "agent": {
@@ -149,6 +153,9 @@
               },
               "feedback": {
                 "endpoint": "https://manzanita.example/poppy/feedback"
+              },
+              "excluded_tasks": {
+                "url": "https://manzanita.example/poppy/excluded-tasks.json"
               },
               "extensions": {
                 "operations": {
@@ -179,11 +186,21 @@
               "issuer": "https://manzanita.example",
               "token_endpoint": "https://manzanita.example/oauth/token",
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
-              "poppy_domains": ["manzanita.example"],
+              "grant_types_supported": [
+                "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "refresh_token",
+                "authorization_code",
+                "urn:ietf:params:oauth:grant-type:device_code"
+              ],
+              "scopes_supported": ["orders:read", "orders:write"],
+              "protected_resources": [
+                "https://manzanita.example",
+                "https://manzanita.example/mcp"
+              ],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://manzanita.example/oauth/device",
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
-              "code_challenge_methods_supported": ["S256"]
+              "code_challenge_methods_supported": ["S256"],
+              "device_1": "https://manzanita.example/oauth/device"
             }
           }
         },
@@ -217,10 +234,7 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3600,
-              "scope": "",
-              "session_id": "ses_1",
-              "signed_in": false
+              "expires_in": 3600
             }
           }
         },
@@ -402,7 +416,6 @@
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
               "device_code": "‹device code›",
-              "session_id": "ses_1",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -441,7 +454,6 @@
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
               "device_code": "‹device code›",
-              "session_id": "ses_1",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -456,11 +468,9 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3590,
-              "scope": "orders:read orders:write",
-              "session_id": "ses_1",
-              "signed_in": true,
-              "refresh_token": "‹account token›"
+              "expires_in": 3600,
+              "refresh_token": "‹account token›",
+              "refresh_token_expires_in": 7776000
             }
           }
         }
@@ -540,7 +550,6 @@
             "body": {
               "grant_type": "refresh_token",
               "refresh_token": "‹account token›",
-              "session_id": "ses_1",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -557,9 +566,8 @@
               "token_type": "DPoP",
               "expires_in": 3600,
               "scope": "orders:read orders:write",
-              "session_id": "ses_1",
-              "signed_in": true,
-              "refresh_token": "‹account token›"
+              "refresh_token": "‹account token›",
+              "refresh_token_expires_in": 7776000
             }
           }
         }
@@ -639,11 +647,10 @@
             "body": {
               "grant_type": "refresh_token",
               "refresh_token": "‹account token›",
-              "session_id": "ses_1",
+              "scope": "orders:read",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-              "client_assertion": "‹client assertion›",
-              "scope": "orders:read"
+              "client_assertion": "‹client assertion›"
             },
             "encoding": "form"
           },
@@ -656,10 +663,8 @@
               "access_token": "‹session token›",
               "token_type": "DPoP",
               "expires_in": 3600,
-              "scope": "orders:read",
-              "session_id": "ses_1",
-              "signed_in": true,
-              "refresh_token": "‹account token›"
+              "refresh_token": "‹account token›",
+              "refresh_token_expires_in": 7776000
             }
           }
         },
@@ -679,11 +684,10 @@
             "body": {
               "grant_type": "refresh_token",
               "refresh_token": "‹account token›",
-              "session_id": "ses_1",
+              "scope": "orders:read orders:admin",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-              "client_assertion": "‹client assertion›",
-              "scope": "orders:read orders:admin"
+              "client_assertion": "‹client assertion›"
             },
             "encoding": "form"
           },

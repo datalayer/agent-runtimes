@@ -18,8 +18,8 @@ identifier by a stable one (`cnv_1`), so the output is deterministic. The
 script refuses to write a trace in which a secret survives.
 
 From the Agent Runtimes repository, with the released PAP Python SDK installed
-(Agent Runtimes pins 0.25.0 and later; the traces in the repository were
-recorded with 0.25.0 (PAP draft 0.2)):
+(Agent Runtimes pins 0.27.0 and later; the traces in the repository were
+recorded with 0.27.0 (PAP draft 0.3)):
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py
@@ -43,6 +43,7 @@ from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -550,7 +551,6 @@ class World:
         self.metadata = self.company.oauth_metadata
         self.who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": self.metadata.issuer,
         }
         self.endpoint = self.company.document.agent.protocols[0].endpoint
@@ -578,10 +578,9 @@ class World:
             client_id=self.atlas.client_id,
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
-            session_id=self.session.session_id,
+            session_key=self.session.session_key,
             organization=self.company.document.organization,
-            poppy_domains=self.metadata.poppy_domains,
+            protected_resources=self.metadata.protected_resources,
         )
         self.trace.secret(started.user_code, "‹user code›")
         self.clock.advance(started.poll_interval)
@@ -599,8 +598,12 @@ class World:
         self.session = done.token
         return done
 
-    def message(self, text: str, sender: str = "human") -> Message:
-        return Message(id=generate_message_id(self.reactor), sender=sender, text=text)  # type: ignore[arg-type]
+    def message(self, text: str, author: str = "human") -> Message:
+        return Message(
+            id=generate_message_id(self.reactor),
+            author=Author(type=author),  # type: ignore[arg-type]
+            text=text,
+        )
 
     def atlas_view(self) -> list[dict[str, str]]:
         return atlas_facts(self.host, self.session, company="Manzanita Outfitters")
@@ -816,7 +819,7 @@ async def account_tokens() -> Trace:
     accounts = AccountTokenClient(reactor=world.reactor, http_client=world.http)
     reference = done.account_token_reference
     refreshed = await accounts.refresh(
-        reference, context=world.context(), session_id=world.session.session_id
+        reference, context=world.context(), session_key=world.session.session_key
     )
     world.session = refreshed.token
     trace.step(
@@ -831,14 +834,14 @@ async def account_tokens() -> Trace:
     narrowed = await accounts.refresh(
         reference,
         context=world.context(),
-        session_id=world.session.session_id,
+        session_key=world.session.session_key,
         scopes=("orders:read",),
     )
     world.session = narrowed.token
     wider = await accounts.refresh(
         reference,
         context=world.context(),
-        session_id=world.session.session_id,
+        session_key=world.session.session_key,
         scopes=("orders:read", "orders:admin"),
     )
     trace.step(
@@ -858,7 +861,7 @@ async def account_tokens() -> Trace:
     trace.action("user", "atlas", "Disconnects Atlas from Manzanita")
     await accounts.revoke(reference, context=world.context())
     after = await accounts.refresh(
-        reference, context=world.context(), session_id=world.session.session_id
+        reference, context=world.context(), session_key=world.session.session_key
     )
     trace.step(
         "Revocation",
@@ -1237,7 +1240,7 @@ async def two_companies() -> Trace:
         "Two companies working together",
         "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP "
         "personal agent at Northwind Bank for her. Every approval is an Operation. This is "
-        "composition: draft 0.2 defines no company-to-company protocol.",
+        "composition: draft 0.3 defines no company-to-company protocol.",
         [ADA_PARTY, ATLAS_PARTY, LEDGERLY_PARTY, NORTHWIND_PARTY],
     )
     clock = MutableClock()
@@ -1308,7 +1311,6 @@ async def two_companies() -> Trace:
     metadata = company.oauth_metadata
     who = {
         "tenant_id": TENANT,
-        "pairwise_user_id": PAIRWISE_LEDGERLY,
         "issuer": metadata.issuer,
     }
     session = await SessionClient(reactor=reactor, http_client=http).start(
@@ -1341,10 +1343,9 @@ async def two_companies() -> Trace:
         client_id=atlas.client_id,
         scopes=("books:read", "payments:write"),
         tenant_id=TENANT,
-        pairwise_user_id=PAIRWISE_LEDGERLY,
-        session_id=session.session_id,
+        session_key=session.session_key,
         organization=company.document.organization,
-        poppy_domains=metadata.poppy_domains,
+        protected_resources=metadata.protected_resources,
     )
     trace.secret(started.user_code, "‹Ledgerly user code›")
     trace.action(
@@ -1375,7 +1376,9 @@ async def two_companies() -> Trace:
     ops = firm.config.operations_endpoint
 
     async def tell(conversation_id: str | None, cursor: str | None, text: str) -> Any:
-        message = Message(id=generate_message_id(reactor), sender="human", text=text)
+        message = Message(
+            id=generate_message_id(reactor), author=Author(type="human"), text=text
+        )
         if conversation_id is None:
             return await conversations.start(
                 endpoint, message, token=session, wait=0, **who

@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -86,10 +87,9 @@ async def explain_operations() -> dict[str, Any]:
             client_id=atlas.client_id,
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
-            session_id=session.session_id,
+            session_key=session.session_key,
             organization=company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
@@ -97,7 +97,6 @@ async def explain_operations() -> dict[str, Any]:
         assert token is not None
         who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": metadata.issuer,
         }
         transport = DpopHttpClient(reactor=reactor, http_client=http)
@@ -109,7 +108,7 @@ async def explain_operations() -> dict[str, Any]:
                 endpoint,
                 Message(
                     id=generate_message_id(reactor),
-                    sender="human",
+                    author=Author(type="human"),
                     text="Exchange my jacket for something warmer",
                 ),
                 token=token,

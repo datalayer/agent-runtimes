@@ -33,7 +33,7 @@ app = Application(
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_account_tokens. Never request or expose an Account Token, "
-        "Session Token, assertion, proof, or token reference."
+        "Session Token, Session Key, assertion, proof, or token reference."
     ),
 )
 
@@ -71,10 +71,9 @@ async def explain_account_tokens() -> dict[str, Any]:
             client_id=atlas.client_id,
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
-            session_id=session.session_id,
+            session_key=session.session_key,
             organization=company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
@@ -93,7 +92,7 @@ async def explain_account_tokens() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
         )
         refreshed = await accounts.refresh(
-            reference, context=context, session_id=session.session_id
+            reference, context=context, session_key=session.session_key
         )
         rotated_in_store = (
             host.vault.values[reference].get_secret_value() != stored_before
@@ -101,18 +100,18 @@ async def explain_account_tokens() -> dict[str, Any]:
         narrowed = await accounts.refresh(
             reference,
             context=context,
-            session_id=session.session_id,
+            session_key=session.session_key,
             scopes=("orders:read",),
         )
         wider = await accounts.refresh(
             reference,
             context=context,
-            session_id=session.session_id,
+            session_key=session.session_key,
             scopes=("orders:read", "orders:admin"),
         )
         revoked = await accounts.revoke(reference, context=context)
         after = await accounts.refresh(
-            reference, context=context, session_id=session.session_id
+            reference, context=context, session_key=session.session_key
         )
 
     return {
@@ -120,7 +119,7 @@ async def explain_account_tokens() -> dict[str, Any]:
         "signed_in_with_device_sign_in": signed_in.status == "complete",
         "refresh_status": refreshed.status,
         "refresh_kept_the_session": refreshed.token is not None
-        and refreshed.token.session_id == session.session_id,
+        and refreshed.token.session_key == session.session_key,
         "rotated": refreshed.rotated,
         "rotated_token_replaced_the_stored_one": rotated_in_store,
         "narrowed_status": narrowed.status,

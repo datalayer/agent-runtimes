@@ -18,11 +18,14 @@ import {
   ConversationClient,
   DpopFetchClient,
   DpopProofProviders,
+  InMemorySessionKeys,
+  JoseDpopProofProvider,
   SecretValue,
   buildPapReactor,
   buildDirectSignInRequest,
   buildSessionAssertionClaims,
   parseDiscoveryDocument,
+  parseOAuthServerMetadata,
   type ConversationResponse,
   type SessionToken,
 } from '@datalayer/personal-agent-protocol';
@@ -70,7 +73,7 @@ const STEPS: readonly JourneyStep[] = [
     channel: 'Discovery',
     messages: conversationStart,
     facts: [
-      { label: 'Publishes', value: 'poppy.json · draft 0.2' },
+      { label: 'Publishes', value: 'poppy.json · draft 0.3' },
       { label: 'Returns', value: 'Company conversation agent' },
       { label: 'Sign-in', value: "Northstar's own page" },
     ],
@@ -80,16 +83,22 @@ const STEPS: readonly JourneyStep[] = [
     request: 'Accept: application/json',
     response: `200 OK
 {
-  "protocol_version": "0.2",
+  "protocol_version": "0.3",
   "organization": { "name": "Northstar Outfitters" },
-  "auth": { "issuer": "https://auth.northstar.example" },
+  "auth": {
+    "issuer": "https://auth.northstar.example",
+    "scopes": {
+      "orders:read": "Read your orders",
+      "orders:return": "Return or exchange an order"
+    }
+  },
   "agent": { "protocols": [{ "type": "poppy" }] }
 }`,
   },
   {
     title: 'Starting signed out',
     summary:
-      'Atlas opens a pairwise Session and can ask about the return before knowing who the user is. Northstar replies that order access needs sign-in.',
+      'Atlas opens a Session under a key of its own, the Session Key, and can ask about the return before knowing who the user is. Northstar answers insufficient_scope: order access needs sign-in.',
     channel: 'Session + conversation',
     messages: [
       ...conversationStart,
@@ -100,14 +109,14 @@ const STEPS: readonly JourneyStep[] = [
     ],
     facts: [
       { label: 'Personal agent', value: 'Atlas' },
-      { label: 'Session', value: 'Signed out · pairwise' },
+      { label: 'Session', value: 'Signed out · its own key' },
       { label: 'Conversation', value: 'Waiting for sign-in' },
     ],
     method: 'POST',
     target: 'https://auth.northstar.example/oauth/token',
     detailLabel: 'Atlas → authorization server',
     request: `Content-Type: application/x-www-form-urlencoded
-DPoP: [fresh host-only proof]
+DPoP: [fresh proof, signed with the new Session Key]
 
 grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
 assertion=[host-only session assertion]
@@ -116,9 +125,9 @@ client_assertion=[host-only client assertion]`,
 {
   "access_token": "[stored by host]",
   "token_type": "DPoP",
-  "session_id": "[opaque reference]",
-  "signed_in": false
-}`,
+  "expires_in": 300
+}
+(the Session is named by its key's thumbprint; the grant says signed out)`,
   },
   {
     title: 'The user signs in',
@@ -140,7 +149,8 @@ client_id=https://atlas.example/agent.json
 redirect_uri=https://atlas.example/oauth/callback
 scope=orders:read orders:return
 state=[single-use, host-only]
-code_challenge=[S256, host-only verifier]`,
+code_challenge=[S256, host-only verifier]
+dpop_jkt=[the Session Key's thumbprint]`,
     response: `302 Found
 Location: https://atlas.example/oauth/callback
   ?code=[single-use authorization code]
@@ -177,7 +187,7 @@ Content-Type: application/json
 {
   "message": {
     "id": "msg_offer",
-    "sender": "agent",
+    "author": { "type": "agent" },
     "text": "The user has signed in. Continue the return request."
   }
 }`,
@@ -230,7 +240,7 @@ Content-Type: application/json
 {
   "message": {
     "id": "msg_exchange_choice",
-    "sender": "agent",
+    "author": { "type": "agent" },
     "text": "The user chose the even exchange."
   }
 }`,
@@ -279,12 +289,14 @@ const runJourney = async (): Promise<
   readonly (readonly JourneyMessage[])[]
 > => {
   parseDiscoveryDocument({
-    protocol_version: '0.2',
+    protocol_version: '0.3',
     organization: { name: 'Northstar Outfitters', domain: 'northstar.example' },
     auth: {
       issuer: 'https://auth.northstar.example',
-      direct: { scopes: ['orders:read', 'orders:return'] },
-      custom_scopes: {},
+      scopes: {
+        'orders:read': 'Read your orders',
+        'orders:return': 'Return or exchange an order',
+      },
     },
     agent: {
       protocols: [
@@ -294,6 +306,26 @@ const runJourney = async (): Promise<
         },
       ],
     },
+  });
+  // Direct Sign-In is what the issuer's grants offer (draft 0.3 §3.2).
+  parseOAuthServerMetadata({
+    issuer: 'https://auth.northstar.example',
+    token_endpoint: 'https://auth.northstar.example/oauth/token',
+    revocation_endpoint: 'https://auth.northstar.example/oauth/revoke',
+    authorization_endpoint: 'https://auth.northstar.example/oauth/authorize',
+    grant_types_supported: [
+      'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      'refresh_token',
+      'authorization_code',
+    ],
+    protected_resources: ['https://northstar.example'],
+    scopes_supported: ['orders:read', 'orders:return'],
+  });
+  // The Session's own DPoP key, its thumbprint the Session's name (§4.3).
+  const proofs = new JoseDpopProofProvider({ keys: new InMemorySessionKeys() });
+  const sessionKey = await proofs.newSessionKey({
+    tenantId: 'guided-example',
+    issuer: 'https://auth.northstar.example',
   });
   buildSessionAssertionClaims({
     clientId: 'https://atlas.example/agent.json',
@@ -306,6 +338,7 @@ const runJourney = async (): Promise<
     clientId: 'https://atlas.example/agent.json',
     redirectUri: 'https://atlas.example/oauth/callback',
     scopes: ['orders:read', 'orders:return'],
+    sessionKey,
   });
 
   const replies = [
@@ -336,7 +369,7 @@ const runJourney = async (): Promise<
             created_at: `2026-10-10T09:4${index}:00Z`,
             message: {
               id: `reply_${index + 1}`,
-              sender: 'agent',
+              author: { type: 'agent' },
               role: 'company',
               text: reply,
               context: { in_reply_to: incoming.message?.id ?? 'unknown' },
@@ -360,9 +393,9 @@ const runJourney = async (): Promise<
       contribution(
         DpopProofProviders,
         {
-          async create() {
-            return new SecretValue(`host-only-proof-${requestIndex + 1}`);
-          },
+          newSessionKey: options => proofs.newSessionKey(options),
+          discardSessionKey: options => proofs.discardSessionKey(options),
+          create: request => proofs.create(request),
         },
         { id: 'guided-example-dpop' },
       ),
@@ -383,14 +416,13 @@ const runJourney = async (): Promise<
       ),
       tokenType: 'DPoP',
       expiresIn: 300,
-      scopes: signedIn ? ['orders:read', 'orders:return'] : ['poppy:read'],
-      sessionId: 'ses_guided_example',
+      scopes: signedIn ? ['orders:read', 'orders:return'] : [],
+      sessionKey,
       signedIn,
     });
     const requestOptions = (token: SessionToken) => ({
       token,
       tenantId: 'guided-example',
-      pairwiseUserId: 'usr_host_only_journey',
       issuer: 'https://auth.northstar.example',
       wait: 0,
     });
@@ -400,7 +432,7 @@ const runJourney = async (): Promise<
       endpoint,
       {
         id: conversations.generateMessageId(),
-        sender: 'agent',
+        author: { type: 'agent' },
         text: conversationStart[0]?.text,
       },
       requestOptions(session(false)),
@@ -412,7 +444,7 @@ const runJourney = async (): Promise<
         'cnv_return',
         {
           id: conversations.generateMessageId(),
-          sender: 'agent',
+          author: { type: 'agent' },
           text: 'The user has signed in. Continue the return request.',
         },
         requestOptions(session(true)),
@@ -424,7 +456,7 @@ const runJourney = async (): Promise<
         'cnv_return',
         {
           id: conversations.generateMessageId(),
-          sender: 'agent',
+          author: { type: 'agent' },
           text: 'The user chose the even exchange.',
         },
         requestOptions(session(true)),

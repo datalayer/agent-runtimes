@@ -8,6 +8,7 @@ import { Box } from '@datalayer/primer-addons';
 import { Button, Text, TextInput } from '@primer/react';
 import {
   parseDiscoveryDocument,
+  parseOAuthServerMetadata,
   type DiscoveredCompany,
 } from '@datalayer/personal-agent-protocol';
 import { PapPersonalAgentCapability, type PapCompanySummary } from '../../pap';
@@ -18,12 +19,19 @@ const SAMPLE_DOMAIN = 'shop.example';
 const sampleCompany = (domain: string): DiscoveredCompany => ({
   discoveryUrl: `https://${domain}/.well-known/poppy.json`,
   document: parseDiscoveryDocument({
-    protocol_version: '0.2',
+    protocol_version: '0.3',
     organization: { name: 'Example Shop', domain },
     auth: {
       issuer: `https://auth.${domain}`,
-      direct: { scopes: ['poppy:read'] },
-      custom_scopes: {},
+      // The company's own scopes, each with what it allows and its hints (§4.4).
+      scopes: {
+        'orders:read': 'Read your orders',
+        'orders:write': 'Exchange an order you approved',
+      },
+      scope_hints: {
+        'orders:read': { changes: 'none', personal_data: true },
+        'orders:write': { changes: 'reversible', personal_data: true },
+      },
     },
     agent: {
       protocols: [{ type: 'a2a', endpoint: `https://${domain}/agent` }],
@@ -36,6 +44,22 @@ const sampleCompany = (domain: string): DiscoveredCompany => ({
       },
     ],
     extensions: { operations: { version: '1' } },
+  }),
+  // Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
+  oauthMetadata: parseOAuthServerMetadata({
+    issuer: `https://auth.${domain}`,
+    token_endpoint: `https://auth.${domain}/token`,
+    revocation_endpoint: `https://auth.${domain}/revoke`,
+    authorization_endpoint: `https://auth.${domain}/authorize`,
+    device_authorization_endpoint: `https://auth.${domain}/device`,
+    grant_types_supported: [
+      'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      'refresh_token',
+      'authorization_code',
+      'urn:ietf:params:oauth:grant-type:device_code',
+    ],
+    protected_resources: [`https://${domain}`],
+    scopes_supported: ['orders:read', 'orders:write'],
   }),
 });
 
@@ -68,7 +92,7 @@ const PapCompanyDiscoveryView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Company discovery"
       title="Discover capabilities, not credentials"
-      description="The PAP parser validates the discovery document; Agent Runtimes then projects it into a model-safe summary. Change the sample domain to see issuer and discovery binding move together."
+      description="The PAP parser validates the discovery document and the issuer's metadata (draft 0.3); Agent Runtimes then projects them into a model-safe summary: the sign-ins the issuer's grants offer, the company's own scopes with their hints, and the domains its issuer protects. Change the sample domain to see issuer and discovery binding move together."
     >
       <Box
         display="flex"

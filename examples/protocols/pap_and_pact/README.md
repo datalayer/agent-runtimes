@@ -1,13 +1,13 @@
 # PAP and PACT in one task
 
-Ada asks her application, *Atlas*, one question — *where is my jacket order,
-and when do I fly?* — whose answer is at two businesses speaking two
+Ada asks her application, _Atlas_, one question — _where is my jacket order,
+and when do I fly?_ — whose answer is at two businesses speaking two
 consent protocols (example EX-07):
 
 - **Manzanita Outfitters**, a company over the
   [Personal Agent Protocol](https://personal-agent-protocol.datalayer.tech)
   (the PAP SDK's `demo` world): discovered at its domain, a signed-out
-  pairwise Session, Device Sign-In with `orders:read` on its own page, then
+  Session under its own key (PAP draft 0.3), Device Sign-In with `orders:read` on its own page, then
   the same conversation answers;
 - **Example Air**, a Brand over [PACT](https://github.com/openpactprotocol/openpactprotocol)
   1.0 (agent-runtimes' local Provider): its A2A card read, the

@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Text } from '@primer/react';
 import {
+  InMemorySessionKeys,
   JoseDpopProofProvider,
   SecretValue,
 } from '@datalayer/personal-agent-protocol';
@@ -20,6 +21,10 @@ type DpopSummary = {
   accessTokenBound: boolean;
   nonceIncluded: boolean;
   proofRedactedByDefault: boolean;
+  /** One key per Session, its thumbprint the Session's name (PAP draft 0.3 §4.3). */
+  oneKeyPerSession: boolean;
+  /** A key discarded once its Session ended signs nothing again. */
+  discardedKeyRefused: boolean;
   proofWithheldFromUiState: boolean;
   keyMaterialWithheldFromUiState: boolean;
 };
@@ -32,33 +37,31 @@ const PapDpopProofView: React.FC = () => {
   const createProofs = async () => {
     setError(null);
     try {
-      const keyPair = (await globalThis.crypto.subtle.generateKey(
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        false,
-        ['sign', 'verify'],
-      )) as CryptoKeyPair;
-      const publicJwk = await globalThis.crypto.subtle.exportKey(
-        'jwk',
-        keyPair.publicKey,
-      );
+      // A P-256 key per Session, the Session Key, kept in this host (draft 0.3 §4.3).
       const provider = new JoseDpopProofProvider({
-        resolveKey: () => ({
-          privateKey: keyPair.privateKey,
-          publicJwk,
-          algorithm: 'ES256',
-        }),
+        keys: new InMemorySessionKeys(),
       });
+      const where = {
+        tenantId: 'example-tenant',
+        issuer: 'https://company.example',
+      } as const;
+      const sessionKey = await provider.newSessionKey(where);
+      const otherSessionKey = await provider.newSessionKey(where);
       const request = {
         method: 'POST',
         url: 'https://api.company.example/orders?draft=true#editor',
-        tenantId: 'example-tenant',
-        subject: 'host-only-pairwise-subject',
-        issuer: 'https://company.example',
+        ...where,
+        sessionKey,
         accessToken: new SecretValue('host-only-example-token'),
         nonce: 'host-only-company-nonce',
       } as const;
       const first = await provider.create(request);
       const second = await provider.create(request);
+      await provider.discardSessionKey({ ...where, sessionKey });
+      const discardedKeyRefused = await provider.create(request).then(
+        () => false,
+        () => true,
+      );
 
       setSummary({
         algorithm: 'ES256',
@@ -68,6 +71,8 @@ const PapDpopProofView: React.FC = () => {
         accessTokenBound: true,
         nonceIncluded: true,
         proofRedactedByDefault: first.toJSON() === '[REDACTED]',
+        oneKeyPerSession: sessionKey !== otherSessionKey,
+        discardedKeyRefused,
         proofWithheldFromUiState: true,
         keyMaterialWithheldFromUiState: true,
       });

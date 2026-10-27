@@ -1,9 +1,9 @@
 {
   "slug": "two-companies",
   "title": "Two companies working together",
-  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.2 defines no company-to-company protocol.",
+  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.3 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.25.0",
+  "sdk": "personal-agent-protocol 0.27.0",
   "parties": [
     {
       "id": "user",
@@ -120,22 +120,26 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.2",
+              "protocol_version": "0.3",
               "organization": {
                 "name": "Ledgerly",
                 "domain": "ledgerly.example"
               },
               "auth": {
                 "issuer": "https://ledgerly.example",
-                "direct": {
-                  "scopes": ["books:read", "payments:write"]
+                "scopes": {
+                  "books:read": "See your books: invoices, bills and payments",
+                  "payments:write": "Pay your bills, once you approve each payment"
                 },
-                "device": {
-                  "scopes": ["books:read", "payments:write"]
-                },
-                "custom_scopes": {
-                  "books:read": "See your books",
-                  "payments:write": "Pay bills for you"
+                "scope_hints": {
+                  "books:read": {
+                    "changes": "none",
+                    "personal_data": true
+                  },
+                  "payments:write": {
+                    "changes": "irreversible",
+                    "personal_data": true
+                  }
                 }
               },
               "agent": {
@@ -178,11 +182,18 @@
               "issuer": "https://ledgerly.example",
               "token_endpoint": "https://ledgerly.example/oauth/token",
               "revocation_endpoint": "https://ledgerly.example/oauth/revoke",
-              "poppy_domains": ["ledgerly.example"],
+              "grant_types_supported": [
+                "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "refresh_token",
+                "authorization_code",
+                "urn:ietf:params:oauth:grant-type:device_code"
+              ],
+              "scopes_supported": ["books:read", "payments:write"],
+              "protected_resources": ["https://ledgerly.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://ledgerly.example/oauth/device",
               "authorization_endpoint": "https://ledgerly.example/oauth/authorize",
-              "code_challenge_methods_supported": ["S256"]
+              "code_challenge_methods_supported": ["S256"],
+              "device_1": "https://ledgerly.example/oauth/device"
             }
           }
         },
@@ -216,10 +227,7 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3600,
-              "scope": "",
-              "session_id": "ses_1",
-              "signed_in": false
+              "expires_in": 3600
             }
           }
         },
@@ -427,7 +435,6 @@
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
               "device_code": "‹device code›",
-              "session_id": "ses_1",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -442,11 +449,9 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3595,
-              "scope": "books:read payments:write",
-              "session_id": "ses_1",
-              "signed_in": true,
-              "refresh_token": "‹account token›"
+              "expires_in": 3600,
+              "refresh_token": "‹account token›",
+              "refresh_token_expires_in": 7776000
             }
           }
         }
@@ -566,7 +571,9 @@
             "body": {
               "message": {
                 "id": "msg_1",
-                "sender": "human",
+                "author": {
+                  "type": "human"
+                },
                 "text": "Pay INV-0042"
               }
             }
@@ -584,7 +591,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_1",
-                    "sender": "human",
+                    "author": {
+                      "type": "human"
+                    },
                     "text": "Pay INV-0042",
                     "role": "user"
                   }
@@ -602,7 +611,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_2",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter the code shown with this message. Tell me when done.",
                     "data": {
@@ -646,22 +657,26 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.2",
+              "protocol_version": "0.3",
               "organization": {
                 "name": "Northwind Bank",
                 "domain": "northwind.example"
               },
               "auth": {
                 "issuer": "https://northwind.example",
-                "direct": {
-                  "scopes": ["accounts:read", "payments:write"]
+                "scopes": {
+                  "accounts:read": "See your accounts, balances and transactions",
+                  "payments:write": "Make payments from your accounts"
                 },
-                "device": {
-                  "scopes": ["accounts:read", "payments:write"]
-                },
-                "custom_scopes": {
-                  "accounts:read": "See balances",
-                  "payments:write": "Make payments"
+                "scope_hints": {
+                  "accounts:read": {
+                    "changes": "none",
+                    "personal_data": true
+                  },
+                  "payments:write": {
+                    "changes": "irreversible",
+                    "personal_data": true
+                  }
                 }
               },
               "agent": {
@@ -674,6 +689,9 @@
               },
               "feedback": {
                 "endpoint": "https://northwind.example/poppy/feedback"
+              },
+              "excluded_tasks": {
+                "url": "https://northwind.example/poppy/excluded-tasks.json"
               },
               "extensions": {
                 "operations": {
@@ -704,11 +722,18 @@
               "issuer": "https://northwind.example",
               "token_endpoint": "https://northwind.example/oauth/token",
               "revocation_endpoint": "https://northwind.example/oauth/revoke",
-              "poppy_domains": ["northwind.example"],
+              "grant_types_supported": [
+                "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "refresh_token",
+                "authorization_code",
+                "urn:ietf:params:oauth:grant-type:device_code"
+              ],
+              "scopes_supported": ["accounts:read", "payments:write"],
+              "protected_resources": ["https://northwind.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://northwind.example/oauth/device",
               "authorization_endpoint": "https://northwind.example/oauth/authorize",
-              "code_challenge_methods_supported": ["S256"]
+              "code_challenge_methods_supported": ["S256"],
+              "device_1": "https://northwind.example/oauth/device"
             }
           }
         },
@@ -742,10 +767,7 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3600,
-              "scope": "",
-              "session_id": "ses_2",
-              "signed_in": false
+              "expires_in": 3600
             }
           }
         },
@@ -1089,7 +1111,9 @@
             "body": {
               "message": {
                 "id": "msg_3",
-                "sender": "human",
+                "author": {
+                  "type": "human"
+                },
                 "text": "Done. Pay INV-0042"
               }
             }
@@ -1107,7 +1131,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_3",
-                    "sender": "human",
+                    "author": {
+                      "type": "human"
+                    },
                     "text": "Done. Pay INV-0042",
                     "role": "user"
                   }
@@ -1125,7 +1151,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_4",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Northwind Bank proposes this payment; it needs your approval.",
                     "operation": {
@@ -1183,7 +1211,6 @@
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
               "device_code": "‹device code›",
-              "session_id": "ses_2",
               "client_id": "https://ledgerly.example/poppy/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -1198,11 +1225,9 @@
             "body": {
               "access_token": "‹session token›",
               "token_type": "DPoP",
-              "expires_in": 3595,
-              "scope": "accounts:read payments:write",
-              "session_id": "ses_2",
-              "signed_in": true,
-              "refresh_token": "‹account token›"
+              "expires_in": 3600,
+              "refresh_token": "‹account token›",
+              "refresh_token_expires_in": 7776000
             }
           }
         },
@@ -1223,7 +1248,9 @@
             "body": {
               "message": {
                 "id": "msg_5",
-                "sender": "agent",
+                "author": {
+                  "type": "agent"
+                },
                 "text": "Pay INV-0042: EUR 1250.00 to Acme GmbH"
               }
             }
@@ -1241,7 +1268,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_5",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "text": "Pay INV-0042: EUR 1250.00 to Acme GmbH",
                     "role": "user"
                   }
@@ -1259,7 +1288,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_6",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Ready to pay INV-0042.",
                     "operation": {
@@ -1689,7 +1720,9 @@
             "body": {
               "message": {
                 "id": "msg_7",
-                "sender": "human",
+                "author": {
+                  "type": "human"
+                },
                 "text": "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking"
               }
             }
@@ -1707,7 +1740,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_7",
-                    "sender": "human",
+                    "author": {
+                      "type": "human"
+                    },
                     "text": "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking",
                     "role": "user"
                   }
@@ -1725,7 +1760,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_8",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Here is the permission, to approve.",
                     "operation": {
@@ -1981,7 +2018,9 @@
             "body": {
               "message": {
                 "id": "msg_9",
-                "sender": "human",
+                "author": {
+                  "type": "human"
+                },
                 "text": "Pay INV-0043"
               }
             }
@@ -1999,7 +2038,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_9",
-                    "sender": "human",
+                    "author": {
+                      "type": "human"
+                    },
                     "text": "Pay INV-0043",
                     "role": "user"
                   }
@@ -2017,7 +2058,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_10",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Paid under your standing permission. Northwind Bank: Sent EUR 980.00 to Acme GmbH for INV-0043 from DE89 3704 0044 0532 0130 00. Bank reference NW-0002.",
                     "data": {
@@ -2057,7 +2100,9 @@
             "body": {
               "message": {
                 "id": "msg_11",
-                "sender": "agent",
+                "author": {
+                  "type": "agent"
+                },
                 "text": "Pay INV-0043: EUR 980.00 to Acme GmbH"
               }
             }
@@ -2075,7 +2120,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_11",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "text": "Pay INV-0043: EUR 980.00 to Acme GmbH",
                     "role": "user"
                   }
@@ -2093,7 +2140,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_12",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Ready to pay INV-0043.",
                     "operation": {
@@ -2360,7 +2409,9 @@
             "body": {
               "message": {
                 "id": "msg_13",
-                "sender": "human",
+                "author": {
+                  "type": "human"
+                },
                 "text": "Pay INV-0044"
               }
             }
@@ -2378,7 +2429,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_13",
-                    "sender": "human",
+                    "author": {
+                      "type": "human"
+                    },
                     "text": "Pay INV-0044",
                     "role": "user"
                   }
@@ -2396,7 +2449,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_14",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Northwind Bank proposes this payment; it needs your approval.",
                     "operation": {
@@ -2455,7 +2510,9 @@
             "body": {
               "message": {
                 "id": "msg_15",
-                "sender": "agent",
+                "author": {
+                  "type": "agent"
+                },
                 "text": "Pay INV-0044: EUR 3400.00 to Acme GmbH"
               }
             }
@@ -2473,7 +2530,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_15",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "text": "Pay INV-0044: EUR 3400.00 to Acme GmbH",
                     "role": "user"
                   }
@@ -2491,7 +2550,9 @@
                   "type": "message",
                   "message": {
                     "id": "msg_16",
-                    "sender": "agent",
+                    "author": {
+                      "type": "agent"
+                    },
                     "role": "company",
                     "text": "Ready to pay INV-0044.",
                     "operation": {

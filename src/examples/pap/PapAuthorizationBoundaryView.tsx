@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Text } from '@primer/react';
 import {
+  InMemorySessionKeys,
+  JoseDpopProofProvider,
   buildDirectSignInRequest,
   buildSessionAssertionClaims,
   generatePairwiseUserId,
@@ -27,8 +29,17 @@ const PapAuthorizationBoundaryView: React.FC = () => {
     setError(null);
     try {
       const clientId = 'https://assistant.example/agent.json';
-      // PAP 0.2 §4.2: the assertion names the company's issuer, not its token endpoint.
+      // PAP §4.2: the assertion names the company's issuer, not its token endpoint.
       const issuer = 'https://shop.example';
+      // Draft 0.3 §4.3: the Session has its own DPoP key, the Session Key; the
+      // Direct Sign-In code is bound to its thumbprint (`dpop_jkt`).
+      const proofs = new JoseDpopProofProvider({
+        keys: new InMemorySessionKeys(),
+      });
+      const sessionKey = await proofs.newSessionKey({
+        tenantId: 'example-tenant',
+        issuer,
+      });
       const claims = buildSessionAssertionClaims({
         clientId,
         pairwiseUserId: generatePairwiseUserId(),
@@ -39,7 +50,8 @@ const PapAuthorizationBoundaryView: React.FC = () => {
         issuer: 'https://shop.example',
         clientId,
         redirectUri: 'https://assistant.example/callback',
-        scopes: ['poppy:read', 'poppy:act'],
+        scopes: ['orders:read', 'orders:write'],
+        sessionKey,
       });
       setSummary({
         session: {
@@ -53,6 +65,12 @@ const PapAuthorizationBoundaryView: React.FC = () => {
         directSignIn: {
           requestedScopes: request.scopes,
           pkceMethod: 'S256',
+          codeBoundToSessionKey:
+            request.sessionKey === sessionKey &&
+            new URL(request.authorizationUrl.reveal()).searchParams.get(
+              'dpop_jkt',
+            ) === sessionKey,
+          sessionKeyWithheld: true,
           randomState: true,
           userOwnedBrowserRequired: true,
           authorizationUrlWithheld: true,
@@ -70,7 +88,7 @@ const PapAuthorizationBoundaryView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Authorization boundary"
       title="Generate secrets in the host; return policy to the agent"
-      description="This example creates a real pairwise Session identity, unique assertion ID, OAuth state and S256 PKCE verifier. None crosses the Reactor view boundary. Studio hands the authorization URL directly to a user-owned browser and stores tokens behind opaque references."
+      description="This example creates a real pairwise identity, a Session Key (the Session's own DPoP key, PAP draft 0.3), unique assertion ID, OAuth state and S256 PKCE verifier, the code bound to the Session Key. None crosses the Reactor view boundary. Studio hands the authorization URL directly to a user-owned browser and stores tokens behind opaque references."
     >
       <Box
         display="flex"

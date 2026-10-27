@@ -9,6 +9,7 @@ from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     ConversationError,
     DiscoveryClient,
@@ -86,7 +87,6 @@ async def explain_conversation_control() -> dict[str, Any]:
         )
         who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": metadata.issuer,
         }
         endpoint = company.document.agent.protocols[0].endpoint
@@ -94,8 +94,12 @@ async def explain_conversation_control() -> dict[str, Any]:
             transport=DpopHttpClient(reactor=reactor, http_client=http)
         )
 
-        def say(text: str, sender: str = "agent") -> Message:
-            return Message(id=generate_message_id(reactor), sender=sender, text=text)  # type: ignore[arg-type]
+        def say(text: str, author: str = "agent") -> Message:
+            return Message(
+                id=generate_message_id(reactor),
+                author=Author(type=author),  # type: ignore[arg-type]
+                text=text,
+            )
 
         parent = await conversations.start(
             endpoint, say("Hello, can someone help me?"), token=session, **who
@@ -103,7 +107,7 @@ async def explain_conversation_control() -> dict[str, Any]:
         direct = await conversations.start_direct(
             endpoint,
             parent.conversation_id,
-            say("I'll take it from here", sender="human"),
+            say("I'll take it from here", author="human"),
             token=session,
             **who,
         )

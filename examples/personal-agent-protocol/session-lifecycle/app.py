@@ -13,6 +13,8 @@ from personal_agent_protocol import (
     DPOP_PROOF_PROVIDERS,
     SIGNERS,
     DpopProofRequest,
+    InMemorySessionKeys,
+    JoseDpopProofProvider,
     SessionClient,
     build_pap_reactor,
 )
@@ -32,12 +34,29 @@ class RecordingSigner:
 
 
 class RecordingDpopProvider:
+    """Real Session Keys and proofs, recording which key each proof used.
+
+    Each Session gets its own key; its JWK thumbprint, the Session Key, names the
+    Session. The private halves stay in the host's key custody.
+    """
+
     def __init__(self) -> None:
+        self.proofs = JoseDpopProofProvider(InMemorySessionKeys())
         self.requests: list[DpopProofRequest] = []
+
+    async def new_session_key(self, *, tenant_id: str, issuer: str) -> str:
+        return await self.proofs.new_session_key(tenant_id=tenant_id, issuer=issuer)
+
+    async def discard_session_key(
+        self, *, tenant_id: str, issuer: str, session_key: str
+    ) -> None:
+        await self.proofs.discard_session_key(
+            tenant_id=tenant_id, issuer=issuer, session_key=session_key
+        )
 
     async def create(self, request: DpopProofRequest) -> SecretStr:
         self.requests.append(request)
-        return SecretStr(f"host-only-proof-{len(self.requests)}")
+        return await self.proofs.create(request)
 
 
 class SessionSecurityPlugin:
@@ -61,7 +80,7 @@ app = Application(
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_session_lifecycle to explain signed-out Session start and "
-        "renewal. Never ask for or expose a subject, session ID, assertion, "
+        "renewal. Never ask for or expose a subject, Session Key, assertion, "
         "proof, nonce, key, or token."
     ),
 )
@@ -84,15 +103,15 @@ async def explain_session_lifecycle() -> dict[str, Any]:
                 json={"error": "use_dpop_nonce"},
                 headers={"DPoP-Nonce": "host-only-company-nonce"},
             )
+        # No Session ID, no `signed_in`, no `scope`: the proof's key names the
+        # Session, the grant (JWT bearer) makes it signed out, and a signed-out
+        # Session has no scopes.
         return httpx.Response(
             200,
             json={
                 "access_token": f"host-only-session-token-{calls}",
                 "token_type": "DPoP",
                 "expires_in": 300,
-                "scope": "poppy:read",
-                "session_id": "ses_example",
-                "signed_in": False,
             },
         )
 
@@ -112,8 +131,9 @@ async def explain_session_lifecycle() -> dict[str, Any]:
             "token_endpoint": "https://company.example/oauth/token",
             "tenant_id": "example-tenant",
         }
+        # Starting a Session makes a new Session Key; renewing proves the same key.
         started = await client.start(**options)
-        renewed = await client.renew(**options, session_id=started.session_id)
+        renewed = await client.renew(**options, session_key=started.session_key)
         reactor.stop()
 
     return {
@@ -122,13 +142,16 @@ async def explain_session_lifecycle() -> dict[str, Any]:
         "signed_in": renewed.signed_in,
         "token_type": renewed.token_type,
         "scopes": renewed.scopes,
-        "same_session": started.session_id == renewed.session_id,
+        "same_session": started.session_key == renewed.session_key,
+        "renewal_proved_with_the_session_key": (
+            dpop.requests[-1].session_key == started.session_key
+        ),
+        "no_session_id_on_the_wire": all("session_id" not in form for form in forms),
         "nonce_retry": [request.nonce for request in dpop.requests]
         == [None, "host-only-company-nonce", None],
         "fresh_assertions": len(signer.purposes) == 6,
         "fresh_proofs": len(dpop.requests) == 3,
-        "renewal_bound_to_session": "session_id" in forms[-1],
-        "session_id_withheld": True,
+        "session_key_withheld": True,
         "assertions_withheld": True,
         "proofs_withheld": True,
         "tokens_withheld": True,

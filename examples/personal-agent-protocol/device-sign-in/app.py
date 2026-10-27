@@ -25,6 +25,10 @@ from reactor import PluginManifest
 
 from agent_runtimes.loop.apps import Application
 
+#: The Session Key's JWK thumbprint (RFC 7638): it names the Session. The key's
+#: private half stays with the host's proof provider.
+SESSION_KEY = "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+
 
 class MutableClock:
     def __init__(self) -> None:
@@ -143,8 +147,8 @@ async def explain_device_sign_in() -> dict[str, Any]:
                 "token_type": "DPoP",
                 "expires_in": 300,
                 "scope": "orders:read",
-                "session_id": "ses_existing",
-                "signed_in": True,
+                # No Session ID and no `signed_in` on the wire: the proof's key names
+                # the Session, and the grant (device code) says it is signed in.
                 "refresh_token": "host-only-account-token",
             },
         )
@@ -164,11 +168,13 @@ async def explain_device_sign_in() -> dict[str, Any]:
             client_id="https://assistant.example/agent.json",
             scopes=("orders:read", "orders:return"),
             tenant_id="example-tenant",
-            pairwise_user_id="usr_host_only_example",
-            session_id="ses_existing",
-            # The link is shown only on the company's own hosts, named with it (§4.6).
+            # The existing Session's Session Key (its JWK thumbprint): every poll is
+            # proved with it, and the company binds the device code to it.
+            session_key=SESSION_KEY,
             organization=Organization(name="Shop", domain="shop.example"),
-            poppy_domains=("shop.example",),
+            # The issuer's `protected_resources`: the verification link must be on
+            # the issuer's host or one of these.
+            protected_resources=("https://shop.example",),
         )
         early = await client.poll(started.reference)
         security.clock.advance(5)
@@ -192,7 +198,8 @@ async def explain_device_sign_in() -> dict[str, Any]:
         "authorization_pending_respected": pending.status == "pending",
         "slow_down_added_five_seconds": slow_down_added_five_seconds,
         "same_session": completed.token is not None
-        and completed.token.session_id == "ses_existing",
+        and completed.token.session_key == SESSION_KEY
+        and completed.token.signed_in,
         "granted_scopes": completed.granted_scopes,
         "missing_scopes": completed.missing_scopes,
         "account_token_stored_by_reference": completed.account_token_reference
@@ -200,4 +207,7 @@ async def explain_device_sign_in() -> dict[str, Any]:
         "device_code_withheld": True,
         "session_and_account_tokens_withheld": True,
         "fresh_dpop_for_each_network_poll": len(security.dpop.requests) == 3,
+        "every_proof_signed_with_the_session_key": all(
+            request.session_key == SESSION_KEY for request in security.dpop.requests
+        ),
     }

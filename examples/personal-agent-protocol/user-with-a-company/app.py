@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -80,7 +81,9 @@ async def explain_user_with_a_company() -> dict[str, Any]:
         conversations = ConversationClient(transport=transport)
 
         def say(text: str) -> Message:
-            return Message(id=generate_message_id(reactor), sender="human", text=text)
+            return Message(
+                id=generate_message_id(reactor), author=Author(type="human"), text=text
+            )
 
         # 1. Atlas discovers Manzanita and opens a signed-out, pairwise Session.
         company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
@@ -98,7 +101,6 @@ async def explain_user_with_a_company() -> dict[str, Any]:
         )
         who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": metadata.issuer,
         }
         endpoint = company.document.agent.protocols[0].endpoint
@@ -119,10 +121,9 @@ async def explain_user_with_a_company() -> dict[str, Any]:
             client_id=atlas.client_id,
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
-            session_id=session.session_id,
+            session_key=session.session_key,
             organization=company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
@@ -174,7 +175,7 @@ async def explain_user_with_a_company() -> dict[str, Any]:
         "company": company.document.organization.name,
         "first_reply_required": asked_to_sign_in,
         "signed_in_on_company_page": done.status == "complete",
-        "same_session_signed_in": token.session_id == session.session_id,
+        "same_session_signed_in": token.session_key == session.session_key,
         "granted_scopes": token.scopes,
         "same_conversation_continued": page.conversation_id == first_conversation,
         "proposed_operation": {

@@ -13,7 +13,7 @@ feature while keeping protocol secrets outside model context.
 | [`device-sign-in`](./device-sign-in/)                     | Device code, paced polling and protected token storage | Lifecycle evidence; all secrets withheld          |
 | [`dpop-proof`](./dpop-proof/)                             | Method, URL, token, nonce and replay binding           | Verified policy; all proof material withheld      |
 | [`session-lifecycle`](./session-lifecycle/)               | Start, nonce retry, and renewal over HTTP              | Lifecycle evidence; credentials withheld          |
-| [`browser-session`](./browser-session/)                   | Controlled form POST and one-use browser assertion     | Browser policy; all credentials withheld          |
+| [`browser-session`](./browser-session/)                   | Join form, one-time code, proof with the Session Key   | Browser policy; all credentials withheld          |
 | [`dpop-transport`](./dpop-transport/)                     | Nonce retry, fresh proofs, refused redirects           | Transport policy; credentials withheld            |
 | [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs         | Conversation state; credentials withheld          |
 | [`conversation-events`](./conversation-events/)           | Long poll and de-duplicate ordered conversation events | Event evidence; credentials withheld              |
@@ -31,11 +31,11 @@ feature while keeping protocol secrets outside model context.
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company   | What the person was shown; ticket used once       |
 
 Every example runs against the released PAP Python SDK — Agent Runtimes pins
-0.25.0 and later (`personal-agent-protocol[ui]`), which implements
-[PAP draft 0.2](https://personalagentprotocol.org/docs/0.2/spec), the
+0.27.0 and later (`personal-agent-protocol[ui]`), which implements
+[PAP draft 0.3](https://personalagentprotocol.org/docs/0.3/spec), the
 specification published at [personalagentprotocol.org](https://personalagentprotocol.org)
 from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol);
-all of them ran on 0.25.0 on 19 October 2026
+all of them ran on 0.27.0 on 27 October 2026
 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.

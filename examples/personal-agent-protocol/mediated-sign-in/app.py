@@ -66,7 +66,7 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
             token_endpoint=company.oauth_metadata.token_endpoint,  # type: ignore[union-attr]
             tenant_id=TENANT,
         )
-        who = {"tenant_id": TENANT, "pairwise_user_id": PAIRWISE, "issuer": auth.issuer}
+        who = {"tenant_id": TENANT, "issuer": auth.issuer}
         mediated = MediatedSignInClient(reactor=reactor, http_client=http)
         started = await mediated.sign_in(
             mediated=auth.mediated,
@@ -94,7 +94,7 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
         "final_status": done.status,
         "same_session_signed_in": done.token is not None
         and done.token.signed_in
-        and done.token.session_id == session.session_id,
+        and done.token.session_key == session.session_key,
         "granted_scopes": done.granted_scopes,
         "account_token_stored_by_reference": done.account_token_reference
         in host.vault.values,

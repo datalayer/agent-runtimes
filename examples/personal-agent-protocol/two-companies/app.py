@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -86,7 +87,6 @@ async def explain_two_companies() -> dict[str, Any]:
         assert company.document.agent is not None
         who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": metadata.issuer,
         }
         session = await SessionClient(reactor=reactor, http_client=http).start(
@@ -104,10 +104,9 @@ async def explain_two_companies() -> dict[str, Any]:
             client_id=atlas.client_id,
             scopes=("books:read", "payments:write"),
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
-            session_id=session.session_id,
+            session_key=session.session_key,
             organization=company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
         clock.advance(started.poll_interval)
@@ -121,7 +120,7 @@ async def explain_two_companies() -> dict[str, Any]:
             conversation_id: str | None, cursor: str | None, text: str
         ) -> Any:
             message = Message(
-                id=generate_message_id(reactor), sender="human", text=text
+                id=generate_message_id(reactor), author=Author(type="human"), text=text
             )
             if conversation_id is None:
                 return await conversations.start(

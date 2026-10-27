@@ -1,6 +1,6 @@
 # PAP Two Companies
 
-Two companies working together, in PAP draft 0.2's own terms. Draft 0.2
+Two companies working together, in PAP draft 0.3's own terms. Draft 0.3
 defines no company-to-company protocol, so this is **composition**:
 
 - To Ada's personal agent, Atlas, **Ledgerly** (an accounting firm) is a PAP

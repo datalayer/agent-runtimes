@@ -119,7 +119,7 @@ async def walk_through() -> dict[str, Any]:
             "open_on_the_company_page": bool(sign_in.open),
         },
         "signed_in": status.model_dump(),
-        "order": order.replies,
+        "order": [line.text for line in order.replies],
         "proposed": proposed.model_dump(),
         "person_was_asked": host.asked,
         "confirmed": confirmed.status,

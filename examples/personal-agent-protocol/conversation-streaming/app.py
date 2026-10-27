@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from personal_agent_protocol import (
+    Author,
     ConversationClient,
     DiscoveryClient,
     DpopHttpClient,
@@ -72,7 +73,6 @@ async def explain_conversation_streaming() -> dict[str, Any]:
         )
         who = {
             "tenant_id": TENANT,
-            "pairwise_user_id": PAIRWISE,
             "issuer": metadata.issuer,
         }
         endpoint = company.document.agent.protocols[0].endpoint
@@ -81,7 +81,11 @@ async def explain_conversation_streaming() -> dict[str, Any]:
         )
         page = await conversations.start(
             endpoint,
-            Message(id=generate_message_id(reactor), sender="human", text="Hello"),
+            Message(
+                id=generate_message_id(reactor),
+                author=Author(type="human"),
+                text="Hello",
+            ),
             token=session,
             wait=0,
             **who,

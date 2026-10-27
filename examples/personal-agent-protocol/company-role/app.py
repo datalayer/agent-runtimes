@@ -50,7 +50,11 @@ app.as_company(
     # A personal agent may ask before the person signs in.
     signed_out=True,
     interfaces=["agent", "openapi", "mcp"],
-    scopes=["orders:read", "orders:write"],
+    # Its own scopes, each with what it allows (PAP draft 0.3 §4.4).
+    scopes=[
+        {"name": "orders:read", "description": "Read your orders", "changes": "none"},
+        {"name": "orders:write", "description": "Exchange an order you approved"},
+    ],
     extensions=["operations"],
     personal_agents="registered",
     registered_agents=[ATLAS],
@@ -147,7 +151,7 @@ async def explain_company_role() -> dict[str, Any]:
         "company_enabled": company.enabled,
         "signed_out_allowed": company.signed_out,
         "interfaces": [interface.value for interface in company.interfaces],
-        "scopes_offered": company.scopes,
+        "scopes_offered": [scope.name for scope in company.scopes],
         "personal_agents": company.personal_agents.value,
         "registered_agents": company.registered_agents,
         "declared_operations": [
