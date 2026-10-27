@@ -92,7 +92,12 @@ export type ProtocolDisplay =
       id: string;
       company: string;
       conversation: string;
-      replies: { sender: 'agent' | 'human'; text: string }[];
+      /** Each with who wrote it (`author`, PAP draft 0.3) and their name when the company gives one. */
+      replies: {
+        author: 'agent' | 'human';
+        name: string | null;
+        text: string;
+      }[];
       status: 'working' | 'idle' | 'queued' | 'closed' | null;
       responder: 'agent' | 'human' | null;
     }
@@ -275,7 +280,8 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
       const conversation = text(data.conversation);
       const replies = Array.isArray(data.replies)
         ? data.replies.map(record).map(reply => ({
-            sender: who(reply?.sender),
+            author: who(reply?.author),
+            name: words(reply?.name) || null,
             text: text(reply?.text),
           }))
         : [];
@@ -283,7 +289,7 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
         !company ||
         !/^[A-Za-z0-9_-]{1,256}$/.test(conversation) ||
         !replies.length ||
-        replies.some(reply => !reply.sender || !reply.text.trim())
+        replies.some(reply => !reply.author || !reply.text.trim())
       ) {
         return unknown;
       }
@@ -292,7 +298,11 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
         id,
         company,
         conversation,
-        replies: replies as { sender: 'agent' | 'human'; text: string }[],
+        replies: replies as {
+          author: 'agent' | 'human';
+          name: string | null;
+          text: string;
+        }[],
         status: STATUSES.find(s => s === data.status) ?? null,
         responder: who(data.responder),
       };
@@ -441,11 +451,14 @@ const OUTCOME_LEADS: Record<
 /** Who wrote a reply, said apart from the person's words and the agent's summaries (PAP-7.8-01). */
 export const replyAuthor = (
   company: string,
-  sender: 'agent' | 'human',
+  author: 'agent' | 'human',
+  name?: string | null,
 ): string =>
-  sender === 'human'
-    ? `${company}, one of its people`
-    : `${company}, its agent`;
+  `${
+    author === 'human'
+      ? `${company}, one of its people`
+      : `${company}, its agent`
+  }${name ? ` (${name})` : ''}`;
 
 // -- a diff and a terminal (SH-16) ------------------------------------
 

@@ -635,6 +635,7 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
             "pap_mcp_call": ["write"],
             "pap_confirm": ["write", "buy"],
             "pap_disconnect": ["write"],
+            "pap_feedback": ["send"],
         },
     },
     "signed-fetch": {"connection": "signed-fetch", "tools": {"signed_fetch": ["read"]}},

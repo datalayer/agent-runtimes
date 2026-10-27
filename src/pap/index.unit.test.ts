@@ -14,12 +14,14 @@ import { PapPersonalAgentCapability } from './index';
 const company: DiscoveredCompany = {
   discoveryUrl: 'https://shop.example/.well-known/poppy.json',
   document: {
-    protocol_version: '0.2',
+    protocol_version: '0.3',
     organization: { name: 'Example Shop', domain: 'shop.example' },
     auth: {
       issuer: 'https://auth.shop.example',
-      direct: { scopes: ['poppy:read'] },
-      custom_scopes: {},
+      scopes: { 'catalogue:read': 'Read the catalogue' },
+      scope_hints: {
+        'catalogue:read': { changes: 'none', personal_data: false },
+      },
     },
     agent: {
       protocols: [{ type: 'a2a', endpoint: 'https://shop.example/agent' }],
@@ -32,6 +34,20 @@ const company: DiscoveredCompany = {
       },
     ],
     extensions: { operations: { version: '1' } },
+  },
+  // Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
+  oauthMetadata: {
+    issuer: 'https://auth.shop.example',
+    token_endpoint: 'https://auth.shop.example/token',
+    revocation_endpoint: 'https://auth.shop.example/revoke',
+    authorization_endpoint: 'https://auth.shop.example/authorize',
+    grant_types_supported: [
+      'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      'refresh_token',
+      'authorization_code',
+    ],
+    protected_resources: ['https://shop.example'],
+    scopes_supported: ['catalogue:read'],
   },
 };
 
@@ -67,11 +83,17 @@ describe('PapPersonalAgentCapability', () => {
     expect(summary).toMatchObject({
       organization: 'Example Shop',
       signIn: ['direct'],
+      scopes: { 'catalogue:read': 'Read the catalogue' },
+      scopeHints: {
+        'catalogue:read': { changes: 'none', personalData: false },
+      },
+      protectedResources: ['https://shop.example'],
       interfaces: ['agent:a2a', 'api:openapi'],
       extensions: { operations: '1' },
     });
     expect(JSON.stringify(summary)).not.toContain('openapi.json');
     expect(JSON.stringify(summary)).not.toContain('/agent');
+    expect(JSON.stringify(summary)).not.toContain('/token');
   });
 
   it('returns public key policy without JWK coordinates', async () => {

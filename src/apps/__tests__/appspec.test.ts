@@ -461,7 +461,7 @@ describe('writing an Appspec', () => {
     const agent = 'https://agents.example/agent.json';
     const company = {
       enabled: true,
-      scopes: ['poppy:read'],
+      scopes: [{ name: 'orders:read', description: 'Read your orders' }],
       interfaces: ['agent', 'mcp'],
       personal_agents: 'registered',
       registered_agents: [agent],
@@ -490,7 +490,35 @@ describe('writing an Appspec', () => {
             scopes: ['orders:read'],
           },
         ],
-        company: { enabled: true, scopes: ['poppy:read'] },
+        company: {
+          enabled: true,
+          scopes: [
+            {
+              name: 'orders:read',
+              description: 'Read your orders',
+              changes: 'none',
+              personal_data: true,
+            },
+            { name: 'orders:write', description: 'Exchange an order' },
+          ],
+          excluded_tasks: [
+            {
+              task: 'Cancel an order',
+              alternative: {
+                instructions: 'Cancel it on the website.',
+                references: [
+                  { type: 'web', url: 'https://manzanita.example/orders' },
+                  {
+                    type: 'mcp',
+                    url: 'https://manzanita.example/mcp',
+                    tool: 'cancel_order',
+                  },
+                ],
+              },
+            },
+            { task: 'Talk to the warehouse' },
+          ],
+        },
       },
     });
     expect(problems).toEqual([]);
@@ -512,7 +540,32 @@ describe('writing an Appspec', () => {
         enabled: true,
         signedOut: true,
         interfaces: ['agent'],
-        scopes: ['poppy:read'],
+        scopes: [
+          {
+            name: 'orders:read',
+            description: 'Read your orders',
+            changes: 'none',
+            personalData: true,
+          },
+          { name: 'orders:write', description: 'Exchange an order' },
+        ],
+        excludedTasks: [
+          {
+            task: 'Cancel an order',
+            alternative: {
+              instructions: 'Cancel it on the website.',
+              references: [
+                { type: 'web', url: 'https://manzanita.example/orders' },
+                {
+                  type: 'mcp',
+                  url: 'https://manzanita.example/mcp',
+                  tool: 'cancel_order',
+                },
+              ],
+            },
+          },
+          { task: 'Talk to the warehouse' },
+        ],
         extensions: [],
         personalAgents: 'any',
         registeredAgents: [],
@@ -530,7 +583,35 @@ describe('writing an Appspec', () => {
           scopes: ['orders:read'],
         },
       ],
-      company: { enabled: true, scopes: ['poppy:read'] },
+      company: {
+        enabled: true,
+        scopes: [
+          {
+            name: 'orders:read',
+            description: 'Read your orders',
+            changes: 'none',
+            personal_data: true,
+          },
+          { name: 'orders:write', description: 'Exchange an order' },
+        ],
+        excluded_tasks: [
+          {
+            task: 'Cancel an order',
+            alternative: {
+              instructions: 'Cancel it on the website.',
+              references: [
+                { type: 'web', url: 'https://manzanita.example/orders' },
+                {
+                  type: 'mcp',
+                  url: 'https://manzanita.example/mcp',
+                  tool: 'cancel_order',
+                },
+              ],
+            },
+          },
+          { task: 'Talk to the warehouse' },
+        ],
+      },
     });
     // Without it, the application has none.
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();

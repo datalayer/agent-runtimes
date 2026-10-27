@@ -35,7 +35,7 @@ export type PapSignInWaiting = {
    */
   company?: string;
   /**
-   * The company that asks, by name and domain (PAP draft 0.2 §4.6, §4.7): the
+   * The company that asks, by name and domain (PAP §4.6, §4.7): the
    * SDK names it on every Device and Mediated Sign-In, and the card shows both
    * with the link, so a company cannot pass off another's page as its own.
    */
@@ -47,8 +47,9 @@ export type PapSignInWaiting = {
   /** Until when, ISO 8601. */
   expiresAt?: string;
   /**
-   * What the company said it needs (its `authorization` event's scope,
-   * P-02): what the person is asked to allow there.
+   * What the company said it needs: the scopes its `insufficient_scope`
+   * named (the `authorization` event, which always names them since PAP
+   * draft 0.3; P-02), what the person is asked to allow there.
    */
   needs?: string[];
 };
@@ -56,7 +57,7 @@ export type PapSignInWaiting = {
 /** What the card says. */
 export const PAP_SIGN_IN_WORDS = {
   title: (host: string): string => `Sign in at ${host}`,
-  /** A Device Sign-In, with the company that asks named (PAP 0.2 §4.6). */
+  /** A Device Sign-In, with the company that asks named (PAP §4.6). */
   titleFor: (name: string, domain: string, host: string): string =>
     `Sign in to ${name} (${domain}) at ${host}`,
   direct:
@@ -64,7 +65,7 @@ export const PAP_SIGN_IN_WORDS = {
   device: 'Open the company’s page and enter this code there.',
   /** `mediated`: the page is Datalayer's, which names the company and asks what it asks. */
   mediatedTitle: (host: string): string => `Sign in through ${host}`,
-  /** A Mediated Sign-In, with the company that asks named (PAP 0.2 §4.7). */
+  /** A Mediated Sign-In, with the company that asks named (PAP §4.7). */
   mediatedTitleFor: (name: string, domain: string, host: string): string =>
     `Sign in to ${name} (${domain}) through ${host}`,
   mediated:

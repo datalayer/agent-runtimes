@@ -93,7 +93,7 @@ class PapPlugin:
                 version=_version(),
                 roles=("personal-agent", "company"),
                 status="implemented",
-                specification="https://personalagentprotocol.org/docs/0.2/spec",
+                specification="https://personalagentprotocol.org/docs/0.3/spec",
                 plugin=PLUGIN,
                 catalogue="pap",
                 points=POINTS,

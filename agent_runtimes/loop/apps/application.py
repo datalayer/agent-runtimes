@@ -978,7 +978,8 @@ class Application:
     def as_company(
         self,
         *,
-        scopes: Sequence[str] = (),
+        scopes: Sequence[Mapping[str, Any]] = (),
+        excluded_tasks: Sequence[Mapping[str, Any]] = (),
         signed_out: bool = True,
         interfaces: Sequence[str] = ("agent",),
         extensions: Sequence[str] = (),
@@ -993,8 +994,15 @@ class Application:
 
         Parameters
         ----------
-        scopes : sequence of str
-            The scopes it offers: ``orders:read``.
+        scopes : sequence of mapping
+            The scopes it offers, each ``{name, description}`` with, when
+            the Maker says so, its hints ``changes`` (``none``,
+            ``reversible``, ``irreversible``) and ``personal_data``:
+            ``{"name": "orders:read", "description": "Read your orders"}``.
+        excluded_tasks : sequence of mapping
+            Tasks it does not offer through the protocol, each ``{task}``
+            with, when there is one, another way (``alternative``:
+            ``instructions`` and/or ``references``).
         signed_out : bool
             Whether a personal agent may ask before the person signs in.
         interfaces : sequence of str
@@ -1021,6 +1029,7 @@ class Application:
                 "signed_out": signed_out,
                 "interfaces": list(interfaces),
                 "scopes": list(scopes),
+                "excluded_tasks": list(excluded_tasks),
                 "extensions": list(extensions),
                 "personal_agents": personal_agents,
                 "registered_agents": list(registered_agents),

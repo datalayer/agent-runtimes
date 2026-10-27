@@ -9,6 +9,10 @@
  * IAM bound to their browser and the company asked, a Device code the
  * company confirmed — and says where it stands.
  *
+ * `signed_in` is the gateway's word for a sign-in the company granted (the
+ * grant says it, PAP draft 0.3: no token response carries `signed_in` any
+ * more); nothing here reads a token.
+ *
  * A continuation is accepted only when it is bound: the answer names the
  * application and the company the card was for, and a verified issuer. The
  * client then goes on in the same conversation (its session), once.

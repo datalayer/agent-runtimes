@@ -140,7 +140,7 @@ export const PAP_PROTOCOL_0_0_1: ProtocolSpec = {
   publisher: 'Sierra, Meta',
   layer: 'consent',
   specUrl: 'https://personalagentprotocol.org',
-  specVersion: 'draft 0.2',
+  specVersion: 'draft 0.3',
   status: 'shipped',
   connects: "Companies, as a person's agent there, or being one",
   packages: {

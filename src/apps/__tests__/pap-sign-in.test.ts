@@ -48,7 +48,7 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
-  it('names the company that asks, by name and domain (PAP 0.2 §4.6)', () => {
+  it('names the company that asks, by name and domain (PAP §4.6)', () => {
     const named = readPapSignIn({
       ...DEVICE,
       organization_name: 'Manzanita',

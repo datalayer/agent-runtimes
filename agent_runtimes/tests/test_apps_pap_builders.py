@@ -42,7 +42,29 @@ def _exchange_desk() -> Application:
     app.as_company(
         signed_out=True,
         interfaces=["agent", "openapi"],
-        scopes=["orders:read", "orders:write"],
+        # Each scope with what it allows and its hints (PAP draft 0.3 §4.4).
+        scopes=[
+            {
+                "name": "orders:read",
+                "description": "Read your orders and their status",
+                "changes": "none",
+                "personal_data": True,
+            },
+            {
+                "name": "orders:write",
+                "description": "Exchange an order you approved",
+                "changes": "reversible",
+                "personal_data": True,
+            },
+        ],
+        excluded_tasks=[
+            {
+                "task": "Cancel an order",
+                "alternative": {
+                    "instructions": "Cancel it from your account on the shop's website, under Orders."
+                },
+            }
+        ],
         extensions=["operations"],
         personal_agents="any",
     )
@@ -83,7 +105,13 @@ app.company_connection(
     "northwind", "northwind.example", access="write", scopes=["invoices:read", "invoices:write"],
     extensions=["operations"],
 )
-app.as_company(scopes=["books:read", "books:write"], extensions=["operations"])
+app.as_company(
+    scopes=[
+        {"name": "books:read", "description": "Read your books"},
+        {"name": "books:write", "description": "Close a month you approved"},
+    ],
+    extensions=["operations"],
+)
 
 
 @app.company_operation("books.close_month", summary="Close {month} for {company}.")
@@ -108,6 +136,7 @@ def test_loop_apps_build_writes_the_same_appspec_for_both_roles(tmp_path: Path) 
         "user",
     )
     assert again.pap.company.enabled is True
+    assert again.pap.company.scope_names() == ["books:read", "books:write"]
     [operation] = again.pap.company.operations
     assert (operation.action, operation.tool, operation.user_approval_required) == (
         "books.close_month",
@@ -147,12 +176,20 @@ def test_what_the_builders_refuse() -> None:
             """Cancels an order."""
             return {}
 
-    app.as_company(scopes=["orders:write"], extensions=["operations"])
+    app.as_company(
+        scopes=[{"name": "orders:write", "description": "Change your orders"}],
+        extensions=["operations"],
+    )
     with pytest.raises(ValueError, match="@app.tool"):
         app.company_operation("orders.refund", summary="Refund {order_id}.")(stray)
+    # The list-of-strings form of PAP draft 0.2 is refused (0.3: each scope says what it allows).
+    with pytest.raises(ValidationError, match="valid dictionary"):
+        Application("z", "chat", agent="example-blank:0.0.1").as_company(
+            scopes=["orders:read"]  # type: ignore[list-item]  # the old shape, refused
+        )
     with pytest.raises(ValidationError, match="names at least one"):
         Application("y", "chat", agent="example-blank:0.0.1").as_company(
-            scopes=["orders:read"],
+            scopes=[{"name": "orders:read", "description": "Read your orders"}],
             extensions=[],
             personal_agents="registered",
         )
@@ -237,7 +274,10 @@ def test_a_standing_permission_is_declared_in_python_as_in_yaml() -> None:
     app.company_connection(
         "bank", "northwind.example", access="write", scopes=["payments:write"]
     )
-    app.as_company(scopes=["books:write"], extensions=["operations"])
+    app.as_company(
+        scopes=[{"name": "books:write", "description": "Give a standing permission"}],
+        extensions=["operations"],
+    )
     limits = [
         {"path": "payee", "allowed": "payee"},
         {"path": "amount.amount", "maximum": "maximum"},

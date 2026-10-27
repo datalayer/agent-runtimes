@@ -727,6 +727,7 @@ export const PROTOCOL_TOOL_CLASSES: Record<
       pap_mcp_call: ['write'],
       pap_confirm: ['write', 'buy'],
       pap_disconnect: ['write'],
+      pap_feedback: ['send'],
     },
   },
   'signed-fetch': {

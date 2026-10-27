@@ -54,7 +54,7 @@ ANSWER = {
     "open": OPEN,
     "code": CODE,
     "expires_at": "2026-10-11T12:15:00+00:00",
-    # PAP draft 0.2 §4.6: a device sign-in names the company that asks.
+    # PAP §4.6: a device sign-in names the company that asks.
     "organization_name": "Manzanita Outfitters",
     "organization_domain": "manzanita.example",
 }

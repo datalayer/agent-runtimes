@@ -68,7 +68,7 @@ def test_the_command_says_pap_with_its_plugin(tmp_path: Path):
     )
     result = CliRunner().invoke(apps_cli, ["protocols", str(spec)])
     assert result.exit_code == 0, result.output
-    assert "Personal Agent Protocol (pap) 0.2" in result.output
+    assert "Personal Agent Protocol (pap) 0.3" in result.output
     assert "works with manzanita.example" in result.output
     assert "its own SDK's plugins" not in result.output
 

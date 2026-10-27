@@ -149,8 +149,26 @@ class A2AApplication:
 
 
 def _scopes(company: Any) -> tuple[str, ...]:
-    """Return the company's scopes, or the default read scope."""
-    return tuple(str(scope) for scope in company.scopes) or ("poppy:read",)
+    """Return the names of the scopes the company offers (PAP draft 0.3 §4.4)."""
+    return tuple(str(scope.name) for scope in company.scopes)
+
+
+def _scope_hints(company: Any) -> dict[str, tuple[str, bool]]:
+    """The hints the Maker gave, for the scopes whose both hints are said (``auth.scope_hints``)."""
+    hints: dict[str, tuple[str, bool]] = {}
+    for scope in company.scopes:
+        changes = getattr(scope.changes, "value", scope.changes)
+        if changes is not None and scope.personal_data is not None:
+            hints[str(scope.name)] = (str(changes), bool(scope.personal_data))
+    return hints
+
+
+def _excluded_tasks(company: Any) -> tuple[dict[str, Any], ...]:
+    """The tasks it does not offer through the protocol, as ``excluded-tasks.json`` lists them."""
+    return tuple(
+        task.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
+        for task in company.excluded_tasks
+    )
 
 
 class ApplicationCompanyAgent:
@@ -169,10 +187,14 @@ class ApplicationCompanyAgent:
         return None
 
     async def respond(self, turn: Turn) -> Sequence[Reply]:
-        """Answer a turn, asking to sign in when needed."""
+        """Answer a turn, asking for the scopes it needs when they are not held.
+
+        Signed out, ``insufficient_scope`` names what to sign in for; signed
+        in, what to ask for again (PAP draft 0.3 §7.11).
+        """
         scopes = list(_scopes(self.company))
         if turn.account_id is None and not self.company.signed_out:
-            return [Reply(authorization=("sign_in_required", " ".join(scopes)))]
+            return [Reply(authorization=("insufficient_scope", " ".join(scopes)))]
         # Signed in, the person's account is read only with a read scope (a
         # write scope alone never reads); an operation is proposed only with a write scope.
         reads = [scope for scope in scopes if scope.endswith(":read")]
@@ -213,7 +235,7 @@ class ApplicationCompanyAgent:
             # Nothing is done for nobody: the personal agent signs in first.
             return [
                 Reply(text=text),
-                Reply(authorization=("sign_in_required", " ".join(scopes))),
+                Reply(authorization=("insufficient_scope", " ".join(scopes))),
             ]
         if writes and not set(writes) & set(turn.scopes):
             return [
@@ -410,6 +432,10 @@ class PapCompanyCapability:
                 f"A local company gives no standing permission: {giving[0]} is given "
                 "only by the application shipped on Datalayer"
             )
+        if not company.scopes:
+            raise ValueError(
+                "A company offers at least one scope of its own: the Appspec's pap.company.scopes is empty"
+            )
         self.company = company
         self.application = application
         self.accounts = accounts
@@ -419,6 +445,12 @@ class PapCompanyCapability:
             name=name,
             domain=domain,
             scopes=scopes,
+            # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
+            scope_descriptions={
+                str(scope.name): str(scope.description) for scope in company.scopes
+            },
+            scope_hints=_scope_hints(company),
+            excluded_tasks=_excluded_tasks(company),
             write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
             device=True,
             direct=False,

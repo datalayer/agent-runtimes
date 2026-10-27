@@ -49,7 +49,21 @@ DOMAIN = "orders.example"
 COMPANY = AppPapCompany(
     enabled=True,
     signed_out=True,
-    scopes=["orders:read", "orders:write"],
+    scopes=[
+        {
+            "name": "orders:read",
+            "description": "Read your orders",
+            "changes": "none",
+            "personal_data": True,
+        },
+        {"name": "orders:write", "description": "Exchange an order you approved"},
+    ],
+    excluded_tasks=[
+        {
+            "task": "Cancel an order",
+            "alternative": {"instructions": "Cancel it on the website."},
+        }
+    ],
     extensions=["operations"],
     operations=[
         AppPapOperation(
@@ -185,14 +199,27 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             assert summary.organization == "Order Desk"
             assert summary.sign_in == ("device",)
             assert summary.extensions == {"operations": "1"}
+            # Its own scopes, what each allows and the Maker's hints (draft 0.3 §4.4).
+            assert summary.scopes == {
+                "orders:read": "Read your orders",
+                "orders:write": "Exchange an order you approved",
+            }
+            assert {
+                name: (hint.changes, hint.personal_data)
+                for name, hint in summary.scope_hints.items()
+            } == {"orders:read": ("none", True)}
+            assert summary.protected_resources == (f"https://{DOMAIN}",)
 
             signed_out = await pap.ask(DOMAIN, "Where is my order?", user_id="ada")
-            assert signed_out.replies == ("Order o-17 is delivered.",)
+            assert [reply.text for reply in signed_out.replies] == [
+                "Order o-17 is delivered."
+            ]
+            assert {reply.author for reply in signed_out.replies} == {"agent"}
             # Signed out, nothing is proposed for nobody.
             asked = await pap.ask(DOMAIN, "Exchange it for an L", user_id="ada")
             assert asked.operations == ()
             assert asked.authorization == {
-                "error": "sign_in_required",
+                "error": "insufficient_scope",
                 "scope": "orders:read orders:write",
             }
 

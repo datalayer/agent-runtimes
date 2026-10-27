@@ -36,7 +36,7 @@ describe('a Direct Conversation (M-038)', () => {
       if (init?.method === 'POST') {
         return json({
           direct_conversation: 'dc_1',
-          replies: [{ text: 'Sam here.', from: 'human' }],
+          replies: [{ text: 'Sam here.', from: 'human', name: 'Sam' }],
           status: 'working',
           responder: 'human',
           cursor: 'c1',
@@ -63,7 +63,8 @@ describe('a Direct Conversation (M-038)', () => {
     );
     expect(open.lines.map(line => [directAuthor(line), line.text])).toEqual([
       ['You', 'Where is my parcel?'],
-      ['One of its people', 'Sam here.'],
+      // Who wrote it at the company, by name (`author.name`, PAP draft 0.3).
+      ['One of its people (Sam)', 'Sam here.'],
     ]);
     expect((fetcher.mock.calls[1] as unknown[])[0]).toBe(
       'https://gw.test/api/mcp/v1/pap/direct',

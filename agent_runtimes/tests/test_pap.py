@@ -8,6 +8,7 @@ from personal_agent_protocol.models import (
     DiscoveredCompany,
     DiscoveryDocument,
     JsonWebKeySet,
+    OAuthServerMetadata,
 )
 
 from agent_runtimes.pap import PapPersonalAgentCapability
@@ -20,11 +21,17 @@ class CompanyClient:
             discovery_url="https://shop.example/.well-known/poppy.json",
             document=DiscoveryDocument.model_validate(
                 {
-                    "protocol_version": "0.2",
+                    "protocol_version": "0.3",
                     "organization": {"name": "Example Shop", "domain": "shop.example"},
                     "auth": {
                         "issuer": "https://auth.shop.example",
-                        "direct": {"scopes": ["poppy:read"]},
+                        "scopes": {"catalogue:read": "Read the catalogue"},
+                        "scope_hints": {
+                            "catalogue:read": {
+                                "changes": "none",
+                                "personal_data": False,
+                            }
+                        },
                     },
                     "agent": {
                         "protocols": [
@@ -42,6 +49,22 @@ class CompanyClient:
                         }
                     ],
                     "extensions": {"operations": {"version": "1"}},
+                }
+            ),
+            # Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
+            oauth_metadata=OAuthServerMetadata.model_validate(
+                {
+                    "issuer": "https://auth.shop.example",
+                    "token_endpoint": "https://auth.shop.example/token",
+                    "revocation_endpoint": "https://auth.shop.example/revoke",
+                    "authorization_endpoint": "https://auth.shop.example/authorize",
+                    "grant_types_supported": [
+                        "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                        "refresh_token",
+                        "authorization_code",
+                    ],
+                    "protected_resources": ["https://shop.example"],
+                    "scopes_supported": ["catalogue:read"],
                 }
             ),
         )
@@ -87,11 +110,15 @@ async def test_company_summary_contains_capabilities_but_no_endpoints() -> None:
 
     assert summary.organization == "Example Shop"
     assert summary.sign_in == ("direct",)
+    assert summary.scopes == {"catalogue:read": "Read the catalogue"}
+    assert summary.scope_hints["catalogue:read"].changes == "none"
+    assert summary.protected_resources == ("https://shop.example",)
     assert summary.interfaces == ("agent:a2a", "api:openapi")
     assert summary.extensions == {"operations": "1"}
     serialized = summary.model_dump_json()
     assert "openapi.json" not in serialized
     assert "/agent" not in serialized
+    assert "/token" not in serialized
 
 
 async def test_agent_summary_contains_public_key_policy_but_no_key_material() -> None:

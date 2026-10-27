@@ -1266,6 +1266,37 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppPap',
       type: 'object',
     },
+    AppPapAlternative: {
+      additionalProperties: false,
+      description:
+        'Another way to do an excluded task (PAP draft 0.3 §8.2): instructions, references, or both.',
+      properties: {
+        instructions: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'What the person or their agent can do instead, at most 2000 characters',
+          title: 'Instructions',
+        },
+        references: {
+          description: 'Where to do it instead',
+          items: {
+            $ref: '#/$defs/AppPapReference',
+          },
+          title: 'References',
+          type: 'array',
+        },
+      },
+      title: 'AppPapAlternative',
+      type: 'object',
+    },
     AppPapCompany: {
       additionalProperties: false,
       description:
@@ -1284,7 +1315,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'boolean',
         },
         interfaces: {
-          description: 'How personal agents reach it',
+          description:
+            "How personal agents reach it: `agent`, `openapi`, `mcp`, and `web` — its pages, a browser joining the person's Session through the one-time-code form (PAP draft 0.3 §6)",
           items: {
             $ref: '#/$defs/PapInterface',
           },
@@ -1292,11 +1324,21 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
         },
         scopes: {
-          description: 'The scopes it offers',
+          description:
+            'The scopes it offers, each with what it allows and its hints',
           items: {
-            type: 'string',
+            $ref: '#/$defs/AppPapCompanyScope',
           },
           title: 'Scopes',
+          type: 'array',
+        },
+        excluded_tasks: {
+          description:
+            'Tasks it does not offer through the protocol, each with another way when there is one',
+          items: {
+            $ref: '#/$defs/AppPapExcludedTask',
+          },
+          title: 'Excluded Tasks',
           type: 'array',
         },
         extensions: {
@@ -1332,6 +1374,54 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
       },
       title: 'AppPapCompany',
+      type: 'object',
+    },
+    AppPapCompanyScope: {
+      additionalProperties: false,
+      description:
+        'A scope the company offers: its name, what it allows, and its hints (PAP draft 0.3 §4.4).\n\nThe description is published in `auth.scopes`; the hints, when given, in\n`auth.scope_hints`. Without them the hints are derived from the Rules\nclasses of the tools behind the scope.',
+      properties: {
+        name: {
+          description:
+            'The scope, in OAuth syntax and never `poppy:`: `orders:read`',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          description:
+            'What it allows, as a person reads it: `Read your orders`',
+          title: 'Description',
+          type: 'string',
+        },
+        changes: {
+          anyOf: [
+            {
+              $ref: '#/$defs/PapScopeChanges',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'What its most consequential use changes: `none`, `reversible` or `irreversible`',
+        },
+        personal_data: {
+          anyOf: [
+            {
+              type: 'boolean',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: "Whether it reads or changes the person's personal data",
+          title: 'Personal Data',
+        },
+      },
+      required: ['name', 'description'],
+      title: 'AppPapCompanyScope',
       type: 'object',
     },
     AppPapConnection: {
@@ -1378,7 +1468,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
         },
         sign_in: {
-          description: 'Sign-in modes the application accepts, preferred first',
+          description:
+            'Sign-in modes the application accepts, preferred first; which of them the company offers is read from its issuer (`grant_types_supported`, Mediated from its `poppy.json`)',
           items: {
             $ref: '#/$defs/PapSignIn',
           },
@@ -1396,6 +1487,33 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['id', 'company'],
       title: 'AppPapConnection',
+      type: 'object',
+    },
+    AppPapExcludedTask: {
+      additionalProperties: false,
+      description:
+        'A task the company chose not to offer through the protocol (PAP draft 0.3 §8.1).',
+      properties: {
+        task: {
+          description: 'The task, as a person says it, at most 200 characters',
+          title: 'Task',
+          type: 'string',
+        },
+        alternative: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppPapAlternative',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'Another way to do it',
+        },
+      },
+      required: ['task'],
+      title: 'AppPapExcludedTask',
       type: 'object',
     },
     AppPapOperation: {
@@ -1452,6 +1570,52 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['action', 'summary'],
       title: 'AppPapOperation',
+      type: 'object',
+    },
+    AppPapReference: {
+      additionalProperties: false,
+      description:
+        'One place an alternative points to: an OpenAPI operation, an MCP tool, or a page.',
+      properties: {
+        type: {
+          $ref: '#/$defs/PapReferenceType',
+          description: '`openapi`, `mcp` or `web`',
+        },
+        url: {
+          description:
+            "Its HTTPS URL: the API's or server's the company lists, or the page",
+          title: 'Url',
+          type: 'string',
+        },
+        operation_id: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'For `openapi`: the operation',
+          title: 'Operation Id',
+        },
+        tool: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'For `mcp`: the tool',
+          title: 'Tool',
+        },
+      },
+      required: ['type', 'url'],
+      title: 'AppPapReference',
       type: 'object',
     },
     AppPapStanding: {
@@ -2637,6 +2801,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'How a Personal Agent Protocol company is reached (PAP §3.1).',
       enum: ['agent', 'openapi', 'mcp', 'web'],
       title: 'PapInterface',
+      type: 'string',
+    },
+    PapReferenceType: {
+      description: 'Where an alternative points (PAP draft 0.3 §8.2).',
+      enum: ['openapi', 'mcp', 'web'],
+      title: 'PapReferenceType',
+      type: 'string',
+    },
+    PapScopeChanges: {
+      description:
+        'The most consequential thing a scope lets an agent do (PAP draft 0.3 §4.4).',
+      enum: ['none', 'reversible', 'irreversible'],
+      title: 'PapScopeChanges',
       type: 'string',
     },
     PapSignIn: {

@@ -11,7 +11,8 @@ discovery, a personal agent's identity). Given the host's PAP Reactor
 (``build_pap_reactor`` with its ``pap.signer``, ``pap.dpopProofProvider``,
 ``pap.tokenStore``, ``pap.authorizationStateStore`` and
 ``pap.pairwiseUserIdStore`` contributions), it is a local runtime's personal
-agent (PR-03): it opens a pairwise Session at a company,
+agent (PR-03): it opens a Session at a company under its own Session Key
+(a DPoP key per Session, PAP draft 0.3),
 talks in a conversation, signs the person in with Device Sign-In, and
 confirms an operation the person approved on the host's own approval surface
 (``pap.approvalSurface``). Every answer is a summary: no token, proof,
@@ -43,6 +44,7 @@ from personal_agent_protocol import (
     resolve_pairwise_user_id,
 )
 from personal_agent_protocol.models import (
+    Author,
     ClientMetadata,
     DiscoveredCompany,
     JsonWebKeySet,
@@ -58,6 +60,15 @@ from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
 
 
+class PapScopeHint(BaseModel):
+    """What a company says one of its scopes allows at most (PAP draft 0.3 §4.4)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    changes: str
+    personal_data: bool
+
+
 class PapCompanySummary(BaseModel):
     """Verified public company capabilities safe to expose to an agent."""
 
@@ -67,7 +78,17 @@ class PapCompanySummary(BaseModel):
     domain: str
     protocol_version: str
     issuer: str | None
+    #: Direct and Device as the issuer's ``grant_types_supported`` offers them,
+    #: Mediated as ``poppy.json`` describes it.
     sign_in: tuple[str, ...]
+    #: The company's own scopes and what each allows (``auth.scopes``).
+    scopes: dict[str, str]
+    #: What each scope's most consequential use changes (``none``,
+    #: ``reversible``, ``irreversible``) and whether it touches personal data
+    #: (``auth.scope_hints``): the company's claim, read by the Rules.
+    scope_hints: dict[str, PapScopeHint]
+    #: The domains whose ``poppy.json`` names this issuer (``protected_resources``).
+    protected_resources: tuple[str, ...]
     interfaces: tuple[str, ...]
     extensions: dict[str, str]
 
@@ -95,14 +116,20 @@ class _IdentityClient(Protocol):
 
 
 def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
+    """A verified company as an agent may read it: capabilities, never endpoints or credentials."""
     document = company.document
-    sign_in: list[str] = []
-    if document.auth is not None:
-        sign_in = [
-            name
-            for name in ("direct", "device", "mediated")
-            if getattr(document.auth, name) is not None
-        ]
+    metadata = company.oauth_metadata
+    auth = document.auth
+    # Direct and Device from the issuer's grants, Mediated from poppy.json (§3.2, §4.4).
+    sign_in = [
+        name
+        for name, offered in (
+            ("direct", metadata is not None and metadata.offers_direct),
+            ("device", metadata is not None and metadata.offers_device),
+            ("mediated", auth is not None and auth.mediated is not None),
+        )
+        if offered
+    ]
     interfaces: list[str] = []
     if document.agent is not None:
         interfaces.extend(
@@ -117,6 +144,14 @@ def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
         protocol_version=document.protocol_version,
         issuer=document.auth.issuer if document.auth is not None else None,
         sign_in=tuple(sign_in),
+        scopes=dict(auth.scopes) if auth is not None else {},
+        scope_hints={
+            name: PapScopeHint(changes=hint.changes, personal_data=hint.personal_data)
+            for name, hint in (auth.scope_hints.items() if auth is not None else ())
+        },
+        protected_resources=tuple(metadata.protected_resources)
+        if metadata is not None
+        else (),
         interfaces=tuple(interfaces),
         extensions={name: value.version for name, value in document.extensions.items()},
     )
@@ -126,6 +161,7 @@ def _identity_summary(
     metadata: ClientMetadata,
     keys: JsonWebKeySet,
 ) -> PapAgentIdentitySummary:
+    """A verified personal agent as an agent may read it: no key coordinates."""
     algorithms = {
         key.alg or ("ES256" if key.kty == "EC" else "RS256") for key in keys.keys
     }
@@ -152,14 +188,27 @@ class PapOperationSummary(BaseModel):
     expires_at: str | None
 
 
+class PapReplyLine(BaseModel):
+    """One message the company wrote, with who wrote it (``author``, PAP draft 0.3 §7.4)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    #: The company's agent or one of its people.
+    author: Literal["agent", "human"]
+    #: The writer's display name, when the company gives one.
+    name: str | None = None
+    text: str
+
+
 class PapAnswer(BaseModel):
     """What a company said in a conversation turn."""
 
     model_config = ConfigDict(frozen=True)
 
     company: str
-    replies: tuple[str, ...]
-    #: ``sign_in_required`` or ``insufficient_scope`` with the scope it names.
+    replies: tuple[PapReplyLine, ...]
+    #: ``insufficient_scope`` with the scopes it names (PAP draft 0.3 §7.11):
+    #: signed out, the person signs in for them; signed in, with them.
     authorization: dict[str, str] | None
     operations: tuple[PapOperationSummary, ...]
     status: str | None
@@ -175,7 +224,7 @@ class PapSignInSummary(BaseModel):
         "waiting_for_the_person", "pending", "signed_in", "not_started", "unavailable"
     ]
     company: str
-    #: The company's domain, shown with its name next to the link (PAP 0.2 §4.6).
+    #: The company's domain, shown with its name next to the link (PAP draft 0.3 §4.6).
     company_domain: str | None = None
     #: Where the person signs in, on the company's own page.
     open: str | None = None
@@ -219,6 +268,7 @@ class PapCapabilityError(Exception):
 
 
 def _operation_summary(operation: Operation) -> PapOperationSummary:
+    """A proposed operation as the person is shown it."""
     return PapOperationSummary(
         operation_ref=operation.operation_id,
         revision=operation.revision,
@@ -230,9 +280,9 @@ def _operation_summary(operation: Operation) -> PapOperationSummary:
     )
 
 
-def session_ref(session_id: str) -> str:
-    """A Session named for a person: one-way, the Session ID is not recoverable from it."""
-    return hashlib.sha256(session_id.encode()).hexdigest()[:12]
+def session_ref(session_key: str) -> str:
+    """A Session named for a person: one-way, its Session Key's thumbprint is not recoverable from it."""
+    return hashlib.sha256(session_key.encode()).hexdigest()[:12]
 
 
 @dataclass
@@ -240,6 +290,7 @@ class _Link:
     """What the personal agent holds at one company for one person, in the host's memory."""
 
     company: DiscoveredCompany
+    #: The person's pairwise User ID there, asserted when a Session starts.
     pairwise_user_id: str
     session: SessionToken | None = None
     conversation_id: str | None = None
@@ -324,6 +375,7 @@ class PapPersonalAgentCapability:
     # -- a local runtime's personal agent (PR-03) ---------------------------
 
     def _host(self) -> tuple[PluginPlatform, httpx.AsyncClient, str]:
+        """The host's reactor, HTTP client and client_id, or ``no_host``."""
         if self._reactor is None or self._http is None or self._client_id is None:
             raise PapCapabilityError(
                 "no_host",
@@ -332,10 +384,12 @@ class PapPersonalAgentCapability:
         return self._reactor, self._http, self._client_id
 
     def _transport(self) -> DpopHttpClient:
+        """The DPoP transport, proving with each Session's own key."""
         reactor, http, _ = self._host()
         return DpopHttpClient(reactor=reactor, http_client=http)
 
     async def _link(self, user_id: str, domain: str) -> _Link:
+        """What this person holds at the company, its verified issuer unchanged."""
         reactor, _, _ = self._host()
         company = await self._company.discover(domain)
         if company.oauth_metadata is None:
@@ -363,14 +417,16 @@ class PapPersonalAgentCapability:
         return link
 
     def _who(self, link: _Link) -> dict[str, str]:
+        """Whose call it is: the tenant and the issuer (the Session Token's key says who)."""
         assert link.company.oauth_metadata is not None
+        # The Session Token's key says who; a call names no User ID (draft 0.3).
         return {
             "tenant_id": self._tenant_id,
-            "pairwise_user_id": link.pairwise_user_id,
             "issuer": link.company.oauth_metadata.issuer,
         }
 
     async def _session(self, link: _Link) -> SessionToken:
+        """The person's Session at the company, started under a new Session Key when there is none."""
         reactor, http, client_id = self._host()
         if link.session is None:
             metadata = link.company.oauth_metadata
@@ -403,7 +459,9 @@ class PapPersonalAgentCapability:
         client = ConversationClient(transport=self._transport())
         # The agent's own words (PAP-7.8-01): what it is given to say is not
         # known to be the person's, so it is never sent as theirs (P-08).
-        message = Message(id=generate_message_id(reactor), sender="agent", text=text)
+        message = Message(
+            id=generate_message_id(reactor), author=Author(type="agent"), text=text
+        )
         if link.conversation_id is None:
             page = await client.start(
                 endpoint, message, token=token, wait=10, **self._who(link)
@@ -420,7 +478,7 @@ class PapPersonalAgentCapability:
             )
         link.conversation_id = page.conversation_id
         link.cursor = getattr(page, "cursor", link.cursor)
-        replies: list[str] = []
+        replies: list[PapReplyLine] = []
         authorization: dict[str, str] | None = None
         operations: list[PapOperationSummary] = []
         for event in getattr(page, "events", []):
@@ -432,7 +490,13 @@ class PapPersonalAgentCapability:
                 and event.message.role == "company"
             ):
                 if event.message.text:
-                    replies.append(event.message.text)
+                    replies.append(
+                        PapReplyLine(
+                            author=event.message.author.type,
+                            name=event.message.author.name,
+                            text=event.message.text,
+                        )
+                    )
                 if event.message.operation is not None:
                     link.operations[event.message.operation.operation_id] = (
                         event.message.operation
@@ -452,20 +516,19 @@ class PapPersonalAgentCapability:
     ) -> PapSignInSummary:
         """Start Device Sign-In: the person signs in on the company's own page.
 
-        ``scopes`` must be among those the company offers for it (all of them
-        when omitted). Direct and Mediated Sign-In need a host page to hand the
-        browser or the typed values to; a local runtime does not offer them.
+        Device Sign-In is offered when the issuer's ``grant_types_supported``
+        lists it (PAP draft 0.3 §3.2). ``scopes`` must be among the issuer's
+        ``scopes_supported`` (all of them when omitted). Direct and Mediated
+        Sign-In need a host page to hand the browser or the typed values to; a
+        local runtime does not offer them.
         """
         reactor, http, client_id = self._host()
         link = await self._link(user_id, domain)
         name = link.company.document.organization.name
         metadata = link.company.oauth_metadata
-        device = (
-            link.company.document.auth.device if link.company.document.auth else None
-        )
         if (
             metadata is None
-            or device is None
+            or not metadata.offers_device
             or metadata.device_authorization_endpoint is None
         ):
             return PapSignInSummary(
@@ -473,7 +536,7 @@ class PapPersonalAgentCapability:
                 company=name,
                 reason=f"{domain} offers no Device Sign-In, the one a local runtime does",
             )
-        offered = tuple(device.scopes)
+        offered = tuple(metadata.scopes_supported or ())
         asked = offered if scopes is None else tuple(scopes)
         beyond = [scope for scope in asked if scope not in offered]
         if beyond or not asked:
@@ -495,12 +558,12 @@ class PapPersonalAgentCapability:
             client_id=client_id,
             scopes=asked,
             tenant_id=self._tenant_id,
-            pairwise_user_id=link.pairwise_user_id,
-            session_id=session.session_id,
-            # The SDK shows the link only on the company's issuer host or one of its
-            # poppy_domains, and names the company with it (PAP 0.2 §4.6).
+            # The code is bound to this Session's own key (draft 0.3 §4.6).
+            session_key=session.session_key,
+            # The SDK shows the link only on the company's issuer host or the host of
+            # one of its protected_resources, and names the company with it (§4.6).
             organization=link.company.document.organization,
-            poppy_domains=metadata.poppy_domains,
+            protected_resources=metadata.protected_resources,
         )
         link.device_reference = started.reference
         return PapSignInSummary(
@@ -544,6 +607,7 @@ class PapPersonalAgentCapability:
         )
 
     async def _metadata_of_self(self) -> ClientMetadata:
+        """This personal agent's own client metadata, read once."""
         _, _, client_id = self._host()
         if self._metadata is None:
             self._metadata = await self._identity.fetch_metadata(client_id)
@@ -621,6 +685,6 @@ class PapPersonalAgentCapability:
         if link is None or link.session is None:
             return None
         return {
-            "ref": session_ref(link.session.session_id),
+            "ref": session_ref(link.session.session_key),
             "signed_in": link.session.signed_in,
         }

@@ -7,9 +7,9 @@ title: Personal Agent Protocol
 
 Agent Runtimes depends on Personal Agent Protocol (PAP, or Poppy) in Python
 and TypeScript: `personal-agent-protocol[ui]` and
-`@datalayer/personal-agent-protocol` (0.25.0 and later, implementing
-[draft 0.2](https://personalagentprotocol.org/docs/0.2/spec) and the
-[Operations extension](https://personalagentprotocol.org/docs/0.2/extensions/operations)
+`@datalayer/personal-agent-protocol` (0.27.0, implementing
+[draft 0.3](https://personalagentprotocol.org/docs/0.3/spec) and the
+[Operations extension](https://personalagentprotocol.org/docs/0.3/extensions/operations)
 version 1; see the SDKs'
 [protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/)).
 
@@ -45,7 +45,11 @@ async with PapPersonalAgentCapability() as pap:
 ```
 
 `PapCompanySummary` contains the verified organization, domain, protocol
-version, issuer, sign-in choices, interface kinds, and extension versions.
+version, issuer, sign-in choices (Direct and Device as the issuer's
+`grant_types_supported` offers them, Mediated as `poppy.json` describes it),
+the company's own scopes with what each allows and their hints
+(`auth.scopes`, `auth.scope_hints`), the issuer's `protected_resources`,
+interface kinds, and extension versions.
 `PapAgentIdentitySummary` contains the verified client identity, redirect
 count, signing algorithms, and extension versions. Neither contains endpoint
 operational endpoint URLs, response bodies, JWK coordinates, assertions,
@@ -67,7 +71,8 @@ pap = PapPersonalAgentCapability(
     client_id="https://atlas.example/agent.json", tenant_id="local",
 )
 answer = await pap.ask("manzanita.example", "Where is my order?", user_id="ada")
-# answer.authorization == {"error": "sign_in_required", "scope": "orders:read orders:write"}
+# answer.authorization == {"error": "insufficient_scope", "scope": "orders:read orders:write"}
+# answer.replies[0].author == "agent": each reply says who wrote it (its agent or one of its people)
 started = await pap.sign_in("manzanita.example", user_id="ada")
 # started.open and started.code are for the person, on the company's own page
 status = await pap.sign_in_status("manzanita.example", user_id="ada")
@@ -77,7 +82,8 @@ done = await pap.confirm("manzanita.example", proposed.operation_ref, proposed.r
 ```
 
 The host contributes to the SDK's points what a personal agent holds: its
-signing key (`pap.signer`), DPoP keys (`pap.dpopProofProvider`), tokens
+signing key (`pap.signer`), a DPoP key per Session, the Session Key, whose
+thumbprint names the Session (`pap.dpopProofProvider`), tokens
 (`pap.tokenStore`), one-use authorization state
 (`pap.authorizationStateStore`), pairwise identities
 (`pap.pairwiseUserIdStore`) and the person's approval surface
@@ -87,11 +93,11 @@ approval surface, `confirm` sends nothing (`no_approval_surface`).
 
 | Method | Answers | What never crosses |
 | --- | --- | --- |
-| `ask(domain, text, user_id=)` | `PapAnswer`: the company's words, what it asks for (`sign_in_required`, `insufficient_scope` and the scope), the operations it proposed | the Session Token, DPoP proofs, the pairwise id |
-| `sign_in(domain, user_id=, scopes=)` | `PapSignInSummary`: the company's link and the code the person types there; only scopes the company offers for Device Sign-In | the private device code |
+| `ask(domain, text, user_id=)` | `PapAnswer`: the company's words, each with its `author` (`agent` or `human`) and name, what it asks for (`insufficient_scope` and the scopes: signed out, to sign in for; signed in, to ask for again), the operations it proposed | the Session Token, DPoP proofs, the Session Key, the pairwise id |
+| `sign_in(domain, user_id=, scopes=)` | `PapSignInSummary`: the company's link and the code the person types there; offered when the issuer's `grant_types_supported` lists Device Sign-In, only scopes in its `scopes_supported` | the private device code |
 | `sign_in_status(domain, user_id=)` | `pending`, `signed_in` with granted and missing scopes | the Account Token |
 | `confirm(domain, operation_ref, revision, user_id=)` | `PapConfirmSummary`: `confirmed` with the result, `not_approved`, `terms_changed` (asked again) | the approval itself is the person's, on the host's surface |
-| `session_of(domain, user_id=)` | a one-way reference to the Session and whether someone is signed in | the Session ID |
+| `session_of(domain, user_id=)` | a one-way reference to the Session and whether someone is signed in | the Session Key's thumbprint |
 
 Only Device Sign-In is offered locally: Direct Sign-In needs a page the
 company returns the browser to, and Mediated Sign-In a trusted page to type
@@ -140,7 +146,7 @@ proof in React state. Protocol details remain canonical in the PAP
 The `session-lifecycle` pair drives the real `SessionClient` through signed-out
 start, one DPoP nonce challenge, and renewal. Its deterministic company
 transport makes the wire behavior observable without external credentials,
-while the Loop tool returns only lifecycle evidence. Session IDs, pairwise
+while the Loop tool returns only lifecycle evidence. Session Keys, pairwise
 subjects, assertions, proofs, nonces, and tokens remain host-owned. See the
 canonical [Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).
 
@@ -322,7 +328,17 @@ pap:
     enabled: true                  # publish it as a company at Ship
     signed_out: true               # personal agents may ask before sign-in
     interfaces: [agent, openapi, mcp]
-    scopes: [orders:read, orders:write]
+    scopes:                        # its own, never poppy:; each says what it allows
+      - name: orders:read
+        description: Read your orders
+        changes: none              # hints, when the Maker says them: none | reversible | irreversible
+        personal_data: true
+      - name: orders:write
+        description: Exchange an order you approved
+    excluded_tasks:                # what it does not do through the protocol, with another way
+      - task: Cancel an order
+        alternative:
+          instructions: Cancel it from your account on the website.
     extensions: [operations]
     personal_agents: registered    # any | registered
     registered_agents:
@@ -341,7 +357,15 @@ agentspecs validates the block (0.0.77 and later): a company admitting nobody
 signed out offers at least one scope, `registered_agents` are HTTPS
 `client_id` URLs named only with `personal_agents: registered`, operations
 require the `operations` extension, and each action and each tool is declared
-once. `web` is not an interface a company application offers yet.
+once. `web` is not an interface a company application offers yet. Since
+agentspecs 0.0.126 (PAP draft 0.3) each scope is an object: its `name` (never
+under the reserved `poppy:` prefix), its `description`, published as the
+company's `auth.scopes`, and, when given, its hints `changes` and
+`personal_data`, published as `auth.scope_hints` (left out, Datalayer derives
+them from the Rules classes of the tools behind the scope); `excluded_tasks`
+are published at the company's `excluded_tasks` document, each with its
+`alternative` (`instructions`, `references`, or both). A list of scope
+names is refused.
 
 Datalayer's company service publishes the application and asks it over A2A,
 marking the message `metadata.pap`. In such a turn the runtime

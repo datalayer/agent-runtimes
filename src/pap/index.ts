@@ -6,6 +6,8 @@
 import {
   AgentIdentityClient,
   discoverCompany,
+  offersDevice,
+  offersDirect,
   type DiscoveredCompany,
   type DiscoveryOptions,
   type JsonWebKeySet,
@@ -19,7 +21,22 @@ export interface PapCompanySummary {
   readonly domain: string;
   readonly protocolVersion: string;
   readonly issuer: string | null;
+  /**
+   * Direct and Device as the issuer's `grant_types_supported` offers them,
+   * Mediated as `poppy.json` describes it (PAP draft 0.3 §3.2, §4.4).
+   */
   readonly signIn: readonly string[];
+  /** The company's own scopes and what each allows (`auth.scopes`). */
+  readonly scopes: Readonly<Record<string, string>>;
+  /**
+   * What each scope changes at most and whether it touches personal data
+   * (`auth.scope_hints`): the company's claim.
+   */
+  readonly scopeHints: Readonly<
+    Record<string, { readonly changes: string; readonly personalData: boolean }>
+  >;
+  /** The domains whose `poppy.json` names this issuer (`protected_resources`). */
+  readonly protectedResources: readonly string[];
   readonly interfaces: readonly string[];
   readonly extensions: Readonly<Record<string, string>>;
 }
@@ -85,10 +102,13 @@ export class PapPersonalAgentCapability {
     options: DiscoveryOptions = {},
   ): Promise<PapCompanySummary> {
     const company = await this.#discover(domain, options);
-    const { document } = company;
-    const signIn = (['direct', 'device', 'mediated'] as const).filter(
-      method => document.auth?.[method] !== undefined,
-    );
+    const { document, oauthMetadata } = company;
+    const auth = document.auth;
+    const signIn = [
+      ...(oauthMetadata && offersDirect(oauthMetadata) ? ['direct'] : []),
+      ...(oauthMetadata && offersDevice(oauthMetadata) ? ['device'] : []),
+      ...(auth?.mediated !== undefined ? ['mediated'] : []),
+    ];
     const interfaces = [
       ...(document.agent?.protocols.map(protocol => `agent:${protocol.type}`) ??
         []),
@@ -101,6 +121,21 @@ export class PapPersonalAgentCapability {
       protocolVersion: document.protocol_version,
       issuer: document.auth?.issuer ?? null,
       signIn: Object.freeze(signIn),
+      scopes: Object.freeze({ ...(auth?.scopes ?? {}) }),
+      scopeHints: Object.freeze(
+        Object.fromEntries(
+          Object.entries(auth?.scope_hints ?? {}).map(([name, hint]) => [
+            name,
+            Object.freeze({
+              changes: hint.changes,
+              personalData: hint.personal_data,
+            }),
+          ]),
+        ),
+      ),
+      protectedResources: Object.freeze([
+        ...(oauthMetadata?.protected_resources ?? []),
+      ]),
       interfaces: Object.freeze(interfaces),
       extensions: extensionVersions(document.extensions),
     });

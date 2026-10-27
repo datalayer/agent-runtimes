@@ -799,8 +799,54 @@ export interface AppConnectionSpec {
 /** How a Personal Agent Protocol company is reached (PAP §3.1). */
 export type PapInterface = 'agent' | 'openapi' | 'mcp' | 'web';
 
-/** How a person signs in at a company, in the order the application prefers. */
+/**
+ * How a person signs in at a company, in the order the application prefers;
+ * which of them the company offers is read from its issuer
+ * (`grant_types_supported`, Mediated from its `poppy.json`; PAP draft 0.3).
+ */
 export type PapSignIn = 'direct' | 'device' | 'mediated';
+
+/** The most consequential thing a scope lets an agent do (PAP draft 0.3 §4.4). */
+export type PapScopeChanges = 'none' | 'reversible' | 'irreversible';
+
+/**
+ * A scope the company offers (PAP draft 0.3 §4.4): never under `poppy:`,
+ * with what it allows (published as `auth.scopes`) and, when the Maker
+ * says so, its hints (`auth.scope_hints`); left out, they are derived from
+ * the Rules classes of the tools behind it.
+ */
+export interface AppPapCompanyScopeSpec {
+  /** The scope: `orders:read`. */
+  name: string;
+  /** What it allows, as a person reads it. */
+  description: string;
+  changes?: PapScopeChanges;
+  personalData?: boolean;
+}
+
+/** Where an alternative points (PAP draft 0.3 §8.2). */
+export interface AppPapReferenceSpec {
+  type: 'openapi' | 'mcp' | 'web';
+  /** Its HTTPS URL: an API or server the company lists, or a page. */
+  url: string;
+  /** For `openapi`: the operation. */
+  operationId?: string;
+  /** For `mcp`: the tool. */
+  tool?: string;
+}
+
+/** Another way to do an excluded task: instructions, references, or both. */
+export interface AppPapAlternativeSpec {
+  instructions?: string;
+  references: AppPapReferenceSpec[];
+}
+
+/** A task the company does not offer through the protocol (PAP draft 0.3 §8.1). */
+export interface AppPapExcludedTaskSpec {
+  /** The task, as a person says it, at most 200 characters. */
+  task: string;
+  alternative?: AppPapAlternativeSpec;
+}
 
 /**
  * A company the application works with as a personal agent
@@ -830,7 +876,10 @@ export interface AppPapCompanySpec {
   /** Whether a personal agent may ask before signing in. */
   signedOut: boolean;
   interfaces: PapInterface[];
-  scopes: string[];
+  /** The scopes it offers, each with what it allows and its hints. */
+  scopes: AppPapCompanyScopeSpec[];
+  /** Tasks it does not offer through the protocol, each with another way when there is one. */
+  excludedTasks: AppPapExcludedTaskSpec[];
   extensions: string[];
   /** `any`, or `registered` personal agents only. */
   personalAgents: 'any' | 'registered';
@@ -894,8 +943,9 @@ export interface AppPapOperationSpec {
 }
 
 /**
- * A Personal Agent Protocol profile Datalayer speaks: a draft the PAP SDK
- * implements (`draft-01` is its `PROTOCOL_PROFILE` 0.1; S-03).
+ * A Personal Agent Protocol profile Datalayer speaks (S-03): `draft-01` names
+ * the profile the Appspec has said since the first draft; the SDK it is read
+ * with implements draft 0.3.
  */
 export type PapProfile = 'draft-01';
 

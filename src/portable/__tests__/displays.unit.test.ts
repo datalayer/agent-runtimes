@@ -177,8 +177,8 @@ describe('protocol displays (M-037)', () => {
         status: 'queued',
         responder: 'human',
         replies: [
-          { sender: 'agent', text: 'A person will take over.' },
-          { sender: 'human', text: 'Hello, I am Sam.' },
+          { author: 'agent', text: 'A person will take over.' },
+          { author: 'human', name: 'Sam', text: 'Hello, I am Sam.' },
         ],
       }),
     );
@@ -186,15 +186,23 @@ describe('protocol displays (M-037)', () => {
       kind: 'replies',
       status: 'queued',
       responder: 'human',
+      replies: [
+        { author: 'agent', name: null, text: 'A person will take over.' },
+        { author: 'human', name: 'Sam', text: 'Hello, I am Sam.' },
+      ],
     });
     expect(replyAuthor('shop.example', 'human')).toBe(
       'shop.example, one of its people',
     );
+    expect(replyAuthor('shop.example', 'human', 'Sam')).toBe(
+      'shop.example, one of its people (Sam)',
+    );
+    // PAP draft 0.2's `sender` is not read (draft 0.3: `author`).
     expect(
       protocolDisplayOf(
         wire('replies', {
           company: 'shop.example',
-          conversation: 'conv 1',
+          conversation: 'c',
           replies: [{ sender: 'agent', text: 'x' }],
         }),
       )!.kind,
@@ -203,8 +211,17 @@ describe('protocol displays (M-037)', () => {
       protocolDisplayOf(
         wire('replies', {
           company: 'shop.example',
+          conversation: 'conv 1',
+          replies: [{ author: 'agent', text: 'x' }],
+        }),
+      )!.kind,
+    ).toBe('unknown');
+    expect(
+      protocolDisplayOf(
+        wire('replies', {
+          company: 'shop.example',
           conversation: 'c',
-          replies: [{ sender: 'robot', text: 'x' }],
+          replies: [{ author: 'robot', text: 'x' }],
         }),
       )!.kind,
     ).toBe('unknown');

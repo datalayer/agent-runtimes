@@ -6,7 +6,7 @@
 /**
  * A Direct Conversation the person types in themselves (P-08,
  * M-038): a linked sub-conversation under the one a company answered
- * in, where the person's own words go to the company as `sender: human`,
+ * in, where the person's own words go to the company as `author: human`,
  * never through the application's model, until the company closes it.
  *
  * Each message takes a one-use ticket IAM gives the person for one
@@ -30,7 +30,12 @@ export type DirectTarget = {
 };
 
 /** One reply of the company, and who wrote it there. */
-export type DirectReply = { text: string; from: 'agent' | 'human' };
+/** A company's reply: who wrote it (`author`, PAP draft 0.3), by name when the company gives one. */
+export type DirectReply = {
+  text: string;
+  from: 'agent' | 'human';
+  name?: string;
+};
 
 /** What the company answered, and where the conversation stands. */
 export type DirectAnswer = {
@@ -119,6 +124,9 @@ export function directAnswerOf(raw: unknown, company: string): DirectAnswer {
     replies: (replies as DirectReply[]).map(reply => ({
       text: reply.text,
       from: reply.from,
+      ...(typeof reply.name === 'string' && reply.name.trim()
+        ? { name: reply.name.trim() }
+        : {}),
     })),
     status: data.status,
     responder: typeof data.responder === 'string' ? data.responder : '',
@@ -224,7 +232,12 @@ export function directClient({
 export type DirectClient = ReturnType<typeof directClient>;
 
 /** One line of the Direct Conversation: the person's, or the company's (its agent or one of its people). */
-export type DirectLine = { from: 'you' | 'agent' | 'human'; text: string };
+export type DirectLine = {
+  from: 'you' | 'agent' | 'human';
+  text: string;
+  /** The writer's name at the company, when it gives one (`author.name`, PAP draft 0.3). */
+  name?: string;
+};
 
 /** A Direct Conversation open under its parent: the parent's composer is locked while it is. */
 export type DirectOpen = {
@@ -260,7 +273,11 @@ export function withDirectAnswer(
       ...(mine !== undefined
         ? [{ from: 'you' as const, text: mine.trim() }]
         : []),
-      ...answer.replies.map(reply => ({ from: reply.from, text: reply.text })),
+      ...answer.replies.map(reply => ({
+        from: reply.from,
+        text: reply.text,
+        ...(reply.name ? { name: reply.name } : {}),
+      })),
     ],
     cursor: answer.cursor || open.cursor,
     closed: answer.status === 'closed',
@@ -271,6 +288,6 @@ export function withDirectAnswer(
 export const directAuthor = (line: DirectLine): string =>
   line.from === 'you'
     ? DIRECT_WORDS.you
-    : line.from === 'agent'
-      ? DIRECT_WORDS.agent
-      : DIRECT_WORDS.human;
+    : `${line.from === 'agent' ? DIRECT_WORDS.agent : DIRECT_WORDS.human}${
+        line.name ? ` (${line.name})` : ''
+      }`;

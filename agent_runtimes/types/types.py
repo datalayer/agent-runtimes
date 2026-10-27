@@ -2649,6 +2649,34 @@ class AppPapOperationSpec(BaseModel):
     user_approval_required: bool = Field(default=True)
 
 
+class AppPapCompanyScopeSpec(BaseModel):
+    """A scope a company application offers (PAP draft 0.3 §4.4), as agentspecs checks it."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(..., description="The scope: `orders:read`")
+    description: str = Field(..., description="What it allows, as a person reads it")
+    changes: Optional[str] = Field(
+        default=None,
+        description="`none`, `reversible` or `irreversible`; derived from its tools when unsaid",
+    )
+    personal_data: Optional[bool] = Field(
+        default=None, description="Whether it touches personal data"
+    )
+
+
+class AppPapExcludedTaskSpec(BaseModel):
+    """A task a company application does not offer through the protocol (PAP draft 0.3 §8.1)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    task: str
+    alternative: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Another way: `instructions` and/or `references`, as agentspecs checks it",
+    )
+
+
 class AppPapCompanySpec(BaseModel):
     """The application as a company personal agents work with."""
 
@@ -2656,9 +2684,14 @@ class AppPapCompanySpec(BaseModel):
 
     enabled: bool = Field(default=False)
     signed_out: bool = Field(default=True)
-    scopes: List[str] = Field(default_factory=list)
+    scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
+    excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)
     operations: List[AppPapOperationSpec] = Field(default_factory=list)
+
+    def scope_names(self) -> List[str]:
+        """The names of the scopes it offers, in order."""
+        return [scope.name for scope in self.scopes]
 
 
 class AppPapSpec(BaseModel):

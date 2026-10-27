@@ -42,6 +42,9 @@ import type {
   AppActionSpec,
   AppCommandSpec,
   AppConnectionSpec,
+  AppPapAlternativeSpec,
+  AppPapCompanyScopeSpec,
+  AppPapExcludedTaskSpec,
   AppPapSpec,
   AppPapStandingSpec,
   PapProfile,
@@ -570,7 +573,13 @@ function parsePap(data: Data): AppPapSpec {
         PAP_INTERFACES,
         PAP_DEFAULT_INTERFACES,
       ),
-      scopes: texts(company.scopes),
+      scopes: records(company.scopes).map(parsePapCompanyScope),
+      excludedTasks: records(company.excluded_tasks).map(task => ({
+        task: text(task.task),
+        ...(isData(task.alternative)
+          ? { alternative: parsePapAlternative(task.alternative) }
+          : {}),
+      })),
       extensions: texts(company.extensions),
       personalAgents: oneOf(
         company.personal_agents,
@@ -588,6 +597,82 @@ function parsePap(data: Data): AppPapSpec {
         userApprovalRequired: flag(operation.user_approval_required, true),
       })),
     },
+  };
+}
+
+const PAP_SCOPE_CHANGES = ['none', 'reversible', 'irreversible'] as const;
+const PAP_REFERENCE_TYPES = ['openapi', 'mcp', 'web'] as const;
+
+/** A scope a company offers (PAP draft 0.3 §4.4), as agentspecs reads it. */
+function parsePapCompanyScope(data: Data): AppPapCompanyScopeSpec {
+  const changes = PAP_SCOPE_CHANGES.find(value => value === data.changes);
+  return {
+    name: text(data.name),
+    description: text(data.description),
+    ...(changes ? { changes } : {}),
+    ...(typeof data.personal_data === 'boolean'
+      ? { personalData: data.personal_data }
+      : {}),
+  };
+}
+
+/** Another way to do an excluded task (PAP draft 0.3 §8.2), as agentspecs reads it. */
+function parsePapAlternative(data: Data): AppPapAlternativeSpec {
+  return {
+    ...(typeof data.instructions === 'string'
+      ? { instructions: data.instructions }
+      : {}),
+    references: records(data.references).map(reference => ({
+      type: oneOf(reference.type, PAP_REFERENCE_TYPES, 'web'),
+      url: text(reference.url),
+      ...(typeof reference.operation_id === 'string'
+        ? { operationId: reference.operation_id }
+        : {}),
+      ...(typeof reference.tool === 'string' ? { tool: reference.tool } : {}),
+    })),
+  };
+}
+
+/** A company scope as its document says it. */
+function dumpPapCompanyScope(scope: AppPapCompanyScopeSpec): Data {
+  return {
+    name: scope.name,
+    description: scope.description,
+    ...(scope.changes !== undefined ? { changes: scope.changes } : {}),
+    ...(scope.personalData !== undefined
+      ? { personal_data: scope.personalData }
+      : {}),
+  };
+}
+
+/** An excluded task as its document says it. */
+function dumpPapExcludedTask(task: AppPapExcludedTaskSpec): Data {
+  const alternative = task.alternative;
+  return {
+    task: task.task,
+    ...(alternative
+      ? {
+          alternative: {
+            ...(alternative.instructions !== undefined
+              ? { instructions: alternative.instructions }
+              : {}),
+            ...(alternative.references.length
+              ? {
+                  references: alternative.references.map(reference => ({
+                    type: reference.type,
+                    url: reference.url,
+                    ...(reference.operationId !== undefined
+                      ? { operation_id: reference.operationId }
+                      : {}),
+                    ...(reference.tool !== undefined
+                      ? { tool: reference.tool }
+                      : {}),
+                  })),
+                }
+              : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -653,7 +738,11 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         .value('enabled', pap.company.enabled, false)
         .value('signed_out', pap.company.signedOut, true)
         .list('interfaces', pap.company.interfaces, [...PAP_DEFAULT_INTERFACES])
-        .list('scopes', pap.company.scopes)
+        .list('scopes', pap.company.scopes.map(dumpPapCompanyScope))
+        .list(
+          'excluded_tasks',
+          pap.company.excludedTasks.map(dumpPapExcludedTask),
+        )
         .list('extensions', pap.company.extensions)
         .value<string>('personal_agents', pap.company.personalAgents, 'any')
         .list('registered_agents', pap.company.registeredAgents)

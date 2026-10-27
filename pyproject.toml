@@ -41,7 +41,10 @@ dependencies = [
     # the reference company of PapCompanyCapability; PR-03).
     # 0.25.0: PAP draft 0.2 (Device Sign-In names the company, assertions name
     # its issuer, token_for_mcp); a 0.2 personal agent uses only 0.2 companies.
-    "personal-agent-protocol[ui]>=0.25.0,<1",
+    # 0.27.0: PAP draft 0.3 (a DPoP key per Session, its thumbprint the
+    # Session Key; insufficient_scope; protected_resources; the issuer's
+    # grant_types_supported; author); a 0.3 personal agent uses only 0.3 companies.
+    "personal-agent-protocol[ui]>=0.27.0,<0.28",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
@@ -59,7 +62,8 @@ dependencies = [
     # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file, MH-12) and every
     # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
     # agentspecs 0.0.124: interface.theme.variant may be vscode (T-30), as primer-addons 1.0.41 lists it.
-    "agentspecs>=0.0.124",
+    # agentspecs 0.0.127: PAP draft 0.3 in the pap block (company scopes with descriptions and hints, excluded tasks, the web interface) and pap_feedback classed send.
+    "agentspecs>=0.0.127",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

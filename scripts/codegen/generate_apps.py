@@ -62,6 +62,10 @@ CAMEL = {
     "personal_agents": "personalAgents",
     "registered_agents": "registeredAgents",
     "user_approval_required": "userApprovalRequired",
+    # Its company scopes' hints and excluded tasks (PAP draft 0.3).
+    "personal_data": "personalData",
+    "excluded_tasks": "excludedTasks",
+    "operation_id": "operationId",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights

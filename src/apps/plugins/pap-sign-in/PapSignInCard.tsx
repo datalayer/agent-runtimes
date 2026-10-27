@@ -9,7 +9,8 @@
  * new tab, the code large and copyable with a code to scan for Device
  * Sign-In, Datalayer's own page for Mediated Sign-In (where the person types
  * what the company asks, never in the chat) with where a code was sent,
- * until when, and *I have signed in: check again* — sent as the
+ * until when, what the company needs (the scopes its `insufficient_scope`
+ * named, PAP draft 0.3), and *I have signed in: check again* — sent as the
  * person's next message — when the chat can send one, otherwise a line
  * asking them to say so. What it reads is `signIn`'s.
  *
@@ -95,7 +96,7 @@ export function PapSignInCard({
   };
   // Who the person signs in at: the company itself for a Direct Sign-In (P-04), the page's host otherwise.
   const named = read.company ?? read.host;
-  // The company that asks, by name and domain, beside the page (PAP 0.2 §4.6, §4.7).
+  // The company that asks, by name and domain, beside the page (PAP §4.6, §4.7).
   const org = read.organization;
   const title =
     read.mode === 'mediated'

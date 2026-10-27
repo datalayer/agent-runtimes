@@ -98,7 +98,7 @@ async def _journey(
     )
     said.append(signed_out)
     assert signed_out.authorization == {
-        "error": "sign_in_required",
+        "error": "insufficient_scope",
         "scope": "orders:read orders:write",
     }
     started = await capability.sign_in(DOMAIN, user_id="ada")
@@ -219,13 +219,21 @@ async def test_what_it_says_is_sent_as_the_agents_words(
     """PAP-7.8-01 (P-08): never as the person's own words."""
     from personal_agent_protocol.demo.manzanita import ManzanitaAgent
 
-    senders: list[str] = []
+    authors: list[str] = []
     respond = ManzanitaAgent.respond
 
     async def spy(self: Any, turn: Any) -> Any:
-        senders.append(turn.sender)
+        authors.append(turn.author)
         return await respond(self, turn)
 
     monkeypatch.setattr(ManzanitaAgent, "respond", spy)
-    await _journey(Surface(True), tmp_path)
-    assert senders and set(senders) == {"agent"}
+    _, _, _, said = await _journey(Surface(True), tmp_path)
+    assert authors and set(authors) == {"agent"}
+    # And the company's words come back with who wrote them (draft 0.3 §7.4).
+    replies = [
+        reply
+        for answer in said
+        if hasattr(answer, "replies")
+        for reply in answer.replies
+    ]
+    assert replies and {reply.author for reply in replies} == {"agent"}
