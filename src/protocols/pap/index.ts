@@ -21,7 +21,7 @@ import { DEFAULT_ORDER, ProtocolDescriptions } from '../core';
 
 export const PAP_PLUGIN = 'agent-runtimes.protocols.pap';
 /** The PAP draft the SDK implements (its `PROTOCOL_PROFILE`; Python reads it from the SDK). */
-export const PAP_PROTOCOL_PROFILE = '0.2';
+export const PAP_PROTOCOL_PROFILE = '0.3';
 
 export const PapPlugin = definePlugin({
   name: PAP_PLUGIN,

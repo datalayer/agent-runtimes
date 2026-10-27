@@ -607,7 +607,7 @@ class PapPersonalAgentCapability:
         )
 
     async def _metadata_of_self(self) -> ClientMetadata:
-        """This personal agent's own client metadata, read once."""
+        """Read this personal agent's own client metadata, once."""
         _, _, client_id = self._host()
         if self._metadata is None:
             self._metadata = await self._identity.fetch_metadata(client_id)
