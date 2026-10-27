@@ -155,7 +155,7 @@
         "@datalayer/agent-teams": "^1.0.0",
         "@datalayer/core": "^1.2.18",
         "@datalayer/decks": "^1.0.4",
-        "@datalayer/design": "^1.0.9",
+        "@datalayer/design": "^1.0.10",
         "@datalayer/icons-react": "^1.0.16",
         "@datalayer/jupyter-lexical": "^2.0.18",
         "@datalayer/jupyter-react": "^2.0.20",

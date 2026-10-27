@@ -88,37 +88,40 @@ async function settle(): Promise<void> {
 }
 
 describe('the orb', () => {
-  it('thinks while a turn runs, and is idle otherwise', () => {
-    expect(orbStateOf('thinking')).toBe('thinking');
-    expect(orbStateOf('working')).toBe('thinking');
-    expect(orbStateOf('speaking')).toBe('thinking');
+  it('acts out every state of the assistant, idle when it has none', () => {
     for (const state of [
       'idle',
-      'waiting',
-      'paused',
       'greeting',
+      'thinking',
+      'working',
+      'waiting',
+      'speaking',
+      'paused',
       'goodbye',
     ] as const) {
-      expect(orbStateOf(state)).toBe('idle');
+      expect(orbStateOf(state)).toBe(state);
     }
     expect(orbStateOf(undefined)).toBe('idle');
   });
 
-  it('is contributed by Datalayer’s plugin in both tones', async () => {
+  it('is contributed by Datalayer’s plugin once, in the theme’s colours, named Orb', async () => {
     const reactor = buildReactorFromPlugins([AssistantCharactersPlugin]);
     await reactor.start();
-    const ids = assistantCharactersOf(reactor).map(entry => entry.id);
-    expect(ids).toContain('orb');
-    expect(ids).toContain('orb-theme');
+    const orbs = assistantCharactersOf(reactor).filter(entry =>
+      entry.id.startsWith('orb'),
+    );
+    expect(orbs.map(entry => [entry.id, entry.character.name])).toEqual([
+      ['orb', 'Orb'],
+    ]);
   });
 
-  it('draws the design library’s orb in its tone and the stage’s state', async () => {
-    const Orb = shippedAssistantCharacter('orb-theme').Drawing;
-    const host = await draw(<Orb size={40} state="thinking" />);
+  it('draws the design library’s orb in the theme’s colours and the stage’s state', async () => {
+    const Orb = shippedAssistantCharacter('orb').Drawing;
+    const host = await draw(<Orb size={40} state="working" />);
     await settle();
     const svg = host.querySelector('svg[data-orb-tone]');
     expect(svg?.getAttribute('data-orb-tone')).toBe('theme');
-    expect(svg?.getAttribute('data-orb-state')).toBe('thinking');
+    expect(svg?.getAttribute('data-orb-state')).toBe('working');
   });
 });
 

@@ -184,14 +184,14 @@ for (const mode of MODES) {
 }
 
 // The gallery's grid (T-16, T-22, T-26, T-27): every character — Datalayer's
-// six (the orb's two among them), the owl a plugin contributes and a test sprite read by the clippy.js
+// five (its orb among them), the owl a plugin contributes and a test sprite read by the clippy.js
 // reader — in every state and stepped aside, still, in both modes.
 for (const mode of MODES) {
   test.describe(`assistant gallery · ${mode}`, () => {
     test.use({ colorScheme: mode, viewport: { width: 880, height: 520 } });
     test('every character in every state', async ({ page }) => {
       await show(page, `gallery=grid&theme=loop&mode=${mode}`);
-      await expect(page.locator('[data-gallery-cell]')).toHaveCount(8 * 9);
+      await expect(page.locator('[data-gallery-cell]')).toHaveCount(7 * 9);
       await expect(
         page.locator(
           '[data-gallery-cell="sprite-idle"] [data-sprite-animation]',
@@ -199,7 +199,7 @@ for (const mode of MODES) {
       ).toHaveAttribute('data-sprite-animation', 'Idle1_1');
       await expect(
         page.locator('[data-gallery-cell$="-aside"] [data-assistant-aside]'),
-      ).toHaveCount(8);
+      ).toHaveCount(7);
       for (const cell of await page
         .locator('[data-gallery-cell$="-aside"] [data-assistant-state]')
         .all()) {

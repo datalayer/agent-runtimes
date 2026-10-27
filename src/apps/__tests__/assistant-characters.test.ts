@@ -54,7 +54,6 @@ describe('the characters of the floating assistant', () => {
       'cat',
       'eyes',
       'orb',
-      'orb-theme',
       'own',
     ]);
     expect(assistantCharacterNamed(reactor, 'own')).toBe(robot);
@@ -69,7 +68,6 @@ describe('the characters of the floating assistant', () => {
       'cat',
       'eyes',
       'orb',
-      'orb-theme',
     ]);
     expect(assistantCharacterNamed(reactor, 'wizard')).toHaveProperty(
       'Drawing',

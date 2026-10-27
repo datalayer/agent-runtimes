@@ -753,8 +753,8 @@ export interface AppThemeSpec {
 
 /**
  * An avatar named by id (T-24): the id an enabled plugin contributes it
- * under to `loop.assistant.character` — Datalayer's orb is `orb`
- * (iridescent) and `orb-theme` (the theme's colours); its own drawings are
+ * under to `loop.assistant.character` — Datalayer's orb is `orb`, in the
+ * theme's colours, acting out each of the assistant's states; its own drawings are
  * `paperclip`, `wizard`, `cat` and `eyes`; the characters clippy.js
  * publishes, Microsoft's and fetched from jsDelivr when shown, are
  * `clippy-js-clippy` to `clippy-js-bonzi`; a plugin may bring another
