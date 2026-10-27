@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Button, Label, Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, Card } from '@datalayer/primer-addons';
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -128,13 +128,9 @@ export function ToolApprovalCard({
       : `, ${statusDescriptor}`;
 
   return (
-    <Box
-      p={3}
-      borderRadius={2}
-      border="1px solid"
-      borderColor={isRead ? 'transparent' : 'accent.muted'}
-      bg={isRead ? 'canvas.default' : 'accent.subtle'}
-    >
+    // primer-addons' Card, as the other pages' rows: an unread request is the
+    // selected one (an accent border on an accent wash).
+    <Card border shadow="none" display="block" p={3} selected={!isRead}>
       <Box
         display="flex"
         justifyContent="space-between"
@@ -323,7 +319,7 @@ export function ToolApprovalCard({
           </Button>
         </Box>
       </Box>
-    </Box>
+    </Card>
   );
 }
 
