@@ -6,7 +6,8 @@
 The catalogue's Appspec, its rules, its record and Gmail's tools — under the
 names and with the arguments the Google Workspace server gives them — served
 from a `FixtureMailbox`, with a scripted model in place of its agent's. No
-real mailbox is reached: the Google Workspace server is not enabled (W-02).
+real mailbox is reached here: a person's Gmail is reached on Datalayer only,
+in their name, through IAM (W-02).
 
 What is shown: woken by a message arriving, with nobody there, it reads,
 labels, archives and drafts by itself, and a send waits for the person, its

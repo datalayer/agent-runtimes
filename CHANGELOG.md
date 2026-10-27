@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.86
+
+27 October 2026. Personal Agent Protocol draft 0.3 (personal-agent-protocol 0.27.0, agentspecs 0.0.127), and Inbox triage is offered (W-01, W-02): with agentspecs 0.0.128 the catalogue's `google-workspace` server, the `worker-mail-triage` agent and the `inbox-triage` example are enabled, so an application connecting to Gmail has no setup note left, and the example is offered in the gallery. Gmail is the person's own, connected through Datalayer's IAM; each run's Gmail toolset asks IAM for its access token, as since 1.3.94.
+
 ## 1.5.85
 
 23 October 2026. A frontend tool says what its call did on its card: `summaryOf`, from what it returned, in place of its arguments' summary (a host's editor tool names the file it ran on).

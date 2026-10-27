@@ -5,10 +5,11 @@
 
 Inbox triage reaches mail through Gmail's tools, as the catalogue's Google
 Workspace server serves them (`google-workspace__search_gmail_messages`…).
-That server is not enabled on Datalayer: reaching a person's Gmail needs
-Google's consent screen and, outside Datalayer's own domain, Google's review
-(W-02, W-10). So that the worker runs end to end before then, this
-module is the **mail source** it runs against:
+On Datalayer that server reaches the Gmail of the person an application acts
+for, connected in Google's consent screen through IAM (W-02); outside
+Datalayer's own domain it waits for Google's review (W-10). So that the
+worker runs end to end with no real mailbox — in tests, in a demonstration —
+this module is the **mail source** it runs against:
 
 - `MailSource` — what a worker needs of a mailbox;
 - `FixtureMailbox` — a mailbox of example mail held in memory, for tests and

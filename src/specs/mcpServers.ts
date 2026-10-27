@@ -175,7 +175,7 @@ export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
     'gmail:send',
   ],
   transport: 'streamable-http',
-  enabled: false,
+  enabled: true,
   isAvailable: false,
   tools: [],
   requiredEnvVars: [],

@@ -2073,7 +2073,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
                     "Run end to end in Datalayer's own tests on a test mailbox of example mail, a scripted model in place of its agent's (2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing."
                 ],
                 "unverified": [
-                    "Its agent and the Google Workspace server are switched off in the catalogue: no real mail has been read, drafted or sent.",
+                    "No real mail has been read, drafted or sent yet: the drill on a Datalayer mailbox comes first.",
                     "Its tests have not been run against its own model.",
                 ],
             },
@@ -2112,17 +2112,14 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
         "notifications": ["email"],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
-        "enabled": False,
-        "unavailable_because": "It reads and sorts your mail, and a mailbox cannot be connected yet: the Google Workspace connection is still being built.",
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "worker", "mail"],
         "icon": "mail",
         "emoji": "📬",
         "avatar": "",
         "banner": "",
-        "setup": [
-            "The agent 'worker-mail-triage:0.0.1' is not enabled.",
-            "The MCP server 'google-workspace:0.0.1' is not enabled.",
-        ],
+        "setup": [],
     }
 )
 

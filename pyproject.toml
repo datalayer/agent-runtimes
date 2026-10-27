@@ -63,7 +63,8 @@ dependencies = [
     # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
     # agentspecs 0.0.124: interface.theme.variant may be vscode (T-30), as primer-addons 1.0.41 lists it.
     # agentspecs 0.0.127: PAP draft 0.3 in the pap block (company scopes with descriptions and hints, excluded tasks, the web interface) and pap_feedback classed send.
-    "agentspecs>=0.0.127",
+    # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled (W-02).
+    "agentspecs>=0.0.128",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

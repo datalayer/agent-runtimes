@@ -177,7 +177,7 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
         "gmail:send",
     ],
     transport="streamable-http",
-    enabled=False,
+    enabled=True,
     tools=[],
     url="http://127.0.0.1:9711/mcp",
     env={
