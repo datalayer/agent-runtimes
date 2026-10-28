@@ -135,6 +135,8 @@ async def _the_hung_start_is_failed_and_the_next_turn_starts_it(
     # Its start, if still ending, is left to end on its own, held meanwhile
     # (Python 3.10's cancellation can end it at once: then none is held).
     assert len(manager._abandoned) <= 1
+    abandoned = next(iter(manager._abandoned), None)
+    assert abandoned is None or not abandoned.done()
 
     # A turn that needs it does not wait on it: the failure is known at once.
     assert await manager.wait_until_ready(SERVER, timeout=5.0) is False
@@ -150,8 +152,9 @@ async def _the_hung_start_is_failed_and_the_next_turn_starts_it(
     # The hung start, released at last, keeps nothing: the server running is
     # the one the retry started.
     hung.release.set()
-    await asyncio.wait({abandoned}, timeout=5.0)
-    assert abandoned.done()
+    if abandoned is not None:
+        await asyncio.wait({abandoned}, timeout=5.0)
+        assert abandoned.done()
     assert hung.exited == 1
     assert manager.get_running_server(SERVER) is instance
     assert not manager._abandoned
