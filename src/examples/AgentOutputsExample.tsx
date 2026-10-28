@@ -51,6 +51,7 @@ import {
   downloadSheet,
   parseSheetBlock,
   type SheetBlock,
+  useFitHeight,
   useSheetModel,
 } from '../apps/plugins/agent-outputs/sheets';
 import { AGENT_OUTPUTS_LOOP_PLUGINS } from './utils/agentOutputsPlugins';
@@ -402,6 +403,8 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
  */
 const SheetView: React.FC<{ block: SheetBlock }> = ({ block }) => {
   const { model, error } = useSheetModel(block);
+  // As tall as its data and charts (up to 640 px), so a chart the agent adds shows.
+  const height = useFitHeight(model, 200, 640);
   if (error) {
     return (
       <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
@@ -414,7 +417,7 @@ const SheetView: React.FC<{ block: SheetBlock }> = ({ block }) => {
   }
   return (
     <CellsProvider model={model}>
-      <Box height={280} border="1px solid" borderColor="border.muted">
+      <Box height={height} border="1px solid" borderColor="border.muted">
         <Spreadsheet model={model} aria-label={block.name} />
       </Box>
     </CellsProvider>

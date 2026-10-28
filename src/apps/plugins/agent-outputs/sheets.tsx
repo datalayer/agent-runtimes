@@ -35,7 +35,8 @@ import {
   type CellsModel,
 } from '@datalayer/cells';
 import { CellsChartsPlugin } from '@datalayer/cells/charts';
-import { importCsv } from '@datalayer/cells/csv';
+import { chartRect } from '@datalayer/cells/core';
+import { importCsv, usedZone } from '@datalayer/cells/csv';
 import { cellsAgentToolsPlugin } from '@datalayer/cells/plugin';
 import {
   ChatCodeBlock,
@@ -190,6 +191,40 @@ export function useReadOnlyMirror(model: CellsModel | null): CellsModel | null {
   return mirror;
 }
 
+/** The column header's height and a scrollbar's, in px, around the content. */
+const GRID_CHROME = 24 + 16;
+
+/**
+ * The height that shows a workbook's active sheet whole — its data and its
+ * charts — between `min` and `max`, followed as the workbook changes: a chart
+ * the agent inserts below the data comes into view instead of sitting under
+ * a frame of fixed height (28 October 2026).
+ */
+export function useFitHeight(
+  model: CellsModel | null,
+  min = 160,
+  max = 560,
+): number {
+  const [height, setHeight] = useState(min);
+  useEffect(() => {
+    if (!model) {
+      return;
+    }
+    const measure = () => {
+      const sheet = model.sheet(model.selection.sheet);
+      let bottom = sheet.rows.offsetOf(usedZone(model, sheet.id).bottom + 1);
+      for (const spec of sheet.charts.values()) {
+        const rect = chartRect(sheet, spec);
+        bottom = Math.max(bottom, rect.y + rect.height);
+      }
+      setHeight(Math.min(max, Math.max(min, Math.ceil(bottom) + GRID_CHROME)));
+    };
+    measure();
+    return model.subscribe(measure);
+  }, [model, min, max]);
+  return height;
+}
+
 /** Save a block as its file. */
 export function downloadSheet(block: SheetBlock): void {
   const type =
@@ -214,6 +249,7 @@ export function SheetCodeBlock({
   const block = parseSheetBlock(language, code);
   const { model, error } = useSheetModel(block);
   const mirror = useReadOnlyMirror(model);
+  const height = useFitHeight(mirror);
   if (!block) {
     return <></>;
   }
@@ -226,7 +262,7 @@ export function SheetCodeBlock({
       ) : mirror ? (
         <CellsProvider model={mirror}>
           <Box
-            height={240}
+            height={height}
             border="1px solid"
             borderColor="border.muted"
             borderRadius={2}
