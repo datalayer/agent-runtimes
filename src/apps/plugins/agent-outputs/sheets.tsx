@@ -254,7 +254,15 @@ export function SheetCodeBlock({
     return <></>;
   }
   return (
-    <Box data-sheet-block={block.name} my={2}>
+    // The whole measure of the message (the chat gives it to what declares
+    // `width: 100%`), and wide enough for a few columns even in a bubble that
+    // hugs its text: a grid has no width of its own, and showed one column.
+    <Box
+      data-sheet-block={block.name}
+      my={2}
+      width="100%"
+      minWidth="min(560px, 90vw)"
+    >
       {error ? (
         <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
           Could not read the spreadsheet: {error}
