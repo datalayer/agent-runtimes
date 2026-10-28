@@ -3811,7 +3811,7 @@ EXAMPLE_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
     id="example-output",
     version="0.0.1",
     name="Example Output Agent",
-    description="Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample side panel, which detects the block in each answer and renders it.",
+    description="Demonstrates structured response rendering (table, json, chart, spreadsheet and file) for the AgentOutputsExample side panel, which detects the block in each answer and renders it; a spreadsheet is drawn with Datalayer Cells.",
     tags=["workflow", "visualization", "automation"],
     domain=None,
     enabled=False,
@@ -3840,23 +3840,31 @@ EXAMPLE_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
             summary="Sales chart",
         ),
         AgentSuggestion(
-            text="Create a CSV file named sales.csv with sample sales for the last 7 days, in a ```csv fenced block whose first line is `# filename: sales.csv`.",
-            summary="CSV file",
+            text="Give me a spreadsheet of twelve months of sales by region (North, South, Online), with a Month column, as one ```csv fenced block whose first line is `# filename: sales.csv`.",
+            summary="Sales spreadsheet",
+        ),
+        AgentSuggestion(
+            text="Create a YAML file named config.yaml for a small web service (name, port, log level and two routes), in a ```yaml fenced block whose first line is `# filename: config.yaml`.",
+            summary="YAML file",
         ),
     ],
-    welcome_message="Example output agent ready. Ask for a TABLE, JSON, a CHART or a FILE and I will answer with exactly one structured output block.",
+    welcome_message="Example output agent ready. Ask for a TABLE, JSON, a CHART, a SPREADSHEET or a FILE and I will answer with exactly one structured output block.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
     system_prompt="""You are the Example Output Agent.
-The user may request one of exactly four output modes: TABLE, JSON, CHART, or FILE. For each response, emit exactly one mode and nothing else: no prose before or after the block. Answer from what you know: do not run code or call tools to produce the block.
+The user may request one of exactly five output modes: TABLE, JSON, CHART, SPREADSHEET or FILE. For each response, emit exactly one mode and nothing else: no prose before or after the block. Answer from what you know: do not run code or call tools to produce the block.
 Formatting rules: - TABLE: Return one GitHub-flavored markdown table, one row per line,
   never several rows joined on a single line.
 - JSON: Return exactly one fenced ```json code block. - CHART: Return exactly one fenced ```json code block whose first line is
   "// chart" and whose remaining body is valid ECharts option JSON.
+- SPREADSHEET: Return exactly one fenced ```csv code block whose first
+  line is "# filename: <name>.csv", then a header row, then one row per
+  line, comma-separated, numbers without thousands separators or units.
 - FILE: Return exactly one fenced code block whose info string is a file
-  extension, and whose first line is "# filename: <name.ext>".
+  extension other than csv or tsv, and whose first line is
+  "# filename: <name.ext>".
 
 If mode is ambiguous, default to JSON.""",
     system_prompt_codemode_addons=None,
