@@ -15,6 +15,7 @@ import asyncio
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -630,7 +631,7 @@ class TestPermissionsAreRules:
 
         monkeypatch.setattr(agent, "_note_of", always)
         try:
-            events = await turn(agent, "edit", session="t")
+            await turn(agent, "edit", session="t")
             # Asked twice for one edit: the agent's permission (kind `edit`),
             # then the Shield's own fs/write of the same path. Only the first
             # becomes a session rule: the Shield asks about its own actions
@@ -650,7 +651,7 @@ class TestPermissionsAreRules:
             # The same session: the rule decides the agent's permission,
             # nobody asked; the Shield's write is asked.
             (workspace / "hello.txt").unlink()
-            events = await turn(agent, "edit", session="t")
+            await turn(agent, "edit", session="t")
             assert [a["tool"] for a in approvals.asked][2:] == ["Write hello.txt"]
             assert (workspace / "hello.txt").exists()
             # Gone with the session: another session asks for the edit again.
@@ -1542,6 +1543,7 @@ class TestResolvingACatalogueHarness:
         claude = get_harness("claude-code")
         assert claude is not None
         monkeypatch.setattr(offered, "_given", {"token": None, "expires_at": None})
+        monkeypatch.setattr(offered, "INFERENCE_TOKEN_WAIT", 0.0)
         monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
         monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
         agent = ACPAgent(
@@ -1564,6 +1566,89 @@ class TestResolvingACatalogueHarness:
         )
         agent._give_routed_token()
         assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-later"
+
+    def _routed_claude(self, tmp_path: Path) -> ACPAgent:
+        from agent_runtimes.specs.harnesses import get_harness
+
+        claude = get_harness("claude-code")
+        assert claude is not None
+        return ACPAgent(
+            agent_id="routed",
+            harness=claude,
+            command=["/nonexistent/claude-agent-acp"],
+            workspace=tmp_path,
+            environment={
+                "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic"
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_routed_harness_waits_for_the_token_the_companion_is_giving_the_runtime(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        """A kept deployment's first keep on a fresh runtime (r1, 28 October
+        2026, an OpenCode application) started its harness as the companion
+        was still giving the runtime its token: refused "This runtime has no
+        ai-inference token yet", and fine on the next try. The start waits,
+        bounded, for the token instead."""
+        from agent_runtimes.models import offered
+
+        given: dict = {"token": None, "expires_at": None}
+        monkeypatch.setattr(offered, "_given", given)
+        monkeypatch.setattr(offered, "INFERENCE_TOKEN_WAIT", 5.0)
+        monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        agent = self._routed_claude(tmp_path)
+
+        async def the_companion_gives_it() -> None:
+            await asyncio.sleep(0.3)
+            given["token"] = "given-while-waiting"
+
+        giving = asyncio.create_task(the_companion_gives_it())
+        started = time.monotonic()
+        # Past the token, the harness launches: this one's command does not exist.
+        with pytest.raises(HarnessRefused, match="did not start"):
+            await agent.initialize()
+        waited = time.monotonic() - started
+        assert 0.3 <= waited < 5.0
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-while-waiting"
+        await giving
+
+    @pytest.mark.asyncio
+    async def test_a_runtime_still_without_a_token_at_the_deadline_is_refused_saying_how_long(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.models import offered
+
+        monkeypatch.setattr(offered, "_given", {"token": None, "expires_at": None})
+        monkeypatch.setattr(offered, "INFERENCE_TOKEN_WAIT", 1.0)
+        monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        agent = self._routed_claude(tmp_path)
+        started = time.monotonic()
+        with pytest.raises(
+            HarnessRefused,
+            match=r"no ai-inference token yet.*\(waited 1s for it\)",
+        ):
+            await agent.initialize()
+        assert time.monotonic() - started >= 1.0
+        assert not agent.started
+
+    @pytest.mark.asyncio
+    async def test_an_expired_token_is_refused_at_once_not_waited_on(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.models import offered
+
+        monkeypatch.setattr(
+            offered, "_given", {"token": "ran-out", "expires_at": time.time() - 60}
+        )
+        monkeypatch.setattr(offered, "INFERENCE_TOKEN_WAIT", 5.0)
+        agent = self._routed_claude(tmp_path)
+        started = time.monotonic()
+        with pytest.raises(HarnessRefused, match="expired at"):
+            await agent.initialize()
+        assert time.monotonic() - started < 1.0
 
     def test_the_workspace_is_named_or_refused(self, tmp_path: Path) -> None:
         with pytest.raises(HarnessRefused, match=WORKSPACE_VARIABLE):

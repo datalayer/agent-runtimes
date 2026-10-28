@@ -166,6 +166,15 @@ class InferenceTokenMissing(RuntimeError):
 #: seconds; ``None`` when it does not say). Process memory only.
 _given: dict[str, Any] = {"token": None, "expires_at": None}
 
+#: How long whatever needs the runtime's token at once waits for it, in
+#: seconds (`await_inference_token`): a kept deployment's first keep on a
+#: fresh runtime starts its harness as the companion is still giving the
+#: runtime its token (r1, 28 October 2026: an OpenCode application's keep
+#: refused with the note below, and fine on the next try).
+INFERENCE_TOKEN_WAIT = float(
+    os.environ.get("AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT", "30")
+)
+
 #: Said while a runtime waits for its token: a pooled runtime has no user yet.
 NO_TOKEN_NOTE = (
     "This runtime has no ai-inference token yet: it is given one, its user's "
@@ -247,6 +256,38 @@ def inference_token_refusal() -> str | None:
             "it calls no model any more. Start a new runtime."
         )
     return None
+
+
+async def await_inference_token(
+    timeout: float | None = None, *, poll: float = 0.1
+) -> str | None:
+    """
+    Wait, bounded, for the token this runtime calls ai-inference with.
+
+    Parameters
+    ----------
+    timeout : float | None
+        How long to wait at most, in seconds; `INFERENCE_TOKEN_WAIT` when
+        ``None``.
+    poll : float
+        How often the token is looked for, in seconds.
+
+    Returns
+    -------
+    str | None
+        The token, as soon as the runtime has one; ``None`` when it still
+        has none at the deadline. An expired token is returned as it is:
+        what refuses it says so (`inference_token_refusal`).
+    """
+    deadline = time.monotonic() + (INFERENCE_TOKEN_WAIT if timeout is None else timeout)
+    while True:
+        token = inference_token()
+        if token:
+            return token
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        await asyncio.sleep(min(poll, remaining))
 
 
 async def inference_api_key() -> str:

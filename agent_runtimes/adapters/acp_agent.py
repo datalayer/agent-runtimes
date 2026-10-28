@@ -41,6 +41,7 @@ import logging
 import os
 import shutil
 import sys
+import time
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -1030,23 +1031,57 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Whether the harness's process is running."""
         return self._channel is not None
 
-    def _give_routed_token(self) -> None:
+    def _routed(self) -> Any:
+        """The route the harness's model calls take through ai-inference, or ``None``."""
+        from agent_runtimes.adapters import harness_inference
+
+        route = harness_inference.ROUTES.get(self.harness.id)
+        if route is None or route.base_url_variable not in self.agent_env:
+            return None
+        return route
+
+    async def _await_routed_token(self) -> float:
+        """Wait, bounded, for the runtime's token when a routed harness has none yet.
+
+        A kept deployment's first keep on a fresh runtime starts its harness
+        as the companion is still giving the runtime its token (r1, 28
+        October 2026: an OpenCode application's keep refused "This runtime
+        has no ai-inference token yet", and fine on the next try): the start
+        waits `INFERENCE_TOKEN_WAIT` for it rather than refusing. An expired
+        token is not waited on — a new one is not coming.
+
+        Returns
+        -------
+        float
+            How long was waited, in seconds; 0 when nothing was.
+        """
+        from agent_runtimes.models import offered
+
+        if self._routed() is None or offered.inference_token():
+            return 0.0
+        started = time.monotonic()
+        await offered.await_inference_token()
+        return time.monotonic() - started
+
+    def _give_routed_token(self, waited: float = 0.0) -> None:
         """The runtime's ai-inference token, as it is now, for a harness whose calls go through ai-inference.
 
         A harness routed through ai-inference (``ANTHROPIC_BASE_URL`` in its
         environment, :func:`harness_environment`) calls with the token the
         runtime holds when the harness starts; none, or an expired one, is a
-        refusal in a sentence before the process is launched.
+        refusal in a sentence before the process is launched — saying how
+        long was waited for it (`_await_routed_token`), when it was.
         """
         from agent_runtimes.adapters import harness_inference
 
-        route = harness_inference.ROUTES.get(self.harness.id)
-        if route is None or route.base_url_variable not in self.agent_env:
+        route = self._routed()
+        if route is None:
             return
         token, refusal = harness_inference.routed_token()
         if not token:
+            after = f" (waited {waited:.0f}s for it)" if waited >= 1 else ""
             raise HarnessRefused(
-                f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}"
+                f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}{after}"
             )
         self.agent_env[route.token_variable] = token
         if route.config_variable:
@@ -1058,7 +1093,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Launch the harness and negotiate; refuse what its spec asked that it lacks."""
         if self.started:
             return
-        self._give_routed_token()
+        self._give_routed_token(await self._await_routed_token())
         self._listen_for_policies()
         try:
             channel = await self.start_agent()
