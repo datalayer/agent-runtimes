@@ -65,6 +65,46 @@ if (
   );
 }
 
+// `@jupyterlab/notebook` subclasses `window.IntersectionObserver` at module
+// scope (its windowing), and `@jupyterlab/ui-components` observes sizes:
+// jsdom has neither, so every suite that imports a chat or a computer page
+// through them failed to load (*Class extends value undefined*). Observers
+// that never fire: nothing under test scrolls or resizes here.
+if (typeof window !== 'undefined') {
+  class IdleObserver {
+    constructor(_callback: unknown, _options?: unknown) {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds: ReadonlyArray<number> = [];
+  }
+  if (typeof window.IntersectionObserver !== 'function') {
+    window.IntersectionObserver =
+      IdleObserver as unknown as typeof window.IntersectionObserver;
+    globalThis.IntersectionObserver = window.IntersectionObserver;
+  }
+  if (typeof window.ResizeObserver !== 'function') {
+    window.ResizeObserver =
+      IdleObserver as unknown as typeof window.ResizeObserver;
+    globalThis.ResizeObserver = window.ResizeObserver;
+  }
+}
+
+// `@datalayer/jupyter-react`'s ipywidgets embed reads webpack's public path
+// at module scope; vitest is not webpack, so it is the empty one here.
+if (
+  typeof (globalThis as { __webpack_public_path__?: string })
+    .__webpack_public_path__ === 'undefined'
+) {
+  (globalThis as { __webpack_public_path__?: string }).__webpack_public_path__ =
+    '';
+}
+
 // Primer's theme reads this on mount.
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({

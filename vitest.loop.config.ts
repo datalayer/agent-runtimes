@@ -18,8 +18,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['src/apps/__tests__/**/*.test.{ts,tsx}'],
-    environment: 'node',
-    environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
+    // jsdom for every suite, the plain ones included: a `.ts` test that
+    // reaches `@lumino/domutils` or `@jupyterlab/notebook` through what it
+    // imports needs `document` and `window` at module scope, and the
+    // `environmentMatchGlobs` split (`node` for `.ts`) left those failing to
+    // load, as did the `.tsx` suites until the globals jsdom lacks were
+    // stubbed in the setup file below.
+    environment: 'jsdom',
     // Browser globals jsdom lacks, installed before any module is imported —
     // a stub written inside a test file runs too late.
     setupFiles: ['./src/__tests__/browserGlobals.ts'],

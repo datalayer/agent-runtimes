@@ -198,11 +198,13 @@ describe('every part arrives with an example the Appspec takes as it is', () => 
       problem => !checkAppspec(empty).problems.includes(problem),
     );
     // Nothing new refused: an event even answers a worker's want of one. A
-    // part not enabled today is refused in its one sentence while offered.
+    // part not enabled today is refused in its one sentence while offered —
+    // a harness the catalogue describes and does not offer (MH-47) included.
     expect(
       added.filter(
         problem =>
-          part.enabled || !/planned, not shipped|is not enabled/.test(problem),
+          part.enabled ||
+          !/planned, not shipped|is not enabled|is not offered/.test(problem),
       ),
     ).toEqual([]);
   });
