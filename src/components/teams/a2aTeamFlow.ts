@@ -96,12 +96,24 @@ export type A2ATeamCall = {
   id?: string;
   /** When it started, in milliseconds. */
   started: number;
-  /** Ended, but shown until it has been shown {@link CALL_SHOWN_MS}. */
-  ended?: boolean;
+  /**
+   * When it ended: its result is shown coming back from the connection
+   * until {@link RESULT_SHOWN_MS} after.
+   */
+  ended?: number;
 };
 
-/** The least time a call is shown, in milliseconds: a quick one still reads. */
-export const CALL_SHOWN_MS = 900;
+/**
+ * How long a call's result is shown coming back to the member, in
+ * milliseconds: the link to a connection flows like the A2A link, out with
+ * the call, back with its result.
+ */
+export const RESULT_SHOWN_MS = 1200;
+
+/** Which way a member's link to a connection carries a call now. */
+export function callFlow(call: A2ATeamCall): A2ATeamFlow {
+  return call.ended === undefined ? 'asking' : 'answering';
+}
 
 /**
  * The connection a tool is of: one whose tools name it (a toolset's prefix
@@ -157,8 +169,8 @@ export function toolOwnName(
 
 /**
  * The calls running after an event of the peer's (`member`): a call it
- * starts to one of its connections is added; its end marks it ended, and
- * drops it once it has been shown long enough (else `holdMs` says when to
+ * starts to one of its connections is added; its end marks it ended, its
+ * result coming back, for {@link RESULT_SHOWN_MS} (`holdMs` says when to
  * look again, with {@link pruneCalls}). A new request, an answer or a
  * failure ends them all.
  */
@@ -196,28 +208,23 @@ export function callsAfter(
   }
   const index = calls.findIndex(
     call =>
-      !call.ended &&
+      call.ended === undefined &&
       call.connection === connection.id &&
       (step.id && call.id ? call.id === step.id : call.tool === step.name),
   );
   if (index < 0) {
     return { calls };
   }
-  const call = calls[index];
-  const left = call.started + CALL_SHOWN_MS - now;
-  if (left <= 0) {
-    return { calls: calls.filter((_, at) => at !== index) };
-  }
   return {
-    calls: calls.map((c, at) => (at === index ? { ...c, ended: true } : c)),
-    holdMs: left,
+    calls: calls.map((c, at) => (at === index ? { ...c, ended: now } : c)),
+    holdMs: RESULT_SHOWN_MS,
   };
 }
 
-/** The calls without those ended and shown long enough. */
+/** The calls without those whose result has been shown long enough. */
 export function pruneCalls(calls: A2ATeamCall[], now: number): A2ATeamCall[] {
   const kept = calls.filter(
-    call => !call.ended || call.started + CALL_SHOWN_MS > now,
+    call => call.ended === undefined || call.ended + RESULT_SHOWN_MS > now,
   );
   return kept.length === calls.length ? calls : kept;
 }

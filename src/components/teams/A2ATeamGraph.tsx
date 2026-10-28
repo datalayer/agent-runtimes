@@ -26,10 +26,12 @@
  *
  * A member's connections — the MCP servers it reaches, Odoo for Accounting —
  * stand to its right, each a node half a member's size with the server's mark
- * (`SpecMark`), linked to it by an edge of its own. That edge is still until
- * the member calls one of the connection's tools: then it flows toward the
- * connection for as long as the call runs ({@link A2ATeamCall}), with the
- * tool's name on it; under reduced motion, the arrow and the words alone.
+ * (`SpecMark`), linked to it by an edge of its own, `MCP`, drawn as the A2A
+ * link is: still until the member calls one of the connection's tools, then
+ * flowing toward the connection for as long as the call runs
+ * ({@link A2ATeamCall}), `MCP · list invoices`, and back with its result for
+ * a moment, `MCP · Odoo answers` (a screen reader hears who calls whom);
+ * under reduced motion, the arrow and the words alone.
  *
  * The graph is a picture, not an editor: nothing is dragged, panned or
  * zoomed, and the wheel scrolls the page. Its viewport is worked out from its
@@ -78,6 +80,7 @@ import { teamNotebookKernel } from './teamNotebookKernel';
 import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import { SpecMark } from '../../chat/marks/SpecMark';
 import {
+  callFlow,
   toolWords,
   type A2ATeamCall,
   type A2ATeamConnection,
@@ -224,8 +227,11 @@ const WIDTH = NODE_WIDTH * 2 + GAP;
 const ROW_GAP = 48;
 /** A connection's node: half a member's. */
 const CONNECTION_WIDTH = NODE_WIDTH / 2;
-/** Between a member and its connections, to its right. */
-const CONNECTION_GAP = 44;
+/**
+ * Between a member and its connections, to its right: room for the MCP
+ * edge's words, as the A2A edge has room for its own.
+ */
+const CONNECTION_GAP = 140;
 const CONNECTIONS_APART = 16;
 /** Where a member's connections start: right of it. */
 const CONNECTION_X = NODE_WIDTH + CONNECTION_GAP;
@@ -735,10 +741,11 @@ const ConnectionNode = memo(function ConnectionNode({
       data-team-connection={connection.id}
       data-connection-busy={tool ? 'true' : 'false'}
     >
+      {/* The edge reaches its mark, not the node's side. */}
       <Handle
         type="target"
         position={Position.Left}
-        style={{ ...HANDLE(size), left: 0 }}
+        style={{ ...HANDLE(size), left: (CONNECTION_WIDTH - size) / 2 }}
         isConnectable={false}
       />
       <Box
@@ -923,11 +930,18 @@ const LinkEdge = memo(function LinkEdge({
 });
 
 type CallData = {
+  /** Which way it carries a call: out with the call, back with its result. */
+  flow: A2ATeamFlow;
   /** The tool being called, in words (`list invoices`); empty while none is. */
   calling: string;
+  /** What it says: `MCP`, and what it carries while it carries something. */
+  label: string;
 };
 
-/** A member's link to a connection: still, or flowing toward it while a call runs. */
+/**
+ * A member's link to a connection, drawn as the A2A link is: still, flowing
+ * toward the connection while a call runs, and back with its result.
+ */
 export const CallEdge = memo(function CallEdge({
   id,
   sourceX,
@@ -936,48 +950,52 @@ export const CallEdge = memo(function CallEdge({
   targetY,
   data,
 }: EdgeProps<Edge<CallData>>): JSX.Element {
-  const calling = Boolean(data?.calling);
+  const flow = data?.flow ?? 'still';
   const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-  const arrow = `M ${targetX},${targetY} L ${targetX - ARROW / 1.6},${targetY - ARROW} L ${targetX + ARROW / 1.6},${targetY - ARROW} Z`;
+  // The arrow at the end the call or its result goes to, along the edge.
+  const arrow = arrowPath(
+    { x: sourceX, y: sourceY },
+    { x: targetX, y: targetY },
+    flow === 'asking',
+  );
   return (
     <>
       <BaseEdge
         id={id}
         path={path}
         style={{
-          stroke: 'var(--borderColor-default)',
+          stroke: 'var(--borderColor-accent-emphasis)',
           strokeWidth: 2,
-          opacity: calling ? 0.3 : 0.8,
+          opacity: flow === 'still' ? 0.6 : 0.25,
         }}
       />
-      {calling && (
-        <g data-mcp-edge-call={data?.calling}>
+      {flow !== 'still' && (
+        <g data-mcp-edge-call={data?.calling} data-mcp-edge-flow={flow}>
           <path
             d={path}
             fill="none"
-            className="a2a-team-flow a2a-team-call"
+            className={`a2a-team-flow a2a-team-flow-${flow}`}
             stroke="var(--fgColor-accent)"
             strokeWidth={3}
             strokeLinecap="round"
-            strokeDasharray="6 8"
+            strokeDasharray="10 14"
           />
           <path d={arrow} fill="var(--fgColor-accent)" />
         </g>
       )}
-      {calling && (
-        <EdgeLabelRenderer>
-          <Box
-            className="nodrag nopan"
-            position="absolute"
-            // Beside the edge, toward the middle of the graph.
-            transform={`translate(calc(-100% - 10px), -50%) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
-            pointerEvents="none"
-            whiteSpace="nowrap"
-          >
-            <Label variant="accent">{data?.calling}</Label>
-          </Box>
-        </EdgeLabelRenderer>
-      )}
+      <EdgeLabelRenderer>
+        <Box
+          className="nodrag nopan"
+          position="absolute"
+          transform={`translate(-50%, 12px) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
+          pointerEvents="none"
+          textAlign="center"
+          whiteSpace="nowrap"
+          data-mcp-edge-label=""
+        >
+          <Label variant="accent">{data?.label}</Label>
+        </Box>
+      </EdgeLabelRenderer>
     </>
   );
 });
@@ -1014,13 +1032,41 @@ function connectionsReach(
     : 0;
 }
 
-/** What a member's call says, on its edge and to a screen reader. */
+/** What a link to a connection says at rest, as `A2A` says the members' link. */
+export const MCP_LABEL = 'MCP';
+
+/**
+ * What a link to a connection says while it carries a call, short enough
+ * for the room beside the member: the tool going out, `MCP · list invoices`,
+ * then `MCP · Odoo answers` as its result comes back.
+ */
+export function callEdgeWords(
+  connection: A2ATeamConnection,
+  tool: string,
+  flow: A2ATeamFlow,
+): string {
+  return flow === 'asking'
+    ? `${MCP_LABEL} · ${toolWords(tool, connection)}`
+    : flow === 'answering'
+      ? `${MCP_LABEL} · ${connection.label} answers`
+      : MCP_LABEL;
+}
+
+/**
+ * What a member's call says, on its edge and to a screen reader: the call
+ * going out, `Accounting calls Odoo · list invoices`, then its result
+ * coming back, `Odoo answers Accounting · list invoices`.
+ */
 export function callWords(
   member: string,
   connection: A2ATeamConnection,
   tool: string,
+  flow: A2ATeamFlow = 'asking',
 ): string {
-  return `${member} calls ${connection.label} · ${toolWords(tool, connection)}`;
+  const words = toolWords(tool, connection);
+  return flow === 'answering'
+    ? `${connection.label} answers ${member} · ${words}`
+    : `${member} calls ${connection.label} · ${words}`;
 }
 
 /** The viewport that shows a graph `drawn` wide whole in a box `width` wide, never larger than drawn. */
@@ -1322,11 +1368,18 @@ export function A2ATeamGraph({
         )
       : '';
   const words = edgesWanted.map(wordsOf).filter(Boolean);
-  // The tool each connection is answering now, in words, by its node's id.
+  // The tool each connection is answering now, in words, by its node's id,
+  // and which way its edge carries it: a call still running before one
+  // whose result is coming back.
   const busy = useMemo(() => {
     const byNode: Record<string, string> = {};
+    const edgeByNode: Record<string, { flow: A2ATeamFlow; label: string }> = {};
     const said: string[] = [];
-    for (const call of calls) {
+    const running = [
+      ...calls.filter(call => callFlow(call) === 'asking'),
+      ...calls.filter(call => callFlow(call) === 'answering'),
+    ];
+    for (const call of running) {
       const member = members.find(one => one.id === call.member);
       const connection = member?.connections?.find(
         known => known.id === call.connection,
@@ -1335,10 +1388,16 @@ export function A2ATeamGraph({
         continue;
       }
       const node = connectionNodeId(member.id, connection.id);
+      const flow = callFlow(call);
+      const words = callWords(member.name, connection, call.tool, flow);
       byNode[node] ??= toolWords(call.tool, connection);
-      said.push(callWords(member.name, connection, call.tool));
+      edgeByNode[node] ??= {
+        flow,
+        label: callEdgeWords(connection, call.tool, flow),
+      };
+      said.push(words);
     }
-    return { byNode, said: [...new Set(said)] };
+    return { byNode, edgeByNode, said: [...new Set(said)] };
   }, [calls, members]);
   const linkKey = JSON.stringify(
     edgesWanted.map(link => ({
@@ -1382,6 +1441,7 @@ export function A2ATeamGraph({
           connections.map(connection => {
             const node = connectionNodeId(member, connection);
             const calling = busy.byNode[node] ?? '';
+            const carried = busy.edgeByNode[node];
             return {
               id: `${member}->${node}`,
               source: member,
@@ -1390,7 +1450,11 @@ export function A2ATeamGraph({
               type: 'mcp',
               selectable: false,
               focusable: false,
-              data: { calling },
+              data: {
+                flow: carried?.flow ?? 'still',
+                calling,
+                label: carried?.label ?? MCP_LABEL,
+              },
             };
           }),
       ),
@@ -1421,18 +1485,11 @@ export function A2ATeamGraph({
         '& .a2a-team-flow-answering': {
           animation: 'a2aTeamFlow 0.6s linear infinite reverse',
         },
-        '@keyframes a2aTeamCall': {
-          from: { strokeDashoffset: 14 },
-          to: { strokeDashoffset: 0 },
-        },
         '@keyframes a2aTeamPulse': {
           '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
           '50%': {
             boxShadow: '0 0 0 4px var(--bgColor-accent-muted)',
           },
-        },
-        '& .a2a-team-call': {
-          animation: 'a2aTeamCall 0.5s linear infinite',
         },
         '& .a2a-team-connection-busy': {
           animation: 'a2aTeamPulse 1s ease-in-out infinite',
