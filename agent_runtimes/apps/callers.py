@@ -27,6 +27,10 @@ token** naming that person and one deployment. It is
 what ai-agents' ``/apps/hosts/whoami`` accepts, which checks that the
 installation, the link and the deployment's allowance still stand; it is
 remembered for a minute at most, so that a revocation stops it within one.
+A host token ai-agents answers ``visitor: true`` is a person who never linked,
+answered because the installation's owner opened it to visitors (WHATSAPP
+WA-03): a ``visitor`` caller, named by its pseudonymous id, for its one
+deployment (see :func:`is_host_visitor`).
 
 A call from the machine itself — a developer's ``localhost``, the companion
 beside the runtime — needs no token. Every other call that cannot be verified
@@ -96,6 +100,17 @@ class Caller:
 
 
 LOCAL = Caller(kind="local")
+
+
+def is_host_visitor(caller: Any) -> bool:
+    """Whether a caller is a host's visitor (WHATSAPP WA-03): a ``visitor``
+    whose host token names one deployment. Unlike a visitor of the visitors'
+    runtime, whose own token calls the models, the deployment's principal
+    acts for them; like one, their turn only reads and asks nobody.
+    """
+    return getattr(caller, "kind", "") == "visitor" and bool(
+        getattr(caller, "deployment_uid", "")
+    )
 
 
 class CallerRefused(Exception):
@@ -354,7 +369,8 @@ class CallerVerifier:
             )
         said = response.json()
         caller = Caller(
-            kind="host",
+            # A person who never linked, answered as a visitor (WA-03).
+            kind="visitor" if said.get("visitor") is True else "host",
             uid=str(said.get("sub") or ""),
             app_uid=str(said.get("app_uid") or ""),
             visit=str(said.get("azp") or ""),

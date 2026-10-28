@@ -37,6 +37,11 @@ const contracts = JSON.parse(
     optional_request: Record<string, unknown>;
     request: Record<string, string>;
   };
+  visitor_exchange: {
+    request: Record<string, unknown>;
+    response_keys: string[];
+    sub_prefix: string;
+  };
   bind_session: {
     request: { target: Record<string, string> };
     target_limit: number;
@@ -326,6 +331,41 @@ describe('the host agent client', () => {
       { kind: 'completion', text: 'Option B is safer.' },
     ]);
     expect(calls.map(call => call.method)).toEqual(['POST', 'POST', 'GET']);
+  });
+
+  it('exchanges as a visitor when the host user never linked, as the contract says (WHATSAPP WA-03)', async () => {
+    const visitorAnswer = {
+      ...exchanged,
+      principal_uid: `${contracts.visitor_exchange.sub_prefix}0a1b2c`,
+      visitor: true,
+    };
+    const { calls, fetchImplementation } = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(visitorAnswer),
+    });
+    const credentials = new HostKeyCredentials(
+      API,
+      async () => 'dlhk_key',
+      shape,
+      fetchImplementation,
+    );
+    const answered = await credentials.exchange({ ...request, visitor: true });
+    expect(answered.visitor).toBe(true);
+    expect(answered.principal_uid).toMatch(/^visitor:/);
+    const [exchange] = calls;
+    expect(exchange?.body).toMatchObject({ visitor: true });
+    expect(
+      Object.keys(contracts.visitor_exchange.request).every(key =>
+        Object.keys(exchange?.body as object).includes(key),
+      ),
+    ).toBe(true);
+    for (const key of contracts.visitor_exchange.response_keys.filter(
+      (one: string) => one !== 'success',
+    ))
+      expect(Object.keys(visitorAnswer)).toContain(key);
+    // A linked person's exchange says nothing of visitors.
+    await credentials.exchange(request);
+    expect(calls[1]?.body).not.toHaveProperty('visitor');
   });
 
   it("says the exchange's refusal and starts nothing", async () => {

@@ -1196,8 +1196,14 @@ class LiveSession:
         """
         from ag_ui.core import RunErrorEvent, RunFinishedEvent, RunStartedEvent
 
+        from agent_runtimes.apps.callers import is_host_visitor
+
         self._may_go_on()
-        visitor = self.opened_by.kind == "visitor"
+        # A host's visitor (WA-03) is capped at ai-agents' exchange, and their
+        # turn calls the models as the deployment's principal: not as the
+        # visitors' runtime's visitor, whose own token does.
+        host_visitor = is_host_visitor(self.opened_by)
+        visitor = self.opened_by.kind == "visitor" and not host_visitor
         if visitor and counts:
             from agent_runtimes.apps.visitors import admit_turn
 
@@ -1227,6 +1233,10 @@ class LiveSession:
             # only reads, and asks nobody, as a visitor's (R-20).
             if self.opened_by.kind == "embed":
                 enter_visitor_run(f"embed:{self.opened_by.visit}")
+            # A host's visitor too (WA-03): only reading, an approval refused
+            # in the visitor's sentence rather than addressed to anybody.
+            if host_visitor:
+                enter_visitor_run(f"host:{self.opened_by.visit}:{self.opened_by.uid}")
             cancelled = False
             try:
                 if wraps_run:

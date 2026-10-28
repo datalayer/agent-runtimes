@@ -38,6 +38,17 @@ class HostVerifier:
     """`host:<person>:<deployment>` is a host token of installation inst-1; the rest, people."""
 
     async def verify(self, token: str, app_uid: str = "") -> Caller:
+        if token.startswith("visitor:"):
+            # `visitor:<id>:<deployment>`: a host's visitor (WHATSAPP WA-03).
+            _, visitor, deployment = token.split(":")
+            return Caller(
+                kind="visitor",
+                uid=f"visitor:{visitor}",
+                app_uid="app-1",
+                visit="inst-1",
+                scopes=("session",),
+                deployment_uid=deployment,
+            )
         if not token.startswith("host:"):
             return Caller(kind="person", uid=token)
         _, person, deployment = token.split(":")
@@ -550,3 +561,108 @@ def test_an_external_turn_holds_to_the_shared_contract(
     other = {**message, "text": "Something else"}
     assert remote.post(messages, headers=keyed, json=other).status_code == 409
     assert len(model.prompts) == 2
+
+
+# --- a host's visitor (WHATSAPP WA-03, decided 28 October 2026) ------------------------------
+
+
+def test_ai_agents_saying_visitor_makes_a_host_token_a_visitor_of_its_one_deployment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    said = {
+        "sub": "visitor:0a1b2c",
+        "azp": "inst-1",
+        "deployment_uid": "dep-1",
+        "app_uid": "app-1",
+        "link": "",
+        "visitor": True,
+        "scope": "session",
+        "expires_in": 600,
+    }
+    _ai_agents(monkeypatch, (200, said))
+    caller = asyncio.run(CallerVerifier().verify(HOST_TOKEN, "app-1"))
+    assert caller == Caller(
+        kind="visitor",
+        uid="visitor:0a1b2c",
+        app_uid="app-1",
+        visit="inst-1",
+        scopes=("session",),
+        deployment_uid="dep-1",
+    )
+    assert callers.is_host_visitor(caller)
+    # The visitors' runtime's visitor names no deployment: not a host's.
+    assert not callers.is_host_visitor(
+        Caller(kind="visitor", uid="v-1", app_uid="at:desk")
+    )
+    assert not callers.is_host_visitor(
+        Caller(kind="host", uid="alice", deployment_uid="dep-1")
+    )
+
+
+def test_a_host_s_visitor_runs_its_deployment_as_its_principal_reading_only_and_kept_nowhere(
+    runtime: Runtime, remote: TestClient, hosted: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.apps import visitors
+
+    entered: List[str] = []
+    real_enter = visitors.enter_visitor_run
+
+    def enter(visitor: str) -> Any:
+        entered.append(visitor)
+        return real_enter(visitor)
+
+    def no_admission(*_: Any, **__: Any) -> str:
+        raise AssertionError(
+            "A host's visitor is capped at ai-agents' exchange, not here."
+        )
+
+    monkeypatch.setattr(visitors, "enter_visitor_run", enter)
+    monkeypatch.setattr(visitors, "admit_turn", no_admission)
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    started = _start(remote, "visitor:0a1b2c:dep-1", "whatsapp-visitor-0001")
+    assert started.status_code == 200, started.text
+    said = events_of(started)[0]["value"]
+    # Its principal acts; ai-agents was asked as for somebody signed out.
+    assert said["acts_as"] == {
+        "kind": "principal",
+        "uid": "p-7",
+        "deployment_uid": "dep-1",
+    }
+    assert said["opened_by"] == {"kind": "visitor", "uid": "visitor:0a1b2c"}
+    assert hosted == [("dep-1", "")]
+    # The turn ran as a visitor's: only reading, an approval refused.
+    assert entered == ["host:inst-1:visitor:0a1b2c"]
+    # Nobody is recorded as having opened it.
+    assert {b["opened_by"] for b in runtime.records} <= {""}
+    # The same visitor goes on; another visitor, a person, the host's linked
+    # people do not.
+    assert (
+        remote.get(
+            "/api/v1/apps/sessions/whatsapp-visitor-0001",
+            headers=as_("visitor:0a1b2c:dep-1"),
+        ).status_code
+        == 200
+    )
+    for other in ("visitor:ffff:dep-1", "alice", "host:alice:dep-1"):
+        assert (
+            remote.get(
+                "/api/v1/apps/sessions/whatsapp-visitor-0001/messages",
+                headers=as_(other),
+            ).status_code
+            == 404
+        )
+
+
+def test_a_host_s_visitor_runs_no_other_deployment_and_no_preview(
+    runtime: Runtime, remote: TestClient, hosted: Any
+) -> None:
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    refused = _start(remote, "visitor:0a1b2c:dep-2", "whatsapp-visitor-0002")
+    assert refused.status_code == 403 and "issued for" in refused.json()["detail"]
+    runtime.make("preview-assistant", ASSISTANT, {"app_uid": "app-1", "version": 2})
+    refused = remote.post(
+        "/api/v1/apps/sessions",
+        headers=as_("visitor:0a1b2c:dep-1"),
+        json={"agent": "preview-assistant", "opener": "Hello"},
+    )
+    assert refused.status_code == 403

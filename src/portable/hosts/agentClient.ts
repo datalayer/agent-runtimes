@@ -47,6 +47,12 @@ export type HostTurnRequest<P> = Readonly<{
    * another application): a new session's uid is derived with it.
    */
   sessionGeneration?: number;
+  /**
+   * The host user never linked: exchanged as a visitor, which ai-agents
+   * answers only when the installation's owner opened it to visitors and the
+   * deployment opens to somebody signed out (WHATSAPP WA-03).
+   */
+  visitor?: boolean;
 }>;
 
 export type TurnStream = Readonly<{
@@ -149,6 +155,7 @@ export class HostKeyCredentials<P> implements HostCredentials<P> {
       externalUserId: request.externalUserId,
       hostKey,
       place: this.shape.placeOf(request),
+      ...(request.visitor ? { visitor: true } : {}),
     });
   }
 
@@ -159,6 +166,8 @@ export class HostKeyCredentials<P> implements HostCredentials<P> {
     hostKey: string;
     /** Where the turn is asked from: Datalayer refuses a denied channel at once. */
     place?: Place;
+    /** As a visitor: the host user never linked (WHATSAPP WA-03). */
+    visitor?: boolean;
   }): Promise<HostExchange> {
     const response = await this.fetchImplementation(
       `${this.apiUrl}/api/ai-agents/v1/apps/hosts/self/token`,
@@ -167,6 +176,7 @@ export class HostKeyCredentials<P> implements HostCredentials<P> {
           deployment_uid: input.deploymentUid,
           external_user_id: input.externalUserId,
           ...(input.place ? { place: input.place } : {}),
+          ...(input.visitor ? { visitor: true } : {}),
         }),
         headers: {
           'content-type': 'application/json',

@@ -123,6 +123,8 @@ export const exchangeSchema = z.object({
   expires_in: z.number().int().nonnegative(),
   exp: z.number().int(),
   principal_uid: z.string().min(1),
+  /** A person who never linked, answered as a visitor (WHATSAPP WA-03): `principal_uid` is `visitor:<hash>`. */
+  visitor: z.boolean().optional(),
   host_uid: z.string().min(1),
   deployment: z.object({
     uid: z.string().min(1),

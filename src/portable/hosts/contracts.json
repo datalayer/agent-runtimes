@@ -114,6 +114,45 @@
       "direct"
     ]
   },
+  "visitor_exchange": {
+    "about": "WHATSAPP WA-03 (decided 28 October 2026): a host's user who never linked, answered as a visitor when the installation's owner turned its visitors switch on and the deployment opens to somebody signed out. sub is visitor:<hash of the host's id with the installation's salt>; no link; a daily cap per visitor at the exchange (429).",
+    "request": {
+      "external_user_id": "US.13491208655302741918",
+      "deployment_uid": "dep-1",
+      "visitor": true
+    },
+    "response_keys": [
+      "success",
+      "access_token",
+      "token_type",
+      "expires_in",
+      "exp",
+      "principal_uid",
+      "visitor",
+      "host_uid",
+      "deployment",
+      "session_api"
+    ],
+    "token_claims": [
+      "jti",
+      "iss",
+      "iat",
+      "exp",
+      "aud",
+      "sub",
+      "azp",
+      "host_kind",
+      "deployment_uid",
+      "app_uid",
+      "visitor",
+      "scope"
+    ],
+    "sub_prefix": "visitor:",
+    "refusals": {
+      "visitors_off": 403,
+      "capped": 429
+    }
+  },
   "whoami": {
     "response_keys": [
       "success",
@@ -124,7 +163,8 @@
       "app_uid",
       "link",
       "scope",
-      "expires_in"
+      "expires_in",
+      "visitor"
     ]
   },
   "bind_session": {

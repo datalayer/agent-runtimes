@@ -289,7 +289,10 @@ async def _authorize(
 
 def _reaches(caller: Caller, agent: str) -> None:
     """A visitor's token reaches the one application it names, and no other (R-30)."""
-    if caller.kind != "visitor":
+    from agent_runtimes.apps.callers import is_host_visitor
+
+    if caller.kind != "visitor" or is_host_visitor(caller):
+        # A host's visitor reaches its one deployment: `_acts_as` holds it there.
         return
     from agent_runtimes.apps.visitors import OTHER_APPLICATION, agent_of
 
@@ -320,8 +323,10 @@ async def _visitors_agent(agent: str, request: Request) -> None:
 
     if not (visitors_runtime() or a_deployment_is_served()):
         return
+    from agent_runtimes.apps.callers import is_host_visitor
+
     caller = (await _authorize(request, False)).caller
-    if caller.kind != "visitor":
+    if caller.kind != "visitor" or is_host_visitor(caller):
         return
     if not visitors_runtime() and not caller.app_uid.startswith(AT_PREFIX):
         # The runtime a deployment is kept on answers its address only.
@@ -1207,6 +1212,7 @@ async def _acts_as(
     companies the Appspec it runs grants (P-01), asked for and
     renewed the same way; without one it runs nothing.
     """
+    from agent_runtimes.apps.callers import is_host_visitor
     from agent_runtimes.apps.opening import NotLetIn, ensure_may_open
     from agent_runtimes.apps.principal import (
         PrincipalTokenMissing,
@@ -1219,6 +1225,31 @@ async def _acts_as(
     from agent_runtimes.apps.sessions import SessionRefused
 
     deployment = deployment_of(instance)
+    if is_host_visitor(caller):
+        # A host's visitor (WHATSAPP WA-03): the one deployment their token
+        # was issued for, opened to them as to anybody signed out, its
+        # principal acting — their turn only reads and asks nobody (the
+        # session's `run`), and nothing of it is resumed, cloned or exported.
+        if not deployment or deployment != caller.deployment_uid:
+            raise HTTPException(
+                status_code=403,
+                detail="This host token runs a session of the deployment it was issued for, and no other.",
+            )
+        try:
+            await ensure_may_open(deployment, caller, bearer)
+        except NotLetIn as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
+        try:
+            await ensure_principal_token(deployment, bearer or None)
+        except PrincipalTokenMissing as missing:
+            raise _refused(SessionRefused(403, str(missing))) from None
+        return {
+            "kind": "principal",
+            "uid": principal_uid_of(deployment),
+            "deployment_uid": deployment,
+        }
     if caller.kind == "host":
         # A host's person: the one deployment its host
         # token was issued for, opened to them as to anybody, its principal
