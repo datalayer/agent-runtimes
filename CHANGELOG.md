@@ -17,6 +17,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - **A host's visitors** (`apps/callers.py`): a host token ai-agents answers with `visitor: true` is a visitor caller of its one deployment — opened as somebody signed out, its turn only reading, approvals refused, nothing resumed, cloned or exported; the portable client exchanges with `visitor: true`.
 - **`pap_confirm` decided in a host**: the `pap-confirm` approval renderer shows the company, its summary, every term, the operation and its exact revision, and fails closed without any of them.
 - Web bot auth: a key directory counts as verified only with a signature covering the authority it was fetched from and the body, with an expiry.
+- **Python 3.11 at least**: `requires-python` is `>=3.11`; CI tests 3.11, 3.12 and 3.13 (3.10 dropped, the user's decision).
 - **A member's tool calls on the team graph** (`components/teams`): the edge to a connection (Accounting → Odoo via MCP) is drawn as an A2A edge is — *MCP* at rest, the call flowing out with its tool (*MCP · list invoices*), its result flowing back (*MCP · Odoo answers*), the label under the edge, said to a screen reader both ways.
 
 ## 1.5.89
