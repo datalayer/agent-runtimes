@@ -909,6 +909,31 @@ class AppRecorder:
             },
         )
 
+    def refused(self, session: str, *, operation: str, by: str, sentence: str) -> None:
+        """An operation of the session API the budget refused (R-22 (5)):
+        a ``decision`` entry said refused, whatever ``record.include``
+        keeps — a refusal is never silent, as a notification that reached
+        nobody is not.
+        """
+        _SESSION.set(session)
+        self._append(
+            "decision",
+            f"{operation.capitalize()} refused: {sentence}",
+            {
+                "tool": f"session.{operation}",
+                "behaviour": REFUSED,
+                "because": "budget",
+                "classes": [],
+                "refused": sentence,
+                "by": by,
+            },
+        )
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        send_later(session, self.flush(session))
+
     def exported(
         self, session: str, *, by: str, entries: int, redactions: int, digest: str
     ) -> None:

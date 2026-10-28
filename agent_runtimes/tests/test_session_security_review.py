@@ -11,7 +11,8 @@ counted from its entries, not read from its first line, and a file over the
 cap is refused while it is being read, before it is held whole; an embed's
 visitor cannot import; a long record is read back page by page and resumed
 whole, one over the cap refused rather than cut short and exported as whole,
-a page that does not say whether more follow refused; the audit rows name
+a page that does not say whether more follow refused; a budget an hour on
+clone, export and import, the refusal said in the record; the audit rows name
 who did it.
 """
 
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
 
@@ -354,6 +356,96 @@ def test_a_page_that_does_not_say_whether_more_follow_is_refused(
         "The record of session session-s005 could not be read: ai-agents answered "
         "no `has_more`, so the page cannot be known to be the last."
     )
+
+
+def test_a_budget_an_hour_refuses_the_next_clone_export_and_import_and_says_when_it_resets(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.loop.apps.sessions import BUDGET_HOUR, SESSION_BUDGETS
+
+    assert SESSION_BUDGETS == {"clone": 20, "export": 20, "import": 10}
+    # 10:05 UTC, by the budget's clock.
+    now = datetime(2026, 10, 28, 10, 5, tzinfo=timezone.utc).timestamp()
+    monkeypatch.setattr(sessions, "_CLOCK", lambda: now)
+    _open(remote, "session-s007")
+    export = remote.get("/api/v1/apps/sessions/session-s007/export", headers=as_("ada"))
+    assert export.status_code == 200
+    text = export.text
+    for n in range(SESSION_BUDGETS["clone"]):
+        clone = remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+        )
+        assert clone.status_code == 201, (n, clone.text)
+    refused = remote.post(
+        "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+    )
+    assert refused.status_code == 429, refused.text
+    assert refused.json()["detail"] == (
+        "You have asked 20 clones this hour, the most the budget allows: it resets at 11:05 UTC."
+    )
+    # The refusal is in the source's record, as a decision said refused, by whom.
+    [row] = [
+        e
+        for e in asyncio.run(store.entries("session-s007"))
+        if e["kind"] == "decision" and e["payload"].get("tool") == "session.clone"
+    ]
+    assert row["summary"].startswith(
+        "Clone refused: You have asked 20 clones this hour"
+    )
+    assert row["payload"]["behaviour"] == "refused" and row["payload"]["by"] == "ada"
+    assert row["opened_by"] == "ada"
+    # Another person's budget is their own; a stranger is still told nothing.
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("bob"), json={}
+        ).status_code
+        == 404
+    )
+    # Exports: the one above counted, 19 more, the 21st refused.
+    for n in range(SESSION_BUDGETS["export"] - 1):
+        assert (
+            remote.get(
+                "/api/v1/apps/sessions/session-s007/export", headers=as_("ada")
+            ).status_code
+            == 200
+        ), n
+    refused = remote.get(
+        "/api/v1/apps/sessions/session-s007/export", headers=as_("ada")
+    )
+    assert (
+        refused.status_code == 429
+        and "20 exports this hour" in refused.json()["detail"]
+    )
+    # Imports: 10, the 11th refused before a byte of its file is read.
+    for n in range(SESSION_BUDGETS["import"]):
+        assert _import(remote, text, who="ada").status_code == 201, n
+    seen: List[int] = []
+    original = routes._read_at_most
+
+    async def counting(request: Any, cap: int) -> bytes:
+        body = await original(request, cap)
+        seen.append(len(body))
+        return body
+
+    monkeypatch.setattr(routes, "_read_at_most", counting)
+    refused = _import(remote, text, who="ada")
+    assert refused.status_code == 429, refused.text
+    assert refused.json()["detail"] == (
+        "You have asked 10 imports this hour, the most the budget allows: it resets at 11:05 UTC."
+    )
+    assert seen == []
+    # An hour on, the budget is back.
+    monkeypatch.setattr(sessions, "_CLOCK", lambda: now + BUDGET_HOUR + 1)
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+        ).status_code
+        == 201
+    )
+    assert _import(remote, text, who="ada").status_code == 201
 
 
 def test_the_audit_rows_name_who_did_it(

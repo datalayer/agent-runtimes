@@ -51,6 +51,7 @@ calls not ready.
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -78,6 +79,8 @@ from agent_runtimes.loop.apps.plugins import (
 from agent_runtimes.loop.apps.record import COMMENT_LIMIT, RecordNotSent, recorder_of
 from agent_runtimes.types import AppSpec
 from agent_runtimes.voice import hear, spoken_of, voice_settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/apps", tags=["apps"])
 
@@ -1788,6 +1791,24 @@ async def _source(uid: str, request: Request) -> Tuple[Any, Caller]:
     return recorded_session(uid, described, app, instance), authorized.caller
 
 
+async def _within_budget(source: Any, operation: str, caller: Caller) -> None:
+    """One more ``operation`` of ``caller``'s on ``source`` within the hour's
+    budget (R-22 (5)), or 429 in a sentence naming when it resets — said in
+    the source's record first.
+    """
+    from agent_runtimes.loop.apps.sessions import (
+        SessionRefused,
+        refused_by_budget,
+        spend_budget,
+    )
+
+    try:
+        spend_budget(operation, caller)
+    except SessionRefused as refused:
+        await refused_by_budget(source, operation, caller, refused)
+        raise _refused(refused) from None
+
+
 class CloneRequest(BaseModel):
     """Where to cut a clone, and what it runs on (MH-09)."""
 
@@ -1812,6 +1833,7 @@ async def clone_session_route(
     from agent_runtimes.loop.apps.sessions import SessionRefused, clone_session
 
     source, caller = await _source(uid, request)
+    await _within_budget(source, "clone", caller)
     try:
         return await clone_session(
             source,
@@ -1836,6 +1858,7 @@ async def export_session_route(uid: str, request: Request, format: str = "") -> 
     from agent_runtimes.loop.apps.sessions import SessionRefused, export_session
 
     source, caller = await _source(uid, request)
+    await _within_budget(source, "export", caller)
     try:
         exported, digest = await export_session(source, format_id=format, caller=caller)
     except SessionRefused as refused:
@@ -1854,7 +1877,8 @@ async def export_session_route(uid: str, request: Request, format: str = "") -> 
 
 async def _read_at_most(request: Request, cap: int) -> bytes:
     """The request's body, read up to ``cap`` bytes and one more: what is
-    over the cap is never held, and the one byte over is what refuses it."""
+    over the cap is never held, and the one byte over is what refuses it.
+    """
     kept = bytearray()
     async for chunk in request.stream():
         need = cap + 1 - len(kept)
@@ -1878,9 +1902,25 @@ async def import_session_route(
     """
     from agentspecs.sessions import MAX_BYTES, within_caps
 
-    from agent_runtimes.loop.apps.sessions import SessionRefused, import_session
+    from agent_runtimes.loop.apps.sessions import (
+        SessionRefused,
+        import_session,
+        spend_budget,
+    )
 
     authorized = await _authorize(request, False)
+    # The hour's budget of imports first (R-22 (5)): a refused import reads
+    # no byte of the file; with no session yet, the refusal is logged by caller.
+    try:
+        spend_budget("import", authorized.caller)
+    except SessionRefused as refused:
+        logger.warning(
+            "An import by %s:%s was refused: %s",
+            authorized.caller.kind,
+            authorized.caller.uid,
+            refused.reason,
+        )
+        raise _refused(refused) from None
     # The file is untrusted data: a body that says it is over the cap is
     # refused before a byte is read, and one that does not say is read up to
     # the cap and one byte more — never held whole past it.

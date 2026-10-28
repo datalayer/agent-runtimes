@@ -63,8 +63,10 @@ import json
 import logging
 import re
 import secrets
+import time
 import traceback
 import uuid
+from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -73,6 +75,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
+    Deque,
     Dict,
     List,
     Mapping,
@@ -2806,6 +2809,67 @@ def _forget_rules(session: str) -> None:
     session_rules().forget(session)
 
 
+#: What one caller may ask of the session API in an hour (REVIEWS R-22 (5)),
+#: by operation: a clone copies a record, an export reads one whole, an import
+#: writes one of up to 20 000 entries. Past the budget, 429 in a sentence that
+#: says when it resets; the refusal is in the source session's record.
+SESSION_BUDGETS: Dict[str, int] = {"clone": 20, "export": 20, "import": 10}
+
+#: The budget's hour, in seconds.
+BUDGET_HOUR = 3600.0
+
+#: When each caller spent each operation, within the hour: ``(operation, caller)``.
+_SPENT: Dict[Tuple[str, str], Deque[float]] = {}
+
+#: The clock the budget reads; a test sets it.
+_CLOCK: Callable[[], float] = time.time
+
+
+def spend_budget(operation: str, caller: Caller) -> None:
+    """Count one ``operation`` of ``caller``'s against the hour's budget.
+
+    Parameters
+    ----------
+    operation : str
+        One of `SESSION_BUDGETS`: ``clone``, ``export`` or ``import``.
+    caller : Caller
+        Who asks; the budget is theirs, by kind and uid.
+
+    Raises
+    ------
+    SessionRefused
+        429, when the hour's budget is spent, naming when it resets.
+    """
+    allowed = SESSION_BUDGETS[operation]
+    spent = _SPENT.setdefault((operation, f"{caller.kind}:{caller.uid}"), deque())
+    now = _CLOCK()
+    while spent and spent[0] <= now - BUDGET_HOUR:
+        spent.popleft()
+    if len(spent) >= allowed:
+        resets = datetime.fromtimestamp(spent[0] + BUDGET_HOUR, timezone.utc)
+        raise SessionRefused(
+            429,
+            f"You have asked {allowed} {operation}s this hour, the most the budget "
+            f"allows: it resets at {resets:%H:%M} UTC.",
+        )
+    spent.append(now)
+
+
+async def refused_by_budget(
+    source: Any, operation: str, caller: Caller, refused: "SessionRefused"
+) -> None:
+    """Say a refusal of the budget in the source session's record (R-22 (5)):
+    the row is written and sent before the refusal is answered.
+    """
+    source.recorder.refused(
+        source.uid, operation=operation, by=caller.uid, sentence=refused.reason
+    )
+    if isinstance(source, LiveSession):
+        await source.recorder.settled(source.uid)
+    else:
+        await source.recorder.flush(source.uid)
+
+
 def session_of(uid: str) -> Optional[LiveSession]:
     """A session of this runtime, by uid, or None."""
     return _SESSIONS.get(uid)
@@ -2822,6 +2886,7 @@ def forget_sessions() -> None:
     from agent_runtimes.guardrails.session_rules import session_rules
 
     session_rules().clear()
+    _SPENT.clear()
 
 
 def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
@@ -3976,6 +4041,10 @@ __all__ = [
     "record_entries",
     "run_hooks",
     "session_of",
+    "spend_budget",
+    "refused_by_budget",
+    "SESSION_BUDGETS",
+    "BUDGET_HOUR",
     "text_in_words",
     "use_rebinder",
     "use_record_reader",
