@@ -132,9 +132,9 @@ async def _the_hung_start_is_failed_and_the_next_turn_starts_it(
     assert not manager._lock_for(SERVER).locked()
     assert manager.get_running_server(SERVER) is None
     assert manager.get_server_status(SERVER)["status"] == "failed"
-    # Its start, still ending, is left to end on its own, held meanwhile.
-    (abandoned,) = manager._abandoned
-    assert not abandoned.done()
+    # Its start, if still ending, is left to end on its own, held meanwhile
+    # (Python 3.10's cancellation can end it at once: then none is held).
+    assert len(manager._abandoned) <= 1
 
     # A turn that needs it does not wait on it: the failure is known at once.
     assert await manager.wait_until_ready(SERVER, timeout=5.0) is False
