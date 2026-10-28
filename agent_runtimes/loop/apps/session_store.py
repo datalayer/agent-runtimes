@@ -270,6 +270,24 @@ class FileSessionStore:
 Reader = Callable[[str, str], Awaitable[List[Dict[str, Any]]]]
 
 
+#: The most entries of one session the record answers at once (ai-agents'
+#: `MAX_READ`). A session read back with that many is not known to be whole:
+#: refused, never cut short and resumed, cloned or exported as if it were.
+RECORD_READ_LIMIT = 1000
+
+
+def _whole(session_uid: str, answered: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The entries answered, when they can be the whole session."""
+    if len(answered) >= RECORD_READ_LIMIT:
+        raise SessionStoreError(
+            409,
+            f"Session {session_uid} has {RECORD_READ_LIMIT} entries or more, and "
+            f"the record answers at most {RECORD_READ_LIMIT} at once: it cannot "
+            "be read back whole yet.",
+        )
+    return answered
+
+
 async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
     """A session's record, read from ai-agents as the caller."""
     if not bearer:
@@ -289,7 +307,7 @@ async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
-            params={"session_uid": session_uid, "limit": 1000},
+            params={"session_uid": session_uid, "limit": RECORD_READ_LIMIT},
             headers={"Authorization": f"Bearer {bearer}"},
         )
     if response.status_code >= 300:
@@ -417,12 +435,14 @@ class RecordSessionStore:
         )
 
     async def get(self, uid: str) -> Optional[Dict[str, Any]]:
-        return session_from_entries(uid, _as_entries(await self.reader(uid, _bearer())))
+        answered = _whole(uid, await self.reader(uid, _bearer()))
+        return session_from_entries(uid, _as_entries(answered))
 
     async def entries(
         self, uid: str, *, up_to_turn: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        return _up_to_turn(_as_entries(await self.reader(uid, _bearer())), up_to_turn)
+        answered = _whole(uid, await self.reader(uid, _bearer()))
+        return _up_to_turn(_as_entries(answered), up_to_turn)
 
     async def append(
         self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
@@ -544,6 +564,7 @@ __all__ = [
     "DEFAULT_SESSIONS_PATH",
     "ENTRIES_FILE",
     "FILE_STORE",
+    "RECORD_READ_LIMIT",
     "NOT_CLONED",
     "PAGE_LIMIT",
     "RECORD_STORE",

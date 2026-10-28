@@ -3067,6 +3067,31 @@ class Rebuilt:
     state: str
     agent: str
     turns: int
+    #: Who opened it, as the record says: the uid, ``""`` when nobody (a
+    #: session woken for an event). A resume is theirs alone.
+    opened_by: str = ""
+
+
+def opener_may(opened_by: str, caller: Caller) -> bool:
+    """Whether a caller may act on a recorded session that ``opened_by`` opened.
+
+    The opener — a person, or a host session's linked person signed in as
+    themselves — or the machine itself; never a stranger, the application's
+    owner and an organization's admin included, who are told the session
+    does not exist (MH-31). A session nobody opened answers nobody but the
+    machine.
+    """
+    if caller.kind == "local":
+        return True
+    return (
+        bool(opened_by)
+        and opened_by == caller.uid
+        and caller.kind
+        in (
+            "person",
+            "host",
+        )
+    )
 
 
 _ROW_FACTS = (
@@ -3277,6 +3302,7 @@ async def rebuilt_from_record(
         state=str(described["state"] if described else "paused"),
         agent=str(described["agent"] if described else ""),
         turns=sum(1 for m in messages if m.get("role") == "user"),
+        opened_by=str((described["opened_by"] if described else {}).get("uid") or ""),
     )
 
 
@@ -3803,6 +3829,11 @@ async def import_session(
         if kind in ("session", "paused", "ended", "imported", "exported", "cloned"):
             # The file's own state and audit rows are its session's, not this one's.
             continue
+        if kind == "rule":
+            # The file's Rules were its exporter's, on their session: an
+            # imported session starts from the application's default Rules,
+            # and an untrusted file plants none (MH-14).
+            continue
         payload = dict(entry.get("payload") or {})
         if kind == "file":
             payload = {**payload, "present": False, "path": ""}
@@ -3815,6 +3846,9 @@ async def import_session(
                 "imported": True,
             }
         )
+    # The person's turns are counted from the entries kept, never read from
+    # the file's first line: a file is untrusted data, its own count included.
+    turns = sum(1 for entry in entries if entry.get("kind") == "turn")
     described = {
         "uid": new_uid,
         "agent": chosen,
@@ -3833,7 +3867,7 @@ async def import_session(
         "archived": bool(head.get("archived")),
         "lineage": lineage,
         "runs_on": None,
-        "turns": int(head.get("turns") or 0),
+        "turns": turns,
     }
     store = await _store()
     await _store_call(
@@ -3865,7 +3899,7 @@ async def import_session(
         "uid": new_uid,
         "state": "paused",
         "runs_on": None,
-        "turns": int(head.get("turns") or 0),
+        "turns": turns,
         "redactions": int(imported.redactions),
         "agent": chosen,
         "harness": harness_id,
@@ -3931,6 +3965,7 @@ __all__ = [
     "given_files",
     "is_text",
     "new_session",
+    "opener_may",
     "pause_held",
     "placed_in_words",
     "put_in_sandbox",

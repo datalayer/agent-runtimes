@@ -1667,17 +1667,15 @@ async def _recorded(uid: str, request: Request) -> Dict[str, Any]:
     """
     from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps.session_store import active_store
+    from agent_runtimes.loop.apps.sessions import opener_may
 
     authorized = await _authorize(request, False)
     set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
     described = await _store_refused(active_store().get(uid))
     if described is None:
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
-    caller = authorized.caller
     owner = str(described.get("opened_by", {}).get("uid") or "")
-    if caller.kind != "local" and (
-        not owner or owner != caller.uid or caller.kind not in ("person", "host")
-    ):
+    if not opener_may(owner, authorized.caller):
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
     return described
 
@@ -1854,6 +1852,20 @@ async def export_session_route(uid: str, request: Request, format: str = "") -> 
     )
 
 
+async def _read_at_most(request: Request, cap: int) -> bytes:
+    """The request's body, read up to ``cap`` bytes and one more: what is
+    over the cap is never held, and the one byte over is what refuses it."""
+    kept = bytearray()
+    async for chunk in request.stream():
+        need = cap + 1 - len(kept)
+        if need <= 0:
+            break
+        kept.extend(chunk[:need])
+        if len(kept) > cap:
+            break
+    return bytes(kept)
+
+
 @router.post("/sessions/import", status_code=201)
 async def import_session_route(
     request: Request, agent: str = "", format: str = ""
@@ -1864,10 +1876,18 @@ async def import_session_route(
     agent it lacks (422 unless `?agent=` names one), a different application
     version said.
     """
+    from agentspecs.sessions import MAX_BYTES, within_caps
+
     from agent_runtimes.loop.apps.sessions import SessionRefused, import_session
 
     authorized = await _authorize(request, False)
-    body = await request.body()
+    # The file is untrusted data: a body that says it is over the cap is
+    # refused before a byte is read, and one that does not say is read up to
+    # the cap and one byte more — never held whole past it.
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_BYTES:
+        raise HTTPException(status_code=413, detail=within_caps(int(declared), 0) or "")
+    body = await _read_at_most(request, MAX_BYTES)
     try:
         return await import_session(
             body,
@@ -2414,6 +2434,7 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         agent_app,
         apply_rules,
         new_session,
+        opener_may,
         rebuilt_from_record,
         session_of,
     )
@@ -2451,6 +2472,11 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         # The whole conversation (MH-03): turns, tool rows and displays,
         # files, the session's Rules, its title and lineage.
         rebuilt = await rebuilt_from_record(uid, app, instance, bearer)
+        if not opener_may(rebuilt.opened_by, authorized.caller):
+            # The opener's alone, as a clone or an export is: a stranger — the
+            # application's owner, who reads its record, included — is not
+            # told the session exists (MH-31).
+            raise SessionRefused(404, f"No session {uid} is held here.")
         _prune()
         live = new_session(
             agent_id=body.agent,
