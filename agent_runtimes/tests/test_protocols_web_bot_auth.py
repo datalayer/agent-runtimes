@@ -156,7 +156,7 @@ async def test_a_directory_signature_that_does_not_bind_the_set_proves_nothing()
         is_response=True,
     )
 
-    async def signed(components, expires):  # type: ignore[no-untyped-def]
+    async def signed(components, expires):
         params = SignatureParams(
             components=components,
             params=(

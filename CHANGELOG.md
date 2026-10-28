@@ -7,6 +7,17 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.90
+
+28 October 2026. Three runtime fixes found on r1 the same day, a host's visitors and `pap_confirm` decided in a host.
+
+- **An MCP server start that never finishes fails closed and is started again** (`agent_runtimes/mcp/lifecycle.py`, `routes/agents.py`): a start now runs under a whole-start deadline (3 attempts × (2 × 45 s + 5 s) + 5 s = 290 s, `AGENT_RUNTIMES_MCP_START_DEADLINE`); at the deadline, on a cancellation or on any exception outside the attempts, the failure is recorded in `_failed_servers` with its reason, the server's lock released and its starting mark cleared, so a later turn that needs it starts it again with the config it was first given. Before, a handshake that ignored its cancellation left the start pending for good: on r1 the demo Accounting answered that its Odoo tools were not connected, turn after turn. The background start tasks are held. `test_mcp_start_fails_closed.py` (5).
+- **`<datalayer-app>` asks the AI plane for a visitor's token** (`src/apps/embed`): its defaults read the plane table (`@datalayer/core` `DEFAULT_PLANE_URLS`, ai-agents and ai-inference on r1), never a literal; ai-inference is resolved on its own (`api`, else the platform's `aiInferenceUrl`, else the plane's). A bare `<datalayer-app app="…">` asked prod1, where ai-inference does not answer, and failed with *Failed to fetch*. `api` stays the override of both. [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding) says it.
+- **A routed harness waits for the runtime's ai-inference token** (`adapters/acp_agent.py`, `models/offered.py`): a kept deployment's first keep on a fresh runtime started its harness while the token was still arriving and was refused; it now waits up to `INFERENCE_TOKEN_WAIT` (30 s, `AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT`), says how long it waited when refused, and refuses an expired token at once.
+- **A host's visitors** (`apps/callers.py`): a host token ai-agents answers with `visitor: true` is a visitor caller of its one deployment — opened as somebody signed out, its turn only reading, approvals refused, nothing resumed, cloned or exported; the portable client exchanges with `visitor: true`.
+- **`pap_confirm` decided in a host**: the `pap-confirm` approval renderer shows the company, its summary, every term, the operation and its exact revision, and fails closed without any of them.
+- Web bot auth: a key directory counts as verified only with a signature covering the authority it was fetched from and the body, with an expiry.
+
 ## 1.5.89
 
 28 October 2026. A remote MCP server is reached at its url with its headers, by the runtime itself: the demo scenes' tools reach the Datalayer gateway again.
