@@ -170,6 +170,7 @@ BEDROCK_ENV = \
 
 RUFF_TARGETS = \
 	agent_runtimes/specs/voices.py \
+	agent_runtimes/specs/scenes.py \
 	agent_runtimes/specs/agents/ \
 	agent_runtimes/specs/teams/ \
 	agent_runtimes/specs/skills.py \

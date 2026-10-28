@@ -356,18 +356,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
 def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
     """Update the __init__.py file with correct imports based on generated specs."""
-    # Generate list of MCP server constant names
-    server_constants = []
-    for spec in specs:
-        server_id = spec["id"]
-        version = spec.get("version", "0.0.1")
-        const_name = (
-            server_id.upper().replace("-", "_")
-            + "_MCP_SERVER"
-            + version_suffix(version)
-        )
-        server_constants.append(const_name)
-
     # Read the current __init__.py
     init_content = init_file.read_text()
 
@@ -386,9 +374,12 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
         return
 
     # Generate new import lines - all names sorted alphabetically (ruff/isort order)
+    # Only the catalogue and its readers are re-exported: entries are read by
+    # id, never by a version-named constant (decided 14 October 2026), so the
+    # *_MCP_SERVER_<version> constants stay in catalog_mcp_servers alone and a
+    # version bump touches no caller (test_catalogue_by_id.py holds it).
     all_names = sorted(
-        server_constants
-        + [
+        [
             "MCP_SERVER_CATALOG",
             "check_env_vars_available",
             "get_catalog_server",
@@ -423,8 +414,6 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
             '    "get_catalog_server",',
             '    "list_catalog_servers",',
         ]
-        for const in sorted(server_constants):
-            all_entries.append(f'    "{const}",')
         all_entries.append("]")
 
         # Replace the section
