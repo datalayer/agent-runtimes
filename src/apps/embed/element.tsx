@@ -92,7 +92,7 @@ import {
   type EmbedLook,
 } from './embedConfig';
 import { embedShadowCss } from './embedTheme';
-import { DEFAULT_API, readVisitorApp } from './visitorApp';
+import { DEFAULT_API, DEFAULT_INFERENCE, readVisitorApp } from './visitorApp';
 
 export { runnable };
 
@@ -482,7 +482,11 @@ export function defineDatalayerAppElement(
         // A public application, as a visitor without an account (D-07):
         // an example kept warm or an address open to visitors, run on the
         // visitors' runtime; a decision framed; a refusal said.
-        const visitor = await readVisitorApp({ api: this.agents(), app });
+        const visitor = await readVisitorApp({
+          api: this.agents(),
+          inference: this.inference(),
+          app,
+        });
         if (visitor.kind === 'decision') {
           return { kind: 'frame', src: frameSrcOf(this.origin(), visitor.app) };
         }
@@ -512,15 +516,29 @@ export function defineDatalayerAppElement(
 
     /**
      * ai-agents, where a visitor's address is read and beside which the
-     * visitors' runtime and ai-inference answer: the `api` attribute, else
-     * the platform's, else r1's. Not Spacer's address (`api()`), which lives
-     * on another plane.
+     * visitors' runtime answers: the `api` attribute, else the platform's,
+     * else the AI plane's (`DEFAULT_API`). Not Spacer's address (`api()`),
+     * which lives on another plane.
      */
     private agents(): string {
       return (
         this.getAttribute('api') ||
         coreStore.getState().configuration?.aiAgentsUrl ||
         DEFAULT_API
+      ).replace(/\/+$/, '');
+    }
+
+    /**
+     * ai-inference, which mints a visitor's token: the `api` attribute, else
+     * the platform's, else the AI plane's (`DEFAULT_INFERENCE`) — never the
+     * control plane, where no ai-inference answers (28 October 2026: a bare
+     * `<datalayer-app app="…">` asked prod1 and got "Failed to fetch").
+     */
+    private inference(): string {
+      return (
+        this.getAttribute('api') ||
+        coreStore.getState().configuration?.aiInferenceUrl ||
+        DEFAULT_INFERENCE
       ).replace(/\/+$/, '');
     }
 

@@ -12,10 +12,15 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import {
+  CONTROL_PLANE_URL,
+  RUNTIMES_PLANE_URL,
+} from '@datalayer/core/lib/config/planes';
 import { emptyAppspec } from '../apps/appspec';
 import {
   AT_PREFIX,
   DEFAULT_API,
+  DEFAULT_INFERENCE,
   TOKEN_HINT,
   VISITORS_PATH,
   VISITOR_EXAMPLES,
@@ -63,6 +68,39 @@ function opened(
 }
 
 describe('a visitor’s application', () => {
+  it('asks the AI plane for ai-agents and for the visitor’s token, as core’s plane table says it, unless api names where', async () => {
+    // core's table, never a literal of this bundle's own: the one it carried
+    // said prod1, where no ai-inference answers, and a bare element could
+    // not mint a visitor's token (28 October 2026).
+    expect(DEFAULT_API).toBe(RUNTIMES_PLANE_URL);
+    expect(DEFAULT_INFERENCE).toBe(RUNTIMES_PLANE_URL);
+    expect(DEFAULT_API).not.toBe(CONTROL_PLANE_URL);
+    expect(visitorsAt(DEFAULT_API, 'web-research')).toEqual({
+      url: `${RUNTIMES_PLANE_URL}${VISITORS_PATH}`,
+      app: 'web-research',
+      inferenceUrl: RUNTIMES_PLANE_URL,
+    });
+    // `api` names both; `inference` names the minting alone.
+    const own = await readVisitorApp({
+      app: 'web-research',
+      api: 'https://own.example/',
+    });
+    expect(own.kind === 'visitors' && own.visitors).toEqual({
+      url: 'https://own.example/api/runtime-visitors',
+      app: 'web-research',
+      inferenceUrl: 'https://own.example',
+    });
+    const minted = await readVisitorApp({
+      app: 'web-research',
+      inference: 'https://mint.example/',
+    });
+    expect(minted.kind === 'visitors' && minted.visitors).toEqual({
+      url: `${DEFAULT_API}${VISITORS_PATH}`,
+      app: 'web-research',
+      inferenceUrl: 'https://mint.example',
+    });
+  });
+
   it('runs an example the visitors’ runtime keeps warm, with a token for its id', async () => {
     const read = await readVisitorApp({ app: 'web-research' });
     expect(read.kind).toBe('visitors');

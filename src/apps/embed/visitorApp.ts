@@ -40,6 +40,7 @@
  * @module apps/embed/visitorApp
  */
 
+import { DEFAULT_PLANE_URLS } from '@datalayer/core/lib/config/planes';
 import type { AppSpec } from '../../types/agentspecs';
 import { getApp } from '../../specs/apps';
 import { parseAppspec } from '../apps/appspec';
@@ -61,12 +62,22 @@ export const AT_PREFIX = 'at:';
 /**
  * Datalayer's services for a visitor, where the element names none (`api`)
  * and the platform's configuration says none: ai-agents, where an address is
- * read, and beside it the visitors' runtime and ai-inference, which mints the
- * visitor's token. Not Spacer's address, which reads an application with its
- * embed token: the two live on different planes (ai-agents on r1, Spacer on
- * prod1), found 15 October 2026 on datalayer.ai's embed.
+ * read, and beside it the visitors' runtime — the AI plane, as core's plane
+ * table says it, never a literal of this bundle's own. Not Spacer's address,
+ * which reads an application with its embed token: the two live on different
+ * planes (ai-agents on r1, Spacer on prod1), found 15 October 2026 on
+ * datalayer.ai's embed; a bundle whose literal still said prod1 failed to
+ * mint a visitor's token there on 28 October 2026 ("Failed to fetch"),
+ * ai-inference being on r1 with the agents that call it.
  */
-export const DEFAULT_API = 'https://r1.datalayer.run';
+export const DEFAULT_API: string = DEFAULT_PLANE_URLS.aiAgentsUrl;
+
+/**
+ * ai-inference, which mints a visitor's token, where the element names none
+ * (`api`) and the platform's configuration says none: the AI plane, as core's
+ * plane table says it.
+ */
+export const DEFAULT_INFERENCE: string = DEFAULT_PLANE_URLS.aiInferenceUrl;
 
 /** An application's id on Datalayer: a ULID. */
 export const isAppUid = (value: string): boolean =>
@@ -87,18 +98,20 @@ export type VisitorApp =
 /**
  * Where a visitor's conversation with `app` runs: the visitors' runtime beside
  * ai-agents — or `runtime`, the one a deployment with code of its own is
- * kept on (R-30) — its token from ai-inference.
+ * kept on (R-30) — its token from ai-inference, at `inference` when it is
+ * named, else beside ai-agents.
  */
 export function visitorsAt(
   api: string,
   app: string,
   runtime?: string,
+  inference?: string,
 ): DatalayerVisitors {
   const base = api.replace(/\/+$/, '');
   return {
     url: runtime ? runtime.replace(/\/+$/, '') : `${base}${VISITORS_PATH}`,
     app,
-    inferenceUrl: base,
+    inferenceUrl: (inference || base).replace(/\/+$/, ''),
   };
 }
 
@@ -118,22 +131,29 @@ export const refusedSentence = (reason: string): string =>
  * Read what `app` is for a visitor without an account: a decision to frame,
  * an example or an address to run on the visitors' runtime, or a sentence.
  *
- * @param api - Datalayer's services (ai-agents, ai-inference): the `api` attribute.
+ * @param api - Datalayer's services (ai-agents, and ai-inference unless
+ *   `inference` names it): the `api` attribute; the AI plane unless given.
+ * @param inference - ai-inference, which mints the visitor's token: `api`
+ *   when that is given, else the AI plane.
  * @param app - The `app` attribute: a decision's id, an example's id or an address.
  * @param fetcher - What asks ai-agents; `fetch` unless given.
  * @param catalogue - The examples; the bundle's catalogue unless given.
  */
 export async function readVisitorApp({
-  api = DEFAULT_API,
+  api,
+  inference,
   app,
   fetcher = fetch,
   catalogue = getApp,
 }: {
   api?: string;
+  inference?: string;
   app: string;
   fetcher?: typeof fetch;
   catalogue?: (ref: string) => AppSpec | undefined;
 }): Promise<VisitorApp> {
+  const agents = api || DEFAULT_API;
+  const mints = inference || api || DEFAULT_INFERENCE;
   const named = app.trim();
   if (isAppUid(named)) {
     return { kind: 'decision', app: named };
@@ -149,7 +169,7 @@ export async function readVisitorApp({
     return {
       kind: 'visitors',
       app: runnable({ app: example, problems: [] }),
-      visitors: visitorsAt(api, example.id),
+      visitors: visitorsAt(agents, example.id, undefined, mints),
     };
   }
   if (!SLUG.test(named)) {
@@ -161,7 +181,7 @@ export async function readVisitorApp({
   let response: Response;
   try {
     response = await fetcher(
-      `${api.replace(/\/+$/, '')}/api/ai-agents/v1/apps/deployments/at/${encodeURIComponent(named)}`,
+      `${agents.replace(/\/+$/, '')}/api/ai-agents/v1/apps/deployments/at/${encodeURIComponent(named)}`,
     );
   } catch (error) {
     return {
@@ -206,7 +226,7 @@ export async function readVisitorApp({
   return {
     kind: 'visitors',
     app: runnable({ app: { ...parsed.app, name }, problems: parsed.problems }),
-    visitors: visitorsAt(api, `${AT_PREFIX}${named}`, runtime.url),
+    visitors: visitorsAt(agents, `${AT_PREFIX}${named}`, runtime.url, mints),
   };
 }
 

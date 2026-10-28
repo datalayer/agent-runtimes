@@ -20,6 +20,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { themeAccentVars } from '@datalayer/primer-addons';
@@ -686,6 +687,56 @@ deployment:
       expect(props.app.id).toBe('web-research');
       expect(seen.runtimes).toHaveLength(0);
       await act(async () => element.remove());
+    }
+  });
+
+  it('asks the AI plane for a visitor’s token when the snippet names no api, the platform’s configuration over it, api over both', async () => {
+    // A bare <datalayer-app app="…">: ai-inference is on the AI plane with
+    // the agents that call it (r1); a bundle that asked prod1 for the
+    // visitor's token got "Failed to fetch" (28 October 2026).
+    const configuration = coreStore.getState().configuration;
+    const visitorsOf = async (attributes: Record<string, string>) => {
+      seen.renderer.length = 0;
+      const element = document.createElement('datalayer-app');
+      element.setAttribute('app', 'web-research');
+      for (const [name, value] of Object.entries(attributes)) {
+        element.setAttribute(name, value);
+      }
+      await act(async () => {
+        document.body.appendChild(element);
+      });
+      await settle();
+      const props = seen.renderer.at(-1)!;
+      await act(async () => element.remove());
+      return props.datalayerVisitors;
+    };
+    try {
+      expect(await visitorsOf({})).toEqual({
+        url: 'https://r1.datalayer.run/api/runtime-visitors',
+        app: 'web-research',
+        inferenceUrl: 'https://r1.datalayer.run',
+      });
+      // The platform's configuration, when the page says it.
+      coreStore.setState({
+        configuration: {
+          ...configuration,
+          aiAgentsUrl: 'https://agents.example/',
+          aiInferenceUrl: 'https://inference.example/',
+        },
+      } as never);
+      expect(await visitorsOf({})).toEqual({
+        url: 'https://agents.example/api/runtime-visitors',
+        app: 'web-research',
+        inferenceUrl: 'https://inference.example',
+      });
+      // `api` over both.
+      expect(await visitorsOf({ api: 'https://own.example/' })).toEqual({
+        url: 'https://own.example/api/runtime-visitors',
+        app: 'web-research',
+        inferenceUrl: 'https://own.example',
+      });
+    } finally {
+      coreStore.setState({ configuration } as never);
     }
   });
 
