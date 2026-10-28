@@ -38,6 +38,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Mapping, Optional, Sequence
 
+from agentspecs.sessions import MAX_ENTRIES
+
 from agent_runtimes.loop.apps.record import session_from_entries
 from agent_runtimes.plugins.points import SESSION_STORES, SessionPage
 
@@ -270,26 +272,51 @@ class FileSessionStore:
 Reader = Callable[[str, str], Awaitable[List[Dict[str, Any]]]]
 
 
-#: The most entries of one session the record answers at once (ai-agents'
-#: `MAX_READ`). A session read back with that many is not known to be whole:
-#: refused, never cut short and resumed, cloned or exported as if it were.
-RECORD_READ_LIMIT = 1000
+#: How many entries of one session ai-agents answers at once (its `MAX_READ`):
+#: the record is read back page by page, `start` moving by this many, until
+#: ai-agents says there are no more (R-22 (4)).
+RECORD_PAGE = 1000
+
+#: The most entries one session is read back whole with: the session file's
+#: cap (agentspecs' `MAX_ENTRIES`, 20 000). A session over it is refused in a
+#: sentence, never cut short and resumed, cloned or exported as if it were.
+RECORD_READ_LIMIT = MAX_ENTRIES
+
+
+def _over_the_cap(session_uid: str) -> SessionStoreError:
+    """The refusal of a session with more entries than are read back whole."""
+    limit = f"{RECORD_READ_LIMIT:,}".replace(",", " ")
+    return SessionStoreError(
+        409,
+        f"Session {session_uid} has more than {limit} entries, the most a "
+        "session is read back whole with: it cannot be resumed, cloned or exported.",
+    )
 
 
 def _whole(session_uid: str, answered: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """The entries answered, when they can be the whole session."""
-    if len(answered) >= RECORD_READ_LIMIT:
-        raise SessionStoreError(
-            409,
-            f"Session {session_uid} has {RECORD_READ_LIMIT} entries or more, and "
-            f"the record answers at most {RECORD_READ_LIMIT} at once: it cannot "
-            "be read back whole yet.",
-        )
+    if len(answered) > RECORD_READ_LIMIT:
+        raise _over_the_cap(session_uid)
     return answered
 
 
+#: A transport for the reads of ai-agents, in place of the network (a test).
+_TRANSPORT: Optional[Any] = None
+
+
+def use_record_transport(transport: Optional[Any]) -> None:
+    """What `_read_record` sends its requests through: an ``httpx`` transport
+    standing in for ai-agents in a test; ``None`` puts the network back.
+    """
+    global _TRANSPORT
+    _TRANSPORT = transport
+
+
 async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
-    """A session's record, read from ai-agents as the caller."""
+    """A session's record, read from ai-agents as the caller, page by page
+    (`RECORD_PAGE` entries a page, `GET /records?start=`) until ai-agents
+    says there is no more (`has_more`); refused past `RECORD_READ_LIMIT`.
+    """
     if not bearer:
         raise SessionStoreError(
             401,
@@ -304,18 +331,36 @@ async def _read_record(session_uid: str, bearer: str) -> List[Dict[str, Any]]:
             503,
             f"Session {session_uid} cannot be read back: no ai-agents is configured.",
         )
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(
-            f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
-            params={"session_uid": session_uid, "limit": RECORD_READ_LIMIT},
-            headers={"Authorization": f"Bearer {bearer}"},
-        )
-    if response.status_code >= 300:
-        raise SessionStoreError(
-            502,
-            f"The record of session {session_uid} could not be read ({response.status_code}): {response.text[:200]}",
-        )
-    return list((response.json() or {}).get("entries") or [])
+    entries: List[Dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=10.0, transport=_TRANSPORT) as client:
+        while True:
+            response = await client.get(
+                f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
+                params={
+                    "session_uid": session_uid,
+                    "limit": RECORD_PAGE,
+                    "start": len(entries),
+                },
+                headers={"Authorization": f"Bearer {bearer}"},
+            )
+            if response.status_code >= 300:
+                raise SessionStoreError(
+                    502,
+                    f"The record of session {session_uid} could not be read ({response.status_code}): {response.text[:200]}",
+                )
+            answered = response.json() or {}
+            if "has_more" not in answered:
+                raise SessionStoreError(
+                    502,
+                    f"The record of session {session_uid} could not be read: ai-agents answered "
+                    "no `has_more`, so the page cannot be known to be the last.",
+                )
+            page = list(answered.get("entries") or [])
+            entries.extend(page)
+            if len(entries) > RECORD_READ_LIMIT:
+                raise _over_the_cap(session_uid)
+            if not answered["has_more"] or not page:
+                return entries
 
 
 def _as_entries(answered: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -564,6 +609,7 @@ __all__ = [
     "DEFAULT_SESSIONS_PATH",
     "ENTRIES_FILE",
     "FILE_STORE",
+    "RECORD_PAGE",
     "RECORD_READ_LIMIT",
     "NOT_CLONED",
     "PAGE_LIMIT",
@@ -578,5 +624,6 @@ __all__ = [
     "configured_store_name",
     "send_through_store",
     "use_record_reader",
+    "use_record_transport",
     "use_session_store",
 ]

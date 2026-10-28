@@ -9,8 +9,9 @@ uid is a 404, as a clone's or an export's is); an import is untrusted — the
 file's rules are not applied to the imported session, its turn count is
 counted from its entries, not read from its first line, and a file over the
 cap is refused while it is being read, before it is held whole; an embed's
-visitor cannot import; a record the store answers at its read limit is
-refused rather than cut short and exported as whole; the audit rows name
+visitor cannot import; a long record is read back page by page and resumed
+whole, one over the cap refused rather than cut short and exported as whole,
+a page that does not say whether more follow refused; the audit rows name
 who did it.
 """
 
@@ -21,11 +22,13 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from agent_runtimes.loop.apps import sessions
 from agent_runtimes.loop.apps.session_store import (
+    RECORD_PAGE,
     RECORD_READ_LIMIT,
     FileSessionStore,
     use_session_store,
@@ -233,43 +236,124 @@ def test_an_embeds_visitor_cannot_import(
         assert (answer.status_code, answer.json()["detail"]) == (404, NOTHING_KEPT), who
 
 
-def test_a_record_answered_at_its_read_limit_is_refused_not_cut(
-    through_store: Runtime,
-    remote: TestClient,  # noqa: F811 - the fixture
-) -> None:
-    answered = [
-        {
-            **OPENED,
+class RecordPages:
+    """The record's `GET /records`, answering a session of ``total`` entries
+    a page at a time, as the route pages (R-22 (4)): ``start`` and ``limit``
+    read, ``has_more`` said; ``endless`` answers a full page with more every
+    time, a session longer than any cap.
+    """
+
+    def __init__(self, total: int, *, endless: bool = False, has_more: bool = True):
+        self.total = total
+        self.endless = endless
+        self.says_has_more = has_more
+        self.starts: List[int] = []
+
+    def entry(self, position: int) -> Dict[str, Any]:
+        base = OPENED if position == 0 else TURN
+        return {
+            **base,
             "session_uid": "session-s005",
             "opened_by": "ada",
             "app_uid": "app-1",
         }
-    ] + [
-        {**TURN, "session_uid": "session-s005", "opened_by": "ada", "app_uid": "app-1"}
-        for _ in range(RECORD_READ_LIMIT - 1)
-    ]
-    assert len(answered) == RECORD_READ_LIMIT
 
-    async def reader(uid: str, bearer: str) -> List[Dict[str, Any]]:
-        return list(answered)
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/ai-agents/v1/apps/records"
+        assert request.headers["Authorization"].startswith("Bearer ")
+        params = dict(request.url.params)
+        assert params["session_uid"] == "session-s005"
+        start, limit = int(params.get("start") or 0), int(params["limit"])
+        assert limit == RECORD_PAGE
+        self.starts.append(start)
+        if self.endless:
+            page = [self.entry(start + n) for n in range(limit)]
+            return httpx.Response(
+                200, json={"success": True, "entries": page, "has_more": True}
+            )
+        page = [self.entry(n) for n in range(start, min(start + limit, self.total))]
+        answer: Dict[str, Any] = {"success": True, "entries": page}
+        if self.says_has_more:
+            answer["has_more"] = start + len(page) < self.total
+        return httpx.Response(200, json=answer)
 
-    sessions.use_record_reader(reader)
+
+@pytest.fixture()
+def record_pages(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+    """The record store on the real reader, ai-agents played by `RecordPages`."""
+    from agent_runtimes.loop.apps.session_store import (
+        RECORD_STORE,
+        use_record_transport,
+    )
+
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "http://ai-agents.test")
+    made: List[RecordPages] = []
+
+    def play(pages: RecordPages) -> RecordPages:
+        made.append(pages)
+        use_record_transport(httpx.MockTransport(pages.handle))
+        use_session_store(RECORD_STORE)
+        return pages
+
     try:
-        for operation in ("export", "clone"):
-            answer = remote.request(
-                "GET" if operation == "export" else "POST",
-                f"/api/v1/apps/sessions/session-s005/{operation}",
-                headers=as_("ada"),
-                json=None if operation == "export" else {},
-            )
-            assert answer.status_code == 409, (operation, answer.text)
-            assert answer.json()["detail"] == (
-                f"Session session-s005 has {RECORD_READ_LIMIT} entries or more, and "
-                f"the record answers at most {RECORD_READ_LIMIT} at once: it cannot "
-                "be read back whole yet."
-            )
+        yield play
     finally:
-        sessions.use_record_reader(None)
+        use_record_transport(None)
+        use_session_store(None)
+
+
+def test_a_long_record_is_read_back_page_by_page_and_resumed_whole(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    pages = record_pages(RecordPages(1500))
+    resumed = events_of(_resume(remote, "session-s005", "ada"))
+    [snapshot] = [e for e in resumed if e["type"] == "MESSAGES_SNAPSHOT"]
+    assert len([m for m in snapshot["messages"] if m["role"] == "user"]) == 1499
+    # Two pages: the second asked from the 1000th entry on, none after the last.
+    assert pages.starts == [0, 1000]
+    live = sessions.session_of("session-s005")
+    assert live is not None and live.opened_by.uid == "ada"
+
+
+def test_a_record_over_the_cap_is_refused_not_cut(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    pages = record_pages(RecordPages(0, endless=True))
+    for operation in ("export", "clone"):
+        answer = remote.request(
+            "GET" if operation == "export" else "POST",
+            f"/api/v1/apps/sessions/session-s005/{operation}",
+            headers=as_("ada"),
+            json=None if operation == "export" else {},
+        )
+        assert answer.status_code == 409, (operation, answer.text)
+        assert answer.json()["detail"] == (
+            "Session session-s005 has more than 20 000 entries, the most a "
+            "session is read back whole with: it cannot be resumed, cloned or exported."
+        )
+    # Read up to the cap and one page more, never further.
+    assert pages.starts[: RECORD_READ_LIMIT // RECORD_PAGE + 1] == list(
+        range(0, RECORD_READ_LIMIT + RECORD_PAGE, RECORD_PAGE)
+    )
+    assert len(pages.starts) == 2 * (RECORD_READ_LIMIT // RECORD_PAGE + 1)
+
+
+def test_a_page_that_does_not_say_whether_more_follow_is_refused(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    record_pages(RecordPages(3, has_more=False))
+    answer = remote.get("/api/v1/apps/sessions/session-s005/export", headers=as_("ada"))
+    assert answer.status_code == 502, answer.text
+    assert answer.json()["detail"] == (
+        "The record of session session-s005 could not be read: ai-agents answered "
+        "no `has_more`, so the page cannot be known to be the last."
+    )
 
 
 def test_the_audit_rows_name_who_did_it(
