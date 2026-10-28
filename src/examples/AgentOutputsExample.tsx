@@ -34,6 +34,13 @@ import {
   DownloadIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import {
+  CellsProvider,
+  createCellsModel,
+  type CellsModel,
+  Spreadsheet,
+} from '@datalayer/cells';
+import { importCsv } from '@datalayer/cells/csv';
 import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
@@ -54,7 +61,7 @@ const AGENT_NAME = 'outputs-example-agent';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type OutputTab = 'table' | 'json' | 'chart' | 'files';
+type OutputTab = 'table' | 'json' | 'chart' | 'sheet' | 'files';
 
 interface DetectedOutput {
   tab: OutputTab;
@@ -83,9 +90,14 @@ const expandCompactMarkdownTable = (text: string): string => {
   return text.replace(/\|\|/g, '|\n|');
 };
 
+/**
+ * A spreadsheet: CSV or TSV, labelled by its fence (`csv`, `tsv`,
+ * `spreadsheet`, `cells`) or by a `# filename:` ending in .csv or .tsv. It is
+ * drawn by Datalayer Cells in the Sheet tab, and can still be downloaded.
+ */
+const SHEET_INFOS = new Set(['csv', 'tsv', 'spreadsheet', 'cells']);
+
 const EXT_LIKE_INFOS = new Set([
-  'csv',
-  'tsv',
   'txt',
   'md',
   'markdown',
@@ -153,6 +165,26 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
 
     // File: info string is a known extension OR first line declares a filename.
     const filenameMatch = firstLine.match(/^#\s*filename:\s*([\w.-]+)/i);
+
+    // Spreadsheet: a CSV or TSV, by its fence or its filename.
+    const sheetByName = /\.(csv|tsv)$/i.test(filenameMatch?.[1] ?? '');
+    if (SHEET_INFOS.has(info) || sheetByName) {
+      const extension = sheetByName
+        ? (filenameMatch?.[1].split('.').pop() ?? 'csv').toLowerCase()
+        : info === 'tsv'
+          ? 'tsv'
+          : 'csv';
+      const filename = filenameMatch?.[1] ?? `output.${extension}`;
+      return {
+        tab: 'sheet',
+        payload: filenameMatch
+          ? body.replace(/^#\s*filename:.*\n?/i, '')
+          : body,
+        filename,
+        extension,
+        messageId: m.id,
+      };
+    }
     if (filenameMatch || EXT_LIKE_INFOS.has(info)) {
       const filename =
         filenameMatch?.[1] ?? (info ? `output.${info}` : 'output.txt');
@@ -366,6 +398,57 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
   );
 };
 
+// ─── Spreadsheet renderer (Datalayer Cells) ───────────────────────────────
+
+/**
+ * A CSV or TSV the agent wrote, in a Datalayer Cells grid: its own model,
+ * read on this thread (no worker for a reply's few rows), made again as the
+ * reply streams in.
+ */
+const SheetView: React.FC<{ source: string; name: string }> = ({
+  source,
+  name,
+}) => {
+  const [model, setModel] = useState<CellsModel | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    const fresh = createCellsModel();
+    importCsv(fresh, source, { worker: false })
+      .then(() => {
+        if (!cancelled) {
+          setModel(fresh);
+          setError('');
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source]);
+  if (error) {
+    return (
+      <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
+        Could not read the spreadsheet: {error}
+      </Text>
+    );
+  }
+  if (!model) {
+    return <Text sx={{ color: 'fg.muted', fontSize: 0 }}>Reading…</Text>;
+  }
+  return (
+    <CellsProvider model={model}>
+      <Box height={280} border="1px solid" borderColor="border.muted">
+        <Spreadsheet model={model} aria-label={name} />
+      </Box>
+    </CellsProvider>
+  );
+};
+
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
 const AgentOutputsInner: React.FC = () => {
@@ -479,6 +562,7 @@ const AgentOutputsInner: React.FC = () => {
                 { key: 'table' as OutputTab, icon: TableIcon, label: 'Table' },
                 { key: 'json' as OutputTab, icon: CodeIcon, label: 'JSON' },
                 { key: 'chart' as OutputTab, icon: GraphIcon, label: 'Chart' },
+                { key: 'sheet' as OutputTab, icon: TableIcon, label: 'Sheet' },
                 { key: 'files' as OutputTab, icon: FileIcon, label: 'Files' },
               ] as const
             ).map(t => {
@@ -520,6 +604,8 @@ const AgentOutputsInner: React.FC = () => {
                 No {activeTab} outputs yet. Use one of the openers in the chat
                 to produce one — the side panel will switch to the matching tab
                 automatically.
+                {activeTab === 'sheet' &&
+                  ' For a spreadsheet, ask for the data as CSV, for example: "Give me twelve months of sales by region as a CSV".'}
               </Text>
             ) : (
               filtered.map((d, idx) => (
@@ -570,6 +656,23 @@ const AgentOutputsInner: React.FC = () => {
                     </Box>
                   )}
                   {d.tab === 'chart' && <ChartView source={d.payload} />}
+                  {d.tab === 'sheet' && (
+                    <>
+                      <SheetView
+                        source={d.payload}
+                        name={d.filename ?? 'Spreadsheet'}
+                      />
+                      <Box mt={2}>
+                        <Button
+                          size="small"
+                          leadingVisual={DownloadIcon}
+                          onClick={() => download(d)}
+                        >
+                          Download {d.filename ?? 'spreadsheet'}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
                   {d.tab === 'files' && (
                     <>
                       <Box
