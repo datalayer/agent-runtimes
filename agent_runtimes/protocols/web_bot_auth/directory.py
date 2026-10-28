@@ -128,6 +128,17 @@ async def sign_directory_response(
     )
 
 
+def _binds_the_set(params: SignatureParams) -> bool:
+    """Whether a directory signature covers the authority it was fetched at and the body."""
+    covered = {
+        (component.name, dict(component.params).get("req") is True)
+        for component in params.components
+    }
+    return ("@authority", True) in covered and any(
+        name == "content-digest" for name, _ in covered
+    )
+
+
 def verify_directory_response(
     *,
     body: bytes,
@@ -138,8 +149,12 @@ def verify_directory_response(
     """The keys of a directory whose response proves it holds them.
 
     A key is returned only when a signature of the response, tagged
-    ``http-message-signatures-directory`` and not created in the future,
-    verifies under it, and the body matches its ``Content-Digest``. A
+    ``http-message-signatures-directory``, covering ``"@authority";req`` and
+    ``content-digest``, with an ``expires`` not passed and a ``created`` not
+    in the future, verifies under it, and the body matches its
+    ``Content-Digest``. A signature that leaves the authority out could be
+    served again from another origin, and one without ``expires`` would be
+    good forever: neither proves the set (the draft's Appendix B). A
     directory with no such key answers ``ValueError``.
     """
     now = int(time.time()) if now is None else now
@@ -167,11 +182,13 @@ def verify_directory_response(
     ):
         if params.get("tag") != DIRECTORY_TAG:
             continue
+        if not _binds_the_set(params):
+            continue
         created = params.get("created")
         if not isinstance(created, int) or created > now:
             continue
         expires = params.get("expires")
-        if isinstance(expires, int) and expires < now:
+        if not isinstance(expires, int) or expires < now:
             continue
         signer = keys.get(str(params.get("keyid")))
         if signer is None:

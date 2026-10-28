@@ -131,6 +131,69 @@ def test_signed_directory_response_e23():
 
 
 @pytest.mark.asyncio
+async def test_a_directory_signature_that_does_not_bind_the_set_proves_nothing():
+    """REVIEWS R-22, the key directory: a directory signature is taken only when it covers
+    the authority it was fetched at and the body, and says when it ends — one leaving
+    the authority out could be served again from another origin, one without
+    ``expires`` would be good forever."""
+    from agent_runtimes.protocols.web_bot_auth.signature import (
+        Component,
+        SignatureParams,
+        content_digest,
+        serialize_signature,
+        serialize_signature_input,
+    )
+
+    signer = LocalSigner.from_jwk(KEY)
+    url = "https://agent.test" + DIRECTORY_PATH
+    body = directory_body([PUBLIC])
+    digest = content_digest(body)
+    response = Message(
+        method="GET",
+        url=url,
+        headers={"Content-Digest": digest},
+        request=Message(method="GET", url=url),
+        is_response=True,
+    )
+
+    async def signed(components, expires):  # type: ignore[no-untyped-def]
+        params = SignatureParams(
+            components=components,
+            params=(
+                ("created", NOW - 10),
+                *((("expires", expires),) if expires is not None else ()),
+                ("keyid", signer.keyid),
+                ("tag", "http-message-signatures-directory"),
+            ),
+        )
+        value = await signer.sign(signature_base(params, response))
+        return {
+            "Content-Digest": digest,
+            "Signature-Input": serialize_signature_input("binding", params),
+            "Signature": serialize_signature("binding", value),
+        }
+
+    authority = Component(name="@authority", params=(("req", True),))
+    bound = (authority, Component(name="content-digest"))
+    keys = verify_directory_response(
+        body=body, headers=await signed(bound, NOW + 300), authority_url=url, now=NOW
+    )
+    assert [key.keyid for key in keys] == [signer.keyid]
+    for components, expires in (
+        ((Component(name="content-digest"),), NOW + 300),  # the authority left out
+        ((authority,), NOW + 300),  # the body left out
+        (bound, None),  # good forever
+    ):
+        with pytest.raises(ValueError, match="no key"):
+            verify_directory_response(
+                body=body,
+                headers=await signed(components, expires),
+                authority_url=url,
+                now=NOW,
+            )
+
+
+@pytest.mark.asyncio
 async def test_signing_the_directory_reproduces_e23():
     directory = FIXTURES["directory"]
     signed = await sign_directory_response(
