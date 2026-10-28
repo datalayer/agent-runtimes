@@ -21,6 +21,7 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
   description:
     "Anthropic's coding agent, driven over ACP through the Agent Client Protocol project's adapter on the Claude Agent SDK.",
   enabled: true,
+  unavailable_because: '',
   tags: ['harness'],
   docs: 'https://github.com/agentclientprotocol/claude-agent-acp',
   acp: {
@@ -89,6 +90,7 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
   description:
     "OpenAI's coding agent, driven over ACP through the Agent Client Protocol project's adapter, which ships the Codex binary it drives.",
   enabled: true,
+  unavailable_because: '',
   tags: ['harness'],
   docs: 'https://github.com/agentclientprotocol/codex-acp',
   acp: {
@@ -149,6 +151,7 @@ export const CUSTOM_HARNESS_0_0_1: HarnessSpec = {
   description:
     "An organization's own ACP agent, its command named by the organization's own harness spec and never typed into a form.",
   enabled: false,
+  unavailable_because: '',
   tags: ['harness'],
   docs: '',
   requires: {
@@ -195,7 +198,9 @@ export const FAST_AGENT_HARNESS_0_0_1: HarnessSpec = {
   name: 'fast-agent',
   description:
     "llmindset's agent framework served over ACP; each agent it defines is a session mode, with any model provider it is configured with.",
-  enabled: true,
+  enabled: false,
+  unavailable_because:
+    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); fast-agent is a framework served over ACP, not a coding agent, its adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.',
   tags: ['harness', 'framework'],
   docs: 'https://github.com/evalstate/fast-agent/blob/main/docs/docs/acp/index.md',
   acp: {
@@ -254,6 +259,7 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
   description:
     "Google's coding agent, which speaks ACP itself when started with --experimental-acp.",
   enabled: true,
+  unavailable_because: '',
   tags: ['harness'],
   docs: 'https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/cli-reference.md',
   acp: {
@@ -315,7 +321,9 @@ export const GOOSE_HARNESS_0_0_1: HarnessSpec = {
   name: 'goose',
   description:
     "Block's open agent (now the Agentic AI Foundation's), which speaks ACP itself with goose acp; any model provider it is configured with.",
-  enabled: true,
+  enabled: false,
+  unavailable_because:
+    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); goose is a binary of its own release, not an npm adapter, the runtime image does not carry it, and it has not been drilled on Datalayer.',
   tags: ['harness'],
   docs: 'https://block.github.io/goose/docs/gdk/acp/',
   acp: {
@@ -374,6 +382,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
   description:
     "Anomaly's open coding agent, which speaks ACP itself with opencode acp; any model provider it is configured with.",
   enabled: true,
+  unavailable_because: '',
   tags: ['harness'],
   docs: 'https://opencode.ai/docs/acp/',
   acp: {
@@ -431,7 +440,9 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
   name: 'OpenHands',
   description:
     'The OpenHands CLI, which speaks ACP itself with openhands acp; any model provider it is configured with.',
-  enabled: true,
+  enabled: false,
+  unavailable_because:
+    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); OpenHands' adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
   tags: ['harness'],
   docs: 'https://docs.openhands.dev/openhands/usage/run-openhands/acp',
   acp: {

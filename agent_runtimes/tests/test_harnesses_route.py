@@ -34,8 +34,10 @@ def test_the_catalogue_is_listed_with_terms_register_and_capabilities(
     answer = client.get("/api/v1/harnesses")
     assert answer.status_code == 200
     listed = {harness["id"]: harness for harness in answer.json()["harnesses"]}
-    served = {spec.id for spec in HARNESS_CATALOGUE.values() if spec.acp is not None}
-    assert set(listed) == served
+    # The offered ones alone (the restriction to four, META_HARNESS): a harness the
+    # catalogue describes and does not offer is not listed, and named is refused below.
+    served = {spec.id for spec in HARNESS_CATALOGUE.values() if spec.acp is not None and spec.enabled}
+    assert set(listed) == served == {"claude-code", "codex", "opencode", "gemini-cli"}
     claude = listed["claude-code"]
     assert claude["name"] == "Claude Code"
     assert claude["requires"]["secrets"] == ["ANTHROPIC_API_KEY"]
@@ -53,3 +55,8 @@ def test_one_harness_is_answered_and_an_unknown_one_refused_in_a_sentence(
     refused = client.get("/api/v1/harnesses/no-such-harness")
     assert refused.status_code == 404
     assert "GET /api/v1/harnesses lists them" in refused.json()["detail"]
+    not_offered = client.get("/api/v1/harnesses/goose")
+    assert not_offered.status_code == 404
+    assert not_offered.json()["detail"].startswith(
+        "The harness 'goose' (goose) is not offered: the catalogue offers four harnesses today"
+    )

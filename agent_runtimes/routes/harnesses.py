@@ -39,7 +39,7 @@ def served_harnesses() -> List[Dict[str, Any]]:
     listed = []
     for contribution in accepted(session_platform(), HARNESSES):
         value = contribution.value
-        if value.spec.acp is None or value.organization:
+        if value.spec.acp is None or value.organization or not value.spec.enabled:
             continue
         listed.append(_described(contribution))
     return listed
@@ -53,14 +53,19 @@ async def list_harnesses() -> Dict[str, Any]:
 
 @router.get("/{harness_id}")
 async def get_harness(harness_id: str) -> Dict[str, Any]:
-    """One harness of the catalogue; a listed one, or none, refused in a sentence."""
+    """One harness the catalogue offers; one not offered, a listed one, or none, refused in a sentence."""
     for harness in served_harnesses():
         if harness["id"] == harness_id:
             return harness
-    from agentspecs.harnesses import listed_refusal
+    from agentspecs.harnesses import listed_refusal, offered_refusal
 
-    detail = listed_refusal(harness_id) or (
-        f"There is no harness named {harness_id!r} on this runtime: "
-        "GET /api/v1/harnesses lists them."
+    # Described and not offered: its own sentence, 404 as a listed one is.
+    detail = (
+        offered_refusal(harness_id)
+        or listed_refusal(harness_id)
+        or (
+            f"There is no harness named {harness_id!r} on this runtime: "
+            "GET /api/v1/harnesses lists them."
+        )
     )
     raise HTTPException(status_code=404, detail=detail)

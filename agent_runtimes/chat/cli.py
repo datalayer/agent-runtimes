@@ -1986,11 +1986,20 @@ def _prepare_harness(harness_id: str) -> None:
     if spec is None:
         from agentspecs.harnesses import listed_refusal
 
+        offered = sorted(h for h, s in HARNESS_CATALOGUE.items() if s.enabled)
         # The long tail is registered and not offered until drilled (SH-57).
         raise ValueError(
             listed_refusal(harness_id)
             or f"There is no harness named {harness_id!r}: one of "
-            f"{', '.join(sorted(HARNESS_CATALOGUE))} (`loop harnesses`)."
+            f"{', '.join(offered)} (`loop harnesses`)."
+        )
+    if not spec.enabled:
+        from agentspecs.harnesses import offered_refusal
+
+        # Described, not offered: its own sentence, never a launch.
+        raise ValueError(
+            offered_refusal(harness_id)
+            or f"The harness {harness_id!r} is not offered (`loop harnesses`)."
         )
     os.environ.setdefault(WORKSPACE_VARIABLE, os.getcwd())
     try:
@@ -2006,16 +2015,21 @@ def _prepare_harness(harness_id: str) -> None:
 def harnesses() -> None:
     """List the harnesses of the catalogue, each with its terms.
 
-    A harness is a coding agent — Claude Code, Codex, Gemini CLI, goose,
-    OpenCode, OpenHands — or any program speaking the Agent Client Protocol,
-    run with `loop --harness <id>` in the directory you run from.
+    A harness is a coding agent — Claude Code, Codex, OpenCode, Gemini CLI
+    — or any program speaking the Agent Client Protocol, run with
+    `loop --harness <id>` in the directory you run from. A harness the
+    catalogue describes and does not offer is listed last, with why.
     """
     from agent_runtimes.plugins.host import accepted, session_platform
     from agent_runtimes.plugins.points import HARNESSES
 
+    not_offered = []
     for contribution in accepted(session_platform(), HARNESSES):
         spec = contribution.value.spec
         if spec.acp is None or contribution.value.organization:
+            continue
+        if not spec.enabled:
+            not_offered.append(spec)
             continue
         entry = spec.registered
         print(
@@ -2039,6 +2053,10 @@ def harnesses() -> None:
         )
         if contribution.plugin != "agent-runtimes.sessions":
             print(f"    {GRAY}Contributed by:{RESET} {contribution.plugin}")
+        print()
+    for spec in not_offered:
+        print(f"  {GRAY}•{RESET} {BOLD}{spec.name}{RESET}  {GRAY}not offered{RESET}")
+        print(f"    {GRAY}Why:{RESET} {spec.unavailable_because}")
         print()
 
 

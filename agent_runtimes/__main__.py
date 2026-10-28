@@ -543,9 +543,10 @@ except Exception as exc:  # noqa: BLE001
 def harnesses_command() -> None:
     """List the harnesses of the catalogue, each with its terms.
 
-    A harness — Claude Code, Codex, Gemini CLI, goose, OpenCode, OpenHands,
-    or any program speaking the Agent Client Protocol — runs on this machine
-    with `loop --harness <id>`, in the directory you run from.
+    A harness — Claude Code, Codex, OpenCode, Gemini CLI, or any program
+    speaking the Agent Client Protocol — runs on this machine with
+    `loop --harness <id>`, in the directory you run from; one the catalogue
+    describes and does not offer is listed with why.
     """
     from agent_runtimes.chat.cli import harnesses
 

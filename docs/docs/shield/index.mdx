@@ -10,7 +10,7 @@ description: The boundary, the audit and the trace around any agent a Datalayer 
 
 # The Shield
 
-A harness — Claude Code, Codex, any agent that speaks the Agent Client Protocol — runs **inside** a Datalayer runtime, and the runtime is its Shield: the pod's boundary, the gateway's tools, the Rules and the record around it. This page says what the Shield does today — the boundary, the audit, the trace, the policies with their limits and the session's rules — as built (read again on 16 October 2026, agent-runtimes 1.5.42, Phase 2, SH-30, SH-31, SH-32, SH-34, SH-35, SH-50, SH-51, SH-54), with the [examples](#examples) that run it. The harness itself and the transports it is served over are on [the harnesses page](../harnesses/) and [its transports](../harnesses/transports).
+A harness — Claude Code, Codex, OpenCode, Gemini CLI: the four the catalogue offers, or any agent that speaks the Agent Client Protocol — runs **inside** a Datalayer runtime, and the runtime is its Shield: the pod's boundary, the gateway's tools, the Rules and the record around it. This page says what the Shield does today — the boundary, the audit, the trace, the policies with their limits and the session's rules — as built (read again on 16 October 2026, agent-runtimes 1.5.42, Phase 2, SH-30, SH-31, SH-32, SH-34, SH-35, SH-50, SH-51, SH-54), with the [examples](#examples) that run it. The harness itself and the transports it is served over are on [the harnesses page](../harnesses/) and [its transports](../harnesses/transports).
 
 ## The boundary: what a pod can reach
 
@@ -107,7 +107,7 @@ The Shield's decisive question: **can the agent reach a protected resource witho
 
 - A sub-agent that calls the gateway itself is decided and recorded **by the gateway**, not by the Shield's own audit; the Shield's rows hold the session and the turn. One thread across both is SH-51's trace.
 - A platform administrator may read any notebook — that is the platform's rule, not a way round; the notebook drill was run as a platform member for that reason.
-- On the funded side, a real harness (Claude Code and the others) has not been drilled: no funded key exists yet, so these are the fake agent's paths, which are the ACP paths a harness takes.
+- On the funded side, these are the fake agent's paths, which are the ACP paths a harness takes; Claude Code and Codex have since run funded turns on r1 behind the Shield (the sessions drills of 21–22 October 2026), OpenCode and Gemini CLI not yet.
 
 ## Examples
 

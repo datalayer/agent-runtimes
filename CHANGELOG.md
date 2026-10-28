@@ -7,6 +7,13 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.87
+
+28 October 2026. Four harnesses are offered — Claude Code, Codex, OpenCode and Gemini CLI — and a harness the catalogue describes and does not offer is refused in its own sentence (agentspecs 0.0.130).
+
+- **The restriction to four** (META_HARNESS, the audit of 28 October 2026): the catalogue's `enabled: false` harnesses — fast-agent, goose, OpenHands, each with its `unavailable_because` — are refused by the runtime (`harness_agent`: *The harness 'goose' (goose) is not offered: the catalogue offers four harnesses today …*), by `loop --harness`, by `GET /api/v1/harnesses/{id}` (404 with the sentence; the list answers the offered four) and by the Studio's check (`unservedHarnessProblem`, `isServedCatalogueHarness`); `loop harnesses` prints the offered ones, then the not-offered with why. `HarnessSpec.unavailable_because` in the Python and TypeScript catalogues (`make specs`). Nothing launches a harness that is not offered, and nothing falls back to another.
+- **Docs**: [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses) says the four, what each needs and how its credential reaches it on Datalayer and on a machine (Claude Code and Codex through ai-inference's routes on the runtime's token, OpenCode and Gemini CLI the account's secret by name; Gemini CLI's API host outside a pod's boundary until the plane allows it), what the runtime image carries (image 0.0.66: the four adapters at the register's pins; 0.0.44–0.0.65 carried two) and that a pod cannot install an adapter at run time; [Harness capabilities](https://agent-runtimes.datalayer.tech/docs/sessions/harnesses) in two tables, the offered and the described.
+
 ## 1.5.86
 
 27 October 2026. Personal Agent Protocol draft 0.3 (personal-agent-protocol 0.27.0, agentspecs 0.0.127), and Inbox triage is offered (W-01, W-02): with agentspecs 0.0.128 the catalogue's `google-workspace` server, the `worker-mail-triage` agent and the `inbox-triage` example are enabled, so an application connecting to Gmail has no setup note left, and the example is offered in the gallery. Gmail is the person's own, connected through Datalayer's IAM; each run's Gmail toolset asks IAM for its access token, as since 1.3.94.

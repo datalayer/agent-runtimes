@@ -7,10 +7,12 @@ title: Harnesses
 
 A **harness** is an agent program driven over the
 [Agent Client Protocol](https://agentclientprotocol.com) (ACP): a coding agent
-such as Claude Code, Codex, Gemini CLI, goose, OpenCode or OpenHands, or any
-agent a framework exposes over ACP (fast-agent, LangChain's Deep Agents,
-LlamaIndex's `workflows-acp`, …). Agent Runtimes drives one as it drives its
-own agents: it launches the program in the runtime, speaks ACP to it over
+you already know. **Four are offered today** (28 October 2026): **Claude
+Code**, **Codex**, **OpenCode** and **Gemini CLI**. Three more are described
+in the catalogue and not offered — fast-agent, goose, OpenHands — each with
+the reason, said in a sentence wherever one is named; and the long tail of ACP
+agents is listed, not drilled (below). Agent Runtimes drives a harness as it
+drives its own agents: it launches the program in the runtime, speaks ACP to it over
 stdio, lends it tools through the MCP gateway, writes the application's skills
 into its workspace in its own format, and serves it over every protocol the
 runtime serves — A2A, AG-UI, the session API, the embed. The harness has no
@@ -75,11 +77,17 @@ instructions are written for it (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
 `.goosehints`); `terms` the terms it is served under. Nothing in the fields is
 specific to coding: a framework's agent over ACP is described the same way.
 
-The catalogue: `claude-code`, `codex`, `gemini-cli`, `goose`, `opencode`,
-`openhands`, one framework over ACP, `fast-agent`, and **`custom`** — the one
-harness with no `acp` block, whose command an organization's own harness spec
-names; the shared catalogue refuses it to any agent. The reference page of
-every harness, generated from the specs, is
+The catalogue offers four — `claude-code`, `codex`, `opencode`, `gemini-cli`
+— and describes three it does not offer, `fast-agent`, `goose` and
+`openhands`, each with `enabled: false` and an `unavailable_because` sentence
+(a harness that is not offered says why, and an offered one says nothing: the
+spec is refused at load otherwise). Naming one of the three is refused with
+that sentence by the runtime (`harness_agent`), by `loop --harness`, by
+`GET /api/v1/harnesses/{id}` and by the Studio's checks; `loop harnesses` and
+the reference page list them apart. **`custom`** is the one harness with no
+`acp` block, whose command an organization's own harness spec names; the
+shared catalogue refuses it to any agent. The reference page of every harness,
+generated from the specs, is
 [agentspecs.datalayer.tech/harnesses](https://agentspecs.datalayer.tech/harnesses).
 
 `make specs` generates the Python and TypeScript catalogues as for every kind:
@@ -99,7 +107,8 @@ built), the Studio's instant checks (`checkAppspec`) and the variant vocabulary
 - `There is no harness named 'x': one of pydantic-ai, vercel-ai, claude-code, …`
 - `The harness 'custom' names no command: an organization's own harness spec names it, and is never typed into a form.`
 - `The harness 'claude-code' has its own subagents: drop `subagents:`.`
-- `The harness 'x' does not take a model: drop `model:`.` and `The harness 'x' reads no skills: drop `skills:`.` — for a harness whose `honours.model` is false or whose `skills.format` is `none`; none of the catalogue's seven is, an organization's own may be.
+- `The harness 'x' does not take a model: drop `model:`.` and `The harness 'x' reads no skills: drop `skills:`.` — for a harness whose `honours.model` is false or whose `skills.format` is `none`; none of the catalogue's is, an organization's own may be.
+- `The harness 'goose' (goose) is not offered: the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI …` — at launch, for a harness the catalogue describes and does not offer (`offered_refusal`); the Studio says it on the agent (`unservedHarnessProblem`).
 
 `harness_problems(harness_id, model=, subagents=, skills=)` in
 `agent_runtimes.types` says them; `unservedHarnessProblem(spec)` in
@@ -122,16 +131,16 @@ with where it was read, on 15 October 2026. A harness without an entry, or
 whose spec disagrees with its entry, does not load; a harness whose terms are
 unknown is not in the catalogue. The entries, in short:
 
-| Harness | Adapter, pinned | Credential | Third parties | Why |
-| --- | --- | --- | --- | --- |
-| Claude Code | `@agentclientprotocol/claude-agent-acp` 0.91.0, Apache-2.0, Node 22 | `ANTHROPIC_API_KEY` | API key only | Anthropic's [legal page](https://code.claude.com/docs/en/legal-and-compliance): each end user authenticates with their own key; developers may not route requests through Free, Pro or Max plan credentials for their users |
-| Codex | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser |
-| Gemini CLI | `@google/gemini-cli` 0.64.0 `--experimental-acp`, Apache-2.0, Node 20+ | `GEMINI_API_KEY`, or a Google login on Code Assist Standard or Enterprise | API key only | The individuals tier [stopped being served on 18 June 2026](https://developers.google.com/gemini-code-assist/resources/privacy-notice-gemini-code-assist-individuals) |
-| goose | `goose acp`, goose 1.54.0, Apache-2.0 | the provider's key (`GOOSE_PROVIDER`) | permitted | Open source, no vendor terms of its own |
-| OpenCode | `opencode-ai` 1.19.0 `acp`, MIT | the provider's key | permitted | Open source |
-| OpenHands | `openhands` 1.16.0 `acp --override-with-envs`, MIT | `LLM_API_KEY` | permitted | Open source |
-| fast-agent | `fast-agent-acp` 0.10.45 (uvx), Apache-2.0 | the provider's key | permitted | Open source; each agent it defines is an ACP mode |
-| custom | the organization's own | the organization's own | the organization's own | Not launchable from the shared catalogue |
+| Harness | Offered | Adapter, pinned | Credential | Third parties | Why |
+| --- | --- | --- | --- | --- | --- |
+| Claude Code | yes | `@agentclientprotocol/claude-agent-acp` 0.91.0, Apache-2.0, Node 22 | `ANTHROPIC_API_KEY` | API key only | Anthropic's [legal page](https://code.claude.com/docs/en/legal-and-compliance): each end user authenticates with their own key; developers may not route requests through Free, Pro or Max plan credentials for their users |
+| Codex | yes | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser |
+| OpenCode | yes | `opencode-ai` 1.19.0 `acp`, MIT | `ANTHROPIC_API_KEY` (the provider it is configured with) | permitted | Open source |
+| Gemini CLI | yes | `@google/gemini-cli` 0.64.0 `--experimental-acp`, Apache-2.0, Node 20+ | `GEMINI_API_KEY`, or a Google login on Code Assist Standard or Enterprise | API key only | The individuals tier [stopped being served on 18 June 2026](https://developers.google.com/gemini-code-assist/resources/privacy-notice-gemini-code-assist-individuals) |
+| goose | no | `goose acp`, goose 1.54.0, Apache-2.0 | the provider's key (`GOOSE_PROVIDER`) | permitted | Open source, no vendor terms of its own. Not offered: a binary of its own release, not in the runtime image, not drilled |
+| OpenHands | no | `openhands` 1.16.0 `acp --override-with-envs`, MIT | `LLM_API_KEY` | permitted | Open source. Not offered: a Python tool the runtime image does not carry, not drilled |
+| fast-agent | no | `fast-agent-acp` 0.10.45 (uvx), Apache-2.0 | the provider's key | permitted | Open source; a framework, not a coding agent. Not offered: a Python tool the runtime image does not carry, not drilled |
+| custom | no | the organization's own | the organization's own | the organization's own | Not launchable from the shared catalogue |
 
 Reviewed by counsel: not yet. The register's engine side — the Shield reading
 it to refuse a credential kind — is SH-04's part in `agent-shield`.
@@ -149,12 +158,11 @@ harness does not honour is refused at load, in a sentence (above).
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | lent | yes | yes | no, its own | `.claude/skills` | `CLAUDE.md` | default, plan, acceptEdits, bypassPermissions |
 | Codex | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | read-only, workspace-write, agent, agent-full-access |
-| Gemini CLI | lent | no | yes | no, its own | `.gemini/skills` | `GEMINI.md` | default, auto_edit, yolo, plan |
-| goose | lent | no | yes | no, its own | `.agents/skills` | `.goosehints` | — |
 | OpenCode | lent | no | yes | no, its own | `.opencode/skills` | `AGENTS.md` | — |
-| OpenHands | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | always-ask, always-approve, llm-approve |
-| fast-agent | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | each agent it defines |
+| Gemini CLI | lent | no | yes | no, its own | `.gemini/skills` | `GEMINI.md` | default, auto_edit, yolo, plan |
 | custom | — | — | — | — | — | — | refused in the shared catalogue |
+
+The three described and not offered (goose: `.goosehints`, no reload; OpenHands and fast-agent: `AGENTS.md`, reload) keep their rows in the catalogue and in the [capabilities table](../sessions/harnesses) for the day they are offered; nothing launches them until then.
 
 *Lent* is `acp.mcp: lend`: the gateway's toolsets the application connects,
 with the run's credential, never a key of the harness's own
@@ -230,8 +238,15 @@ what needs the runtime.
 - **`loop --harness <id>`** runs a harness on this machine over stdio, the
   directory `loop` runs from as its workspace, the platform's default policy, the record
   in the terminal; a missing adapter, secret or workspace is refused before
-  anything starts. **`loop harnesses`** lists the catalogue with each one's
-  adapter, credential, third-party serving and licence.
+  anything starts, each in a sentence — *OpenCode's adapter opencode-ai@1.19.0
+  is not installed: neither ~/.agent-shield/harnesses/opencode@1.19.0/node_modules/.bin/opencode
+  (`agent-shield setup --harness opencode`) nor 'opencode' on the PATH …* —
+  and so is a harness the catalogue does not offer (*The harness 'goose'
+  (goose) is not offered: …*). The adapter is installed into the Shield's
+  prefix by `agent-shield setup --harness <id>` (an `npm install --prefix`,
+  pinned), never fetched by `npx -y` at first run. **`loop harnesses`** lists
+  the offered harnesses with each one's adapter, credential, third-party
+  serving, licence and capabilities, then the ones not offered with why.
 - **The orchestrator's channel** (SH-02's agent-runtimes part):
   `orchestration/adapters/acp.py` takes the package's channels as its
   `ShieldChannel` — `stdio:<command line>` launches a local agent, `ws://`
@@ -245,6 +260,25 @@ harness, Claude Code live as a marked test) and `test_acp_agent_transports.py`
 all on the ACP SDK's fake agent (`tests/fixtures/acp_fake_agent.py`,
 agent-shield's): the only Anthropic key at hand has no credit, so Claude
 Code's first live turn through the adapter waits on a funded key.
+
+## What each harness needs, and how it gets it
+
+Each harness runs on **the vendor's own credential — the person's, never
+Datalayer's**: an API key (Claude Code and Codex refuse a subscription login
+in their terms; Gemini CLI takes a key, or a Google login on a paid Code
+Assist tier). Where that credential lives and how the harness's process gets
+it depends on the harness and on where it runs:
+
+| Harness | Credential | On Datalayer (a runtime pod) | On your machine (`loop --harness`, Desktop, VS Code) |
+| --- | --- | --- | --- |
+| Claude Code | `ANTHROPIC_API_KEY` | the key stays in the account's secrets; the harness calls ai-inference's Anthropic route with the runtime's own token, and ai-inference uses the key (below) | from the environment, or set once for the Shield |
+| Codex | `OPENAI_API_KEY` | the key stays in the account's secrets; codex-acp's `gateway` authentication onto ai-inference's OpenAI route with the runtime's token (1.5.80) | from the environment |
+| OpenCode | `ANTHROPIC_API_KEY` (the provider it is configured with) | the account's secret, declared by the harness and given to its process by name (the key, from IAM — below); the pod's boundary allows `api.anthropic.com` | from the environment |
+| Gemini CLI | `GEMINI_API_KEY` | the account's secret, given by name as OpenCode's; its API host (`generativelanguage.googleapis.com`) is not among the hosts a runtime pod may reach today, so a turn is refused at the pod's boundary until the plane allows it (`DATALAYER_RUNTIME_EGRESS_ALLOW`) | from the environment |
+
+What is **not** offered: a subscription login of any vendor (a browser flow
+no pod has; and Claude Code's and Codex's terms), a key of Datalayer's own,
+and a harness the catalogue describes and does not offer.
 
 ## The key, from IAM (built: the declared secrets, 1.5.32, 15 October 2026)
 
@@ -280,21 +314,26 @@ the runtime (`adapters/harness_inference.py`). Elsewhere — a runtime started b
 hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
 environment, as above.
 
-## In the runtime image (built: SH-05; image 0.0.44, 15 October 2026)
+## In the runtime image (built: SH-05; the four since image 0.0.66, 28 October 2026)
 
-The runtime image (`plane/etc/dockerfiles/agent-runtimes`, agent-runtimes
-1.5.33, agentspecs 0.0.101) carries the adapters the register pins, installed
-at build with `npm install --prefix` into the Shield's own prefix,
+The runtime image (`plane/etc/dockerfiles/agent-runtimes`) carries the four
+offered harnesses' adapters at the versions the register pins, installed at
+build with `npm install --prefix` into the Shield's own prefix,
 `AGENT_SHIELD_HOME=/opt/datalayer/agent-shield` —
-`harnesses/claude-code@0.91.0/node_modules/.bin/claude-agent-acp` and
-`harnesses/codex@2.2.2/node_modules/.bin/codex-acp` — owned by the runtime's
+`harnesses/claude-code@0.91.0/node_modules/.bin/claude-agent-acp`,
+`harnesses/codex@2.2.2/node_modules/.bin/codex-acp`,
+`harnesses/opencode@1.19.0/node_modules/.bin/opencode` (its musl build) and
+`harnesses/gemini-cli@0.64.0/node_modules/.bin/gemini` — owned by the runtime's
 user (`nobody`, whose `HOME` is `/tmp`, which is why the Shield's home is
-named rather than found under `~`), and never fetched by `npx -y` from the pod.
-Node is Alpine 3.21's, 22.23 (Zed's adapters need 22), so nothing was installed
-for it. Verified inside the image at build and by hand: `agent_shield` 0.1.1
-importable, `launch_command` resolving both harnesses to the prefix and not
-the PATH, and each adapter answering an ACP `initialize` over stdio as `nobody`
-(Claude Agent 0.91.0 with `loadSession`; Codex 2.2.2). The harness's workspace
+named rather than found under `~`), and never fetched by `npx -y` from the
+pod: **a pod reaches no package index** (the boundary refuses npm and PyPI),
+so an adapter that is not in the image cannot be installed at run time, and
+`launch_command` refuses it in a sentence. Images 0.0.44 to 0.0.65 carried
+Claude Code and Codex alone; OpenCode and Gemini CLI were refused there as
+*not installed*. Node is Alpine 3.21's, 22.x (Zed's adapters need 22), so
+nothing was installed for it. Verified inside the image at build and by hand:
+`agent_shield` importable, `launch_command` resolving the four to the prefix
+and not the PATH, each adapter answering `--version`. The harness's workspace
 is `AGENT_RUNTIMES_WORKSPACE_ROOT=/mnt/shared-agent/workspace`, a directory of
 the volume the agent-runtimes container shares with the sandbox (where
 `generated` and `skills` live), made by the entrypoint — the contents the
@@ -352,11 +391,11 @@ and **Shield Policy** (`@datalayer/agent-shield`'s types and
 
 ## Not built yet
 
-- **Claude Code live** through the adapter (SH-10's marked test, SH-03): the
-  adapter reaches `initialize` and `session/new` through the proxy; its turn
-  waits on a funded key.
-- **Drilled on r1** (SH-12): a kept Python application whose agent is a
-  harness, its permissions decided from the page.
+- **OpenCode and Gemini CLI drilled on Datalayer**: both are in the image
+  (0.0.66) and resolved by the runtime; a funded turn of each on a runtime pod
+  has not been run — Claude Code's and Codex's have (the sessions drills of
+  21–22 October 2026). Gemini CLI's API host is outside the pod's boundary
+  until the plane allows it.
 - `plane local` running a harness beside the local runtime (SH-19's second
   half); the Studio's Toolbox offering the catalogue's harnesses (SH-43) — an
   application names `example-harness-claude-code` by hand today.
@@ -372,6 +411,6 @@ and **Shield Policy** (`@datalayer/agent-shield`'s types and
 - **The Shield** around a harness is built — the organization's rules from
   IAM, the limits soft then hard, the session's rules, the record and the
   trace: see [The Shield](../shield/). Open there: the Shield report (SH-36),
-  the bypass drills run with a funded harness (SH-37: all seven run with the
-  fake agent).
+  the bypass drills run with a funded harness (SH-37: run with the fake
+  agent).
 - **The long tail** of ACP agents as a listed tier of the register (SH-57).

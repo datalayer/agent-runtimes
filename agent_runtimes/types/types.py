@@ -603,6 +603,13 @@ class HarnessSpec(BaseModel):
     enabled: bool = Field(
         default=True, description="Whether the shared catalogue offers it"
     )
+    unavailable_because: str = Field(
+        default="",
+        description=(
+            "Why it is not offered today, in a sentence said wherever it is named; "
+            "set when `enabled` is false, and only then"
+        ),
+    )
     tags: List[str] = Field(default_factory=list)
     docs: str = Field(default="", description="Where its ACP use is documented")
     acp: Optional[HarnessAcpSpec] = Field(

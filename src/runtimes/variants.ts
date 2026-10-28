@@ -97,14 +97,16 @@ export const CUSTOM_HARNESS = 'custom';
  * Why no variant runs an agent on this harness, in a sentence, or undefined
  * when one does.
  *
- * A harness of the catalogue (`agentspecs/harnesses`, SH-01) — Claude
- * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is served
- * by the Datalayer runtime through its ACP adapter (`ACPAgent`, SH-10):
- * the runtime launches the harness as its subprocess, so the runtime's
- * locations run it and the browser, which has no process to launch, does not.
- * Two are refused: `custom`, which names no command in the shared catalogue
- * (an organization's own harness spec names it), and a harness neither built
- * in nor of the catalogue. Nothing runs such an agent in its place.
+ * A harness the catalogue offers (`agentspecs/harnesses`, SH-01) — Claude
+ * Code, Codex, OpenCode, Gemini CLI — is served by the Datalayer runtime
+ * through its ACP adapter (`ACPAgent`, SH-10): the runtime launches the
+ * harness as its subprocess, so the runtime's locations run it and the
+ * browser, which has no process to launch, does not. Three are refused:
+ * `custom`, which names no command in the shared catalogue (an
+ * organization's own harness spec names it), a harness the catalogue
+ * describes and does not offer (its `unavailable_because` is the sentence),
+ * and a harness neither built in nor of the catalogue. Nothing runs such an
+ * agent in its place.
  */
 export function unservedHarnessProblem(
   spec: Pick<Agentspec, 'id' | 'harness'>,
@@ -120,6 +122,9 @@ export function unservedHarnessProblem(
   if (harness === CUSTOM_HARNESS) {
     return `The agent “${spec.id}” runs on the harness “custom”, which names no command: an organization's own harness spec names it, and is never typed into a form.`;
   }
+  if (!catalogued.enabled) {
+    return `The agent “${spec.id}” runs on the harness “${harness}” (${catalogued.name}), which is not offered: ${catalogued.unavailable_because}`;
+  }
   return undefined;
 }
 
@@ -131,7 +136,7 @@ export function isServedCatalogueHarness(harness: string): boolean {
   return (
     harness !== CUSTOM_HARNESS &&
     !(harness in HARNESS_BY_SPEC_HARNESS) &&
-    getHarness(harness) !== undefined
+    getHarness(harness)?.enabled === true
   );
 }
 

@@ -50,6 +50,46 @@ class TestTheHarnessCatalogue:
         }
         assert all(isinstance(spec, HarnessSpec) for spec in list_harnesses())
 
+    def test_four_are_offered_and_the_others_say_why_not(self) -> None:
+        """The restriction to four (META_HARNESS, 28 October 2026): Claude Code,
+        Codex, OpenCode and Gemini CLI are offered; fast-agent, goose and
+        OpenHands are described, not offered, each with its reason; `custom`
+        is the organization's own."""
+        offered = {spec.id for spec in list_harnesses() if spec.enabled}
+        assert offered == {"claude-code", "codex", "opencode", "gemini-cli"}
+        for spec in list_harnesses():
+            if spec.id == "custom":
+                assert not spec.enabled and not spec.unavailable_because
+            elif spec.enabled:
+                assert not spec.unavailable_because, spec.id
+            else:
+                assert spec.id in {"fast-agent", "goose", "openhands"}
+                assert "Claude Code, Codex, OpenCode and Gemini CLI" in spec.unavailable_because
+        from agentspecs.harnesses import offered_refusal
+
+        assert offered_refusal("goose") == (
+            "The harness 'goose' (goose) is not offered: " + get_harness("goose").unavailable_because.strip()
+        )
+        assert offered_refusal("codex") is None
+
+    def test_a_harness_not_offered_is_refused_in_its_sentence_everywhere(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The runtime (`harness_agent`), `loop --harness` and the Studio's
+        check each say the catalogue's sentence; nothing launches it."""
+        from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
+        from agent_runtimes.chat.cli import _prepare_harness
+
+        with pytest.raises(HarnessRefused, match="The harness 'goose' \\(goose\\) is not offered: the catalogue offers four"):
+            harness_agent("a1", "goose", workspace=tmp_path)
+        with pytest.raises(HarnessRefused, match="There is no harness named 'nope': one of claude-code, codex, gemini-cli, opencode\\."):
+            harness_agent("a1", "nope", workspace=tmp_path)
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(ValueError, match="The harness 'openhands' \\(OpenHands\\) is not offered"):
+            _prepare_harness("openhands")
+        with pytest.raises(ValueError, match="one of claude-code, codex, gemini-cli, opencode \\(`loop harnesses`\\)"):
+            _prepare_harness("nope")
+
     def test_each_is_launched_pinned_and_registered(self) -> None:
         for spec in list_harnesses():
             if spec.id == "custom":

@@ -184,6 +184,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f"    name={_s(spec['name'])},",
             f"    description={_s(spec.get('description'))},",
             f"    enabled={bool(spec.get('enabled', True))},",
+            f"    unavailable_because={_s(spec.get('unavailable_because'))},",
             f"    tags={json.dumps(list(spec.get('tags') or []))},",
             f"    docs={_s(spec.get('docs'))},",
         ]
@@ -316,6 +317,7 @@ def generate_typescript_code(
             f"  name: {_t(spec['name'])},",
             f"  description: {_t(spec.get('description'))},",
             f"  enabled: {json.dumps(bool(spec.get('enabled', True)))},",
+            f"  unavailable_because: {_t(spec.get('unavailable_because'))},",
             f"  tags: {json.dumps(list(spec.get('tags') or []))},",
             f"  docs: {_t(spec.get('docs'))},",
         ]

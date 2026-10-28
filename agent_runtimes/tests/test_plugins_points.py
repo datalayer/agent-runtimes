@@ -293,7 +293,7 @@ def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_a
 
     aider = HarnessContribution(
         spec=HARNESS_CATALOGUE["goose"].model_copy(
-            update={"id": "aider", "name": "Aider"}
+            update={"id": "aider", "name": "Aider", "enabled": True, "unavailable_because": ""}
         ),
         adapter=adapter,
     )
@@ -351,6 +351,10 @@ def test_an_organizations_harness_is_contributed_for_its_organization_alone(
         {
             "id": "org-acme-coder",
             "name": "Acme Coder",
+            # The organization's own is offered to it: the catalogue template's
+            # (goose's) not-offered sentence is not its own.
+            "enabled": True,
+            "unavailable_because": "",
             "acp": {
                 **spec["acp"],
                 "command": "acme-coder",

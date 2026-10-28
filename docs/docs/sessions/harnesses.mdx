@@ -21,19 +21,31 @@ client (`auto_run`: its own read-only allowlist, as data — `cat`, `wc`, `ls`,
 the Shield's *ask me first* on a command knowingly excludes: a run of one is
 never an action against an application's rules.
 
+The four the catalogue offers (28 October 2026):
+
 | Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id | runs unasked |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `claude-code` | load | replay | yes | no | yes | own | none | 8 |
 | `codex` | load | replay | yes | no | yes | own | none | 0 |
-| `fast-agent` | load | replay | yes | no | no | own | none | 0 |
-| `gemini-cli` | none | replay | yes | no | yes | own | none | 0 |
-| `goose` | none | replay | yes | no | no | own | none | 0 |
 | `opencode` | none | replay | yes | no | no | own | none | 0 |
+| `gemini-cli` | none | replay | yes | no | yes | own | none | 0 |
+
+Described and not offered (named, each is refused with its reason; the rows
+stay for the day they are offered), and the organization's own:
+
+| Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id | runs unasked |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `fast-agent` | load | replay | yes | no | no | own | none | 0 |
+| `goose` | none | replay | yes | no | no | own | none | 0 |
 | `openhands` | load | replay | yes | no | no | own | none | 0 |
 | `custom` | none | none | yes | no | no | own | — | 0 |
 
-A harness whose `resume` is `none` is swapped onto with the warning that a
-swap back to it will start over; its row is still kept for the vendor id.
-`images` is a claim `initialize` must confirm; the vendor session id is
-`none` for every harness until the adapter drill answers it. `loop harnesses`
-prints the table beside each harness's terms.
+A harness whose `resume` is `none` (OpenCode, Gemini CLI) is swapped onto
+with the warning that a swap back to it will start over; its row is still
+kept for the vendor id. Claude Code's `load` is what the adapter advertises;
+drilled on r1 (21 October 2026), a swap back started a new Claude Code
+session and said so — its own uuid comes with each turn's stop result, not
+in a form `session/load` takes. `images` is a claim `initialize` must
+confirm; the vendor session id is `none` for every harness until the adapter
+drill answers it. `loop harnesses` prints the table beside each harness's
+terms.

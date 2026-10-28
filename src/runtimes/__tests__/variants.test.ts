@@ -49,9 +49,18 @@ describe('a harness of the catalogue (SH-01, SH-10)', () => {
     expect(variantSupportsSpecHarness('browser-vercelai', 'claude-code')).toBe(
       false,
     );
-    for (const harness of ['codex', 'gemini-cli', 'goose', 'opencode']) {
+    // The four the catalogue offers (28 October 2026); a harness it describes
+    // and does not offer is not served, and names its reason.
+    for (const harness of ['codex', 'gemini-cli', 'opencode']) {
       expect(isServedCatalogueHarness(harness)).toBe(true);
     }
+    for (const harness of ['goose', 'openhands', 'fast-agent']) {
+      expect(isServedCatalogueHarness(harness)).toBe(false);
+    }
+    expect(unservedHarnessProblem({ id: 'g', harness: 'goose' })).toMatch(
+      /^The agent “g” runs on the harness “goose” \(goose\), which is not offered: the catalogue offers four harnesses today/,
+    );
+    expect(variantsForSpec({ id: 'g', harness: 'goose' })).toEqual([]);
   });
 
   it('refuses custom in the shared catalogue, and never runs pydantic-ai in its place', () => {

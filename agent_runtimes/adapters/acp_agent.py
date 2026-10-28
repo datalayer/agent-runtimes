@@ -2092,7 +2092,7 @@ def harness_agent(
         installed, a declared secret missing, no workspace, or a connection
         its spec's ``acp.mcp`` refuses — each in a sentence.
     """
-    from agentspecs.harnesses import listed_refusal
+    from agentspecs.harnesses import listed_refusal, offered_refusal
 
     from agent_runtimes.guardrails.organization_harnesses import (
         OrganizationHarnessRefused,
@@ -2135,10 +2135,22 @@ def harness_agent(
         contribution = contributions.get(harness_id)
     if contribution is None:
         listed = listed_refusal(harness_id)
-        shared = sorted(c.spec.id for c in contributions.values() if not c.organization)
+        shared = sorted(
+            c.spec.id
+            for c in contributions.values()
+            if not c.organization and c.spec.enabled
+        )
         raise HarnessRefused(
             listed
             or f"There is no harness named {harness_id!r}: one of {', '.join(shared)}."
+        )
+    # A catalogue harness that is described and not offered is refused in its
+    # own sentence (`unavailable_because`), never launched: the catalogue
+    # offers four today (Claude Code, Codex, OpenCode, Gemini CLI).
+    if not contribution.organization and not contribution.spec.enabled:
+        raise HarnessRefused(
+            offered_refusal(harness_id)
+            or f"The harness {harness_id!r} is not offered by the shared catalogue."
         )
     return contribution.adapter(
         agent_id,

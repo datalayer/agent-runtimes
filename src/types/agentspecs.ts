@@ -407,6 +407,8 @@ export interface HarnessSpec {
   description: string;
   /** Whether the shared catalogue offers it: `custom` is not. */
   enabled: boolean;
+  /** Why it is not offered today, in a sentence said wherever it is named; set when `enabled` is false, and only then. */
+  unavailable_because: string;
   tags: string[];
   /** Where its ACP use is documented. */
   docs: string;
