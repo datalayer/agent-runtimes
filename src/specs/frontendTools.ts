@@ -18,6 +18,25 @@ import type { FrontendToolSpec } from '../types';
 // Frontend Tool Definitions
 // ============================================================================
 
+export const CELLS_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
+  id: 'cells',
+  version: '0.0.1',
+  name: 'Cells',
+  description:
+    "Read and write the spreadsheet on the person's screen, and chart it — the grid drawn by Datalayer Cells.",
+  tags: ['frontend', 'cells', 'spreadsheets'],
+  enabled: true,
+  toolset: [
+    'cells_read_range',
+    'cells_write_range',
+    'cells_insert_chart',
+    'cells_list_charts',
+    'cells_select_range',
+  ],
+  icon: '@primer/octicons-react:table',
+  emoji: '🧮',
+};
+
 export const DECKS_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   id: 'decks',
   version: '0.0.1',
@@ -129,6 +148,7 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
 // ============================================================================
 
 export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
+  cells: CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   decks: DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-propose': JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,

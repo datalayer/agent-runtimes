@@ -52,6 +52,7 @@ import {
   RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
 } from '../backendTools';
 import {
+  CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
@@ -167,6 +168,8 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'cells:0.0.1': CELLS_FRONTEND_TOOL_SPEC_0_0_1,
+  cells: CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   'decks:0.0.1': DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   decks: DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit:0.0.1': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
@@ -4183,7 +4186,7 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-output',
   version: '0.0.1',
   name: 'Example Output Agent',
-  description: `Demonstrates structured response rendering (table, json, chart, spreadsheet and file) for the AgentOutputsExample side panel, which detects the block in each answer and renders it; a spreadsheet is drawn with Datalayer Cells.`,
+  description: `Demonstrates structured response rendering (table, json, chart, spreadsheet and file) for the AgentOutputsExample side panel, which detects the block in each answer and renders it; a spreadsheet is drawn with Datalayer Cells, in the chat and in the panel, and charted on the grid through the Cells frontend tools.`,
   tags: ['workflow', 'visualization', 'automation'],
   domain: undefined,
   enabled: false,
@@ -4192,7 +4195,7 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
   disableToolApprovals: true,
-  frontendTools: [],
+  frontendTools: [FRONTEND_TOOL_MAP['cells:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📦',
@@ -4215,18 +4218,22 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
       summary: 'Sales spreadsheet',
     },
     {
+      text: 'Chart the sales spreadsheet: a column chart of the three regions by month, titled Sales by region, inserted on the grid below the data.',
+      summary: 'Chart the spreadsheet',
+    },
+    {
       text: 'Create a YAML file named config.yaml for a small web service (name, port, log level and two routes), in a ```yaml fenced block whose first line is `# filename: config.yaml`.',
       summary: 'YAML file',
     },
   ],
   welcomeMessage:
-    'Example output agent ready. Ask for a TABLE, JSON, a CHART, a SPREADSHEET or a FILE and I will answer with exactly one structured output block.',
+    'Example output agent ready. Ask for a TABLE, JSON, a CHART, a SPREADSHEET or a FILE and I will answer with exactly one structured output block; once a spreadsheet is shown, ask me to chart it on its grid.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
   systemPrompt: `You are the Example Output Agent.
-The user may request one of exactly five output modes: TABLE, JSON, CHART, SPREADSHEET or FILE. For each response, emit exactly one mode and nothing else: no prose before or after the block. Answer from what you know: do not run code or call tools to produce the block.
+The user may request one of exactly six output modes: TABLE, JSON, CHART, SPREADSHEET, FILE or SHEET CHART. For the first five, emit exactly one mode and nothing else: no prose before or after the block. Answer from what you know: do not run code or call tools to produce the block.
 Formatting rules: - TABLE: Return one GitHub-flavored markdown table, one row per line,
   never several rows joined on a single line.
 - JSON: Return exactly one fenced \`\`\`json code block. - CHART: Return exactly one fenced \`\`\`json code block whose first line is
@@ -4237,6 +4244,14 @@ Formatting rules: - TABLE: Return one GitHub-flavored markdown table, one row pe
 - FILE: Return exactly one fenced code block whose info string is a file
   extension other than csv or tsv, and whose first line is
   "# filename: <name.ext>".
+- SHEET CHART: when asked to chart, plot or graph the spreadsheet already
+  shown (the last SPREADSHEET answer), do not write a block: work on the
+  grid with the Cells tools. Call cells_read_range with no range to find
+  the data, then cells_insert_chart over that range (headers included) with
+  the type and title asked for, at the first column two rows below the
+  data (for data in A1:D13, at A15), unless told where. Answer in one short
+  sentence naming the chart and its range. If the tools say no grid is
+  shown, ask for the spreadsheet first.
 
 If mode is ambiguous, default to JSON.`,
   systemPromptCodemodeAddons: undefined,
