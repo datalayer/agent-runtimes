@@ -19,6 +19,13 @@
  * We subscribe to the chat store, detect the output type of the latest
  * assistant message, auto-switch the sidebar tab, and render the payload
  * inline in the sidebar.
+ *
+ * A spreadsheet (a ```csv block) is also drawn in the chat message itself, by
+ * the `AgentOutputsSheetsPlugin` renderer the chat reads from its
+ * `ChatCodeBlock` point; the message's grid and the Sheet tab's are one
+ * workbook. The Cells agent tools (`AgentOutputsSheetToolsPlugin`, the
+ * `cells` bundle the spec's `frontend_tools` names) act on the last one, so
+ * "Chart the spreadsheet" inserts a chart that appears on both grids.
  */
 
 /// <reference types="vite/client" />
@@ -34,24 +41,22 @@ import {
   DownloadIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import {
-  CellsProvider,
-  createCellsModel,
-  type CellsModel,
-  Spreadsheet,
-} from '@datalayer/cells';
-import { importCsv } from '@datalayer/cells/csv';
+import { CellsProvider, Spreadsheet } from '@datalayer/cells';
 import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { LoopEmbed } from '../apps';
-import { AgentOutputsPlugin } from '../apps/plugins/agent-outputs';
+import {
+  downloadSheet,
+  parseSheetBlock,
+  type SheetBlock,
+  useSheetModel,
+} from '../apps/plugins/agent-outputs/sheets';
+import { AGENT_OUTPUTS_LOOP_PLUGINS } from './utils/agentOutputsPlugins';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-
-const LOOP_PLUGINS_AGENTOUT = [AgentOutputsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -68,6 +73,8 @@ interface DetectedOutput {
   payload: string;
   filename?: string;
   extension?: string;
+  /** A spreadsheet's block, for the Sheet tab. */
+  sheet?: SheetBlock;
   messageId: string;
 }
 
@@ -89,13 +96,6 @@ const expandCompactMarkdownTable = (text: string): string => {
   if (!text.includes('||')) return text;
   return text.replace(/\|\|/g, '|\n|');
 };
-
-/**
- * A spreadsheet: CSV or TSV, labelled by its fence (`csv`, `tsv`,
- * `spreadsheet`, `cells`) or by a `# filename:` ending in .csv or .tsv. It is
- * drawn by Datalayer Cells in the Sheet tab, and can still be downloaded.
- */
-const SHEET_INFOS = new Set(['csv', 'tsv', 'spreadsheet', 'cells']);
 
 const EXT_LIKE_INFOS = new Set([
   'txt',
@@ -166,22 +166,17 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
     // File: info string is a known extension OR first line declares a filename.
     const filenameMatch = firstLine.match(/^#\s*filename:\s*([\w.-]+)/i);
 
-    // Spreadsheet: a CSV or TSV, by its fence or its filename.
-    const sheetByName = /\.(csv|tsv)$/i.test(filenameMatch?.[1] ?? '');
-    if (SHEET_INFOS.has(info) || sheetByName) {
-      const extension = sheetByName
-        ? (filenameMatch?.[1].split('.').pop() ?? 'csv').toLowerCase()
-        : info === 'tsv'
-          ? 'tsv'
-          : 'csv';
-      const filename = filenameMatch?.[1] ?? `output.${extension}`;
+    // Spreadsheet: a CSV or TSV, by its fence (`csv`, `tsv`, `spreadsheet`,
+    // `cells`) or a `# filename:` ending in .csv or .tsv — read as the chat's
+    // renderer reads it, so both grids show the same workbook.
+    const sheet = parseSheetBlock(info, rawBody);
+    if (sheet) {
       return {
         tab: 'sheet',
-        payload: filenameMatch
-          ? body.replace(/^#\s*filename:.*\n?/i, '')
-          : body,
-        filename,
-        extension,
+        payload: sheet.source,
+        filename: sheet.name,
+        extension: sheet.extension,
+        sheet,
         messageId: m.id,
       };
     }
@@ -401,35 +396,12 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
 // ─── Spreadsheet renderer (Datalayer Cells) ───────────────────────────────
 
 /**
- * A CSV or TSV the agent wrote, in a Datalayer Cells grid: its own model,
- * read on this thread (no worker for a reply's few rows), made again as the
- * reply streams in.
+ * A CSV or TSV the agent wrote, in a Datalayer Cells grid: the workbook the
+ * chat message shows too (read once, on this thread), editable here, and
+ * where the agent's chart goes.
  */
-const SheetView: React.FC<{ source: string; name: string }> = ({
-  source,
-  name,
-}) => {
-  const [model, setModel] = useState<CellsModel | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    const fresh = createCellsModel();
-    importCsv(fresh, source, { worker: false })
-      .then(() => {
-        if (!cancelled) {
-          setModel(fresh);
-          setError('');
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source]);
+const SheetView: React.FC<{ block: SheetBlock }> = ({ block }) => {
+  const { model, error } = useSheetModel(block);
   if (error) {
     return (
       <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
@@ -443,7 +415,7 @@ const SheetView: React.FC<{ source: string; name: string }> = ({
   return (
     <CellsProvider model={model}>
       <Box height={280} border="1px solid" borderColor="border.muted">
-        <Spreadsheet model={model} aria-label={name} />
+        <Spreadsheet model={model} aria-label={block.name} />
       </Box>
     </CellsProvider>
   );
@@ -537,7 +509,7 @@ const AgentOutputsInner: React.FC = () => {
             agentId={agentName}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTOUT}
+            plugins={AGENT_OUTPUTS_LOOP_PLUGINS}
           />
         </Box>
 
@@ -656,17 +628,14 @@ const AgentOutputsInner: React.FC = () => {
                     </Box>
                   )}
                   {d.tab === 'chart' && <ChartView source={d.payload} />}
-                  {d.tab === 'sheet' && (
+                  {d.tab === 'sheet' && d.sheet && (
                     <>
-                      <SheetView
-                        source={d.payload}
-                        name={d.filename ?? 'Spreadsheet'}
-                      />
+                      <SheetView block={d.sheet} />
                       <Box mt={2}>
                         <Button
                           size="small"
                           leadingVisual={DownloadIcon}
-                          onClick={() => download(d)}
+                          onClick={() => downloadSheet(d.sheet!)}
                         >
                           Download {d.filename ?? 'spreadsheet'}
                         </Button>
