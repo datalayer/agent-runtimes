@@ -14,12 +14,23 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MAIL_WORDS, renderApproval } from '../approvalRenderers';
+import {
+  isPapConfirm,
+  MAIL_WORDS,
+  PAP_CONFIRM_KEYS,
+  renderApproval,
+} from '../approvalRenderers';
 import { presentationSchema, type ApprovalPresentation } from '../contracts';
 
 const contracts = JSON.parse(
   readFileSync(join(__dirname, '..', 'contracts.json'), 'utf8'),
-) as { presentation: { example: unknown; mail_words: string[] } };
+) as {
+  presentation: {
+    example: unknown;
+    mail_words: string[];
+    pap_confirm_keys: string[];
+  };
+};
 const example = presentationSchema.parse(contracts.presentation.example);
 const of = (
   overrides: Partial<ApprovalPresentation>,
@@ -113,5 +124,70 @@ describe('typed approval renderers', () => {
 
   it('holds the mail words to contracts.json', () => {
     expect([...MAIL_WORDS].sort()).toEqual(contracts.presentation.mail_words);
+  });
+
+  describe("a company's pap_confirm (WHATSAPP WA-43, decided 28 October 2026)", () => {
+    const pap = (args: Record<string, unknown>): ApprovalPresentation =>
+      of({
+        action_class: 'unknown',
+        tool_name: 'pap_confirm',
+        arguments: {
+          key: 'k-1',
+          company: 'manzanita.example',
+          summary: 'Book a table for two at 20:00.',
+          terms: { price: '0 EUR', party: 2 },
+          operation_ref: 'op-7',
+          revision: 3,
+          digest: 'd'.repeat(64),
+          class: 'write',
+          session: { ref: 's-ref', signed_in: true },
+          only_the_person: false,
+          ...args,
+        },
+      });
+
+    it('shows the company, its words, every term and the exact revision', () => {
+      const shown = renderApproval(pap({}));
+      expect(shown.renderer).toBe('pap-confirm');
+      expect(shown.complete).toBe(true);
+      expect(shown.fields).toEqual([
+        { label: 'Company', value: 'manzanita.example' },
+        { label: 'Summary', value: 'Book a table for two at 20:00.' },
+        { label: 'price', value: '0 EUR' },
+        { label: 'party', value: '2' },
+        { label: 'Operation', value: 'op-7' },
+        { label: 'Revision', value: '3' },
+        { label: 'What it does', value: 'write' },
+      ]);
+      expect(
+        renderApproval(pap({ was: { revision: 2, terms: {} } })).fields,
+      ).toContainEqual({ label: 'Replaces revision', value: '2' });
+    });
+
+    it('fails closed without a revision, a company, its summary or digest, and on an argument it does not know', () => {
+      for (const missing of [
+        'revision',
+        'company',
+        'summary',
+        'operation_ref',
+        'digest',
+      ]) {
+        const shown = renderApproval(pap({ [missing]: undefined }));
+        expect(shown.complete).toBe(false);
+      }
+      expect(renderApproval(pap({ revision: '3' })).complete).toBe(false);
+      expect(renderApproval(pap({ terms: ['a'] })).complete).toBe(false);
+      expect(renderApproval(pap({ secret_door: 1 })).complete).toBe(false);
+    });
+
+    it("knows the gateway names, with or without a prefix, and the contract's keys", () => {
+      expect(isPapConfirm('pap_confirm')).toBe(true);
+      expect(isPapConfirm('datalayer_pap_confirm')).toBe(true);
+      expect(isPapConfirm('pap_confirmed')).toBe(false);
+      expect(isPapConfirm('not_pap_confirm_x')).toBe(false);
+      expect([...PAP_CONFIRM_KEYS]).toEqual(
+        contracts.presentation.pap_confirm_keys,
+      );
+    });
   });
 });

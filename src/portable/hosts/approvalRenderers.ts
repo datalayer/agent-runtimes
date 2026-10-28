@@ -12,7 +12,9 @@ import type { ApprovalPresentation } from './contracts';
  * presented is named by the renderer, or the card fails closed. An unknown
  * tool, an argument the renderer does not know, an attachment, and every
  * action that is not mail (reads, writes, other sends, destructive, financial,
- * publishing, executing) are reviewed in Datalayer (decided by the user on 16 October 2026: mail only).
+ * publishing, executing) are reviewed in Datalayer (decided by the user on 16 October 2026: mail only),
+ * but for a company's `pap_confirm`, decided in a host with the operation's
+ * exact revision since 28 October 2026 (the user, WHATSAPP WA-43).
  * They render ai-agents' presentation v1, a different input
  * from `../approvals.ts` and `../approvalCard.ts`. Moved from the Slack
  * service (DC-004).
@@ -165,6 +167,91 @@ const mail: Renderer = {
   },
 };
 
+/** `pap_confirm`, as the gateway names it with or without a prefix. */
+const PAP_CONFIRM = /(^|[_.:\-/])pap_confirm$/;
+export const isPapConfirm = (toolName: string): boolean =>
+  PAP_CONFIRM.test(toolName);
+
+/** What a `pap_confirm` approval carries: contracts.json `presentation.pap_confirm_keys`. */
+export const PAP_CONFIRM_KEYS = [
+  'key',
+  'company',
+  'summary',
+  'terms',
+  'operation_ref',
+  'revision',
+  'digest',
+  'class',
+  'session',
+  'only_the_person',
+  'was',
+] as const;
+
+/**
+ * A company's operation the person confirms (WHATSAPP WA-43, decided by the
+ * user 28 October 2026): the company, its own summary, every term, the
+ * operation and its **exact revision** — a decision is on that revision and
+ * no other; a changed revision is another approval. A missing company,
+ * summary, operation, revision or digest fails the card closed.
+ */
+const papConfirm: Renderer = {
+  name: 'pap-confirm',
+  matches: presentation => isPapConfirm(presentation.tool_name),
+  render(presentation) {
+    const args = presentation.arguments;
+    const fields: RenderedField[] = [];
+    const missing: string[] = [];
+    const extra: string[] = [];
+    const company = typeof args.company === 'string' ? args.company : '';
+    const summary = typeof args.summary === 'string' ? args.summary : '';
+    const operation =
+      typeof args.operation_ref === 'string' ? args.operation_ref : '';
+    const revision = Number.isInteger(args.revision)
+      ? (args.revision as number)
+      : undefined;
+    if (!company) missing.push('the company');
+    else fields.push({ label: 'Company', value: company });
+    if (!summary) missing.push('what it does, in its words');
+    else fields.push({ label: 'Summary', value: summary });
+    const termsAreFields =
+      args.terms === undefined ||
+      args.terms === null ||
+      (typeof args.terms === 'object' && !Array.isArray(args.terms));
+    if (!termsAreFields)
+      extra.push('Its terms are not named one by one: review it in Datalayer.');
+    else
+      for (const [name, value] of Object.entries(
+        (args.terms ?? {}) as Record<string, unknown>,
+      ))
+        fields.push({ label: name, value: text(value) });
+    if (!operation) missing.push('the operation');
+    else fields.push({ label: 'Operation', value: operation });
+    if (revision === undefined) missing.push('its exact revision');
+    else fields.push({ label: 'Revision', value: String(revision) });
+    if (typeof args.digest !== 'string' || !args.digest)
+      missing.push('the digest of its terms');
+    if (typeof args.class === 'string' && args.class)
+      fields.push({ label: 'What it does', value: args.class });
+    const was =
+      args.was && typeof args.was === 'object'
+        ? (args.was as { revision?: unknown })
+        : undefined;
+    if (was && was.revision !== undefined)
+      fields.push({ label: 'Replaces revision', value: text(was.revision) });
+    if (missing.length)
+      extra.push(
+        `The request does not say ${missing.join(', ')}: review it in Datalayer.`,
+      );
+    return rendered(
+      'pap-confirm',
+      presentation,
+      fields,
+      PAP_CONFIRM_KEYS,
+      extra,
+    );
+  },
+};
+
 /** Everything but mail: shown, decided only in Datalayer. */
 const datalayerOnly: Renderer = {
   name: 'datalayer-only',
@@ -192,8 +279,11 @@ const datalayerOnly: Renderer = {
   },
 };
 
-/** The renderers, the first that matches wins: Datalayer-only before any other. */
-export const RENDERERS: readonly Renderer[] = [datalayerOnly, mail];
+/**
+ * The renderers, the first that matches wins: a company's `pap_confirm`
+ * (whose name says no class), then Datalayer-only before any other.
+ */
+export const RENDERERS: readonly Renderer[] = [papConfirm, datalayerOnly, mail];
 
 /**
  * How a host shows an approval, by the renderer that knows its tool; with
