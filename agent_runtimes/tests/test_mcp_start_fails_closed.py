@@ -155,7 +155,9 @@ async def _the_hung_start_is_failed_and_the_next_turn_starts_it(
     if abandoned is not None:
         await asyncio.wait({abandoned}, timeout=5.0)
         assert abandoned.done()
-    assert hung.exited == 1
+    # Held, the start opened its handshake at last and closed it; ended at
+    # once by its cancellation (Python 3.10), it never opened one.
+    assert hung.exited == (1 if abandoned is not None else 0)
     assert manager.get_running_server(SERVER) is instance
     assert not manager._abandoned
     assert await manager.stop_server(SERVER)
