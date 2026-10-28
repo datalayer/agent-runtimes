@@ -31,6 +31,7 @@ from agent_runtimes.apps.composer import command_called, command_prompt
 from agent_runtimes.apps.forms import form_fields
 from agent_runtimes.apps.loading import AppNotRunnable
 from agent_runtimes.apps.pages import page_values
+from agent_runtimes.apps.record import AppRecorder, send_to_store
 from agent_runtimes.apps.session import (
     ChoiceQuestion,
     Closed,
@@ -251,8 +252,6 @@ def _store_recorder(application: Application) -> AppRecorder:
     laptop, the record on Datalayer), as a runtime's does — not in memory,
     the host's default for a script.
     """
-    from agent_runtimes.apps.record import AppRecorder, send_to_store
-
     return AppRecorder(app=application.spec, send=send_to_store)
 
 
