@@ -7,6 +7,14 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.89
+
+28 October 2026. A remote MCP server is reached at its url with its headers, by the runtime itself: the demo scenes' tools reach the Datalayer gateway again.
+
+- **A remote MCP server, no process** (`agent_runtimes/mcp/remote.py`): a catalogue server with `transport: streamable-http`, a `url` and no `command` is connected to over Streamable HTTP, its `headers` sent with every request and their `${VAR}` expanded as arguments are, the bearer held and never shown to the model (R-19); an empty bearer is refused before anything is sent, naming the variable. The five hosted servers — `datalayer`, `odoo-accounting`, `earthdata` (the gateway, `https://mcp.datalayer.run/mcp`, the toolset chosen with `only=`), `huggingface`, `kaggle` — went through `npx -y mcp-remote`, a stdio bridge a Datalayer runtime's pod can neither fetch (its egress boundary allows the gateway and no package registry) nor finds in its image: on r1 the home page's demo scenes answered that their tools could not be reached (28 October 2026). agentspecs 0.0.135 writes the five with a url and headers, and the catalogue is regenerated from it (`make specs`); a server from `mcp.json` with a `url` and no `command` is remote the same way. A local server is as before: a command over stdio, or a command listening at its url (`google-workspace`).
+- **The gateway's refusal, said at once**: the gateway refuses a wrong key as a JSON-RPC error with no id at HTTP 200 (and a 401 or 403 with its `detail`), which the MCP client never surfaces — it waited the whole handshake and said *Failed to initialize server session*. The handshake's answers are read for a refusal; at the first, the start fails with the gateway's own sentence in `_failed_servers` (*MCP server 'odoo-accounting' at … refused the handshake: This request carries a token that could not be attributed …*), and once the server has answered the hook stands down, a tool's refusal at run time reaching the model as every tool error does. `test_mcp_remote_server.py` (18) replays it against the `mcp` package's server mounted in-process behind a gate that answers as the gateway does.
+- The catalogue's Python and TypeScript generators take `headers` and an absent `command`; `MCPServer` has `headers`; `test_mcp_server_catalog.py` holds the specification, the catalogue and the docs to the two shapes. [MCP servers](https://agentspecs.datalayer.tech/docs/agents/mcp-servers) says them.
+
 ## 1.5.88
 
 28 October 2026. The application API is `agent_runtimes.apps`, reviewed; the record is read back whole; pi is the fourth harness and OpenCode goes through ai-inference.

@@ -110,8 +110,10 @@ class TestTheThreeCopiesAgree:
         spec = specifications()[server_id]
         server = MCP_SERVER_CATALOG[server_id]
         assert spec["id"] == server.id
-        assert spec["command"] == server.command
-        assert _comparable(spec["args"]) == _comparable(server.args)
+        assert spec.get("command") == server.command
+        assert _comparable(spec.get("args") or []) == _comparable(server.args)
+        assert spec.get("url", "") == server.url
+        assert spec.get("headers") == server.headers
         assert spec.get("transport", "stdio") == server.transport
         assert bool(spec.get("enabled", True)) is bool(server.enabled)
         assert list(spec.get("envvars") or []) == list(server.required_env_vars or [])
@@ -121,13 +123,26 @@ class TestTheSpecificationsAreWellFormed:
     @pytest.mark.parametrize("server_id", sorted(specifications()))
     def test_the_required_fields_are_there(self, server_id: str) -> None:
         spec = specifications()[server_id]
-        for field in ("id", "version", "name", "description", "command"):
+        for field in ("id", "version", "name", "description"):
             assert spec.get(field), f"{server_id}.yaml has no {field}"
-        # `args` may legitimately be empty — `eurus-mcp` takes none — so this
-        # asks that the key is *there*, which is what the schema requires.
-        assert "args" in spec and spec["args"] is not None, (
-            f"{server_id}.yaml has no args"
-        )
+        if spec.get("command"):
+            # A local server: its command and its args. `args` may
+            # legitimately be empty — `eurus-mcp` takes none — so this asks
+            # that the key is *there*, which is what the schema requires.
+            assert "args" in spec and spec["args"] is not None, (
+                f"{server_id}.yaml has no args"
+            )
+        else:
+            # A remote server: reached at its url with its headers, no
+            # process — nothing to run, so nothing to run it with.
+            assert spec.get("url"), f"{server_id}.yaml has neither command nor url"
+            assert spec.get("transport") == "streamable-http", (
+                f"{server_id}.yaml is remote and not over streamable-http"
+            )
+            assert isinstance(spec.get("headers"), dict), (
+                f"{server_id}.yaml names no headers"
+            )
+            assert "args" not in spec, f"{server_id}.yaml has args and no command"
 
     @pytest.mark.parametrize("server_id", sorted(specifications()))
     def test_the_id_matches_the_file_name(self, server_id: str) -> None:
@@ -151,6 +166,9 @@ class TestTheSpecificationsAreWellFormed:
         written += " " + " ".join(
             f"{key}={value}" for key, value in (spec.get("env") or {}).items()
         )
+        written += " " + " ".join(
+            f"{key}: {value}" for key, value in (spec.get("headers") or {}).items()
+        )
         for marker in ("Bearer ", "api_key=", "token="):
             if marker in written:
                 after = written.split(marker, 1)[1]
@@ -166,16 +184,27 @@ class TestTheHostedDatalayerServer:
         assert "datalayer" in MCP_SERVER_CATALOG
 
     def test_it_points_at_the_hosted_endpoint(self) -> None:
-        assert "https://mcp.datalayer.run/mcp" in MCP_SERVER_CATALOG["datalayer"].args
+        assert MCP_SERVER_CATALOG["datalayer"].url == "https://mcp.datalayer.run/mcp"
+
+    def test_it_is_reached_by_the_runtime_itself(self) -> None:
+        """No command, no bridge: a runtime pod reaches the gateway and no
+        package registry, so the `npx -y mcp-remote` shim these went through
+        never started there (28 October 2026). The runtime connects to the
+        url over Streamable HTTP and sends the headers itself."""
+        for server_id in ("datalayer", "odoo-accounting", "earthdata"):
+            server = MCP_SERVER_CATALOG[server_id]
+            assert server.command is None and server.args == []
+            assert server.transport == "streamable-http"
+            assert server.url.startswith("https://mcp.datalayer.run/mcp")
+            assert server.headers == {"Authorization": "Bearer ${DATALAYER_API_KEY}"}
 
     def test_it_presents_a_token_rather_than_opening_a_browser(self) -> None:
-        """`mcp-remote` can do OAuth 2.1 with PKCE, which is right for a
-        person at a desktop client and wrong here: it opens a browser and
-        waits for somebody to approve a consent screen. An agent runtime has
-        nobody at the keyboard."""
-        args = MCP_SERVER_CATALOG["datalayer"].args
-        assert "--header" in args
-        assert any("${DATALAYER_API_KEY}" in str(arg) for arg in args)
+        """OAuth 2.1 with PKCE is right for a person at a desktop client and
+        wrong here: it opens a browser and waits for somebody to approve a
+        consent screen. An agent runtime has nobody at the keyboard, so the
+        bearer it already holds goes in the header."""
+        headers = MCP_SERVER_CATALOG["datalayer"].headers or {}
+        assert headers["Authorization"] == "Bearer ${DATALAYER_API_KEY}"
 
     def test_it_is_off_by_default(self) -> None:
         """Every other server here reaches something outside Datalayer. This
