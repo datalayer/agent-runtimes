@@ -293,7 +293,12 @@ def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_a
 
     aider = HarnessContribution(
         spec=HARNESS_CATALOGUE["goose"].model_copy(
-            update={"id": "aider", "name": "Aider", "enabled": True, "unavailable_because": ""}
+            update={
+                "id": "aider",
+                "name": "Aider",
+                "enabled": True,
+                "unavailable_because": "",
+            }
         ),
         adapter=adapter,
     )

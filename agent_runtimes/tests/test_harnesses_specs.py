@@ -64,11 +64,17 @@ class TestTheHarnessCatalogue:
                 assert not spec.unavailable_because, spec.id
             else:
                 assert spec.id in {"fast-agent", "goose", "openhands"}
-                assert "Claude Code, Codex, OpenCode and Gemini CLI" in spec.unavailable_because
+                assert (
+                    "Claude Code, Codex, OpenCode and Gemini CLI"
+                    in spec.unavailable_because
+                )
         from agentspecs.harnesses import offered_refusal
 
+        goose = get_harness("goose")
+        assert goose is not None
         assert offered_refusal("goose") == (
-            "The harness 'goose' (goose) is not offered: " + get_harness("goose").unavailable_because.strip()
+            "The harness 'goose' (goose) is not offered: "
+            + goose.unavailable_because.strip()
         )
         assert offered_refusal("codex") is None
 
@@ -80,14 +86,25 @@ class TestTheHarnessCatalogue:
         from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
         from agent_runtimes.chat.cli import _prepare_harness
 
-        with pytest.raises(HarnessRefused, match="The harness 'goose' \\(goose\\) is not offered: the catalogue offers four"):
+        with pytest.raises(
+            HarnessRefused,
+            match="The harness 'goose' \\(goose\\) is not offered: the catalogue offers four",
+        ):
             harness_agent("a1", "goose", workspace=tmp_path)
-        with pytest.raises(HarnessRefused, match="There is no harness named 'nope': one of claude-code, codex, gemini-cli, opencode\\."):
+        with pytest.raises(
+            HarnessRefused,
+            match="There is no harness named 'nope': one of claude-code, codex, gemini-cli, opencode\\.",
+        ):
             harness_agent("a1", "nope", workspace=tmp_path)
         monkeypatch.chdir(tmp_path)
-        with pytest.raises(ValueError, match="The harness 'openhands' \\(OpenHands\\) is not offered"):
+        with pytest.raises(
+            ValueError, match="The harness 'openhands' \\(OpenHands\\) is not offered"
+        ):
             _prepare_harness("openhands")
-        with pytest.raises(ValueError, match="one of claude-code, codex, gemini-cli, opencode \\(`loop harnesses`\\)"):
+        with pytest.raises(
+            ValueError,
+            match="one of claude-code, codex, gemini-cli, opencode \\(`loop harnesses`\\)",
+        ):
             _prepare_harness("nope")
 
     def test_each_is_launched_pinned_and_registered(self) -> None:

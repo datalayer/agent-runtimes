@@ -36,7 +36,11 @@ def test_the_catalogue_is_listed_with_terms_register_and_capabilities(
     listed = {harness["id"]: harness for harness in answer.json()["harnesses"]}
     # The offered ones alone (the restriction to four, META_HARNESS): a harness the
     # catalogue describes and does not offer is not listed, and named is refused below.
-    served = {spec.id for spec in HARNESS_CATALOGUE.values() if spec.acp is not None and spec.enabled}
+    served = {
+        spec.id
+        for spec in HARNESS_CATALOGUE.values()
+        if spec.acp is not None and spec.enabled
+    }
     assert set(listed) == served == {"claude-code", "codex", "opencode", "gemini-cli"}
     claude = listed["claude-code"]
     assert claude["name"] == "Claude Code"
