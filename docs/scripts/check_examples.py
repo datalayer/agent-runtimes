@@ -18,7 +18,7 @@ this reads the code blocks and checks:
 And the examples the pages point a reader at (``EXAMPLE_FOLDERS``, SH-23): every script of the folder is named in its README (``python
 <script>``), every script the README names exists, and each name a script
 imports from ``agent_runtimes`` exists — the scripts themselves are run by
-the tests (``test_the_shield_examples.py``).
+the tests (``test_the_shield_examples.py``, ``test_the_python_applications_examples.py``).
 
 Run from the repository's root: ``python docs/scripts/check_examples.py``.
 It reads files only, imports nothing, and exits 1 when a page drifted,
@@ -44,6 +44,7 @@ EXAMPLE_FOLDERS = (
     ROOT / "examples" / "shield",
     ROOT / "examples" / "sessions",
     ROOT / "examples" / "plugins",
+    ROOT / "examples" / "python-applications",
 )
 README_RUNS = re.compile(r"python (?P<script>[\w-]+\.py)")
 
