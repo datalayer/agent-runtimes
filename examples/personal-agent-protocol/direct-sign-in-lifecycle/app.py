@@ -24,7 +24,7 @@ from personal_agent_protocol import (
 from pydantic import SecretStr
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 #: The existing Session's Session Key (its JWK thumbprint, RFC 7638): it names the
 #: Session. The private half stays with the host's proof provider.

@@ -20,7 +20,7 @@ their own conversations with it later (R-31); a session nobody opened, or
 opened by an embed's visitor or the machine itself, names nobody.
 
 The routes live in `agent_runtimes/routes/apps.py`, beside `configure`,
-`decide` and `feedback`; what they drive is `agent_runtimes.loop.apps.sessions`.
+`decide` and `feedback`; what they drive is `agent_runtimes.apps.sessions`.
 
 ## The application's agent first
 
@@ -68,7 +68,7 @@ is not there or runs no application.
   token: it has no grants to hold it to. A Preview the machine itself opens
   (`localhost`, no token) runs as that machine, as before. **The Datalayer MCP
 gateway's own tools are held the same way** (R-25,
-`gateway_toolsets_of_the_run` in `agent_runtimes.loop.apps.principal`, used
+`gateway_toolsets_of_the_run` in `agent_runtimes.apps.principal`, used
 by the AG-UI and Vercel AI transports): a session's run reaches the gateway
 as the application — a deployment with its principal's token, or the
 person's for a connection `as: user`; a Preview with its run token, narrowed
@@ -129,7 +129,7 @@ that application **as it is deployed**, and nothing beyond:
   uid>`): `401` without it, `403` for one that is not one, `503` when the
   runtime was not given the secret. The user it names is the session's
   (`user`: `{ sub, name, signed }`): what `host_context` answers as `user`,
-  its code's `session.user`, and whom a page it saves was written for. A
+  its code's `session.opened_by`, and whom a page it saves was written for. A
   Preview, and a session a schedule woke, have nobody to sign.
 
 On Datalayer, a runtime is launched with a person's credentials, which an

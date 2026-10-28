@@ -320,7 +320,7 @@ def team_app(team: TeamSpec) -> dict[str, Any]:
     A seat's task is a turn of an apps session; a session is of an
     application, and a team's is the team itself: a ``loop.app/v1`` document
     naming the team (``team:``), whose record keeps what the seats say and
-    do. Loaded by ``agent_runtimes.loop.apps.loading.load_app``.
+    do. Loaded by ``agent_runtimes.apps.loading.load_app``.
 
     Parameters
     ----------

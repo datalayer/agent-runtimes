@@ -15,7 +15,7 @@ into a message, fenced as SQL, as the model writes it. Nothing of Chainlit's
 OpenAI client is the developer's: the application's agent is the model.
 """
 
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 
 AGENT = "example-blank:0.0.1"
 

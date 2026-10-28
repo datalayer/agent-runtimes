@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from personal_agent_protocol.company.service import CompanyService
 
-from agent_runtimes.loop.apps.build import build
+from agent_runtimes.apps.build import build
 from agent_runtimes.protocols.pact.client import InMemoryDelegationStore
 from agent_runtimes.protocols.pact.provider import ExampleAir
 

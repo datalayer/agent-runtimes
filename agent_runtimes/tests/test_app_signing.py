@@ -19,13 +19,13 @@ import jwt
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.callers import Caller, CallerVerifier, person_name
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.record import _SESSION, AppRecorder
-from agent_runtimes.loop.apps.rules import Decision, signs_of
-from agent_runtimes.loop.apps.saving import (
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.callers import Caller, CallerVerifier, person_name
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.record import _SESSION, AppRecorder
+from agent_runtimes.apps.rules import Decision, signs_of
+from agent_runtimes.apps.saving import (
     AppSavingCapability,
     byline,
     signature,

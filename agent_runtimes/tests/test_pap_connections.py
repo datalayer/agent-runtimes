@@ -14,8 +14,8 @@ the gateway's own table, and a connection that reads gives only what reads.
 
 import pytest
 
-from agent_runtimes.loop.apps import pap_connections
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps import pap_connections
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
 from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
 from agent_runtimes.specs.apps import APP_CATALOGUE
 from agent_runtimes.tests.test_apps_enforcement import Harness
@@ -128,7 +128,7 @@ async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(
     runtime holds — the company, its protocol, the connection's level and in whose account it
     acts, whether that level gives the tool — beside what it does, the Rule and the narrowest
     reason. Never an argument of the call."""
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.record import AppRecorder
 
     spec = app()
     pap_connections.remember_agent("agent-r01", spec)
@@ -245,7 +245,7 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
     generated — the gateway reads the same — and every commerce operation too."""
     from agentspecs.actions import protocol_tool_classes, protocol_tool_names
 
-    from agent_runtimes.loop.apps.pap_connections import TOOL_CLASSES
+    from agent_runtimes.apps.pap_connections import TOOL_CLASSES
     from agent_runtimes.protocols.agentic_commerce import (
         ACTION_CLASSES as ACP_CLASSES,
     )

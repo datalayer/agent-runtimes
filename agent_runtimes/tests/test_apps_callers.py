@@ -14,8 +14,8 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps import callers, plugins
-from agent_runtimes.loop.apps.callers import (
+from agent_runtimes.apps import callers, plugins
+from agent_runtimes.apps.callers import (
     APP_EMBED_AUDIENCE,
     CallerRefused,
     CallerVerifier,
@@ -214,7 +214,7 @@ def remote(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def run(app: dict) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     loaded = load_app(app)
     plugins.register_app(loaded)
@@ -284,7 +284,7 @@ def test_a_page_elsewhere_cannot_reach_a_local_runtime_through_the_browser(
 def test_an_application_configured_while_a_token_is_checked_is_not_answered_for(
     remote: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     run(WEB_RESEARCH)
     other = load_app({**WEB_RESEARCH, "id": "other-app", "name": "Another"})

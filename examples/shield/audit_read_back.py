@@ -34,9 +34,9 @@ from fake_harness import FAKE_COMMAND, a_workspace, fake_harness  # noqa: E402
 
 from agent_runtimes.adapters.acp_agent import ACPAgent  # noqa: E402
 from agent_runtimes.adapters.base import AgentContext  # noqa: E402
+from agent_runtimes.apps.loading import load_app  # noqa: E402
+from agent_runtimes.apps.record import AppRecorder  # noqa: E402
 from agent_runtimes.guardrails.shield_policy import policies_of  # noqa: E402
-from agent_runtimes.loop.apps.loading import load_app  # noqa: E402
-from agent_runtimes.loop.apps.record import AppRecorder  # noqa: E402
 
 #: A key-shaped value in a command: what the record must never keep.
 KEY = "sk-ant-api03-" + "x" * 24

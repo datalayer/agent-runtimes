@@ -23,10 +23,9 @@ from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 from typer.testing import CliRunner
 
-from agent_runtimes.commands import apps as apps_command
-from agent_runtimes.loop.apps import safety
-from agent_runtimes.loop.apps.application import Application
-from agent_runtimes.loop.apps.safety import (
+from agent_runtimes.apps import safety
+from agent_runtimes.apps.application import Application
+from agent_runtimes.apps.safety import (
     SAFETY_CASE_KIND,
     SAFETY_CHECKS,
     SAFETY_FAILED,
@@ -38,6 +37,7 @@ from agent_runtimes.loop.apps.safety import (
     result_of,
     safety_cases,
 )
+from agent_runtimes.commands import apps as apps_command
 
 _T = TypeVar("_T")
 
@@ -412,7 +412,7 @@ def test_without_a_judge_here_the_cases_are_listed_and_the_exit_says_so(
 
 
 def _here(monkeypatch: pytest.MonkeyPatch, says: str, verdict: Dict[str, Any]) -> None:
-    from agent_runtimes.loop.apps import agent as agent_module
+    from agent_runtimes.apps import agent as agent_module
 
     monkeypatch.setattr(
         agent_module,
@@ -711,8 +711,8 @@ def test_a_run_is_read_by_case_and_one_that_did_not_hold_says_so() -> None:
 
 class FakeStore:
     def __init__(self, spec: Dict[str, Any]) -> None:
-        from agent_runtimes.loop.apps.deployments import APP_ITEM_FORMAT
-        from agent_runtimes.loop.apps.store import AppItem
+        from agent_runtimes.apps.deployments import APP_ITEM_FORMAT
+        from agent_runtimes.apps.store import AppItem
 
         self.app = AppItem(
             uid="app-1",

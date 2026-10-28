@@ -70,7 +70,7 @@ def enqueue_stream_message(agent_id: str | None, message: AgentStreamMessage) ->
     Never an agent's that serves a deployment: its events are every visitor's
     (`serves_a_deployment`), and anybody reaches this stream.
     """
-    from agent_runtimes.loop.apps.principal import serves_a_deployment
+    from agent_runtimes.apps.principal import serves_a_deployment
 
     if serves_a_deployment(agent_id):
         return
@@ -864,7 +864,7 @@ async def build_monitoring_snapshot_payload(
         are left empty (useful when the caller does not have access to the
         approval store).
     """
-    from agent_runtimes.loop.apps.principal import serves_a_deployment
+    from agent_runtimes.apps.principal import serves_a_deployment
 
     approvals: list[dict[str, Any]] = []
     if list_approvals is not None:
@@ -1138,7 +1138,7 @@ async def stream_loop(
     Accepts the connection, streams an initial snapshot, then pushes
     periodic diffs and reactive messages until the client disconnects.
     """
-    from agent_runtimes.loop.apps.principal import serves_a_deployment
+    from agent_runtimes.apps.principal import serves_a_deployment
 
     await websocket.accept()
     logger.info("[ws:connect] agent_id=%s", agent_id)

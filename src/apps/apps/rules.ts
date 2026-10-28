@@ -27,7 +27,7 @@
  *    and the most restricted wins.
  *
  * The same decision is written in Python, in `agentspecs.apps.behaviour_for`
- * and in `agent_runtimes.loop.apps.rules`. `APP_BEHAVIOURS`, generated from
+ * and in `agent_runtimes.apps.rules`. `APP_BEHAVIOURS`, generated from
  * agentspecs, is what all three have to agree on. The server enforces; this
  * one shows the decision before it is made.
  *
@@ -292,7 +292,7 @@ const reaches = (connection: AppConnectionSpec, tool: string): boolean =>
  * A tool of a server the application is not connected to is not given.
  *
  * The runtime gives its agent only these (`AppRulesCapability.prepare_tools`,
- * through `agent_runtimes.loop.apps.rules.gives`, its Python twin).
+ * through `agent_runtimes.apps.rules.gives`, its Python twin).
  *
  * @throws When `tool` names no server: a catalogue tool is given by the
  *   spec's `tools`, not by a connection.

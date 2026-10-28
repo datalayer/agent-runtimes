@@ -215,7 +215,7 @@ def _catalogue_tools_deferred(approvals_disabled: bool, running_app: Any) -> boo
 
     Never for an application's agent: its Rules decide every tool call, and
     *Ask me first* asks the person through the tool-approvals service before
-    the call runs (`loop.apps.enforcement`). Deferred, the call ended its run
+    the call runs (`apps.enforcement`). Deferred, the call ended its run
     with pydantic-ai's error instead, since an application's agent takes no
     ``DeferredToolRequests`` (seen 16 October 2026 with ``runtime-send-mail``
     on a hosted application).
@@ -602,8 +602,8 @@ def _application_code_of(code: dict[str, Any], app: Any) -> Any:
     says no version takes the deployed one: the stored version is the
     authority (P-24).
     """
-    from agent_runtimes.loop.apps.application import load_application_source
-    from agent_runtimes.loop.apps.deployments import DeployRefused, code_carried
+    from agent_runtimes.apps.application import load_application_source
+    from agent_runtimes.apps.deployments import DeployRefused, code_carried
 
     try:
         carried = code_carried(code)
@@ -1389,7 +1389,7 @@ def _keep_app_recorder(
     agent_id: str, running_app: Any, request: "CreateAgentRequest"
 ) -> Any:
     """The record of the application this agent runs (R-07), kept for it."""
-    from agent_runtimes.loop.apps.record import AppRecorder, keep_agent_recorder
+    from agent_runtimes.apps.record import AppRecorder, keep_agent_recorder
     from agent_runtimes.routes.apps import keep_running
 
     serving = request.app_instance or {}
@@ -1886,12 +1886,12 @@ async def create_agent(
         running_app = None
         app_frames_section = ""
         if request.app_spec is not None:
-            from agent_runtimes.loop.apps.loading import (
+            from agent_runtimes.apps.loading import (
                 AppNotRunnable,
                 connected_server_ids,
                 load_app,
             )
-            from agent_runtimes.loop.apps.plugins import register_app
+            from agent_runtimes.apps.plugins import register_app
 
             try:
                 running_app = load_app(request.app_spec)
@@ -1910,14 +1910,14 @@ async def create_agent(
             # A deployment's agent acts as its application's principal, with
             # the token ai-agents mints for it from the caller's: it is not
             # made without one (I-03).
-            from agent_runtimes.loop.apps.principal import (
+            from agent_runtimes.apps.principal import (
                 DeploymentCodeUnread,
                 PrincipalTokenMissing,
                 deployment_of,
                 ensure_principal_token,
                 read_deployment_code,
             )
-            from agent_runtimes.loop.apps.visitors import visitors_runtime
+            from agent_runtimes.apps.visitors import visitors_runtime
 
             serving_deployment = deployment_of(request.app_instance)
             # The version's own code is the deployment's, read from it (R-14): a request never brings code of its own (`app_code` is
@@ -1971,8 +1971,8 @@ async def create_agent(
             if running_app.context:
                 from datalayer_core.utils.urls import DatalayerURLs
 
-                from agent_runtimes.loop.apps.callers import bearer_of
-                from agent_runtimes.loop.apps.frames import (
+                from agent_runtimes.apps.callers import bearer_of
+                from agent_runtimes.apps.frames import (
                     FramesUnread,
                     frames_instructions,
                     read_organization_frames,
@@ -2015,7 +2015,7 @@ async def create_agent(
             # It remembers what its Appspec says, never what its agent's spec
             # does: per person and application, its Preview and its
             # deployments together (R-18).
-            from agent_runtimes.loop.apps.memory import agent_memory
+            from agent_runtimes.apps.memory import agent_memory
 
             request.memory, request.memory_config = agent_memory(
                 running_app, request.app_instance
@@ -2641,7 +2641,7 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
-                from agent_runtimes.loop.apps.agent import app_capabilities
+                from agent_runtimes.apps.agent import app_capabilities
                 from agent_runtimes.notifications import NotificationsCapability
 
                 capabilities = _without_approval_capabilities(capabilities)
@@ -2654,7 +2654,7 @@ async def create_agent(
                 ]
                 recorder = _keep_app_recorder(agent_id, running_app, request)
                 # And runs its sessions with the deployment's code (R-14).
-                from agent_runtimes.loop.apps.sessions import serve_agent_code
+                from agent_runtimes.apps.sessions import serve_agent_code
 
                 serve_agent_code(agent_id, served_code)
                 # Exactly what the terminal's agent of the application runs
@@ -2780,14 +2780,14 @@ async def create_agent(
             remember_app_instance(agent_id, serving_app)
             # Which of its gateway's servers it reaches in each user's name,
             # with the token of who talks to it (I-04).
-            from agent_runtimes.loop.apps.acting import remember_servers_in_users_name
+            from agent_runtimes.apps.acting import remember_servers_in_users_name
 
             remember_servers_in_users_name(
                 agent_id, running_app.connections if running_app is not None else None
             )
             # The companies it works with as a personal agent, each the
             # gateway's `pap` toolset for it (ADR-1).
-            from agent_runtimes.loop.apps.pap_connections import remember_agent
+            from agent_runtimes.apps.pap_connections import remember_agent
 
             remember_agent(agent_id, running_app)
             # In whose name it reaches Gmail, with a token IAM mints per run
@@ -3510,15 +3510,15 @@ async def delete_agent(
     # Remove the stored creation spec
     _agentspecs.pop(agent_id, None)
     # And what the session API knew of it (R-04), and the code it ran (R-14).
-    from agent_runtimes.loop.apps.record import keep_agent_recorder
-    from agent_runtimes.loop.apps.sessions import serve_agent_code
+    from agent_runtimes.apps.record import keep_agent_recorder
+    from agent_runtimes.apps.sessions import serve_agent_code
     from agent_runtimes.routes.apps import keep_running
 
     keep_agent_recorder(agent_id, None)
     serve_agent_code(agent_id, None)
     keep_running(agent_id, None)
     # The browser of its computer, when it opened one (R-23).
-    from agent_runtimes.loop.apps.browser import close_browser
+    from agent_runtimes.apps.browser import close_browser
 
     await close_browser(agent_id)
 
@@ -4578,7 +4578,7 @@ def _declared_for_app(
 
     422 when the runtime's own loader refuses the Appspec.
     """
-    from agent_runtimes.loop.apps.loading import AppNotRunnable, agent_id_of, load_app
+    from agent_runtimes.apps.loading import AppNotRunnable, agent_id_of, load_app
 
     try:
         app = load_app(app_spec)

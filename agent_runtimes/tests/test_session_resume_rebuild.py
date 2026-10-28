@@ -16,8 +16,8 @@ from typing import Any, Dict, Iterator, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,

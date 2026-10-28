@@ -35,11 +35,11 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from reactor import EXTENSION_CONTENT_TYPES
 
-from agent_runtimes.loop.apps.packaging import (
+from agent_runtimes.apps.packaging import (
     app_extension_file,
     app_frontend_extensions,
 )
-from agent_runtimes.loop.apps.plugins import app_plugins_state, revision_of
+from agent_runtimes.apps.plugins import app_plugins_state, revision_of
 
 router = APIRouter(prefix="/apps", tags=["apps"])
 

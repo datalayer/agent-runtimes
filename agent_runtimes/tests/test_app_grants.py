@@ -11,20 +11,20 @@ from typing import Any
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
-from agent_runtimes.loop.apps.enforcement import (
+from agent_runtimes.apps.enforcement import (
     AppRulesCapability,
     Enforced,
     approval_marks,
 )
-from agent_runtimes.loop.apps.grants import (
+from agent_runtimes.apps.grants import (
     Approval,
     StandingApprovals,
     covers,
     reaches,
     recipients_of,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import Decision
 from agent_runtimes.types import AppSpec
 
 APP_UID = "01J9APP"

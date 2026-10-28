@@ -161,10 +161,10 @@ def toolsets_for_the_run(
                 ),
             )
         )
-    from agent_runtimes.loop.apps.pap_connections import (
+    from agent_runtimes.apps.pap_connections import (
         gateway_query as company_query,
     )
-    from agent_runtimes.loop.apps.pap_connections import (
+    from agent_runtimes.apps.pap_connections import (
         tool_prefix,
     )
 

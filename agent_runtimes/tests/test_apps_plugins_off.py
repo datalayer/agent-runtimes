@@ -12,15 +12,15 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from agent_runtimes.commands.apps import app, validate_file
-from agent_runtimes.loop.apps import plugins_off as module
-from agent_runtimes.loop.apps.plugins_off import (
+from agent_runtimes.apps import plugins_off as module
+from agent_runtimes.apps.plugins_off import (
     PluginsOff,
     components_used_by,
     plugins_off_setup_notes,
     read_plugins_off,
     unknown_plugins_off,
 )
+from agent_runtimes.commands.apps import app, validate_file
 
 pytest.importorskip("agentspecs.apps")
 

@@ -65,7 +65,7 @@ async def _refuse_every_visitors(approval_id: str) -> None:
     Anybody reaches the runtime's monitoring stream; the person decides at
     ai-agents, whose decision reaches the run (`serves_a_deployment`).
     """
-    from agent_runtimes.loop.apps.principal import EVERY_VISITORS, serves_a_deployment
+    from agent_runtimes.apps.principal import EVERY_VISITORS, serves_a_deployment
 
     record = await _get_approval(approval_id)
     if serves_a_deployment(record.agent_id):
@@ -595,7 +595,7 @@ async def forward_approval_to_ai_agents(
         remote_approval_id: str | None = None
         # The session whose turn asks it: a host mapping that session is
         # delivered it.
-        from agent_runtimes.loop.apps.record import current_session
+        from agent_runtimes.apps.record import current_session
 
         session_uid = current_session()
         async with httpx.AsyncClient(

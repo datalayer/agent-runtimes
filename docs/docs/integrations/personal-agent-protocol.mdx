@@ -232,7 +232,7 @@ In Python, `app.company_connection("orders", "manzanita.example",
 scopes=["orders:read"], interfaces=["agent", "mcp"], sign_in=["device",
 "direct"])` writes the same block, checked by agentspecs at the call.
 No endpoint, issuer or credential is ever part of the spec. In the runtime
-(`agent_runtimes.loop.apps.pap_connections`) each company is one server of
+(`agent_runtimes.apps.pap_connections`) each company is one server of
 Datalayer's MCP gateway, named from its domain (`pap_manzanita_example`,
 reached with `?only=pap&pap-company=manzanita.example`) and prefixing its
 tools, so two companies' tools never collide. The token sent is the person's
@@ -369,7 +369,7 @@ names is refused.
 
 Datalayer's company service publishes the application and asks it over A2A,
 marking the message `metadata.pap`. In such a turn the runtime
-(`agent_runtimes.loop.apps.pap_company`):
+(`agent_runtimes.apps.pap_company`):
 
 1. **proposes** a declared operation instead of making it. The model's call
    of `exchange_order` does not run: its arguments become the terms, the

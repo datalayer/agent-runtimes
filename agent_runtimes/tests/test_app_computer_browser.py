@@ -27,16 +27,16 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.loop.apps import browser as browsing
-from agent_runtimes.loop.apps import computer, sessions
-from agent_runtimes.loop.apps.browser import PageSeen, refusal_of
-from agent_runtimes.loop.apps.computer import (
+from agent_runtimes.apps import browser as browsing
+from agent_runtimes.apps import computer, sessions
+from agent_runtimes.apps.browser import PageSeen, refusal_of
+from agent_runtimes.apps.computer import (
     BROWSE_TOOLS,
     ComputerRefused,
     browser_toolset,
 )
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, AppRulesCapability
-from agent_runtimes.loop.apps.visitors import enter_visitor_run, leave_visitor_run
+from agent_runtimes.apps.enforcement import AppRuleBlockedError, AppRulesCapability
+from agent_runtimes.apps.visitors import enter_visitor_run, leave_visitor_run
 from agent_runtimes.routes import agents
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.types import AppSpec
@@ -314,14 +314,14 @@ async def test_every_request_a_page_makes_is_checked() -> None:
 
 class Verifier:
     async def verify(self, token: str, app_uid: str = "") -> Any:
-        from agent_runtimes.loop.apps.callers import Caller
+        from agent_runtimes.apps.callers import Caller
 
         return Caller(kind="person", uid=token)
 
 
 class Talking:
     def __init__(self, agent_id: str, uid: str) -> None:
-        from agent_runtimes.loop.apps.callers import Caller
+        from agent_runtimes.apps.callers import Caller
 
         self.agent_id = agent_id
         self.state = "open"

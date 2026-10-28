@@ -359,7 +359,7 @@ def declared_secrets(
         signed = _get(host, "user") == "signed"
         deployment_uid = str((app_instance or {}).get("deployment_uid") or "")
         if signed and deployment_uid:
-            from agent_runtimes.loop.apps.host_user import secret_variable
+            from agent_runtimes.apps.host_user import secret_variable
 
             held.add(secret_variable(deployment_uid))
 

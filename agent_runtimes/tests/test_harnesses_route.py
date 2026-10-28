@@ -15,7 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps import plugins
+from agent_runtimes.apps import plugins
 from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
 
 
@@ -41,7 +41,7 @@ def test_the_catalogue_is_listed_with_terms_register_and_capabilities(
         for spec in HARNESS_CATALOGUE.values()
         if spec.acp is not None and spec.enabled
     }
-    assert set(listed) == served == {"claude-code", "codex", "opencode", "gemini-cli"}
+    assert set(listed) == served == {"claude-code", "codex", "opencode", "pi"}
     claude = listed["claude-code"]
     assert claude["name"] == "Claude Code"
     assert claude["requires"]["secrets"] == ["ANTHROPIC_API_KEY"]

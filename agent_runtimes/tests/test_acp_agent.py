@@ -65,7 +65,7 @@ def catalogued_fake(monkeypatch: Any, **overrides: Any) -> HarnessSpec:
     """
     from reactor import PluginPlatform
 
-    from agent_runtimes.loop.apps import plugins as runtime_plugins
+    from agent_runtimes.apps import plugins as runtime_plugins
     from agent_runtimes.specs import harnesses as catalogue
 
     harness = fake_harness(**overrides)
@@ -1277,7 +1277,7 @@ class TestSkillsLentInTheHarnessFormat:
         from reactor import PluginManifest, PluginPlatform, hookimpl
 
         from agent_runtimes.adapters.acp_agent import acp_harness_agent
-        from agent_runtimes.loop.apps import plugins as runtime_plugins
+        from agent_runtimes.apps import plugins as runtime_plugins
         from agent_runtimes.plugins.points import HARNESSES, HarnessContribution
 
         platform = PluginPlatform(extension_group="agent-runtimes.tests.extensions")
@@ -1415,6 +1415,76 @@ class TestResolvingACatalogueHarness:
         # Off Datalayer, the person's own key is required, as the spec says.
         with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
             harness_environment(codex, {})
+
+    def test_on_datalayer_opencode_calls_through_ai_inference_by_its_own_configuration(
+        self, monkeypatch
+    ) -> None:
+        """The user's decision of 28 October 2026: OpenCode through ai-inference as Claude Code is, never on the account's secret."""
+        import json
+
+        from agent_runtimes.models import offered
+        from agent_runtimes.specs.harnesses import get_harness
+
+        opencode = get_harness("opencode")
+        assert opencode is not None
+        datalayer = {
+            "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+            "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+            "ANTHROPIC_API_KEY": "sk-ant-not-given",
+        }
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        given = harness_environment(opencode, datalayer)
+        assert "ANTHROPIC_API_KEY" not in given
+        assert (
+            given["ANTHROPIC_BASE_URL"]
+            == "https://r1.example/api/ai-inference/v1/anthropic"
+        )
+        config = json.loads(given["OPENCODE_CONFIG_CONTENT"])
+        assert config["enabled_providers"] == ["anthropic"]
+        anthropic = config["provider"]["anthropic"]
+        assert anthropic["npm"] == "@ai-sdk/anthropic"
+        assert anthropic["options"] == {
+            "baseURL": "https://r1.example/api/ai-inference/v1/anthropic/v1",
+            "apiKey": "the-inference-token",
+            "headers": {"Authorization": "Bearer the-inference-token"},
+        }
+        # Off Datalayer, the person's own key, as the spec says; no configuration written.
+        own = harness_environment(opencode, {"ANTHROPIC_API_KEY": "sk-ant-own"})
+        assert own == {"ANTHROPIC_API_KEY": "sk-ant-own"}
+
+    def test_an_adapter_installed_in_the_prefix_has_its_bin_first_on_the_path(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """pi-acp spawns the `pi` executable from the PATH: installed beside it in the Shield's prefix."""
+        from agent_runtimes.specs.harnesses import get_harness
+
+        pi = get_harness("pi")
+        assert pi is not None
+        prefix_bin = (
+            tmp_path
+            / "harnesses"
+            / f"pi@{pi.registered.version}"
+            / "node_modules"
+            / ".bin"
+        )
+        prefix_bin.mkdir(parents=True)
+        for name in ("pi-acp", "pi"):
+            (prefix_bin / name).write_text("#!/bin/sh\n")
+            (prefix_bin / name).chmod(0o755)
+        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path))
+        given = harness_environment(
+            pi, {"ANTHROPIC_API_KEY": "sk-ant-own", "PATH": "/usr/bin:/bin"}
+        )
+        assert given["PATH"] == f"{prefix_bin}:/usr/bin:/bin"
+        assert launch_command(pi)[0] == str(prefix_bin / "pi-acp")
+        # One launched from the PATH is given no PATH of its own.
+        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "elsewhere"))
+        monkeypatch.setattr("shutil.which", lambda name: f"/usr/local/bin/{name}")
+        assert "PATH" not in harness_environment(
+            pi, {"ANTHROPIC_API_KEY": "sk-ant-own", "PATH": "/usr/bin"}
+        )
 
     @pytest.mark.asyncio
     async def test_a_routed_codex_is_authenticated_with_the_gateway_method(
@@ -1584,7 +1654,7 @@ class TestPapThroughTheShield:
     GATEWAY = "https://mcp.datalayer.run/mcp"
 
     def test_the_companies_are_lent_as_the_gateways_pap_toolset(self) -> None:
-        from agent_runtimes.loop.apps import pap_connections
+        from agent_runtimes.apps import pap_connections
 
         app = SimpleNamespace(
             connections=[SimpleNamespace(server="earthdata")],
@@ -1626,8 +1696,8 @@ class TestPapThroughTheShield:
     def test_a_companys_tool_is_classed_by_agentspecs_table_and_names_the_company(
         self,
     ) -> None:
+        from agent_runtimes.apps import pap_connections
         from agent_runtimes.guardrails import shield_authorizer
-        from agent_runtimes.loop.apps import pap_connections
 
         app = SimpleNamespace(
             pap=SimpleNamespace(
@@ -1705,7 +1775,7 @@ class TestPapThroughTheShield:
         keeper, and the subject is the deployment served."""
         import time
 
-        from agent_runtimes.loop.apps import principal
+        from agent_runtimes.apps import principal
         from agent_runtimes.models.models import remember_app_instance
 
         monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")
@@ -1750,7 +1820,7 @@ class TestPapThroughTheShield:
         subject is read when it is needed, like the credential: the
         creator's account until the deployment's token is held, the
         deployment from then on — and in the session the Shield opens."""
-        from agent_runtimes.loop.apps import principal
+        from agent_runtimes.apps import principal
         from agent_runtimes.models.models import remember_app_instance
 
         monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")

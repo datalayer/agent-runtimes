@@ -14,14 +14,14 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     Application,
     Session,
     WindowMessage,
     mounting,
     sessions,
 )
-from agent_runtimes.loop.apps.session import MemoryChannel
+from agent_runtimes.apps.session import MemoryChannel
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -209,8 +209,8 @@ def test_a_window_message_to_an_application_whose_code_reads_none_is_refused(
 
 
 async def test_a_window_message_is_what_json_writes() -> None:
-    from agent_runtimes.loop.apps import AppHost
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps import AppHost
+    from agent_runtimes.apps.record import AppRecorder
 
     async def nothing(_body: Any = None) -> None:
         return None
@@ -222,7 +222,7 @@ async def test_a_window_message_is_what_json_writes() -> None:
     )
     session = await host.open()
     await host.window(session, {"page": "/cart"})
-    assert channel.events == [WindowMessage(session.id, {"seen": "/cart"})]
+    assert channel.events == [WindowMessage(session.uid, {"seen": "/cart"})]
     with pytest.raises(ValueError, match="what JSON writes"):
         await session.send_window_message({"when": object()})
     plain = Application(id="plain", kind="chat", agent="example-simple")

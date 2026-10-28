@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Literal, Optional
 import pytest
 from rich.console import Console
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     MemoryChannel,
@@ -22,17 +22,17 @@ from agent_runtimes.loop.apps import (
     Session,
     sessions,
 )
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.loading import AppNotRunnable
-from agent_runtimes.loop.apps.pages import (
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.loading import AppNotRunnable
+from agent_runtimes.apps.pages import (
     LOOP_PAGE,
     field_of,
     page_signature,
     page_values,
 )
-from agent_runtimes.loop.apps.plugins import reaction_of
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.terminal import TerminalChannel
+from agent_runtimes.apps.plugins import reaction_of
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.terminal import TerminalChannel
 
 pytest.importorskip("agentspecs.apps")
 
@@ -205,7 +205,7 @@ def test_what_the_page_declares_is_refused_in_sentences() -> None:
 
 
 def test_the_page_is_a_contribution_of_its_plugin_and_marked_as_code() -> None:
-    from agent_runtimes.loop.apps.build import code_marks
+    from agent_runtimes.apps.build import code_marks
 
     application = quote_app()
     host = host_of(application)
@@ -229,7 +229,9 @@ async def test_an_input_changed_runs_the_page_and_shows_its_outputs() -> None:
     }
     pages = [event for event in channel.events if isinstance(event, PageShown)]
     assert pages == [
-        PageShown(session.id, {"seats": 3, "plan": "Business", "term": "Annual"}, shown)
+        PageShown(
+            session.uid, {"seats": 3, "plan": "Business", "term": "Annual"}, shown
+        )
     ]
     # Each with its default: the page from the start.
     assert (await host.page(session, {}))["total"] == "1200 €"
@@ -319,7 +321,7 @@ async def test_the_terminal_says_the_outputs() -> None:
 def test_the_terminal_runs_the_page_with_slash_page() -> None:
     import asyncio
 
-    from agent_runtimes.loop.apps.terminal import AppTux
+    from agent_runtimes.apps.terminal import AppTux
 
     tux = AppTux(
         quote_app(),
@@ -416,7 +418,7 @@ async def test_a_page_without_its_code_is_refused() -> None:
 
 APP_PY = """
 from typing import Literal
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
 app.output("total", title="Total")

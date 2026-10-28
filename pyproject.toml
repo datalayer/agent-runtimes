@@ -66,7 +66,9 @@ dependencies = [
     # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled (W-02).
     # agentspecs 0.0.130 (0.0.129 unpublished): the catalogue offers four harnesses (Claude Code, Codex, OpenCode, Gemini CLI); a harness
     # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
-    "agentspecs>=0.0.130",
+    # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
+    # catalogue's Python applications import agent_runtimes.apps.
+    "agentspecs>=0.0.132",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -166,7 +168,7 @@ dependencies = [
     "typer>=0.16.0",
     "urllib3>=2.6.3",
     # The DevTools protocol of the browser on an application's computer
-    # (R-23, `loop/apps/browser.py`).
+    # (R-23, `apps/browser.py`).
     "websockets>=13",
 ]
 dynamic = ["version"]

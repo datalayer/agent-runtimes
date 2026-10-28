@@ -10,10 +10,10 @@ from typing import Any, Dict
 
 import pytest
 
-from agent_runtimes.loop.apps import AppHost, Application, MemoryChannel, Shown
-from agent_runtimes.loop.apps.components import answer_components, component_node
-from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps import AppHost, Application, MemoryChannel, Shown
+from agent_runtimes.apps.components import answer_components, component_node
+from agent_runtimes.apps.loading import AppNotRunnable, load_app
+from agent_runtimes.apps.record import AppRecorder
 
 pytest.importorskip("agentspecs.apps")
 
@@ -123,7 +123,7 @@ async def test_its_code_shows_it_inline_in_a_panel_or_on_a_page() -> None:
     gauge = session.component("load", "Gauge", label="Load", value={"path": "/load"})
     panel = await session.show(gauge, where="panel", title="Load", data={"load": 42})
     assert channel.shown == [
-        Shown(panel.id, session.id, "panel", "Load", (gauge,), {"load": 42})
+        Shown(panel.id, session.uid, "panel", "Load", (gauge,), {"load": 42})
     ]
     inline = await session.show(
         {"id": "now", "component": "Gauge", "label": "Now", "value": 7}

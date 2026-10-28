@@ -28,7 +28,7 @@ from personal_agent_protocol.demo.ledgerly import ledgerly
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.operations import OperationsClient, approve
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 TENANT = "atlas-demo"
 PAIRWISE = "usr_ada_at_ledgerly_00000000"

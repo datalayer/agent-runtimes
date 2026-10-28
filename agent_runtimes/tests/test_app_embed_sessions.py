@@ -16,9 +16,9 @@ from typing import Any, Dict, Iterator, List, Tuple
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import opening, principal
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.visitors import in_visitor_turn
+from agent_runtimes.apps import opening, principal
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.visitors import in_visitor_turn
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests import test_app_sessions as base
 from agent_runtimes.tests.test_app_sessions import (

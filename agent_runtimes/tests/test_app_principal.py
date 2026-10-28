@@ -17,8 +17,8 @@ import time
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps import principal
-from agent_runtimes.loop.apps.principal import (
+from agent_runtimes.apps import principal
+from agent_runtimes.apps.principal import (
     PrincipalTokenMissing,
     api_key_for,
     ensure_principal_token,
@@ -131,7 +131,7 @@ def test_a_preview_calls_with_the_runtimes_token(monkeypatch):
 
 
 def test_its_record_is_written_as_the_principal(monkeypatch):
-    from agent_runtimes.loop.apps import record
+    from agent_runtimes.apps import record
 
     sent: list[httpx.Request] = []
     real = httpx.AsyncClient
@@ -190,7 +190,7 @@ def test_a_deployments_agent_is_not_made_without_its_principals_token():
 
 def test_its_keeper_renews_it_whatever_is_held(asked):
     """A kept deployment asked only over A2A is renewed by ai-agents (A-08)."""
-    from agent_runtimes.loop.apps.principal import renew_principal_token
+    from agent_runtimes.apps.principal import renew_principal_token
 
     # Its agent made an hour ago: the token still holds, and is asked again anyway.
     give_principal_token("dep-1", "old", expires_in=1800, principal_uid="p-1")
@@ -205,7 +205,7 @@ def test_its_keeper_renews_it_whatever_is_held(asked):
 
 
 def test_no_agent_here_serves_it_nothing_is_asked(asked):
-    from agent_runtimes.loop.apps.principal import renew_principal_token
+    from agent_runtimes.apps.principal import renew_principal_token
 
     with pytest.raises(PrincipalTokenMissing, match="No agent on this runtime"):
         asyncio.run(renew_principal_token("dep-1", "owner-key"))
@@ -217,7 +217,7 @@ def test_the_route_renews_it_with_the_key_it_is_sent(asked):
     from fastapi import HTTPException
     from starlette.requests import Request
 
-    from agent_runtimes.loop.apps.callers import LOCAL
+    from agent_runtimes.apps.callers import LOCAL
     from agent_runtimes.routes import apps as apps_routes
 
     def request(bearer: str) -> Request:

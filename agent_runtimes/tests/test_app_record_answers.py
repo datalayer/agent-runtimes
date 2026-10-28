@@ -14,21 +14,21 @@ from typing import Any
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
-from agent_runtimes.guardrails.tool_approvals import ToolApprovalTimeoutError
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.guards import (
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.guards import (
     AppCheckBlockedError,
     AppChecks,
     AppChecksCapability,
     Verdict,
 )
-from agent_runtimes.loop.apps.record import (
+from agent_runtimes.apps.record import (
     _SESSION,
     AppRecorder,
     keep_days_of,
     kept_of,
 )
-from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.apps.rules import Decision
+from agent_runtimes.guardrails.tool_approvals import ToolApprovalTimeoutError
 from agent_runtimes.specs.apps import APP_CATALOGUE
 from agent_runtimes.tests.test_apps_enforcement import Harness
 from agent_runtimes.types import AppSpec

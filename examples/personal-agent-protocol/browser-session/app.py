@@ -40,7 +40,7 @@ from personal_agent_protocol.demo.manzanita import CONFIG, DOMAIN, manzanita
 from pydantic import SecretStr
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"

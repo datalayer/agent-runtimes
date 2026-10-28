@@ -98,7 +98,7 @@ export const CUSTOM_HARNESS = 'custom';
  * when one does.
  *
  * A harness the catalogue offers (`agentspecs/harnesses`, SH-01) — Claude
- * Code, Codex, OpenCode, Gemini CLI — is served by the Datalayer runtime
+ * Code, Codex, OpenCode, pi — is served by the Datalayer runtime
  * through its ACP adapter (`ACPAgent`, SH-10): the runtime launches the
  * harness as its subprocess, so the runtime's locations run it and the
  * browser, which has no process to launch, does not. Three are refused:

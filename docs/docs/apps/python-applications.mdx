@@ -6,7 +6,7 @@ title: Applications in Python
 # Applications in Python
 
 An application can be written in Python, for logic no block covers. The API
-lives in `agent_runtimes.loop.apps`, in agent-runtimes itself — no other
+lives in `agent_runtimes.apps`, in agent-runtimes itself — no other
 package to install. It uses the words of the Appspec: an *application*, its
 *rules*, its *settings*, a *session*.
 
@@ -110,19 +110,19 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     ChoiceQuestion,
     MemoryChannel,
     Session,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
 
 # The application: what it declares is its Appspec.
 app = Application(id="customer-interview", kind="chat", agent="cog-crawler:0.0.1")
 app.starter("Onboarding", "Interview me about my onboarding.")
 app.rule("send the summary by email", applies_to="send", behaviour="ask_first")
+app.record(include=["outputs"])
 app.setting("tone", {"type": "string", "title": "Tone", "enum": ["warm", "dry"], "default": "warm"})
 app.setting("depth", {"type": "integer", "title": "Depth", "minimum": 1, "maximum": 5, "default": 3})
 
@@ -154,21 +154,16 @@ async def save(session: Session, insight: Insight) -> None:
 
 async def main() -> None:
     channel = MemoryChannel()
-    sent: list = []
-
-    async def send(body: dict) -> None:  # the record, kept here and not sent
-        sent.append(body)
-
     host = AppHost(
         app,
         channel,
         # A model that answers without being called: no key, no network.
         agent=lambda spec: Agent(TestModel(custom_output_text="Tell me about week one.")),
-        recorder=AppRecorder(app=app.spec, send=send),
+        # No recorder: the record is kept in memory, `host.recorder.entries`.
     )
 
     channel.reply("why people leave")            # the answer to `start`'s question
-    session = await host.open(user="ada", settings={"depth": 4})
+    session = await host.open(opened_by="ada", settings={"depth": 4})
     print(session.state, session.settings)
 
     await host.message(session, "Hello")
@@ -176,9 +171,10 @@ async def main() -> None:
 
     await host.settings(session, {"tone": "dry"})
     channel.reply("No")
-    await host.action(session, "save", {"insight": "pricing is unclear"})
+    await host.press(session, "save", {"insight": "pricing is unclear"})
     print(session.state)
     print([type(q).__name__ for q in channel.questions])
+    print([e["kind"] for e in host.recorder.entries if e["kind"] == "output"])
 
 
 asyncio.run(main())
@@ -188,12 +184,18 @@ asyncio.run(main())
 $ python interview.py
 {'goal': 'why people leave'} {'tone': 'warm', 'depth': 4}
 Customer interview - Tell me about week one.
-{'goal': 'why people leave', 'kept': False, 'done': True}
+{'goal': 'why people leave', 'kept': True, 'done': True}
 ['TextQuestion', 'ChoiceQuestion']
+['output']
 ```
 
-`kept` is `False`: the application keeps no outputs in its record unless its
-Appspec's `record.include` names them (see [The record](#the-record)).
+`kept` is `True` because `app.record(include=["outputs"])` says so: the
+application keeps nothing in its record unless its Appspec names it (see
+[The record](#the-record)). Given no `recorder`, the host keeps the record
+in memory — `host.recorder` is an `AppRecorder` whose `sent` holds each body
+as it would have been sent, and whose `entries` flattens them — which is
+what a script or a test wants; a runtime, and `loop apps run`, give one that
+sends it to the session store (`AppRecorder(app=app.spec, send=…)`).
 
 The scenario is the one `agent_runtimes/tests/test_loop_app_api.py` runs
 (`interview()`, `hosted()`), where the model is scripted turn by turn.
@@ -201,7 +203,7 @@ The scenario is the one `agent_runtimes/tests/test_loop_app_api.py` runs
 ## `Application`
 
 ```python
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(
     id="customer-interview",
@@ -259,6 +261,10 @@ an `AppSpec`:
 app = Application.from_spec(spec)
 ```
 
+Nothing is validated at the call: the spec is checked when it is read —
+`app.spec`, which the host reads as it starts — so a worker read from a spec
+without triggers may still get its schedule from `@app.schedule` before.
+
 ### Declarations: plain calls
 
 What an application declares is its Appspec. Each call adds to it:
@@ -269,7 +275,8 @@ What an application declares is its Appspec. Each call adds to it:
 | `app.profile(id, label, *, description="", instructions="", model=None)` | One of several assistants in one application (P-20): two at least, or none. The person picks one before the conversation starts — the first unless they pick another — and keeps it to the end: its `instructions` are told to the agent in every run, its `model` is run in place of the application's (a mode's model wins over it), its starters offered. `session.profile` says it. |
 | `app.setting(name, field, *, required=False, widget=None)` | A setting of the session: a field of the settings' form (C-16), `interface.settings`, the JSON Schema of an object of named fields. `field` is the field's own schema — a `type`, the `title` the person reads, a `default`, and what it takes (`enum`, `minimum`, `maximum`…). `widget` is the input it is drawn with when not its field's own (`interface.settings_ui`, P-20) — see [The nine inputs](#the-nine-inputs). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card. A field that is not a schema raises `TypeError`; the old `app.setting(id, type, label, …)` is gone. |
 | `app.translation(language, words)` | What a person reads of it in another language (P-26), by BCP 47 tag: `words` keyed as `interface.translations` are — `name`, `description`, `welcome`, `starters` by label, `categories`, `settings` by field, `commands` by name, `modes` and `profiles` by id. The page shows the person's language when it has it, else its own words. |
-| `app.rule(action, *, applies_to, behaviour)` | When it acts alone and when it asks: `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
+| `app.rule(says, *, applies_to, behaviour)` | When it acts alone and when it asks: `says` is the rule in the words a person reads (the Appspec's `action`); `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
+| `app.record(include, *, keep_for=None)` | What the record keeps of each session (`record.include`, the Appspec's words: `conversations`, `actions`, `decisions`, `checks`, `approvals`, `outputs`, `feedback`, `diffs`, `terminals`, `audio`) and for how long (`keep_for`, `1_years`, `90_days`…). Nothing is kept unless said — see [The record](#the-record) for which entry goes under which word. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
 | `app.company_connection(id, company, *, access="read", acts_as="user", scopes=(), interfaces=("agent",), sign_in=("direct", "device"), extensions=())` | A company it works with as each person's agent, over the Personal Agent Protocol (`pap.connections`): reached through Datalayer's gateway, its tools named with the company. `company` is a domain, never a URL; a credential or an unknown field is refused at the call. See [Both PAP roles](#both-personal-agent-protocol-roles). |
 | `app.as_company(*, scopes=(), excluded_tasks=(), signed_out=True, interfaces=("agent",), extensions=(), personal_agents="any", registered_agents=())` | The application is itself a company personal agents work with (`pap.company`): each scope `{name, description}`, with its hints `changes` and `personal_data` when you give them; each excluded task `{task, alternative}`. |
@@ -431,7 +438,7 @@ session always first:
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
-| `@app.schedule(cron, *, description="", prompt="")` | `(session)` | On a schedule, in a session of its own. Also adds the schedule to the Appspec's triggers. |
+| `@app.schedule(cron, *, name="", description="", prompt="")` | `(session)` | On a schedule, in a session of its own, known by `name` (the handler's when unsaid): `host.tick(name)`. Also adds the schedule to the Appspec's triggers. Refused at the call on anything but a `worker` — a chat starts when somebody opens it. |
 | `@app.page` / `@app.page(live=False)` | `([session], **inputs)` | A widget's page (P-05): its inputs changed on the page, or Run pressed with `live=False`. Returns its outputs. See [A widget's page](#a-widgets-page). |
 
 A second handler for the same moment, action or schedule raises
@@ -448,7 +455,7 @@ renderer as a chat application.
 ```python
 from typing import Literal
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
 app.output("total", title="Total")
@@ -510,7 +517,7 @@ its check, its test, each with the line that decides it) and validation runs
 it:
 
 ```python
-from agent_runtimes.loop.apps import Application, Conversation
+from agent_runtimes.apps import Application, Conversation
 
 app = Application(id="order-desk", kind="chat", agent="worker-support:0.0.1")
 app.rule("Refund an order", applies_to="refund", behaviour="ask_first")
@@ -615,14 +622,14 @@ runtime has: the scheduler knows a schedule by its position among the
 application's triggers, the runtime finds the handler the code declared
 there (`app.schedule_at(position)`) and runs it with the session, in place
 of the prompt, as a command's code runs — what the platform holds for
-`loop.app.schedule` under `<id>/<name>` (`AppHost.scheduled(session, name)`).
+`loop.app.schedule` under `<id>/<name>` (`AppHost.tick(name, session=…)`).
 The code's `start` runs first, as in any session opened. A schedule the
 code did not declare — one of the Appspec's own — asks the agent its
 prompt. When the trigger at that position is not the schedule the code
 declared (another cron: code and Appspec of different versions), the
 session is refused and the tick fails, saying so. An `app.py` of your own
 runs on the tick the same way: the deployment's runtime is handed its code,
-and its `schedule` handler runs there (`host.schedule(name)`), with nobody
+and its `schedule` handler runs there (`host.tick(name)`), with nobody
 present.
 
 Woken, nobody is present: the session only reads unless one of the
@@ -655,7 +662,7 @@ granted — never with the token of the person who launched the runtime.
   (the hosted page, the scheduler's tick). The runtime asks ai-agents for the
   principal's token with it (`POST /api/ai-agents/v1/apps/deployments/{uid}/principal-token`)
   before the agent is made, keeps it in memory by deployment
-  (`agent_runtimes.loop.apps.principal`), and asks again, with the latest
+  (`agent_runtimes.apps.principal`), and asks again, with the latest
   request's token, when less than five minutes of its hour are left.
 - **What it is used for**: the agent's model calls through ai-inference
   (metered on the application's owner, naming the deployment and the
@@ -690,7 +697,7 @@ reaches none. Its model calls do not change.
 
 An Appspec's `notifications` names where an approval reaches a person —
 `email`, `slack`, `teams` — and those are the channels the runtime sends
-through for the application's sessions (`agent_runtimes.loop.apps.notifications`).
+through for the application's sessions (`agent_runtimes.apps.notifications`).
 Its agent's own `notifications` are not used: an application's agent is
 given no `send_notification` tool.
 
@@ -720,7 +727,7 @@ given no `send_notification` tool.
 
 A rule that says `if_asked` — *Do it if I asked* — acts only on what the
 person approved before, and asks otherwise
-(`agent_runtimes.loop.apps.grants`). Never from a model's reading of the
+(`agent_runtimes.apps.grants`). Never from a model's reading of the
 conversation.
 
 - **What an approval is.** Given by the person in the Studio — *send replies
@@ -755,29 +762,29 @@ Tool Approvals page and its channels say whose it is.
 ## `AppHost`
 
 `AppHost(app, channel, *, agent=local_agent, recorder=None, platform=None)`
-runs an application in this process. A runtime, a test or a script drives it:
+runs an application in this process. A runtime, a test or a script drives it.
+`host.recorder` is its `AppRecorder`: in memory when none is given.
 
 | Method | Does |
 | --- | --- |
-| `await host.open(user=None, settings=None)` | Opens a session and runs `start`. Returns the `Session`. |
+| `await host.open(opened_by=None, settings=None, uid=None, modes=None, profile=None)` | Opens a session and runs `start`. Returns the `Session`; `opened_by` is who opens it (on the record too), `uid` names the session when the caller does — the session API's uid. |
 | `await host.message(session, text)` | Runs `message`, or lets the agent answer. |
-| `await host.action(session, name, payload=None)` | Runs the action; an unknown one raises `KeyError`. |
+| `await host.press(session, name, payload=None)` | A press of a button: runs the action of that name; an unknown one raises `KeyError`. |
 | `await host.files(session, files, text="")` | Runs `file` with the files sent without being asked; without one, the words go to `message`. |
 | `await host.window(session, data)` | Runs `window` with what the page posted; without one, raises `KeyError`. |
 | `await host.settings(session, values)` | Checks the values against the settings' form, keeps them, runs `settings`. A field the form does not have, or a value its schema refuses, raises `InvalidAnswer` (*“Its settings” was sent what its fields refuse: depth: 9 is greater than the maximum of 5.*). |
 | `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
 | `await host.audio(session, chunks, content_type="audio/wav", language="", token=None)` | Hears the turn's sound — bytes, or an iterable or async iterable of bytes — then runs `audio`, or sends the words to `message` marked spoken. A WAV (16-bit mono at 16 kHz) is heard on the machine when it can be; another type, or without the model here, by the speech service with `token`. What cannot be heard raises `AudioNotHeard`, in a sentence. Returns the `HeardSpeech`. |
 | `await host.interrupt(session)` | The person spoke over the agent: cancels what runs, tells the page (`voice.interrupted`), then runs `interrupted`. |
-| `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume` — an ended one too. |
+| `await host.resume(uid, state, opened_by=None, settings=None)` | Reopens a session with its state, and runs `resume` — an ended one too. |
 | `await host.end(session)` | Cancels what runs in the session, runs `end`; the session then takes nothing more — a message, an action, settings or Stop raise `ValueError` (*Session … has ended.*). Ending it again does nothing. |
 | `await host.logout(session)` | Cancels what runs, runs `logout`, then ends the session. |
-| `await host.schedule(name)` | Runs a schedule now, in a new session whose record says the schedule woke it. |
-| `await host.scheduled(session, name)` | Runs a schedule's handler in a session already open — the one a tick woke on a runtime. |
+| `await host.tick(name, session=None)` | A tick of the schedule `name`, now: in a new session whose record says the schedule woke it, or in `session`, one already open — the one a tick woke on a runtime. Returns the session it ran in. |
 
 Each handler runs as one turn: it can be stopped, and the record of the turn
 is sent when it ends. `agent` says how the application's agent is built
-(`local_agent` unless said); `recorder` where its record goes (to the
-platform unless said).
+(`local_agent` unless said); `recorder` where its record goes (kept in memory
+unless said: `AppRecorder.in_memory(spec)`, read from `host.recorder.entries`).
 
 `load_application(path)` returns the one `Application` an `app.py` defines;
 a file with none, or more than one, raises `ValueError`.
@@ -813,7 +820,7 @@ catalogue, and the plugin of each application it is configured with.
 
 ```python
 from reactor import PluginManifest, PluginPlatform
-from agent_runtimes.loop.apps.plugins import REACTION_POINTS
+from agent_runtimes.apps.plugins import REACTION_POINTS
 
 platform = PluginPlatform()
 host = AppHost(app, channel, platform=platform)
@@ -850,7 +857,7 @@ that runs it honours it.
 | `@app.route(path, methods=["GET"])` | A route of its plugin (`provide_routes`), with its endpoint. | `app.mount` and `loop apps run --web`, under the application's path (Reactor's `include_plugin_routes`). |
 
 ```python
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 from support_crm import SOURCES, extension   # a Reactor extension, installed
 
 app = Application(id="support-desk-plus", kind="chat", agent="example-blank:0.0.1",
@@ -904,8 +911,8 @@ made by that code.
 
 | | |
 | --- | --- |
-| `session.id` | The session's id: its conversation and its record. |
-| `session.user` | Who the person is, when the host knows: embedded with `user: signed`, the `sub` the host's server signed (D-21). |
+| `session.uid` | The session's uid — the one word for it, in Python, on the wire and in the record: its conversation and its record. |
+| `session.opened_by` | Who opened it, when the host knows: the person the application talks to; embedded with `user: signed`, the `sub` the host's server signed (D-21). |
 | `session.state` | A dict the application keeps across the turns of this session; each session has its own. |
 | `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
 | `session.profile` | The id of the profile the conversation is with (P-20): the first unless another was picked; `None` for an application without profiles. |
@@ -1070,7 +1077,9 @@ await session.close("report")
   the code is not told, and may show it again.
 
 On the channel, a panel or a page is a `Shown` event, delivered again when it
-changes, and `Closed` when it goes (`MemoryChannel.shown` is what is open);
+changes, and `Closed` when it goes (`MemoryChannel.shown` is what is open,
+as `MemoryChannel.steps` is the steps as they are now, and `.messages` the
+conversation);
 inline, it is a `Message`. Over the [Session API](./session-api) it is a
 `reactor.ui` display that says where it shows (a `remove` op closes it),
 drawn by the `app-elements` plugin every application's
@@ -1235,7 +1244,7 @@ Handlers are sync or async alike. Besides:
   not kept; its arguments are hashable; `fn.cache_clear()` forgets.
 
 ```python
-from agent_runtimes.loop.apps import cache, run_sync
+from agent_runtimes.apps import cache, run_sync
 
 @cache
 async def prices(region: str) -> dict:
@@ -1373,10 +1382,25 @@ permissions turn a shell on (see [Files](./session-api#files)).
 to the application's record and sends it at once. `kind` is `output`,
 `tool_call`, `decision`, `check`, `approval`, `feedback`, `turn` or `step`. It
 returns whether the application keeps entries of that kind: only those its
-Appspec's `record.include` names (`outputs`, `actions`, `decisions`,
-`checks`, `approvals`, `feedback`, `conversations`) are kept. A session's
-start and what its channels were sent (`notification`, see *Its
-notifications*) are kept whatever it names.
+Appspec's `record.include` names (`app.record(include=[…])`) are kept, each
+kind of entry under one word of it:
+
+| Entry kind | Kept under (`record.include`) | What it is |
+| --- | --- | --- |
+| `turn` | `conversations` | What the person asked and what was answered, one turn |
+| `tool_call`, `step` | `actions` | A tool the agent called; a step the code showed |
+| `decision` | `decisions` | What a rule decided of a call |
+| `check` | `checks` | A check at its stage |
+| `approval` | `approvals` | What the person answered when asked |
+| `output` | `outputs` | What `session.record` writes, and what an answer showed |
+| `feedback` | `feedback` | A thumb up or down on an answer |
+| `diff`, `terminal` | `diffs`, `terminals` | A harness's edits whole; its terminals' output |
+| `audio` | `audio` | What the person said, as sound, with their consent |
+
+A session's own entries — its start, its life (`paused`, `ended`, `swapped`,
+`cloned`, `exported`, `imported`, `titled`), its rules, and what its channels
+were sent (`notification`, see *Its notifications*) — are kept whatever it
+names. The mapping is `agent_runtimes.apps.record.INCLUDED_BY`.
 
 Each turn of a conversation that ends in an answer is kept by itself, as a
 `turn` entry, when `record.include` names `conversations`: what the person
@@ -1466,8 +1490,11 @@ with its rules, its checks and its record attached:
 
 Every run is a turn of the session's conversation: the history is kept from
 turn to turn. A rule that says *ask first* asks the person of this session —
-a `ChoiceQuestion` with *Allow* and *Refuse*, two buttons on the page —
-and a refusal raises `AppRuleBlockedError`.
+a `ChoiceQuestion` with *Allow* and *Refuse*, two buttons on the page, whose
+question names the tool and its arguments, then the rule
+(`send_reply(to='ada@example.com', text='…') — Your rule “send a reply”: ask
+you first.`) — and a refusal raises `AppRuleBlockedError`, saying what was
+not run. Every name of the API is listed on [Python API, by name](./python-reference).
 
 The host builds the agent. `local_agent`, the default, builds it in this
 process from the Appspec: the application's model and instructions, else its

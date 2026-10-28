@@ -58,7 +58,7 @@ def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """
     from reactor.ui.ws import UiHub
 
-    from agent_runtimes.loop.apps import sessions
+    from agent_runtimes.apps import sessions
 
     monkeypatch.setattr(sessions, "UI_HUB", UiHub())
     yield
@@ -77,7 +77,7 @@ def _a_recorder_per_session_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterato
     None
         Control to the test, with the recorders' sessions empty.
     """
-    from agent_runtimes.loop.apps import record
+    from agent_runtimes.apps import record
 
     monkeypatch.setattr(record, "_RECORDERS", {})
     yield
@@ -188,7 +188,7 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
     None
         While the test runs with this asker.
     """
-    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.apps import principal
 
     async def answer(
         app_uid: str, grants: Mapping[str, Any], bearer: str
@@ -225,7 +225,7 @@ def _ai_agents_not_asked_for_code() -> Iterator[None]:
     None
         While the test runs with this reader.
     """
-    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.apps import principal
 
     async def none(
         deployment_uid: str, version: int, bearer: Optional[str]

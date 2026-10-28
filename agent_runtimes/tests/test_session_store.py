@@ -22,9 +22,9 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps import session_store, sessions
-from agent_runtimes.loop.apps.record import session_from_entries
-from agent_runtimes.loop.apps.session_store import (
+from agent_runtimes.apps import session_store, sessions
+from agent_runtimes.apps.record import session_from_entries
+from agent_runtimes.apps.session_store import (
     FileSessionStore,
     RecordSessionStore,
     SessionStoreRefused,
@@ -356,7 +356,7 @@ def test_a_session_opened_with_the_file_store_is_kept_whole_and_read_back(
 ) -> None:
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     # The recorder sends through the active store: its default, not the test's capture.
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     recorder = agent_recorder("notes-assistant")
     assert recorder is not None
@@ -392,7 +392,7 @@ def test_a_session_opened_with_the_file_store_is_kept_whole_and_read_back(
         described["runs_on"],
     ) == ("paused", 2, "ada", {"kind": "runtime", "uid": "local"})
     # Read back from the store: the conversation of a session this runtime no longer holds.
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     messages = _run(
         sessions.conversation_from_record(

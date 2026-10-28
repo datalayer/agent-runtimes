@@ -75,14 +75,15 @@ def test_asks_before_it_acts() -> None:
         in out
     )
     assert (
-        "Your rule “send a reply”: ask you first. -> Refuse -> You refused: the agent sent nothing."
+        "send_reply(to='a', text='a') — Your rule “send a reply”: ask you first. -> Refuse -> You refused: the agent sent nothing."
         in out
     )
     assert (
-        "Your rule “send a reply”: ask you first. -> Allow -> Done: the reply is sent."
+        "send_reply(to='a', text='a') — Your rule “send a reply”: ask you first. -> Allow -> Done: the reply is sent."
         in out
     )
     assert "outbox 2, drafts 1" in out
+    assert "decisions on the record: 2" in out
 
 
 def test_runs_on_a_schedule() -> None:

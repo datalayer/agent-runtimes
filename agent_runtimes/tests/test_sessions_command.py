@@ -16,10 +16,10 @@ import pytest
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.commands import sessions as command
 from agent_runtimes.commands.apps import app as apps_app
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -46,7 +46,7 @@ class Signed:
 
 @pytest.fixture()
 def fake(runtime: Runtime, remote: TestClient, tmp_path: Path) -> Iterator[Runtime]:  # noqa: F811 - the fixtures
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     use_session_store(FileSessionStore(root=tmp_path / "sessions"))
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})

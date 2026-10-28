@@ -16,12 +16,12 @@ from typing import Any, Dict, List
 
 from reactor import PluginManifest, PluginPlatform, hookimpl
 
-from agent_runtimes.guardrails.session_rules import session_rules
-from agent_runtimes.loop.apps.session_carry import (
+from agent_runtimes.apps.session_carry import (
     DEFAULT_CARRY,
     carry_policy,
     swap_sentence,
 )
+from agent_runtimes.guardrails.session_rules import session_rules
 from agent_runtimes.plugins import host
 from agent_runtimes.plugins.points import SESSION_CARRY, Carried
 

@@ -23,8 +23,8 @@ from pathlib import Path
 import ag_ui.core
 
 import agent_runtimes
-from agent_runtimes.loop.apps import external_turns
-from agent_runtimes.loop.apps.sessions import question_of
+from agent_runtimes.apps import external_turns
+from agent_runtimes.apps.sessions import question_of
 
 PACKAGE = Path(agent_runtimes.__file__).parent
 FIXTURE = PACKAGE.parent / "src" / "portable" / "semantic-events.json"
@@ -32,7 +32,7 @@ FIXTURE = PACKAGE.parent / "src" / "portable" / "semantic-events.json"
 #: The modules whose events reach a host's session stream.
 EMITTERS = [
     PACKAGE / "routes" / "apps.py",
-    *sorted((PACKAGE / "loop" / "apps").glob("*.py")),
+    *sorted((PACKAGE / "apps").glob("*.py")),
 ]
 
 

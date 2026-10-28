@@ -15,7 +15,7 @@ the runtime makes a toolset of its own, bound to who the run is for, whose
 every HTTP request to the server carries an access token IAM minted
 (``POST /api/iam/v1/oauth2/google-workspace/token``) — asked with
 
-- the person's token naming the application (I-04, ``loop.apps.acting``)
+- the person's token naming the application (I-04, ``apps.acting``)
   when the application's connection to Gmail is in the name of who uses it
   (``as: user``);
 - the application's principal's token (I-03) when it is in its owner's;
@@ -147,7 +147,7 @@ async def _iam_bearer(
     if not acting:
         raise GmailRefused("This application has no connection to Gmail.")
     if acting == "user":
-        from agent_runtimes.loop.apps.acting import acting_token
+        from agent_runtimes.apps.acting import acting_token
 
         person = await acting_token(deployment_uid, bearer)
         if not person:
@@ -156,7 +156,7 @@ async def _iam_bearer(
                 "act in their name (or nobody signed in is talking to it)."
             )
         return person, f"user:{hashlib.sha256((bearer or '').encode()).hexdigest()}"
-    from agent_runtimes.loop.apps.principal import principal_token
+    from agent_runtimes.apps.principal import principal_token
 
     principal = principal_token(deployment_uid) or ""
     if not principal:
@@ -187,7 +187,7 @@ async def gmail_access_token(agent_id: str, bearer: Optional[str]) -> str:
     GmailRefused
         Nobody's Gmail can be reached for this run, and why.
     """
-    from agent_runtimes.loop.apps.principal import deployment_of
+    from agent_runtimes.apps.principal import deployment_of
     from agent_runtimes.models.models import app_instance_of
 
     deployment_uid = deployment_of(app_instance_of(agent_id))

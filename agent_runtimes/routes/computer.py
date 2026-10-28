@@ -41,15 +41,15 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from agent_runtimes.loop.apps.browser import (
+from agent_runtimes.apps.browser import (
     KEYS,
     Browser,
     browser_of,
     browser_running,
     find_browser,
 )
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.computer import (
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.computer import (
     ComputerRefused,
     ensure_holder,
     hand_back,
@@ -152,8 +152,8 @@ def _refused(refused: ComputerRefused) -> HTTPException:
 
 async def _computer(agent: str, request: Request) -> Tuple[AppSpec, Caller]:
     """The application an agent runs, and a caller who may see its computer."""
-    from agent_runtimes.loop.apps import sessions
-    from agent_runtimes.loop.apps.principal import deployment_of
+    from agent_runtimes.apps import sessions
+    from agent_runtimes.apps.principal import deployment_of
     from agent_runtimes.routes.apps import _authorize
 
     try:
@@ -163,8 +163,8 @@ async def _computer(agent: str, request: Request) -> Tuple[AppSpec, Caller]:
     caller = (await _authorize(request, False, app)).caller
     deployment = deployment_of(instance)
     if deployment:
-        from agent_runtimes.loop.apps.callers import bearer_of
-        from agent_runtimes.loop.apps.opening import NotLetIn, ensure_may_see_computer
+        from agent_runtimes.apps.callers import bearer_of
+        from agent_runtimes.apps.opening import NotLetIn, ensure_may_see_computer
 
         try:
             await ensure_may_see_computer(

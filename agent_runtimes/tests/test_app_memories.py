@@ -26,12 +26,11 @@ from fastapi.testclient import TestClient
 from pydantic_ai.toolsets import FunctionToolset
 from reactor import PluginPlatform
 
-from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
-from agent_runtimes.loop.apps import memory as app_memories
-from agent_runtimes.loop.apps import plugins
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.memory import (
+from agent_runtimes.apps import memory as app_memories
+from agent_runtimes.apps import plugins
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.memory import (
     EMBEDDED,
     NOT_SIGNED_IN,
     AppMemory,
@@ -45,6 +44,7 @@ from agent_runtimes.loop.apps.memory import (
     remembers_with,
     withheld,
 )
+from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
 from agent_runtimes.memory import EphemeralMemory, MemoryCapability, get_memory_backend
 from agent_runtimes.memory.mem0_backend import Mem0Backend
 from agent_runtimes.routes import apps as routes

@@ -34,8 +34,8 @@ from typer.testing import CliRunner
 
 scenes = pytest.importorskip("agentspecs.scenes")
 
+from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED  # noqa: E402
 from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
-from agent_runtimes.loop.apps.own import FAILED, NOT_RUN, PASSED  # noqa: E402
 from agent_runtimes.loop.scenes.rehearsal import (  # noqa: E402
     RehearsalVerdict,
     answer_differences,
@@ -256,7 +256,7 @@ def test_a_member_that_cannot_play_makes_the_beat_not_run_with_why(scene: Any) -
 
 
 def test_a_member_refused_in_this_process_is_said_in_its_sentence(scene: Any) -> None:
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     def refusing(spec: Any) -> Agent:
         if spec.id == "accounting":
@@ -572,7 +572,7 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
 
 
 def _here(monkeypatch: pytest.MonkeyPatch, factory: Callable[[Any], Agent]) -> None:
-    from agent_runtimes.loop.apps import agent as agent_module
+    from agent_runtimes.apps import agent as agent_module
 
     # A member on a runtime is built by `local_agent`, one in the browser by `browser_agent`.
     monkeypatch.setattr(agent_module, "local_agent", factory)

@@ -60,14 +60,14 @@ from agent_shield.policy import (
 )
 from agent_shield.saas import PolicyUnavailable
 
-from agent_runtimes.guardrails.managed_policies import runtime_policies
-from agent_runtimes.loop.apps.rules import (
+from agent_runtimes.apps.rules import (
     ASK_FIRST,
     DEFAULT_BEHAVIOURS,
     DO_IT,
     IF_ASKED,
     LEAVE_TO_ME,
 )
+from agent_runtimes.guardrails.managed_policies import runtime_policies
 
 #: An application's behaviour, as the Shield's verdict.
 BEHAVIOUR_VERDICT: Dict[str, str] = {

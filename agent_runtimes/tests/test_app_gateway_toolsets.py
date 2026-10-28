@@ -18,8 +18,8 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps import principal
-from agent_runtimes.loop.apps.principal import gateway_toolsets_of_the_run
+from agent_runtimes.apps import principal
+from agent_runtimes.apps.principal import gateway_toolsets_of_the_run
 from agent_runtimes.mcp import datalayer_gateway
 from agent_runtimes.models.models import remember_app_instance
 

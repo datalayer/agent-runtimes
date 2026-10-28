@@ -19,7 +19,7 @@ from personal_agent_protocol import (
 from pydantic import SecretStr
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 
 class Proofs:

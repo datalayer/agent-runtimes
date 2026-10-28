@@ -16,15 +16,15 @@ python3 -m http.server 8788 --directory examples/embed-host
 Then open <http://127.0.0.1:8788/>. The page reads what to embed from its
 query, each with a default:
 
-| Query    | Default                                         | What it is                                                   |
-| -------- | ----------------------------------------------- | ------------------------------------------------------------ |
-| `embed`  | `http://localhost:3063/embed/datalayer-app.js`  | The script a host writes, where the bundle is served         |
-| `origin` | `http://localhost:3063`                         | Where Datalayer is (the landing)                             |
-| `api`    | `https://r1.datalayer.run`                      | Datalayer's services: ai-agents, ai-inference                |
-| `app`    | `web-research`                                  | A public example, an application's address, or a decision's id |
-| `mode`   | `inline`                                        | `inline`, `bubble`, `panel` or `assistant`                   |
-| `token`  | —                                               | An embed token, for a private application                    |
-| `server` | —                                               | An agent-runtimes server of the host's own                   |
+| Query    | Default                                        | What it is                                                     |
+| -------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| `embed`  | `http://localhost:3063/embed/datalayer-app.js` | The script a host writes, where the bundle is served           |
+| `origin` | `http://localhost:3063`                        | Where Datalayer is (the landing)                               |
+| `api`    | `https://r1.datalayer.run`                     | Datalayer's services: ai-agents, ai-inference                  |
+| `app`    | `web-research`                                 | A public example, an application's address, or a decision's id |
+| `mode`   | `inline`                                       | `inline`, `bubble`, `panel` or `assistant`                     |
+| `token`  | —                                              | An embed token, for a private application                      |
+| `server` | —                                              | An agent-runtimes server of the host's own                     |
 
 Without a token, a public application runs for the visitor as it does on
 Datalayer's pages: the element reads what it is (an example the visitors'

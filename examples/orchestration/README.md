@@ -48,7 +48,7 @@ them:
    seam: adapters report, the control plane decides. No adapter
    in this example ever names a canonical state.
 5. **Arbitrate the commit.** The first attempt to reach commit wins
-  .
+   .
 
 The two runs come out with the same execution state, the same milestones, and
 **the same artifact content hash** — two hashes computed by two adapters from

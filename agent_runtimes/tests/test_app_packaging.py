@@ -21,7 +21,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps.packaging import (
+from agent_runtimes.apps.packaging import (
     NotPackageable,
     folder_files,
     is_folder_file,
@@ -36,7 +36,7 @@ from agent_runtimes.routes.app_plugins import router
 pytest.importorskip("agentspecs.apps")
 
 APP_PY = """
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(id="dial-desk", name="Dial desk", kind="chat", agent="example-simple")
 app.custom_component(
@@ -180,7 +180,7 @@ def test_the_entry_point_advertises_the_applications_own_extension(
 
     from reactor import EXTENSION_ENTRY_POINT_GROUP, PluginPlatform
 
-    from agent_runtimes.loop.apps.plugins import AppPlugin
+    from agent_runtimes.apps.plugins import AppPlugin
 
     (entry,) = entry_points(
         group=EXTENSION_ENTRY_POINT_GROUP, name="loop-app-dial-desk"
@@ -210,7 +210,7 @@ def test_an_application_with_no_package_installed_has_no_page_side() -> None:
 
 
 def test_folder_files_are_read_from_the_spec(folder: Path) -> None:
-    from agent_runtimes.loop.apps.build import build
+    from agent_runtimes.apps.build import build
 
     assert folder_files(build(folder / "app.py").application.spec) == [
         "components/dial.js"

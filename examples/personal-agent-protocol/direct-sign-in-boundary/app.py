@@ -16,7 +16,7 @@ from personal_agent_protocol import (
     build_direct_sign_in_request,
 )
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 
 @dataclass(frozen=True)

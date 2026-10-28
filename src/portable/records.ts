@@ -26,7 +26,7 @@ export const RUN_END_WORDS: Record<string, string> = {
 /**
  * The mark around what the runtime tells an application of a turn a personal
  * agent asked over PAP or PACT, before the request (`asked_for_said`,
- * `ASKED_FOR_TAG` in agent_runtimes.loop.apps.pap_company).
+ * `ASKED_FOR_TAG` in agent_runtimes.apps.pap_company).
  */
 export const ASKED_FOR_TAG = 'asked-for';
 

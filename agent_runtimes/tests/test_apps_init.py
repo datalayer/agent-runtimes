@@ -15,11 +15,10 @@ from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 from typer.testing import CliRunner
 
-from agent_runtimes.commands.apps import PASSES, app, validate_file
-from agent_runtimes.loop.apps import AppHost, MemoryChannel, load_application
-from agent_runtimes.loop.apps.agent import local_agent
-from agent_runtimes.loop.apps.build import build, read_code_marks
-from agent_runtimes.loop.apps.scaffold import (
+from agent_runtimes.apps import AppHost, MemoryChannel, load_application
+from agent_runtimes.apps.agent import local_agent
+from agent_runtimes.apps.build import build, read_code_marks
+from agent_runtimes.apps.scaffold import (
     BLANK_AGENT,
     BLANK_PYTHON_AGENT,
     InitRefused,
@@ -27,6 +26,7 @@ from agent_runtimes.loop.apps.scaffold import (
     examples,
     init,
 )
+from agent_runtimes.commands.apps import PASSES, app, validate_file
 
 pytest.importorskip("agentspecs.apps")
 
@@ -67,7 +67,7 @@ def test_a_blank_python_application_builds_its_spec_and_answers_through_its_agen
             channel,
             agent=lambda spec: Agent(TestModel(custom_output_text="Hello there.")),
         )
-        session = await host.open(user="ada")
+        session = await host.open(opened_by="ada")
         await host.message(session, "Hello")
         assert channel.messages[-1].text == "Hello there."
 
@@ -168,7 +168,7 @@ def test_the_folder_s_own_tests_pass_as_written(
 
 
 def test_eject_writes_an_app_py_that_builds_the_same_spec(tmp_path: Path) -> None:
-    from agent_runtimes.loop.apps.scaffold import eject
+    from agent_runtimes.apps.scaffold import eject
 
     written = init("desk", tmp_path, example="support-desk")
     spec_path = written.folder / "app.yaml"
@@ -185,7 +185,7 @@ def test_eject_writes_an_app_py_that_builds_the_same_spec(tmp_path: Path) -> Non
 
 
 def test_eject_refuses_what_is_not_a_spec_that_validates(tmp_path: Path) -> None:
-    from agent_runtimes.loop.apps.scaffold import eject
+    from agent_runtimes.apps.scaffold import eject
 
     stray = tmp_path / "notes.yaml"
     stray.write_text("- a list\n")

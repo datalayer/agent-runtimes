@@ -13,8 +13,8 @@ from personal_agent_protocol.demo.kit import AgentIdentity
 from personal_agent_protocol.models import Operation
 from personal_agent_protocol.operations import approve, terms_digest
 
-from agent_runtimes.loop.apps import Application
-from agent_runtimes.loop.apps.pap_company import (
+from agent_runtimes.apps import Application
+from agent_runtimes.apps.pap_company import (
     PapTurn,
     Performing,
     enter_pap_turn,

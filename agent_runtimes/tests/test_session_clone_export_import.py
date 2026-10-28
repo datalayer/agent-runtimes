@@ -23,8 +23,8 @@ from typing import Iterator, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -50,7 +50,7 @@ def store(tmp_path: Path) -> Iterator[FileSessionStore]:
 @pytest.fixture()
 def through_store(runtime: Runtime) -> Runtime:  # noqa: F811 - the fixture
     """The application's recorder sends through the active store, as a runtime's does."""
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     recorder = agent_recorder("notes-assistant")
@@ -200,7 +200,7 @@ def test_a_clone_with_another_agent_carries_the_sentence_and_an_ended_source_clo
         and swapped["payload"]["to"] == HARNESS_AGENT
     )
     # Resumed, the sentence is in the conversation.
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     rebuilt = asyncio.run(
         sessions.rebuilt_from_record(
@@ -229,7 +229,7 @@ def test_export_redacts_counts_carries_files_as_entries_and_writes_the_digest(
 ) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "plain-secret-value-xyz")
     # An application that keeps its actions too: the tool row is on the record.
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     acting = {
         **ASSISTANT,

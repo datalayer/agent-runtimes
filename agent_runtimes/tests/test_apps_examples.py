@@ -14,15 +14,15 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     InvalidAnswer,
     MemoryChannel,
     UploadedFile,
     load_application,
 )
-from agent_runtimes.loop.apps.build import build
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps.build import build
+from agent_runtimes.apps.record import AppRecorder
 
 CATALOGUE = Path(pytest.importorskip("agentspecs.apps").__file__).parent
 
@@ -81,14 +81,14 @@ def test_the_customer_interview_asks_consent_then_interviews_and_keeps_its_resul
         )
         channel.reply("Yes")
         channel.reply("why people leave after the trial")
-        session = await host.open(user="ada")
+        session = await host.open(opened_by="ada")
         assert session.state["goal"] == "why people leave after the trial"
         await host.message(session, "The setup took a week.")
         assert channel.messages[-1].text == "What happened in week one?"
-        await host.action(
+        await host.press(
             session, "save", {"insight": "setup is slow", "quote": "a week"}
         )
-        await host.action(session, "finish", {})
+        await host.press(session, "finish", {})
         assert session.state["insights"] == [
             {"insight": "setup is slow", "quote": "a week"}
         ]
@@ -96,7 +96,7 @@ def test_the_customer_interview_asks_consent_then_interviews_and_keeps_its_resul
 
         declined, channel = _host("customer-interview", "unused", [])
         channel.reply("No")
-        session = await declined.open(user="bob")
+        session = await declined.open(opened_by="bob")
         await declined.message(session, "Hello")
         assert session.state == {"consent": False}
         assert "not consented" in channel.messages[-1].text
@@ -107,7 +107,7 @@ def test_the_customer_interview_asks_consent_then_interviews_and_keeps_its_resul
 def test_the_report_from_a_file_takes_a_csv_and_refuses_anything_else() -> None:
     async def scenario() -> None:
         host, channel = _host("report-from-a-file", "3 rows, 2 columns.", [])
-        session = await host.open(user="ada", settings={"report": "Full"})
+        session = await host.open(opened_by="ada", settings={"report": "Full"})
         channel.reply(UploadedFile("orders.csv", "text/csv", b"a,b\n1,2\n3,4\n5,6\n"))
         await host.message(session, "Run")
         assert channel.messages[-1].text == "3 rows, 2 columns."
@@ -131,7 +131,7 @@ def test_the_exchange_desk_exchanges_at_manzanita_once_per_confirmed_operation(
 
     import httpx
 
-    from agent_runtimes.loop.apps.pap_company import (
+    from agent_runtimes.apps.pap_company import (
         PapTurn,
         enter_pap_turn,
         leave_pap_turn,

@@ -26,7 +26,7 @@ export type ComputerPart = (typeof COMPUTER_PARTS)[number];
 
 export type ComputerParts = Record<ComputerPart, boolean>;
 
-/** The tools of each part, as the runtime gives them (`loop/apps/computer.py`). */
+/** The tools of each part, as the runtime gives them (`apps/computer.py`). */
 export const COMPUTER_PART_TOOLS: Record<ComputerPart, readonly string[]> = {
   browse: [
     'open_page',

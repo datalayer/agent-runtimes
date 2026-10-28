@@ -21,9 +21,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps.application import load_application
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.plugins import (
+from agent_runtimes.apps.application import load_application
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.plugins import (
     PLATFORM,
     app_plugin_name,
     app_plugins_state,
@@ -33,7 +33,7 @@ from agent_runtimes.loop.apps.plugins import (
     revision_of,
     unregister_app,
 )
-from agent_runtimes.loop.apps.scaffold import eject, init
+from agent_runtimes.apps.scaffold import eject, init
 from agent_runtimes.routes.app_plugins import router
 from agent_runtimes.specs.apps import APP_CATALOGUE
 

@@ -16,11 +16,11 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor.ui import UiAction
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.session import TextQuestion
-from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.session import TextQuestion
+from agent_runtimes.apps.visitors import NOTHING_KEPT
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,

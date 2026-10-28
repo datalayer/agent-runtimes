@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     BEHAVIOURS,
     DEFAULT_BEHAVIOURS,
     behaviour_for,
@@ -426,7 +426,7 @@ def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
     from agentspecs.apps import dump_app
     from agentspecs.apps import get_app as spec_of
 
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     quote = APP_CATALOGUE["quote-calculator"]
     [prices] = quote.samples.documents
@@ -446,7 +446,7 @@ def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
     from agentspecs.apps import dump_app
     from agentspecs.apps import get_app as spec_of
 
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     cases = APP_CATALOGUE["report-from-a-file"].tests.cases
     assert [[file.name for file in case.files] for case in cases] == [
@@ -472,7 +472,7 @@ def test_a_test_s_conversation_is_in_the_catalogue_and_kept_by_a_runtime() -> No
     from agentspecs.apps import dump_app
     from agentspecs.apps import get_app as spec_of
 
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     cases = APP_CATALOGUE["customer-interview"].tests.cases
     assert [case.ask for case in cases] == ["", "", "", ""]

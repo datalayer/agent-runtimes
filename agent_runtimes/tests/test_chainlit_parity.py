@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai import Agent
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Delta,
     FileQuestion,
@@ -30,7 +30,7 @@ from agent_runtimes.loop.apps import (
     mounting,
     sessions,
 )
-from agent_runtimes.loop.apps.session import ChoiceQuestion
+from agent_runtimes.apps.session import ChoiceQuestion
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     answer_of,
@@ -139,7 +139,7 @@ async def test_text_to_sql_chains_three_steps_and_its_button_takes_action() -> N
             "status": "processing",
         }
     ]
-    await host.action(session, "take_action", {})
+    await host.press(session, "take_action", {})
     assert channel.messages[-1].text == "Contacting shipping carrier..."
 
 

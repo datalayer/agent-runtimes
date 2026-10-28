@@ -153,7 +153,7 @@ async def test_an_empty_bearer_is_refused_without_starting_anything(
 def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
     """The runtime, with agent creation reduced to what it does with MCP servers."""
     from agent_runtimes.app import create_app
-    from agent_runtimes.loop.apps import plugins
+    from agent_runtimes.apps import plugins
     from agent_runtimes.routes import agents
     from agent_runtimes.routes import apps as routes
     from agent_runtimes.routes.acp import _agents

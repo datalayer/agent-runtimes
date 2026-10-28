@@ -21,8 +21,8 @@ from typing import Any
 import httpx
 import pytest
 
+from agent_runtimes.apps import acting, principal
 from agent_runtimes.guardrails import credentials
-from agent_runtimes.loop.apps import acting, principal
 from agent_runtimes.mcp import google_workspace as gw
 from agent_runtimes.mcp.catalog_mcp_servers import get_catalog_server
 from agent_runtimes.models.models import remember_app_instance

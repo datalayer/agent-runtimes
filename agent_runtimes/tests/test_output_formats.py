@@ -248,8 +248,8 @@ class TestTheRun:
 
 class TestTheApplicationsRules:
     def test_accounting_writes_its_notebook_as_reading_even_for_a_visitor(self) -> None:
-        from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-        from agent_runtimes.loop.apps.visitors import (
+        from agent_runtimes.apps.enforcement import AppRulesCapability
+        from agent_runtimes.apps.visitors import (
             enter_visitor_run,
             leave_visitor_run,
             visitor_refusal,
@@ -421,7 +421,7 @@ class TestTheComponents:
     def test_an_approval_pressed_by_a_visitor_is_refused_and_by_a_person_asked(
         self,
     ) -> None:
-        from agent_runtimes.loop.apps.visitors import (
+        from agent_runtimes.apps.visitors import (
             enter_visitor_run,
             leave_visitor_run,
         )
@@ -445,7 +445,7 @@ class TestTheComponents:
             leave_visitor_run(token)
 
     def test_showing_is_reading_for_the_applications_rules(self) -> None:
-        from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+        from agent_runtimes.apps.enforcement import AppRulesCapability
         from agent_runtimes.specs.apps import APP_CATALOGUE
 
         rules = AppRulesCapability(app=APP_CATALOGUE["accounting"])

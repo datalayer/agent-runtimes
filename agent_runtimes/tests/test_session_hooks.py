@@ -19,9 +19,9 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor import PluginManifest, PluginPlatform, hookimpl
 
-from agent_runtimes.loop.apps import plugins as runtime_plugins
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session_hooks import (
+from agent_runtimes.apps import plugins as runtime_plugins
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.session_hooks import (
     AuditHook,
     HookFailed,
     OtelHook,
@@ -159,7 +159,7 @@ def test_a_failing_hook_stops_the_operation_naming_it() -> None:
 def test_the_audit_hook_writes_the_rows_and_the_otel_hook_a_span_each(
     runtime: Runtime,  # noqa: F811 - the fixture
 ) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     recorder = AppRecorder(app=load_app(ASSISTANT), app_uid="app-1", send=runtime.send)
     recorder.opened("session-h003", "ada")

@@ -12,7 +12,7 @@ runs the application, the page draws the dial from that server::
     loop apps run app.py --web
 """
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(
     id="dial-desk",

@@ -18,9 +18,9 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from agent_runtimes.loop.apps import documents
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.documents import (
+from agent_runtimes.apps import documents
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.documents import (
     SEARCH_TOOL,
     AppDocumentsCapability,
     DocumentsNotSearched,
@@ -28,9 +28,9 @@ from agent_runtimes.loop.apps.documents import (
     passages_in_words,
     search_on_contents,
 )
-from agent_runtimes.loop.apps.plugins import rules_for
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import UNCLASSED
+from agent_runtimes.apps.plugins import rules_for
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import UNCLASSED
 from agent_runtimes.types import AppSpec
 
 RETURNS = "eric/support/returns.md"
@@ -226,7 +226,7 @@ def contents(monkeypatch: pytest.MonkeyPatch) -> List[httpx.Request]:
 async def test_on_a_deployment_it_searches_as_its_principal(
     contents, monkeypatch
 ) -> None:
-    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.apps import principal
 
     monkeypatch.setattr(
         principal,
@@ -267,7 +267,7 @@ async def test_a_refusal_of_contents_is_said_in_its_words(
 async def test_a_deployment_without_its_principals_token_searches_nothing(
     contents, monkeypatch
 ) -> None:
-    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.apps import principal
 
     monkeypatch.setattr(principal, "principal_token", lambda deployment: None)
     monkeypatch.setattr(

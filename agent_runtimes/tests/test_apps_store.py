@@ -8,8 +8,8 @@ import json
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps.deployments import DeployRefused
-from agent_runtimes.loop.apps.store import APP_ITEM_FORMAT, AppStore, pull, push
+from agent_runtimes.apps.deployments import DeployRefused
+from agent_runtimes.apps.store import APP_ITEM_FORMAT, AppStore, pull, push
 from agent_runtimes.tests.test_apps_deployments import FakeSpacer
 
 SOURCE = "# The desk.\nschema: loop.app/v1\nid: desk\nname: Desk\nkind: chat\n"
@@ -107,7 +107,7 @@ def test_an_application_in_the_older_form_is_refused(store, spacer):
 
 # --- P-10: an app.py kept in the application's item ------------------------------
 
-CODE = {"file": "app.py", "text": "from agent_runtimes.loop.apps import Application\n"}
+CODE = {"file": "app.py", "text": "from agent_runtimes.apps import Application\n"}
 
 
 def test_an_app_py_is_kept_beside_its_spec_and_versioned_with_it(store, spacer):

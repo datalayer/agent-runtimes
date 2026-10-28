@@ -32,7 +32,7 @@ runtime's server on this machine, the harness made at startup through the
 create route, the workspace it guards. It sends one AG-UI turn over HTTP, as
 the terminal and the web chat do, and prints what the runtime streamed: the
 harness's own tool calls with the Shield's decision, the Shield's own rows
-(*Write hello.txt — do it*) and the change as a `diff` display.
+(_Write hello.txt — do it_) and the change as a `diff` display.
 
 ```bash
 python harness_on_the_runtime.py
@@ -56,8 +56,8 @@ In the workspace: hello.txt says 'hello, shield\n'
 ```
 
 The harness's own notification of its read carries no path, so the decision
-written beside it is the cautious one (*ask me first*); the read itself is
-the Shield's answer to `fs/read_text_file`, decided with its path: *do it*.
+written beside it is the cautious one (_ask me first_); the read itself is
+the Shield's answer to `fs/read_text_file`, decided with its path: _do it_.
 
 **Claude Code** is the same script with its adapter installed and a funded
 key — without them it is refused in the runtime's sentence, before anything
@@ -74,7 +74,7 @@ Claude Code's adapter @agentclientprotocol/claude-agent-acp@0.91.0 is not instal
 ```
 
 Not run with Claude Code itself here: the only Anthropic key at hand has no
-credit (*Credit balance is too low*, said by the Shield as a sentence on r1).
+credit (_Credit balance is too low_, said by the Shield as a sentence on r1).
 
 `python harness_on_the_runtime.py --serve` serves the runtime on port 8765
 until interrupted, for the web chat below.
@@ -84,8 +84,8 @@ until interrupted, for the web chat below.
 `proxy_from_python.py` is the ACP client an editor would be, in front of
 `agent-shield run -- <the fake agent>`: Datalayer's default policy
 in an `agent-shield.yaml`, an audit file of its own. An edit
-inside the workspace is *do it* — the agent's permission request never
-reaches the client; a `git push` is *ask me first* — the question reaches the
+inside the workspace is _do it_ — the agent's permission request never
+reaches the client; a `git push` is _ask me first_ — the question reaches the
 client, which says no; a read outside the workspace is refused in a sentence.
 Then the audit is read back, as `agent-shield log` reads it.
 
@@ -146,7 +146,7 @@ The edit was done without asking, the push was asked and refused.
 
 `session_rule.py` runs the runtime's harness agent (`ACPAgent`) and does what
 `POST /api/v1/apps/sessions/{uid}/rules` does — `session_rules().add(uid,
-rule_from(body))` — between two turns: the rule *no reads* holds from the
+rule_from(body))` — between two turns: the rule _no reads_ holds from the
 next action; a rule that would allow commands freely is refused because the
 organization's rules ask first (on Datalayer, read from IAM; given here as a
 document); taken back (`DELETE …/rules/no reads`), reading is done again.
@@ -183,9 +183,9 @@ Removed    no reads
 
 `audit_read_back.py` gives the harness agent the application's recorder —
 the one a shipped application's runtime sends to ai-agents — whose `send`
-keeps what would be sent. One turn edits a file (*do it*, a diff) and runs a
-command naming a key (*ask me first*, approved by the script as a person
-would in *Waiting for you*). The record's `include` names `diffs` and
+keeps what would be sent. One turn edits a file (_do it_, a diff) and runs a
+command naming a key (_ask me first_, approved by the script as a person
+would in _Waiting for you_). The record's `include` names `diffs` and
 `terminals`, so both are kept whole; the key is redacted in every entry
 before anything keeps it.
 
@@ -268,7 +268,7 @@ In the worker's workspace: hello.txt says 'hello, shield\n'
 
 ## In the browser: the examples app
 
-Two pages of the examples app (`npm run examples`, then the *Shield* group):
+Two pages of the examples app (`npm run examples`, then the _Shield_ group):
 
 - **Shield Harness** (`src/examples/ShieldHarnessExample.tsx`): the web chat
   on the local runtime above (`python harness_on_the_runtime.py --serve`

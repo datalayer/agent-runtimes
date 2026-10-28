@@ -5,7 +5,7 @@
 
 The browser's Sales application asks Accounting over A2A. Accounting runs on a
 runtime, where its route answers the machine itself and a key granted to that
-route (`agent_runtimes.loop.apps.a2a`). This script mints that key with IAM's
+route (`agent_runtimes.apps.a2a`). This script mints that key with IAM's
 task grants (O1-06, O1-17), and it reaches exactly this:
 
 - **the route**: the grant's task is ``a2a:<runtime uid>:<application>:<nonce>``,

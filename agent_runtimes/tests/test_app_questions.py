@@ -23,10 +23,10 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from reactor.ui import ANSWER_ACTION, UiAction, UiActionError
 
-from agent_runtimes.loop.apps import AppHost, Application, sessions
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session import (
+from agent_runtimes.apps import AppHost, Application, sessions
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.session import (
     ALLOW,
     REFUSE,
     ChoiceQuestion,
@@ -66,7 +66,7 @@ async def asking(
         recorder=AppRecorder(app=application.spec, send=_ignore),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    session = await live.host.open(id=live.uid)
+    session = await live.host.open(uid=live.uid)
     live.session = session
     got: List[Any] = []
 
@@ -292,7 +292,7 @@ async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None
         recorder=AppRecorder(app=application.spec, send=send),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    session = await live.host.open(id=live.uid)
+    session = await live.host.open(uid=live.uid)
     live.session = session
 
     async def work() -> None:

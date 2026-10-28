@@ -17,10 +17,10 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.chat.commands import clone, export, resume, swap
 from agent_runtimes.chat.commands import sessions as sessions_command
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.loop.session import LoopSession
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
@@ -50,7 +50,7 @@ def tux(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[Any]:  # noqa: F811 - the fixtures
     """A REPL bound to the test runtime: httpx reaches the TestClient, signed as Ada."""
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     use_session_store(FileSessionStore(root=tmp_path / "sessions"))
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})

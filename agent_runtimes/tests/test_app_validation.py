@@ -24,11 +24,9 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 from typer.testing import CliRunner
 
-from agent_runtimes.commands import apps as apps_command
-from agent_runtimes.commands.apps import app as apps_cli
-from agent_runtimes.loop.apps import Application, Conversation, validation
-from agent_runtimes.loop.apps.own import FAILED, NOT_RUN, PASSED
-from agent_runtimes.loop.apps.validation import (
+from agent_runtimes.apps import Application, Conversation, validation
+from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED
+from agent_runtimes.apps.validation import (
     CHECK_EXPECTED,
     CHECK_RULES,
     CHECK_SENSITIVE,
@@ -42,6 +40,8 @@ from agent_runtimes.loop.apps.validation import (
     stopped_on_record,
     what_it_did,
 )
+from agent_runtimes.commands import apps as apps_command
+from agent_runtimes.commands.apps import app as apps_cli
 
 pytest.importorskip("agentspecs.apps")
 
@@ -474,7 +474,7 @@ def test_an_answer_of_nothing_is_refused_by_the_agent_itself_and_the_case_not_ru
 
 
 GREETER = (
-    "from agent_runtimes.loop.apps import Application, Session\n"
+    "from agent_runtimes.apps import Application, Session\n"
     "app = Application(id='greeter', kind='chat', agent='cog-crawler:0.0.1')\n"
     "@app.message\n"
     "async def reply(session: Session, text: str) -> None:\n"
@@ -488,7 +488,7 @@ GREETER = (
 def _spec_with_a_worded_test(tmp_path: Path) -> Path:
     import yaml
 
-    from agent_runtimes.loop.apps.build import build
+    from agent_runtimes.apps.build import build
 
     source = tmp_path / "app.py"
     source.write_text(GREETER)
@@ -681,7 +681,7 @@ def test_a_test_that_is_a_conversation_is_played_turn_by_turn() -> None:
     answered by a choice, its goal by a message, its insight and result by its
     actions — played in one session each, in this process, and judged whole on
     what it said and what its code kept."""
-    from agent_runtimes.loop.apps.build import load_application
+    from agent_runtimes.apps.build import load_application
 
     catalogue = Path(pytest.importorskip("agentspecs.apps").__file__).parent
     application = load_application(catalogue / "customer-interview" / "app.py")

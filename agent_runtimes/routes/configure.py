@@ -305,7 +305,7 @@ async def give_inference_token_endpoint(
     ai-inference serves is asked again with it, so the models offered are
     those it serves rather than the sentence a pooled runtime started with.
     """
-    from agent_runtimes.loop.apps.callers import is_loopback
+    from agent_runtimes.apps.callers import is_loopback
     from agent_runtimes.models.offered import (
         give_inference_token,
         load_inference_models,

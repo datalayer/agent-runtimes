@@ -22,8 +22,8 @@ from typing import Any, Dict, List
 
 import pytest
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.loading import load_app
 from agent_runtimes.specs.apps import APP_BUILT, APP_CATALOGUE
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
     creation_spy,
@@ -63,7 +63,7 @@ def test_the_loaders_a_service_imports_run_no_application_code(
 ) -> None:
     """``load_app`` and the deployment helpers read a document; loading an
     ``app.py`` is never on their way."""
-    from agent_runtimes.loop.apps import application, deployments
+    from agent_runtimes.apps import application, deployments
 
     def refuse(*args: object, **kwargs: object) -> None:
         raise AssertionError("a loader a service imports ran an application's code")
@@ -86,13 +86,13 @@ def test_a_hosted_deployment_not_kept_runs_its_own_code(
     read from the deployment: its handlers answer, not the plain agent —
     whether or not the deployment is kept always on (drilled on r1, 14
     October 2026: a shipped app's code ran only when kept)."""
-    from agent_runtimes.loop.apps import principal
-    from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.apps import principal
+    from agent_runtimes.apps.application import Application
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
     from agent_runtimes.tests.test_agents_create_integration import _DummyRequest
 
     text = (
-        "from agent_runtimes.loop.apps import Application\n"
+        "from agent_runtimes.apps import Application\n"
         "app = Application('hosted-own', agent='cog-crawler:0.0.1', version='0.0.3')\n"
         "@app.message\n"
         "async def answer(session, text):\n"

@@ -10,8 +10,8 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.record import AppRecordCapability, AppRecorder
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.record import AppRecordCapability, AppRecorder
 from agent_runtimes.specs.voices import SPEECH_MODEL_CATALOGUE, VOICE_CATALOGUE
 from agent_runtimes.types import AppSpec
 from agent_runtimes.voice import (

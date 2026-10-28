@@ -94,7 +94,7 @@ def python_of(specs_dir: Path, identity: str) -> str:
     Its own ``app.py`` when it was built in Python; otherwise the file `loop
     apps eject` writes from its spec, so every example can be read in Python.
     """
-    from agent_runtimes.loop.apps.scaffold import eject_text  # noqa: PLC0415
+    from agent_runtimes.apps.scaffold import eject_text  # noqa: PLC0415
 
     code = specs_dir / identity / "app.py"
     if code.is_file():

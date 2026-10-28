@@ -91,8 +91,8 @@ def test_the_package_is_discovered_listed_and_resolved(
     installed: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from agent_runtimes.adapters.acp_agent import harness_agent
+    from agent_runtimes.apps import plugins as runtime_plugins
     from agent_runtimes.chat.cli import harnesses
-    from agent_runtimes.loop.apps import plugins as runtime_plugins
 
     monkeypatch.delenv("AIDER_HARNESS_YAML", raising=False)
     platform = _platform()
@@ -127,7 +127,7 @@ def test_the_package_is_discovered_listed_and_resolved(
         agent.harness.id == "aider"
         and agent.harness.instructions_file == "CONVENTIONS.md"
     )
-    from agent_runtimes.loop.apps.session_files import format_named
+    from agent_runtimes.apps.session_files import format_named
 
     assert format_named("omnigent-jsonl/1", platform).id == "omnigent-jsonl/1"
 

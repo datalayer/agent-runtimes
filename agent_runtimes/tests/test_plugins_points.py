@@ -234,8 +234,8 @@ def test_loop_plugins_lists_extensions_contributions_and_what_was_refused(
 def test_the_command_prints_the_entry_point_and_the_error(
     monkeypatch: pytest.MonkeyPatch, broken: Path
 ) -> None:
+    from agent_runtimes.apps import plugins as runtime_plugins
     from agent_runtimes.commands.plugins import app
-    from agent_runtimes.loop.apps import plugins as runtime_plugins
 
     fresh = PluginPlatform(extension_group=TEST_GROUP)
     monkeypatch.setattr(runtime_plugins, "PLATFORM", fresh)
@@ -281,8 +281,8 @@ def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_a
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
+    from agent_runtimes.apps import plugins as runtime_plugins
     from agent_runtimes.chat.cli import harnesses
-    from agent_runtimes.loop.apps import plugins as runtime_plugins
 
     monkeypatch.setattr(runtime_plugins, "PLATFORM", platform)
     made: list[Any] = []
@@ -347,8 +347,8 @@ def test_an_organizations_harness_is_contributed_for_its_organization_alone(
     platform: PluginPlatform, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
+    from agent_runtimes.apps import plugins as runtime_plugins
     from agent_runtimes.guardrails import organization_harnesses as org
-    from agent_runtimes.loop.apps import plugins as runtime_plugins
 
     monkeypatch.setattr(runtime_plugins, "PLATFORM", platform)
     spec = HARNESS_CATALOGUE["goose"].model_dump(mode="json")

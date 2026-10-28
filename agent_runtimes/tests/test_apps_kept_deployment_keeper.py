@@ -41,11 +41,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from agent_runtimes.app import create_app
-from agent_runtimes.loop.apps import a2a as apps_a2a
-from agent_runtimes.loop.apps import callers, plugins, principal
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.deployments import SessionNotStarted, create_agent
-from agent_runtimes.loop.apps.principal import (
+from agent_runtimes.apps import a2a as apps_a2a
+from agent_runtimes.apps import callers, plugins, principal
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.deployments import SessionNotStarted, create_agent
+from agent_runtimes.apps.principal import (
     ORGANIZATION_OWNER,
     OWN_ROUTES_ONLY,
     MembershipsUnread,

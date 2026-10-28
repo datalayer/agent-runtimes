@@ -17,7 +17,7 @@ made, and a ``propose`` at a company the person did not connect is refused at
 the Rules through the authorizer, as the gateway refuses it at the toolset.
 
 The lent tools of a company (SH-70) are classed by agentspecs' table
-(:mod:`agent_runtimes.loop.apps.pap_connections`), the strictest class when a
+(:mod:`agent_runtimes.apps.pap_connections`), the strictest class when a
 tool may do two things, and name the company as the resource.
 """
 
@@ -29,7 +29,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from agent_shield.policy import Subject, strictest
 
-from agent_runtimes.loop.apps import pap_connections
+from agent_runtimes.apps import pap_connections
 
 logger = logging.getLogger(__name__)
 

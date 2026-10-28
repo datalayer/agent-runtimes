@@ -140,7 +140,7 @@ listComponents().filter(c => !c.standard).map(c => c.id);
 - **Forms** (C-16): `checkApp` refuses a `Form` whose `schema` is not an object of
   named fields, or that requires a field it does not ask (`formProblems`, agentspecs'
   `form_problems`); and when an action arrives, the runtime checks the values a `Form`
-  sends with it against the same schema (`agent_runtimes.loop.apps.forms.form_values_refused`):
+  sends with it against the same schema (`agent_runtimes.apps.forms.form_values_refused`):
   refused, the session API answers 422 with the sentence —
   *“The quote” was sent what its fields refuse: seats: 0 is less than the minimum of 1.* —
   and the application's handler is not called. An application's settings are a form of

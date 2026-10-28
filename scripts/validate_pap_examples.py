@@ -15,7 +15,7 @@ import json
 import sys
 from pathlib import Path
 
-from agent_runtimes.loop.apps.build import build
+from agent_runtimes.apps.build import build
 
 ROOT = Path(__file__).parents[1]
 EXAMPLES = ROOT / "examples" / "personal-agent-protocol"

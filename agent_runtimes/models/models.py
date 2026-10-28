@@ -482,8 +482,8 @@ def resolve_model_for_inference_provider(
     # one is refused in a sentence (``InferenceTokenMissing``), never made
     # with another key. A deployment's agent calls with its application's
     # principal's token, and only with it (I-03).
-    from agent_runtimes.loop.apps.principal import api_key_for, deployment_of
-    from agent_runtimes.loop.apps.visitors import (
+    from agent_runtimes.apps.principal import api_key_for, deployment_of
+    from agent_runtimes.apps.visitors import (
         or_visitors_key,
         turn_api_key,
         visitors_runtime,

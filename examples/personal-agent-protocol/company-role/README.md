@@ -24,7 +24,7 @@ pap:
 
 Datalayer's company service publishes the application, admits the personal
 agents it names, and asks it over A2A, marking each message `metadata.pap`.
-The runtime (`agent_runtimes.loop.apps.pap_company`) then:
+The runtime (`agent_runtimes.apps.pap_company`) then:
 
 1. **proposes** a declared operation instead of making it: in a company turn,
    the model's call of `exchange_order` does not run; its arguments become the

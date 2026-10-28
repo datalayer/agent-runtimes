@@ -21,7 +21,7 @@ the other: shown with ``show_components`` — the sources as cards that open, a
 comparison as a table, a series as a chart, a choice as buttons that answer
 the application — each call one A2UI surface, the runtime building its nodes
 from what the agent gave and checking each against the catalog's JSON Schema
-(`agent_runtimes.loop.apps.components`). A button pressed comes back as the
+(`agent_runtimes.apps.components`). A button pressed comes back as the
 reader's next turn, its action in the message's metadata
 (``loop.action``): one whose option does more than read is refused to a
 visitor in a sentence before any model runs (:func:`refused_action`).
@@ -544,7 +544,7 @@ def surface_of_components(
         chart's point without its fields, a choice of fewer than two options
         or more than four, or a node the catalog refuses.
     """
-    from agent_runtimes.loop.apps.components import answer_surface, component_node
+    from agent_runtimes.apps.components import answer_surface, component_node
 
     nodes: list[dict[str, Any]] = []
     data: dict[str, Any] = {}
@@ -758,8 +758,8 @@ def refused_action(message: Any) -> str:
     """
     from collections.abc import Mapping
 
-    from agent_runtimes.loop.apps.rules import DO_IT
-    from agent_runtimes.loop.apps.visitors import visitor_refusal
+    from agent_runtimes.apps.rules import DO_IT
+    from agent_runtimes.apps.visitors import visitor_refusal
 
     meta = message.get("metadata") if isinstance(message, Mapping) else None
     ours = meta.get("loop") if isinstance(meta, Mapping) else None

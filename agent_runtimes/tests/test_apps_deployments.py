@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps.deployments import (
+from agent_runtimes.apps.deployments import (
     Deployments,
     DeployRefused,
     deploy,
@@ -198,7 +198,7 @@ DIGEST = {
 
 
 def test_the_schedules_of_an_application_are_known_by_their_position():
-    from agent_runtimes.loop.apps.deployments import ScheduleTrigger, schedule_triggers
+    from agent_runtimes.apps.deployments import ScheduleTrigger, schedule_triggers
 
     assert schedule_triggers(DIGEST) == [
         ScheduleTrigger(1, "0 9 * * 1", "Write the Monday digest.", ""),
@@ -214,7 +214,7 @@ def test_the_schedules_of_an_application_are_known_by_their_position():
 
 def test_a_woken_session_is_created_with_its_deployment_and_what_woke_it():
     pytest.importorskip("agentspecs.apps")
-    from agent_runtimes.loop.apps.deployments import session_payload
+    from agent_runtimes.apps.deployments import session_payload
 
     woken = {
         "kind": "schedule",
@@ -287,7 +287,7 @@ def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():
     """R-14: the agent made, then a session of it on the session API —
     said to be woken, the trigger's prompt its opener — whose stream is read
     to its end."""
-    from agent_runtimes.loop.apps.deployments import start_session
+    from agent_runtimes.apps.deployments import start_session
 
     seen: list[httpx.Request] = []
     # The runtime was just launched: it does not answer at first.
@@ -377,7 +377,7 @@ def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():
     ],
 )
 def test_a_woken_session_that_fails_asks_or_breaks_off_is_said(events, result):
-    from agent_runtimes.loop.apps.deployments import start_session
+    from agent_runtimes.apps.deployments import start_session
 
     client = _runtime(
         [
@@ -397,7 +397,7 @@ def test_a_woken_session_that_fails_asks_or_breaks_off_is_said(events, result):
 
 
 def test_a_woken_session_the_runtime_refuses_is_said():
-    from agent_runtimes.loop.apps.deployments import SessionNotStarted, start_session
+    from agent_runtimes.apps.deployments import SessionNotStarted, start_session
 
     seen: list[httpx.Request] = []
     refused = _runtime([httpx.Response(422, json={"detail": "no such agent"})], seen)
@@ -440,7 +440,7 @@ def test_a_woken_session_the_runtime_refuses_is_said():
 def test_a_payload_not_made_for_the_session_api_is_refused_before_anything_is_asked():
     """Fail fast: a payload on Vercel AI comes from an ai-agents before
     agent-runtimes 1.3.83, and one nothing woke is not a woken session."""
-    from agent_runtimes.loop.apps.deployments import SessionNotStarted, start_session
+    from agent_runtimes.apps.deployments import SessionNotStarted, start_session
 
     seen: list[httpx.Request] = []
     client = _runtime([], seen)
@@ -468,7 +468,7 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
     one the hosted page's chat addresses — the application's id, over AG-UI —
     with the deployment as its instance and nothing woken."""
     pytest.importorskip("agentspecs.apps")
-    from agent_runtimes.loop.apps.deployments import kept_payload
+    from agent_runtimes.apps.deployments import kept_payload
 
     payload = kept_payload(
         DIGEST,
@@ -513,7 +513,7 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
 
 
 def test_a_kept_agent_is_created_once_and_one_already_there_is_kept():
-    from agent_runtimes.loop.apps.deployments import create_agent
+    from agent_runtimes.apps.deployments import create_agent
 
     seen: list[httpx.Request] = []
     made = create_agent(
@@ -538,7 +538,7 @@ def test_a_kept_agent_is_created_once_and_one_already_there_is_kept():
 def test_an_application_the_runtime_refuses_is_said_once_in_its_sentence():
     """A refusal is the application's, not the runtime's: not asked again,
     and its sentence is the runtime's own (D-21)."""
-    from agent_runtimes.loop.apps.deployments import (
+    from agent_runtimes.apps.deployments import (
         ApplicationRefused,
         SessionNotStarted,
         create_agent,

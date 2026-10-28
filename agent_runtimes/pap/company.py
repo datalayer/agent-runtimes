@@ -8,7 +8,7 @@ application whose Appspec enables ``pap.company``. Its Reactor points:
 
 - ``pap.company.agent`` is the application, asked over its A2A route (R-03)
   with the message marked ``metadata.pap`` — the turn the runtime reads in
-  :mod:`agent_runtimes.loop.apps.pap_company`: a declared operation's tool
+  :mod:`agent_runtimes.apps.pap_company`: a declared operation's tool
   call is proposed rather than made, returned as a ``pap_operation`` data
   part, and the Maker's sentence with the terms is what the person sees;
 - ``pap.company.operationExecutor``, one per declared operation, is the
@@ -56,7 +56,7 @@ from personal_agent_protocol.models import Operation, OperationResult
 from personal_agent_protocol.reactor import resolve_addresses
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps.pap_company import PAP_META_KEY, summary_of
+from agent_runtimes.apps.pap_company import PAP_META_KEY, summary_of
 from agent_runtimes.protocols.pap import OPERATION_TICKETS
 
 #: How long a perform turn's ticket can be redeemed.

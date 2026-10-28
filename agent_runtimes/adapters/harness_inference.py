@@ -10,6 +10,11 @@ Anthropic route — ``ANTHROPIC_BASE_URL`` is ``<ai-inference>/anthropic`` —
 and calls it with the runtime's ai-inference token as ``ANTHROPIC_AUTH_TOKEN``.
 ai-inference calls Anthropic on the account's own ``ANTHROPIC_API_KEY``, which
 it reads from the account's secrets, and meters the call under the account.
+OpenCode reads no base-URL variable: it is given its configuration inline
+(``OPENCODE_CONFIG_CONTENT``), an ``anthropic`` provider on the AI SDK's
+``@ai-sdk/anthropic`` whose ``baseURL`` is that route and whose key and
+``Authorization`` header carry the runtime's token (META_HARNESS, the user's
+decision of 28 October 2026: OpenCode through ai-inference as Claude Code is).
 
 So the runtime is never given the key: it is not declared to the platform
 (:func:`routed_secret`, read by ``guardrails.declared_secrets``), not passed
@@ -20,6 +25,7 @@ takes the key from the environment, as its spec declares.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Mapping
@@ -33,6 +39,44 @@ OPENAI_ROUTE = "/openai/v1"
 
 BASE_URL_VARIABLE = "ANTHROPIC_BASE_URL"
 AUTH_TOKEN_VARIABLE = "ANTHROPIC_AUTH_TOKEN"
+
+#: OpenCode's inline configuration (opencode.ai/docs/config: precedence 6 of
+#: 8, over the global and project files).
+OPENCODE_CONFIG_VARIABLE = "OPENCODE_CONFIG_CONTENT"
+
+
+def opencode_config(base_url: str, token: str) -> str:
+    """Write OpenCode's configuration for ai-inference's Anthropic route: one
+    provider, ``anthropic`` on ``@ai-sdk/anthropic`` (which adds ``/messages``
+    to its ``baseURL``, so the route's ``/v1`` is given), the runtime's token
+    as its key and as a bearer, every other provider off.
+    """
+    return json.dumps(
+        {
+            "$schema": "https://opencode.ai/config.json",
+            "provider": {
+                "anthropic": {
+                    "npm": "@ai-sdk/anthropic",
+                    "name": "Datalayer (ai-inference)",
+                    "options": {
+                        "baseURL": f"{base_url}/v1",
+                        "apiKey": token,
+                        "headers": {"Authorization": f"Bearer {token}"},
+                    },
+                }
+            },
+            "enabled_providers": ["anthropic"],
+        }
+    )
+
+
+def inline_config(route: "Route", base_url: str, token: str) -> str:
+    """The configuration a routed harness is given inline, for its ``config_variable``."""
+    if route.config_variable == OPENCODE_CONFIG_VARIABLE:
+        return opencode_config(base_url, token)
+    raise ValueError(
+        f"No inline configuration is written for {route.config_variable!r}."
+    )
 
 
 @dataclass(frozen=True)
@@ -49,6 +93,9 @@ class Route:
     token_variable: str
     #: The ACP auth method the harness is authenticated with after ``initialize``, when it asks for one.
     auth_method: str | None = None
+    #: The variable the harness reads its configuration from inline, when it
+    #: reads no base-URL variable: written by :func:`inline_config`.
+    config_variable: str | None = None
 
 
 #: The harnesses whose model calls go through ai-inference on Datalayer.
@@ -60,6 +107,15 @@ class Route:
 ROUTES: dict[str, Route] = {
     "claude-code": Route(
         "ANTHROPIC_API_KEY", ANTHROPIC_ROUTE, BASE_URL_VARIABLE, AUTH_TOKEN_VARIABLE
+    ),
+    # OpenCode (the user's decision, 28 October 2026): the same Anthropic
+    # route, through its own provider configuration rather than a variable.
+    "opencode": Route(
+        "ANTHROPIC_API_KEY",
+        ANTHROPIC_ROUTE,
+        BASE_URL_VARIABLE,
+        AUTH_TOKEN_VARIABLE,
+        config_variable=OPENCODE_CONFIG_VARIABLE,
     ),
     "codex": Route(
         "OPENAI_API_KEY",
@@ -138,6 +194,9 @@ def routed_token() -> tuple[str | None, str | None]:
 __all__ = [
     "ANTHROPIC_ROUTE",
     "OPENAI_ROUTE",
+    "OPENCODE_CONFIG_VARIABLE",
+    "inline_config",
+    "opencode_config",
     "ROUTES",
     "Route",
     "base_url",

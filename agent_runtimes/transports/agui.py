@@ -734,7 +734,7 @@ class AGUITransport(BaseTransport):
                 # run of a deployment as its principal (I-03), of a
                 # Preview with the token the session gives the run, narrowed
                 # to its granted Spaces (R-25) — which the gateway holds.
-                from ..loop.apps.principal import gateway_toolsets_of_the_run
+                from ..apps.principal import gateway_toolsets_of_the_run
 
                 runtime_toolsets = await gateway_toolsets_of_the_run(
                     agent_id,

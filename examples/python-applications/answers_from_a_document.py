@@ -23,7 +23,7 @@ from pathlib import Path
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     MemoryChannel,
@@ -32,7 +32,6 @@ from agent_runtimes.loop.apps import (
     cache,
     run_sync,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
 
 HANDBOOK = Path(__file__).with_name("handbook.txt")
 
@@ -90,20 +89,14 @@ async def answer(session: Session, text: str) -> None:
 
 async def main() -> None:
     channel = MemoryChannel()
-    record: list = []
-
-    async def keep(body: dict) -> None:
-        record.append(body)
-
     host = AppHost(
         app,
         channel,
         agent=lambda spec: Agent(
             TestModel(custom_output_text="Here is what the handbook says.")
         ),
-        recorder=AppRecorder(app=app.spec, send=keep),
     )
-    session = await host.open(user="ada")
+    session = await host.open(opened_by="ada")
     print(channel.messages[-1].text)
 
     for question in ("How many days off do I get?", "Who feeds the office cat?"):

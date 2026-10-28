@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The semantic agent events a chat host renders (Slack, Discord:  DC-005, S-004, S-205), and the AG-UI events of agent-runtimes' session API (agent_runtimes/routes/apps.py, agent_runtimes/loop/apps/sessions.py, agent_runtimes/loop/apps/external_turns.py) each reduces to. src/portable/semanticOfAgUi.ts reduces every case (src/portable/__tests__/semantic.unit.test.ts); agent_runtimes/tests/test_semantic_events_contract.py holds the cases to what the runtime emits.",
+  "about": "The semantic agent events a chat host renders (Slack, Discord:  DC-005, S-004, S-205), and the AG-UI events of agent-runtimes' session API (agent_runtimes/routes/apps.py, agent_runtimes/apps/sessions.py, agent_runtimes/apps/external_turns.py) each reduces to. src/portable/semanticOfAgUi.ts reduces every case (src/portable/__tests__/semantic.unit.test.ts); agent_runtimes/tests/test_semantic_events_contract.py holds the cases to what the runtime emits.",
   "kinds": [
     "text",
     "progress",
@@ -23,9 +23,9 @@
     "table": "a Markdown table in the answer (src/portable/semantic.ts answerParts); no AG-UI event carries one",
     "file": "none in agent-runtimes 1.5.45: reserved, rendered as a safe HTTPS link when produced",
     "citation": "an HTTPS Markdown link in the answer (answerParts); no AG-UI event carries one",
-    "ask": "AG-UI RUN_FINISHED with result.asking (agent_runtimes/loop/apps/sessions.py question_of); the run stream carries no loop.ask event",
+    "ask": "AG-UI RUN_FINISHED with result.asking (agent_runtimes/apps/sessions.py question_of); the run stream carries no loop.ask event",
     "completion": "AG-UI RUN_FINISHED without asking",
-    "stop": "the host itself, after its own Stop: a stopped session's stream ends without RUN_FINISHED or RUN_ERROR (agent_runtimes/loop/apps/sessions.py stop, _close); no AG-UI event carries it",
+    "stop": "the host itself, after its own Stop: a stopped session's stream ends without RUN_FINISHED or RUN_ERROR (agent_runtimes/apps/sessions.py stop, _close); no AG-UI event carries it",
     "error": "AG-UI RUN_ERROR message",
     "sign-in": "AG-UI TOOL_CALL_RESULT of pap_sign_in (or pact_sign_in, with or without a gateway prefix) whose result is a sign-in waiting for the person with an https page (src/portable/signIn.ts readPapSignIn), after the tool's complete row; a page that is not https gives the row only"
   },

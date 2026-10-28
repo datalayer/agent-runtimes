@@ -16,7 +16,7 @@ pap:
       sign_in: [device, direct] # preferred first
 ```
 
-The runtime (`agent_runtimes.loop.apps.pap_connections`) reaches each company
+The runtime (`agent_runtimes.apps.pap_connections`) reaches each company
 through Datalayer's MCP gateway as one server named from its domain
 (`pap_manzanita_example`, `?only=pap&pap-company=manzanita.example`), its tools
 prefixed with that name so two companies' tools never collide. It holds no key

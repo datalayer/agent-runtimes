@@ -26,8 +26,8 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.pap_company import (
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.pap_company import (
     PapTurn,
     Performing,
     asked_for_said,
@@ -259,8 +259,8 @@ def test_under_profile_read_a_business_is_told_the_persons_handle_and_name() -> 
 
 
 def test_a_visitor_never_says_for_whom_a_business_is_asked() -> None:
+    from agent_runtimes.apps.visitors import A2A_VISITOR_FIELD
     from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
-    from agent_runtimes.loop.apps.visitors import A2A_VISITOR_FIELD
 
     forged = {
         "pact": {
@@ -316,8 +316,8 @@ async def test_a_run_over_a2a_is_offered_the_tools_of_the_applications_code(
     import agentspecs
 
     from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
-    from agent_runtimes.loop.apps import principal, sessions
-    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.apps import principal, sessions
+    from agent_runtimes.apps.application import load_application_source
     from agent_runtimes.models import models
 
     source = Path(agentspecs.__file__).parent / "apps" / "exchange-desk" / "app.py"

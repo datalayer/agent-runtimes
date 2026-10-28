@@ -72,7 +72,7 @@ token naming the application from the grant — as its mail watch does to read
 the mailbox — and gives it with the session request alone, in
 `X-Datalayer-Acting-Token` (`deployments.start_session(acting_token=)`).
 The route holds it where a person's own session's token would be
-(`loop.apps.acting.given`, keyed on the request's bearer), so every run of
+(`apps.acting.given`, keyed on the request's bearer), so every run of
 the session finds it through `acting_token` as any session does — the Gmail
 toolset and the gateway's servers in the person's name alike: one path. It
 is the only token that session acts with: ended, nothing more is reached in
@@ -83,7 +83,7 @@ a person (`test_app_woken_for_a_person.py`).
 
 ## The mail source it runs against today
 
-`agent_runtimes.loop.apps.mail` is the mail source a worker runs against
+`agent_runtimes.apps.mail` is the mail source a worker runs against
 wherever the server is not:
 
 - `MailSource` — what a worker needs of a mailbox: its address, a search,
@@ -98,9 +98,9 @@ wherever the server is not:
 ```python
 from pydantic_ai import Agent
 
-from agent_runtimes.loop.apps.agent import AppAgent, app_capabilities
-from agent_runtimes.loop.apps.mail import fixture_mailbox, gmail_toolset
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps.agent import AppAgent, app_capabilities
+from agent_runtimes.apps.mail import fixture_mailbox, gmail_toolset
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.specs.apps import APP_CATALOGUE
 
 triage = APP_CATALOGUE["inbox-triage"]

@@ -20,7 +20,7 @@ its agent.
 | `state` | `open` (held by a runtime, a turn may run), `paused` (nothing runs; held or not) or `ended` (its code's `end` ran; the record stays). `stopped` is no state: posted or read as one, it is refused in a sentence. |
 | `turn` | While `open`, what the runtime does: `idle`, `running` or `waiting` (a question asked). |
 | `held` | Whether a runtime holds it now. |
-| `agent`, `harness` | The agentspec bound to it now; its harness when the agent runs on one (Claude Code, Codex, OpenCode, Gemini CLI — see [Harness capabilities](./harnesses.mdx)). |
+| `agent`, `harness` | The agentspec bound to it now; its harness when the agent runs on one (Claude Code, Codex, OpenCode, pi — see [Harness capabilities](./harnesses.mdx)). |
 | `turns` | The person's turns — the cursor a clone is cut at. |
 | `title`, `archived` | The person's title, else the first turn's first line; an archived session is hidden from the list unless asked for. |
 | `runs_on` | `{kind: runtime, uid}` where it runs when open; `null` on no runtime. |
@@ -77,7 +77,7 @@ with its first turn, depends on the old harness's `resume` capability (see
 - *This conversation was with Claude Code until turn 4; from here it is with
   Codex. What was said stays; what Claude Code kept for itself waits for a
   swap back.* — the old harness loads its own session again on a swap back.
-- *… what Gemini CLI kept for itself is gone.* — it cannot (`resume: none`).
+- *… what OpenCode kept for itself is gone.* — it cannot (`resume: none`).
 - *A swap back to Codex later will start it over.* — added when the target's
   `resume` is `none`.
 

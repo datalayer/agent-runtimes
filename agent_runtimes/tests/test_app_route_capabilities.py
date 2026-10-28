@@ -17,15 +17,15 @@ from typing import Any, Dict, List
 
 import pytest
 
-from agent_runtimes.loop.apps import principal
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.documents import AppDocumentsCapability
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.guards import AppChecksCapability
-from agent_runtimes.loop.apps.learning import AppLearningCapability
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.record import AppRecordCapability, AppRecorder
-from agent_runtimes.loop.apps.saving import SAVE_TOOL, AppSavingCapability
+from agent_runtimes.apps import principal
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.documents import AppDocumentsCapability
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.guards import AppChecksCapability
+from agent_runtimes.apps.learning import AppLearningCapability
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.record import AppRecordCapability, AppRecorder
+from agent_runtimes.apps.saving import SAVE_TOOL, AppSavingCapability
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
     _DummyRequest,
     creation_spy,

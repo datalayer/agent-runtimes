@@ -16,7 +16,7 @@ from typing import Any, Dict, Iterator, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import mounting, serving
+from agent_runtimes.apps import mounting, serving
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     answer_of,
@@ -31,7 +31,7 @@ def app_py(name: str = "Echo Desk", answer: str = "Echo") -> str:
     """An app.py whose code answers every message."""
     return textwrap.dedent(
         f"""
-        from agent_runtimes.loop.apps import Application, Session
+        from agent_runtimes.apps import Application, Session
 
         app = Application(
             id="echo-desk",
@@ -50,7 +50,7 @@ def app_py(name: str = "Echo Desk", answer: str = "Echo") -> str:
 
 def build_of(path: Path) -> Any:
     """The application an app.py builds."""
-    from agent_runtimes.loop.apps.build import build
+    from agent_runtimes.apps.build import build
 
     return build(path).application
 

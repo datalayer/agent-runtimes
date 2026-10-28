@@ -67,7 +67,7 @@ def test_a_sessions_life_in_process() -> None:
 def test_the_two_packages_contribute_and_a_yaml_without_terms_is_refused() -> None:
     out = run("plugins", "show_contributed.py")
     assert (
-        "harnesses  claude-code, codex, custom, fast-agent, gemini-cli, goose, opencode, openhands, aider"
+        "harnesses  claude-code, codex, custom, fast-agent, gemini-cli, goose, opencode, openhands, pi, aider"
         in out
     )
     assert "formats    datalayer-session/1, omnigent-jsonl/1" in out

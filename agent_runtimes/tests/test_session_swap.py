@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import sessions
+from agent_runtimes.apps import sessions
 from agent_runtimes.loop.session import LoopRefused, LoopSession
 from agent_runtimes.specs.agents.agents import list_agentspecs
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
@@ -343,7 +343,7 @@ def test_a_harness_whose_policy_cannot_be_read_is_refused_and_nothing_is_swapped
 
 
 def test_always_answers_are_counted_from_the_harness_and_dropped() -> None:
-    from agent_runtimes.loop.apps.session_carry import DEFAULT_CARRY
+    from agent_runtimes.apps.session_carry import DEFAULT_CARRY
 
     class State:
         session_rules = ["r1", "r2"]

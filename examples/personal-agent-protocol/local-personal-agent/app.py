@@ -32,7 +32,7 @@ from personal_agent_protocol.demo.kit import (
 from personal_agent_protocol.demo.manzanita import manzanita
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 from agent_runtimes.pap import PapPersonalAgentCapability
 
 DOMAIN = "manzanita.example"

@@ -15,7 +15,7 @@ The lifecycle, written in Python (P-30)::
     scene = loop.scene("desk-and-sales", "Desk & Sales")
     loop.stage(scene, runs_in={"desk": "browser"})
 
-``loop.app`` is `agent_runtimes.loop.apps.Application`; ``loop.scene`` and
+``loop.app`` is `agent_runtimes.apps.Application`; ``loop.scene`` and
 ``loop.stage`` write a scene spec (`agent_runtimes.loop.scenes.written`).
 Each is imported when first named.
 """
@@ -48,7 +48,7 @@ from agent_runtimes.loop.sync import (
 
 #: What ``loop.<name>`` is, imported when first named.
 _LIFECYCLE = {
-    "app": ("agent_runtimes.loop.apps.application", "Application"),
+    "app": ("agent_runtimes.apps.application", "Application"),
     "scene": ("agent_runtimes.loop.scenes.written", "scene"),
     "stage": ("agent_runtimes.loop.scenes.written", "stage"),
 }

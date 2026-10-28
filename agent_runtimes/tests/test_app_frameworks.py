@@ -25,21 +25,21 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import pytest
 
-from agent_runtimes.chat.tux import SessionStats
-from agent_runtimes.commands.apps import NEEDS_ATTENTION, validate_file
-from agent_runtimes.loop.apps import AppHost, Application, MemoryChannel, Session
-from agent_runtimes.loop.apps.build import build
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.frameworks import (
+from agent_runtimes.apps import AppHost, Application, MemoryChannel, Session
+from agent_runtimes.apps.build import build
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.frameworks import (
     FrameworkAgent,
     FrameworkCallRefused,
     code_agent_problems,
     framework_of,
     missing_framework,
 )
-from agent_runtimes.loop.apps.loading import AppNotRunnable
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session import ALLOW, REFUSE, Delta, Message, Step
+from agent_runtimes.apps.loading import AppNotRunnable
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.session import ALLOW, REFUSE, Delta, Message, Step
+from agent_runtimes.chat.tux import SessionStats
+from agent_runtimes.commands.apps import NEEDS_ATTENTION, validate_file
 
 pytest.importorskip("agentspecs.apps")
 
@@ -264,7 +264,7 @@ def test_a_credential_is_withheld_as_a_function_answers() -> None:
 
 
 def test_an_answer_its_code_refuses_is_not_given() -> None:
-    from agent_runtimes.loop.apps.guards import AppCheckBlockedError
+    from agent_runtimes.apps.guards import AppCheckBlockedError
 
     app = Application(id="priced", kind="chat", agent=AGENT)
 
@@ -294,7 +294,7 @@ def test_an_answer_its_code_refuses_is_not_given() -> None:
 
 
 APP_PY = """
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application(id="echo", kind="chat", agent="cog-crawler:0.0.1")
 
@@ -1137,7 +1137,7 @@ def test_validation_says_nothing_of_an_agent_whose_tool_calls_its_rules_decide(
 def test_the_terminal_gives_a_message_to_the_agent_of_its_code() -> None:
     from rich.console import Console
 
-    from agent_runtimes.loop.apps.terminal import AppTux, ask_once
+    from agent_runtimes.apps.terminal import AppTux, ask_once
 
     app = Application(id="echo", kind="chat", agent=AGENT)
 

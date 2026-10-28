@@ -35,6 +35,7 @@ const sidebars = {
       items: [
         'apps/app-renderer',
         'apps/python-applications',
+        'apps/python-reference',
         'apps/python-tutorial',
         'apps/session-api',
         'apps/portable',

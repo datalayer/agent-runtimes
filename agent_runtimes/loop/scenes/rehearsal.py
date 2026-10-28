@@ -32,7 +32,7 @@ from dataclasses import asdict, dataclass, field
 from fnmatch import fnmatchcase
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from agent_runtimes.loop.apps.own import FAILED, NOT_RUN, PASSED
+from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED
 from agent_runtimes.loop.scenes.stage import Played, kind_of_words
 from agent_runtimes.loop.scenes.transcript import (
     ASKED,

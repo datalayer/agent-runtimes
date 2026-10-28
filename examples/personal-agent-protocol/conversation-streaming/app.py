@@ -26,7 +26,7 @@ from personal_agent_protocol.demo.kit import (
 )
 from personal_agent_protocol.demo.manzanita import manzanita
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 TENANT = "atlas-demo"
 PAIRWISE = "usr_ada_at_manzanita_000000"

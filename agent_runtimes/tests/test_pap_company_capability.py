@@ -6,7 +6,7 @@
 ``PapCompanyCapability`` publishes an application's ``pap.company`` through the
 SDK's reference company, ``pap.company.agent`` being the application over its
 A2A route. The application here answers as the runtime does in a company turn
-(``agent_runtimes.loop.apps.pap_company``): a declared tool's call proposed as
+(``agent_runtimes.apps.pap_company``): a declared tool's call proposed as
 ``pap_operation``, and, in a perform turn, the ticket redeemed through the
 runtime's ``pap.company.operationTickets`` before the one call is made. A
 local personal agent (``PapPersonalAgentCapability``, PR-03) reaches it.
@@ -37,7 +37,7 @@ from personal_agent_protocol.demo.kit import (
 )
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps.pap_company import PapTurn, pap_turn_of, redeem
+from agent_runtimes.apps.pap_company import PapTurn, pap_turn_of, redeem
 from agent_runtimes.pap import (
     A2AApplication,
     PapCompanyCapability,

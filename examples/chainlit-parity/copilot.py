@@ -22,8 +22,8 @@ import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
-from agent_runtimes.loop.apps import Application, Session
-from agent_runtimes.loop.apps.mounting import EMBED_ORIGIN, EMBED_SCRIPT_PATH
+from agent_runtimes.apps import Application, Session
+from agent_runtimes.apps.mounting import EMBED_ORIGIN, EMBED_SCRIPT_PATH
 
 AGENT = "example-blank:0.0.1"
 

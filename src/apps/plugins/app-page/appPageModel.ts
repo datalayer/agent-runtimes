@@ -510,7 +510,7 @@ export function inputsInWords(
 
 /**
  * The largest file a session takes: what the session API refuses above
- * (`agent_runtimes.loop.apps.sessions.MAX_FILE_BYTES`), said here before
+ * (`agent_runtimes.apps.sessions.MAX_FILE_BYTES`), said here before
  * the file is sent.
  */
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;

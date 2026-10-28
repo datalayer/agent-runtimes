@@ -21,9 +21,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import Application, Session, principal, sessions
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.record import _SESSION
+from agent_runtimes.apps import Application, Session, principal, sessions
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.record import _SESSION
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
     _DummyRequest,
     creation_spy,
@@ -67,7 +67,7 @@ def digest() -> tuple[Application, List[str]]:
 
     @application.schedule("0 9 * * 1", prompt="Write the Monday digest.")
     async def monday(session: Session) -> None:
-        ran.append(session.id)
+        ran.append(session.uid)
         await session.send("Monday digest kept.")
 
     return application, ran
@@ -217,7 +217,7 @@ def test_the_scheduler_s_start_session_runs_the_handler_on_the_runtime(
 ) -> None:
     """What the scheduler calls, end to end against the runtime's routes: the
     agent is already there (409, the one kept), the session runs the code."""
-    from agent_runtimes.loop.apps.deployments import start_session
+    from agent_runtimes.apps.deployments import start_session
 
     _, ran = deployed
 
@@ -291,7 +291,7 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
 # --- the deployment's own code travels with the tick (drilled 2026-10-07) ----------
 
 TICK_SOURCE = """
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 
 app = Application.from_spec(
     {
@@ -319,7 +319,7 @@ TICK_DEPLOYMENT = {"app_uid": "app-14", "deployment_uid": "dep-14", "version": 2
 
 def tick_spec() -> Dict[str, Any]:
     """The Appspec `loop apps push` builds from the code: its schedule at position 1."""
-    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.apps.application import load_application_source
 
     return load_application_source(TICK_SOURCE, "app.py").document
 
@@ -353,7 +353,7 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     """ai-agents' `/wake` and its keeper make a deployment's agent with its
     Appspec and its instance, never its code: the runtime reads the
     version's `app.py` from the deployment as the agent is made (R-14)."""
-    from agent_runtimes.loop.apps.deployments import kept_payload, session_payload
+    from agent_runtimes.apps.deployments import kept_payload, session_payload
 
     spec = tick_spec()
     woken_by = {"kind": "schedule", "position": 1}
@@ -405,7 +405,7 @@ def test_a_request_that_carries_code_is_refused_by_the_route() -> None:
     """On the runtime's own route: 422, and no agent is made."""
     from fastapi import FastAPI
 
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
     from agent_runtimes.routes.agents import APP_CODE_REFUSED, router
 
     app = FastAPI()
@@ -436,8 +436,8 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
     refused; code not read stops the agent."""
     from fastapi import HTTPException
 
-    from agent_runtimes.loop.apps.loading import load_app
-    from agent_runtimes.loop.apps.principal import DeploymentCodeUnread
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.principal import DeploymentCodeUnread
     from agent_runtimes.routes.agents import (
         CreateAgentRequest,
         create_agent,
@@ -538,8 +538,8 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     """`GET /apps/deployments/{uid}/code?version=` with the caller's bearer;
     what it refuses is said in its own sentence; an answer without the code
     is not taken for none."""
-    from agent_runtimes.loop.apps import principal as module
-    from agent_runtimes.loop.apps.principal import DeploymentCodeUnread
+    from agent_runtimes.apps import principal as module
+    from agent_runtimes.apps.principal import DeploymentCodeUnread
 
     seen: List[httpx.Request] = []
     answers: List[httpx.Response] = []
@@ -587,11 +587,11 @@ def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
     is refused, in a sentence."""
     from fastapi import HTTPException
 
-    from agent_runtimes.loop.apps.application import (
+    from agent_runtimes.apps.application import (
         Application,
         load_application_source,
     )
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 
     unsaid = TICK_SOURCE.replace('        "version": "0.0.1",\n', "")
@@ -656,8 +656,8 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
     `kept_payload`, and the create route reads the version's `app.py` from
     the deployment as for a tick, and every session of that agent — a visitor's at the
     address, not only a woken one — runs with the code; without it, none."""
-    from agent_runtimes.loop.apps.deployments import kept_payload
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.deployments import kept_payload
+    from agent_runtimes.apps.loading import load_app
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 
     spec = tick_spec()
@@ -691,7 +691,7 @@ def test_a_woken_session_runs_the_code_the_deployment_carried_not_the_prompt(
     """End to end on the runtime's routes, nothing patched in `sessions`: the
     agent's code is the deployment's `app.py`, the handler runs on the tick,
     the agent is never asked the prompt, and the record holds the turn."""
-    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.apps.application import load_application_source
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
@@ -752,7 +752,7 @@ def test_the_stream_of_a_turn_ends_only_once_its_record_is_sent(
         await slow(body)
 
     made.send = send  # type: ignore[method-assign]
-    from agent_runtimes.loop.apps.record import agent_recorder
+    from agent_runtimes.apps.record import agent_recorder
 
     recorder = agent_recorder("digest")
     assert recorder is not None
@@ -783,7 +783,7 @@ def test_a_woken_session_running_code_keeps_its_run_turn_and_output(
     held the session's start only (drilled 2026-10-07, evening). It is kept
     as an agent's run is: the run, the turn — what woke it, what its code
     said — and its output, before the stream ends."""
-    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.apps.application import load_application_source
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {

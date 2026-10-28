@@ -117,7 +117,7 @@ def build_protocols_reactor(
 
 def protocols_platform() -> PluginPlatform:
     """The runtime's own platform (one per process), the protocols registered on it."""
-    from agent_runtimes.loop.apps.plugins import PLATFORM
+    from agent_runtimes.apps.plugins import PLATFORM
 
     return build_protocols_reactor(platform=PLATFORM)
 

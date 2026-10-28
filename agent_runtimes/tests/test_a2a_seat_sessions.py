@@ -24,10 +24,10 @@ import jwt
 import pytest
 
 from agent_runtimes.adapters.acp_agent import ACPAgent
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.context.delegation import hold
 from agent_runtimes.guardrails.shield_policy import policies_of
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.protocol_state.a2a import DurableStorage
 from agent_runtimes.routes import a2a as a2a_routes
 from agent_runtimes.tests.test_a2a_harness_worker import (  # noqa: F401 - fixtures

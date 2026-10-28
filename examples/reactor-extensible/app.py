@@ -26,7 +26,7 @@ Run it::
 import sys
 from pathlib import Path
 
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 
 # The CRM sits beside this file, as if it were installed.
 sys.path.insert(0, str(Path(__file__).resolve().parent))

@@ -238,7 +238,36 @@ def harness_environment(
         token, _ = harness_inference.routed_token()
         if token:
             given[route.token_variable] = token
+            if route.config_variable:
+                given[route.config_variable] = harness_inference.inline_config(
+                    route, given[route.base_url_variable], token
+                )
+    installed = installed_bin(harness)
+    if installed is not None:
+        # An adapter installed in the Shield's prefix finds the program it
+        # spawns beside itself: pi-acp runs `pi` from the PATH.
+        given["PATH"] = os.pathsep.join(
+            [
+                str(installed),
+                *(p for p in source.get("PATH", "").split(os.pathsep) if p),
+            ]
+        )
     return given
+
+
+def installed_bin(harness: HarnessSpec, *, home: Path | None = None) -> Path | None:
+    """The Shield-prefix ``bin`` directory the harness launches from, or ``None``
+    when it launches from the PATH, or cannot launch here.
+    """
+    try:
+        command = launch_command(harness, home=home)
+    except HarnessRefused:
+        return None
+    executable = Path(command[0])
+    if harness.acp is None or harness.acp.command != "npx":
+        return None
+    prefix = harness_prefix(harness.id, harness.registered.version, home)
+    return executable.parent if prefix in executable.parents else None
 
 
 #: Where the pod's `datalayer-harnesses` sidecar listens, when the operator added one (SH-40).
@@ -443,7 +472,7 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
     # (``?only=pap&pap-company=<domain>``), reached with the execution credential
     # as any other — the harness calls pap_sign_in, pap_ask, pap_propose as tools
     # and never speaks PAP; custody, identity and the record are the gateway's.
-    from agent_runtimes.loop.apps import pap_connections  # noqa: PLC0415
+    from agent_runtimes.apps import pap_connections  # noqa: PLC0415
 
     for sid in pap_connections.remember(app) if app is not None else []:
         if sid in {item.name for item in lent}:
@@ -522,7 +551,7 @@ class RecordAudit:
         session = self.runtime_session_of(str(row.get("session") or ""))
         if not session:
             return row
-        from agent_runtimes.loop.apps.record import _SESSION
+        from agent_runtimes.apps.record import _SESSION
 
         token = _SESSION.set(session)
         try:
@@ -902,7 +931,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     def _deployment_served(self) -> str:
         """The deployment this agent serves, or ``""`` (a Preview, a test, no application)."""
-        from agent_runtimes.loop.apps.principal import deployment_of
+        from agent_runtimes.apps.principal import deployment_of
         from agent_runtimes.models.models import app_instance_of
 
         return deployment_of(app_instance_of(self._agent_id))
@@ -918,7 +947,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         (found on r1, 21 October 2026, SH-12). As ``_bearer_of`` does for
         the gateway, the token is read when it is needed.
         """
-        from agent_runtimes.loop.apps.principal import principal_token
+        from agent_runtimes.apps.principal import principal_token
 
         deployment = self._deployment_served()
         if deployment:
@@ -1020,6 +1049,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}"
             )
         self.agent_env[route.token_variable] = token
+        if route.config_variable:
+            self.agent_env[route.config_variable] = harness_inference.inline_config(
+                route, self.agent_env[route.base_url_variable], token
+            )
 
     async def initialize(self) -> None:
         """Launch the harness and negotiate; refuse what its spec asked that it lacks."""
@@ -1446,8 +1479,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         to that execution's manifest at the gateway (SH-33).
         Else a deployment's principal, else the run's, else the caller's.
         """
+        from agent_runtimes.apps.principal import deployment_of, principal_token
         from agent_runtimes.context.delegation import DELEGATED_CREDENTIAL
-        from agent_runtimes.loop.apps.principal import deployment_of, principal_token
         from agent_runtimes.models.models import app_instance_of
 
         delegated = str(context.metadata.get(DELEGATED_CREDENTIAL) or "")
@@ -1612,7 +1645,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     ) -> None:
         """Keep the turn and the run's end in the record, and send it; never fails the run."""
         recorder = self.recorder
-        from agent_runtimes.loop.apps.record import _SESSION
+        from agent_runtimes.apps.record import _SESSION
 
         token = _SESSION.set(runtime_session)
         try:

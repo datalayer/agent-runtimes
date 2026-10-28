@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from reactor import PluginManifest, PluginPlatform, hookimpl
 
-from agent_runtimes.loop.apps.session_files import (
+from agent_runtimes.apps.session_files import (
     DATALAYER_SESSION_FORMAT,
     REDACTED,
     Redactor,

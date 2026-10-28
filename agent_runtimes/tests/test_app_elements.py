@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 import pytest
 from rich.console import Console
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     Closed,
@@ -21,9 +21,9 @@ from agent_runtimes.loop.apps import (
     Shown,
     sessions,
 )
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.terminal import TerminalChannel
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.terminal import TerminalChannel
 
 pytest.importorskip("agentspecs.apps")
 
@@ -57,7 +57,7 @@ async def test_a_panel_is_opened_changed_and_closed() -> None:
     assert channel.shown == [
         Shown(
             panel.id,
-            session.id,
+            session.uid,
             "panel",
             "Runs",
             panel.components,
@@ -71,7 +71,7 @@ async def test_a_panel_is_opened_changed_and_closed() -> None:
     assert len([e for e in channel.events if isinstance(e, Shown)]) == 2
     await panel.close()
     assert channel.shown == [] and session.elements == {}
-    assert channel.events[-1] == Closed(panel.id, session.id)
+    assert channel.events[-1] == Closed(panel.id, session.uid)
     with pytest.raises(ValueError, match=f"No element {panel.id} is open"):
         await session.close(panel.id)
 
@@ -171,7 +171,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
         recorder=AppRecorder(app=app, send=_nothing),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     session = live.session
     panel = await session.show(

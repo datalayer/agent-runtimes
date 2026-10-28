@@ -26,9 +26,9 @@ from typing import Any, Dict, List
 
 import pytest
 
-from agent_runtimes.loop.apps import AppHost, Application, sessions
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps import AppHost, Application, sessions
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
 
 pytest.importorskip("agentspecs.apps")
 
@@ -70,7 +70,7 @@ async def _session_events() -> Dict[str, Any]:
         recorder=AppRecorder(app=app, send=_nothing),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     session = live.session
     queue = live._open_stream()
 

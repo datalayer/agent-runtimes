@@ -25,13 +25,13 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import callers, opening, visitors
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.memory import NOT_SIGNED_IN, remember_for, withheld
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import ASK_FIRST, DO_IT
-from agent_runtimes.loop.apps.visitors import (
+from agent_runtimes.apps import callers, opening, visitors
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.memory import NOT_SIGNED_IN, remember_for, withheld
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import ASK_FIRST, DO_IT
+from agent_runtimes.apps.visitors import (
     NOT_HERE,
     ONLY_VISITORS,
     OTHER_APPLICATION,
@@ -747,7 +747,7 @@ def test_a_visitors_token_is_verified_where_a_deployment_is_served(
 ) -> None:
     """A runtime serving a deployment asks ai-inference who the visitor is,
     as the visitors' runtime does; one serving none refuses them."""
-    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.apps import principal
 
     monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
@@ -795,7 +795,7 @@ def test_a_visitors_turn_on_a_deployment_calls_its_models_with_their_token() -> 
 
 
 def test_nothing_is_kept_of_the_agent_only_visitors_talk_to() -> None:
-    from agent_runtimes.loop.apps.record import ALWAYS_KEPT
+    from agent_runtimes.apps.record import ALWAYS_KEPT
 
     app = load_app(ASSISTANT)
     for kind in sorted(ALWAYS_KEPT):

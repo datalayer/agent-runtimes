@@ -51,7 +51,7 @@ describe('a harness of the catalogue (SH-01, SH-10)', () => {
     );
     // The four the catalogue offers (28 October 2026); a harness it describes
     // and does not offer is not served, and names its reason.
-    for (const harness of ['codex', 'gemini-cli', 'opencode']) {
+    for (const harness of ['codex', 'opencode', 'pi']) {
       expect(isServedCatalogueHarness(harness)).toBe(true);
     }
     for (const harness of ['goose', 'openhands', 'fast-agent']) {

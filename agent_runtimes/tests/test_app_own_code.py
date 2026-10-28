@@ -12,20 +12,18 @@ import yaml
 from pydantic_ai import Agent
 from typer.testing import CliRunner
 
-from agent_runtimes.commands.apps import NEEDS_ATTENTION, validate_file
-from agent_runtimes.commands.apps import app as apps_cli
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     Conversation,
     MemoryChannel,
     Session,
 )
-from agent_runtimes.loop.apps.build import build, code_marks
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.guards import AppCheckBlockedError
-from agent_runtimes.loop.apps.loading import AppNotRunnable
-from agent_runtimes.loop.apps.own import (
+from agent_runtimes.apps.build import build, code_marks
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.guards import AppCheckBlockedError
+from agent_runtimes.apps.loading import AppNotRunnable
+from agent_runtimes.apps.own import (
     FAILED,
     NOT_RUN,
     PASSED,
@@ -33,10 +31,12 @@ from agent_runtimes.loop.apps.own import (
     run_code_tests,
     verdict_of,
 )
-from agent_runtimes.loop.apps.plugins import reaction_of
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import decision_for
-from agent_runtimes.loop.apps.session import ChoiceQuestion
+from agent_runtimes.apps.plugins import reaction_of
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import decision_for
+from agent_runtimes.apps.session import ChoiceQuestion
+from agent_runtimes.commands.apps import NEEDS_ATTENTION, validate_file
+from agent_runtimes.commands.apps import app as apps_cli
 from agent_runtimes.tests.test_apps_guards import scripted
 
 pytest.importorskip("agentspecs.apps")
@@ -207,7 +207,7 @@ def test_build_marks_each_as_code_and_a_spec_alone_says_what_it_lacks(
 ) -> None:
     source = tmp_path / "app.py"
     source.write_text(
-        "from agent_runtimes.loop.apps import Application\n"
+        "from agent_runtimes.apps import Application\n"
         "app = Application(id='order-desk', kind='chat', agent='cog-crawler:0.0.1')\n"
         "@app.tool(does='read')\n"
         "def lookup_order(number: str) -> dict:\n"
@@ -305,7 +305,7 @@ async def test_an_answer_its_check_refuses_is_asked_again_and_recorded() -> None
         if part.part_kind == "retry-prompt"
     ]
     assert retried == ["It quoted a price. Answer again without it."]
-    await host.recorder.flush(session.id)
+    await host.recorder.flush(session.uid)
     checks = [e for body in sent for e in body["entries"] if e["kind"] == "check"]
     assert [(e["summary"], e["payload"]["stage"]) for e in checks] == [
         ("It quoted a price.", "post_run")
@@ -321,7 +321,7 @@ async def test_a_tool_call_its_check_refuses_is_stopped() -> None:
         AppCheckBlockedError, match="The check small_refunds refused it."
     ):
         await session.agent.run("Refund 500.")
-    await host.recorder.flush(session.id)
+    await host.recorder.flush(session.uid)
     checks = [e for body in sent for e in body["entries"] if e["kind"] == "check"]
     assert [(e["summary"], e["payload"]["stage"]) for e in checks] == [
         ("The check small_refunds refused it.", "in_flight")
@@ -403,7 +403,7 @@ async def test_its_tests_are_run_and_decided_by_its_code() -> None:
 def test_validate_lists_its_tests_and_runs_them_here(tmp_path: Path) -> None:
     source = tmp_path / "app.py"
     source.write_text(
-        "from agent_runtimes.loop.apps import Application, Session\n"
+        "from agent_runtimes.apps import Application, Session\n"
         "app = Application(id='greeter', kind='chat', agent='cog-crawler:0.0.1')\n"
         "@app.message\n"
         "async def reply(session: Session, text: str) -> None:\n"

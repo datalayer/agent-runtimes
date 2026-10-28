@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from agentspecs.apps import AppError
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 
 def _app(**kwargs: Any) -> Application:

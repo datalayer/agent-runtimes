@@ -18,12 +18,12 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
-from agent_runtimes.loop.apps.plugins import rules_for
-from agent_runtimes.loop.apps.record import _SESSION, AppRecorder
-from agent_runtimes.loop.apps.rules import UNCLASSED
-from agent_runtimes.loop.apps.saving import (
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.enforcement import AppRuleBlockedError, sentence_of
+from agent_runtimes.apps.plugins import rules_for
+from agent_runtimes.apps.record import _SESSION, AppRecorder
+from agent_runtimes.apps.rules import UNCLASSED
+from agent_runtimes.apps.saving import (
     APPROVE_AND_SAVE,
     DRAFT_LIMIT,
     SAVE_TOOL,
@@ -314,7 +314,7 @@ async def test_a_refusal_of_spacer_is_said(monkeypatch) -> None:
 
 
 async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
-    from agent_runtimes.loop.apps import principal, saving
+    from agent_runtimes.apps import principal, saving
 
     monkeypatch.setattr(
         principal, "principal_token", lambda d: "p-token" if d == "dep-1" else None
@@ -368,7 +368,7 @@ def test_the_page_names_the_application_and_the_person_it_acted_for() -> None:
 
 
 async def test_a_save_says_who_it_was_for_or_that_nobody_was_there() -> None:
-    from agent_runtimes.loop.apps.record import _SESSION
+    from agent_runtimes.apps.record import _SESSION
 
     written = Written()
     saving = AppSavingCapability(

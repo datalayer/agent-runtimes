@@ -33,6 +33,50 @@ const contracts = JSON.parse(
 
 const API = 'https://r1.datalayer.run';
 
+describe('DatalayerHostClient.bind', () => {
+  it("asserts the provider the contract's requests name", async () => {
+    for (const request of [
+      contracts.bind.request,
+      contracts.discord.bind_request,
+      contracts.whatsapp.bind_request,
+    ]) {
+      const calls: Array<{ url: string; init?: RequestInit }> = [];
+      const client = new DatalayerHostClient(API, (async (
+        url: string | URL,
+        init?: RequestInit,
+      ) => {
+        calls.push({ init, url: String(url) });
+        return Response.json({
+          success: true,
+          host: { uid: 'h-1', state: 'active', name: 'Acme' },
+          host_key: 'dlhk_key',
+        });
+      }) as typeof fetch);
+      const bound = await client.bind({
+        code: request.code,
+        externalId: request.external_id,
+        name: request.name,
+        provider: request.provider,
+        customAppId: request.custom_app_id || undefined,
+      });
+      expect(bound.hostKey).toBe('dlhk_key');
+      expect(
+        `${calls[0]?.init?.method} ${new URL(calls[0]!.url).pathname}`,
+      ).toBe(contracts.routes.bind);
+      expect(JSON.parse(String(calls[0]?.init?.body))).toEqual(request);
+    }
+  });
+
+  it('refuses a custom bind without its app id before asking', async () => {
+    const client = new DatalayerHostClient(API, (async () => {
+      throw new Error('not asked');
+    }) as typeof fetch);
+    await expect(
+      client.bind({ code: 'dlhc_x', externalId: 'A:-:T', provider: 'custom' }),
+    ).rejects.toThrow("A custom app's bind names its app id (customAppId)");
+  });
+});
+
 describe('DatalayerHostClient.admin', () => {
   it("sends the contract's requests with the host key, and reads the pause back", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];

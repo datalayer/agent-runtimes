@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 
 import pytest
 
-from agent_runtimes.loop.apps import sessions
+from agent_runtimes.apps import sessions
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -154,7 +154,7 @@ def test_what_the_session_offers_is_pressed_up_the_ui_socket(
     from agentspecs.apps import dump_app, get_app
     from reactor.ui import UiAction, UiActionError
 
-    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.apps.callers import Caller
 
     runtime.make(
         "customer-interview",

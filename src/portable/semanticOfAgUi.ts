@@ -9,7 +9,7 @@
  * `readRunStream` (`agui.ts`); this says what each event means to a host.
  *
  * The runtime's `loop.turn` event says which turn a stream is and where it
- * stands (`running`, `finished`, `failed`: agent_runtimes/loop/apps/
+ * stands (`running`, `finished`, `failed`: agent_runtimes/apps/
  * external_turns.py); a stopped session's stream ends without a run end,
  * so `stop` is never read from an event: the host that pressed Stop says it.
  * A question is read from `RUN_FINISHED.result.asking` only: the run stream

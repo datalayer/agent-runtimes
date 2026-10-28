@@ -28,19 +28,20 @@ The four the catalogue offers (28 October 2026):
 | `claude-code` | load | replay | yes | no | yes | own | none | 8 |
 | `codex` | load | replay | yes | no | yes | own | none | 0 |
 | `opencode` | none | replay | yes | no | no | own | none | 0 |
-| `gemini-cli` | none | replay | yes | no | yes | own | none | 0 |
+| `pi` | load | replay | yes | no | no | own | none | 0 |
 
 Described and not offered (named, each is refused with its reason; the rows
 stay for the day they are offered), and the organization's own:
 
 | Harness | `resume` | `fork_history` | `interrupt` | `steering` | `images` | `compaction` | vendor id | runs unasked |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `gemini-cli` | none | replay | yes | no | yes | own | none | 0 |
 | `fast-agent` | load | replay | yes | no | no | own | none | 0 |
 | `goose` | none | replay | yes | no | no | own | none | 0 |
 | `openhands` | load | replay | yes | no | no | own | none | 0 |
 | `custom` | none | none | yes | no | no | own | — | 0 |
 
-A harness whose `resume` is `none` (OpenCode, Gemini CLI) is swapped onto
+A harness whose `resume` is `none` (OpenCode) is swapped onto
 with the warning that a swap back to it will start over; its row is still
 kept for the vendor id. Claude Code's `load` is what the adapter advertises;
 drilled on r1 (21 October 2026), a swap back started a new Claude Code

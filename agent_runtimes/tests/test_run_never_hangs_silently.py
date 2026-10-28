@@ -60,7 +60,7 @@ def test_a_cold_gateway_worker_has_time_to_answer_the_handshake() -> None:
 
 
 def test_the_gateway_toolsets_of_a_run_wait_for_a_cold_worker(monkeypatch) -> None:
-    from agent_runtimes.loop.apps import pap_connections
+    from agent_runtimes.apps import pap_connections
 
     monkeypatch.setenv("DATALAYER_MCP_SERVER_URL", "https://mcp.example/mcp")
     pap_connections.forget()

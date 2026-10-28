@@ -27,7 +27,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import acting, principal, sessions
+from agent_runtimes.apps import acting, principal, sessions
 from agent_runtimes.mcp import google_workspace as gw
 from agent_runtimes.models.models import remember_app_instance
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
@@ -299,7 +299,7 @@ def test_a_token_given_to_a_session_not_woken_for_a_person_is_refused(
 def test_the_scheduler_s_start_session_sends_the_token_with_the_session_request_only() -> (
     None
 ):
-    from agent_runtimes.loop.apps.deployments import start_session
+    from agent_runtimes.apps.deployments import start_session
 
     seen: List[tuple[str, str]] = []
 

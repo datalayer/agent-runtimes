@@ -15,16 +15,16 @@ from typing import Any
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.enforcement import (
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.enforcement import (
     UNATTENDED,
     AppRuleBlockedError,
     AppRulesCapability,
     Enforced,
 )
-from agent_runtimes.loop.apps.record import _SESSION, AppRecorder
-from agent_runtimes.loop.apps.rules import Decision
-from agent_runtimes.loop.apps.saving import SAVE_TOOL
+from agent_runtimes.apps.record import _SESSION, AppRecorder
+from agent_runtimes.apps.rules import Decision
+from agent_runtimes.apps.saving import SAVE_TOOL
 from agent_runtimes.types import AppSpec
 
 

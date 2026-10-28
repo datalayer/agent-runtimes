@@ -86,7 +86,7 @@ class OmnigentJsonl:
         return Exported(lines=lines, redactions=0, turns=turns, entries=len(lines) - 1)
 
     def import_(self, lines: Sequence[str], **facts: Any) -> Any:
-        from agent_runtimes.loop.apps.session_files import SessionFormatRefused
+        from agent_runtimes.apps.session_files import SessionFormatRefused
         from agent_runtimes.plugins.points import Imported
 
         parsed = [json.loads(line) for line in lines if line.strip()]

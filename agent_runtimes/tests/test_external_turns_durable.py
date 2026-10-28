@@ -26,8 +26,8 @@ from typing import Any, AsyncIterator, Dict, Iterator, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import external_turns
-from agent_runtimes.loop.apps.callers import Caller
+from agent_runtimes.apps import external_turns
+from agent_runtimes.apps.callers import Caller
 from agent_runtimes.protocol_state import (
     SqliteProtocolStateStore,
     use_protocol_state_store,
@@ -250,7 +250,7 @@ def test_a_turn_running_in_a_killed_process_is_answered_failed_by_the_next(
     child = textwrap.dedent(
         f"""
         import asyncio, os, signal
-        from agent_runtimes.loop.apps import external_turns
+        from agent_runtimes.apps import external_turns
 
         async def main():
             turn, _ = external_turns.claim(

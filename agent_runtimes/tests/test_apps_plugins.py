@@ -9,9 +9,9 @@ from typing import Any, Optional
 
 from reactor import PluginManifest, PluginPlatform
 
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.plugins import (
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.plugins import (
     APP_POINT,
     CATALOGUE_PLUGIN,
     app_plugin_name,

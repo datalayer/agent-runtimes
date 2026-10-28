@@ -2015,7 +2015,7 @@ def _prepare_harness(harness_id: str) -> None:
 def harnesses() -> None:
     """List the harnesses of the catalogue, each with its terms.
 
-    A harness is a coding agent — Claude Code, Codex, OpenCode, Gemini CLI
+    A harness is a coding agent — Claude Code, Codex, OpenCode, pi
     — or any program speaking the Agent Client Protocol, run with
     `loop --harness <id>` in the directory you run from. A harness the
     catalogue describes and does not offer is listed last, with why.

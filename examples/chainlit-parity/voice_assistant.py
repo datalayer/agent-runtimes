@@ -23,7 +23,7 @@ AudioPlayer. Needs ``OPENAI_API_KEY``.
 import base64
 from typing import List
 
-from agent_runtimes.loop.apps import Application, Session, UploadedFile
+from agent_runtimes.apps import Application, Session, UploadedFile
 
 AGENT = "example-a2a-writer:0.0.1"
 

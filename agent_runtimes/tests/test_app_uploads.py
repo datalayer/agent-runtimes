@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai.messages import BinaryContent, ModelMessage, UserPromptPart
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     Application,
     FileQuestion,
     Session,
@@ -21,7 +21,7 @@ from agent_runtimes.loop.apps import (
     sessions,
     uploads,
 )
-from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.apps.loading import load_app
 from agent_runtimes.tests import test_app_sessions
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,

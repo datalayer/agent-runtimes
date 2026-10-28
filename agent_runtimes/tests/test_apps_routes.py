@@ -15,8 +15,8 @@ import pytest
 from fastapi.testclient import TestClient
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps import plugins
-from agent_runtimes.loop.apps.loading import (
+from agent_runtimes.apps import plugins
+from agent_runtimes.apps.loading import (
     AppNotRunnable,
     agent_id_of,
     connected_server_ids,
@@ -60,8 +60,17 @@ TRIAGE_LIKE = {
 @pytest.fixture()
 def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     from agent_runtimes.app import create_app
+    from agent_runtimes.models import models
     from agent_runtimes.routes import agents
 
+    # What configure leaves in the process stays with this test: the instance
+    # it remembers under the agent's id, and the user token it exports as
+    # DATALAYER_USER_TOKEN — left behind, with the shell's DATALAYER_IAM_URL,
+    # every later in-process agent pulled a managed policy, fail-closed
+    # (*the runtime's token names no account*). Set empty here, so that its
+    # absence is recorded and the variable deleted again at teardown.
+    monkeypatch.setattr(models, "_APP_INSTANCES", {})
+    monkeypatch.setenv("DATALAYER_USER_TOKEN", "")
     created: list[Any] = []
 
     async def create_agent(request: Any, http_request: Any) -> dict:
@@ -217,7 +226,7 @@ def test_feedback_on_a_conversation_is_kept_in_the_record(
     client: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """V-18: a thumb and a comment, through the recorder of the session."""
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.record import AppRecorder
 
     keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
     assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
@@ -263,15 +272,15 @@ def test_feedback_is_heard_by_its_code(
     client: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """P-24: once kept, a Python application's `@app.feedback` hears it."""
-    from agent_runtimes.loop.apps import (
+    from agent_runtimes.apps import (
         AppHost,
         Application,
         Feedback,
         Session,
         sessions,
     )
-    from agent_runtimes.loop.apps.callers import Caller
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.callers import Caller
+    from agent_runtimes.apps.record import AppRecorder
 
     keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
     assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
@@ -280,7 +289,7 @@ def test_feedback_is_heard_by_its_code(
 
     @application.feedback
     async def said(session: Session, feedback: Feedback) -> None:
-        heard.append((session.id, feedback))
+        heard.append((session.uid, feedback))
         if not feedback.liked:
             session.tags = [*session.tags, "to-review"]
 
@@ -306,7 +315,7 @@ def test_feedback_is_heard_by_its_code(
         recorder.start("thread-9")
         import asyncio
 
-        live.session = asyncio.run(live.host.open(id=live.uid))
+        live.session = asyncio.run(live.host.open(uid=live.uid))
         answer = client.post(
             "/api/v1/apps/feedback",
             json={
@@ -340,7 +349,7 @@ def test_feedback_is_heard_by_its_code(
 
 
 def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> None:
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.record import AppRecorder
 
     assert (
         client.post("/api/v1/apps/configure", json={"app": WEB_RESEARCH}).status_code
@@ -402,7 +411,7 @@ def test_configure_with_no_organization_takes_none_off_and_says_so(client: Any) 
     assert body["plugins_off_says"].startswith("No organization was named")
 
 
-APP_PY = """from agent_runtimes.loop.apps import Application, Session
+APP_PY = """from agent_runtimes.apps import Application, Session
 
 app = Application(id="hello", kind="chat", agent="example-simple:0.0.1", name="Hello")
 
@@ -435,7 +444,7 @@ def test_build_runs_the_file_apart_and_answers_its_spec(client: Any) -> None:
 
 
 def test_a_file_that_never_ends_is_stopped_not_the_server() -> None:
-    from agent_runtimes.loop.apps.build import build_apart
+    from agent_runtimes.apps.build import build_apart
 
     with pytest.raises(AppNotRunnable) as refused:
         build_apart("app.py", "while True:\n    pass\n", timeout=2)

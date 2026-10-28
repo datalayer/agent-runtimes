@@ -14,15 +14,15 @@ import httpx
 import pytest
 from fastapi import HTTPException
 
-from agent_runtimes.loop.apps.agent import local_agent
-from agent_runtimes.loop.apps.frames import (
+from agent_runtimes.apps.agent import local_agent
+from agent_runtimes.apps.frames import (
     NO_ORGANIZATION,
     FramesUnread,
     OrganizationFrames,
     frames_instructions,
     read_organization_frames,
 )
-from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
+from agent_runtimes.apps.loading import AppNotRunnable, load_app
 from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
     _DummyRequest,

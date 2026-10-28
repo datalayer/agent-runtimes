@@ -14,15 +14,15 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 
-from agent_runtimes.loop.apps import record
-from agent_runtimes.loop.apps.learning import (
+from agent_runtimes.apps import record
+from agent_runtimes.apps.learning import (
     LEARNING_CLASSES,
     PROPOSE_TOOL,
     USE_TOOL,
     AppLearningCapability,
 )
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.plugins import rules_for
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.plugins import rules_for
 
 SPEC = {
     "schema": "loop.app/v1",
@@ -126,7 +126,7 @@ def test_only_approved_skills_are_listed_and_followed(learning) -> None:
 def test_a_visitor_without_an_account_proposes_nothing(
     learning, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from agent_runtimes.loop.apps import visitors
+    from agent_runtimes.apps import visitors
 
     capability, service = learning
     monkeypatch.setattr(visitors, "visitors_runtime", lambda: True)

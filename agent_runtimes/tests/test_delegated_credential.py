@@ -298,7 +298,7 @@ class TestAnApplicationsRunOverA2AReachesItsCompanies:
     ) -> None:
         from agent_runtimes.adapters.base import AgentContext
         from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
-        from agent_runtimes.loop.apps import pap_connections, principal
+        from agent_runtimes.apps import pap_connections, principal
         from agent_runtimes.models.models import remember_app_instance
         from agent_runtimes.tests.test_pydantic_ai_adapter_model_budget import _Agent
 

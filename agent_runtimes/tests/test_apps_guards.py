@@ -19,8 +19,8 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
-from agent_runtimes.loop.apps.frames import OrganizationFrames
-from agent_runtimes.loop.apps.guards import (
+from agent_runtimes.apps.frames import OrganizationFrames
+from agent_runtimes.apps.guards import (
     AppCheckBlockedError,
     AppChecks,
     AppChecksCapability,
@@ -30,7 +30,7 @@ from agent_runtimes.loop.apps.guards import (
     permissions_needed,
     redact,
 )
-from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.apps.rules import Decision
 from agent_runtimes.types import AppSpec
 
 AWS = "AKIA" + "ABCDEFGHIJKLMNOP"

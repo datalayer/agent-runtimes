@@ -14,10 +14,10 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-from agent_runtimes.loop.apps import AppHost, Application, Feedback, Session
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session import MemoryChannel
-from agent_runtimes.loop.apps.threads import (
+from agent_runtimes.apps import AppHost, Application, Feedback, Session
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.session import MemoryChannel
+from agent_runtimes.apps.threads import (
     RECORDS_PATH,
     THREADS_PATH,
     ThreadsRefused,
@@ -55,7 +55,7 @@ async def test_its_code_names_tags_and_describes_its_conversation() -> None:
         session.metadata.update(seats=12)
 
     host, sent = _host(application)
-    session = await host.open(id="s-1")
+    session = await host.open(uid="s-1")
     await host.recorder.settled("s-1")
     assert (session.title, session.tags, dict(session.metadata)) == (
         "Billing question",
@@ -80,7 +80,7 @@ async def test_its_code_names_tags_and_describes_its_conversation() -> None:
 async def test_what_a_conversation_is_called_is_refused_beyond_its_limits() -> None:
     application = Application(id="desk", agent="example-simple")
     host, sent = _host(application)
-    session = await host.open(id="s-2")
+    session = await host.open(uid="s-2")
     with pytest.raises(ValueError, match="at most 200 characters"):
         session.title = "x" * 201
     with pytest.raises(ValueError, match="at most 20 tags"):
@@ -110,14 +110,14 @@ async def test_feedback_reaches_its_code() -> None:
         heard.append(feedback)
 
     host, _ = _host(application)
-    session = await host.open(id="s-3")
+    session = await host.open(uid="s-3")
     word = Feedback(liked=True, comment="Clear.", message="answer-1", by="ada")
     assert await host.feedback(session, word) is True
     assert heard == [word]
     assert application.handler("feedback") is said
     # Without one, nothing runs.
     plain, _ = _host(Application(id="plain", agent="example-simple"))
-    assert await plain.feedback(await plain.open(id="s-4"), word) is False
+    assert await plain.feedback(await plain.open(uid="s-4"), word) is False
 
 
 # --- read from ai-agents ------------------------------------------------------------

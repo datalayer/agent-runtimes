@@ -32,15 +32,15 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 import agent_runtimes.tests.test_app_sessions as sessions_api
-from agent_runtimes.loop.apps import plugins, principal
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.principal import (
+from agent_runtimes.apps import plugins, principal
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.principal import (
     PrincipalTokenMissing,
     ensure_preview_token,
     preview_key,
     preview_token,
 )
-from agent_runtimes.loop.apps.record import (
+from agent_runtimes.apps.record import (
     AppRecorder,
     keep_agent_recorder,
     own_token_for,

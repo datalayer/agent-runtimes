@@ -27,10 +27,10 @@ from reactor import (
     hookimpl,
 )
 
-from agent_runtimes.loop.apps import AppHost, Application, MemoryChannel, Session
-from agent_runtimes.loop.apps.own import CommandTool
-from agent_runtimes.loop.apps.plugins import AppPlugin, find_app
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps import AppHost, Application, MemoryChannel, Session
+from agent_runtimes.apps.own import CommandTool
+from agent_runtimes.apps.plugins import AppPlugin, find_app
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.tests.test_apps_guards import scripted
 
 #: A point of another plugin, which the application contributes to.
@@ -297,7 +297,7 @@ async def test_the_example_extends_with_reactor() -> None:
     """``examples/reactor-extensible``: each thing it contributes, honoured."""
     from pathlib import Path
 
-    from agent_runtimes.loop.apps import load_application
+    from agent_runtimes.apps import load_application
 
     example = (
         Path(__file__).resolve().parents[2]
@@ -336,7 +336,7 @@ async def test_the_example_extends_with_reactor() -> None:
 
 
 def test_loop_apps_build_marks_what_a_reactor_command_answers() -> None:
-    from agent_runtimes.loop.apps.build import code_marks
+    from agent_runtimes.apps.build import code_marks
 
     app = greeter()
     app.uses(crm(), tools={"lookup_customer": "read"})

@@ -11,7 +11,7 @@ import pytest
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     AskTimeout,
@@ -28,9 +28,9 @@ from agent_runtimes.loop.apps import (
     load_application,
     local_agent,
 )
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.loading import AppNotRunnable
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.loading import AppNotRunnable
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.loop.session import LoopSession
 from agent_runtimes.tests.test_apps_guards import scripted
 from agent_runtimes.types import AppSpec
@@ -75,7 +75,7 @@ def hosted(
 
 def test_an_application_session_is_not_the_workspace_session():
     assert Session is not LoopSession
-    assert Session.__module__ == "agent_runtimes.loop.apps.session"
+    assert Session.__module__ == "agent_runtimes.apps.session"
 
 
 # --- P-02: declarations, attached to an Appspec ------------------------------------
@@ -160,14 +160,14 @@ async def test_start_then_message_then_action():
 
     host, channel, _ = hosted(app)
     channel.reply("why people leave")
-    session = await host.open(user="ada")
-    assert session.user == "ada"
+    session = await host.open(opened_by="ada")
+    assert session.opened_by == "ada"
     assert session.state == {"goal": "why people leave"}
     await host.message(session, "hello")
-    await host.action(session, "save", {"k": 1})
+    await host.press(session, "save", {"k": 1})
     assert seen == [("hello", "why people leave"), Saved(k=1)]
     with pytest.raises(KeyError, match="no action 'delete'"):
-        await host.action(session, "delete")
+        await host.press(session, "delete")
 
 
 async def test_without_a_message_handler_the_agent_answers_streamed():
@@ -212,7 +212,7 @@ async def test_stop_cancels_what_runs_then_reacts():
 
     @app.stop
     async def on_stop(session: Session) -> None:
-        stopped.append(session.id)
+        stopped.append(session.uid)
 
     host, _, _ = hosted(app)
     session = await host.open()
@@ -220,7 +220,7 @@ async def test_stop_cancels_what_runs_then_reacts():
     await asyncio.sleep(0.01)
     await host.stop(session)
     await asyncio.wait_for(running, 1)
-    assert stopped == [session.id]
+    assert stopped == [session.uid]
 
 
 async def test_resume_brings_the_state_back():
@@ -232,7 +232,7 @@ async def test_resume_brings_the_state_back():
 
     host, channel, _ = hosted(app)
     session = await host.resume("s-1", {"goal": "pricing"})
-    assert session.id == "s-1"
+    assert session.uid == "s-1"
     assert channel.messages[-1].text == "Back to pricing."
 
 
@@ -246,15 +246,15 @@ async def test_a_schedule_runs_in_a_session_of_its_own():
         await session.send("digest")
 
     host, channel, sent = hosted(app)
-    session = await host.schedule("monday")
-    assert channel.messages[-1].session_id == session.id
+    session = await host.tick("monday")
+    assert channel.messages[-1].session_id == session.uid
     # Its record says the schedule woke it (R-14).
     woken = {"kind": "schedule", "schedule": "monday", "cron": "0 9 * * 1"}
-    assert sent[-1]["session_uid"] == session.id
+    assert sent[-1]["session_uid"] == session.uid
     assert sent[-1]["woken_by"] == woken
     assert sent[-1]["entries"][0]["payload"]["woken_by"] == woken
     with pytest.raises(KeyError, match="no schedule"):
-        await host.schedule("friday")
+        await host.tick("friday")
 
 
 # --- C-15: a component placed from Python ------------------------------------------
@@ -456,13 +456,13 @@ async def test_a_press_its_model_refuses_never_reaches_its_handler():
         match="'price' was pressed with what it does not take — values.seats: "
         "Input should be greater than or equal to 1",
     ):
-        await host.action(session, "price", {"values": {"seats": 0}})
+        await host.press(session, "price", {"values": {"seats": 0}})
     with pytest.raises(
         ValueError, match="clear' was pressed with what it does not take"
     ):
-        await host.action(session, "clear", {"secret": "x"})
-    await host.action(session, "price", {"values": {"seats": 2}})
-    await host.action(session, "clear")
+        await host.press(session, "clear", {"secret": "x"})
+    await host.press(session, "price", {"values": {"seats": 2}})
+    await host.press(session, "clear")
     assert seen == [Quote(values=Seats(seats=2)), "cleared"]
 
 
@@ -473,7 +473,7 @@ async def test_send_and_stream():
     host, channel, _ = hosted(interview())
     session = await host.open()
     sent = await session.send("Hi", author="Interviewer")
-    assert sent == Message(sent.id, session.id, "Hi", "Interviewer")
+    assert sent == Message(sent.id, session.uid, "Hi", "Interviewer")
 
     async def tokens():
         for token in ["a", "b"]:
@@ -561,7 +561,7 @@ async def test_an_answer_shows_components_of_the_catalog():
 
 
 def test_an_answers_surface_lays_its_components_in_a_column():
-    from agent_runtimes.loop.apps.components import answer_components, answer_surface
+    from agent_runtimes.apps.components import answer_components, answer_surface
 
     nodes = answer_components(
         [
@@ -707,14 +707,14 @@ async def test_state_is_the_sessions_own():
     host, _, _ = hosted(interview())
     first, second = await host.open(), await host.open()
     first.state["n"] = 1
-    assert second.state == {} and first.id != second.id
+    assert second.state == {} and first.uid != second.uid
 
 
 async def test_record_writes_to_the_applications_recorder():
     host, _, sent = hosted(interview(), include=("outputs",))
     session = await host.open()
     assert await session.record({"insight": "pricing"}) is True
-    assert sent[-1]["session_uid"] == session.id
+    assert sent[-1]["session_uid"] == session.uid
     assert sent[-1]["app_uid"] == "app-1"
     assert [entry["kind"] for entry in sent[-1]["entries"]] == ["session", "output"]
     assert sent[-1]["entries"][-1]["payload"] == {"insight": "pricing"}
@@ -733,7 +733,7 @@ async def test_the_agent_runs_with_the_session_history_and_record():
     assert len(session.agent.history) == 4  # two turns, kept
     outputs = [e for body in sent for e in body["entries"] if e["kind"] == "output"]
     assert [e["summary"] for e in outputs] == ["First.", "Second."]
-    assert {body["session_uid"] for body in sent} == {session.id}
+    assert {body["session_uid"] for body in sent} == {session.uid}
 
 
 async def test_a_rule_asks_the_user_of_the_session():
@@ -771,7 +771,7 @@ def test_the_local_agent_refuses_what_only_a_runtime_brings():
 def test_load_application_finds_the_one_in_the_file(tmp_path: Path):
     file = tmp_path / "app.py"
     file.write_text(
-        "from agent_runtimes.loop.apps import Application\n"
+        "from agent_runtimes.apps import Application\n"
         "app = Application(id='from-file', kind='chat', agent='cog-crawler:0.0.1')\n"
         "same = app\n"
     )
@@ -811,7 +811,7 @@ async def test_end_cancels_what_runs_reacts_and_takes_nothing_more():
 
     @app.end
     async def closed(session: Session) -> None:
-        said.append(("end", session.id))
+        said.append(("end", session.uid))
 
     host, _, _ = hosted(app)
     session = await host.open()
@@ -819,16 +819,16 @@ async def test_end_cancels_what_runs_reacts_and_takes_nothing_more():
     await asyncio.sleep(0.01)
     await host.end(session)
     await asyncio.wait_for(running, 1)
-    assert said == [("end", session.id)]
+    assert said == [("end", session.uid)]
     # Ended twice is ended once.
     await host.end(session)
-    assert said == [("end", session.id)]
+    assert said == [("end", session.uid)]
     with pytest.raises(ValueError, match="has ended"):
         await host.message(session, "again")
     with pytest.raises(ValueError, match="has ended"):
         await host.stop(session)
     # Resumed, its thread is open again.
-    again = await host.resume(session.id, {"goal": "pricing"})
+    again = await host.resume(session.uid, {"goal": "pricing"})
     await host.settings(again, {"tone": "dry"})
 
 
@@ -845,7 +845,7 @@ async def test_logout_reacts_then_ends():
         said.append("end")
 
     host, _, _ = hosted(app)
-    session = await host.open(user="ada")
+    session = await host.open(opened_by="ada")
     await host.logout(session)
     assert said == ["logout", "end"]
     with pytest.raises(ValueError, match="has ended"):
@@ -853,7 +853,7 @@ async def test_logout_reacts_then_ends():
 
 
 def test_end_and_logout_are_one_handler_each_and_marked_as_code():
-    from agent_runtimes.loop.apps.application import EVENTS
+    from agent_runtimes.apps.application import EVENTS
 
     app = interview()
 
@@ -871,7 +871,7 @@ def test_end_and_logout_are_one_handler_each_and_marked_as_code():
 
 
 async def test_a_message_is_updated_and_removed_where_the_user_reads_it():
-    from agent_runtimes.loop.apps import Removed
+    from agent_runtimes.apps import Removed
 
     host, channel, _ = hosted(interview())
     session = await host.open()
@@ -890,7 +890,7 @@ async def test_a_message_is_updated_and_removed_where_the_user_reads_it():
         ("Found 3.", "Searcher"),
     ]
     await other.remove()
-    assert channel.events[-1] == Removed(other.id, session.id)
+    assert channel.events[-1] == Removed(other.id, session.uid)
     assert [m.text for m in channel.messages] == ["Searched: 3 results."]
     with pytest.raises(ValueError, match="was removed"):
         await other.update("back")
@@ -903,13 +903,13 @@ async def test_a_message_is_updated_and_removed_where_the_user_reads_it():
     with pytest.raises(ValueError, match="not"):
         await elsewhere.update(changed, "x")
     with pytest.raises(ValueError, match="not sent by a session"):
-        await Message("m", session.id, "x", "y").update("z")
+        await Message("m", session.uid, "x", "y").update("z")
 
 
 async def test_run_sync_and_cache():
     import threading
 
-    from agent_runtimes.loop.apps import cache, run_sync
+    from agent_runtimes.apps import cache, run_sync
 
     main = threading.get_ident()
     assert await run_sync(threading.get_ident) != main
@@ -961,7 +961,7 @@ async def test_run_sync_and_cache():
 async def test_an_application_is_its_plugin_each_reaction_a_contribution():
     from reactor import PluginManifest, PluginPlatform
 
-    from agent_runtimes.loop.apps.plugins import (
+    from agent_runtimes.apps.plugins import (
         APP_POINT,
         REACTION_POINTS,
         find_app,
@@ -1032,14 +1032,14 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
     ]
     assert reaction_of("customer-interview", "message", platform=platform) is None
     with pytest.raises(KeyError, match="no action 'save'"):
-        await host.action(session, "save", {})
+        await host.press(session, "save", {})
 
 
 # --- P-19: commands and modes in the composer ---------------------------------------
 
 
 def test_commands_and_modes_are_declared_in_the_spec():
-    from agent_runtimes.loop.apps.build import code_marks
+    from agent_runtimes.apps.build import code_marks
 
     app = interview()
     app.command("summarise", "Summarise what was said", prompt="Summarise: {input}")
@@ -1085,7 +1085,7 @@ def test_commands_and_modes_are_declared_in_the_spec():
 
 
 async def test_profiles_starters_settings_inputs_and_translations_are_declared():
-    from agent_runtimes.loop.apps.composer import run_effect
+    from agent_runtimes.apps.composer import run_effect
 
     app = interview()
     app.starter("Hello", "Hello!", category="Start")
@@ -1234,7 +1234,7 @@ async def test_the_mode_the_user_is_in_is_told_to_the_agent(monkeypatch):
 
 
 def test_composer_rules_on_the_runtimes_types():
-    from agent_runtimes.loop.apps.composer import (
+    from agent_runtimes.apps.composer import (
         command_called,
         command_prompt,
         mode_effect,

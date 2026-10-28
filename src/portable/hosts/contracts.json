@@ -36,7 +36,9 @@
     "request": {
       "code": "dlhc_…",
       "external_id": "A0123:-:T0123",
-      "name": "Acme"
+      "name": "Acme",
+      "provider": "datalayer",
+      "custom_app_id": ""
     },
     "response_keys": [
       "success",
@@ -452,7 +454,9 @@
     "bind_request": {
       "code": "dlhc_…",
       "external_id": "123456789012345678:234567890123456789",
-      "name": "Acme"
+      "name": "Acme",
+      "provider": "datalayer",
+      "custom_app_id": ""
     },
     "external_user_id": "567890123456789012",
     "thread": {
@@ -501,7 +505,9 @@
     "bind_request": {
       "code": "dlhc_…",
       "external_id": "102290129340398:106540352242922",
-      "name": "Acme"
+      "name": "Acme",
+      "provider": "custom",
+      "custom_app_id": "1234567890"
     },
     "external_user_id": "US.13491208655302741918",
     "external_user_name": "Alice",

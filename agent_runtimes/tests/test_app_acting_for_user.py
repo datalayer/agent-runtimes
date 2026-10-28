@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps import acting
+from agent_runtimes.apps import acting
 from agent_runtimes.mcp import datalayer_gateway
 from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
 
@@ -136,7 +136,7 @@ def test_a_company_in_each_persons_name_is_left_out_of_a_turn_nobody_signed_in_t
         seen.append(dict(headers or {}))
         return httpx.AsyncClient(headers=headers)
 
-    from agent_runtimes.loop.apps import pap_connections
+    from agent_runtimes.apps import pap_connections
 
     monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
     app = SimpleNamespace(

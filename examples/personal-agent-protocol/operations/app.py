@@ -33,7 +33,7 @@ from personal_agent_protocol.operations import (
     operations_endpoint,
 )
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 TENANT = "atlas-demo"
 PAIRWISE = "usr_ada_at_manzanita_000000"

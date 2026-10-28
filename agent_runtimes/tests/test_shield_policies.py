@@ -39,6 +39,11 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
 from agent_runtimes.adapters.base import AgentContext
+from agent_runtimes.apps import opening, plugins, principal, sessions
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.plugins import rules_for
+from agent_runtimes.apps.record import _SESSION
+from agent_runtimes.apps.rules import SESSION_RULE
 from agent_runtimes.guardrails import managed_policies
 from agent_runtimes.guardrails.managed_policies import (
     account_of_token,
@@ -59,11 +64,6 @@ from agent_runtimes.guardrails.shield_policy import (
     policies_in_force,
     policies_of,
 )
-from agent_runtimes.loop.apps import opening, plugins, principal, sessions
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.plugins import rules_for
-from agent_runtimes.loop.apps.record import _SESSION
-from agent_runtimes.loop.apps.rules import SESSION_RULE
 from agent_runtimes.routes import agents
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.routes.agui import unregister_agui_agent

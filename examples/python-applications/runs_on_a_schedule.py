@@ -9,17 +9,19 @@ its own, with nobody present, and the session's record says what woke it
 (``woken_by``). The application is a ``worker``: a chat starts when somebody
 opens it, and refuses triggers.
 
-Here the ticks are fired by hand — ``host.schedule(name)`` is what the
+Here the ticks are fired by hand — ``host.tick(name)`` is what the
 platform's scheduler does on each cron tick — three times, with items
 arriving in between. Each tick is a new session, so what the handler keeps
 across ticks lives outside the session (``SEEN``, a module variable here; a
-file or a store on a runtime). The last run shows ``host.scheduled(session,
-name)``, a tick run inside a session already open, which is what a runtime
-does when the scheduler wakes a session over the Session API.
+file or a store on a runtime). The last run shows ``host.tick(name,
+session=…)``, a tick run inside a session already open, which is what a
+runtime does when the scheduler wakes a session over the Session API.
 
 Runs in this process with no key and no network: a ``MemoryChannel`` reads
 what is sent, pydantic-ai's ``TestModel`` stands in for the model, and the
-record is kept in a list here.
+record is kept in memory, the host's default (``host.recorder.sent``).
+``app.record(include=["outputs"])`` says the record keeps what the handler
+records: without it, nothing of a session's outputs is kept.
 
     python runs_on_a_schedule.py
 """
@@ -29,8 +31,7 @@ import asyncio
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps import AppHost, Application, MemoryChannel, Session
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps import AppHost, Application, MemoryChannel, Session
 
 INBOX: list[str] = []
 SEEN = 0
@@ -42,6 +43,7 @@ app = Application(
     name="Morning digest",
     goal="A digest of what arrived, each weekday morning.",
 )
+app.record(include=["outputs"])
 
 
 @app.schedule("0 9 * * 1-5", description="The morning digest")
@@ -67,33 +69,20 @@ async def main() -> None:
     )
 
     channel = MemoryChannel()
-    record: list = []
-
-    async def keep(body: dict) -> None:
-        record.append(body)
-
-    # The record keeps an entry only when the Appspec's `record.include` names
-    # its kind. No plain call declares it, and `Application.from_spec` refuses a
-    # worker before `@app.schedule` can add its trigger: so the recorder is
-    # given a copy of the spec that includes `outputs`.
-    kept_spec = spec.model_copy(
-        update={"record": spec.record.model_copy(update={"include": ["outputs"]})}
-    )
     host = AppHost(
         app,
         channel,
         agent=lambda spec: Agent(
             TestModel(custom_output_text="Two deliveries and a visit.")
         ),
-        recorder=AppRecorder(app=kept_spec, send=keep),
     )
 
     ids = []
     for tick, arrived in enumerate(([], ["parcel", "invoice"], ["visitor"]), start=1):
         INBOX.extend(arrived)
-        session = await host.schedule("digest")
-        ids.append(session.id)
-        woke = record[-1]["woken_by"]
+        session = await host.tick("digest")
+        ids.append(session.uid)
+        woke = host.recorder.sent[-1]["woken_by"]
         print(f"tick {tick}: {channel.messages[-1].text}")
         print(
             f"  woken by {woke['kind']} {woke['schedule']!r} ({woke['cron']}), kept: {session.state.get('kept', '-')}"
@@ -102,7 +91,7 @@ async def main() -> None:
 
     INBOX.append("letter")
     opened = await host.open()
-    await host.scheduled(opened, "digest")
+    await host.tick("digest", session=opened)
     print(f"in an open session: {channel.messages[-1].text}")
 
 

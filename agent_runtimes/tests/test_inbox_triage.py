@@ -28,15 +28,15 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
-from agent_runtimes.loop.apps.agent import AppAgent, app_capabilities
-from agent_runtimes.loop.apps.deployments import (
+from agent_runtimes.apps.agent import AppAgent, app_capabilities
+from agent_runtimes.apps.deployments import (
     DeployRefused,
     event_details,
     event_prompt,
     event_triggers,
 )
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, AppRulesCapability
-from agent_runtimes.loop.apps.mail import (
+from agent_runtimes.apps.enforcement import AppRuleBlockedError, AppRulesCapability
+from agent_runtimes.apps.mail import (
     MAIL_RECEIVED,
     MailEventNotSent,
     MailRefused,
@@ -46,9 +46,9 @@ from agent_runtimes.loop.apps.mail import (
     post_mail_event,
     tell_arrivals,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import Decision, decision_for
-from agent_runtimes.loop.apps.saving import signed
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import Decision, decision_for
+from agent_runtimes.apps.saving import signed
 from agent_runtimes.specs.apps import APP_CATALOGUE
 
 ME = "eric@datalayer.io"
@@ -497,7 +497,7 @@ def test_it_is_told_to_ai_agents_as_the_owner() -> None:
 
 
 def test_its_event_trigger_says_what_its_agent_is_asked() -> None:
-    from agent_runtimes.loop.apps.deployments import schedule_triggers
+    from agent_runtimes.apps.deployments import schedule_triggers
 
     spec = triage().model_dump(by_alias=True, mode="json")
     [arrives] = event_triggers(spec)

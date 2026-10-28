@@ -18,7 +18,7 @@ from typing import Any, Dict
 import pytest
 import yaml
 
-from agent_runtimes.loop.apps.scaffold import init
+from agent_runtimes.apps.scaffold import init
 
 apps = pytest.importorskip("agentspecs.apps")
 

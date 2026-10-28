@@ -17,13 +17,13 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.loop.apps.enforcement import (
+from agent_runtimes.apps.enforcement import (
     NO_SHELL,
     AppRuleBlockedError,
     AppRulesCapability,
     Enforced,
 )
-from agent_runtimes.loop.apps.rules import Decision, classes_of, gives
+from agent_runtimes.apps.rules import Decision, classes_of, gives
 from agent_runtimes.specs.actions import SERVER_ACTIONS
 from agent_runtimes.specs.apps import APP_CATALOGUE
 from agent_runtimes.types import AppSpec

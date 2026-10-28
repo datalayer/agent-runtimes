@@ -28,8 +28,8 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from agent_runtimes.adapters.acp_agent import RecordAudit
+from agent_runtimes.apps.record import INCLUDED_BY
 from agent_runtimes.guardrails.shield_policy import VERDICT_BEHAVIOUR
-from agent_runtimes.loop.apps.record import INCLUDED_BY
 from agent_runtimes.mcp import lent_stdio
 from agent_runtimes.monitoring.otel import TraceContextMiddleware
 
@@ -76,7 +76,7 @@ def audit(recorder: Recorder | None = None) -> RecordAudit:
 
 @pytest.fixture
 def session_context():
-    from agent_runtimes.loop.apps.record import _SESSION
+    from agent_runtimes.apps.record import _SESSION
 
     token = _SESSION.set("runtime-session")
     yield

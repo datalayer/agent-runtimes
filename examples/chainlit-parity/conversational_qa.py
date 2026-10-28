@@ -26,7 +26,7 @@ developer's, in Chainlit's example as here.
 import re
 from typing import List
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     Application,
     AskTimeout,
     FileQuestion,

@@ -38,7 +38,7 @@ def catalogue_harnesses() -> list[HarnessContribution]:
 
 def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
     """Contribute today's implementations, as the built-in plugin."""
-    from agent_runtimes.loop.apps.session_store import FILE_STORE, RECORD_STORE
+    from agent_runtimes.apps.session_store import FILE_STORE, RECORD_STORE
 
     for harness in catalogue_harnesses():
         contributions.contribute(
@@ -48,9 +48,9 @@ def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
         contributions.contribute(
             SESSION_STORES, store, contribution_id=store.name, order=order
         )
-    from agent_runtimes.loop.apps.session_carry import DEFAULT_CARRY
-    from agent_runtimes.loop.apps.session_files import DATALAYER_SESSION_FORMAT
-    from agent_runtimes.loop.apps.session_hooks import AUDIT_HOOK, OTEL_HOOK
+    from agent_runtimes.apps.session_carry import DEFAULT_CARRY
+    from agent_runtimes.apps.session_files import DATALAYER_SESSION_FORMAT
+    from agent_runtimes.apps.session_hooks import AUDIT_HOOK, OTEL_HOOK
 
     contributions.contribute(
         SESSION_FORMATS,

@@ -20,8 +20,8 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import DeferredToolRequests, ToolDefinition
 from pydantic_ai.toolsets import ExternalToolset
 
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.host_user import host_tools
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.host_user import host_tools
 from agent_runtimes.types import AppSpec
 
 TICKET = "host_open_ticket"

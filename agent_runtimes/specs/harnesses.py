@@ -202,7 +202,7 @@ FAST_AGENT_HARNESS_0_0_1 = HarnessSpec(
     name="fast-agent",
     description="llmindset's agent framework served over ACP; each agent it defines is a session mode, with any model provider it is configured with.",
     enabled=False,
-    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); fast-agent is a framework served over ACP, not a coding agent, its adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
+    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); fast-agent is a framework served over ACP, not a coding agent, its adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
     tags=["harness", "framework"],
     docs="https://github.com/evalstate/fast-agent/blob/main/docs/docs/acp/index.md",
     acp=HarnessAcpSpec(
@@ -259,8 +259,8 @@ GEMINI_CLI_HARNESS_0_0_1 = HarnessSpec(
     version="0.0.1",
     name="Gemini CLI",
     description="Google's coding agent, which speaks ACP itself when started with --experimental-acp.",
-    enabled=True,
-    unavailable_because="",
+    enabled=False,
+    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it stays unfunded and unoffered there (the user's decision, 28 October 2026).",
     tags=["harness"],
     docs="https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/cli-reference.md",
     acp=HarnessAcpSpec(
@@ -318,7 +318,7 @@ GOOSE_HARNESS_0_0_1 = HarnessSpec(
     name="goose",
     description="Block's open agent (now the Agentic AI Foundation's), which speaks ACP itself with goose acp; any model provider it is configured with.",
     enabled=False,
-    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); goose is a binary of its own release, not an npm adapter, the runtime image does not carry it, and it has not been drilled on Datalayer.",
+    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); goose is a binary of its own release, not an npm adapter, the runtime image does not carry it, and it has not been drilled on Datalayer.",
     tags=["harness"],
     docs="https://block.github.io/goose/docs/gdk/acp/",
     acp=HarnessAcpSpec(
@@ -434,7 +434,7 @@ OPENHANDS_HARNESS_0_0_1 = HarnessSpec(
     name="OpenHands",
     description="The OpenHands CLI, which speaks ACP itself with openhands acp; any model provider it is configured with.",
     enabled=False,
-    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); OpenHands' adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
+    unavailable_because="the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); OpenHands' adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
     tags=["harness"],
     docs="https://docs.openhands.dev/openhands/usage/run-openhands/acp",
     acp=HarnessAcpSpec(
@@ -492,6 +492,64 @@ OPENHANDS_HARNESS_0_0_1 = HarnessSpec(
     ),
 )
 
+PI_HARNESS_0_0_1 = HarnessSpec(
+    id="pi",
+    version="0.0.1",
+    name="pi",
+    description="Earendil's pi coding agent, driven over ACP through the pi-acp adapter, which spawns the published pi executable; any model provider pi is configured with.",
+    enabled=True,
+    unavailable_because="",
+    tags=["harness"],
+    docs="https://github.com/svkozak/pi-acp",
+    acp=HarnessAcpSpec(
+        command="npx",
+        args=["-y", "pi-acp@0.0.34"],
+        protocol_version=1,
+        load_session=True,
+        mcp="lend",
+        modes=[],
+        env={},
+        native_session="none",
+    ),
+    requires=HarnessRequiresSpec(
+        secrets=["ANTHROPIC_API_KEY"],
+        binaries=["node", "git"],
+    ),
+    terms=HarnessTermsSpec(
+        served_to_third_parties="permitted",
+        licence="MIT (adapter); MIT (the agent, @earendil-works/pi-coding-agent 1.4.0)",
+        tier_restrictions=None,
+    ),
+    skills=HarnessSkillsSpec(
+        format="skill-md",
+        dir=".pi/skills",
+    ),
+    honours=HarnessHonoursSpec(
+        model=True,
+        subagents=False,
+    ),
+    capabilities=HarnessCapabilitiesSpec(
+        resume="load",
+        fork_history="replay",
+        interrupt=True,
+        steering=False,
+        images=False,
+        compaction="own",
+        modes=[],
+        auto_run=[],
+    ),
+    instructions_file="AGENTS.md",
+    registered=HarnessRegisterEntry(
+        adapter="pi-acp",
+        version="0.0.34",
+        licence_source="https://www.npmjs.com/package/pi-acp",
+        terms_source="https://github.com/earendil-works/pi/blob/main/LICENSE",
+        credential="The provider's key pi is configured with; ANTHROPIC_API_KEY declared, the person's own",
+        binaries="Node 22 (pi-coding-agent engines.node >=22.19.0; pi-acp >=20), the pi executable 1.4.0 on the PATH (@earendil-works/pi-coding-agent), git",
+        note="Read 2026-10-28. pi speaks no ACP itself; pi-acp 0.0.34 (MIT, an individual's, github.com/svkozak/pi-acp) speaks ACP JSON-RPC over stdio and spawns the published `pi` executable with `pi --mode rpc`, so pi 1.4.0 runs as published — chosen over @automatalabs/pi-acp 0.9.4 (Apache-2.0, in-process, which embeds pi 0.87.1 through its SDK on a fork's package). Open source under MIT on both sides, no vendor terms of their own; the model provider's terms apply to the key. Session persistence through pi's own session files (session/load).",
+    ),
+)
+
 
 HARNESS_CATALOGUE: Dict[str, HarnessSpec] = {
     "claude-code": CLAUDE_CODE_HARNESS_0_0_1,
@@ -502,6 +560,7 @@ HARNESS_CATALOGUE: Dict[str, HarnessSpec] = {
     "goose": GOOSE_HARNESS_0_0_1,
     "opencode": OPENCODE_HARNESS_0_0_1,
     "openhands": OPENHANDS_HARNESS_0_0_1,
+    "pi": PI_HARNESS_0_0_1,
 }
 
 

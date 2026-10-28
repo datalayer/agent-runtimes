@@ -123,7 +123,7 @@ signed_fetch:
 
 Each site is one server of the gateway's `signed-fetch` toolset in the
 runtime (`/mcp?only=signed-fetch&signed-fetch-site=<domain>`,
-`agent_runtimes.loop.apps.pap_connections`), granted as
+`agent_runtimes.apps.pap_connections`), granted as
 `datalayer_connection` `signed-fetch:<domain>`. Its one tool,
 `signed_fetch`, is a `read` under the application's Rules
 (`protocol-tools/signed-fetch.yaml`): a `GET` of a path at that site and no

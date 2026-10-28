@@ -327,7 +327,7 @@ def _evaluate_llm_judge(
     scorer failure: a benchmark must not claim a judge it did not have.
 
     Handed a conversation's record (``_record``: its lines, as
-    `loop.apps.validation.what_it_did` says them), the judge reads it beside
+    `apps.validation.what_it_did` says them), the judge reads it beside
     the answer and grades on what was done — a test of an application
     (V-08) is graded on its tool calls, its rules' decisions and its
     checks, not on its words alone.

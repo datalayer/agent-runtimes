@@ -23,7 +23,7 @@ from personal_agent_protocol.models import Organization
 from pydantic import SecretStr
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 #: The Session Key's JWK thumbprint (RFC 7638): it names the Session. The key's
 #: private half stays with the host's proof provider.

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 from urllib.parse import quote
 
-from agent_runtimes.loop.apps.deployments import Deployments, DeployRefused
+from agent_runtimes.apps.deployments import Deployments, DeployRefused
 
 #: The item type a scene is kept under (`SCENE_ITEM_TYPE`).
 SCENE_ITEM_TYPE = "scene"

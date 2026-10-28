@@ -246,9 +246,9 @@ def test_every_agent_the_runtime_makes_withholds_credentials_last(
 ) -> None:
     """The create route's agent, an application's (the terminal's builder),
     and a subagent: each has the capability once, last."""
-    from agent_runtimes.loop.apps.agent import app_capabilities
-    from agent_runtimes.loop.apps.loading import load_app
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.agent import app_capabilities
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.record import AppRecorder
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
     from agent_runtimes.subagents.capability import _build_subagent_capabilities
     from agent_runtimes.tests.test_agents_create_integration import _DummyRequest
@@ -382,7 +382,7 @@ def test_the_config_toolsets_info_withholds_an_argument_whole(
 
 
 def test_the_secrets_given_to_the_runtime_are_held() -> None:
-    from agent_runtimes.loop.apps.host_user import use_user_secret
+    from agent_runtimes.apps.host_user import use_user_secret
     from agent_runtimes.routes.agent_node import set_runtime_credentials
     from agent_runtimes.services.code_sandbox_manager import CodeSandboxManager
 
@@ -409,8 +409,8 @@ def test_the_secrets_given_to_the_runtime_are_held() -> None:
 
 
 def test_the_record_keeps_no_credential_whoever_writes_the_entry(secret: str) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.record import AppRecorder
 
     recorder = AppRecorder(
         app=load_app({**APP, "record": {"include": ["actions", "conversations"]}})
@@ -430,7 +430,7 @@ def test_the_record_keeps_no_credential_whoever_writes_the_entry(secret: str) ->
 def test_a_step_is_shown_with_its_credential_withheld(secret: str) -> None:
     from datetime import datetime, timezone
 
-    from agent_runtimes.loop.apps.session import Step, shown_step
+    from agent_runtimes.apps.session import Step, shown_step
 
     step = Step(
         id="st",
@@ -449,7 +449,7 @@ def test_a_step_is_shown_with_its_credential_withheld(secret: str) -> None:
 
 
 def test_the_stage_s_span_of_a_tool_call_holds_no_credential(secret: str) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
     from agent_runtimes.loop.scenes.stage import Recording, StageMember, _SpanRecorder
 
     recording = Recording()
@@ -471,10 +471,10 @@ def test_the_stage_s_span_of_a_tool_call_holds_no_credential(secret: str) -> Non
 def test_a_turn_that_failed_is_said_without_the_credential(
     secret: str, caplog: pytest.LogCaptureFixture
 ) -> None:
-    from agent_runtimes.loop.apps import sessions
-    from agent_runtimes.loop.apps.callers import Caller
-    from agent_runtimes.loop.apps.loading import load_app
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps import sessions
+    from agent_runtimes.apps.callers import Caller
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.record import AppRecorder
 
     async def nothing(_body: Any = None) -> None:
         return None

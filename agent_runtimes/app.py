@@ -1056,7 +1056,7 @@ class ServerConfig(BaseModel):
 
 async def _create_harness_agent(app: FastAPI, harness_id: str, api_prefix: str) -> None:
     """Make the agent of a catalogue harness through the runtime's own create
-    route, in process (as `loop/apps/mounting.create_agent` mounts an
+    route, in process (as `apps/mounting.create_agent` mounts an
     application); what refuses it is raised, so the runtime does not start
     without the agent it was started for.
     """
@@ -1124,7 +1124,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # One session store, chosen by configuration (MH-F03): two named, or
         # one nothing contributes, refuse the host before it serves a session.
-        from .loop.apps.session_store import active_store
+        from .apps.session_store import active_store
 
         logger.info("Sessions are kept in the %s store", active_store().name)
 
@@ -1437,7 +1437,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # The visitors' runtime (R-30): the examples it keeps warm, their
         # agents made through its own API once it listens.
-        from .loop.apps.visitors import loopback_url, visitors_runtime, warm
+        from .apps.visitors import loopback_url, visitors_runtime, warm
 
         _visitors_task = (
             asyncio.create_task(warm(loopback_url()), name="runtime-visitors-warm")
@@ -1450,7 +1450,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # The sessions this runtime holds are paused in their record before
         # it goes (MH-01): a listing from the record then says the truth.
         try:
-            from .loop.apps.sessions import pause_held
+            from .apps.sessions import pause_held
 
             paused = await pause_held()
             if paused:
@@ -1536,7 +1536,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
         # Stop the browsers of applications' computers (R-23).
-        from .loop.apps.browser import close_browsers
+        from .apps.browser import close_browsers
 
         await close_browsers()
 
@@ -1559,7 +1559,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # pod itself only on the application's own routes, websockets and the
     # dynamic AG-UI and A2A mounts included. Inside CORS, so that a page reads
     # the refusal's sentence.
-    from .loop.apps.visitors import OwnRoutesOnly
+    from .apps.visitors import OwnRoutesOnly
 
     app.add_middleware(OwnRoutesOnly)
 

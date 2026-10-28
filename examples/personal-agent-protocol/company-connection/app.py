@@ -9,9 +9,9 @@ from typing import Any
 
 from agentspecs.apps import parse_app
 
-from agent_runtimes.loop.apps import Application
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.pap_connections import (
+from agent_runtimes.apps import Application
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.pap_connections import (
     TOOL_CLASSES,
     connection_actions,
     gateway_query,

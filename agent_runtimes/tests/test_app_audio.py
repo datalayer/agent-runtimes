@@ -22,7 +22,7 @@ from typing import Any, List
 
 import pytest
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     HeardSpeech,
@@ -31,8 +31,8 @@ from agent_runtimes.loop.apps import (
     Said,
     sessions,
 )
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.voice import VOICE_INTERRUPTED_EVENT, VOICE_SAY_EVENT, heard
 from agent_runtimes.voice import cli as voice_cli
 from agent_runtimes.voice.protocol_audio import AudioNotHeard
@@ -199,7 +199,7 @@ async def test_session_say_says_a_line_with_the_application_s_voice():
     session = await hosting.open()
     said = await session.say("One   moment, I am looking that up.")
     assert said == Said(
-        session.id,
+        session.uid,
         "One moment, I am looking that up.",
         voice="kokoro-af-heart",
         language="en-US",
@@ -237,7 +237,7 @@ async def test_speaking_over_the_agent_stops_what_runs_and_reaches_app_interrupt
     await hosting.interrupt(session)
     await asyncio.wait_for(running, 5)
     assert reached == ["interrupted"]
-    assert Interrupted(session.id) in channel.events
+    assert Interrupted(session.uid) in channel.events
 
 
 @pytest.mark.asyncio
@@ -254,7 +254,7 @@ async def test_a_page_hears_the_line_said_and_the_interruption_as_voice_events()
         recorder=AppRecorder(app=app, send=_nothing),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     await live.session.say("One moment.")
     await live.host.interrupt(live.session)
@@ -279,7 +279,7 @@ async def test_a_page_hears_the_line_said_and_the_interruption_as_voice_events()
 
 
 def test_audio_and_interrupted_are_contribution_points_of_the_platform():
-    from agent_runtimes.loop.apps.plugins import REACTION_POINTS
+    from agent_runtimes.apps.plugins import REACTION_POINTS
 
     assert {"audio", "interrupted"} <= set(REACTION_POINTS)
     assert REACTION_POINTS["audio"].id == "loop.app.audio"

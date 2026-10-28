@@ -26,7 +26,7 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     HeardSpeech,
@@ -34,8 +34,8 @@ from agent_runtimes.loop.apps import (
     mounting,
     sessions,
 )
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests.test_app_audio import SAID, HereHearing, wav
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
@@ -350,7 +350,7 @@ async def test_at_the_terminal_voice_gives_the_sound_to_app_audio(
     """
     from rich.console import Console
 
-    from agent_runtimes.loop.apps.terminal import AppTux
+    from agent_runtimes.apps.terminal import AppTux
     from agent_runtimes.tests.test_loop_voice import Stream
 
     monkeypatch.setattr(

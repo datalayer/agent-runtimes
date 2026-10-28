@@ -29,7 +29,7 @@ def refuse_every_visitors(agent_id: str) -> None:
 
     What it holds is every visitor's (`serves_a_deployment`): 404, in its sentence.
     """
-    from agent_runtimes.loop.apps.principal import EVERY_VISITORS, serves_a_deployment
+    from agent_runtimes.apps.principal import EVERY_VISITORS, serves_a_deployment
 
     if serves_a_deployment(agent_id):
         raise HTTPException(
@@ -297,7 +297,7 @@ async def get_conversation_history(
     # resolve to the primary registered agent in this runtime.
     if (not stats or not stats.message_history) and agent_id == "default":
         for candidate_id in tracker.list_agents():
-            from agent_runtimes.loop.apps.principal import serves_a_deployment
+            from agent_runtimes.apps.principal import serves_a_deployment
 
             if serves_a_deployment(candidate_id):
                 continue

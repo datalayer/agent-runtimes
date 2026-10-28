@@ -64,6 +64,9 @@ export type BoundHost = Readonly<{
  * with its key in `X-Datalayer-Host-Key`, or as a person, with the host token
  * the exchange answered. Any host speaks them.
  */
+/** Which app a host runs as: Datalayer's own, or one the person brought (`custom`). */
+export type HostProvider = 'datalayer' | 'custom';
+
 export class DatalayerHostClient {
   constructor(
     readonly apiUrl: string,
@@ -102,12 +105,25 @@ export class DatalayerHostClient {
     return schema.parse(body);
   }
 
-  /** Bind the installation its owner set up, with the code their browser carried. */
+  /**
+   * Bind the installation its owner set up, with the code their browser
+   * carried, asserting the app this host runs as: `datalayer` for
+   * Datalayer's own app, `custom` with the app's id for one the person
+   * brought. Datalayer refuses a provider that is not the one the
+   * installation was registered for (409), and a bind without one (422).
+   */
   async bind(input: {
     code: string;
     externalId: string;
     name?: string;
+    provider: HostProvider;
+    customAppId?: string;
   }): Promise<BoundHost> {
+    if (input.provider === 'custom' && !input.customAppId) {
+      throw new Error(
+        "A custom app's bind names its app id (customAppId): Datalayer refuses it otherwise.",
+      );
+    }
     const bound = await this.#call(
       'Datalayer did not bind the installation',
       '/apps/hosts/bind',
@@ -116,6 +132,9 @@ export class DatalayerHostClient {
           code: input.code,
           external_id: input.externalId,
           name: input.name ?? '',
+          provider: input.provider,
+          custom_app_id:
+            input.provider === 'custom' ? (input.customAppId ?? '') : '',
         },
         method: 'POST',
       },

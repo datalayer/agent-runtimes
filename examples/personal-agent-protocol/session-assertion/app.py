@@ -17,7 +17,7 @@ from personal_agent_protocol import (
 )
 from reactor import PluginManifest, PluginPlatform
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 PAIRWISE_DATABASE = Path(
     os.getenv(

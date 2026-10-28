@@ -23,7 +23,7 @@ model of its own, the patterns do not; what the agent says is checked by the pla
 import re
 from typing import List, Tuple
 
-from agent_runtimes.loop.apps import Application, ChoiceQuestion, Session
+from agent_runtimes.apps import Application, ChoiceQuestion, Session
 
 AGENT = "example-blank:0.0.1"
 

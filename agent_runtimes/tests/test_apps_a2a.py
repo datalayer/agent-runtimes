@@ -28,8 +28,8 @@ import pytest
 from agentspecs.apps import APP_CATALOGUE
 
 from agent_runtimes.adapters.base import BaseAgent, StreamEvent
-from agent_runtimes.loop.apps import a2a as apps_a2a
-from agent_runtimes.loop.apps.callers import VERIFIER, Caller, CallerRefused
+from agent_runtimes.apps import a2a as apps_a2a
+from agent_runtimes.apps.callers import VERIFIER, Caller, CallerRefused
 from agent_runtimes.protocol_state import store as state_store
 from agent_runtimes.protocol_state.store import SqliteProtocolStateStore
 from agent_runtimes.routes import a2a as a2a_routes
@@ -95,7 +95,7 @@ class Accounting(BaseAgent):
         raise NotImplementedError
 
     async def stream(self, prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
-        from agent_runtimes.loop.apps.visitors import in_visitor_turn
+        from agent_runtimes.apps.visitors import in_visitor_turn
 
         self.contexts.append(context)
         self.visiting.append(in_visitor_turn())
@@ -239,7 +239,7 @@ class TestTheCard:
     ) -> None:
         """PR-02: `a2a.extensions` of the Appspec, published after
         the runtime's own and read back by the A2A plugin's reader."""
-        from agent_runtimes.loop.apps.loading import load_app
+        from agent_runtimes.apps.loading import load_app
         from agent_runtimes.protocols.a2a import find_extension
 
         gift: dict[str, Any] = {
@@ -448,7 +448,7 @@ class TestWhoIsAnswered:
         (IAM's whoami answered 500 for a principal, then no task grant for this route).
         The principal this runtime acts as, for the same deployment grant, is answered,
         its run acting with that token; another principal, or another grant, is not."""
-        from agent_runtimes.loop.apps import principal as principals
+        from agent_runtimes.apps import principal as principals
 
         def principal_token(agent: str, grant: str) -> str:
             return _token(

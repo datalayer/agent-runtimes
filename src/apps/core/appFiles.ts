@@ -10,7 +10,7 @@
  * A component its developer wrote may be a file of its folder (`source:
  * gauge.js`). `loop apps package` puts the folder's files in the
  * application's wheel, beside a generated page-side plugin
- * (`loop-app-<id>/page`, `agent_runtimes/loop/apps/packaging.py`) whose one
+ * (`loop-app-<id>/page`, `agent_runtimes/apps/packaging.py`) whose one
  * contribution is to this point: the address its own directory is served at
  * by the server the wheel is installed beside. The page installs that plugin
  * through Reactor's `bootstrapExtensions` (`AppRuntimePlugins`), and a file

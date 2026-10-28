@@ -33,7 +33,7 @@ from pydantic_ai.models.function import (
 )
 from reactor.ui import DISPLAY_META_KEY
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 from agent_runtimes.mcp.displays import DisplayMCPToolset
 from agent_runtimes.transports.agui_displays import DisplayAGUIAdapter
 

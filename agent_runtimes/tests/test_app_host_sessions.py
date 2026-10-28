@@ -22,8 +22,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import callers, external_turns, opening, principal
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused, CallerVerifier
+from agent_runtimes.apps import callers, external_turns, opening, principal
+from agent_runtimes.apps.callers import Caller, CallerRefused, CallerVerifier
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests import test_app_sessions as base
 from agent_runtimes.tests.test_app_sessions import ASSISTANT, Runtime, as_, events_of

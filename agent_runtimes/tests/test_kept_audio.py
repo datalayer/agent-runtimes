@@ -23,7 +23,7 @@ from typing import Any, Dict, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps.record import agent_recorder
+from agent_runtimes.apps.record import agent_recorder
 from agent_runtimes.routes.apps import _said_sound
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
@@ -167,8 +167,8 @@ def test_a_sound_past_a_minute_is_not_kept(monkeypatch: pytest.MonkeyPatch) -> N
 
 @pytest.mark.asyncio
 async def test_the_recorder_keeps_only_for_a_person_and_never_for_a_test() -> None:
-    from agent_runtimes.loop.apps.loading import load_app
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.record import AppRecorder
 
     app = load_app(LISTENER)
     sent: List[Dict[str, Any]] = []

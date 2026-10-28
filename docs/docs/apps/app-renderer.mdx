@@ -122,7 +122,7 @@ context: the view is drawn inside the host's tree.
 
 An application is two [Reactor](/apps) plugins of one name, `loop-app-<id>`:
 the page's (`defineAppPlugin`) and its runtime's (`manifest_of` in
-`agent_runtimes.loop.apps.plugins`). Whichever editor wrote it — a spec, the
+`agent_runtimes.apps.plugins`). Whichever editor wrote it — a spec, the
 Canvas, an `app.py` — the pair is the same, and each half declares the other,
 with Reactor's cross-tier declaration:
 
@@ -291,7 +291,7 @@ An application's computer is the sandbox its agent runs on (R-23). Its
 Appspec's `permissions.computer` turns on three parts, each off until it is
 turned on, and a part that is off gives its agent no tool — it is never shown
 one, where its connections' tools are filtered (`AppRulesCapability.prepare_tools`,
-`loop/apps/computer.py`):
+`apps/computer.py`):
 
 | Part     | The tools its agent is given                                                                   |
 | -------- | ---------------------------------------------------------------------------------------------- |
@@ -303,7 +303,7 @@ one, where its connections' tools are filtered (`AppRulesCapability.prepare_tool
 
 With `browse` on, its agent has a browser: a headless Chromium in the
 runtime's own container, started on its first page and kept until the
-runtime stops or its agent is deleted (`loop/apps/browser.py`, driven over
+runtime stops or its agent is deleted (`apps/browser.py`, driven over
 the DevTools protocol). Its agent opens an `http` or `https` address and is
 told the page's title and text; it reads the page again, takes a screenshot
 — a 1280×800 PNG shown to its model — and clicks or types where a CSS
@@ -686,7 +686,7 @@ not signed; what only reads is never touched.
 ## What it learns
 
 An application saved on Datalayer is given two more tools on the runtime
-(R-26, `agent_runtimes.loop.apps.learning`):
+(R-26, `agent_runtimes.apps.learning`):
 
 - `propose_skill(name, description, instructions)` — what a conversation
   worked out, written so that it can be done again: a name in lower-case

@@ -544,8 +544,8 @@ class PydanticAIAdapter(BaseAgent):
         from ..models.models import app_instance_of
 
         if str((app_instance_of(self._agent_id) or {}).get("app_uid") or "").strip():
-            from ..loop.apps.principal import gateway_toolsets_of_the_run
-            from ..loop.apps.sessions import agent_code_toolset
+            from ..apps.principal import gateway_toolsets_of_the_run
+            from ..apps.sessions import agent_code_toolset
 
             # And the tools of its code, when it is written in Python (R-14): a session adds them itself, a run over A2A only here.
             own = agent_code_toolset(self._agent_id)

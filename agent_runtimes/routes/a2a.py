@@ -208,7 +208,7 @@ def register_a2a_agent(
         gate: Optional ASGI wrapper the mount is served through, which may
             refuse a request before the agent sees it: an application's
             route admits only the callers it was granted to
-            (`agent_runtimes.loop.apps.a2a`).
+            (`agent_runtimes.apps.a2a`).
 
     fasta2a answers A2A 1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`)
     as well as its own method names, as its card says it does.

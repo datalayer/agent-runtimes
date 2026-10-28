@@ -563,10 +563,10 @@ class Stage:
         self, recording: Recording, member: StageMember, request: str, parent: str
     ) -> Tuple[str, Tuple[str, ...]]:
         """A turn of a member in this process: a session of its own, its agent with its ask tools."""
-        from agent_runtimes.loop.apps.application import AppHost, Application
-        from agent_runtimes.loop.apps.loading import AppNotRunnable
-        from agent_runtimes.loop.apps.safety import _AskedThePerson, _SafetyChannel
-        from agent_runtimes.loop.apps.session import Message
+        from agent_runtimes.apps.application import AppHost, Application
+        from agent_runtimes.apps.loading import AppNotRunnable
+        from agent_runtimes.apps.safety import _AskedThePerson, _SafetyChannel
+        from agent_runtimes.apps.session import Message
 
         try:
             application = Application.from_spec(
@@ -830,7 +830,7 @@ def _agent_builder_for(member: StageMember) -> Callable[[Any], Any]:
     its model and prompt alone, as the page does (`browser_agent`); any other
     is `local_agent`, which refuses what only a runtime brings.
     """
-    from agent_runtimes.loop.apps.agent import browser_agent, local_agent
+    from agent_runtimes.apps.agent import browser_agent, local_agent
 
     return browser_agent if member.runs_in == "browser" else local_agent
 
@@ -911,7 +911,7 @@ def _tool_kind(tool: str, member: StageMember) -> str:
 
 
 def _recorder_base() -> Any:
-    from agent_runtimes.loop.apps.record import AppRecorder
+    from agent_runtimes.apps.record import AppRecorder
 
     return AppRecorder
 
@@ -1055,8 +1055,8 @@ def refused_here(
     """Why a member's agent cannot be built in this process, in sentences; empty when it can."""
     if member.reason or member.address or not member.document:
         return member.reason
-    from agent_runtimes.loop.apps.application import Application
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.application import Application
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     try:
         application = Application.from_spec(member.document)

@@ -20,7 +20,7 @@ Chainlit's loop is the developer's to write.
 import json
 from typing import Literal, Optional
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 AGENT = "example-blank:0.0.1"
 

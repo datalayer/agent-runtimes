@@ -422,7 +422,7 @@ def build_capabilities_from_agent_spec(
 
         memory_capability: MemoryCapability | None
         if app_memory_key:
-            from ..loop.apps.memory import app_memory_capability
+            from ..apps.memory import app_memory_capability
 
             memory_capability = app_memory_capability(app_memory_key)
         else:

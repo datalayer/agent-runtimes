@@ -820,7 +820,7 @@ def run_cloud_app_conversation(
     ``failed`` with ``failure_cause`` when a request was refused or a turn
     failed — a question left waiting is an answer, not a failure.
     """
-    from agent_runtimes.loop.apps.deployments import UNFINISHED, session_result
+    from agent_runtimes.apps.deployments import UNFINISHED, session_result
 
     played = [_conversation_turn(raw) for raw in turns]
     if not played:

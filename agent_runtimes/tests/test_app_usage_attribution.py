@@ -49,7 +49,7 @@ def test_an_agent_no_application_runs_names_nothing():
 
 
 def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
-    from agent_runtimes.loop.apps.principal import give_principal_token
+    from agent_runtimes.apps.principal import give_principal_token
 
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
     give_inference_token("the-runtime-token")
@@ -128,8 +128,8 @@ def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
     around ai-inference, unmetered on the application."""
     from pydantic_ai import Agent
 
-    from agent_runtimes.loop.apps.agent import AppAgent
-    from agent_runtimes.loop.apps.composer import ModeEffect
+    from agent_runtimes.apps.agent import AppAgent
+    from agent_runtimes.apps.composer import ModeEffect
 
     asked: list[tuple[Any, ...]] = []
 
@@ -153,7 +153,7 @@ def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
 def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeypatch):
     """The agent a runtime's session runs (R-04) is told the provider and the
     instance its agent was created with."""
-    from agent_runtimes.loop.apps import sessions
+    from agent_runtimes.apps import sessions
     from agent_runtimes.routes import agents, agui
 
     class Adapter:
@@ -175,7 +175,7 @@ def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeyp
 
     class Session:
         app = None
-        id = "s"
+        uid = "s"
 
     made = sessions._agent_maker("agent-1")(Session())
     assert (made.inference_provider, made.app_instance) == ("datalayer", DEPLOYMENT)

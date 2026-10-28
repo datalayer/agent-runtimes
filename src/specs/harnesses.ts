@@ -200,7 +200,7 @@ export const FAST_AGENT_HARNESS_0_0_1: HarnessSpec = {
     "llmindset's agent framework served over ACP; each agent it defines is a session mode, with any model provider it is configured with.",
   enabled: false,
   unavailable_because:
-    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); fast-agent is a framework served over ACP, not a coding agent, its adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.',
+    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); fast-agent is a framework served over ACP, not a coding agent, its adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.',
   tags: ['harness', 'framework'],
   docs: 'https://github.com/evalstate/fast-agent/blob/main/docs/docs/acp/index.md',
   acp: {
@@ -258,8 +258,9 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
   name: 'Gemini CLI',
   description:
     "Google's coding agent, which speaks ACP itself when started with --experimental-acp.",
-  enabled: true,
-  unavailable_because: '',
+  enabled: false,
+  unavailable_because:
+    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it stays unfunded and unoffered there (the user's decision, 28 October 2026).",
   tags: ['harness'],
   docs: 'https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/cli-reference.md',
   acp: {
@@ -323,7 +324,7 @@ export const GOOSE_HARNESS_0_0_1: HarnessSpec = {
     "Block's open agent (now the Agentic AI Foundation's), which speaks ACP itself with goose acp; any model provider it is configured with.",
   enabled: false,
   unavailable_because:
-    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); goose is a binary of its own release, not an npm adapter, the runtime image does not carry it, and it has not been drilled on Datalayer.',
+    'the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); goose is a binary of its own release, not an npm adapter, the runtime image does not carry it, and it has not been drilled on Datalayer.',
   tags: ['harness'],
   docs: 'https://block.github.io/goose/docs/gdk/acp/',
   acp: {
@@ -442,7 +443,7 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
     'The OpenHands CLI, which speaks ACP itself with openhands acp; any model provider it is configured with.',
   enabled: false,
   unavailable_because:
-    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and Gemini CLI (28 October 2026); OpenHands' adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
+    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); OpenHands' adapter is a Python tool the runtime image does not carry, and it has not been drilled on Datalayer.",
   tags: ['harness'],
   docs: 'https://docs.openhands.dev/openhands/usage/run-openhands/acp',
   acp: {
@@ -500,6 +501,67 @@ export const OPENHANDS_HARNESS_0_0_1: HarnessSpec = {
   },
 };
 
+export const PI_HARNESS_0_0_1: HarnessSpec = {
+  id: 'pi',
+  version: '0.0.1',
+  name: 'pi',
+  description:
+    "Earendil's pi coding agent, driven over ACP through the pi-acp adapter, which spawns the published pi executable; any model provider pi is configured with.",
+  enabled: true,
+  unavailable_because: '',
+  tags: ['harness'],
+  docs: 'https://github.com/svkozak/pi-acp',
+  acp: {
+    command: 'npx',
+    args: ['-y', 'pi-acp@0.0.34'],
+    protocolVersion: 1,
+    loadSession: true,
+    mcp: 'lend',
+    modes: [],
+    env: {},
+    nativeSession: 'none',
+  },
+  requires: {
+    secrets: ['ANTHROPIC_API_KEY'],
+    binaries: ['node', 'git'],
+  },
+  terms: {
+    servedToThirdParties: 'permitted',
+    licence:
+      'MIT (adapter); MIT (the agent, @earendil-works/pi-coding-agent 1.4.0)',
+  },
+  skills: {
+    format: 'skill-md',
+    dir: '.pi/skills',
+  },
+  honours: {
+    model: true,
+    subagents: false,
+  },
+  capabilities: {
+    resume: 'load',
+    forkHistory: 'replay',
+    interrupt: true,
+    steering: false,
+    images: false,
+    compaction: 'own',
+    modes: [],
+    autoRun: [],
+  },
+  instructionsFile: 'AGENTS.md',
+  registered: {
+    adapter: 'pi-acp',
+    version: '0.0.34',
+    licenceSource: 'https://www.npmjs.com/package/pi-acp',
+    termsSource: 'https://github.com/earendil-works/pi/blob/main/LICENSE',
+    credential:
+      "The provider's key pi is configured with; ANTHROPIC_API_KEY declared, the person's own",
+    binaries:
+      'Node 22 (pi-coding-agent engines.node >=22.19.0; pi-acp >=20), the pi executable 1.4.0 on the PATH (@earendil-works/pi-coding-agent), git',
+    note: "Read 2026-10-28. pi speaks no ACP itself; pi-acp 0.0.34 (MIT, an individual's, github.com/svkozak/pi-acp) speaks ACP JSON-RPC over stdio and spawns the published `pi` executable with `pi --mode rpc`, so pi 1.4.0 runs as published — chosen over @automatalabs/pi-acp 0.9.4 (Apache-2.0, in-process, which embeds pi 0.87.1 through its SDK on a fork's package). Open source under MIT on both sides, no vendor terms of their own; the model provider's terms apply to the key. Session persistence through pi's own session files (session/load).",
+  },
+};
+
 export const HARNESS_CATALOGUE: Record<string, HarnessSpec> = {
   'claude-code': CLAUDE_CODE_HARNESS_0_0_1,
   codex: CODEX_HARNESS_0_0_1,
@@ -509,6 +571,7 @@ export const HARNESS_CATALOGUE: Record<string, HarnessSpec> = {
   goose: GOOSE_HARNESS_0_0_1,
   opencode: OPENCODE_HARNESS_0_0_1,
   openhands: OPENHANDS_HARNESS_0_0_1,
+  pi: PI_HARNESS_0_0_1,
 };
 
 /** A harness by id. */
@@ -917,21 +980,6 @@ export const LISTED_HARNESSES: ListedHarness[] = [
       "An OpenClaw Gateway token, with the Gateway's configured model providers",
     servedToThirdParties: 'permitted',
     note: 'Bridges ACP to an OpenClaw Gateway, whose providers keep their own terms.',
-  },
-  {
-    id: 'pi',
-    name: 'pi (through pi-acp)',
-    docs: 'https://github.com/svkozak/pi-acp',
-    adapter: 'pi-acp',
-    version: '0.0.34',
-    command: 'npx -y pi-acp',
-    licence: 'MIT',
-    licenceSource: 'https://github.com/svkozak/pi-acp/blob/main/LICENSE',
-    termsSource: 'https://github.com/svkozak/pi-acp/blob/main/LICENSE',
-    credential:
-      "pi's configured provider's API key (a subscription login carries its provider's terms)",
-    servedToThirdParties: 'permitted',
-    note: 'Spawns pi --mode rpc from @earendil-works/pi-coding-agent (MIT).',
   },
   {
     id: 'poolside',

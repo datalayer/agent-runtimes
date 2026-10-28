@@ -78,7 +78,7 @@ async def _resumed(live: Any) -> None:
     ``LiveSession.resume`` — a ``session`` entry with ``state: open`` and ``runs_on``
     rewritten (MH-01) — without its replay on a socket a seat does not have.
     """
-    from ..loop.apps.sessions import run_hooks
+    from ..apps.sessions import run_hooks
 
     if live.state == "ended":
         raise SeatRefused(
@@ -120,7 +120,7 @@ class SeatRun:
 
     def tool_answered(self, answered: Mapping[str, Any]) -> None:
         """A tool row in the record: the call and its result, as the audit keeps one."""
-        from ..loop.apps.record import _short
+        from ..apps.record import _short
 
         called = self._calls.pop(str(answered.get("id") or ""), {})
         name = str(called.get("name") or answered.get("name") or "")
@@ -141,8 +141,8 @@ class SeatRun:
 
     async def answered(self, text: str) -> Dict[str, Any]:
         """The turn is over: its answer kept, the record sent. What the task result says of the session."""
-        from ..loop.apps.record import _short
-        from ..loop.apps.sessions import _new_id
+        from ..apps.record import _short
+        from ..apps.sessions import _new_id
 
         if text:
             self.live.messages.append(
@@ -157,7 +157,7 @@ class SeatRun:
 
     async def failed(self, reason: str) -> Dict[str, Any]:
         """The turn stopped: said on the record, sent."""
-        from ..loop.apps.record import _short
+        from ..apps.record import _short
 
         recorder = self.live.recorder
         # The task's turn is kept though it stopped: a seat session whose
@@ -184,7 +184,7 @@ def _caller_of(credential: Optional[str]) -> Any:
     session is in; the platform is not asked a second time (a pool pod's
     worker has no IAM to ask in every setting).
     """
-    from ..loop.apps.callers import LOCAL, Caller, _unverified_claims, person_name
+    from ..apps.callers import LOCAL, Caller, _unverified_claims, person_name
 
     if not credential:
         return LOCAL
@@ -243,8 +243,8 @@ async def seat_run(
     root = str(execution.get("rootExecutionId") or execution_of(meta) or "")
     if not root:
         return None
-    from ..loop.apps.loading import load_app
-    from ..loop.apps.sessions import (
+    from ..apps.loading import load_app
+    from ..apps.sessions import (
         SessionRefused,
         apply_rules,
         new_session,

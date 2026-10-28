@@ -130,13 +130,14 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       kind: 'model3d',
     });
     // The catalogue's harnesses as the agent (SH-43): each by the
-    // catalogue agent that runs on it — Claude Code, Codex, Gemini CLI,
+    // catalogue agent that runs on it — Claude Code, Codex, pi, Gemini CLI,
     // goose, OpenCode, OpenHands and fast-agent alike.
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
     expect(claude?.example).toBe('example-harness-claude-code');
     for (const harness of [
       'codex',
+      'pi',
       'gemini-cli',
       'goose',
       'opencode',

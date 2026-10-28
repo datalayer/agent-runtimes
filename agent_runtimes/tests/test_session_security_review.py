@@ -28,14 +28,14 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.session_store import (
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import (
     RECORD_PAGE,
     RECORD_READ_LIMIT,
     FileSessionStore,
     use_session_store,
 )
-from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+from agent_runtimes.apps.visitors import NOTHING_KEPT
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
@@ -81,7 +81,7 @@ def store(tmp_path: Path) -> Iterator[FileSessionStore]:
 
 @pytest.fixture()
 def through_store(runtime: Runtime) -> Runtime:  # noqa: F811 - the fixture
-    from agent_runtimes.loop.apps.record import agent_recorder, send_to_store
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
 
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
     recorder = agent_recorder("notes-assistant")
@@ -283,7 +283,7 @@ class RecordPages:
 @pytest.fixture()
 def record_pages(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     """The record store on the real reader, ai-agents played by `RecordPages`."""
-    from agent_runtimes.loop.apps.session_store import (
+    from agent_runtimes.apps.session_store import (
         RECORD_STORE,
         use_record_transport,
     )
@@ -364,7 +364,7 @@ def test_a_budget_an_hour_refuses_the_next_clone_export_and_import_and_says_when
     remote: TestClient,  # noqa: F811 - the fixture
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from agent_runtimes.loop.apps.sessions import BUDGET_HOUR, SESSION_BUDGETS
+    from agent_runtimes.apps.sessions import BUDGET_HOUR, SESSION_BUDGETS
 
     assert SESSION_BUDGETS == {"clone": 20, "export": 20, "import": 10}
     # 10:05 UTC, by the budget's clock.

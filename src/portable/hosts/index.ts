@@ -38,6 +38,7 @@ export {
   DatalayerHostClient,
   HostRefusedError,
   type BoundHost,
+  type HostProvider,
   type HostSelf,
 } from './client';
 export {

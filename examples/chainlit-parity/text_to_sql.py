@@ -21,7 +21,7 @@ import re
 import sqlite3
 from datetime import date
 
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 
 AGENT = "example-blank:0.0.1"
 

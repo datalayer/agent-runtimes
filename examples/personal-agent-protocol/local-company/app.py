@@ -5,7 +5,7 @@
 
 The SDK's reference company publishes *Order Desk* at ``orders.example``;
 ``pap.company.agent`` is the application over its A2A route. The route here
-answers as the runtime does in a company turn (``loop.apps.pap_company``): a
+answers as the runtime does in a company turn (``apps.pap_company``): a
 declared tool's call is proposed, not made, and once the person confirmed the
 exact revision the perform turn redeems its one-use ticket through the
 runtime's ``pap.company.operationTickets`` and makes that one call. A local
@@ -37,8 +37,8 @@ from personal_agent_protocol.demo.kit import (
 )
 from reactor import PluginManifest
 
-from agent_runtimes.loop.apps import Application
-from agent_runtimes.loop.apps.pap_company import pap_turn_of, redeem
+from agent_runtimes.apps import Application
+from agent_runtimes.apps.pap_company import pap_turn_of, redeem
 from agent_runtimes.pap import (
     A2AApplication,
     PapCompanyCapability,

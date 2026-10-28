@@ -375,7 +375,7 @@ async def test_a_visitors_turn_refuses_a_call_that_waits_for_a_person() -> None:
     """Nobody is there to approve for a visitor: the call is refused in the
     visitor's sentence and the run goes on, rather than ending an A2A task
     whose run takes no DeferredToolRequests (H-03)."""
-    from agent_runtimes.loop.apps.visitors import enter_visitor_run, leave_visitor_run
+    from agent_runtimes.apps.visitors import enter_visitor_run, leave_visitor_run
 
     await _reset_approvals()
     token = enter_visitor_run("visitor-1")

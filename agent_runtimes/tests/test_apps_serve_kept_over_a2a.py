@@ -19,10 +19,10 @@ import pytest
 from agentspecs.apps import APP_CATALOGUE
 from fastapi import HTTPException, Request
 
-from agent_runtimes.loop.apps import a2a as apps_a2a
-from agent_runtimes.loop.apps import plugins
-from agent_runtimes.loop.apps.callers import LOCAL
-from agent_runtimes.loop.apps.deployments import Deployments
+from agent_runtimes.apps import a2a as apps_a2a
+from agent_runtimes.apps import plugins
+from agent_runtimes.apps.callers import LOCAL
+from agent_runtimes.apps.deployments import Deployments
 from agent_runtimes.routes import a2a as a2a_routes
 from agent_runtimes.routes import acp
 from agent_runtimes.routes import apps as apps_routes

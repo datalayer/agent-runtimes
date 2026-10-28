@@ -21,8 +21,8 @@ from typing import Any, Dict, List
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import sessions
-from agent_runtimes.loop.apps.record import (
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.record import (
     SESSION_KINDS,
     SESSION_STATES,
     session_facts,
@@ -37,7 +37,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     runtime,
 )
 
-PACKAGE = Path(sessions.__file__).resolve().parents[3]
+PACKAGE = Path(sessions.__file__).resolve().parents[2]
 
 
 def _open(client: TestClient, uid: str, person: str = "ada") -> None:
@@ -232,7 +232,7 @@ def test_a_graceful_stop_leaves_paused_entries_for_two_held_sessions(
 
 def test_the_only_stopped_left_in_the_code_is_the_runs_end_word() -> None:
     for relative in (
-        "agent_runtimes/loop/apps/sessions.py",
+        "agent_runtimes/apps/sessions.py",
         "agent_runtimes/routes/apps.py",
     ):
         lines = (PACKAGE / relative).read_text().splitlines()

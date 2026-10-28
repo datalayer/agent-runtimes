@@ -14,17 +14,17 @@ import yaml
 from rich.console import Console
 from typer.testing import CliRunner
 
-from agent_runtimes.commands import apps as commands
-from agent_runtimes.commands.apps import NOT_READY, PASSES, app, validate_file
-from agent_runtimes.loop.apps import Application
-from agent_runtimes.loop.apps.build import (
+from agent_runtimes.apps import Application
+from agent_runtimes.apps.build import (
     CodeMark,
     build,
     read_code_marks,
 )
-from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
-from agent_runtimes.loop.apps.session import ChoiceQuestion, FormQuestion, Session
-from agent_runtimes.loop.apps.terminal import AppTux, TerminalChannel, ask_once
+from agent_runtimes.apps.loading import AppNotRunnable, load_app
+from agent_runtimes.apps.session import ChoiceQuestion, FormQuestion, Session
+from agent_runtimes.apps.terminal import AppTux, TerminalChannel, ask_once
+from agent_runtimes.commands import apps as commands
+from agent_runtimes.commands.apps import NOT_READY, PASSES, app, validate_file
 
 pytest.importorskip("agentspecs.apps")
 
@@ -42,7 +42,7 @@ def _kept(store: list[Any], item: Any, result: _T) -> _T:
 APP_PY = """\
 from pydantic import BaseModel
 
-from agent_runtimes.loop.apps import Application, Session
+from agent_runtimes.apps import Application, Session
 
 
 class Saved(BaseModel):
@@ -129,7 +129,7 @@ def test_a_workers_schedule_is_marked_as_code(tmp_path: Path) -> None:
     built = build(
         write(
             tmp_path,
-            "from agent_runtimes.loop.apps import Application\n"
+            "from agent_runtimes.apps import Application\n"
             "app = Application(id='triage', kind='worker', agent='cog-crawler:0.0.1',\n"
             "                  goal='Sort the inbox.')\n"
             "@app.schedule('0 8 * * *', description='Every morning')\n"
@@ -145,7 +145,7 @@ def test_code_that_decides_nothing_is_said_so(tmp_path: Path) -> None:
     built = build(
         write(
             tmp_path,
-            "from agent_runtimes.loop.apps import Application\n"
+            "from agent_runtimes.apps import Application\n"
             "app = Application(id='plain', kind='chat', agent='cog-crawler:0.0.1')\n",
         )
     )
@@ -158,7 +158,7 @@ def test_code_that_decides_nothing_is_said_so(tmp_path: Path) -> None:
     [
         ("x = 1\n", "defines 0 applications; it has to define one"),
         (
-            "from agent_runtimes.loop.apps import Application\n"
+            "from agent_runtimes.apps import Application\n"
             "a = Application(id='a', agent='cog-crawler:0.0.1')\n"
             "b = Application(id='b', agent='cog-crawler:0.0.1')\n",
             "defines 2 applications; it has to define one",
@@ -182,7 +182,7 @@ def test_build_refuses_with_a_sentence(tmp_path: Path, text: str, said: str) -> 
 def test_build_refuses_a_spec_that_does_not_validate(tmp_path: Path) -> None:
     path = write(
         tmp_path,
-        "from agent_runtimes.loop.apps import Application\n"
+        "from agent_runtimes.apps import Application\n"
         "app = Application(id='lost', kind='chat', agent='no-such-agent:9.9.9')\n",
     )
     with pytest.raises(AppNotRunnable) as refused:
@@ -209,7 +209,7 @@ def test_validate_builds_an_app_py_first(tmp_path: Path) -> None:
     assert "defines 0 applications" in bad.problems[0]
     plain = write(
         tmp_path,
-        "from agent_runtimes.loop.apps import Application\n"
+        "from agent_runtimes.apps import Application\n"
         "app = Application(id='plain', kind='chat', agent='cog-crawler:0.0.1')\n"
         "app.connection('tavily:0.0.1')\n",
         name="plain.py",
@@ -221,7 +221,7 @@ def test_push_saves_the_built_spec_and_the_file(tmp_path: Path, monkeypatch) -> 
     saved: List[Any] = []
     monkeypatch.setattr(commands, "_store", lambda: object())
     monkeypatch.setattr(
-        "agent_runtimes.loop.apps.store.push",
+        "agent_runtimes.apps.store.push",
         lambda store, uid, text, code=None: (_kept(saved, (text, code), 3), "saved"),
     )
     path = write(tmp_path)
@@ -239,7 +239,7 @@ def test_pull_writes_the_app_py_beside_the_spec_it_builds(
     monkeypatch.setattr(commands, "_store", lambda: object())
     code = {"file": "app.py", "text": "# the code\n"}
     monkeypatch.setattr(
-        "agent_runtimes.loop.apps.store.pull",
+        "agent_runtimes.apps.store.pull",
         lambda store, uid: ("id: interview\n", 4, code),
     )
     out = tmp_path / "app.yaml"
@@ -289,7 +289,7 @@ def local_server(monkeypatch) -> List[Any]:
     async def run_tux(*args: Any, **kwargs: Any) -> None:
         calls.append(("plain tux", args, kwargs))
 
-    monkeypatch.setattr("agent_runtimes.loop.apps.terminal.run_app_tux", run_app_tux)
+    monkeypatch.setattr("agent_runtimes.apps.terminal.run_app_tux", run_app_tux)
     monkeypatch.setattr("agent_runtimes.chat.tux.run_tux", run_tux)
     return calls
 
@@ -491,7 +491,7 @@ def test_the_renderer_routes_to_the_code_and_reloads_with_the_state(
 
 def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -> None:
     """P-14, P-15: a terminal does not write over what it printed."""
-    from agent_runtimes.loop.apps import Session
+    from agent_runtimes.apps import Session
 
     app = Application(id="interview", agent="example-simple")
     ended: List[str] = []
@@ -514,7 +514,7 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
 
     @app.end
     def closed(session: Session) -> None:
-        ended.append(session.id)
+        ended.append(session.uid)
 
     tux = AppTux(
         app,
@@ -536,7 +536,7 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
     assert "✗ a message was removed." in said
     # What an answer shows is named, not drawn (P-04).
     assert "▣ Table runs: Runs" in said
-    assert tux.app_session is not None and ended == [tux.app_session.id]
+    assert tux.app_session is not None and ended == [tux.app_session.uid]
 
 
 def test_the_terminal_runs_an_applications_commands() -> None:

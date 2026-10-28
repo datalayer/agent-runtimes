@@ -46,15 +46,15 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel  # noqa: E402
 
 from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter  # noqa: E402
 from agent_runtimes.app import create_app  # noqa: E402
-from agent_runtimes.loop.apps import (  # noqa: E402
+from agent_runtimes.apps import (  # noqa: E402
     opening,
     plugins,
     principal,
     sessions,
 )
-from agent_runtimes.loop.apps.agent import app_capabilities  # noqa: E402
-from agent_runtimes.loop.apps.loading import load_app  # noqa: E402
-from agent_runtimes.loop.apps.record import (
+from agent_runtimes.apps.agent import app_capabilities  # noqa: E402
+from agent_runtimes.apps.loading import load_app  # noqa: E402
+from agent_runtimes.apps.record import (
     AppRecorder,
     keep_agent_recorder,
     send_to_store,
@@ -138,7 +138,7 @@ class Verifier:
     """Every token is the person it names."""
 
     async def verify(self, token: str, app_uid: str = "") -> Any:
-        from agent_runtimes.loop.apps.callers import Caller
+        from agent_runtimes.apps.callers import Caller
 
         return Caller(kind="person", uid=token)
 

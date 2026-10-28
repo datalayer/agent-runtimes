@@ -37,8 +37,8 @@ from starlette.routing import Mount, WebSocketRoute
 from starlette.testclient import WebSocketDenialResponse
 
 from agent_runtimes.app import create_app
-from agent_runtimes.loop.apps.principal import OWN_ROUTES_ONLY
-from agent_runtimes.loop.apps.visitors import OwnRoutesOnly, path_answered
+from agent_runtimes.apps.principal import OWN_ROUTES_ONLY
+from agent_runtimes.apps.visitors import OwnRoutesOnly, path_answered
 from agent_runtimes.models.models import remember_app_instance
 
 SHIPPED = "shop-shipped"

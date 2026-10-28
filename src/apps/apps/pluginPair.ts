@@ -9,7 +9,7 @@
  * Whichever editor wrote it — a spec, the Canvas, an `app.py` — an
  * application is a pair of plugins of one name, `loop-app-<id>`: the page's
  * (`defineAppPlugin`) and the runtime's (`manifest_of` in
- * `agent_runtimes.loop.apps.plugins`, which says the same name). Each
+ * `agent_runtimes.apps.plugins`, which says the same name). Each
  * declares the other: the page's `requiredBackendPlugins`, the runtime's
  * `frontend_dependencies`; and both are delivered as one extension of that
  * name, which is how Reactor's manager and graph show them as one

@@ -23,15 +23,15 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.loop.apps import computer, sessions
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.computer import (
+from agent_runtimes.apps import computer, sessions
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.computer import (
     FILE_TOOLS,
     ComputerRefused,
     computer_toolset,
     sandbox_of,
 )
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.enforcement import AppRulesCapability
 from agent_runtimes.routes import agents
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.types import AppSpec
@@ -358,7 +358,7 @@ def test_it_is_shown_only_to_whoever_talks_to_it(held: None) -> None:
 def test_a_deployments_computer_is_shown_to_its_owner_and_editors_only(
     held: None,
 ) -> None:
-    from agent_runtimes.loop.apps import opening
+    from agent_runtimes.apps import opening
 
     asked: List[tuple] = []
 
@@ -397,8 +397,8 @@ def test_a_deployments_computer_is_shown_to_its_owner_and_editors_only(
 
 
 def test_an_embeds_visitor_never_sees_a_deployments_computer() -> None:
-    from agent_runtimes.loop.apps import opening
-    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.apps import opening
+    from agent_runtimes.apps.callers import Caller
 
     async def never(deployment_uid: str, bearer: str) -> tuple:
         raise AssertionError("an embed is not asked about")

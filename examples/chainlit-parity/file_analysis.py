@@ -20,7 +20,7 @@ import csv
 import io
 from typing import List, Optional
 
-from agent_runtimes.loop.apps import Application, Session, UploadedFile
+from agent_runtimes.apps import Application, Session, UploadedFile
 
 AGENT = "example-blank:0.0.1"
 

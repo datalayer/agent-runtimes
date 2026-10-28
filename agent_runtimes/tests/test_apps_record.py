@@ -8,12 +8,12 @@ from typing import Any
 import pytest
 from pydantic_ai import Agent
 
-from agent_runtimes.loop.apps.guards import (
+from agent_runtimes.apps.guards import (
     AppCheckBlockedError,
     AppChecks,
     AppChecksCapability,
 )
-from agent_runtimes.loop.apps.record import (
+from agent_runtimes.apps.record import (
     AppRecordCapability,
     AppRecorder,
     RecordNotSent,

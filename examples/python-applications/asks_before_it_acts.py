@@ -17,7 +17,9 @@ and says.
 
 Runs in this process with no key and no network: the person is played by a
 ``MemoryChannel`` (``channel.reply`` answers the next question), the agent
-by pydantic-ai's ``TestModel``, which calls every tool it is given once.
+by pydantic-ai's ``TestModel``, which calls every tool it is given once, with
+placeholder arguments (``to='a'``). The record is kept in memory, the host's
+default: ``host.recorder.entries`` reads it.
 
     python asks_before_it_acts.py
 """
@@ -27,7 +29,7 @@ import asyncio
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     AppRuleBlockedError,
@@ -35,7 +37,6 @@ from agent_runtimes.loop.apps import (
     MemoryChannel,
     Session,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
 
 OUTBOX: list[tuple[str, str]] = []
 DRAFTS: list[tuple[str, str]] = []
@@ -49,6 +50,7 @@ app = Application(
     instructions="Write short, plain replies, and send them with send_reply.",
 )
 app.rule("send a reply", applies_to="send", behaviour="ask_first")
+app.record(include=["decisions"])
 
 
 @app.tool(does="send")
@@ -88,20 +90,14 @@ async def agent_sends(session: Session, words: str) -> None:
 
 async def main() -> None:
     channel = MemoryChannel()
-    record: list = []
-
-    async def keep(body: dict) -> None:
-        record.append(body)
-
     host = AppHost(
         app,
         channel,
         agent=lambda spec: Agent(
             TestModel(custom_output_text="Done: the reply is sent.")
         ),
-        recorder=AppRecorder(app=app.spec, send=keep),
     )
-    session = await host.open(user="ada")
+    session = await host.open(opened_by="ada")
 
     print("The code asks")
     channel.reply("Send")
@@ -143,6 +139,8 @@ async def main() -> None:
     )
 
     print(f"outbox {len(OUTBOX)}, drafts {len(DRAFTS)}")
+    decisions = [e for e in host.recorder.entries if e["kind"] == "decision"]
+    print(f"decisions on the record: {len(decisions)}")
 
 
 asyncio.run(main())

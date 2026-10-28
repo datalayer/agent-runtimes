@@ -24,11 +24,11 @@ import pytest
 from pydantic import BaseModel
 from reactor.ui import UiAction, UiActionError
 
-from agent_runtimes.loop.apps import AppHost, Application, sessions
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.components import ANSWER_DISPLAY_TYPE, AnswerShows
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session import Session
+from agent_runtimes.apps import AppHost, Application, sessions
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.components import ANSWER_DISPLAY_TYPE, AnswerShows
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.session import Session
 
 
 class Row(BaseModel):
@@ -60,7 +60,7 @@ async def hosted(uid: str) -> tuple[sessions.LiveSession, List[Any]]:
         recorder=AppRecorder(app=application.spec, send=_ignore),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     return live, pressed
 
 

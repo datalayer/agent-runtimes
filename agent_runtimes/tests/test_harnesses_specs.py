@@ -42,6 +42,7 @@ class TestTheHarnessCatalogue:
             "claude-code",
             "codex",
             "gemini-cli",
+            "pi",
             "goose",
             "opencode",
             "openhands",
@@ -52,22 +53,19 @@ class TestTheHarnessCatalogue:
 
     def test_four_are_offered_and_the_others_say_why_not(self) -> None:
         """The restriction to four (META_HARNESS, 28 October 2026): Claude Code,
-        Codex, OpenCode and Gemini CLI are offered; fast-agent, goose and
+        Codex, OpenCode and pi are offered; Gemini CLI, fast-agent, goose and
         OpenHands are described, not offered, each with its reason; `custom`
         is the organization's own."""
         offered = {spec.id for spec in list_harnesses() if spec.enabled}
-        assert offered == {"claude-code", "codex", "opencode", "gemini-cli"}
+        assert offered == {"claude-code", "codex", "opencode", "pi"}
         for spec in list_harnesses():
             if spec.id == "custom":
                 assert not spec.enabled and not spec.unavailable_because
             elif spec.enabled:
                 assert not spec.unavailable_because, spec.id
             else:
-                assert spec.id in {"fast-agent", "goose", "openhands"}
-                assert (
-                    "Claude Code, Codex, OpenCode and Gemini CLI"
-                    in spec.unavailable_because
-                )
+                assert spec.id in {"fast-agent", "gemini-cli", "goose", "openhands"}
+                assert "Claude Code, Codex, OpenCode and pi" in spec.unavailable_because
         from agentspecs.harnesses import offered_refusal
 
         goose = get_harness("goose")
@@ -93,7 +91,7 @@ class TestTheHarnessCatalogue:
             harness_agent("a1", "goose", workspace=tmp_path)
         with pytest.raises(
             HarnessRefused,
-            match="There is no harness named 'nope': one of claude-code, codex, gemini-cli, opencode\\.",
+            match="There is no harness named 'nope': one of claude-code, codex, opencode, pi\\.",
         ):
             harness_agent("a1", "nope", workspace=tmp_path)
         monkeypatch.chdir(tmp_path)
@@ -103,7 +101,7 @@ class TestTheHarnessCatalogue:
             _prepare_harness("openhands")
         with pytest.raises(
             ValueError,
-            match="one of claude-code, codex, gemini-cli, opencode \\(`loop harnesses`\\)",
+            match="one of claude-code, codex, opencode, pi \\(`loop harnesses`\\)",
         ):
             _prepare_harness("nope")
 
@@ -150,6 +148,7 @@ class TestTheCapabilitiesTable:
             "fast-agent": "load",
             "openhands": "load",
             "gemini-cli": "none",
+            "pi": "load",
             "goose": "none",
             "opencode": "none",
             "custom": "none",

@@ -25,11 +25,11 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, UserProm
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from reactor import PluginPlatform
 
-from agent_runtimes.loop.apps import opening, plugins, principal, sessions
-from agent_runtimes.loop.apps.agent import app_capabilities
-from agent_runtimes.loop.apps.callers import Caller, CallerRefused
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.record import AppRecorder, keep_agent_recorder
+from agent_runtimes.apps import opening, plugins, principal, sessions
+from agent_runtimes.apps.agent import app_capabilities
+from agent_runtimes.apps.callers import Caller, CallerRefused
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.record import AppRecorder, keep_agent_recorder
 from agent_runtimes.routes import agents
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.routes.agui import register_agui_agent, unregister_agui_agent
@@ -827,19 +827,19 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
     """A message changed is written again under its id, its author said (a
     ``reactor.ui`` meta op), one removed said removed (a remove op); the
     code's end and logout run (P-14, P-15, RU-3)."""
-    from agent_runtimes.loop.apps import AppHost, Application, Session
-    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.apps import AppHost, Application, Session
+    from agent_runtimes.apps.callers import Caller
 
     application = Application(id="notes-assistant", agent="example-simple")
     said: List[str] = []
 
     @application.end
     def closed(session: Session) -> None:
-        said.append(f"end {session.id}")
+        said.append(f"end {session.uid}")
 
     @application.logout
     def out(session: Session) -> None:
-        said.append(f"logout {session.id}")
+        said.append(f"logout {session.uid}")
 
     app = application.spec
 
@@ -858,7 +858,7 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
         return live
 
     live = live_session("session-0014")
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     first = await live.session.send("Searching…")
     await live.session.send("Found 3.", author="Searcher")
@@ -924,7 +924,7 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
     assert sessions.session_of("session-0014") is None
 
     other = live_session("session-0015")
-    other.session = await other.host.open(id=other.uid)
+    other.session = await other.host.open(uid=other.uid)
     await other.logout()
     assert said[1:] == ["logout session-0015", "end session-0015"]
     assert (other.state, sessions.session_of("session-0015")) == ("ended", None)
@@ -933,8 +933,8 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
 async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     """An answer's components arrive as a display under the message, and come
     back with a resume (P-04, RU-2)."""
-    from agent_runtimes.loop.apps import AppHost, Application
-    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.apps import AppHost, Application
+    from agent_runtimes.apps.callers import Caller
 
     application = Application(id="notes-assistant", agent="example-simple")
     app = application.spec
@@ -957,7 +957,7 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
         recorder=AppRecorder(app=recorded, send=keep),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     session = live.session
     sent = await session.send(
@@ -1032,8 +1032,8 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
 async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
     """STEP_STARTED and STEP_FINISHED carry a name; the step's display the
     step (P-16, RU-3)."""
-    from agent_runtimes.loop.apps import AppHost, Application
-    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.apps import AppHost, Application
+    from agent_runtimes.apps.callers import Caller
 
     application = Application(id="notes-assistant", agent="example-simple")
     app = application.spec
@@ -1047,7 +1047,7 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
         recorder=AppRecorder(app=app, send=lambda body: _nothing()),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     async with live.session.step("Researching", input="q") as outer:
         async with live.session.step(
@@ -1563,7 +1563,7 @@ def test_its_code_is_told_the_settings_the_page_changed_and_the_profile(
 ) -> None:
     """P-20: settings changed in the page go with the next run; ``@app.settings``
     runs on what changed, before the message, and ``session.profile`` says the profile."""
-    from agent_runtimes.loop.apps import Application
+    from agent_runtimes.apps import Application
 
     app = Application("notes-desk", agent="cog-crawler:0.0.1", name="Notes Desk")
     app.setting(

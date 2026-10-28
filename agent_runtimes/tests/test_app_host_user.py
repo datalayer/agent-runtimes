@@ -21,8 +21,8 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import host_user, sessions
-from agent_runtimes.loop.apps.host_user import (
+from agent_runtimes.apps import host_user, sessions
+from agent_runtimes.apps.host_user import (
     HostUser,
     UserNotSigned,
     secret_variable,
@@ -30,7 +30,7 @@ from agent_runtimes.loop.apps.host_user import (
     use_user_secret,
     verify_host_user,
 )
-from agent_runtimes.loop.apps.saving import authorship, byline
+from agent_runtimes.apps.saving import authorship, byline
 from agent_runtimes.tests import test_app_embed_sessions as embeds
 from agent_runtimes.tests import test_app_sessions as base
 from agent_runtimes.tests.test_app_sessions import ASSISTANT, Runtime, as_, events_of
@@ -185,7 +185,7 @@ def test_host_context_answers_the_signed_user_whoever_the_page_says() -> None:
 
 
 def test_what_it_saves_says_the_signed_user_it_wrote_for() -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     app = load_app(SIGNED_APP)
     about = authorship(
@@ -343,7 +343,7 @@ def test_over_ag_ui_the_token_goes_with_the_run_and_host_context_says_its_user(
 def test_a_session_woken_by_a_schedule_or_a_preview_has_nobody_to_sign(
     secret: str,
 ) -> None:
-    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.apps.loading import load_app
 
     app = load_app(SIGNED_APP)
     assert host_user.host_user_of(app, DEPLOYED, "", woken=True) is None

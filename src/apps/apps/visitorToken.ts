@@ -171,7 +171,7 @@ const SLUG = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 /**
  * The agent of the visitors' runtime a visitor's token reaches, as the
- * runtime names it (`agent_of` in `agent_runtimes.loop.apps.visitors`): an
+ * runtime names it (`agent_of` in `agent_runtimes.apps.visitors`): an
  * example's by its id, an application at its address by `at-<slug>`. The
  * chat speaks to that agent and to no other: the token reaches no other.
  *

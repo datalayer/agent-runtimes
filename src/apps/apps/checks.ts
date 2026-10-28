@@ -791,7 +791,7 @@ function attentionNotes(app: AppSpec): string[] {
 }
 
 /**
- * The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`): the
+ * The Guards the runtime executes (agent-runtimes `apps/guards.py`): the
  * three of a session's start, run once before its model is first asked and
  * each written to the record, and the two of every tool call and the answer.
  */

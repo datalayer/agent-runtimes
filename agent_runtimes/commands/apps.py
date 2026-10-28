@@ -22,10 +22,10 @@ Its verdict is said in the Studio's words. *Not ready* when the spec is
 wrong; *Needs attention* when a safety check has something to say; otherwise
 the instant checks pass, which is not yet *Ready*: that takes its tests.
 
-With ``--safety`` it also asks the safety set every application runs (V-09, `agent_runtimes.loop.apps.safety`) — listed alone, asked on this
+With ``--safety`` it also asks the safety set every application runs (V-09, `agent_runtimes.apps.safety`) — listed alone, asked on this
 machine (``--local``) or on Datalayer through the Evals engine (``--cloud``).
 With ``--tests`` it also runs its test conversations (V-08,
-`agent_runtimes.loop.apps.validation`) — listed alone, or run on this machine
+`agent_runtimes.apps.validation`) — listed alone, or run on this machine
 (``--local``): each case asked of the application in this process with its
 checks on — nothing sensitive leaves, the output has its shape, it answers
 from its sources, the catalogue Guards it names — then decided by the
@@ -53,8 +53,8 @@ import typer
 from rich.console import Console
 
 if TYPE_CHECKING:
-    from agent_runtimes.loop.apps.frames import FramesUnread, OrganizationFrames
-    from agent_runtimes.loop.apps.plugins_off import PluginsOff
+    from agent_runtimes.apps.frames import FramesUnread, OrganizationFrames
+    from agent_runtimes.apps.plugins_off import PluginsOff
 
 app = typer.Typer(
     name="apps",
@@ -164,7 +164,7 @@ def safety_notes(module: Any, application: Any) -> List[str]:
     if not application.record.include:
         notes.append("It keeps no record of what it did.")
     # A Guard the runtime does not run checks nothing (R-06).
-    from agent_runtimes.loop.apps.guards import EXECUTORS
+    from agent_runtimes.apps.guards import EXECUTORS
     from agent_runtimes.specs.guards import get_guard
 
     for ref in application.checks.guards:
@@ -222,7 +222,7 @@ def read_document(path: Path) -> Dict[str, Any]:
     """
     import yaml
 
-    from agent_runtimes.loop.apps.build import build, is_python
+    from agent_runtimes.apps.build import build, is_python
 
     if is_python(path):
         return build(path).document
@@ -253,8 +253,8 @@ def validate_file(
     """
     import yaml
 
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
-    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.plugins_off import plugins_off_setup_notes
 
     off = plugins_off.plugins if plugins_off else []
 
@@ -275,7 +275,7 @@ def validate_file(
         application = module.parse_app(data)
     except module.AppError as error:
         return Report(str(path), NOT_READY, problems=[str(error)])
-    from agent_runtimes.loop.apps.frames import FramesUnread
+    from agent_runtimes.apps.frames import FramesUnread
 
     if isinstance(frames, FramesUnread):
         problems = module.app_problems(application)
@@ -294,7 +294,7 @@ def validate_file(
             str(path), NOT_READY, problems=problems, setup=setup, plugins_off_says=says
         )
     attention = safety_notes(module, application)
-    from agent_runtimes.loop.apps.build import is_python
+    from agent_runtimes.apps.build import is_python
 
     if not is_python(path):
         attention += code_notes(application)
@@ -316,7 +316,7 @@ def code_agent_notes(path: Path) -> List[str]:
     LlamaIndex workflow — has none of them decided by its rules: said, so that
     the verdict is not *passes* for what its rules never see.
     """
-    from agent_runtimes.loop.apps.build import build
+    from agent_runtimes.apps.build import build
 
     agent = build(path).application.code_agent
     note = agent.note() if agent is not None else None
@@ -529,9 +529,9 @@ def _page_test_of(path: Path, report: Report, *, local: bool) -> bool:
     """
     import asyncio
 
-    from agent_runtimes.loop.apps.application import AppHost
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
-    from agent_runtimes.loop.apps.session import MemoryChannel
+    from agent_runtimes.apps.application import AppHost
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.session import MemoryChannel
 
     try:
         application = _application_of(path)
@@ -599,8 +599,8 @@ def _judge_here(model: Optional[str]) -> Tuple[Any, str]:
     """The judge of the worded tests on this machine: the model named, or the
     one configured (`default_judge`); None when there is none.
     """
+    from agent_runtimes.apps import safety as _safety
     from agent_runtimes.evals.remote.evaluators import default_judge
-    from agent_runtimes.loop.apps import safety as _safety
 
     if model:
         return _safety.model_judge(model), model
@@ -623,8 +623,8 @@ def _case_tests_of(
     """
     import asyncio
 
-    from agent_runtimes.loop.apps import own, validation
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps import own, validation
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     try:
         application = _application_of(path)
@@ -710,9 +710,9 @@ def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
     """
     import httpx
 
-    from agent_runtimes.loop.apps import validation
-    from agent_runtimes.loop.apps.deployments import DeployRefused
-    from agent_runtimes.loop.apps.store import _canonical
+    from agent_runtimes.apps import validation
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import _canonical
 
     store = _store()
     try:
@@ -765,7 +765,7 @@ def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
 
 
 def _unsafe(report: Report) -> bool:
-    from agent_runtimes.loop.apps import safety as _safety
+    from agent_runtimes.apps import safety as _safety
 
     return any(
         line.get("state") in (_safety.FAILED, _safety.NOT_ANSWERED)
@@ -819,8 +819,8 @@ def _safety_of(
 
     Returns whether it was asked but not judged (exit 3).
     """
-    from agent_runtimes.loop.apps import safety as _safety
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps import safety as _safety
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     try:
         application = _application_of(path)
@@ -875,9 +875,9 @@ def _ask_safety_here(
     """Each case asked of the application in this process, and judged."""
     import asyncio
 
+    from agent_runtimes.apps import safety as _safety
+    from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.evals.remote.evaluators import default_judge
-    from agent_runtimes.loop.apps import safety as _safety
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
 
     judge = _safety.model_judge(judge_model) if judge_model else default_judge()
     if judge is None:
@@ -923,12 +923,12 @@ def _answers_on_local_runtime(document: Dict[str, Any], cases: List[Any]) -> Lis
     import asyncio
     import logging
 
+    from agent_runtimes.apps.safety import Answered
     from agent_runtimes.chat.cli import (
         _run_single_query_ag_ui,
         _start_agent_runtime_server,
         _wait_for_server,
     )
-    from agent_runtimes.loop.apps.safety import Answered
     from agent_runtimes.loop.launch import CLOUD_AGENT_NAME, speak_ag_ui
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -967,9 +967,9 @@ def _safety_in_cloud(
     """The safety set run by the Evals engine on the saved application (its `app` subject)."""
     import httpx
 
-    from agent_runtimes.loop.apps import safety as _safety
-    from agent_runtimes.loop.apps.deployments import DeployRefused
-    from agent_runtimes.loop.apps.store import _canonical
+    from agent_runtimes.apps import safety as _safety
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import _canonical
     from agent_runtimes.loop.launch import NotSignedIn, interactive, make_client
 
     try:
@@ -1062,7 +1062,7 @@ def apps_init(
     passes the checks `validate` makes of a spec; a folder that is there is
     never overwritten.
     """
-    from agent_runtimes.loop.apps.scaffold import (
+    from agent_runtimes.apps.scaffold import (
         PYTHON_FILE,
         InitRefused,
         examples,
@@ -1119,7 +1119,7 @@ def apps_eject(
     """
     import yaml
 
-    from agent_runtimes.loop.apps.scaffold import EJECT_SAID, InitRefused, eject
+    from agent_runtimes.apps.scaffold import EJECT_SAID, InitRefused, eject
     from agent_runtimes.loop.launch import interactive
 
     _require_agentspecs()
@@ -1171,8 +1171,8 @@ def apps_build(
     with the reasons, when the file defines no application or more than one,
     or its spec does not validate.
     """
-    from agent_runtimes.loop.apps.build import build, is_python
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.build import build, is_python
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     if not is_python(path):
         console.print(f"[red]✗[/red] {path} is not an app.py: a spec is built already.")
@@ -1228,9 +1228,9 @@ def apps_package(
     Installed beside the server that runs the application (`loop apps run
     --web`, `app.mount`), its page draws them from that server.
     """
-    from agent_runtimes.loop.apps.build import is_python
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
-    from agent_runtimes.loop.apps.packaging import NotPackageable, package
+    from agent_runtimes.apps.build import is_python
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.packaging import NotPackageable, package
 
     if not is_python(path):
         console.print(
@@ -1266,7 +1266,7 @@ def apps_package(
 
 def _watcher(path: Path, base_url: str) -> Any:
     """What builds the application again when its file changed, and reconfigures the runtime."""
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     seen = [path.stat().st_mtime]
 
@@ -1293,9 +1293,9 @@ def _application_of(path: Path) -> Any:
     AppNotRunnable
         When it would not run, with the reasons.
     """
-    from agent_runtimes.loop.apps.application import Application
-    from agent_runtimes.loop.apps.build import build, is_python
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.application import Application
+    from agent_runtimes.apps.build import build, is_python
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     if is_python(path):
         return build(path).application
@@ -1492,8 +1492,8 @@ def apps_run(
     """
     import asyncio
 
-    from agent_runtimes.loop.apps.build import is_python
-    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.build import is_python
+    from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.loop.launch import (
         CLOUD,
         CLOUD_AGENT_NAME,
@@ -1648,7 +1648,7 @@ def apps_run(
             return
         if not speak_ag_ui(base_url):
             raise RuntimeError("The application's agent did not come up.")
-        from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
+        from agent_runtimes.apps.plugins_off import plugins_off_setup_notes
 
         plugins_off = organization_plugins_off(organization)
         console.print(
@@ -1672,7 +1672,7 @@ def apps_run(
             and has_code
             and (built.handler("message") is not None or built.code_agent is not None)
         ):
-            from agent_runtimes.loop.apps.terminal import ask_once
+            from agent_runtimes.apps.terminal import ask_once
 
             asyncio.run(ask_once(built, ask, console))
         elif ask:
@@ -1680,7 +1680,7 @@ def apps_run(
 
             console.print(asyncio.run(_run_single_query_ag_ui(agent_url, ask)))
         elif has_code or watch:
-            from agent_runtimes.loop.apps.terminal import run_app_tux
+            from agent_runtimes.apps.terminal import run_app_tux
 
             asyncio.run(
                 run_app_tux(
@@ -1731,8 +1731,8 @@ def _serve_web(
 
     import uvicorn
 
-    from agent_runtimes.loop.apps.mounting import EMBED_ORIGIN
-    from agent_runtimes.loop.apps.serving import APP_PATH, HotReload, local_server
+    from agent_runtimes.apps.mounting import EMBED_ORIGIN
+    from agent_runtimes.apps.serving import APP_PATH, HotReload, local_server
 
     if refused_with:
         console.print(
@@ -1893,7 +1893,7 @@ def apps_deploy(
 
     import httpx
 
-    from agent_runtimes.loop.apps.deployments import (
+    from agent_runtimes.apps.deployments import (
         Deployments,
         DeployRefused,
         deploy,
@@ -1994,7 +1994,7 @@ def organization_frames(
         Its contexts — none with no organization — or the sentence saying why
         they were not read.
     """
-    from agent_runtimes.loop.apps.frames import FramesUnread, read_organization_frames
+    from agent_runtimes.apps.frames import FramesUnread, read_organization_frames
     from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     try:
@@ -2024,7 +2024,7 @@ def organization_plugins_off(organization: Optional[str]) -> PluginsOff:
     PluginsOff
         The list — empty with no organization, signed out or offline — and why.
     """
-    from agent_runtimes.loop.apps.plugins_off import read_plugins_off
+    from agent_runtimes.apps.plugins_off import read_plugins_off
     from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     if not organization:
@@ -2040,7 +2040,7 @@ def _store() -> Any:
     """The caller's applications on the Spacer, or a said exit."""
     import logging
 
-    from agent_runtimes.loop.apps.store import AppStore
+    from agent_runtimes.apps.store import AppStore
     from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -2073,8 +2073,8 @@ def apps_pull(
     """
     import httpx
 
-    from agent_runtimes.loop.apps.deployments import DeployRefused
-    from agent_runtimes.loop.apps.store import pull
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import pull
 
     out = path or Path("app.yaml")
     try:
@@ -2103,7 +2103,7 @@ def apps_pull(
 
 def _spec_text(path: Path) -> str:
     """The Appspec's text: the file's own, or the spec an app.py builds, its code marked."""
-    from agent_runtimes.loop.apps.build import build, is_python
+    from agent_runtimes.apps.build import build, is_python
 
     return build(path).text if is_python(path) else path.read_text()
 
@@ -2202,15 +2202,15 @@ def apps_push(
     """
     import httpx
 
-    from agent_runtimes.loop.apps.deployments import DeployRefused
-    from agent_runtimes.loop.apps.store import push
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import push
 
     report = validate_file(path)
     if report.verdict == NOT_READY:
         for problem in report.problems:
             console.print(f"[red]✗[/red] {problem}")
         raise typer.Exit(1)
-    from agent_runtimes.loop.apps.build import is_python
+    from agent_runtimes.apps.build import is_python
 
     # An app.py is kept beside the spec it builds, versioned with it (P-10).
     code = {"file": path.name, "text": path.read_text()} if is_python(path) else None

@@ -23,9 +23,9 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
-from agent_runtimes.loop.apps import AppHost, Application, sessions
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.apps import AppHost, Application, sessions
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.record import AppRecorder
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     remote,
@@ -69,7 +69,7 @@ def held(uid: str) -> Tuple[sessions.LiveSession, List[Any]]:
     live.host = AppHost(application, live, recorder=live.recorder)
 
     async def opened() -> None:
-        live.session = await live.host.open(id=live.uid)
+        live.session = await live.host.open(uid=live.uid)
         live._open_stream()
         await live.session.send(
             "Done.",

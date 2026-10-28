@@ -20,20 +20,20 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability
-from agent_runtimes.loop.apps.guards import AppChecks, AppChecksCapability
-from agent_runtimes.loop.apps.loading import load_app
-from agent_runtimes.loop.apps.notifications import (
+from agent_runtimes.apps.enforcement import AppRulesCapability
+from agent_runtimes.apps.guards import AppChecks, AppChecksCapability
+from agent_runtimes.apps.loading import load_app
+from agent_runtimes.apps.notifications import (
     APPROVAL_REQUESTED,
     AppNotifier,
     send_to_ai_agents,
 )
-from agent_runtimes.loop.apps.principal import (
+from agent_runtimes.apps.principal import (
     forget_principal_token,
     give_principal_token,
 )
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.rules import ASK_FIRST, Decision
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.rules import ASK_FIRST, Decision
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
     _DummyRequest,
     creation_spy,

@@ -18,8 +18,8 @@ import yaml
 from agentspecs.apps import APP_CATALOGUE, parse_app
 from pydantic import ValidationError
 
-from agent_runtimes.loop.apps import Application
-from agent_runtimes.loop.apps.build import build
+from agent_runtimes.apps import Application
+from agent_runtimes.apps.build import build
 
 
 def _order_desk() -> Application:
@@ -98,7 +98,7 @@ def test_the_company_role_is_exchange_desks_block() -> None:
 
 
 SOURCE = '''
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 app = Application("both-roles", "chat", agent="example-blank:0.0.1")
 app.company_connection(
@@ -197,7 +197,7 @@ def test_what_the_builders_refuse() -> None:
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
     """`protocols` and `ui` from Python (PS-02, R8): the Canvas and the YAML read the same lists."""
-    from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.apps.application import Application
 
     app = Application(
         "speaker",
@@ -219,7 +219,7 @@ def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
 
 def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
     """The old shape (R8): a renderer's id under `ui` is refused, with no reading of it."""
-    from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.apps.application import Application
 
     with pytest.raises(Exception, match="UI renderer"):
         Application(
@@ -236,7 +236,7 @@ def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
     """U-06: each company, the company role and each operation built in Python are
     marked as the code's, with the line that decides them — the Studio's cards
     show them read-only, each a link to that line."""
-    from agent_runtimes.loop.apps.build import read_code_marks
+    from agent_runtimes.apps.build import read_code_marks
 
     (tmp_path / "app.py").write_text(SOURCE)
     built = build(tmp_path / "app.py")

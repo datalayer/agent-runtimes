@@ -1,0 +1,160 @@
+---
+sidebar_position: 2.5
+title: Python API, by name
+---
+
+# The Python API, by name
+
+Every public name of `agent_runtimes.apps`, the package an application
+written in Python imports from — what [Applications in Python](./python-applications)
+explains, listed here with its signature so a name read in a script can be
+found. One package, no other to install: `from agent_runtimes.apps import
+Application, AppHost, Session, MemoryChannel, AppRecorder`. The generated
+API pages (`make pydoc`, under *Python API* in the sidebar once built) say
+the same of every module; this page is kept by hand and holds the names a
+reviewer looked for and did not find.
+
+## `Application`
+
+`Application(id, kind="chat", *, agent="", team="", name=None, description="", instructions="", model="", goal="", version=None, protocols=(), ui=(), avatar=None)`
+— the application: its Appspec, and the code that reacts to its sessions.
+`Application.from_spec(spec)` attaches code to an Appspec read from its YAML
+or as an `AppSpec`; nothing is validated until the spec is read.
+
+| Property | Is |
+| --- | --- |
+| `app.id` | Its id. |
+| `app.spec` | The Appspec it amounts to, validated here: `AppNotRunnable` with the reasons when it would not run. |
+| `app.document` | The spec as its YAML would say it; a copy. |
+| `app.declared_version` | The version the code says, `None` when it says none; `app.at_version(v)` takes a deployment's. |
+| `app.tools`, `app.checks`, `app.tests`, `app.actions`, `app.schedules`, `app.commands` | What its code gives, by name; copies. `app.schedule_at(position)` names the schedule at a position among the triggers. |
+| `app.ui` | Every component of the catalog as a typed call. |
+
+**Plain calls**, each adding to the Appspec:
+
+| Call | Declares |
+| --- | --- |
+| `app.starter(label, message, *, category="", profile=None)` | A first message offered. |
+| `app.profile(id, label, *, description="", instructions="", model=None)` | One of several assistants. |
+| `app.setting(name, field, *, required=False, widget=None)` | A setting of the session, a field of its form. |
+| `app.translation(language, words)` | What a person reads in another language. |
+| `app.rule(says, *, applies_to, behaviour)` | When it acts alone and when it asks: `says` in the words a person reads; `applies_to` classes (`send`, `write`…) or tools; `behaviour` one of `do_it`, `if_asked`, `ask_first`, `leave_to_me`. |
+| `app.record(include, *, keep_for=None)` | What the record keeps of each session, in the Appspec's words, and for how long. Nothing is kept unless said. |
+| `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches. |
+| `app.company_connection(id, company, *, …)`, `app.as_company(*, …)`, `app.company_operation(action, *, summary, …)`, `app.company_standing_permission(…)` | The Personal Agent Protocol, both roles. |
+| `app.business_connection(id, brand, *, audience, …)`, `app.as_business(*, registered_agents, …)` | PACT 1.0, both roles. |
+| `app.command(name, description, *, prompt="", run="")` | A slash command; a decorator when its code answers it. |
+| `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer. |
+| `app.component(id, component, **properties)`, `app.custom_component(name, *, description, source, …)` | A component of the catalog on its surface; one its developer wrote. |
+| `app.input(name, field, *, required=False)`, `app.output(name, component="Text", *, title="", **props)` | The fields of its page. |
+| `app.agent(target=None, *, name=None, tools=None, …)` | An agent of its own code, in place of its agent's. |
+| `app.uses(extension, *, tools=None)`, `app.contribute(point, value, *, id=None, order=0)`, `app.extend(point, target, value, …)`, `app.contribution_point(point_id)`, `app.extension(frontend=None)` | Reactor: what it composes, contributes, declares; the application as one extension. |
+| `app.mount(api, path="/assistant", *, app_uid="", token=None, embed_origin=…)` | Serve it inside a FastAPI of your own. |
+
+**Decorators**, each the handler of a moment — `(session, …)`:
+
+| Decorator | Handler | When |
+| --- | --- | --- |
+| `@app.start` | `(session)` | A session starts. |
+| `@app.message` | `(session, text)` | The person wrote. |
+| `@app.file` | `(session, files, text)` | Files sent without being asked. |
+| `@app.action(name, *, payload=None, description="")` | `(session[, payload])` | A button pressed: `host.press(session, name, payload)`. |
+| `@app.page(live=True)` | `([session], **inputs)` | The page's inputs changed. |
+| `@app.settings` | `(session, settings)` | Settings changed. |
+| `@app.window` | `(session, data)` | The page the application sits in posted. |
+| `@app.audio`, `@app.interrupted` | `(session, speech)`, `(session)` | The person spoke; spoke over the agent. |
+| `@app.stop`, `@app.resume`, `@app.end`, `@app.logout` | `(session)` | Stop pressed; reopened with its state; closed for good; signed out. |
+| `@app.feedback` | `(session, feedback)` | A thumb up or down. |
+| `@app.command(name, description)` | `(session, words)` | `/<name> words`. |
+| `@app.schedule(cron, *, name="", description="", prompt="")` | `(session)` | On a schedule, in a session of its own, known by `name` (the handler's when unsaid); a `worker`'s alone — refused at the call on a chat. |
+| `@app.tool(*, does=(), description="")` | `(**arguments)` | A tool the agent is given. |
+| `@app.check(on, *, description="")` | `(…)` | A check at a stage. |
+| `@app.test(expect, *, ask)` | `(conversation)` | A test whose verdict is code. |
+| `@app.route(path, *, methods=("GET",))`, `@app.reactor_command(command_id, name, **presentation)` | | A route of its plugin; a Reactor command. |
+
+## `AppHost`
+
+`AppHost(app, channel, *, agent=local_agent, recorder=None, agent_maker=None, platform=None)`
+runs an application in this process. `host.recorder` is its `AppRecorder`:
+one keeping the record in memory when none is given; `host.app`, `host.spec`,
+`host.channel`, `host.platform`, `host.plugin` are what it runs and on what.
+
+| Method | Does |
+| --- | --- |
+| `await host.open(*, opened_by=None, settings=None, uid=None, modes=None, profile=None)` | Opens a session and runs `start`; returns the `Session`. |
+| `await host.message(session, text)` | The person wrote: a command's code, `message`, or the agent. |
+| `await host.press(session, name, payload=None)` | A press of a button: the action of that name. |
+| `await host.files(session, files, text="")` | Files sent without being asked. |
+| `await host.page(session, inputs=None)` | The page's inputs changed; returns its outputs. |
+| `await host.window(session, data)` | The page posted. |
+| `await host.settings(session, values)` | Settings changed, checked against the form. |
+| `await host.audio(session, chunks, *, content_type="audio/wav", language="", token=None)`, `await host.heard(session, speech)`, `await host.interrupt(session)` | The person spoke; was heard already; spoke over the agent. |
+| `await host.stop(session)`, `await host.end(session)`, `await host.logout(session)` | Stop; closed for good; signed out. |
+| `await host.feedback(session, feedback)` | A thumb up or down; returns whether it was kept. |
+| `await host.resume(uid, state, *, opened_by=None, settings=None, elements=())` | Reopens a session with its state and runs `resume`. |
+| `await host.tick(name, *, session=None)` | A tick of the schedule `name`, in a new session or in `session`; returns the session it ran in. |
+| `host.dispose()` | Takes the application's extension off its platform. |
+
+`load_application(path)` and `load_application_source(source, file)` return
+the one `Application` an `app.py` defines.
+
+## `Session`
+
+Made by the host and handed to the code; never made by the code.
+
+| | |
+| --- | --- |
+| `session.uid` | The session's uid — the one word for it, in Python, on the wire and in the record. |
+| `session.opened_by` | Who opened it, when the host knows. |
+| `session.state` | What the code keeps across the turns; a dict of this session's own. |
+| `session.settings`, `session.modes`, `session.profile` | The person's settings, the mode options chosen, the profile; copies. |
+| `session.app`, `session.channel` | The Appspec; what the person sees through. |
+| `session.agent` | The application's agent in this session: `await session.agent.run(prompt, **context)`, `session.agent.stream(prompt)`. |
+| `await session.send(text, *, author=None, show=(), data=None)` | A message; returns the `Message`. |
+| `await session.stream(tokens, *, author=None, show=(), data=None)` | A message as it comes. |
+| `await session.update(message, text, *, show=None, data=None)`, `await session.remove(message)` | Change a message in place; take it away. |
+| `async with session.step(name, *, kind="run", input=None) as step` | A step shown as it runs: `step.output`, `await step.stream(tokens)`. |
+| `await session.ask(question, *, timeout=None)` | Stop and ask: a text, or a `TextQuestion`, `ChoiceQuestion`, `FormQuestion`, `FileQuestion`; `AskTimeout`, `InvalidAnswer`. |
+| `await session.show(show, *, where="inline", title=None, data=None)`, `await session.close(element)`, `session.elements` | Elements in the conversation, a panel or a page. |
+| `await session.record(payload, *, summary="", kind="output")` | An entry of the record, sent at once; returns whether its kind is kept. |
+| `session.title`, `session.tags`, `session.metadata` | What its code names the conversation. |
+| `await session.say(text)`, `await session.send_window_message(data)` | A line aloud; a message to the page it sits in. |
+| `session.ui`, `session.component(id, component, **properties)` | Components for an answer to show. |
+| `session.contributions(point)`, `await session.execute_command(command_id, argument=None)` | Its host's platform. |
+
+## Channels, questions and events
+
+`Channel` is what a session talks to its person through: `deliver(event)`
+and `ask(session_id, question)`. `MemoryChannel()` is one in this process:
+`channel.events` (everything delivered), `channel.messages` (the
+conversation as it is now), `channel.steps` (the steps as they are now),
+`channel.shown` (what is open), `channel.questions` (everything asked), and
+`channel.reply(answer)` answers the question being asked or the next one. A
+rule that says *ask first* asks a `ChoiceQuestion` naming the tool and its
+arguments, then the rule, with *Allow* and *Refuse*.
+
+Events: `Message`, `Delta`, `Removed`, `Step`, `StepDelta`, `Shown`,
+`Closed`, `PageShown`, `WindowMessage`, `Said`, `Interrupted`. Questions:
+`Question`, `TextQuestion`, `ChoiceQuestion`, `FormQuestion`,
+`FileQuestion`; an answer may raise `AskTimeout` or `InvalidAnswer`; a file
+answered is an `UploadedFile`; `Feedback` is a person's word on an answer.
+`AppRuleBlockedError` is a call a rule left to the person, refused.
+
+## `AppRecorder`
+
+`AppRecorder(app, app_uid="", deployment_uid="", version=0, purpose="", launch_uid="", woken_by={}, visitors=False, send=send_to_store, keep_sound=…)`
+keeps a session's entries until they are sent — through `send`, the active
+session store on a runtime. `AppRecorder.in_memory(app, **facts)` is the one a
+host makes when given none: `recorder.sent` holds each body as it would
+have been sent, `recorder.entries` flattens them, each entry with its body's
+`session_uid`, `opened_by` and `woken_by`. `INCLUDED_BY`
+(`agent_runtimes.apps.record`) says under which `record.include` word each
+kind of entry is kept.
+
+## Also exported
+
+`Conversation` (what `@app.test` reads), `AgentFactory`, `AppAgent`,
+`Answer`, `local_agent`, `app_capabilities`, `AppRulesCapability`,
+`Enforced`, `Decision` and the rules' vocabulary (`BEHAVIOURS`,
+`decision_for`, `matches`…), `HeardSpeech`, `hear_speech`, `cache` and
+`run_sync` (utilities for a handler's blocking work).

@@ -14,7 +14,7 @@ import pytest
 from pydantic_ai import Agent
 from rich.console import Console
 
-from agent_runtimes.loop.apps import (
+from agent_runtimes.apps import (
     AppHost,
     Application,
     MemoryChannel,
@@ -22,12 +22,12 @@ from agent_runtimes.loop.apps import (
     StepDelta,
     sessions,
 )
-from agent_runtimes.loop.apps.agent import local_agent
-from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
-from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.scaffold import BLANK_PYTHON_AGENT
-from agent_runtimes.loop.apps.terminal import TerminalChannel
+from agent_runtimes.apps.agent import local_agent
+from agent_runtimes.apps.callers import Caller
+from agent_runtimes.apps.enforcement import AppRuleBlockedError
+from agent_runtimes.apps.record import AppRecorder
+from agent_runtimes.apps.scaffold import BLANK_PYTHON_AGENT
+from agent_runtimes.apps.terminal import TerminalChannel
 from agent_runtimes.tests.test_app_own_code import desk, hosted
 from agent_runtimes.tests.test_apps_guards import scripted
 
@@ -118,7 +118,7 @@ async def test_the_session_api_says_the_step_again_with_what_it_wrote_so_far() -
         recorder=AppRecorder(app=app, send=lambda body: _nothing()),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     async with live.session.step("gen_query", kind="tool", input="q") as step:
         await step.stream(["SELECT", " 1"])
@@ -269,7 +269,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
 ):
     """The agent a runtime made (``agent_maker``), called by the code: each
     call is said on the session API's stream as ``loop.step`` (P-33)."""
-    from agent_runtimes.loop.apps.agent import AppAgent
+    from agent_runtimes.apps.agent import AppAgent
 
     application = Application(id="order-desk", kind="chat", agent=BLANK_PYTHON_AGENT)
 
@@ -286,7 +286,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
         def lookup_order(number: str) -> dict:
             return {"number": number, "status": "shipped"}
 
-        return AppAgent(app=session.app, agent=agent, session_id=session.id)
+        return AppAgent(app=session.app, agent=agent, session_id=session.uid)
 
     app = application.spec
     live = sessions.LiveSession(
@@ -299,7 +299,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
         recorder=AppRecorder(app=app, send=lambda body: _nothing()),
     )
     live.host = AppHost(application, live, recorder=live.recorder, agent_maker=made)
-    live.session = await live.host.open(id=live.uid)
+    live.session = await live.host.open(uid=live.uid)
     queue = live._open_stream()
     await live.host.message(live.session, "Where is order 42?")
     events: List[Dict[str, Any]] = []

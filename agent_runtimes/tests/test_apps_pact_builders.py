@@ -14,7 +14,7 @@ import pytest
 from agentspecs.apps import APP_CATALOGUE, parse_app
 from pydantic import ValidationError
 
-from agent_runtimes.loop.apps import Application
+from agent_runtimes.apps import Application
 
 
 def _travel_desk() -> Application:

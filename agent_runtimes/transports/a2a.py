@@ -862,7 +862,7 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         turn: "TurnSpend",
     ) -> None:
-        from ..loop.apps.visitors import (
+        from ..apps.visitors import (
             enter_visitor_run,
             leave_visitor_run,
             visitor_of_a2a,
@@ -881,7 +881,7 @@ class A2AWorker(_FastA2AWorker):
         # A turn asked by a personal agent through the company service: its
         # declared operations are proposed, or performed once confirmed
         # (B-04).
-        from ..loop.apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
+        from ..apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
 
         pap_turn = enter_pap_turn(pap_turn_of(params["message"].get("metadata")))
         # What it may give besides words: what its card declares and the
@@ -976,14 +976,14 @@ class A2AWorker(_FastA2AWorker):
             )
         if credential:
             set_request_user_jwt(credential)
-        from ..loop.apps.pap_company import current_pap_turn, perform_prompt, redeem
+        from ..apps.pap_company import current_pap_turn, perform_prompt, redeem
 
         company_turn = current_pap_turn()
         if company_turn is not None and company_turn.ticket:
             # What the person confirmed, as the company service recorded it:
             # the run makes that call, with those terms, and nothing else.
             prompt = perform_prompt(await redeem(company_turn, credential or ""))
-        from ..loop.apps.pap_company import asked_for_said
+        from ..apps.pap_company import asked_for_said
 
         # Asked of its company or its PACT business: which personal agent asks,
         # for whom and with what the person granted, as ai-agents marked it
@@ -1242,7 +1242,7 @@ class A2AWorker(_FastA2AWorker):
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
         # What it composed besides words, each an artifact of its media type.
-        from ..loop.apps.pap_company import pap_artifacts
+        from ..apps.pap_company import pap_artifacts
 
         composed = [
             *artifacts_of(outputs),

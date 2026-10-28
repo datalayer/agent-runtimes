@@ -19,12 +19,12 @@ its own.
 `datalayer.reactor.extensions`; its plugin contributes the harness read from
 `aider.yaml` — the catalogue's schema: `acp.command`, `requires`, `terms`,
 `capabilities` — with the ACP adapter every ACP harness is driven by. Once
-installed, `loop harnesses` lists *Aider* with its terms and capabilities,
+installed, `loop harnesses` lists _Aider_ with its terms and capabilities,
 and an agent spec may say `harness: aider`. The yaml launches the ACP SDK's
 fake agent of the tests, so the example needs no key.
 
-A yaml missing `terms` is refused at the seam, naming the plugin — *a
-harness whose terms are unknown is not served* — and a second package
+A yaml missing `terms` is refused at the seam, naming the plugin — _a
+harness whose terms are unknown is not served_ — and a second package
 contributing `aider` is refused by name. Nothing in agent-runtimes is edited.
 
 ## `omnigent-format`: a second session file format
@@ -44,7 +44,7 @@ python show_contributed.py
 ```
 
 ```text
-harnesses  claude-code, codex, custom, fast-agent, gemini-cli, goose, opencode, openhands, aider
+harnesses  claude-code, codex, custom, fast-agent, gemini-cli, goose, opencode, openhands, pi, aider
 formats    datalayer-session/1, omnigent-jsonl/1
 plugins    aider-harness 0.0.1 — Aider as a harness of agent-runtimes, from a package of its own.
 plugins      aider-harness: harness (aider)

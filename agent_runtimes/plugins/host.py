@@ -4,7 +4,7 @@
 """The runtime's plugin host for the session (MH-F01): the points read, the
 refusals kept, ``loop plugins`` answered.
 
-The platform is the runtime's own (``loop.apps.plugins.PLATFORM``, one per
+The platform is the runtime's own (``apps.plugins.PLATFORM``, one per
 process) with the ``agent-runtimes`` reactor extension registered on it, as
 the protocols register theirs (``protocols_platform``), and every other
 extension installed beside it discovered under
@@ -101,7 +101,7 @@ def session_platform(
     """The platform with the ``agent-runtimes`` extension on it, and what is
     installed beside it discovered once.
     """
-    from agent_runtimes.loop.apps.plugins import PLATFORM
+    from agent_runtimes.apps.plugins import PLATFORM
     from agent_runtimes.plugins.extension import extension
 
     platform = PLATFORM if platform is None else platform
