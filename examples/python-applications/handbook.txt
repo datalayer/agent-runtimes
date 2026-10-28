@@ -1,0 +1,11 @@
+Working hours. The desk is open from nine to five, Monday to Friday. Nobody is expected to answer outside those hours, and a message sent on Friday evening is read on Monday.
+
+Days off. Everybody has twenty-five days off a year, taken in whole or half days. Ask your lead a week ahead for one day, a month ahead for a week or more.
+
+Expenses. Keep the receipt and file it within the month. Anything over two hundred euros is agreed before it is spent; a train is always agreed, a taxi needs a reason.
+
+Laptops. A laptop is replaced every four years, or sooner when it fails. Report a lost one the same day: the disk is encrypted, and the account is locked from the admin console.
+
+Meetings. A meeting has an owner, an agenda sent a day ahead, and notes sent the same day. Thirty minutes unless the agenda says why it needs more.
+
+Code review. Every change is read by somebody else before it is merged. The reader answers within a working day, and says what they would change rather than what they would have written.
