@@ -158,7 +158,7 @@ class CodemodeIntegration:
             return MCPServerConfig(
                 name=server.id,
                 url=server.url,
-                command=server.command,
+                command=server.command or "",
                 args=server.args or [],
             )
         except Exception as e:

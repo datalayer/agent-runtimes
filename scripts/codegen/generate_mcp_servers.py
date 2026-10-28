@@ -105,6 +105,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
 
+        # A remote server names no command: it is reached at its url with its
+        # headers (`transport: streamable-http`, the Datalayer gateway's
+        # toolsets). A local one names the command that runs it.
+        command = f'"{spec["command"]}"' if spec.get("command") else "None"
+
         lines.extend(
             [
                 f"{const_name} = MCPServer(",
@@ -114,17 +119,26 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    description="{spec["description"]}",',
                 f"    icon={icon},",
                 f"    emoji={emoji},",
-                f'    command="{spec["command"]}",',
+                f"    command={command},",
                 f"    args={args_formatted},",
                 f'    transport="{spec.get("transport", "stdio")}",',
                 f"    enabled={spec.get('enabled', False)},",
                 "    tools=[],",
             ]
         )
-        # A server its command runs as a local HTTP process: where it is
-        # reached (W-02, `google-workspace`).
+        # Where an HTTP server is reached: a remote one is connected to there
+        # (`odoo-accounting`), a local one's command listens there (W-02,
+        # `google-workspace`).
         if spec.get("url"):
             lines.append(f'    url="{spec["url"]}",')
+        # The headers a remote server is sent with every request, their
+        # `${VAR}` expanded as it starts (the bearer among them).
+        headers = spec.get("headers") or {}
+        if headers:
+            lines.append("    headers={")
+            for key, value in headers.items():
+                lines.append(f'        "{key}": "{value}",')
+            lines.append("    },")
 
         # Add env field if present
         if env_formatted:
@@ -285,8 +299,20 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 f"  url: '{spec.get('url', '')}',",
-                f"  command: '{spec['command']}',",
+                *([f"  command: '{spec['command']}',"] if spec.get("command") else []),
                 f"  args: {args_formatted},",
+                *(
+                    [
+                        "  headers: {"
+                        + ", ".join(
+                            f"'{key}': '{value}'"
+                            for key, value in (spec.get("headers") or {}).items()
+                        )
+                        + "},"
+                    ]
+                    if spec.get("headers")
+                    else []
+                ),
                 f"  transport: '{spec.get('transport', 'stdio')}',",
                 f"  enabled: {str(spec.get('enabled', False)).lower()},",
                 "  isAvailable: false,",

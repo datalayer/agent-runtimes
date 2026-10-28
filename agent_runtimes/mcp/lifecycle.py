@@ -19,9 +19,16 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
-from agent_runtimes.guardrails.credentials import hold_env, hold_expansion, redact
+from agent_runtimes.guardrails.credentials import (
+    SENDS_CREDENTIAL,
+    hold,
+    hold_env,
+    hold_expansion,
+    redact,
+)
 from agent_runtimes.guardrails.declared_secrets import env_for_server
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
+from agent_runtimes.mcp.remote import remote_toolset
 from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
@@ -39,9 +46,9 @@ MCP_SERVER_MAX_ATTEMPTS = 3
 #: starts it again (`MCPLifecycleManager.retry_in_background`).
 RETRY_SECONDS = 60.0
 
-#: An argument that sends a bearer token: empty, a remote server answers 401
-#: and ``mcp-remote`` falls back to an interactive OAuth sign-in, in a browser
-#: a runtime does not have — it waits for it forever.
+#: An argument or a header that sends a bearer token: empty, a remote server
+#: answers 401 — and a shim such as ``mcp-remote`` falls back to an interactive
+#: OAuth sign-in, in a browser a runtime does not have, waiting for it forever.
 _BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
 
 
@@ -58,14 +65,19 @@ class _Failures(dict[str, str]):
 
 
 def empty_bearer_problem(server_id: str, raw_args: list[Any], args: list[Any]) -> str:
-    """Why a server is not started with an empty bearer token, or ''."""
+    """Why a server is not started with an empty bearer token, or ''.
+
+    ``raw_args`` and ``args`` are a command's arguments before and after
+    their ``${VAR}`` expansion, or a remote server's headers as ``name:
+    value`` lines (`_expanded_headers`).
+    """
     for raw, arg in zip(raw_args, args):
         if isinstance(arg, str) and _BEARER_ARG.match(arg):
             names = re.findall(r"\$\{([^}]+)\}", raw if isinstance(raw, str) else "")
             what = " or ".join(names) if names else "its token"
             return (
                 f"MCP server '{server_id}' is not started: {what} is not set, and "
-                "it would send an empty bearer token and wait for a sign-in in a browser."
+                "it would send an empty bearer token."
             )
     return ""
 
@@ -239,15 +251,20 @@ class MCPLifecycleManager:
         Returns:
             MCPServer config or None if not found
         """
-        # If user provides a command, use their config entirely. Its args and
-        # env keep their `${VAR}`: they are expanded as the server starts, so
-        # a secret never sits in the config the routes answer (R-19).
+        # If user provides a command, or a url to reach a remote server at, use
+        # their config entirely. Its args, env and headers keep their `${VAR}`:
+        # they are expanded as the server starts, so a secret never sits in
+        # the config the routes answer (R-19).
         if user_config:
             expanded = dict(user_config)
             if isinstance(expanded.get("command"), str):
                 expanded["command"] = self._expand_env_vars(expanded["command"])
-            if "command" in expanded:
-                logger.info(f"Using user-provided command for MCP server '{server_id}'")
+            if "command" in expanded or expanded.get("url"):
+                logger.info(
+                    f"Using user-provided "
+                    f"{'command' if 'command' in expanded else 'url'} "
+                    f"for MCP server '{server_id}'"
+                )
 
                 # Get any additional info from catalog (like name) if available
                 catalog_server = MCP_SERVER_CATALOG.get(server_id)
@@ -264,10 +281,15 @@ class MCPLifecycleManager:
                         "description",
                         catalog_server.description if catalog_server else "",
                     ),
-                    command=expanded["command"],
+                    command=expanded.get("command"),
                     args=expanded.get("args", []),
                     env=expanded.get("env", {}),
-                    transport=expanded.get("transport", "stdio"),
+                    url=expanded.get("url", ""),
+                    headers=expanded.get("headers"),
+                    transport=expanded.get(
+                        "transport",
+                        "stdio" if "command" in expanded else "streamable-http",
+                    ),
                     enabled=True,
                     tools=[],
                     is_config=from_config_file,  # Mark as config server if from mcp.json
@@ -386,10 +408,19 @@ class MCPLifecycleManager:
                     )
                     return instance
 
+            remote = (
+                config.transport == "streamable-http"
+                and bool(config.url)
+                and not config.command
+            )
             logger.info(
                 redact(
                     f"🔧 Creating MCP server '{server_id}' ({storage_name}) "
-                    f"with command: {config.command} {config.args}"
+                    + (
+                        f"at {config.url}"
+                        if remote
+                        else f"with command: {config.command} {config.args}"
+                    )
                 )
             )
 
@@ -459,29 +490,51 @@ class MCPLifecycleManager:
                     self._failed_servers[server_id] = problem
                     return None
 
-                if config.transport == "streamable-http" and config.url:
+                if remote:
+                    # Reached at its url, no process: its headers sent with
+                    # every request, the bearer among them expanded here and
+                    # held, never shown to the model (R-19).
+                    headers = self._expanded_headers(config, env)
+                    problem = empty_bearer_problem(
+                        server_id,
+                        [f"{n}: {v}" for n, v in (config.headers or {}).items()],
+                        [f"{n}: {v}" for n, v in headers.items()],
+                    )
+                    if problem:
+                        logger.error(f"✗ {problem}")
+                        self._failed_servers[server_id] = problem
+                        return None
+                    pydantic_server = remote_toolset(
+                        server_id, config.url, headers, MCP_SERVER_HANDSHAKE_TIMEOUT
+                    )
+                elif config.transport == "streamable-http" and config.url:
                     # Its command runs as a local HTTP process, reached at its
                     # url (W-02: Gmail, whose every request carries a
                     # token IAM minted for whom the run acts for).
                     return await self._start_http_process_server(
                         server_id, config, env, expanded_args
                     )
-
-                pydantic_server = DisplayMCPToolset(
-                    StdioTransport(
-                        command=config.command,
-                        args=expanded_args,
-                        env=env,
-                    ),
-                    id=server_id,
-                    init_timeout=MCP_SERVER_HANDSHAKE_TIMEOUT,
-                )
+                elif not config.command:
+                    raise ValueError(
+                        f"MCP server '{server_id}' names no command to run and "
+                        "no url to reach it at"
+                    )
+                else:
+                    pydantic_server = DisplayMCPToolset(
+                        StdioTransport(
+                            command=config.command,
+                            args=expanded_args,
+                            env=env,
+                        ),
+                        id=server_id,
+                        init_timeout=MCP_SERVER_HANDSHAKE_TIMEOUT,
+                    )
 
                 # Log the env vars that will be available in the subprocess.
                 # For npx-based servers (e.g., tavily, kaggle) this is the
                 # ONLY source of env vars — the stdio transport subprocess does not inherit
                 # from the parent process.
-                if extra_env:
+                if extra_env and not remote:
                     logger.info(
                         f"  MCP server '{server_id}' ({config.command}) subprocess env "
                         f"includes {len(extra_env)} injected var(s): "
@@ -539,6 +592,12 @@ class MCPLifecycleManager:
                             f"✓ MCP server '{server_id}' started (tools unavailable)"
                         )
 
+                    # The handshake is over: a refusal from now on is a
+                    # tool's to say, the way every tool error reaches the model.
+                    refusals = getattr(pydantic_server, "refusals", None)
+                    if refusals is not None:
+                        refusals.stand_down()
+
                     # Update config with discovered tools
                     config.tools = tools
                     config.is_available = True
@@ -579,7 +638,9 @@ class MCPLifecycleManager:
                         logger.debug(
                             f"Closing '{server_id}' after its timeout: {close_error}"
                         )
-                    self._failed_servers[server_id] = error_detail
+                    self._failed_servers[server_id] = self._refused_or(
+                        pydantic_server, error_detail
+                    )
                     return None
 
                 except (_ExceptionGroup, BaseExceptionGroup) as eg:
@@ -604,7 +665,9 @@ class MCPLifecycleManager:
                         continue
 
                     await exit_stack.__aexit__(None, None, None)
-                    self._failed_servers[server_id] = error_detail
+                    self._failed_servers[server_id] = self._refused_or(
+                        pydantic_server, error_detail
+                    )
                     return None
 
                 except Exception as e:
@@ -626,10 +689,39 @@ class MCPLifecycleManager:
                             f"✗ MCP server '{server_id}' startup failed: {error_detail}"
                         )
                     )
-                    self._failed_servers[server_id] = error_detail
+                    self._failed_servers[server_id] = self._refused_or(
+                        pydantic_server, error_detail
+                    )
                     return None
 
             return None
+
+    def _expanded_headers(
+        self, config: MCPServer, env: dict[str, str]
+    ) -> dict[str, str]:
+        """A remote server's headers with their ``${VAR}`` expanded, the
+        credentials among them held, never shown to the model (R-19).
+        """
+        headers = {
+            name: self._expand_env_vars(value, lookup_env=env)
+            if isinstance(value, str)
+            else str(value)
+            for name, value in (config.headers or {}).items()
+        }
+        for name, value in headers.items():
+            if SENDS_CREDENTIAL.search(name):
+                hold(value)
+        return headers
+
+    @staticmethod
+    def _refused_or(pydantic_server: Any, error_detail: str) -> str:
+        """What a failed start is said to have failed with: the sentence a
+        remote server refused the handshake with, when it did, else
+        ``error_detail``.
+        """
+        refusals = getattr(pydantic_server, "refusals", None)
+        sentence = getattr(refusals, "sentence", None)
+        return sentence or error_detail
 
     async def _start_http_process_server(
         self,

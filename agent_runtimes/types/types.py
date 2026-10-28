@@ -1608,7 +1608,20 @@ class MCPServer(BaseModel):
         default=None,
         description="Unicode emoji for UI display",
     )
-    url: str = Field(default="", description="Server URL (for HTTP-based servers)")
+    url: str = Field(
+        default="",
+        description=(
+            "Where an HTTP server is reached: a remote one (no command) is "
+            "connected to here; a local one's command listens here"
+        ),
+    )
+    headers: Optional[Dict[str, str]] = Field(
+        default=None,
+        description=(
+            "The headers a remote server is sent with every request, "
+            "`${VAR}` expanded as it starts: the bearer among them (R-19)"
+        ),
+    )
     enabled: bool = Field(default=True, description="Whether the server is enabled")
     tools: List[MCPServerTool] = Field(
         default_factory=list, description="List of available tools"
@@ -1647,7 +1660,12 @@ class MCPServer(BaseModel):
     )
     transport: str = Field(
         default="stdio",
-        description="Transport type: 'stdio' or 'http'",
+        description=(
+            "Transport type: 'stdio', 'http', or 'streamable-http' — a remote "
+            "server reached at its url with its headers when it has no "
+            "command, a command run as a local HTTP process at its url when "
+            "it has one"
+        ),
     )
     is_config: bool = Field(
         default=False,
