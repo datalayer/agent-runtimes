@@ -3128,7 +3128,7 @@ async def create_agent(
         # for codemode agents too. ``start_server`` is idempotent, so this
         # is safe.
         if selected_mcp_servers:
-            asyncio.create_task(_start_mcp_servers_background(agent_id, http_request))
+            _in_background(_start_mcp_servers_background(agent_id, http_request))
 
         return CreateAgentResponse(
             id=agent_id,
@@ -4237,6 +4237,20 @@ class AgentMcpServersResponse(BaseModel):
     message: str
 
 
+#: The MCP starts asked for in the background, held until they end: a task
+#: nothing holds may be collected before it ends, its start ending without a
+#: word (the loop keeps only weak references to its tasks).
+_BACKGROUND: set["asyncio.Task[Any]"] = set()
+
+
+def _in_background(coroutine: Any) -> "asyncio.Task[Any]":
+    """Run a start in the background, its task held until it ends."""
+    task = asyncio.create_task(coroutine)
+    _BACKGROUND.add(task)
+    task.add_done_callback(_BACKGROUND.discard)
+    return task
+
+
 async def _start_mcp_servers_background(
     agent_id: str,
     request: Request | None = None,
@@ -4264,6 +4278,11 @@ async def _start_mcp_servers_background(
             already_running,
             failed,
         )
+    except asyncio.CancelledError:
+        # Said: the lifecycle records each server's start as cancelled, and
+        # the next turn that needs one starts it again.
+        logger.warning("Background MCP startup for '%s' was cancelled", agent_id)
+        raise
     except Exception as exc:
         logger.warning(
             "Background MCP startup failed for '%s': %s",
@@ -4895,7 +4914,7 @@ async def start_all_agents_mcp_servers(
                         e,
                     )
 
-        asyncio.create_task(_background_start())
+        _in_background(_background_start())
 
         return AgentMcpServersResponse(
             agent_id=None,
@@ -5664,7 +5683,7 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
-    asyncio.create_task(_background_mcp_and_sandbox())
+    _in_background(_background_mcp_and_sandbox())
 
     # The model the agent runs on now: a switch's, not the library spec's.
     effective_model = (
