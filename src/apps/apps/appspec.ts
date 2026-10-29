@@ -1544,6 +1544,15 @@ export function parseAppspec(document: unknown): ParsedAppspec {
         browse: flag(computer.browse, false),
         files: flag(computer.files, false),
         shell: flag(computer.shell, false),
+        // A repository lent to it, at one commit: said only when it is.
+        ...(isData(computer.repository)
+          ? {
+              repository: {
+                url: text(computer.repository.url),
+                revision: text(computer.repository.revision),
+              },
+            }
+          : {}),
       },
     },
     interface: parseInterface(
@@ -2117,7 +2126,16 @@ export function dumpAppspec(app: AppSpec): Data {
   const computer = new Writer()
     .value('browse', app.permissions.computer.browse, false)
     .value('files', app.permissions.computer.files, false)
-    .value('shell', app.permissions.computer.shell, false).data;
+    .value('shell', app.permissions.computer.shell, false)
+    .present(
+      'repository',
+      app.permissions.computer.repository
+        ? {
+            url: app.permissions.computer.repository.url,
+            revision: app.permissions.computer.repository.revision,
+          }
+        : undefined,
+    ).data;
   const writer = new Writer();
   writer.data.schema = APP_SCHEMA;
   writer
