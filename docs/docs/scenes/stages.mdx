@@ -41,16 +41,21 @@ same JSON a stage exports.
 
 ## The nightly rehearsal
 
-Every night, a GitHub Actions workflow of agent-runtimes
-(`.github/workflows/nightly-rehearsal.yaml`) rehearses each demo stage on
-Datalayer, where it is kept running, and keeps its `rehearsal.json` and its
-transcript. A stage whose rehearsal passed says *Live* with the time; one
-that failed says *Needs attention* with the failing beat. You can also run
-it by hand from the Actions tab, for one scene.
+Datalayer rehearses its demo stages every night, on its own platform. Each
+demo stage is kept running under a demo account, and each night every one of
+them is rehearsed with `loop scenes rehearse --cloud`, one scene at a time,
+at the runtime it is kept on. A stage whose rehearsal passed says *Live*
+with the time; one that failed says *Needs attention* with the failing beat.
 
-It asks the stages where they are already served and launches nothing. It
-does nothing, and says so, until the repository holds the demo account's
-key; a scene whose address or key is not set is skipped with a sentence.
+A member's A2A route answers only a key granted to that route: it lives at
+most a day, and it is bound to one runtime, which changes whenever a kept
+runtime restarts. So no key is stored for the rehearsal. Each run reads
+where the members are served that night, mints a fresh key for each from a
+task grant (narrowed to the member's own tools, read only, for two hours),
+rehearses, and revokes the grants when the scene is over.
+
+The rehearsal launches nothing: a scene whose members are not kept running
+is said to need attention rather than started.
 
 ## Recordings
 
