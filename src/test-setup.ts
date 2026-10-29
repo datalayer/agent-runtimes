@@ -171,9 +171,16 @@ vi.mock('@jupyter/web-components', () => {
   return new Proxy(
     { provideJupyterDesignSystem: stub },
     {
-      has: () => true,
+      // Never a thenable (awaiting the module would wait on `then` for
+      // ever), and no symbol is a component.
+      has: (target, key) =>
+        key in target || (typeof key === 'string' && key !== 'then'),
       get: (target, key) =>
-        key in target ? target[key as keyof typeof target] : stub,
+        key in target
+          ? target[key as keyof typeof target]
+          : typeof key === 'string' && key !== 'then'
+            ? stub
+            : undefined,
     },
   );
 });
