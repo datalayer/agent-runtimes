@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.92
+
+29 October 2026. A key granted to an application's A2A route is answered again: a token exchanged from a task grant (a run's key, a deployment's principal, a kept runtime's key) is verified at IAM's task-grant route, which takes it and says whether its grant still stands, instead of `whoami`, which refuses narrowed tokens since 14 October 2026; a grant revoked is refused. Spreadsheets in the Loop: a spreadsheet editor beside the notebook and the document, and an agent's XLSX output drawn read-only in Datalayer Cells in the chat.
+
 ## 1.5.91
 
 29 October 2026. Scenes drawn on a backdrop, read three ways and drilled into; stages that rehearse, record and play their recording; a coding agent behind the Shield on a stage of its own. Needs agentspecs 0.0.137 for the sixth demo scene and the recordings' place; the [Scenes](https://agent-runtimes.datalayer.tech/docs/scenes) and [Stages](https://agent-runtimes.datalayer.tech/docs/scenes/stages) pages say it all for a person using them.
