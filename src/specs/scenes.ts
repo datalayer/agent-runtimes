@@ -154,7 +154,7 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
       live: [],
       recorded: [],
       unverified: [
-        'Not played yet: its runtime is not deployed under the demo account, and the repository it is lent is the workspace of that runtime.',
+        'Not played yet: the repository it is lent (Jupyter Kernel Client, checked out as its workspace) and its commands decided by its Rules need the runtime that carries them.',
       ],
     },
   },

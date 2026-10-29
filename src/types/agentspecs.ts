@@ -1104,7 +1104,21 @@ export interface AppPermissionsSpec {
   /** The Spaces it reads or writes. */
   spaces: Array<{ space: string; access: 'read' | 'write' }>;
   /** Its computer; each off until it is turned on. */
-  computer: { browse: boolean; files: boolean; shell: boolean };
+  computer: {
+    browse: boolean;
+    files: boolean;
+    shell: boolean;
+    /** A repository lent to it, checked out at one commit as its workspace. */
+    repository?: AppRepositorySpec;
+  };
+}
+
+/** A repository lent to an application's computer, checked out at one commit as its workspace. */
+export interface AppRepositorySpec {
+  /** The repository, an https:// git URL. */
+  url: string;
+  /** The full commit sha it is checked out at. */
+  revision: string;
 }
 
 export interface AppStarterSpec {

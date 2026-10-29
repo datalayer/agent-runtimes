@@ -60,7 +60,12 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -260,7 +265,12 @@ BOOKKEEPING_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -398,7 +408,12 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -548,7 +563,15 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": True, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": True,
+                "shell": False,
+                "repository": {
+                    "url": "https://github.com/datalayer/jupyter-kernel-client",
+                    "revision": "69a6f130189ab9229fb888ca48755c76e99ccf39",
+                },
+            },
         },
         "interface": {
             "layout": "chat",
@@ -610,7 +633,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace it is given on Datalayer."
+                    "It has not run live yet: its agent is set up, not enabled; the repository it is lent, Jupyter Kernel Client at one commit, is checked out as its workspace when it starts."
                 ],
             },
         },
@@ -683,7 +706,12 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -832,7 +860,12 @@ CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1040,7 +1073,12 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -1225,7 +1263,12 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1364,7 +1407,12 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1514,7 +1562,12 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1632,7 +1685,12 @@ EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1835,7 +1893,12 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -1960,7 +2023,12 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -2129,7 +2197,12 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "split",
@@ -2318,7 +2391,12 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -2446,7 +2524,12 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -2709,7 +2792,12 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -2898,7 +2986,12 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -3062,7 +3155,12 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -3204,7 +3302,12 @@ PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "split",
@@ -3455,7 +3558,12 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -3694,7 +3802,12 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -3967,7 +4080,12 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -4091,7 +4209,12 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -4225,7 +4348,12 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -4484,7 +4612,12 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -4642,7 +4775,12 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -4804,7 +4942,12 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -4936,7 +5079,12 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -5059,7 +5207,12 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -5270,7 +5423,12 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "page",
@@ -5573,7 +5731,12 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
         ],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",
@@ -5696,7 +5859,12 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
         "rules": [],
         "permissions": {
             "spaces": [],
-            "computer": {"browse": False, "files": False, "shell": False},
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
         },
         "interface": {
             "layout": "chat",

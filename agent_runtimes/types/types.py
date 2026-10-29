@@ -2849,12 +2849,20 @@ class AppSpaceGrantSpec(BaseModel):
     access: str = Field(default="read", description="`read` or `write`")
 
 
+class AppRepositorySpec(BaseModel):
+    """A repository lent to an application's computer, checked out at one commit as its workspace."""
+
+    url: str = Field(..., description="The repository, an https:// git URL")
+    revision: str = Field(..., description="The full commit sha it is checked out at")
+
+
 class AppComputerSpec(BaseModel):
     """What an application may do on its own computer; each off until turned on."""
 
     browse: bool = False
     files: bool = False
     shell: bool = False
+    repository: Optional[AppRepositorySpec] = None
 
 
 class AppPermissionsSpec(BaseModel):

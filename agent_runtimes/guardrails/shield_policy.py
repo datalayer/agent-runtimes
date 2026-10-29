@@ -91,6 +91,34 @@ SHARED_CLASSES: tuple[str, ...] = tuple(
 )
 
 
+#: A command line that only reads the workspace: one program of these, its
+#: arguments, and nothing that redirects, chains, pipes or substitutes (no
+#: ``; & | < > ` $``), no path that leaves the workspace (``/…``, ``..``,
+#: ``~``), and no ``find`` action that runs or deletes. Decided as the
+#: application's rule on reading decides a file it reads.
+_IN_THE_WORKSPACE = r"(?!.*(?:\.\.|~|(?:^|[\s=])/))"
+_PLAIN_ARGUMENTS = r"(?:\s[^;&|<>`$\n]*)?$"
+READING_COMMANDS: tuple[str, ...] = (
+    r"^\s*" + _IN_THE_WORKSPACE + r"(?:ls|cat|head|tail|wc|grep|tree|pwd|file|stat|du"
+    r"|git\s+(?:log|show|status|ls-files|blame))" + _PLAIN_ARGUMENTS,
+    r"^\s*"
+    + _IN_THE_WORKSPACE
+    + r"find(?![^;&|<>`$]*\s-(?:exec|execdir|ok|okdir|delete|fprint\w*|fls)\b)"
+    + _PLAIN_ARGUMENTS,
+)
+
+
+def _reading_commands_rule(spec: Any, verdict: str) -> Rule:
+    """The Rule on reading, for a harness's commands that only read (:data:`READING_COMMANDS`)."""
+    return Rule(
+        name=f"{spec.action}: a command that only reads",
+        decision=verdict,
+        classes=["execute"],
+        commands=list(READING_COMMANDS),
+        reason="the application's rule on reading",
+    )
+
+
 def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
     """The Appspec's Rules on classes as a ``team``-scope policy, or ``None`` with none.
 
@@ -111,6 +139,7 @@ def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
         nothing is lent.
     """
     rules: List[Rule] = []
+    commands: List[Rule] = []
     seen: set[str] = set()
     for spec in getattr(app, "rules", None) or []:
         verdict = BEHAVIOUR_VERDICT.get(spec.behaviour)
@@ -127,11 +156,22 @@ def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
         if not classes:
             continue
         seen.update(classes)
+        # A command is the Shield's `execute`, a class no Rule of an Appspec
+        # names: the Rule on reading decides one that only reads, and a Rule
+        # that leaves writing to a person refuses any other — a command can
+        # change a file — so that nobody is asked who is not there. A Rule
+        # that lets a write be done, or asks first, says nothing of commands:
+        # the platform's default asks, and a Rule never widens it.
+        if "read" in classes:
+            commands.append(_reading_commands_rule(spec, verdict))
+        decided = list(classes)
+        if "write" in classes and verdict == "deny":
+            decided.append("execute")
         rules.append(
             Rule(
                 name=spec.action,
                 decision=verdict,
-                classes=list(classes),
+                classes=decided,
                 reason=(
                     "the application's rule; read as ask me first"
                     if spec.behaviour == IF_ASKED
@@ -139,6 +179,9 @@ def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
                 ),
             )
         )
+    # The commands that only read before every other Rule: one is never
+    # refused by the Rule on writing, and they match nothing else.
+    rules[:0] = commands
     if not rules and not lent:
         return None
     return Policy(scope="team", rules=rules, mcp=Mcp(allow=list(lent)))
@@ -330,6 +373,7 @@ __all__ = [
     "BEHAVIOUR_VERDICT",
     "DEPLOYMENT_SPEND_SOFT_SHARE",
     "KIND_CLASS",
+    "READING_COMMANDS",
     "SHARED_CLASSES",
     "VERDICT_BEHAVIOUR",
     "PolicyUnavailable",

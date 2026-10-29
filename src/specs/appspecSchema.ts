@@ -320,6 +320,18 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Shell',
           type: 'boolean',
         },
+        repository: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppRepository',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'A repository lent to it, checked out as its workspace',
+        },
       },
       title: 'AppComputer',
       type: 'object',
@@ -1827,6 +1839,26 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
       },
       title: 'AppRecord',
+      type: 'object',
+    },
+    AppRepository: {
+      additionalProperties: false,
+      description:
+        "A repository lent to its computer: checked out at one revision, as its workspace.\n\nThe same git content an Environment brings (a public repository at a\npinned commit): an agent that works in a workspace — a coding harness —\nfinds it there when it starts. What it may do to it is its Rules'.",
+      properties: {
+        url: {
+          description: 'The repository, an https:// git URL anyone may clone',
+          title: 'Url',
+          type: 'string',
+        },
+        revision: {
+          description: 'The full commit sha it is checked out at',
+          title: 'Revision',
+          type: 'string',
+        },
+      },
+      required: ['url', 'revision'],
+      title: 'AppRepository',
       type: 'object',
     },
     AppRule: {

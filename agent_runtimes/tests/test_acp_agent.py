@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, List, Tuple, cast
 
 import pytest
 from agent_shield.policy import KIND_CLASS, Context, class_of, decide
@@ -38,6 +38,7 @@ from agent_runtimes.adapters.base import AgentContext, StreamEvent
 from agent_runtimes.adapters.harness_skills import (
     LENT_MARK,
     instructions_markdown,
+    lend_repository,
     skill_markdown,
     skill_specs_of,
     write_lent_files,
@@ -715,10 +716,13 @@ class TestPermissionsAreRules:
         policy = rules_policy(app)
         assert policy is not None and policy.scope == "team"
         assert [(r.name, r.decision, r.classes) for r in policy.rules] == [
-            ("never change my files", "deny", ["write"]),
+            # The commands: one that only reads as reading, any other as writing.
+            ("read freely: a command that only reads", "allow", ["execute"]),
+            ("never change my files", "deny", ["write", "execute"]),
             ("read freely", "allow", ["read"]),
             ("only if I asked", "ask", ["send"]),
         ]
+        assert policy.rules[0].commands
         assert rules_policy(SimpleNamespace(rules=[])) is None
         agent = an_agent(workspace, policies=policies_of(app), approvals=Approvals())
         try:
@@ -728,6 +732,174 @@ class TestPermissionsAreRules:
         assert "edit refused" in texts(events)
         assert "never change my files" in texts(events)
         assert not (workspace / "hello.txt").exists()
+
+
+class TestLentRepository:
+    """The repository an application is lent is checked out as the workspace, at its commit."""
+
+    @staticmethod
+    def a_repository(tmp_path: Path) -> Tuple[str, str]:
+        import subprocess
+
+        source = tmp_path / "source"
+        source.mkdir()
+
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", "-C", str(source), *args],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "GIT_AUTHOR_NAME": "t",
+                    "GIT_AUTHOR_EMAIL": "t@t",
+                    "GIT_COMMITTER_NAME": "t",
+                    "GIT_COMMITTER_EMAIL": "t@t",
+                },
+            ).stdout.strip()
+
+        git("init", "-q")
+        git("config", "uploadpack.allowReachableSHA1InWant", "true")
+        (source / "README.md").write_text("# A project\n")
+        git("add", "README.md")
+        git("commit", "-q", "-m", "first")
+        return f"file://{source}", git("rev-parse", "HEAD")
+
+    @staticmethod
+    def lent(url: str, revision: str) -> Any:
+        return SimpleNamespace(
+            permissions=SimpleNamespace(
+                computer=SimpleNamespace(
+                    repository=SimpleNamespace(url=url, revision=revision)
+                )
+            )
+        )
+
+    def test_checked_out_then_left_as_it_is(self, tmp_path: Path) -> None:
+        url, revision = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        assert lend_repository(workspace, self.lent(url, revision))
+        assert (workspace / "README.md").read_text() == "# A project\n"
+        # Launched again on the same runtime: the checkout stays, and what
+        # Datalayer wrote beside it too.
+        (workspace / "AGENTS.md").write_text("lent")
+        assert "already present" in str(
+            lend_repository(workspace, self.lent(url, revision))
+        )
+        assert (workspace / "AGENTS.md").exists()
+
+    def test_a_workspace_holding_other_files_is_never_cleared(
+        self, tmp_path: Path
+    ) -> None:
+        url, revision = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / "notes.txt").write_text("mine")
+        with pytest.raises(HarnessRefused, match="already holds other files"):
+            lend_repository(workspace, self.lent(url, revision))
+        assert (workspace / "notes.txt").read_text() == "mine"
+
+    def test_nothing_lent_writes_nothing(self, tmp_path: Path) -> None:
+        assert lend_repository(tmp_path, None) is None
+        assert lend_repository(tmp_path, self_less_app()) is None
+        assert not any(tmp_path.iterdir())
+
+    def test_a_commit_that_does_not_exist_is_refused(self, tmp_path: Path) -> None:
+        url, _ = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        with pytest.raises(HarnessRefused, match="could not be checked out"):
+            lend_repository(workspace, self.lent(url, "0" * 40))
+        assert not any(workspace.iterdir())
+
+
+def self_less_app() -> Any:
+    """An application with a computer and no repository."""
+    return SimpleNamespace(
+        permissions=SimpleNamespace(computer=SimpleNamespace(repository=None))
+    )
+
+
+class TestCommandsByTheRules:
+    """A harness's commands are decided by the Rules on reading and writing, nobody asked."""
+
+    @staticmethod
+    def verdicts(app: Any, tmp_path: Path, *commands: str) -> List[Tuple[str, str]]:
+        from agent_shield.policy import Action, command_class
+
+        context = Context(workspace=str(tmp_path))
+        policies = policies_of(app)
+        out = []
+        for command in commands:
+            decision = decide(
+                Action(
+                    kind="execute",
+                    title=command,
+                    command=command,
+                    **{"class": command_class(command)},
+                ),
+                context,
+                policies,
+            )
+            out.append((decision.verdict, decision.rule or ""))
+        return out
+
+    def test_reading_is_done_and_changing_is_refused(self, tmp_path: Path) -> None:
+        app = SimpleNamespace(
+            rules=[
+                AppRuleSpec(
+                    action="Read the repository",
+                    applies_to=["read"],
+                    behaviour="do_it",
+                ),
+                AppRuleSpec(
+                    action="Change a file",
+                    applies_to=["write", "delete"],
+                    behaviour="leave_to_me",
+                ),
+            ]
+        )
+        assert self.verdicts(
+            app,
+            tmp_path,
+            "ls -la",
+            "cat README.md",
+            "git log --oneline -3",
+            "find . -name '*.py'",
+            "echo hi >> README.md",
+            "rm README.md",
+            "find . -delete",
+            "cat /etc/passwd",
+            "python -c 'print(1)'",
+        ) == [
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+        ]
+
+    def test_a_rule_that_lets_writes_be_done_never_widens_commands(
+        self, tmp_path: Path
+    ) -> None:
+        app = SimpleNamespace(
+            rules=[
+                AppRuleSpec(
+                    action="Edit freely", applies_to=["write"], behaviour="do_it"
+                ),
+            ]
+        )
+        # No Rule on reading: a command is the platform's default, asked.
+        assert [v for v, _ in self.verdicts(app, tmp_path, "ls", "make build")] == [
+            "ask",
+            "ask",
+        ]
 
 
 class TestKindsAreClasses:

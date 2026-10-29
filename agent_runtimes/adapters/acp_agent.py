@@ -114,7 +114,7 @@ from .base import (
     ToolResult,
 )
 from .harness_displays import display_meta_of
-from .harness_skills import LentFiles, kept_said, write_lent_files
+from .harness_skills import LentFiles, kept_said, lend_repository, write_lent_files
 
 logger = logging.getLogger(__name__)
 
@@ -2291,8 +2291,12 @@ def acp_harness_agent(
         refused = harness_refusal(policies, admitted_as)
     if refused is not None:
         raise HarnessRefused(refused)
-    # The application's skills and instructions, in the harness's format,
-    # before it starts (SH-21).
+    # The repository the application is lent, checked out as the workspace,
+    # then its skills and instructions, in the harness's format, before it
+    # starts (SH-21).
+    lent_repository = lend_repository(root, app)
+    if lent_repository:
+        logger.info("Harness %s lent %s", harness.id, lent_repository)
     lent_files = write_lent_files(root, harness, app, lent_names)
     # The sidecar bridge (SH-40): with the pod's `datalayer-harnesses`
     # container beside this one, the harness runs there, reached over the

@@ -50,6 +50,7 @@ __all__ = [
     "SKILL_FORMATS",
     "instructions_markdown",
     "kept_said",
+    "lend_repository",
     "skill_markdown",
     "skill_specs_of",
     "write_lent_files",
@@ -418,6 +419,92 @@ def _write_read_only(path: Path, content: str) -> None:
         os.chmod(path, 0o644)
     path.write_text(content, encoding="utf-8")
     os.chmod(path, READ_ONLY)
+
+
+#: How long the checkout of a lent repository may take, in seconds.
+REPOSITORY_TIMEOUT = 120.0
+
+
+def lend_repository(workspace: Path, app: Any) -> str | None:
+    """
+    Check out the repository the application is lent as the workspace, before the harness starts.
+
+    The git content an Environment brings, delivered as ``code_sandboxes``
+    delivers one to a sandbox (``contents.materialize``): cloned at its
+    pinned commit beside the workspace, HEAD read back, then moved into
+    place — never a partial checkout. A workspace already checked out at that
+    commit is left as it is (a harness launched again on the same runtime);
+    one that holds anything else is refused, never cleared.
+
+    Parameters
+    ----------
+    workspace : Path
+        The harness's workspace.
+    app : AppSpec
+        The application; ``permissions.computer.repository`` names the
+        repository and its commit. ``None``, or no repository, lends nothing.
+
+    Returns
+    -------
+    str or None
+        What was lent, in words for the log; ``None`` when nothing is.
+
+    Raises
+    ------
+    HarnessRefused
+        When the workspace holds other files, or the checkout fails.
+    """
+    computer = getattr(getattr(app, "permissions", None), "computer", None)
+    repository = getattr(computer, "repository", None)
+    if repository is None:
+        return None
+    from code_sandboxes import EvalSandbox
+    from code_sandboxes.contents import (
+        ContentAttachmentSpec,
+        MaterializeEntry,
+        materialize,
+    )
+    from code_sandboxes.exceptions import SandboxError
+
+    root = workspace.resolve()
+    head = root / ".git"
+    if root.exists() and any(root.iterdir()) and not head.is_dir():
+        raise _refused(
+            f"The repository {repository.url} is lent as the workspace, and the "
+            f"workspace ({root}) already holds other files: nothing is checked out "
+            "over them."
+        )
+    spec = ContentAttachmentSpec(
+        uid=f"repository:{repository.revision}",
+        source_uid=repository.url,
+        sandbox_uid=str(root),
+        sandbox_provider="local",
+        delivery="materialize",
+        mode="ro",
+        materialize=[
+            MaterializeEntry(
+                path=str(root), git_url=repository.url, revision=repository.revision
+            )
+        ],
+    )
+    try:
+        # The runtime's own process is the sandbox: the checkout is the
+        # runtime's, in the workspace it gives the harness.
+        with EvalSandbox() as sandbox:
+            prepared = materialize(
+                sandbox, spec, reconcile=True, timeout=REPOSITORY_TIMEOUT
+            )
+    except SandboxError as error:
+        raise _refused(
+            f"The repository {repository.url} could not be checked out at "
+            f"{repository.revision[:12]}: {error}."
+        ) from None
+    if prepared.status != "ready":
+        raise _refused(
+            f"The repository {repository.url} could not be checked out at "
+            f"{repository.revision[:12]}: {prepared.detail}."
+        )
+    return f"{repository.url} at {repository.revision[:12]} ({prepared.detail})"
 
 
 def write_lent_files(
