@@ -34,6 +34,9 @@ FIRST = [
     "agent_runtimes.apps",
 ]
 
+#: The exit code of a fresh interpreter whose agent-teams has no platform.
+NO_PLATFORM = 77
+
 #: The roots of what the built-in plugin contributes (`plugins.builtin`).
 CONTRIBUTED = ["agent_runtimes.apps", "agent_runtimes.adapters.acp_agent"]
 
@@ -58,11 +61,18 @@ def test_the_sessions_plugin_contributes_on_agent_teams_platform(first: str) -> 
         app = create_app()  # agent-teams builds no app at import time
         from agent_runtimes.plugins.host import BUILTIN_PLUGIN, accepted
         from agent_runtimes.plugins.points import POINTS
-        platform = app.state.team_manager.platform
+        manager = app.state.team_manager
+        if not hasattr(manager, "platform"):
+            raise SystemExit({NO_PLATFORM})
+        platform = manager.platform
         assert platform.has_plugin(BUILTIN_PLUGIN), BUILTIN_PLUGIN
         print(json.dumps({{point.id: len(accepted(platform, point)) for point in POINTS}}))
         """
     )
+    if done.returncode == NO_PLATFORM:
+        pytest.skip(
+            "the installed agent-teams runs no reactor platform (released before TeamManager.platform)"
+        )
     assert done.returncode == 0, done.stderr
     assert "failed to contribute" not in done.stderr, done.stderr
     assert "circular import" not in done.stderr, done.stderr

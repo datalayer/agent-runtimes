@@ -9,6 +9,7 @@ header:
 
   paths-ignore:
     - '**/*.toml'
+    - '**/*.mmd'
     - '**/*.apt'
     - '**/*.cedar'
     - '**/*.csv'
