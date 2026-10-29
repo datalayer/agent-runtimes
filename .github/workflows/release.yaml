@@ -43,11 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -168,12 +168,12 @@ jobs:
           test "$sdist_bytes" -lt 10000000
           test "$wheel_bytes" -lt 30000000
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: npm
           path: dist-npm/*.tgz
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python
           path: dist-py/*
@@ -185,7 +185,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: python
           path: dist
@@ -198,14 +198,14 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       # Trusted publishing needs npm 11.5.1 or later.
       - run: npm install -g npm@latest
       - run: npm --version
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: npm
           path: dist
