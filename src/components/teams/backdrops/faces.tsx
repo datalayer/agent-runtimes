@@ -6,7 +6,8 @@
 /**
  * A member's face, as a figure `AssistantStage` draws: its emoji, large;
  * else its character drawn small inside a frame; else its initial. The
- * `hero` backdrop frames it in a ring, the `plain` one in a box — the
+ * `hero` backdrop frames it in a ring, the `plain` one in a box, the
+ * `space` one shrinks it to a glowing mark inside an orbit — the
  * frame is the backdrop's (`FaceFrame`), the face is the member's.
  *
  * It is an `AssistantCharacter`, so the stage keeps everything it does for
@@ -30,6 +31,14 @@ export interface FaceFrame {
   id: string;
   /** The frame's style: its corners, its border, its colours. */
   ring: CSSProperties;
+  /**
+   * The face's share of the figure, `1` unsaid: below it the face is a
+   * mark in the middle of the figure (`space`), and the room round it is
+   * the frame's halo and orbit.
+   */
+  scale?: number;
+  /** A ring round the whole figure, about the smaller face (`space`'s orbit); none unsaid. */
+  orbit?: CSSProperties;
 }
 
 /** The character a member's `character` id names, when one does; none for a 3D model or an id the catalogue does not know. */
@@ -53,11 +62,8 @@ export function faceCharacter(
 ): AssistantCharacter {
   const inner = member.emoji ? undefined : drawnCharacter(member);
   const initial = member.name.trim().charAt(0).toUpperCase() || '?';
-  const Drawing = ({
-    size,
-    mode,
-    state,
-  }: AssistantDrawingProps): JSX.Element => (
+  const scale = frame.scale ?? 1;
+  const Face = ({ size, mode, state }: AssistantDrawingProps): JSX.Element => (
     <span
       data-scene-face={member.emoji ? 'emoji' : inner ? 'character' : 'initial'}
       style={{
@@ -89,6 +95,38 @@ export function faceCharacter(
       )}
     </span>
   );
+  const Drawing = (props: AssistantDrawingProps): JSX.Element =>
+    scale >= 1 ? (
+      <Face {...props} />
+    ) : (
+      <span
+        data-scene-mark=""
+        style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: props.size,
+          height: props.size,
+        }}
+      >
+        {frame.orbit && (
+          <span
+            aria-hidden="true"
+            data-scene-orbit=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '50%',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+              ...frame.orbit,
+            }}
+          />
+        )}
+        <Face {...props} size={Math.round(props.size * scale)} />
+      </span>
+    );
   return {
     id: frame.id,
     name: `${member.name}’s face`,

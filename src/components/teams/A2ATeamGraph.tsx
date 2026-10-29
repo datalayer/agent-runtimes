@@ -40,8 +40,9 @@
  * How it is drawn is its *backdrop* (`backdrop`, the scene's
  * `stage.backdrop`; {@link SceneBackdrop}): `studio`, the drawing above —
  * characters, balloons, flowing edges — `hero`, faces on a deep tint with
- * a dot that flies with each message, or `plain`, boxes and arrows that do
- * not move. The graph works out the same things for every backdrop — who
+ * a dot that flies with each message, `plain`, boxes and arrows that do
+ * not move, or `space`, glowing marks on a ground of dots and mesh with a
+ * light flowing along each line. The graph works out the same things for every backdrop — who
  * stands where, which way each link carries a message, which connection
  * answers a call, the words a screen reader hears — and reads the node
  * types, the edge types, the colours and the layout from the backdrop.
@@ -820,6 +821,8 @@ export function A2ATeamGraph({
       >
         {heard}
       </Box>
+      {/* The backdrop's ground, behind the flow: `space`'s dots and mesh. */}
+      {look.ground && <look.ground />}
       <Moving.Provider value={movingValue}>
         <Members.Provider value={membersById}>
           <Busy.Provider value={busy.byNode}>

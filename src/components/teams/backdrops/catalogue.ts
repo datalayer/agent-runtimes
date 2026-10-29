@@ -18,13 +18,13 @@ import type { SceneBackdropId } from '../../../types/scenes';
 /** A backdrop as a chooser offers it. */
 export interface SceneBackdropChoice {
   id: SceneBackdropId;
-  /** `Studio`, `Hero`, `Plain`. */
+  /** `Studio`, `Hero`, `Plain`, `Space`. */
   name: string;
   /** One line of what the stage looks like. */
   description: string;
 }
 
-/** The three backdrops, in a chooser's order: the drawing every scene had first. */
+/** The four backdrops, in a chooser's order: the drawing every scene had first. */
 export const SCENE_BACKDROP_CHOICES: readonly SceneBackdropChoice[] = [
   {
     id: 'studio',
@@ -42,6 +42,12 @@ export const SCENE_BACKDROP_CHOICES: readonly SceneBackdropChoice[] = [
     id: 'plain',
     name: 'Plain',
     description: 'Boxes and arrows, nothing moves: for a printout or a slide.',
+  },
+  {
+    id: 'space',
+    name: 'Space',
+    description:
+      'Glowing marks on a ground of dots, mesh and rings, as the site’s hero drawings; a light flows along each line.',
   },
 ];
 

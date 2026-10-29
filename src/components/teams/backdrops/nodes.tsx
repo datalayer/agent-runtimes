@@ -184,6 +184,13 @@ export interface MemberLook {
   name: StageSx;
   /** Where it runs, under the name; `false` leaves it to the figure's label alone. */
   where: StageSx | false;
+  /**
+   * The name and where it runs beside the figure rather than under it:
+   * on the side away from the middle of the graph, as far from the
+   * figure's middle as this fraction of its size (`space`, whose mark is
+   * smaller than its figure). Under it, unsaid.
+   */
+  beside?: number;
 }
 
 /** A member of the team, drawn in a look. */
@@ -451,14 +458,52 @@ export function MemberNodeBase({
           />
         )}
       </Box>
-      <Text sx={look.name} data-member-name="">
-        {member.emoji ? `${member.emoji} ` : ''}
-        {member.name}
-      </Text>
-      {look.where !== false && (
-        <Text sx={look.where} data-member-where="">
-          {member.where}
-        </Text>
+      {look.beside === undefined ? (
+        <>
+          <Text sx={look.name} data-member-name="">
+            {member.emoji ? `${member.emoji} ` : ''}
+            {member.name}
+          </Text>
+          {look.where !== false && (
+            <Text sx={look.where} data-member-where="">
+              {member.where}
+            </Text>
+          )}
+        </>
+      ) : (
+        // Beside the figure, away from the middle; under the line to its
+        // connections, which leaves it rightward at its middle.
+        <Box
+          position="absolute"
+          top={
+            side === 'right' && member.connections?.length
+              ? size / 2 + 6
+              : size / 2
+          }
+          {...(side === 'right'
+            ? { left: look.width / 2 + size * look.beside }
+            : { right: look.width / 2 + size * look.beside })}
+          transform={
+            side === 'right' && member.connections?.length
+              ? undefined
+              : 'translateY(-50%)'
+          }
+          display="flex"
+          flexDirection="column"
+          alignItems={side === 'right' ? 'flex-start' : 'flex-end'}
+          whiteSpace="nowrap"
+          pointerEvents="none"
+          data-member-beside={side}
+        >
+          <Text sx={look.name} data-member-name="">
+            {member.name}
+          </Text>
+          {look.where !== false && (
+            <Text sx={look.where} data-member-where="">
+              {member.where}
+            </Text>
+          )}
+        </Box>
       )}
       <Handle
         id={MEMBER_HANDLES.outRight}

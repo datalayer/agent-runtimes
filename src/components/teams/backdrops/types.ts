@@ -14,11 +14,13 @@
  * The scene keeps its backdrop (`SceneStageSpec.backdrop`, agentspecs'
  * `Backdrop`): `studio`, the drawing every scene had first; `hero`, round
  * faces on a deep tint with a dot that flies with each message; `plain`,
- * boxes and arrows that do not move.
+ * boxes and arrows that do not move; `space`, glowing marks on a ground
+ * of dots, grid, mesh and rings, as the site's hero drawings.
  *
  * @module components/teams/backdrops/types
  */
 
+import type { ComponentType } from 'react';
 import type { EdgeTypes, NodeTypes } from '@xyflow/react';
 import type { BoxProps } from '@datalayer/primer-addons';
 import type { AssistantModel3D } from '../../../chat/assistant/avatar3dModel';
@@ -206,7 +208,7 @@ export interface SceneBackdropLayout {
 /** A backdrop: how a scene's stage is drawn. */
 export interface SceneBackdrop {
   id: SceneBackdropId;
-  /** `Studio`, `Hero`, `Plain`. */
+  /** `Studio`, `Hero`, `Plain`, `Space`. */
   name: string;
   /** One line of what the stage looks like, for a chooser. */
   description: string;
@@ -216,6 +218,12 @@ export interface SceneBackdrop {
   edgeTypes: EdgeTypes;
   theme: SceneBackdropTheme;
   layout: SceneBackdropLayout;
+  /**
+   * What is drawn behind the flow, filling the stage's box — `space`'s
+   * dots, grid, mesh, rings and glows — under the members and the links,
+   * never taking the pointer. None: the box's own background alone.
+   */
+  ground?: ComponentType;
   /**
    * What a member is drawn as in this look — its own character, or a face
    * made from its emoji, its character or its initial — for a stage that

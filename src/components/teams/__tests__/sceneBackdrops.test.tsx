@@ -32,6 +32,11 @@ import {
 import { HeroCallEdge, HeroLinkEdge, HERO_BACKDROP } from '../backdrops/hero';
 import { PlainLinkEdge, PLAIN_BACKDROP } from '../backdrops/plain';
 import { LinkEdge, STUDIO_BACKDROP } from '../backdrops/studio';
+import {
+  SpaceCallEdge,
+  SpaceLinkEdge,
+  SPACE_BACKDROP,
+} from '../backdrops/space';
 import { edgeSelected } from '../A2ATeamGraph';
 import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
@@ -126,16 +131,18 @@ function Scene({
 }
 
 describe('the backdrops', () => {
-  it('are studio, hero and plain, studio first, with a name and a line each', () => {
+  it('are studio, hero, plain and space, studio first, with a name and a line each', () => {
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.id)).toEqual([
       'studio',
       'hero',
       'plain',
+      'space',
     ]);
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.name)).toEqual([
       'Studio',
       'Hero',
       'Plain',
+      'Space',
     ]);
     for (const backdrop of SCENE_BACKDROPS) {
       expect(backdrop.description).toMatch(/\S/);
@@ -174,6 +181,18 @@ describe('the backdrops', () => {
     );
     expect(sceneBackdrop('hero')).toBe(HERO_BACKDROP);
     expect(sceneBackdrop('plain')).toBe(PLAIN_BACKDROP);
+    expect(sceneBackdrop('space')).toBe(SPACE_BACKDROP);
+    // The space's colours are Primer's tokens, light and dark; it has a ground.
+    const space = sceneStageSx(SPACE_BACKDROP.theme) as Record<string, unknown>;
+    expect(space['--scene-stage-bg']).toMatch(/^var\(--bgColor-/);
+    expect(space['--scene-space-glow']).toMatch(/^var\(--fgColor-accent/);
+    expect(
+      (space['[data-color-mode="dark"] &'] as Record<string, string>)[
+        '--scene-stage-bg'
+      ],
+    ).toMatch(/^var\(--bgColor-/);
+    expect(SPACE_BACKDROP.ground).toBeDefined();
+    expect(SPACE_BACKDROP.figure(sales)).toBe(SPACE_BACKDROP.figure(sales));
     expect(sceneBackdrop()).toBe(STUDIO_BACKDROP);
     expect(DEFAULT_SCENE_BACKDROP).toBe(STUDIO_BACKDROP);
   });
@@ -193,7 +212,7 @@ describe('the backdrops', () => {
     warn.mockRestore();
   });
 
-  it.each(['studio', 'hero', 'plain'] as const)(
+  it.each(['studio', 'hero', 'plain', 'space'] as const)(
     'draw the same scene on %s: every member, its connection, and the links',
     backdrop => {
       const { container } = render(<Scene backdrop={backdrop} />);
@@ -233,7 +252,7 @@ describe('the backdrops', () => {
   );
 
   it('say the same flow to a screen reader on every backdrop', () => {
-    for (const backdrop of ['studio', 'hero', 'plain'] as const) {
+    for (const backdrop of ['studio', 'hero', 'plain', 'space'] as const) {
       const { container, unmount } = render(
         <Scene backdrop={backdrop} flows={{ accounting: 'asking' }} />,
       );
@@ -405,6 +424,109 @@ describe('the hero edge', () => {
   });
 });
 
+describe('the space', () => {
+  it('draws its ground behind the flow, and each member beside its name', () => {
+    const { container } = render(<Scene backdrop="space" />);
+    const graph = container.querySelector('[data-a2a-team-graph]');
+    const ground = graph?.querySelector('[data-scene-ground="space"]');
+    expect(ground?.getAttribute('aria-hidden')).toBe('true');
+    expect(ground?.querySelectorAll('pattern').length).toBe(4);
+    expect(
+      container.querySelector('[data-team-member="sales"] [data-scene-orbit]'),
+    ).not.toBeNull();
+    expect(
+      container
+        .querySelector('[data-team-member="sales"] [data-member-beside]')
+        ?.getAttribute('data-member-beside'),
+    ).toBe('left');
+    expect(
+      container
+        .querySelector('[data-team-member="accounting"] [data-member-beside]')
+        ?.getAttribute('data-member-beside'),
+    ).toBe('right');
+    // No other backdrop has a ground.
+    const { container: hero } = render(<Scene backdrop="hero" />);
+    expect(hero.querySelector('[data-scene-ground]')).toBeNull();
+  });
+
+  it('flows a light along the edge: out while asking, back while answering, none at rest', () => {
+    const draw = (flow: A2ATeamFlow) => (
+      <ReactFlowProvider>
+        <LabelLayer />
+        <svg>
+          <SpaceLinkEdge
+            {...({
+              ...EDGE,
+              data: { flow, connected: true, label: 'A2A' },
+            } as unknown as React.ComponentProps<typeof SpaceLinkEdge>)}
+          />
+        </svg>
+      </ReactFlowProvider>
+    );
+    const { container, rerender } = render(draw('still'));
+    expect(container.querySelector('[data-scene-light]')).toBeNull();
+    act(() => rerender(draw('asking')));
+    const out = container.querySelector('[data-scene-light]');
+    expect(out?.getAttribute('data-scene-light')).toBe('out');
+    expect(out?.querySelector('animate')?.getAttribute('attributeName')).toBe(
+      'stroke-dashoffset',
+    );
+    for (const motion of Array.from(out!.querySelectorAll('animateMotion'))) {
+      expect(motion.getAttribute('path')).toBe('M 0,50 L 200,50');
+    }
+    act(() => rerender(draw('answering')));
+    const back = container.querySelector('[data-scene-light]');
+    expect(back?.getAttribute('data-scene-light')).toBe('back');
+    expect(back?.querySelector('animateMotion')?.getAttribute('path')).toBe(
+      'M 200,50 L 0,50',
+    );
+  });
+
+  it('stands the light at the end the message goes to under reduced motion', () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      onchange: null,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const { container } = render(
+        <ReactFlowProvider>
+          <LabelLayer />
+          <svg>
+            <SpaceCallEdge
+              {...({
+                ...EDGE,
+                data: {
+                  flow: 'answering',
+                  calling: 'list invoices',
+                  label: 'MCP · list invoices',
+                },
+              } as unknown as React.ComponentProps<typeof SpaceCallEdge>)}
+            />
+          </svg>
+        </ReactFlowProvider>,
+      );
+      const still = container.querySelector('[data-scene-light]');
+      expect(still?.getAttribute('data-scene-light')).toBe('still');
+      expect(container.querySelector('animateMotion, animate')).toBeNull();
+      expect(still?.querySelector('circle')?.getAttribute('cx')).toBe('0');
+      expect(
+        container
+          .querySelector('[data-mcp-edge-call]')
+          ?.getAttribute('data-mcp-edge-call'),
+      ).toBe('list invoices');
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+});
+
 describe('the plain edge', () => {
   it('does not move: an arrow toward the end the message goes to, the state in words', () => {
     const draw = (flow: A2ATeamFlow) => (
@@ -499,6 +621,7 @@ describe('the selected exchange on the stage (S3-02)', () => {
       ['studio', LinkEdge],
       ['hero', HeroLinkEdge],
       ['plain', PlainLinkEdge],
+      ['space', SpaceLinkEdge],
     ] as const) {
       const draw = (selected: boolean) => (
         <ReactFlowProvider>
