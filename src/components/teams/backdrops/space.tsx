@@ -14,7 +14,7 @@
  * answers while it answers (the flows of `a2aTeamFlow`).
  *
  * The colours are Primer's tokens — the accent for the agents and their
- * links, the *done* colour for the systems — on the page's own ground,
+ * links, the *success* colour for the systems — on the page's own ground,
  * light or dark, so the stage reads in both modes as the hero drawings do.
  *
  * The balloon still opens on a mark — the figure is `AssistantStage`'s —
@@ -59,7 +59,10 @@ import { faceCharacter } from './faces';
 import { EdgeHalo } from './halo';
 import { sceneBackdropChoice } from './catalogue';
 
-const NODE_WIDTH = 150;
+// As wide as a figure at its usual size: a link leaves and reaches the
+// node's sides, so it meets the mark's orbit, as the hero drawings' lines
+// meet their nodes. The name is beside, outside the node.
+const NODE_WIDTH = 96;
 const CONNECTION_WIDTH = 96;
 /** The mark's share of the figure: the rest is its halo and its orbit. */
 const MARK_SCALE = 0.46;
@@ -116,7 +119,8 @@ function spaceMark(member: SceneBackdropFace): AssistantCharacter {
 const MEMBER_LOOK: MemberLook = {
   width: NODE_WIDTH,
   figure: spaceMark,
-  beside: MARK_SCALE / 2 + 0.16,
+  // Just outside the orbit, which is the figure's whole size.
+  beside: 0.56,
   name: {
     fontFamily: 'mono',
     fontWeight: 700,
@@ -252,7 +256,11 @@ function FlowingLight({
   );
 }
 
-/** The words on an edge, in capitals as the hero drawings' labels: faint at rest, bright while it carries a message. */
+/**
+ * The words on an edge, in the hero drawings' monospace: faint at rest,
+ * bright while it carries a message; above the line, as a member's name
+ * beside its mark sits under the line to its systems.
+ */
 function EdgeWords({
   at,
   flowing,
@@ -269,7 +277,7 @@ function EdgeWords({
       <Box
         className="nodrag nopan"
         position="absolute"
-        transform={`translate(-50%, 10px) translate(${at.x}px, ${at.y}px)`}
+        transform={`translate(-50%, calc(-100% - 8px)) translate(${at.x}px, ${at.y}px)`}
         pointerEvents="none"
         textAlign="center"
         whiteSpace="nowrap"
@@ -542,7 +550,7 @@ export function SpaceGround(): JSX.Element {
           </pattern>
           {radial('core', glow, '50%', '50%', '45%')}
           {radial('left', pop, '14%', '26%', '40%')}
-          {radial('right', glow, '86%', '26%', '40%')}
+          {radial('right', surge, '86%', '26%', '40%')}
           {radial('bottom-left', surge, '20%', '82%', '38%')}
           {radial('bottom-right', pop, '82%', '82%', '38%')}
           <linearGradient
@@ -587,6 +595,22 @@ export function SpaceGround(): JSX.Element {
         <rect width="100%" height="100%" fill={url('bottom-left')} />
         <rect width="100%" height="100%" fill={url('bottom-right')} />
         <rect width="100%" height="100%" fill={url('shimmer')} />
+        {/* Wide diagonal bands of light, as across the hero drawings. */}
+        {[
+          ['12%', '46%', glow, 34],
+          ['40%', '74%', pop, 28],
+          ['66%', '100%', glow, 30],
+        ].map(([from, to, stroke, width]) => (
+          <line
+            key={String(from)}
+            x1={from}
+            y1="0"
+            x2={to}
+            y2="100%"
+            strokeWidth={width}
+            style={{ stroke: String(stroke), strokeOpacity: alpha('band') }}
+          />
+        ))}
         {/* Dashed rings about the middle, as round the hero's core. */}
         <g style={{ stroke: glow }} fill="none">
           <circle
@@ -644,8 +668,9 @@ const SPACE_COLOURS = {
   '--scene-stage-fg': 'var(--fgColor-default, #1f2328)',
   '--scene-stage-muted': 'var(--fgColor-muted, #656d76)',
   '--scene-space-glow': 'var(--fgColor-accent, #0969da)',
-  '--scene-space-pop': 'var(--fgColor-done, #8250df)',
-  '--scene-space-surge': 'var(--fgColor-success, #1a7f37)',
+  '--scene-space-pop': 'var(--fgColor-success, #1a7f37)',
+  // The hero drawings' blue, beside the theme's accent: Primer's display blue.
+  '--scene-space-surge': 'var(--display-blue-fgColor, var(--fgColor-accent))',
 } as const;
 
 /** The `space` backdrop. */
@@ -662,20 +687,22 @@ export const SPACE_BACKDROP: SceneBackdrop = {
       ...SPACE_COLOURS,
       '--scene-stage-bg': 'var(--bgColor-muted, #f6f8fa)',
       '--scene-space-dots-alpha': '0.45',
-      '--scene-space-grid-alpha': '0.16',
-      '--scene-space-mesh-alpha': '0.14',
-      '--scene-space-rings-alpha': '0.1',
-      '--scene-space-glow-alpha': '0.22',
+      '--scene-space-grid-alpha': '0.2',
+      '--scene-space-mesh-alpha': '0.18',
+      '--scene-space-rings-alpha': '0.12',
+      '--scene-space-glow-alpha': '0.62',
+      '--scene-space-band-alpha': '0.1',
       '--scene-space-stars-alpha': '0.7',
     },
     dark: {
       ...SPACE_COLOURS,
       '--scene-stage-bg': 'var(--bgColor-inset, #010409)',
       '--scene-space-dots-alpha': '0.32',
-      '--scene-space-grid-alpha': '0.08',
-      '--scene-space-mesh-alpha': '0.08',
-      '--scene-space-rings-alpha': '0.06',
-      '--scene-space-glow-alpha': '0.3',
+      '--scene-space-grid-alpha': '0.1',
+      '--scene-space-mesh-alpha': '0.1',
+      '--scene-space-rings-alpha': '0.08',
+      '--scene-space-glow-alpha': '0.42',
+      '--scene-space-band-alpha': '0.08',
       '--scene-space-stars-alpha': '0.6',
     },
     sx: {
