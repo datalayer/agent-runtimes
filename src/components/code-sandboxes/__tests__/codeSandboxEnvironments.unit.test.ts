@@ -4,7 +4,7 @@
  */
 
 /**
- * What the environment dropdown offers, and what it refuses (PLAN_ENV.md, E1-19).
+ * What the environment dropdown offers, and what it refuses (E1-19).
  *
  * The rules live in a module of their own so they can be read without a DOM,
  * and so the launcher and the picker cannot disagree about the same entry.

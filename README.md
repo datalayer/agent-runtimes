@@ -13,324 +13,56 @@
 [![Github Actions Status](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yaml/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yaml)
 [![PyPI - Version](https://img.shields.io/pypi/v/agent-runtimes)](https://pypi.org/project/agent-runtimes)
 
-**Agent Runtimes** is a unified library for deploying, managing, and interacting with AI agents across multiple protocols and frameworks. It provides both a Python server for hosting agents and React components for seamless integration into web and desktop applications.
+**Agent Runtimes** runs AI agents and serves them over the protocols the agent world speaks. It is a Python server that hosts agents built from [agentspecs](https://agentspecs.datalayer.tech) (Pydantic AI by default), with their MCP tools, skills, code sandbox and guardrails. It is also a set of React components (chat, floating assistant, the Loop workspace) that talk to them. It drives coding agents such as Claude Code as harnesses, behind the Shield. It runs on your machine with your own model keys, or on [Datalayer](https://datalayer.ai) runtimes.
 
-## What is Agent Runtimes?
+![An agent answering in the chat, its code execution shown](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-chat.gif)
 
-Agent Runtimes solves the complexity of deploying AI agents by providing:
-
-1. **Protocol Abstraction**: One agent, multiple protocols - deploy your agent once and access it through ACP, Vercel AI SDK, AG-UI, MCP-UI, or A2A without changing your code.
-
-2. **Framework Flexibility**: Write agents using your preferred framework (Pydantic AI, LangChain, Jupyter AI) while maintaining a consistent API.
-
-3. **Cloud Runtime Management**: Built-in integration with Datalayer Cloud Runtimes for launching and managing compute resources with Zustand-based state management.
-
-4. **UI Components**: Pre-built React components (ChatBase, ChatSidebar, ChatFloating) that connect to agents and execute tools directly in the browser.
-
-5. **Tool Ecosystem**: Seamless integration with MCP (Model Context Protocol) tools, custom tools, and built-in utilities for Jupyter notebooks and Lexical documents.
-
-![Agent Runtimes Chat Web](https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.gif)
-
-![Agent Runtimes Chat CLI](https://images.datalayer.io/products/codeai/codeai_short_cut.gif)
-
-## 🌟 Features
-
-### Agent Node
-- **Central registration**: Agent nodes register and heartbeat to Datalayer Runtimes APIs.
-- **Node configuration**: Runtime mode (`private`, `shared`, `sleep`) and sharing metadata are tracked per node.
-- **Tunnel routing**: Agent nodes maintain a tunnel with Datalayer Runtimes to route chat messages between central UI and nodes.
-- **Dedicated UI**: Agent Node list/detail UX is available for node observability and operations.
-- **End-to-end sync**: Local node state can be synchronized to central services for fleet visibility.
-
-### Multi-Protocol Support
-- **ACP (Agent Client Protocol)**: WebSocket-based standard protocol
-- **Vercel AI SDK**: Compatible with Vercel's AI SDK for React/Next.js
-- **AG-UI**: Lightweight web interface (Pydantic AI native)
-- **MCP-UI**: Interactive UI resources protocol with React/Web Components
-- **A2A**: Agent-to-agent communication
-
-### Multi-Agent Support
-- **Pydantic AI**: Type-safe agents (fully implemented)
-- **LangChain**: Complex workflows (adapter ready)
-- **Jupyter AI**: Notebook integration (adapter ready)
-
-### Built-in Features
-- 🔌 **Flexible Architecture**: Easy to add new agents and protocols
-- 🛠️ **Tool Support**: MCP, custom tools, built-in utilities
-- 📊 **Observability**: OpenTelemetry integration
-- 💾 **Persistence**: DBOS support for durable execution
-- 🔒 **Context Optimization**: LLM context management
-
-## Runtime, Snapshot, and Evals Workflows
-
-The runtime-oriented examples and CLI workflows migrated from `datalayer-core` now live here.
-
-### Python Runtime Quickstart
-
-```python
-from agent_runtimes.client import RuntimeClient
-
-client = RuntimeClient()
-
-# Execute code in a managed runtime
-with client.create_runtime() as runtime:
-    response = runtime.execute("print('Hello from Datalayer!')")
-    print(response.stdout)
-```
-
-### Runtime and Snapshot CLI
+## Install
 
 ```bash
-# List available runtimes
-datalayer runtime list
-
-# Create a new runtime
-datalayer runtime create ai-env --given-name my-runtime-123
-
-# Execute a script in a runtime
-datalayer runtime exec my-script.py --agent <agent-id>
-
-# Create a snapshot from a runtime but do not terminate the runtime
-datalayer snapshots create <pod-name> my-snapshot 'AI work!' False
+pip install agent-runtimes        # Python 3.11 or later: the server and the `loop` CLI
+npm install @datalayer/agent-runtimes   # the React components
 ```
 
-### Subscription and Credits CLI
+## Run
+
+With a model key in the environment (for example `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or AWS Bedrock credentials):
 
 ```bash
-# End-user billing view
-datalayer subscriptions show
-datalayer subscriptions available
-datalayer subscriptions move
-datalayer subscriptions topups
-datalayer subscriptions dry-run
-
-# Organization and team credits visibility
-datalayer usage org-overview --organization-uid <org_uid>
-datalayer usage team-overview --team-uid <team_uid>
-
-# Monitoring-driven credit management
-datalayer usage org-monitor --organization-uid <org_uid> --window-hours 24
-datalayer usage team-monitor --team-uid <team_uid> --window-hours 24
-
-# Credits transfer operations (owners/admins)
-datalayer usage org-allocate-team --organization-uid <org_uid> --team-uid <team_uid> --amount 50
-datalayer usage org-revoke-team --organization-uid <org_uid> --team-uid <team_uid> --amount 20
-datalayer usage team-allocate-member --team-uid <team_uid> --member-uid <member_uid> --amount 15
-datalayer usage team-revoke-member --team-uid <team_uid> --member-uid <member_uid> --amount 5
+loop --local -a example-simple
 ```
 
-### Evals CLI (Multi-Agentspec)
+`loop` starts a local server with the `example-simple` agent and opens a chat in the terminal. `agent-runtimes serve --port 8765` starts the server on its own, for the web components.
 
-Use comma-separated agentspec ids to create one experiment per agentspec variant:
+![The loop CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-loop-cli.gif)
 
-```bash
-# Creates one experiment per agentspec in the list
-agent-runtimes evals experiments create my-exp \
-  --evalset-id <evalset_id> \
-  --agent-spec-ids example-evals,example-evals-nocodemode,example-custom
-```
+## Features
 
-Generate a comparison report:
+- **The meta-harness.** Coding agents run as harnesses, driven over the Agent Client Protocol (ACP): **Claude Code, Codex, OpenCode and pi** today. The runtime launches the harness, lends it tools through the MCP gateway and writes the skills into its workspace. It serves the harness over every protocol it serves its own agents on. The **Shield** surrounds it: the pod's egress boundary, the policies and the session's rules, the audit record and the trace. See [Harnesses](https://agent-runtimes.datalayer.tech/harnesses/) and [the Shield](https://agent-runtimes.datalayer.tech/shield/).
+- **Protocol integrations.**
+  - *Transports to a UI or another agent*: AG-UI, the Vercel AI SDK, ACP and A2A (served, and called as a client), with A2UI, MCP-UI and MCP Apps for generative UI.
+  - *Tools*: MCP, local servers over stdio and remote servers over Streamable HTTP.
+  - *Identity, consent and commerce*, each a Reactor plugin: Web Bot Auth (with a draft TAP profile), PAP (Personal Agent Protocol), PACT, UCP and the Agentic Commerce Protocol.
 
-```bash
-agent-runtimes evals report <evalset_id> --run-limit 50 --export
-```
-
-How to interpret grouped comparisons in the report:
-
-- `Within-Agentspec Pairwise Latest-Pass Deltas`: compares experiments using the same agentspec id.
-- `Cross-Agentspec Pairwise Latest-Pass Deltas`: compares experiments using different agentspec ids.
-- Pairwise sections compute all combinations for the selected experiments, not just two agentspecs.
+  See [Protocols](https://agent-runtimes.datalayer.tech/protocols/).
+- **Applications.** An Appspec (or a Python `app.py`) becomes a chat, a widget, a worker or a decision. You run it with `loop apps run`, deploy it at its own address and embed it in any page with the `<datalayer-app>` element. See [Apps](https://agent-runtimes.datalayer.tech/apps/).
+- **Tools and code.** MCP servers, skills, a code sandbox and Codemode, which calls tools from code. See [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools/).
+- **Controls.** Guardrails, tool approvals, budgets, hooks, monitoring and OpenTelemetry. See [Identity](https://agent-runtimes.datalayer.tech/identity/) and [Hooks](https://agent-runtimes.datalayer.tech/hooks/).
+- **Sessions, subagents and teams.** Sessions you can resume, clone, export and import. Subagents, and teams of agents over A2A. See [Sessions](https://agent-runtimes.datalayer.tech/sessions/) and [Subagents](https://agent-runtimes.datalayer.tech/subagents/).
+- **Chat UI.** React chat components, a floating assistant with its avatar, voice, presence, and the Loop workspace in the browser. See [Chat](https://agent-runtimes.datalayer.tech/chat/).
+- **Agent Nodes.** Your own machine registers as a node and is reached from Datalayer. See [Agent Nodes](https://agent-runtimes.datalayer.tech/agent-nodes/).
 
 ## Examples
 
-The examples demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
-
-### Install
-
-`make examples` starts both the Python agent server and the Vite dev server,
-so you need both stacks installed once:
-
 ```bash
-# 1. Node dependencies for the React examples + Vite dev server.
-npm install
-
-# 2. Python package (editable) for the local agent-runtimes server.
-#    Use a virtualenv or conda env of your choice.
-pip install -e .
+npm install && pip install -e .
+make examples      # the local server on :8765 and the examples gallery on :3000
 ```
-
-Optional extras (declared in `pyproject.toml`):
-
-```bash
-pip install -e ".[examples]"   # extra agent framework deps used by examples
-pip install -e ".[test]"       # pytest and test utilities
-pip install -e ".[cli]"        # CLI dependencies
-pip install -e ".[chat]"       # chat-related extras
-pip install -e ".[docs]"       # docs build dependencies
-```
-
-For deterministic installs in CI (and to avoid resolver backtracking), use the
-version constraints file:
-
-```bash
-pip install -c constraints/py313.txt -e .
-```
-
-### Run
-
-```bash
-make examples
-```
-
-### Agent Node development (UI + server)
-
-For focused Agent Node development, run:
-
-```bash
-make agent-node
-```
-
-This target starts both:
-
-- the local Python server on port `8765`
-- the Vite page for `html/agent-node.html`
-
-Use this mode to iterate on Agent Node configuration flows and central registration behavior.
-
-Expected central visibility semantics:
-
-- show all nodes owned by the current user,
-- show other users' nodes only when mode is `shared`.
-
-### Agent Node against local services (`plane local`)
-
-To run Agent Node with local service URLs preconfigured, use:
-
-```bash
-make agent-node-local
-```
-
-This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
-`DATALAYER_*` and `VITE_*` variables so Agent Node sync/tunnel and UI calls are
-wired to local services.
-
-Prerequisites:
-
-1. Start the local Plane stack (`plane local`).
-2. Export `DATALAYER_API_KEY` for authenticated registration/tunnel calls.
-
-Override any local service URL if needed:
-
-```bash
-PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node-local
-```
-
-### Docker build notes
-
-Docker image build and release notes were moved to:
-
-- [docker/README.md](docker/README.md)
-
-By default, `make examples` boots the local Vite dev server with every
-Datalayer service URLs set to local defaults for agent execution:
-
-| Variable                      | Default                 | Notes                                           |
-| ----------------------------- | ----------------------- | ----------------------------------------------- |
-| `VITE_BASE_URL`               | `http://localhost:8765` | Local `agent-runtimes` server (`/api/v1/agents/*`) |
-| `VITE_BASE_URL_NO_CODEMODE`   | `http://localhost:8765` | Local no-codemode agent endpoint                |
-| `VITE_BASE_URL_CODEMODE`      | `http://localhost:8766` | Local codemode agent endpoint                   |
-
-This is the local-first workflow used during development. It avoids accidental
-remote calls for the core agent routes even if your shell exports
-`DATALAYER_*_URL` values.
-
-### Running with explicit production URLs
-
-If you want to force production URLs for Datalayer services, use:
-
-```bash
-make examples:prod
-```
-
-This mode uses the `DATALAYER_*_URL` convention from
-`datalayer-core` (specifically `datalayer_core/utils/urls.py`)
-and propagates those values to the Vite HTML placeholders.
-
-Override any URL on the command line:
-
-```bash
-make examples:prod DATALAYER_DEFAULT_URL=https://prod2.datalayer.run
-```
-
-### Running against a local `plane local` stack
-
-If you are developing against a local Plane (`plane local`), use:
-
-```bash
-make example-local
-```
-
-This points each `DATALAYER_*_URL` (and its `VITE_*` frontend counterpart, so
-both http and ws traffic stay local) at the matching localhost port exposed by
-`plane local` (see `services/plane/datalayer_plane/sbin/local.sh`):
-
-| Variable                       | Default port                  |
-| ------------------------------ | ----------------------------- |
-| `PLANE_LOCAL_IAM_URL`          | `http://localhost:9700`       |
-| `PLANE_LOCAL_RUNTIMES_URL`     | `http://localhost:9500`       |
-| `PLANE_LOCAL_SPACER_URL`       | `http://localhost:9900`       |
-| `PLANE_LOCAL_LIBRARY_URL`      | `http://localhost:9800`       |
-| `PLANE_LOCAL_MANAGER_URL`      | `http://localhost:2100`       |
-| `PLANE_LOCAL_AI_AGENTS_URL`    | `http://localhost:4400`       |
-| `PLANE_LOCAL_AI_INFERENCE_URL` | `http://localhost:4450`       |
-| `PLANE_LOCAL_JUPYTER_MCP_SERVER_URL` | `http://localhost:4404/mcp`   |
-| `PLANE_LOCAL_GROWTH_URL`       | `http://localhost:6660`       |
-| `PLANE_LOCAL_SUCCESS_URL`      | `http://localhost:3300`       |
-| `PLANE_LOCAL_STATUS_URL`       | `http://localhost:4785`       |
-| `PLANE_LOCAL_SUPPORT_URL`      | `http://localhost:2200`       |
-
-Override any port on the command line, e.g.:
-
-```bash
-PLANE_LOCAL_IAM_URL=http://localhost:9701 make example-local
-```
-
-On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:
-
-- UX patterns (aka GenUI) with protocols like A2UI and AG-UI
-- Interactive or triggered workflows
-- Agent Identity and Controls with guardrails, monitoring, tool approvals
-- Programmatic tooling with Sandbox and Codemode for MCP and Skills
-- Outputs and Notifications
-- Real-time collaboration with users, subagents, and multi-agent teams
-- Custom agents built from Agentspecs
-- ...
-
-Each of these concerns deserves more than a one-off solution—they need deep, composable, and pluggable implementations.
 
 ## Documentation
 
-The detailed guides for architecture, use cases, interactive chat, key concepts, and runtime configuration are now in Docusaurus docs:
+Everything else is on the documentation site: **[agent-runtimes.datalayer.tech](https://agent-runtimes.datalayer.tech)**. It covers the [CLI](https://agent-runtimes.datalayer.tech/cli/), [endpoints](https://agent-runtimes.datalayer.tech/endpoints/), [agentspecs](https://agent-runtimes.datalayer.tech/agentspecs/), [integrations](https://agent-runtimes.datalayer.tech/integrations/), [sessions](https://agent-runtimes.datalayer.tech/sessions/), [plugins](https://agent-runtimes.datalayer.tech/plugins/) and the API references.
 
-- [Agent Runtimes Overview](https://agent-runtimes.datalayer.tech/)
-- [Integrations](https://agent-runtimes.datalayer.tech/integrations)
-- [Chat](https://agent-runtimes.datalayer.tech/chat)
-- [Protocols](https://agent-runtimes.datalayer.tech/protocols)
-- [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools)
-- [Agent Nodes](https://agent-runtimes.datalayer.tech/nodes)
-- [Endpoints](https://agent-runtimes.datalayer.tech/endpoints)
-- [CLI](https://agent-runtimes.datalayer.tech/cli)
+## License
 
-## Agentspecs
-
-Generated catalogs are produced via:
-
-```bash
-make specs
-```
-
-Generation scripts are under [scripts/codegen](https://github.com/datalayer/agent-runtimes/tree/main/scripts/codegen), and outputs are written to:
-
-- Python: [agent_runtimes/specs](https://github.com/datalayer/agent-runtimes/tree/main/agent_runtimes/specs)
-- TypeScript: [src/specs](https://github.com/datalayer/agent-runtimes/tree/main/src/specs)
+[BSD 3-Clause](LICENSE).

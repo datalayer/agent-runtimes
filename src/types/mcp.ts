@@ -35,19 +35,21 @@ export interface MCPServer {
   enabled: boolean;
   /** List of available tools */
   tools: MCPServerTool[];
-  /** Command to run the MCP server (e.g., 'npx', 'uvx') */
+  /** Command to run a local MCP server (e.g., 'npx', 'uvx'); a remote one names none and is reached at `url` */
   command?: string;
   /** Command arguments for the MCP server */
   args: string[];
+  /** The headers a remote server is sent with every request, `${VAR}` expanded as it starts: the bearer among them */
+  headers?: Record<string, string>;
   /** Whether the server is available (based on tool discovery) */
   isAvailable: boolean;
-  /** Transport type: 'stdio' or 'http' */
-  transport: 'stdio' | 'http';
+  /** Transport type: 'stdio', 'http', or 'streamable-http' — a remote server reached at `url` with its `headers` when it has no `command`, a command run as a local HTTP process at `url` when it has one */
+  transport: 'stdio' | 'http' | 'streamable-http';
   /** Environment variables required by this server (e.g., API keys) */
   requiredEnvVars?: string[];
-  /** Icon identifier for the server */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier for the server */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 

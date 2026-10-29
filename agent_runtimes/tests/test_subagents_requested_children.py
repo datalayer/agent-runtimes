@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A worker's children are requested, not taken (ORCHESTRATOR.md, O2-06).
+"""A worker's children are requested, not taken (O2-06).
 
 A run the control plane dispatched carries its execution. Its ``delegate_task``
 asks the control plane for a subagent reached over A2A, as a child of that

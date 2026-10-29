@@ -18,6 +18,7 @@ app = typer.Typer(
     name="pools",
     help="Runtime pool administration commands",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

@@ -1,0 +1,119 @@
+---
+sidebar_position: 4
+title: Portable code for phones and chat hosts
+---
+
+# Portable code for phones and chat hosts
+
+Agent Runtimes' npm package depends on Jupyter, React and Reactor, because its
+web components do. Two folders of it reach none of them, so that a phone and a
+Node service can take them without the rest. There is no `exports` map: each is
+deep-imported by its built path.
+
+| Import | Source | Who imports it | What it may reach at run time |
+| --- | --- | --- | --- |
+| `@datalayer/agent-runtimes/lib/portable` | `src/portable/index.ts` | Datalayer Mobile (Metro) | modules in `src/portable/` only; no package, no `node:` module |
+| `@datalayer/agent-runtimes/lib/portable/hosts` | `src/portable/hosts/index.ts` | Node chat-host services: `@Datalayer` for Slack and for Discord | `src/portable/` and `src/portable/hosts/`; the packages `zod`, `node:crypto` and `node:http` |
+
+`src/__tests__/portable.unit.test.ts` holds both: it walks every module each
+entry reaches (`from` imports, side-effect imports, `import()` and `require()`)
+and refuses one outside its folders, a package outside its list, and a DOM
+global (`window`, `document`, `localStorage`, `navigator`…), which type-checking
+with the DOM library would let through. The hosts entry's type-only imports
+stay in its two folders too, and it never imports `'../index'`: the portable
+entry's types re-export `ChatMessage`, whose types reach Reactor.
+
+## The portable entry
+
+What a client with no DOM drives the session API with: the run stream
+(`AgUiFrames`, `readRunStream`), a conversation as its stream builds it
+(`reduceConversation`), approvals, sign-in, a thread read again. See
+[From a native app](./session-api.mdx#from-a-native-app).
+
+It also carries the **semantic events** a chat host renders (version 1):
+`semantic.ts` names eleven kinds — text, progress, tool, approval, table,
+file, citation, ask, completion, stop, error — and `semanticOfAgUi.ts`
+reduces each AG-UI event to them (`semanticOf`, `turnOf`, `askQuestionOf`).
+The contract is `semantic-events.json`, beside them: the reducer reduces every
+case of it, and `agent_runtimes/tests/test_semantic_events_contract.py` holds
+the cases to what the runtime emits, so a case never stands for an event the
+runtime does not send. Two follow from that: a question is read from
+`RUN_FINISHED`'s `result.asking` only (the run stream carries no `loop.ask`),
+and `stop` is said by the host that pressed Stop, since a stopped session's
+stream ends without a run end.
+
+## The hosts entry
+
+What every chat host shares, so that Slack and Discord carry no copy of it:
+
+- the ai-agents host contracts (`contracts.ts`) and their fixture
+  `contracts.json`, byte-identical to ai-agents'
+  `tests/fixtures/hosts/contracts.json`, which both sides test;
+- the host client (`DatalayerHostClient`: bind, link codes, the outbox,
+  handoffs, approval presentation and decision, and `admin` — pause, resume
+  or one channel's rule from the host itself, which Datalayer takes only from
+  the host user linked to the installation's owner);
+- the agent client over the session API (`HttpAgentClient`,
+  `HostKeyCredentials`): the host credential exchange (with `visitor: true`
+  for a host user who never linked: ai-agents answers it only when the
+  installation's owner opened the deployment to visitors; see
+  [a host's visitor](./session-api.mdx#a-hosts-visitor)), a turn run once by the
+  host's event id, its stream reduced, its session mapped to the host's
+  thread. What is the host's own is injected as a `HostShape`: the session uid
+  (`hostSessionUid(kind, parts, generation)`), the place Datalayer checks the
+  channel policy against, the delivery target, and the turn's `provenance`
+  (`provenanceOf`: the host's kind, the place, the thread and the message,
+  sent on the turn itself, at most 1 KiB). `bindSession` maps a session again
+  once its place changes after the turn started (Discord's answer thread
+  exists only once the answer is shown), replacing the binding;
+- approval renderers (`renderApproval`) and `hostMayDecide`: a decision is
+  offered only for a complete action the server says a host may decide, and
+  only for mail (a send whose tool names mail, `MAIL_WORDS`) and for a
+  company's `pap_confirm` (since 1.5.90): reads, writes, other sends and every
+  destructive, financial, publishing or unknown action are reviewed in
+  Datalayer. The `pap-confirm` renderer shows the company, its own summary,
+  every term, the operation and its **exact revision** (and the revision it
+  replaces, if any); the decision is on that revision only, and a changed
+  revision is another approval. A card missing the company, the summary, the
+  operation, the revision or the digest of the terms fails closed, to be
+  reviewed in Datalayer;
+- deliveries: the signed webhook (`deliveryRoute`), the outbox poller and a
+  delivery handled once (`receiveDelivery`), over the host's `DeliverySink`;
+- `TurnState`, a turn's state from its semantic events, which each host
+  renders in its own blocks, and `resolveApplication`, the order in which a
+  turn's application is chosen;
+- the durable queue (`PostgresWorkQueue`), quotas (`PostgresQuotaStore`),
+  dead letters, each under the host's table prefix over a structural
+  `Queryable` that `pg.Pool` satisfies (no `pg` import), and the shared tables
+  as idempotent SQL (`hostSchemaSql(prefix)`, `applyHostSchema`), since the
+  npm package ships no `.sql`;
+- `SecretCipher`, redacted logs and audit (`Logger`, `redact`), health
+  (`readiness`, `healthServer`, `timestampWithinWindow`), and the
+  forbidden-graph functions.
+
+## Why a Node service bundles it
+
+Since 1.5.72 `lib/` loads under plain `node` too (every relative import is
+written whole). But installing the package would install its Jupyter and React
+dependencies. So a chat-host service:
+
+1. declares `@datalayer/agent-runtimes` as an **optional peer** and pins one
+   release in `config.agentRuntimesVersion`;
+2. in the monorepo, reads `lib/portable` through the workspace link; in CI and
+   its image, extracts only that release's `lib/portable` from the npm tarball
+   (`scripts/fetch-agent-runtimes.mjs`);
+3. runs as **one esbuild bundle** of its sources and the `lib/portable`
+   modules they reach, its own `dependencies` external;
+4. gates the bundle's module graph with `forbiddenInBundle` over esbuild's
+   metafile: every bundled input is the service's or agent-runtimes'
+   `lib/portable`, every external a `node:` builtin or one of its
+   dependencies, nothing Jupyter, React, Primer or Reactor.
+
+## Release, then pin
+
+A change to `src/portable/hosts` reaches a service's image only through a
+release: bump `package.json`, add the `CHANGELOG.md` entry, push, and tag
+`vX.Y.Z` (see `RELEASE.md`). The release workflow runs the portable tests and
+refuses a tarball without `lib/portable/hosts/index.js`,
+`lib/portable/hosts/contracts.json` and `lib/portable/semantic-events.json`.
+Only then does a service move its `config.agentRuntimesVersion`.

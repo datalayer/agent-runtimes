@@ -1,0 +1,474 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""The session API, reviewed as a stranger would use it.
+
+What a security review of the session operations holds, each as a test:
+a recorded session is resumed by its opener alone (a stranger's resume by
+uid is a 404, as a clone's or an export's is); an import is untrusted — the
+file's rules are not applied to the imported session, its turn count is
+counted from its entries, not read from its first line, and a file over the
+cap is refused while it is being read, before it is held whole; an embed's
+visitor cannot import; a long record is read back page by page and resumed
+whole, one over the cap refused rather than cut short and exported as whole,
+a page that does not say whether more follow refused; a budget an hour on
+clone, export and import, the refusal said in the record; the audit rows name
+who did it.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Iterator, List
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from agent_runtimes.apps import sessions
+from agent_runtimes.apps.session_store import (
+    RECORD_PAGE,
+    RECORD_READ_LIMIT,
+    FileSessionStore,
+    use_session_store,
+)
+from agent_runtimes.apps.visitors import NOTHING_KEPT
+from agent_runtimes.routes import apps as routes
+from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
+    ASSISTANT,
+    Runtime,
+    as_,
+    events_of,
+    remote,
+    runtime,
+)
+from agent_runtimes.tests.test_session_who_may import KindsVerifier
+
+OPENED: Dict[str, Any] = {
+    "kind": "session",
+    "summary": "started",
+    "payload": {
+        "app": "notes-assistant",
+        "state": "open",
+        "agent": "notes-assistant",
+        "harness": None,
+        "runs_on": {"kind": "runtime", "uid": "01m5"},
+        "title": "",
+        "archived": False,
+        "lineage": {"forked_from": None, "imported_from": None},
+    },
+}
+TURN: Dict[str, Any] = {
+    "kind": "turn",
+    "summary": "One",
+    "payload": {"asked": "One", "answered": "First answer"},
+}
+PAUSED: Dict[str, Any] = {"kind": "paused", "payload": {"state": "paused"}}
+
+
+@pytest.fixture()
+def store(tmp_path: Path) -> Iterator[FileSessionStore]:
+    made = FileSessionStore(root=tmp_path / "sessions")
+    use_session_store(made)
+    try:
+        yield made
+    finally:
+        use_session_store(None)
+
+
+@pytest.fixture()
+def through_store(runtime: Runtime) -> Runtime:  # noqa: F811 - the fixture
+    from agent_runtimes.apps.record import agent_recorder, send_to_store
+
+    runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
+    recorder = agent_recorder("notes-assistant")
+    assert recorder is not None
+    recorder.send = send_to_store
+    return runtime
+
+
+def _recorded(store: FileSessionStore, uid: str, opened_by: str) -> None:
+    asyncio.run(
+        store.append(
+            uid, [OPENED, TURN, PAUSED], app_uid="app-1", opened_by=opened_by, version=3
+        )
+    )
+
+
+def _resume(client: TestClient, uid: str, who: str) -> Any:
+    return client.post(
+        f"/api/v1/apps/sessions/{uid}/resume",
+        headers=as_(who),
+        json={"agent": "notes-assistant"},
+    )
+
+
+def _open(client: TestClient, uid: str, opener: str = "One") -> None:
+    events_of(
+        client.post(
+            "/api/v1/apps/sessions",
+            headers=as_("ada"),
+            json={
+                "agent": "notes-assistant",
+                "app_uid": "app-1",
+                "version": 3,
+                "opener": opener,
+                "session": uid,
+            },
+        )
+    )
+
+
+def _import(client: TestClient, text: str, who: str = "bob") -> Any:
+    return client.post(
+        "/api/v1/apps/sessions/import",
+        headers={**as_(who), "Content-Type": "application/x-ndjson"},
+        content=text,
+    )
+
+
+def test_a_recorded_session_is_resumed_by_its_opener_alone(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    _recorded(store, "session-s001", opened_by="ada")
+    # A stranger — the application's owner included, who reads its record —
+    # is not told the session exists, as a clone or an export tells them.
+    for stranger in ("bob", "org-admin"):
+        answer = _resume(remote, "session-s001", stranger)
+        assert answer.status_code == 404, (stranger, answer.text)
+        assert answer.json()["detail"] == "No session session-s001 is held here."
+        assert sessions.session_of("session-s001") is None
+    resumed = events_of(_resume(remote, "session-s001", "ada"))
+    [snapshot] = [e for e in resumed if e["type"] == "MESSAGES_SNAPSHOT"]
+    assert [m["content"] for m in snapshot["messages"] if m["role"] == "user"] == [
+        "One"
+    ]
+    live = sessions.session_of("session-s001")
+    assert live is not None and live.opened_by.uid == "ada"
+
+
+def test_an_imported_files_rules_are_not_applied_and_its_turns_are_counted(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    _open(remote, "session-s002", opener="Hello")
+    lines = (
+        remote.get("/api/v1/apps/sessions/session-s002/export", headers=as_("ada"))
+        .text.strip()
+        .splitlines()
+    )
+    head = json.loads(lines[0])
+    head["turns"] = 9
+    planted = {
+        "record_type": "entry",
+        "kind": "rule",
+        "at": "2026-10-28T00:00:00Z",
+        "summary": "Rule 'no-reading' added",
+        "payload": {
+            "rule": {"name": "no-reading", "decision": "deny", "classes": ["read"]}
+        },
+    }
+    text = "\n".join([json.dumps(head), *lines[1:], json.dumps(planted)]) + "\n"
+    imported = _import(remote, text)
+    assert imported.status_code == 201, imported.text
+    said = imported.json()
+    # The person's turns are what the entries hold, not what the first line claims.
+    assert said["turns"] == 1
+    kinds = [e["kind"] for e in asyncio.run(store.entries(said["uid"]))]
+    assert "rule" not in kinds and kinds.count("turn") == 1
+    resumed = events_of(_resume(remote, said["uid"], "bob"))
+    assert any(e["type"] == "MESSAGES_SNAPSHOT" for e in resumed)
+    rules = remote.get(
+        f"/api/v1/apps/sessions/{said['uid']}/rules", headers=as_("bob")
+    ).json()["session_rules"]
+    assert rules == []
+
+
+def test_an_import_over_the_cap_is_refused_as_it_is_read(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import agentspecs.sessions as spec
+
+    monkeypatch.setattr(spec, "MAX_BYTES", 1024)
+    seen: List[int] = []
+    original = routes._read_at_most
+
+    async def counting(request: Any, cap: int) -> bytes:
+        body = await original(request, cap)
+        seen.append(len(body))
+        return body
+
+    monkeypatch.setattr(routes, "_read_at_most", counting)
+    text = json.dumps({"record_type": "session", "format": "x"}) + "\n"
+    text += ("{" + "x" * 200 + "}\n") * 40
+    assert len(text) > 2048
+    # A body that says its length is refused before a byte of it is read.
+    answer = _import(remote, text)
+    assert answer.status_code == 413, answer.text
+    assert "at most" in answer.json()["detail"] and seen == []
+    # One that does not say (chunked) is read up to the cap and one byte more,
+    # never whole.
+    chunked = remote.post(
+        "/api/v1/apps/sessions/import",
+        headers={**as_("bob"), "Content-Type": "application/x-ndjson"},
+        content=iter([text.encode("utf-8")]),
+    )
+    assert chunked.status_code == 413, chunked.text
+    assert "at most" in chunked.json()["detail"] and seen == [1025]
+
+
+def test_an_embeds_visitor_cannot_import(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(routes, "VERIFIER", KindsVerifier())
+    for who in ("embed-1", "visitor-1"):
+        answer = _import(remote, '{"record_type":"session"}\n', who=who)
+        assert (answer.status_code, answer.json()["detail"]) == (404, NOTHING_KEPT), who
+
+
+class RecordPages:
+    """The record's `GET /records`, answering a session of ``total`` entries
+    a page at a time, as the route pages (R-22 (4)): ``start`` and ``limit``
+    read, ``has_more`` said; ``endless`` answers a full page with more every
+    time, a session longer than any cap.
+    """
+
+    def __init__(self, total: int, *, endless: bool = False, has_more: bool = True):
+        self.total = total
+        self.endless = endless
+        self.says_has_more = has_more
+        self.starts: List[int] = []
+
+    def entry(self, position: int) -> Dict[str, Any]:
+        base = OPENED if position == 0 else TURN
+        return {
+            **base,
+            "session_uid": "session-s005",
+            "opened_by": "ada",
+            "app_uid": "app-1",
+        }
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/ai-agents/v1/apps/records"
+        assert request.headers["Authorization"].startswith("Bearer ")
+        params = dict(request.url.params)
+        assert params["session_uid"] == "session-s005"
+        start, limit = int(params.get("start") or 0), int(params["limit"])
+        assert limit == RECORD_PAGE
+        self.starts.append(start)
+        if self.endless:
+            page = [self.entry(start + n) for n in range(limit)]
+            return httpx.Response(
+                200, json={"success": True, "entries": page, "has_more": True}
+            )
+        page = [self.entry(n) for n in range(start, min(start + limit, self.total))]
+        answer: Dict[str, Any] = {"success": True, "entries": page}
+        if self.says_has_more:
+            answer["has_more"] = start + len(page) < self.total
+        return httpx.Response(200, json=answer)
+
+
+@pytest.fixture()
+def record_pages(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+    """The record store on the real reader, ai-agents played by `RecordPages`."""
+    from agent_runtimes.apps.session_store import (
+        RECORD_STORE,
+        use_record_transport,
+    )
+
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "http://ai-agents.test")
+    made: List[RecordPages] = []
+
+    def play(pages: RecordPages) -> RecordPages:
+        made.append(pages)
+        use_record_transport(httpx.MockTransport(pages.handle))
+        use_session_store(RECORD_STORE)
+        return pages
+
+    try:
+        yield play
+    finally:
+        use_record_transport(None)
+        use_session_store(None)
+
+
+def test_a_long_record_is_read_back_page_by_page_and_resumed_whole(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    pages = record_pages(RecordPages(1500))
+    resumed = events_of(_resume(remote, "session-s005", "ada"))
+    [snapshot] = [e for e in resumed if e["type"] == "MESSAGES_SNAPSHOT"]
+    assert len([m for m in snapshot["messages"] if m["role"] == "user"]) == 1499
+    # Two pages: the second asked from the 1000th entry on, none after the last.
+    assert pages.starts == [0, 1000]
+    live = sessions.session_of("session-s005")
+    assert live is not None and live.opened_by.uid == "ada"
+
+
+def test_a_record_over_the_cap_is_refused_not_cut(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    pages = record_pages(RecordPages(0, endless=True))
+    for operation in ("export", "clone"):
+        answer = remote.request(
+            "GET" if operation == "export" else "POST",
+            f"/api/v1/apps/sessions/session-s005/{operation}",
+            headers=as_("ada"),
+            json=None if operation == "export" else {},
+        )
+        assert answer.status_code == 409, (operation, answer.text)
+        assert answer.json()["detail"] == (
+            "Session session-s005 has more than 20 000 entries, the most a "
+            "session is read back whole with: it cannot be resumed, cloned or exported."
+        )
+    # Read up to the cap and one page more, never further.
+    assert pages.starts[: RECORD_READ_LIMIT // RECORD_PAGE + 1] == list(
+        range(0, RECORD_READ_LIMIT + RECORD_PAGE, RECORD_PAGE)
+    )
+    assert len(pages.starts) == 2 * (RECORD_READ_LIMIT // RECORD_PAGE + 1)
+
+
+def test_a_page_that_does_not_say_whether_more_follow_is_refused(
+    through_store: Runtime,
+    record_pages: Any,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    record_pages(RecordPages(3, has_more=False))
+    answer = remote.get("/api/v1/apps/sessions/session-s005/export", headers=as_("ada"))
+    assert answer.status_code == 502, answer.text
+    assert answer.json()["detail"] == (
+        "The record of session session-s005 could not be read: ai-agents answered "
+        "no `has_more`, so the page cannot be known to be the last."
+    )
+
+
+def test_a_budget_an_hour_refuses_the_next_clone_export_and_import_and_says_when_it_resets(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.apps.sessions import BUDGET_HOUR, SESSION_BUDGETS
+
+    assert SESSION_BUDGETS == {"clone": 20, "export": 20, "import": 10}
+    # 10:05 UTC, by the budget's clock.
+    now = datetime(2026, 10, 28, 10, 5, tzinfo=timezone.utc).timestamp()
+    monkeypatch.setattr(sessions, "_CLOCK", lambda: now)
+    _open(remote, "session-s007")
+    export = remote.get("/api/v1/apps/sessions/session-s007/export", headers=as_("ada"))
+    assert export.status_code == 200
+    text = export.text
+    for n in range(SESSION_BUDGETS["clone"]):
+        clone = remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+        )
+        assert clone.status_code == 201, (n, clone.text)
+    refused = remote.post(
+        "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+    )
+    assert refused.status_code == 429, refused.text
+    assert refused.json()["detail"] == (
+        "You have asked 20 clones this hour, the most the budget allows: it resets at 11:05 UTC."
+    )
+    # The refusal is in the source's record, as a decision said refused, by whom.
+    [row] = [
+        e
+        for e in asyncio.run(store.entries("session-s007"))
+        if e["kind"] == "decision" and e["payload"].get("tool") == "session.clone"
+    ]
+    assert row["summary"].startswith(
+        "Clone refused: You have asked 20 clones this hour"
+    )
+    assert row["payload"]["behaviour"] == "refused" and row["payload"]["by"] == "ada"
+    assert row["opened_by"] == "ada"
+    # Another person's budget is their own; a stranger is still told nothing.
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("bob"), json={}
+        ).status_code
+        == 404
+    )
+    # Exports: the one above counted, 19 more, the 21st refused.
+    for n in range(SESSION_BUDGETS["export"] - 1):
+        assert (
+            remote.get(
+                "/api/v1/apps/sessions/session-s007/export", headers=as_("ada")
+            ).status_code
+            == 200
+        ), n
+    refused = remote.get(
+        "/api/v1/apps/sessions/session-s007/export", headers=as_("ada")
+    )
+    assert (
+        refused.status_code == 429
+        and "20 exports this hour" in refused.json()["detail"]
+    )
+    # Imports: 10, the 11th refused before a byte of its file is read.
+    for n in range(SESSION_BUDGETS["import"]):
+        assert _import(remote, text, who="ada").status_code == 201, n
+    seen: List[int] = []
+    original = routes._read_at_most
+
+    async def counting(request: Any, cap: int) -> bytes:
+        body = await original(request, cap)
+        seen.append(len(body))
+        return body
+
+    monkeypatch.setattr(routes, "_read_at_most", counting)
+    refused = _import(remote, text, who="ada")
+    assert refused.status_code == 429, refused.text
+    assert refused.json()["detail"] == (
+        "You have asked 10 imports this hour, the most the budget allows: it resets at 11:05 UTC."
+    )
+    assert seen == []
+    # An hour on, the budget is back.
+    monkeypatch.setattr(sessions, "_CLOCK", lambda: now + BUDGET_HOUR + 1)
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-s007/clone", headers=as_("ada"), json={}
+        ).status_code
+        == 201
+    )
+    assert _import(remote, text, who="ada").status_code == 201
+
+
+def test_the_audit_rows_name_who_did_it(
+    store: FileSessionStore,
+    through_store: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    _open(remote, "session-s006")
+    assert (
+        remote.get(
+            "/api/v1/apps/sessions/session-s006/export", headers=as_("ada")
+        ).status_code
+        == 200
+    )
+    clone = remote.post(
+        "/api/v1/apps/sessions/session-s006/clone", headers=as_("ada"), json={}
+    ).json()
+    entries = asyncio.run(store.entries("session-s006"))
+    [exported] = [e for e in entries if e["kind"] == "exported"]
+    [cloned] = [e for e in entries if e["kind"] == "cloned"]
+    assert exported["payload"]["by"] == "ada" and exported["opened_by"] == "ada"
+    assert cloned["payload"]["to"] == clone["uid"] and cloned["opened_by"] == "ada"
+    [opening] = [
+        e for e in asyncio.run(store.entries(clone["uid"])) if e["kind"] == "session"
+    ]
+    assert opening["opened_by"] == "ada"

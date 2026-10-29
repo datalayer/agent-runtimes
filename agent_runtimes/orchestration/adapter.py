@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The one port a protocol binding implements (PLAN_ORCHESTRATOR.md, O0-05).
+"""The one port a protocol binding implements (O0-05).
 
 An adapter turns a canonical command into protocol operations and turns what
 the protocol says back into observations. It does exactly that, and it is
@@ -14,7 +14,7 @@ can report work it never did.
 
 Nothing in this module may assume a request scope, a live client connection
 or a process that outlives one step. From Phase 1 these adapters run inside
-the durable worker (19.8), which is replayed across step boundaries and pod
+the durable worker, which is replayed across step boundaries and pod
 rolls. That is why ``resolve`` returns a ``ResolvedWorker`` whose ``handle``
 is rebuildable rather than durable, and why re-attaching to work already
 dispatched is ``subscribe`` — a fresh look at the worker — rather than a
@@ -24,13 +24,13 @@ An operation an adapter cannot perform returns ``Unsupported`` rather than
 answering as though it had. And it is decided before anything is dispatched:
 ``AdapterCapabilities`` refuses to exist unless it accounts for every member
 of ``WorkerOperation``, so there is no operation whose absence is discovered
-at the worst moment. Decision 5 of 19.8 requires the reduction to be
+at the worst moment. The design requires the reduction to be
 reported on the execution rather than hidden, which is what
 ``capability_report`` is for: the adapters yield it as the first observation
 of a dispatch, so "why did this execution never checkpoint?" is answered
 from the execution's own event stream.
 
-``checkpoint`` and ``collect`` are commands (section 6.2) but not adapter
+``checkpoint`` and ``collect`` are commands but not adapter
 methods. Collecting reads artifacts from the execution store, and a
 checkpoint is the control plane persisting what it already holds; neither
 A2A nor ACP has a worker-side equivalent. They are still declared in the
@@ -133,7 +133,7 @@ def objective_prompt(execution: Execution, attempt: Attempt | None = None) -> st
     that behaves differently over two protocols because it was asked two
     different things is a worker that proves nothing about orchestration.
 
-    The references are named, never resolved: section 2 asks for context to
+    The references are named, never resolved: context is to
     be passed by reference, and resolving them is O0-09's.
 
     An attempt that resumes from a checkpoint (``Attempt.resumed_from``) is
@@ -180,11 +180,11 @@ def answer_artifact(
     """
     The worker's answer, registered as a typed output rather than a blob.
 
-    Section 5.4 asks for outputs to be typed, versioned references with
+    The artifact model asks for outputs to be typed, versioned references with
     provenance, and this is the smallest honest one: what the worker said,
     hashed, attributed to the attempt that said it. It is ``registered``,
     not ``committed`` — committing it to contents or the Library is O1-10,
-    and the commit rule is 19.8's fourth decision.
+    and the commit rule is the fourth decision.
 
     Parameters
     ----------
@@ -350,13 +350,13 @@ class AdapterCapabilities:
     Every ``WorkerOperation`` is either in ``supported`` or has an entry in
     ``unsupported``; a capability report that leaves one out does not
     validate. The two sets are what ``agents.discover`` matches against and
-    what the reduction of decision 5 is written from.
+    what the reported reduction is written from.
 
     ``acknowledgements`` is the second half of that reduction and the one
-    that is easiest to fake: it lists the milestones of section 6.3 this
+    that is easiest to fake: it lists the acknowledgement milestones this
     adapter can ever report. A plain A2A worker cannot report ``accepted``,
     because A2A's ``submitted`` says the endpoint took the message and not
-    that a worker took responsibility, and section 6.3 exists precisely so
+    that a worker took responsibility, and the acknowledgement milestones exist precisely so
     that those two are not confused. Saying so here means the control plane
     can stop waiting for a milestone that is never coming.
 
@@ -563,7 +563,7 @@ class Observation:
     ``LifecycleEvent.COMPLETE`` here and an invalid-transition event there,
     which is conformance scenario 9 in miniature.
 
-    ``data`` comes from a worker and is untrusted (section 9): it is shown,
+    ``data`` comes from a worker and is untrusted: it is shown,
     never followed.
     """
 
@@ -709,7 +709,7 @@ class Observation:
         checkpoint_id: str | None = None,
     ) -> "Observation":
         """
-        One of the five milestones of section 6.3 was reached.
+        One of the five acknowledgement milestones was reached.
 
         Parameters
         ----------
@@ -808,9 +808,9 @@ class Observation:
 
 def capability_report(capabilities: AdapterCapabilities) -> Observation:
     """
-    The reduction, as an observation, so it lands on the execution (19.8, 5).
+    The reduction, as an observation, so it lands on the execution.
 
-    Decision 5 says the reduced guarantees of a plain worker are reported
+    The design says the reduced guarantees of a plain worker are reported
     rather than hidden. An adapter yields this first, before it dispatches
     anything, and the answer to "why is there no acceptance acknowledgement
     on this execution?" is then in the execution's own event stream rather
@@ -867,13 +867,13 @@ class ResolvedWorker:
 
     ``handle`` is the adapter's own — an A2A remote agent, an ACP endpoint —
     and it is not durable. The control plane never reads it, and a step that
-    finds itself without one resolves again; section 8 requires protocol
+    finds itself without one resolves again; the design requires protocol
     sessions to be reconstructable from Datalayer state, and a handle that
     had to survive would be the exception that breaks it.
 
     ``details`` is what the worker said about itself: an agent card summary,
     an ACP initialize response. It comes from the worker, so it is shown and
-    never followed (section 9). Turning it into an ``AgentDescriptor`` is
+    never followed. Turning it into an ``AgentDescriptor`` is
     O0-08's mapping and deliberately not repeated here.
     """
 
@@ -970,7 +970,7 @@ def resumed_without_the_extension(
 
 
 class WorkerAdapter(ABC):
-    """The protocol binding of section 7, as one port.
+    """The protocol binding, as one port.
 
     Five things are required of an adapter — say what it can do, find the
     worker, dispatch, re-attach, cancel — and four are optional. The
@@ -1042,7 +1042,7 @@ class WorkerAdapter(ABC):
         """
         Look again at work already dispatched, after losing sight of it.
 
-        This is the recovery path of section 6.4 and conformance scenario 4:
+        This is the recovery path of conformance scenario 4:
         a durable step ended, a connection dropped, a pod rolled, and the
         attempt is still out there under its protocol handle. What can be
         seen depends on the protocol and is in the capability report.

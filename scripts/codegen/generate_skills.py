@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
 
@@ -368,6 +369,7 @@ def main():
     # Load specifications
     print(f"Loading skill specs from {args.specs_dir}...")
     specs = load_skill_specs(args.specs_dir)
+    check_marks(specs, args.specs_dir)
     print(f"Loaded {len(specs)} skill specifications")
 
     # Generate Python code

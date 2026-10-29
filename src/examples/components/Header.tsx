@@ -174,14 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <PageLayout.Header divider="none">
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 3,
-          py: 2,
-        }}
-      >
+      <Box display="flex" alignItems="center" gap={3} py={2}>
         {/* Box 1: Session Tabs - only shown when agent is selected */}
         {agentName && (
           <SessionTabs
@@ -198,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Box 3: Action Buttons - only shown when agent is selected */}
         {agentName && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             {/* Pause/Play button based on agent status */}
             {agentStatus && onToggleStatus && (
               <IconButton
@@ -223,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({
         {agentName && (
           <Box
             onClick={() => setShowAvatarView(!showAvatarView)}
-            sx={{ cursor: 'pointer' }}
+            cursor="pointer"
           >
             <AvatarStack size={24} disableExpand>
               <Avatar
@@ -250,22 +243,18 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Context Treemap (full width below header) - only shown when agent is selected */}
       {agentName && showContextTree && (
         <Box
-          sx={{
-            mt: 2,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-          }}
+          mt={2}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.default"
         >
           <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2,
-            }}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
           >
             <Text
               sx={{
@@ -275,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               Context Distribution ({totalTokens} tokens)
             </Text>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box display="flex" gap={2}>
               <Button
                 size="small"
                 onClick={() => setShowDetails(!showDetails)}
@@ -338,16 +327,14 @@ export const Header: React.FC<HeaderProps> = ({
           />
           {showDetails && (
             <Box
-              sx={{
-                mt: 3,
-                p: 2,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                fontFamily: 'mono',
-                fontSize: 0,
-              }}
+              mt={3}
+              p={2}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
+              fontFamily="mono"
+              fontSize={0}
             >
               <Text sx={{ fontWeight: 'bold', display: 'block', mb: 2 }}>
                 Context Breakdown:
@@ -358,13 +345,13 @@ export const Header: React.FC<HeaderProps> = ({
                   value: number;
                   children?: { name: string; value: number }[];
                 }) => (
-                  <Box key={category.name} sx={{ mb: 2 }}>
+                  <Box key={category.name} mb={2}>
                     <Text sx={{ fontWeight: 'bold' }}>
                       {category.name}: {(category.value / 1000).toFixed(0)}K
                       tokens
                     </Text>
                     {category.children && (
-                      <Box sx={{ ml: 3, mt: 1 }}>
+                      <Box ml={3} mt={1}>
                         {category.children.map(
                           (item: { name: string; value: number }) => (
                             <Text key={item.name} sx={{ display: 'block' }}>
@@ -386,14 +373,12 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Avatar Sharing View - only shown when agent is selected */}
       {agentName && showAvatarView && (
         <Box
-          sx={{
-            mt: 2,
-            p: 3,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-          }}
+          mt={2}
+          p={3}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.default"
         >
           <Text
             sx={{
@@ -407,7 +392,7 @@ export const Header: React.FC<HeaderProps> = ({
           </Text>
 
           {/* Current collaborators */}
-          <Box sx={{ mb: 3 }}>
+          <Box mb={3}>
             <Text
               sx={{
                 fontSize: 0,
@@ -418,14 +403,14 @@ export const Header: React.FC<HeaderProps> = ({
             >
               Current Members
             </Text>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Box display="flex" alignItems="center" gap={2}>
                 <Avatar
                   size={32}
                   alt="Primer logo"
                   src="https://avatars.githubusercontent.com/primer"
                 />
-                <Box sx={{ flex: 1 }}>
+                <Box flex={1}>
                   <Text
                     sx={{
                       fontSize: 0,
@@ -441,13 +426,13 @@ export const Header: React.FC<HeaderProps> = ({
                 </Box>
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Admin</Text>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box display="flex" alignItems="center" gap={2}>
                 <Avatar
                   size={32}
                   alt="GitHub logo"
                   src="https://avatars.githubusercontent.com/github"
                 />
-                <Box sx={{ flex: 1 }}>
+                <Box flex={1}>
                   <Text
                     sx={{
                       fontSize: 0,
@@ -463,13 +448,13 @@ export const Header: React.FC<HeaderProps> = ({
                 </Box>
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Read-Write</Text>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box display="flex" alignItems="center" gap={2}>
                 <Avatar
                   size={32}
                   alt="Atom logo"
                   src="https://avatars.githubusercontent.com/atom"
                 />
-                <Box sx={{ flex: 1 }}>
+                <Box flex={1}>
                   <Text
                     sx={{
                       fontSize: 0,
@@ -485,13 +470,13 @@ export const Header: React.FC<HeaderProps> = ({
                 </Box>
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Read-Only</Text>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box display="flex" alignItems="center" gap={2}>
                 <Avatar
                   size={32}
                   alt="GitHub Desktop logo"
                   src="https://avatars.githubusercontent.com/desktop"
                 />
-                <Box sx={{ flex: 1 }}>
+                <Box flex={1}>
                   <Text
                     sx={{
                       fontSize: 0,
@@ -511,7 +496,7 @@ export const Header: React.FC<HeaderProps> = ({
           </Box>
 
           {/* Add people form */}
-          <Box sx={{ mb: 3 }}>
+          <Box mb={3}>
             <FormControl>
               <FormControl.Label>Add people</FormControl.Label>
               <TextInput
@@ -522,7 +507,7 @@ export const Header: React.FC<HeaderProps> = ({
           </Box>
 
           {/* Message input */}
-          <Box sx={{ mb: 3 }}>
+          <Box mb={3}>
             <FormControl>
               <FormControl.Label>Message</FormControl.Label>
               <TextInput
@@ -545,20 +530,18 @@ export const Header: React.FC<HeaderProps> = ({
               General Access
             </Text>
             <Box
-              sx={{
-                p: 2,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-              }}
+              p={2}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
             >
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Box display="flex" flexDirection="column" gap={2}>
+                <Box display="flex" justifyContent="space-between">
                   <Text sx={{ fontSize: 0 }}>foo</Text>
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Read-Only</Text>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box display="flex" justifyContent="space-between">
                   <Text sx={{ fontSize: 0 }}>bar</Text>
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                     Read-Write

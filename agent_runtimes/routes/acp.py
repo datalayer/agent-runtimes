@@ -31,6 +31,8 @@ import time
 import uuid
 from typing import Any
 
+import httpx
+
 # Import from official ACP SDK
 from acp import (
     PROTOCOL_VERSION as ACP_PROTOCOL_VERSION,
@@ -247,6 +249,155 @@ def cancel_all_prompts() -> int:
     return count
 
 
+# -- ACP in, ACP out (SH-17) --------------------------------------------------
+
+
+class PermissionRelay:
+    """
+    The IDE's side of a harness's permissions, one per connection.
+
+    A harness's ``session/request_permission`` reaches the IDE only after the
+    Rules decided it (*ask me first*): the route sends the IDE the same
+    request — the tool call, the same options — as a JSON-RPC request of its
+    own, and the IDE's response, read off the same connection by its id,
+    answers the harness. A *do it* never reaches the IDE; a *leave it to me*
+    is answered without it. ``fs/*`` and ``terminal/*`` are answered by the
+    runtime against its workspace and never sent here.
+    """
+
+    def __init__(self, websocket: WebSocket) -> None:
+        """Keep the connection the requests go out on."""
+        self.websocket = websocket
+        self.pending: dict[str, asyncio.Future[Any]] = {}
+
+    async def ask(
+        self,
+        session_id: str,
+        tool_call: dict[str, Any],
+        options: list[dict[str, str]],
+    ) -> dict[str, Any]:
+        """
+        Send ``session/request_permission`` to the IDE and wait for its answer.
+
+        Returns
+        -------
+        dict[str, Any]
+            The IDE's ``result`` (``{"outcome": {...}}``).
+        """
+        request_id = f"perm_{uuid.uuid4().hex[:12]}"
+        future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+        self.pending[request_id] = future
+        try:
+            await self.websocket.send_json(
+                ACPMessage(
+                    jsonrpc=ACP_JSONRPC_VERSION,
+                    id=request_id,
+                    method="session/request_permission",
+                    params={
+                        "sessionId": session_id,
+                        "toolCall": tool_call,
+                        "options": options,
+                    },
+                ).model_dump()
+            )
+            return await future
+        finally:
+            self.pending.pop(request_id, None)
+
+    def answered(self, message_id: Any, result: Any, error: Any) -> bool:
+        """The IDE's response to one of the relay's requests; ``False`` for an id it did not send."""
+        future = self.pending.get(str(message_id))
+        if future is None or future.done():
+            return False
+        if error is not None:
+            future.set_exception(
+                RuntimeError(
+                    str(error.get("message") if isinstance(error, dict) else error)
+                )
+            )
+        else:
+            future.set_result(result if isinstance(result, dict) else {})
+        return True
+
+    def close(self) -> None:
+        """The connection is gone: every request still waiting is cancelled."""
+        for future in self.pending.values():
+            if not future.done():
+                future.cancel()
+        self.pending.clear()
+
+
+class RelayApprovals:
+    """
+    The runtime's approvals for a session, raised through the IDE's permission relay.
+
+    What the adapter hands here (:meth:`ACPAgent._person_answers`) is the
+    harness's own tool call and its options, decided *ask me first*; the IDE
+    answers with the option it chose, and that answer goes back to the harness
+    as the chosen option. A rejecting option, or a cancelled answer, is the
+    person's no.
+    """
+
+    def __init__(self, relay: PermissionRelay, session_id: str) -> None:
+        """Keep the relay and the IDE's session the permission is asked on."""
+        self.relay = relay
+        self.session_id = session_id
+
+    async def request_and_wait(
+        self, tool_name: str, tool_args: dict[str, Any], tool_call_id: str | None = None
+    ) -> dict[str, Any]:
+        """Ask the IDE; answer as it chose."""
+        from ..guardrails.tool_approvals import ToolApprovalRejectedError
+
+        options = [
+            {
+                "optionId": str(o.get("option_id") or ""),
+                "name": str(o.get("name") or ""),
+                "kind": str(o.get("kind") or ""),
+            }
+            for o in (tool_args.get("options") or [])
+            if isinstance(o, dict)
+        ] or [
+            {"optionId": "allow", "name": "Allow", "kind": "allow_once"},
+            {"optionId": "reject", "name": "Reject", "kind": "reject_once"},
+        ]
+        raw_input = {
+            key: value
+            for key, value in tool_args.items()
+            if key not in ("options", "sentence", "kind")
+        }
+        answer = await self.relay.ask(
+            self.session_id,
+            {
+                "toolCallId": str(tool_call_id or "").rpartition(":")[2] or "call",
+                "title": tool_name,
+                "kind": str(tool_args.get("kind") or "other"),
+                "status": "pending",
+                "rawInput": raw_input,
+                "content": [
+                    {
+                        "type": "content",
+                        "content": {
+                            "type": "text",
+                            "text": str(tool_args.get("sentence") or tool_name),
+                        },
+                    }
+                ],
+            },
+            options,
+        )
+        outcome = answer.get("outcome") if isinstance(answer, dict) else None
+        chosen = str(outcome.get("optionId") or "") if isinstance(outcome, dict) else ""
+        option = next((o for o in options if o["optionId"] == chosen), None)
+        if option is None:
+            raise ToolApprovalRejectedError(tool_name, "cancelled by the client")
+        if option["kind"].startswith("reject"):
+            raise ToolApprovalRejectedError(
+                tool_name, f"the client chose {option['name']}"
+            )
+        return {"status": "approved", "id": None, "option_id": chosen}
+
+
 def register_agent(agent: BaseAgent, info: AgentInfo) -> None:
     """
     Register an agent with the ACP server.
@@ -409,12 +560,28 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
         websocket.headers.get("authorization"),
         websocket.headers.get("x-external-token"),
     )
+    # The IDE's answers to a harness's permissions (SH-17).
+    relay = PermissionRelay(websocket)
 
     try:
         while True:
             # Receive message
             data = await websocket.receive_json()
             message = ACPMessage(**data)
+
+            # A response, not a request: the IDE answering a permission the
+            # route asked it (SH-17). Read by its id; an id nobody asked is said.
+            if message.method is None:
+                if message.id is None or not relay.answered(
+                    message.id, message.result, message.error
+                ):
+                    await _send_error(
+                        websocket,
+                        message.id,
+                        ACPErrorCode.INVALID_PARAMS,
+                        f"No request of this route has the id {message.id!r}.",
+                    )
+                continue
 
             # Handle different methods
             if message.method == "initialize":
@@ -426,6 +593,28 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                 if session_id:
                     adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
+
+            # ACP spec method: authenticate. A browser opens a websocket with
+            # no header of its own, so a notebook's panel (SH-49) says
+            # who it is in a message, as agent-shield's `serve` takes it:
+            # methodId `bearer`, the token in `_meta.token` — never in the
+            # address. The token is the connection's from then on, as the
+            # `Authorization` header's would be.
+            elif message.method == "authenticate":
+                try:
+                    websocket_user_jwt_token = _authenticated_token(
+                        message.params or {}
+                    )
+                except ValueError as refused:
+                    await _send_error(
+                        websocket, message.id, ACPErrorCode.INVALID_PARAMS, str(refused)
+                    )
+                    continue
+                await websocket.send_json(
+                    ACPMessage(
+                        jsonrpc=ACP_JSONRPC_VERSION, id=message.id, result={}
+                    ).model_dump()
+                )
 
             # ACP spec method: session/new
             elif message.method == "session/new":
@@ -473,6 +662,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                         agent,
                         _adapters.get(prompted_session_id),
                         websocket_user_jwt_token,
+                        relay,
                     )
                 )
                 prompts.add(prompting)
@@ -619,12 +809,35 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
     finally:
         # Cleanup: the prompts this connection ran stop with it, and its
         # session is kept, disconnected, for a `session/load` to find.
+        relay.close()
         for prompting in list(prompts):
             prompting.cancel()
         if session_id:
             await sessions.set_session_status(session_id, "disconnected")
         if session_id and session_id in _adapters:
             del _adapters[session_id]
+
+
+#: The one authentication method the route takes in a message (SH-49), as
+#: agent-shield's ``serve`` names it: the token in ``_meta.token``.
+AUTH_METHOD = "bearer"
+
+
+def _authenticated_token(params: dict[str, Any]) -> str:
+    """The token an ``authenticate`` carries; a ``ValueError`` saying why when it carries none."""
+    if params.get("methodId") != AUTH_METHOD:
+        raise ValueError(
+            f"The route authenticates with methodId {AUTH_METHOD!r} "
+            f"only, not {params.get('methodId')!r}."
+        )
+    meta = params.get("_meta")
+    token = meta.get("token") if isinstance(meta, dict) else None
+    extracted = extract_jwt_token(token) if isinstance(token, str) else None
+    if not extracted:
+        raise ValueError(
+            "`authenticate` needs the person's token, a JWT, in `_meta.token`."
+        )
+    return extracted
 
 
 async def _handle_initialize(
@@ -661,6 +874,15 @@ async def _handle_initialize(
     # Build ACP-compliant response
     result = {
         "protocolVersion": ACP_PROTOCOL_VERSION,
+        # A client with no header of its own (a browser) authenticates in a
+        # message (SH-49); a client that sent `Authorization` need not.
+        "authMethods": [
+            {
+                "id": AUTH_METHOD,
+                "name": "Bearer token",
+                "description": "The person's Datalayer token in `_meta.token`.",
+            }
+        ],
         "agentCapabilities": {
             # The Datalayer orchestration extension (O2-05): a prompt may name
             # its execution and resume from a checkpoint, a `session/cancel`
@@ -672,7 +894,8 @@ async def _handle_initialize(
             "loadSession": True,
             "promptCapabilities": {
                 "image": False,
-                "audio": False,
+                # Heard by the speech service, the prompt its transcript (VO-28).
+                "audio": True,
                 "embeddedContext": True,
             },
             "mcpCapabilities": {
@@ -718,6 +941,21 @@ async def _handle_new_session(
     """
     params = message.params or {}
     session_id = str(uuid.uuid4())
+    harness_workspace = (
+        getattr(agent, "workspace", None) if hasattr(agent, "harness") else None
+    )
+    if harness_workspace is not None:
+        # ACP in, ACP out: the harness's session is
+        # the adapter's, in the runtime's workspace, lent the application's
+        # connections; the IDE's cwd and mcpServers are not what it gets.
+        logger.info(
+            "ACP session %s drives the harness in the runtime's workspace %s; the "
+            "client's cwd %r and %d MCP server(s) are not given to it",
+            session_id,
+            harness_workspace,
+            params.get("cwd"),
+            len(params.get("mcpServers") or []),
+        )
 
     # Create session with context
     from ..adapters.base import AgentContext
@@ -728,7 +966,9 @@ async def _handle_new_session(
     )
     session = ACPSession(
         id=session_id,
-        cwd=params.get("cwd", "."),
+        cwd=str(harness_workspace)
+        if harness_workspace is not None
+        else params.get("cwd", "."),
         context=context,
         mcp_servers=params.get("mcpServers", []),
         current_mode=params.get("mode"),
@@ -737,9 +977,14 @@ async def _handle_new_session(
     await sessions.save_session(session)
 
     # ACP-compliant response
-    result = {
+    result: dict[str, Any] = {
         "sessionId": session_id,
     }
+    if harness_workspace is not None:
+        # Where the harness works (SH-49): a notebook's panel shows the
+        # harness's edits against the runtime's files, so it is told the
+        # workspace its paths are in, which is not the cwd it sent.
+        result["_meta"] = {"datalayer": {"workspace": str(harness_workspace)}}
 
     await websocket.send_json(
         ACPMessage(
@@ -757,6 +1002,7 @@ async def _handle_prompt(
     agent: BaseAgent,
     adapter: ACPTransport | None,
     user_jwt_token: str | None = None,
+    relay: PermissionRelay | None = None,
 ) -> None:
     """
     Handle session/prompt method.
@@ -776,6 +1022,32 @@ async def _handle_prompt(
     model = metadata.get("model") if isinstance(metadata, dict) else None
     if model:
         logger.info(f"ACP: Using model from request metadata: {model}")
+
+    # Audio the client sent is heard first, with the connection's token, and
+    # the prompt is its transcript, marked spoken (VO-28).
+    from ..voice import hear
+    from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
+
+    try:
+        content, spoken = await hear_acp_prompt(
+            list(content) if isinstance(content, list) else [],
+            token=user_jwt_token or "",
+        )
+    except AudioNotHeard as refused:
+        await _send_error(
+            websocket, message.id, ACPErrorCode.INVALID_PARAMS, str(refused)
+        )
+        return
+    except httpx.HTTPError as error:
+        await _send_error(
+            websocket,
+            message.id,
+            ACPErrorCode.INTERNAL_ERROR,
+            "The audio could not be heard: Datalayer's speech service did not "
+            f"answer ({type(error).__name__}).",
+        )
+        return
+    hear(spoken)
 
     # The text of every text block, in order.
     prompt = "\n".join(
@@ -806,6 +1078,7 @@ async def _handle_prompt(
     # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
     from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
     from ..context.delegation import (
+        DELEGATED_CREDENTIAL,
         checkpoint_of,
         enter_execution,
         execution_of,
@@ -815,6 +1088,8 @@ async def _handle_prompt(
     delegated_credential = take_credential(params.get("_meta"))
     if delegated_credential:
         context_metadata["user_token"] = delegated_credential
+        # Said apart, so a harness lends its MCP with it (SH-33).
+        context_metadata[DELEGATED_CREDENTIAL] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 
     # The execution this turn is for, whose checkpoints it keeps, and the one
@@ -845,6 +1120,10 @@ async def _handle_prompt(
             return
         history = [dict(one) for one in checkpoint.messages]
     context_metadata["steer_run"] = session_id
+    if relay is not None:
+        # A harness's *ask me first* reaches this IDE with the same options,
+        # and nothing a Rule already decided does (SH-17).
+        context_metadata["approvals"] = RelayApprovals(relay, session_id)
 
     context = AgentContext(
         session_id=session_id,
@@ -855,6 +1134,9 @@ async def _handle_prompt(
     stop_reason = "end_turn"
     start_time = time.perf_counter()
     tool_call_count = 0
+    # The tool calls this turn already told the IDE of: a later event on one
+    # is a `tool_call_update` (SH-17).
+    told: set[str] = set()
     response_chunks: list[str] = []
     completed_without_error = False
     session = await sessions.load_session(session_id)
@@ -975,9 +1257,20 @@ async def _handle_prompt(
                             if isinstance(event_data, dict)
                             else None
                         )
+                        # A harness's turn says why it stopped (a refusal, a
+                        # cancel), in ACP's words.
+                        ended = (
+                            str(event_data.get("stop_reason") or "")
+                            if isinstance(event_data, dict)
+                            else ""
+                        )
+                        if ended in ACP_STOP_REASONS:
+                            stop_reason = ended
 
                     event_count += 1
-                    update_params = _convert_event_to_session_update(session_id, event)
+                    update_params = _convert_event_to_session_update(
+                        session_id, event, told
+                    )
                     if update_params is not None:
                         await websocket.send_json(
                             ACPMessage(
@@ -1114,8 +1407,44 @@ async def _handle_prompt(
         )
 
 
+#: What a turn may stop for, in ACP's words.
+ACP_STOP_REASONS = frozenset(
+    {"end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled"}
+)
+
+
+def _tool_content_of(displays: Any) -> list[dict[str, Any]]:
+    """A harness's displays as ACP tool call content: a diff, a terminal, text."""
+    content: list[dict[str, Any]] = []
+    for shown in displays or []:
+        if not isinstance(shown, dict):
+            continue
+        kind = shown.get("display")
+        if kind == "diff":
+            content.append(
+                {
+                    "type": "diff",
+                    "path": str(shown.get("path") or ""),
+                    "oldText": shown.get("old_text"),
+                    "newText": str(shown.get("new_text") or ""),
+                }
+            )
+        elif kind == "terminal":
+            content.append(
+                {"type": "terminal", "terminalId": str(shown.get("terminal_id") or "")}
+            )
+        elif kind == "text":
+            content.append(
+                {
+                    "type": "content",
+                    "content": _text_block(str(shown.get("text") or "")),
+                }
+            )
+    return content
+
+
 def _convert_event_to_session_update(
-    session_id: str, event: Any
+    session_id: str, event: Any, told: set[str] | None = None
 ) -> dict[str, Any] | None:
     """
     Convert agent event to ACP session/update params.
@@ -1125,6 +1454,10 @@ def _convert_event_to_session_update(
     - tool_call
     - tool_call_update
     - agent_thought_chunk
+    - plan, available_commands_update, current_mode_update (a harness's, SH-17)
+
+    ``told`` holds the tool calls the turn already announced: a harness's
+    later event on one is a ``tool_call_update``, as ACP spells it.
 
     Returns None for events that should not be sent as session updates (e.g., 'done').
     """
@@ -1168,13 +1501,41 @@ def _convert_event_to_session_update(
         )
     if event_type == "tool_call":
         call = _fields(event_data)
+        call_id = str(call.get("id") or call.get("tool_call_id") or uuid.uuid4())
+        if "kind" in call:
+            # A harness's tool call, relayed as it was said: its kind, its
+            # status, its locations, its displays.
+            update = {
+                "toolCallId": call_id,
+                "title": str(call.get("name") or ""),
+                "kind": str(call.get("kind") or "other"),
+                "status": str(call.get("status") or "pending"),
+                "rawInput": call.get("arguments") or {},
+                **(
+                    {"locations": list(call["locations"])}
+                    if call.get("locations")
+                    else {}
+                ),
+                **(
+                    {"content": _tool_content_of(call.get("display"))}
+                    if call.get("display")
+                    else {}
+                ),
+            }
+            if told is not None and call_id in told:
+                update["sessionUpdate"] = "tool_call_update"
+            else:
+                update["sessionUpdate"] = "tool_call"
+                if told is not None:
+                    told.add(call_id)
+            return _session_update(session_id, update)
+        if told is not None:
+            told.add(call_id)
         return _session_update(
             session_id,
             {
                 "sessionUpdate": "tool_call",
-                "toolCallId": str(
-                    call.get("id") or call.get("tool_call_id") or uuid.uuid4()
-                ),
+                "toolCallId": call_id,
                 "title": str(call.get("name") or ""),
                 "kind": "other",
                 "status": "pending",
@@ -1183,14 +1544,65 @@ def _convert_event_to_session_update(
         )
     if event_type == "tool_result":
         result = _fields(event_data)
+        status = str(result.get("status") or "")
         return _session_update(
             session_id,
             {
                 "sessionUpdate": "tool_call_update",
                 "toolCallId": str(result.get("tool_call_id") or result.get("id") or ""),
-                "status": "failed" if result.get("error") else "completed",
+                "status": status
+                if status in ("completed", "failed")
+                else ("failed" if result.get("error") else "completed"),
                 "rawOutput": result.get("result", event_data),
+                **(
+                    {"content": _tool_content_of(result.get("display"))}
+                    if result.get("display")
+                    else {}
+                ),
             },
+        )
+    if event_type == "plan":
+        steps = event_data.get("steps") if isinstance(event_data, dict) else None
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "plan",
+                "entries": [
+                    {
+                        "content": str(step.get("content") or ""),
+                        "priority": str(step.get("priority") or "medium"),
+                        "status": str(step.get("status") or "pending"),
+                    }
+                    for step in (steps or [])
+                    if isinstance(step, dict)
+                ],
+            },
+        )
+    if event_type == "commands":
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "available_commands_update",
+                "availableCommands": [
+                    {
+                        "name": str(item.get("name") or ""),
+                        "description": str(item.get("description") or ""),
+                    }
+                    for item in (event_data if isinstance(event_data, list) else [])
+                    if isinstance(item, dict)
+                ],
+            },
+        )
+    if event_type == "mode":
+        mode = event_data.get("mode_id") if isinstance(event_data, dict) else None
+        return _session_update(
+            session_id,
+            {"sessionUpdate": "current_mode_update", "currentModeId": str(mode or "")},
+        )
+    if event_type == "session_info":
+        info = dict(event_data) if isinstance(event_data, dict) else {}
+        return _session_update(
+            session_id, {"sessionUpdate": "session_info_update", **info}
         )
     # Anything else — a final `output`, an error, a framework's own events — is
     # not an update the schema has, and is not guessed into one.

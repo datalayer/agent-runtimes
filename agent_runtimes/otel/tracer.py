@@ -17,6 +17,8 @@ from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Callable, Generator, TypeVar
 
+from agent_runtimes.guardrails.credentials import redact
+
 logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -155,7 +157,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("agent.run.success", False)
-                                span.set_attribute("agent.run.error", str(e))
+                                span.set_attribute("agent.run.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 
@@ -180,7 +182,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("agent.run.success", False)
-                                span.set_attribute("agent.run.error", str(e))
+                                span.set_attribute("agent.run.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 
@@ -227,7 +229,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("tool.success", False)
-                                span.set_attribute("tool.error", str(e))
+                                span.set_attribute("tool.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 
@@ -252,7 +254,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("tool.success", False)
-                                span.set_attribute("tool.error", str(e))
+                                span.set_attribute("tool.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 
@@ -311,7 +313,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("code.success", False)
-                                span.set_attribute("code.error", str(e))
+                                span.set_attribute("code.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 
@@ -349,7 +351,7 @@ class AgentTracer:
                         except Exception as e:
                             if span:
                                 span.set_attribute("code.success", False)
-                                span.set_attribute("code.error", str(e))
+                                span.set_attribute("code.error", redact(str(e)))
                                 span.record_exception(e)
                             raise
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The model budget a delegation sets on one run (ORCHESTRATOR.md, O1-07).
+"""The model budget a delegation sets on one run (O1-07).
 
 An execution's policy may bound what its worker spends on models — input
 tokens, output tokens, cost. The orchestration adapters carry that budget with
@@ -39,7 +39,7 @@ __all__ = [
 
 #: Where a delegation carries Datalayer's own fields beside a protocol's.
 #: Imported from the standalone orchestration-extension package
-#: (ORCHESTRATOR.md, O3-02) rather than declared here — `context/delegation.py`
+#: (O3-02) rather than declared here — `context/delegation.py`
 #: imports it from this module in turn, so the whole runtime shares the one
 #: import rather than three hand-maintained copies of the same string.
 DELEGATION_META_KEY = ENVELOPE_KEY

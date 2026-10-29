@@ -1,0 +1,207 @@
+---
+sidebar_position: 12
+title: Served over every protocol
+---
+
+# A harness, served over every protocol
+
+A harness is one `BaseAgent` (the [adapter](./index.mdx#the-adapter-built-sh-10s-adapter-sh-11-sh-12s-runtime-side-sh-13-sh-18-sh-19s-loop-15-october-2026)),
+so every transport the runtime serves gets it without a mapping of its own.
+This page is the Shield's transports as built (read again on 16 October 2026, agent-runtimes
+1.5.42) — the normalisation once, the permissions as Rules, then what each
+face adds — with the boxes that built it. Everything below is drilled on the
+ACP SDK's fake agent (`agent_runtimes/tests/fixtures/acp_fake_agent.py`);
+Claude Code's live turn still waits on a funded key. Each face has a runnable
+example in [`examples/shield`](https://github.com/datalayer/agent-runtimes/tree/main/examples/shield),
+named below.
+
+## The normalisation, once
+
+ACP's `session/update`s become the `StreamEvent`s every transport reads:
+
+| ACP `session/update` | `StreamEvent` | On the page and the phone |
+| --- | --- | --- |
+| `agent_message_chunk` | `text` | The answer, streamed |
+| `agent_thought_chunk` | `thought` | A *thinking* row, folded; kept in the record, never an A2A artifact |
+| `tool_call {kind, title, status, rawInput, locations, content}` | `tool_call` with `kind`, `status`, `arguments`, `locations`, `display`, `awaiting: approval` while pending, the policy's sentence | A tool row titled by the harness, its kind as its icon |
+| `tool_call_update` | `tool_call` (in progress) or `tool_result` (completed, failed) with `display` and, for the page, `_meta["reactor.ui/display"]` | A diff, a terminal, a file read |
+| `plan` | `plan {steps}` | The plan card, steps ticked |
+| `available_commands_update`, `current_mode_update`, `session_info_update` | `commands`, `mode`, `session_info` | Slash commands in the composer; the mode in the header |
+| `session/request_permission` | `tool_call` with `awaiting: approval`, the approval raised | Waiting for you; A2A's `input-required`; the IDE's own prompt |
+| `fs/*`, `terminal/*` | Answered by the runtime, each **also** a `tool_call` row of kind `read` / `edit` / `execute` and a decision | Visible, decided, recorded |
+| a malformed update, a refused action | `text` (`[Shield] …`), then `done {stop_reason: refusal, sentence}` | The sentence, the turn over |
+
+## Permissions are Rules (SH-11, SH-12 — built)
+
+ACP's tool `kind` is classed by the package's one table
+(`agent_shield.policy.class_of`, `KIND_CLASS` in `@datalayer/agent-shield`),
+and the class is decided by the policies in force (the organization's, the
+application's Rules, the session's — [The Shield](../shield/)):
+
+| ACP `kind` | Class decided |
+| --- | --- |
+| `read`, `search`, `fetch` | read |
+| `edit`, `move` | write |
+| `delete` | delete |
+| `execute` | execute |
+| `other` | write (fail closed) |
+| `think`, `switch_mode` | nothing to decide |
+
+| Decision | Answer to `session/request_permission` |
+| --- | --- |
+| *do it* | `allow_once`, without asking anyone |
+| *ask me first* | the approval raised (Waiting for you, A2A's `input-required`, the IDE's prompt); what the person chose — *always* is `allow_always`, a rule of the session gone with it |
+| *leave it to me* | `reject_once`, with the sentence |
+| the turn cancelled while it waits | `cancelled` |
+
+The decision does not depend on the harness asking: its own `tool_call`
+notifications are classed and recorded, and `fs/*` and `terminal/*` are the
+runtime's to answer. A notification that carries no path is decided
+without one — the cautious answer is written beside it, and the read or write
+itself is decided again with its path when the runtime answers it
+(`harness_on_the_runtime.py` shows both rows).
+
+## Sessions, the sidecar, `loop` (SH-18, SH-19, SH-40 — built)
+
+The harness's session is kept in the protocol state store; a restarted
+runtime loads it when the harness advertises `loadSession`, and otherwise
+**says** it starts over. `loop --harness <id>` runs a harness on this machine
+(`harness_on_the_runtime.py` starts the same runtime from Python); with the
+operator's `AGENT_RUNTIMES_HARNESS_SIDECAR_URL` (1.5.38, the operator's flag
+off by default) the harness runs in the pod's `datalayer-harnesses` sidecar
+and the runtime reaches it over the WebSocket channel, deciding the same.
+
+## MCP, lent through the gateway (SH-14 — built)
+
+`session/new.mcpServers` is how a harness gets tools; it is **never** given a
+credential of its own. `adapters/acp_agent.py`'s `lent_toolsets` reads the
+Appspec's `connections`: each must be a toolset of the Datalayer MCP gateway
+(`earthdata` → `…/mcp?only=earthdata`, `datalayer` the whole gateway); a
+connection to any other server is refused at load in a sentence. The harness
+spec's `acp.mcp` is honoured: `lend` lends them, `own` leaves the agent its
+native tools and lends none, `none` lends none and refuses an application that
+connects any.
+
+The shape follows what the agent advertised at `initialize`:
+
+- `mcpCapabilities.http` → `{type: http, name, url, headers: [Authorization:
+  Bearer <the execution credential>]}`;
+- otherwise a **stdio shim**, `python -m agent_runtimes.mcp.lent_stdio --lent
+  <handle>`: the runtime holds the toolset's URL and the credential in the
+  Shield's home (`lent/<handle>`, owner-only, released with the session) under
+  an opaque handle, and the shim forwards `tools/list` and `tools/call` to the
+  gateway with the bearer — nothing of the credential in the harness's
+  arguments, environment or audit.
+
+The credential is a deployment's principal token, else the run's own
+(`user_token`), else the caller's; with none, nothing is lent and the turn says
+so. The allow-list is the package's: the names lent become the `team`
+policy's `mcp.allow` (`guardrails/shield_policy.py`), and
+`agent_shield.acp.proxy`'s `mcpServers` rewriting cuts every other server
+from `session/new`, each cut a `decision` of the record. Drilled against the
+gateway on r1 (read-only): the lent `earthdata` toolset lists its tools over
+both shapes, and `launch_sandbox`, outside it, is refused by the gateway.
+
+## A2A (SH-15 — built)
+
+`transports/a2a.py`'s `A2AWorker` serves a harness as any agent, plus:
+
+| What | How |
+| --- | --- |
+| The plan | One artifact named `plan`, replaced as it progresses: a `text/markdown` part (`- [x] step`, `[~]` in progress) and an `application/json` part with the steps |
+| A diff | One artifact per file, named by its path, one `text/x-diff` part (the unified diff, `a/<path>` → `b/<path>`, `/dev/null` for a new file), `metadata.datalayer.artifactProvenance {contentHash: sha256:…, producedAt, sourceReferences}`; the same path replaces its artifact |
+| A tool call, a result | A `working` status whose message carries the data part as before and `{kind, title, status}` in its metadata |
+| A permission | `input-required` whose message says the sentence and the options, and carries `datalayer.approvalRequest {toolCall, options, expiresAt}`; the stream ends there as A2A says |
+| Its answer | A message **naming the task** (`taskId`): `datalayer.approval {optionId}`, or — for a caller without the extension — one whole word: *yes*, *no*, *always*, or an option's name; a message choosing nothing is asked again. `protocol_state/a2a.py` reads such a message as the waiting task's continuation (A2A 1.0) |
+| Reasoning | Not an artifact, not a message |
+| The agent card | Its skills from the harness spec (`routes/a2a.py`), `text/x-diff` and `application/json` among its output modes |
+
+The orchestrator (`orchestration/adapters/a2a.py`) keeps a part's media type on
+the canonical artifact and says in its summary when the worker's claimed hash
+differs from the body it received. The extension schema
+(`orchestration/extension_schema.py`) now describes `approvalRequest`,
+`approval` and `artifactProvenance`; three proposed fields stay off the wire.
+Drilled: the orchestrator delegating over HTTP to the worker on the fake agent
+and getting the diff back with its provenance (`test_a2a_harness_worker.py`;
+runnable as `examples/shield/delegate_to_a_harness.py`).
+
+## AG-UI, the session API, the embed, the phone (SH-16 — the web built, the phone's contract given)
+
+Two displays join `portable/displays`, typed in Python in
+`adapters/harness_displays.py` and sent beside the tool's result in
+`_meta["reactor.ui/display"]`, as every protocol display travels:
+
+- `application/vnd.datalayer.shield.diff+json` — `{path, old_text, new_text,
+  language}`, the language from the file's suffix; the page draws it as a
+  unified diff (`unifiedDiffLines`, a longest common subsequence of lines;
+  over 2000 lines a side, shown whole) in the file's language;
+- `application/vnd.datalayer.shield.terminal+json` — `{terminal_id, command,
+  output, exit_code, released}`, the output kept after release (the harness's
+  own `rawOutput`, else the Shield's terminal's), the command from the
+  Shield's own row when the harness's did not say it.
+
+The web chat and the embed draw them through the preset's
+`ShieldDisplaysPlugin` (`src/apps/plugins/shield-displays`: two renderers, no
+tool binding — the display says what it is); the session API's record carries
+each as a `tool_call` entry *shown* with the display; the phone reads the same
+contract (`protocolDisplayOf`, `displayLine`, `shieldDisplayFixtures()` as its
+fixture, M-037) — drawing it there is the mobile app's. A terminal
+fills while its command runs: the Shield pushes the output whole at each
+change, and each push reaches the page as the running row's
+`_meta["reactor.ui/display"]` (the output so far, no exit code, not released)
+on the AG-UI `datalayer.harness.tool_call` event, which `portable/conversation`
+draws on the row (`HARNESS_TOOL_CALL`) until the result replaces it.
+The examples app's *Shield Harness* page is the web chat on a harness runtime
+(`examples/shield/harness_on_the_runtime.py --serve`), drawing both; not yet
+seen in a browser.
+
+## ACP in, ACP out (SH-17 — built, proved with the SDK's client)
+
+An IDE connects to the runtime's ACP endpoint (`routes/acp.py`,
+`/api/v1/acp/ws/{agent_id}`) and names an application whose agent is a harness:
+
+- `session/new` opens the adapter's session **in the runtime's workspace**
+ : the IDE's `cwd` and `mcpServers` are not what the harness
+  gets — it is lent the application's connections;
+- prompts go to prompts; updates come back as ACP spells them — a harness's
+  tool call with its kind, status, locations and displays as content (a
+  `diff`, a `terminal`), a later event on it a `tool_call_update`, the `plan`,
+  `available_commands_update`, `current_mode_update`, and the turn's stop
+  reason (`refusal` for an action a Rule leaves to the person);
+- a permission reaches the IDE **only after** the Rules decided *ask me first*:
+  the route's own `session/request_permission` request, with the harness's own
+  options, its response read by id on the same connection and handed back as
+  the option chosen (`PermissionRelay`, `RelayApprovals`); a *do it* never
+  reaches the IDE, a *leave it to me* is answered without it;
+- `fs/*` and `terminal/*` are answered by the runtime and never sent to the
+  IDE; `session/load` replays what the runtime kept.
+
+Proved with a real ACP client — agent-shield's WebSocket channel on the SDK's
+`Connection` — against the route served by uvicorn: the edit done without the
+IDE, the push asked of it, its filesystem never touched
+(`test_acp_route_harness.py`). Zed or `vscode-acp` against a runtime on r1 is
+not yet drilled. The standalone Shield is the same proxy without a runtime:
+`examples/shield/proxy_from_python.py` drives `agent-shield run` from Python
+as an editor would.
+
+## Skills, in the harness's format (SH-21 — built on the fake agent)
+
+Before the harness starts, `adapters/harness_skills.py` writes the
+application's **enabled** skills into the workspace where the harness spec
+says (`skills.format: skill-md`, `skills.dir: .claude/skills`, `.agents/skills`,
+…): one `SKILL.md` per skill in the agentskills.io shape, generated from the
+catalogue spec — `name`, `description`, `version`, `tags`, Datalayer's
+`metadata` — with what it is for, when to use it, the package's own page as
+its instructions, and how its code runs (on Datalayer, through the skills
+tools, never from the directory; a declared secret named as held by Datalayer,
+never written). The application's instructions become the harness's
+instructions file (`CLAUDE.md` for Claude Code, `AGENTS.md` for Codex, OpenCode and pi): the
+instructions verbatim, the Rules in words, the lent toolsets, the skills.
+
+Both are **read-only to the agent**: a write, edit, delete or move of them is
+refused by the Shield in a sentence (`ACPAgent.decide`); a skill the harness
+writes elsewhere is a file write, shown and decided. A skill unknown to
+the catalogue, disabled, or named for a harness that reads none is refused at
+load. Open: lending the runtime's skills toolset over MCP (the gateway has no
+`skills` toolset today, so the skill's scripts are described, not reachable),
+and Claude Code using a lent skill end to end (the key).

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps validate` (LOOP S-05): the instant checks of an Appspec, in a terminal and in CI."""
+"""`loop apps validate` (S-05): the instant checks of an Appspec, in a terminal and in CI."""
 
 import json
 from pathlib import Path
@@ -109,14 +109,57 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         path.stem: validate_file(path) for path in sorted(CATALOGUE.glob("*.yaml"))
     }
     assert set(reports) == {
+        "accounting",
+        # The scenes' members (agentspecs 0.0.60, A-04).
+        "change-detection",
+        "crop-monitoring",
+        "customer-interview",
+        "data-quality",
+        "decide",
+        "disaster-assessment",
+        "event-response",
+        # The two Personal Agent Protocol examples (agentspecs 881a752, E-01, E-02).
+        "exchange-desk",
         "inbox-triage",
+        "month-end-close",
+        "model-choice",
+        "order-desk",
+        "pipeline-report",
         "quote-calculator",
+        "report-from-a-file",
+        "sales",
         "ship-or-fix",
+        "supplier-comparison",
+        "support-desk",
         "web-research",
+        # A personal agent at an airline over PACT, shopping at test merchants (EX-13, EX-12).
+        "travel-desk",
+        "shopping-desk",
+        # A PACT business and the personal agent that asks it, a pair (PR-13).
+        "guest-desk",
+        "errand-runner",
+        # Reading a page at a site that checks its signature (EX-11).
+        "signed-reader",
+        # The Personal Agent Protocol's recorded journeys as applications (PR-05).
+        "order-tracker",
+        "shop-concierge",
+        "live-shop-chat",
+        "sign-in-desk",
+        "returns-desk",
+        "bookkeeping-desk",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
-    assert any("not enabled" in line for line in reports["inbox-triage"].setup)
+    assert reports["decide"].setup == []
+    # Inbox triage's agent and Gmail's server are offered since agentspecs 0.0.128 (W-02).
+    assert reports["inbox-triage"].setup == []
+    # The team over A2A: each ready, its setup what is not enabled today.
+    assert reports["sales"].setup == [
+        "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
+    ]
+    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." in (
+        reports["accounting"].setup
+    )
 
 
 def test_json_for_ci(tmp_path: Path) -> None:

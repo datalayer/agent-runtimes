@@ -202,7 +202,7 @@ const NotebookCollaborationExample = (
           Notebook Collaboration Example
         </Heading>
 
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <FormControl>
             <Checkbox
               checked={enableCollaboration}
@@ -213,7 +213,7 @@ const NotebookCollaborationExample = (
             </FormControl.Label>
           </FormControl>
           {enableCollaboration && runtimeTarget !== 'datalayer' && (
-            <Box sx={{ mt: 1, color: 'fg.muted', fontSize: 0 }}>
+            <Box mt={1} color="fg.muted" fontSize={0}>
               Real-time Datalayer collaboration requires the cloud runtime
               target. Local mode does not expose a collaboration room.
             </Box>
@@ -221,7 +221,7 @@ const NotebookCollaborationExample = (
         </Box>
 
         {(!configuration?.spacerUrl || !configuration?.token) && (
-          <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
+          <Box mb={2} p={2} bg="danger.subtle">
             Warning: Datalayer configuration is missing. Please configure
             spacerUrl and token to use DatalayerServiceManager and collaboration
             features.
@@ -229,42 +229,32 @@ const NotebookCollaborationExample = (
         )}
 
         {!serviceManager && (
-          <Box sx={{ mb: 2, p: 2, bg: 'attention.subtle' }}>
+          <Box mb={2} p={2} bg="attention.subtle">
             Note: DatalayerServiceManager is not available. Notebook
             functionality will be limited.
           </Box>
         )}
 
         {collaborationError && (
-          <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
+          <Box mb={2} p={2} bg="danger.subtle">
             Collaboration could not start: {collaborationError}
           </Box>
         )}
 
         {enableCollaboration && collaborationReady ? (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              flexDirection: 'row',
-            }}
-          >
+          <Box display="flex" gap={2} flexDirection="row">
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Box
-                sx={{
-                  p: 2,
-                  bg: 'canvas.default',
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  fontWeight: 'bold',
-                }}
+                p={2}
+                bg="canvas.default"
+                borderBottom="1px solid"
+                borderColor="border.default"
+                fontWeight="bold"
               >
                 Collaborator 1
               </Box>
@@ -281,27 +271,23 @@ const NotebookCollaborationExample = (
                   collaborationProvider={collaborationProvider1}
                 />
               ) : (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Box p={4} textAlign="center">
                   Loading ServiceManager...
                 </Box>
               )}
             </Box>
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Box
-                sx={{
-                  p: 2,
-                  bg: 'canvas.default',
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  fontWeight: 'bold',
-                }}
+                p={2}
+                bg="canvas.default"
+                borderBottom="1px solid"
+                borderColor="border.default"
+                fontWeight="bold"
               >
                 Collaborator 2
               </Box>
@@ -318,20 +304,14 @@ const NotebookCollaborationExample = (
                   collaborationProvider={collaborationProvider2}
                 />
               ) : (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Box p={4} textAlign="center">
                   Loading ServiceManager...
                 </Box>
               )}
             </Box>
           </Box>
         ) : (
-          <Box
-            sx={{
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-            }}
-          >
+          <Box border="1px solid" borderColor="border.default" borderRadius={2}>
             {serviceManager ? (
               <Notebook
                 id={NOTEBOOK_ID}
@@ -344,19 +324,19 @@ const NotebookCollaborationExample = (
                 collaborationProvider={collaborationProvider1}
               />
             ) : (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Box p={4} textAlign="center">
                 Loading ServiceManager...
               </Box>
             )}
           </Box>
         )}
 
-        <Box sx={{ mt: 2, fontSize: 1, color: 'fg.subtle' }}>
-          <Box as="p" sx={{ m: 0, mb: 2 }}>
+        <Box mt={2} fontSize={1} color="fg.subtle">
+          <Box as="p" m={0} mb={2}>
             This example demonstrates how to use Datalayer services with
             Notebook:
           </Box>
-          <Box as="ul" sx={{ m: 0, pl: 3, '& li': { mb: 1 } }}>
+          <Box as="ul" m={0} pl={3} sx={{ '& li': { mb: 1 } }}>
             <li>
               <strong>DatalayerServiceManager:</strong> Connects to Datalayer
               infrastructure for kernel management

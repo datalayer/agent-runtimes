@@ -32,14 +32,12 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        gap: 3,
-      }}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      height="100vh"
+      gap={3}
     >
       <AlertIcon size={48} />
       <Text sx={{ color: 'danger.fg', fontSize: 2 }}>{message}</Text>

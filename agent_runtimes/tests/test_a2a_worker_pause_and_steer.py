@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Our A2A worker pauses at a checkpoint, resumes from it, and is steered while it works (ORCHESTRATOR.md, O2-05).
+"""Our A2A worker pauses at a checkpoint, resumes from it, and is steered while it works (O2-05).
 
 The worker, its durable storage and the routes of the Datalayer orchestration
 extension, with a scripted agent in place of a model. Checkpoints go to the

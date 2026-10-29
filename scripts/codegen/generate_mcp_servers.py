@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
 
@@ -104,6 +105,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
 
+        # A remote server names no command: it is reached at its url with its
+        # headers (`transport: streamable-http`, the Datalayer gateway's
+        # toolsets). A local one names the command that runs it.
+        command = f'"{spec["command"]}"' if spec.get("command") else "None"
+
         lines.extend(
             [
                 f"{const_name} = MCPServer(",
@@ -113,25 +119,42 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    description="{spec["description"]}",',
                 f"    icon={icon},",
                 f"    emoji={emoji},",
-                f'    command="{spec["command"]}",',
+                f"    command={command},",
                 f"    args={args_formatted},",
                 f'    transport="{spec.get("transport", "stdio")}",',
                 f"    enabled={spec.get('enabled', False)},",
                 "    tools=[],",
             ]
         )
+        # Where an HTTP server is reached: a remote one is connected to there
+        # (`odoo-accounting`), a local one's command listens there (W-02,
+        # `google-workspace`).
+        if spec.get("url"):
+            lines.append(f'    url="{spec["url"]}",')
+        # The headers a remote server is sent with every request, their
+        # `${VAR}` expanded as it starts (the bearer among them).
+        headers = spec.get("headers") or {}
+        if headers:
+            lines.append("    headers={")
+            for key, value in headers.items():
+                lines.append(f'        "{key}": "{value}",')
+            lines.append("    },")
 
         # Add env field if present
         if env_formatted:
             lines.append(f"    env={env_formatted},")
 
-        lines.extend(
-            [
-                f"    required_env_vars={envvars_formatted},",
-                ")",
-                "",
-            ]
-        )
+        lines.append(f"    required_env_vars={envvars_formatted},")
+        # What the code its tools write reads in the code sandbox: given there
+        # when the account has them, never required (R-19).
+        sandbox_envvars = spec.get("sandbox_envvars", [])
+        if sandbox_envvars:
+            lines.append(
+                "    sandbox_env_vars=["
+                + ", ".join(f'"{v}"' for v in sandbox_envvars)
+                + "],"
+            )
+        lines.extend([")", ""])
 
     # Generate catalog dictionary
     lines.extend(
@@ -275,9 +298,21 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: '{description}',",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
-                "  url: '',",
-                f"  command: '{spec['command']}',",
+                f"  url: '{spec.get('url', '')}',",
+                *([f"  command: '{spec['command']}',"] if spec.get("command") else []),
                 f"  args: {args_formatted},",
+                *(
+                    [
+                        "  headers: {"
+                        + ", ".join(
+                            f"'{key}': '{value}'"
+                            for key, value in (spec.get("headers") or {}).items()
+                        )
+                        + "},"
+                    ]
+                    if spec.get("headers")
+                    else []
+                ),
                 f"  transport: '{spec.get('transport', 'stdio')}',",
                 f"  enabled: {str(spec.get('enabled', False)).lower()},",
                 "  isAvailable: false,",
@@ -321,18 +356,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
 def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
     """Update the __init__.py file with correct imports based on generated specs."""
-    # Generate list of MCP server constant names
-    server_constants = []
-    for spec in specs:
-        server_id = spec["id"]
-        version = spec.get("version", "0.0.1")
-        const_name = (
-            server_id.upper().replace("-", "_")
-            + "_MCP_SERVER"
-            + version_suffix(version)
-        )
-        server_constants.append(const_name)
-
     # Read the current __init__.py
     init_content = init_file.read_text()
 
@@ -351,9 +374,12 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
         return
 
     # Generate new import lines - all names sorted alphabetically (ruff/isort order)
+    # Only the catalogue and its readers are re-exported: entries are read by
+    # id, never by a version-named constant (decided 14 October 2026), so the
+    # *_MCP_SERVER_<version> constants stay in catalog_mcp_servers alone and a
+    # version bump touches no caller (test_catalogue_by_id.py holds it).
     all_names = sorted(
-        server_constants
-        + [
+        [
             "MCP_SERVER_CATALOG",
             "check_env_vars_available",
             "get_catalog_server",
@@ -388,8 +414,6 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
             '    "get_catalog_server",',
             '    "list_catalog_servers",',
         ]
-        for const in sorted(server_constants):
-            all_entries.append(f'    "{const}",')
         all_entries.append("]")
 
         # Replace the section
@@ -434,6 +458,7 @@ def main():
     # Load specifications
     print(f"Loading MCP server specs from {args.specs_dir}...")
     specs = load_mcp_specs(args.specs_dir)
+    check_marks(specs, args.specs_dir)
     print(f"Loaded {len(specs)} MCP server specifications")
 
     # Generate Python code

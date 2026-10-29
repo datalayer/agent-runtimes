@@ -28,6 +28,50 @@ ALPHAVANTAGE_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+ANTHROPIC_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="ANTHROPIC_API_KEY",
+    version="0.0.1",
+    name="Anthropic API Key",
+    description="API key for Anthropic's Claude API. Required by the Claude Code harness, and by any harness configured with Anthropic as its model provider; the person's own, never a Claude.ai subscription login.",
+    registrationUrl="https://platform.claude.com/settings/keys",
+    tags=["authentication", "api-key", "anthropic", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
+EARTHDATA_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
+    id="EARTHDATA_PASSWORD",
+    version="0.0.1",
+    name="Earthdata Login Password",
+    description="The password of a NASA Earthdata Login. Read in the code sandbox by the script that the download tool of the Earthdata MCP server writes, to download granules; searching needs none.",
+    registrationUrl="https://urs.earthdata.nasa.gov/users/new",
+    tags=["authentication", "password", "earthdata", "sandbox"],
+    icon="key",
+    emoji="🔑",
+)
+
+EARTHDATA_USERNAME_SPEC_0_0_1 = EnvvarSpec(
+    id="EARTHDATA_USERNAME",
+    version="0.0.1",
+    name="Earthdata Login Username",
+    description="The username of a NASA Earthdata Login. Read in the code sandbox by the script that the download tool of the Earthdata MCP server writes, to download granules; searching needs none.",
+    registrationUrl="https://urs.earthdata.nasa.gov/users/new",
+    tags=["authentication", "username", "earthdata", "sandbox"],
+    icon="key",
+    emoji="🔑",
+)
+
+GEMINI_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="GEMINI_API_KEY",
+    version="0.0.1",
+    name="Gemini API Key",
+    description="API key for Google's Gemini API. Required by the Gemini CLI harness in place of a Google login; the person's own.",
+    registrationUrl="https://aistudio.google.com/apikey",
+    tags=["authentication", "api-key", "google", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
 GITHUB_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="GITHUB_TOKEN",
     version="0.0.1",
@@ -90,6 +134,28 @@ KAGGLE_API_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+LLM_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="LLM_API_KEY",
+    version="0.0.1",
+    name="OpenHands LLM API Key",
+    description="The model provider's key the OpenHands CLI reads, with LLM_MODEL, when started with --override-with-envs. Required by the OpenHands harness; the person's own key at their provider.",
+    registrationUrl="https://docs.openhands.dev/openhands/usage/cli/installation",
+    tags=["authentication", "api-key", "openhands", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
+OPENAI_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="OPENAI_API_KEY",
+    version="0.0.1",
+    name="OpenAI API Key",
+    description="API key for OpenAI's API. Required by the Codex harness, which takes it in place of a ChatGPT login; the person's own.",
+    registrationUrl="https://platform.openai.com/api-keys",
+    tags=["authentication", "api-key", "openai", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
 SLACK_BOT_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="SLACK_BOT_TOKEN",
     version="0.0.1",
@@ -140,11 +206,17 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
+    "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY_SPEC_0_0_1,
+    "EARTHDATA_PASSWORD": EARTHDATA_PASSWORD_SPEC_0_0_1,
+    "EARTHDATA_USERNAME": EARTHDATA_USERNAME_SPEC_0_0_1,
+    "GEMINI_API_KEY": GEMINI_API_KEY_SPEC_0_0_1,
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
     "HF_TOKEN": HF_TOKEN_SPEC_0_0_1,
     "KAGGLE_API_TOKEN": KAGGLE_API_TOKEN_SPEC_0_0_1,
+    "LLM_API_KEY": LLM_API_KEY_SPEC_0_0_1,
+    "OPENAI_API_KEY": OPENAI_API_KEY_SPEC_0_0_1,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,

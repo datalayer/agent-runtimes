@@ -95,32 +95,18 @@ export function ChatHeader({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        p: 3,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-        backgroundColor: 'canvas.subtle',
-      }}
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      p={3}
+      borderBottom="1px solid"
+      borderColor="border.default"
+      backgroundColor="canvas.subtle"
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" gap={2}>
         {/* Connection indicator */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            fontSize: 0,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
+        <Box display="flex" alignItems="center" gap={2} fontSize={0}>
+          <Box display="inline-flex" alignItems="center">
             <KernelIndicator state={indicatorState} />
           </Box>
           <Text sx={{ color: statusColor }}>{labels[connectionState]}</Text>

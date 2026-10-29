@@ -5,7 +5,7 @@
 
 The CLI, the SDK, the GitHub Action and the UI's import all turn an
 ``*.evalset.json`` into ``POST /evalsets``. This pins the schema they share
-and the body they derive from it (BENCHMARK.md, B0-03), over the reference
+and the body they derive from it (B0-03), over the reference
 fixture the package ships and the example specs beside it.
 """
 

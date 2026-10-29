@@ -60,6 +60,80 @@ describe('Component/Function Name', () => {
 });
 ```
 
+## Pictures as tests
+
+The `loop` theme's four reference screens — a conversation, a conversation
+beside its work, the activity of a worker, an approval — and the floating
+assistant's states are pictures kept in `pictures/baselines/` (T-01,
+T-16, T-27). A run takes them again in Chrome and compares them; a changed
+token, radius or colour shows as a failed picture, to fix or to accept.
+
+```bash
+# Compare every picture with its baseline (about five minutes, one Chrome)
+npm run test:pictures
+
+# Only some themes, for a quicker run
+PICTURES_THEMES=loop,datalayer npm run test:pictures
+
+# Only the floating assistant's pictures (its states and the characters)
+npm run test:pictures -- -g "assistant|character"
+
+# Accept what changed as the new baselines, then commit pictures/baselines/
+npm run test:pictures:accept
+```
+
+- **What is pictured.** The four screens in each of the nine themes of the
+  registry (`themeConfigs` of `@datalayer/primer-addons`), light and dark, at
+  960×640; and the paper clip — idle, thinking, working, waiting, speaking,
+  stepped aside for a dialog — in the `loop` theme, light and dark, at
+  480×360; and the wizard, the cat, the L👀P eyes and the owl an example
+  plugin contributes (`loop.assistant.character`), idle, each in its light
+  and its dark drawing. 92 pictures, some 3 MB.
+- **Where they come from.** `html/pictures.html?screen=approval&theme=loop&mode=dark`
+  (or `?assistant=thinking&mode=light`, or `?character=owl&mode=dark`) renders one of them: the real chat
+  components — `ChatBaseHeader` with the presence, `ChatMessageList`,
+  `InputPrompt`, `ToolCallDisplay`'s approval card, `AssistantStage` — with
+  fixed data (`src/stories/loop/ReferenceScreens.tsx`). The same screens are
+  stories (`src/stories/loop/LoopReference.stories.tsx`).
+- **How they are taken.** Playwright (`pictures/playwright.config.ts`) starts
+  Vite on port 3107 with a dependency cache of its own
+  (`vite.pictures.config.ts`), opens each page in the system Chrome
+  (`/usr/bin/google-chrome`, or `PICTURES_CHROME`) with motion reduced, waits
+  until the page's fonts are in and it says `data-pictures-ready`, stops the
+  animations and takes the picture; one worker, one browser; the server is
+  stopped when the run ends. The first page of a cold cache waits for Vite to
+  optimise its dependencies.
+- **What fails.** A picture fails past 64 pixels that differ by more than
+  0.01 in colour (about 3 levels of 255); Chrome draws the same pixels on the
+  same machine, so this only lets a stray edge through. Measured: the
+  bubbles' radius from 22 to 16px fails (110 to 220 pixels), the frame's from
+  28 to 20px (some 370), a 2px hairline or another accent (some 20,000 each).
+  A change drawn only in anti-aliased pixels — a pale bubble 2px less round —
+  is ignored by the comparison and passes. A failure leaves the baseline, the
+  new picture and a `-diff.png` in `pictures/test-results/<test>/`.
+- **Trying a token before changing it.** `PICTURES_CSS` adds a stylesheet to
+  every page before it is pictured:
+  `PICTURES_THEMES=loop PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-frame: 20px !important }' npm run test:pictures`
+  shows what that change would do, as differences.
+- **Fonts.** The `loop` pictures are drawn in Inter, served by the pictures
+  page's own Vite: it imports `@datalayer/primer-addons/style/loop-face.css`
+  (T-04) and is ready only once both weights, 400 and 600, are in. The
+  other themes use whatever face they resolve on the machine that takes them.
+  Baselines are taken on Linux: another system draws text differently and
+  accepts its own.
+- **In CI.** `.github/workflows/pictures.yaml` runs the same comparison on
+  `ubuntu-latest` with the runner's Chrome, on a pull request that changes what
+  is pictured (and by hand: `gh workflow run pictures.yaml`, `-f accept=true`
+  to upload new baselines as the `pictures-baselines` artifact). A failed
+  comparison uploads `pictures-differences`: each picture's expected, actual
+  and diff. **The baselines are CI's** (15 Oct 2026, with
+  `@datalayer/primer-addons` 1.0.40): a picture changed on purpose is
+  accepted by committing its `-actual.png` from that artifact under its
+  baseline's name, or by the `accept` run once the workflow is on `main`. A
+  run takes about ten minutes and is not cancelled by the next push.
+  Taken on this laptop, the pictures differ from CI's by the fonts'
+  rasterization: compare locally against locally-taken baselines only.
+
 ## The Cloudflare model specs against Cloudflare's listing
 
 `agentspecs/agentspecs/models/cloudflare-wrk-*.yaml` name models Cloudflare Workers AI

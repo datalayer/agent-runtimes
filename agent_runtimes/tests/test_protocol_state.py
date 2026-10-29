@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a runtime keeps of its protocols across restarts (ORCHESTRATOR.md, O1-11).
+"""What a runtime keeps of its protocols across restarts (O1-11).
 
 The store, and where it is; A2A tasks, their context and the work still owed;
 ACP sessions and their conversations. Each record is read back by a fresh

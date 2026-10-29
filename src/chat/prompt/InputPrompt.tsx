@@ -44,6 +44,7 @@ import type { PromptSuggestion } from './menus/SuggestionsMenu';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import type { PromptCommand } from './plugins/CommandPlugin';
 
 /*
  * The context-window pie, fetched when there is usage to draw.
@@ -66,6 +67,8 @@ const ContextPie = lazy(() =>
 
 /** One agent the footer may offer. */
 import type { FooterAgent } from '../../types/chat';
+import type { Decisions } from '../base/modelChoice';
+import { useChatWords } from '../ChatLanguage';
 
 /*
  * Re-exported, not defined here.
@@ -115,6 +118,11 @@ export interface InputPromptProps {
    * additions rather than reshuffling the controls people know.
    */
   footerExtras?: ReactNode;
+  /**
+   * The words in the box are still being heard by the microphone (VO-11):
+   * shown greyed, in italics, until they are final.
+   */
+  interim?: boolean;
   /**
    * Panels inside the prompt's card, above and below the composer itself.
    *
@@ -177,6 +185,8 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /** Commands listed while `/` is typed, before the prompt's own (P-19). Lexical only. */
+  promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this page loaded, oldest first.
    *
@@ -270,11 +280,19 @@ export interface InputPromptProps {
   */
   // ---- Model ----
   models?: ModelConfig[];
+  /**
+   * The typed-decision models the runtime lists apart (Jev): shown read-only
+   * under the models, never one to pick. See `modelChoice`'s `Decisions`.
+   */
+  decisions?: Decisions;
   selectedModel?: string;
   onModelSelect?: (modelId: string) => void;
 
   // ---- Tools ----
+  /** The runtime's tools. */
   availableTools?: BuiltinTool[];
+  /** The frontend tools: the ones this page runs for the agent. */
+  availableFrontendTools?: BuiltinTool[];
   /** MCP servers to render (already filtered by selection) */
   mcpServers?: MCPServerConfig[];
   enabledMcpTools?: Map<string, Set<string>>;
@@ -328,6 +346,7 @@ export function InputPrompt({
   draggable = false,
   container,
   footerExtras,
+  interim = false,
   leadingPanel,
   trailingPanel,
   onSend,
@@ -335,6 +354,7 @@ export function InputPrompt({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents,
+  promptCommands,
   promptHistory,
   headerContent,
   showAgentsMenu = false,
@@ -357,9 +377,11 @@ export function InputPrompt({
   hasSkillsData,
   configLoading = false,
   models = [],
+  decisions,
   selectedModel = '',
   onModelSelect = () => {},
   availableTools = [],
+  availableFrontendTools = [],
   mcpServers = [],
   enabledMcpTools = EMPTY_TOOL_MAP,
   enabledMcpToolCount = 0,
@@ -378,6 +400,7 @@ export function InputPrompt({
   authToken,
   mcpStatusData,
 }: InputPromptProps) {
+  const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
   /*
    * Each menu is offered when it is switched on *and* has something behind it.
@@ -461,12 +484,27 @@ export function InputPrompt({
   const hasContext = Boolean(agentUsage && !agentUsage.error);
 
   const body = (
-    <Box>
+    <Box
+      // Words still being heard, greyed until final (VO-11); the same Box
+      // either way, so the editor is never mounted again.
+      data-voice-interim={interim ? '' : undefined}
+      sx={
+        interim
+          ? {
+              '& [contenteditable="true"], & textarea': {
+                color: 'fg.muted',
+                fontStyle: 'italic',
+              },
+            }
+          : undefined
+      }
+    >
       {leadingPanel}
       {/* Input Area — powered by the standalone InputPrompt component */}
       <InputPromptBase
         variant={promptVariant}
         mentionableAgents={mentionableAgents}
+        promptCommands={promptCommands}
         promptHistory={promptHistory}
         /*
           Whatever the host puts inside the prompt, and the agent chip beside
@@ -487,7 +525,7 @@ export function InputPrompt({
             </>
           ) : undefined
         }
-        placeholder={placeholder || 'Type a message...'}
+        placeholder={placeholder || chatText.typeMessage}
         typingSuggestions={typingSuggestions}
         isLoading={isLoading}
         isKernelBusy={isKernelBusy}
@@ -573,6 +611,9 @@ export function InputPrompt({
                 {
                   id: 'session-controls',
                   px: padding,
+                  // Its right end — the voice controls — is never under
+                  // the floating assistant in its corner (T-27).
+                  clearsAssistant: true,
                   py: 0.5,
                   minHeight: 36,
                   bordered: true,
@@ -605,6 +646,7 @@ export function InputPrompt({
                               approvedMcpTools={approvedMcpTools}
                               onToggleMcpToolApproval={onToggleMcpToolApproval}
                               availableTools={availableTools}
+                              availableFrontendTools={availableFrontendTools}
                             />
                           )}
 
@@ -625,6 +667,7 @@ export function InputPrompt({
                           {modelsOffered && (
                             <ModelSelector
                               models={models}
+                              decisions={decisions}
                               selectedModel={selectedModel}
                               onModelSelect={onModelSelect}
                               isA2AProtocol={isA2AProtocol}
@@ -646,12 +689,10 @@ export function InputPrompt({
                           {/* Whatever the host brought; see `footerExtras`. */}
                           {extrasOffered && (
                             <Box
-                              sx={{
-                                marginLeft: 'auto',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 1,
-                              }}
+                              marginLeft="auto"
+                              display="inline-flex"
+                              alignItems="center"
+                              gap={1}
                             >
                               {footerExtras}
                             </Box>

@@ -3,7 +3,7 @@
 
 """Example runtime tools referenced by tool specifications.
 
-These callables are loaded dynamically from ToolSpec.runtime metadata.
+These callables are loaded dynamically from BackendToolSpec.runtime metadata.
 """
 
 

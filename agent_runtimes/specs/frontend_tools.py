@@ -17,6 +17,24 @@ from agent_runtimes.types import FrontendToolSpec
 # Frontend Tool Definitions
 # ============================================================================
 
+CELLS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="cells",
+    version="0.0.1",
+    name="Cells",
+    description="Read and write the spreadsheet on the person's screen, and chart it — the grid drawn by Datalayer Cells.",
+    tags=["frontend", "cells", "spreadsheets"],
+    enabled=True,
+    toolset=[
+        "cells_read_range",
+        "cells_write_range",
+        "cells_insert_chart",
+        "cells_list_charts",
+        "cells_select_range",
+    ],
+    icon="@primer/octicons-react:table",
+    emoji="🧮",
+)
+
 DECKS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="decks",
     version="0.0.1",
@@ -44,7 +62,7 @@ DECKS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
         "decks_present",
         "decks_print",
     ],
-    icon="project",
+    icon="@primer/octicons-react:project",
     emoji="🃏",
 )
 
@@ -63,7 +81,7 @@ JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
         "runCell",
         "executeCode",
     ],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -75,7 +93,7 @@ JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "propose"],
     enabled=True,
     toolset=["readCell", "readAllCells", "proposeCellUpdate", "runCell"],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -87,7 +105,7 @@ JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "read"],
     enabled=True,
     toolset=["readCell", "readAllCells"],
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -99,7 +117,7 @@ JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "notebook", "jupyter-server"],
     enabled=True,
     toolset="all",
-    icon="notebook",
+    icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
 
@@ -111,7 +129,7 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     tags=["frontend", "document", "lexical", "drawing", "diagram"],
     enabled=True,
     toolset="all",
-    icon="file",
+    icon="@primer/octicons-react:file",
     emoji="📄",
 )
 
@@ -120,6 +138,7 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
 # ============================================================================
 
 FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
+    "cells": CELLS_FRONTEND_TOOL_SPEC_0_0_1,
     "decks": DECKS_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook-edit": JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook-propose": JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,

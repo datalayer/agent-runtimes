@@ -234,6 +234,30 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
     return fragments
 
 
+def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
+    """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
+    `ui_plugin` (it is `ui` now, PS-03).
+    """
+    if "ui_plugin" in spec:
+        raise SystemExit(
+            f"Error: {path} says `ui_plugin`: the field is `ui`, one of agentspecs/ui"
+        )
+    ui = spec.get("ui")
+    if ui is not None and (
+        not isinstance(ui, list)
+        or not all(isinstance(choice, dict) and "plugin" in choice for choice in ui)
+    ):
+        raise SystemExit(
+            f"Error: {path} says `ui: {ui!r}`: `ui` lists UI plugins, each "
+            "`{plugin, renderer}` (R8); a renderer is said as a plugin's `renderer`"
+        )
+    if "tools" in spec:
+        raise SystemExit(
+            f"Error: {path} says `tools`: the field is `backend_tools` — the tools "
+            "that run on the runtime, as `frontend_tools` are those that run on the page"
+        )
+
+
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     """
     Load all YAML agent specifications from directory and subdirectories.
@@ -254,6 +278,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
             spec = yaml.safe_load(f)
             if spec:  # Skip empty files
                 ensure_spec_version(spec)
+                refuse_tools_field(spec, yaml_file)
                 specs.append(("", spec))
 
     # Then, load specs from subdirectories (one level deep)
@@ -264,6 +289,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                     spec = yaml.safe_load(f)
                     if spec:  # Skip empty files
                         ensure_spec_version(spec)
+                        refuse_tools_field(spec, yaml_file)
                         specs.append((subdir.name, spec))
 
     fragments = load_fragments(specs_dir)
@@ -276,7 +302,155 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
             spec = resolve_spec(spec, by_id, fragments_by_id)
         resolved.append((subfolder, spec))
 
+    check_model_additionals(resolved, load_model_ids(specs_dir))
+    check_protocols(resolved, load_protocol_ids(specs_dir))
+    check_harnesses(resolved, load_harnesses(specs_dir))
+    check_voices(resolved)
     return resolved
+
+
+def check_voices(specs: List[tuple[str, Dict[str, Any]]]) -> None:
+    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VO-41)."""
+    from agentspecs.apps import agent_voice_problems
+
+    problems = [
+        problem
+        for _, spec in specs
+        if "voice" in spec
+        for problem in agent_voice_problems(str(spec.get("id")), spec["voice"])
+    ]
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+def voice_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
+    """An agent's voice with every field said, as the Appspec's block reads it; None when unsaid."""
+    if "voice" not in spec:
+        return None
+    from agentspecs.apps import AppVoice
+
+    return AppVoice(**spec["voice"]).model_dump(mode="json")
+
+
+def load_protocol_ids(specs_dir: Path) -> set[str]:
+    """Every id of the protocols catalogue (`agentspecs/protocols`, PS-01)."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "protocols").glob("*.yaml")):
+        protocol = yaml.safe_load(yaml_file.read_text()) or {}
+        if protocol.get("id"):
+            ids.add(str(protocol["id"]))
+    return ids
+
+
+def check_protocols(
+    specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]
+) -> None:
+    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once (PS-02)."""
+    problems = []
+    for _, spec in specs:
+        said = spec.get("protocols")
+        if said is None:
+            continue
+        if not isinstance(said, list) or len(set(map(str, said))) != len(said):
+            problems.append(
+                f"{spec.get('id')}: protocols is a list of protocol ids, each once"
+            )
+            continue
+        unknown = [str(p) for p in said if str(p) not in protocol_ids]
+        if unknown:
+            problems.append(
+                f"{spec.get('id')}: protocols names what the catalogue does not know: {', '.join(unknown)}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
+
+
+def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
+    """Every harness of the catalogue (`agentspecs/harnesses`, SH-01), by id."""
+    harnesses: dict[str, dict[str, Any]] = {}
+    for yaml_file in sorted((specs_dir.parent / "harnesses").glob("*.yaml")):
+        if yaml_file.name == "register.yaml":
+            continue
+        harness = yaml.safe_load(yaml_file.read_text()) or {}
+        if harness.get("id"):
+            harnesses[str(harness["id"])] = harness
+    return harnesses
+
+
+def check_harnesses(
+    specs: List[tuple[str, Dict[str, Any]]], harnesses: dict[str, dict[str, Any]]
+) -> None:
+    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour (SH-01)."""
+    problems = []
+    for _, spec in specs:
+        harness_id = str(spec.get("harness") or BUILTIN_HARNESSES[0])
+        if harness_id in BUILTIN_HARNESSES:
+            continue
+        harness = harnesses.get(harness_id)
+        if harness is None:
+            problems.append(
+                f"{spec.get('id')}: there is no harness named {harness_id!r}: one of "
+                f"{', '.join([*BUILTIN_HARNESSES, *sorted(harnesses)])}"
+            )
+            continue
+        if harness_id == "custom":
+            problems.append(
+                f"{spec.get('id')}: the harness 'custom' names no command: an organization's "
+                "own harness spec names it"
+            )
+            continue
+        honours = harness.get("honours") or {}
+        if spec.get("model") and not honours.get("model"):
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} does not take a model"
+            )
+        if spec.get("subagents") and not honours.get("subagents"):
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} has its own subagents"
+            )
+        if spec.get("skills") and (harness.get("skills") or {}).get("format") == "none":
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} reads no skills"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+def load_model_ids(specs_dir: Path) -> set[str]:
+    """Every id the models catalogue answers to: its ids and their aliases."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "models").glob("*.yaml")):
+        with open(yaml_file, "r") as f:
+            model = yaml.safe_load(f) or {}
+        if model.get("id"):
+            ids.add(str(model["id"]))
+        ids.update(str(alias) for alias in model.get("aliases") or [])
+    return ids
+
+
+def check_model_additionals(
+    specs: List[tuple[str, Dict[str, Any]]], model_ids: set[str]
+) -> None:
+    """Refuse an agent whose `model_additionals` names a model the catalogue does not know."""
+    problems = []
+    for _, spec in specs:
+        additionals = spec.get("model_additionals")
+        if additionals is None:
+            continue
+        if not isinstance(additionals, list):
+            problems.append(f"{spec.get('id')}: model_additionals is not a list")
+            continue
+        unknown = [str(m) for m in additionals if str(m) not in model_ids]
+        if unknown:
+            problems.append(
+                f"{spec.get('id')}: model_additionals names models the catalogue "
+                f"does not know: {', '.join(unknown)}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -364,7 +538,8 @@ from agent_runtimes.types import (
                 for skill in spec.get("skills", [])
             ]
             tool_refs = [
-                versioned_ref(*split_spec_ref(tool)) for tool in spec.get("tools", [])
+                versioned_ref(*split_spec_ref(tool))
+                for tool in spec.get("backend_tools", [])
             ]
             frontend_tool_refs = [
                 versioned_ref(*split_spec_ref(ft))
@@ -423,6 +598,16 @@ from agent_runtimes.types import (
             # Model field
             model_id = spec.get("model")
             model_str = f'"{model_id}"' if model_id else "None"
+            model_additionals = spec.get("model_additionals") or []
+            model_additionals_py_line = (
+                f"    model_additionals={_fmt_list(model_additionals)},\n"
+                if model_additionals
+                else ""
+            )
+            voice = voice_of(spec)
+            voice_py_line = (
+                f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_str = (
                 f'"{inference_provider}"' if inference_provider else "None"
@@ -455,8 +640,7 @@ from agent_runtimes.types import (
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
             delegable_str = _fmt_py_delegable(spec.get("delegable", []))
-            ui_ext = spec.get("ui_plugin") or spec.get("ui_extension")
-            ui_ext_str = f'"{ui_ext}"' if ui_ext else "None"
+            ui_str = _fmt_py_literal(list(spec.get("ui") or []))
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -547,10 +731,10 @@ from agent_runtimes.types import (
     domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
     model={model_str},
-    inference_provider={inference_provider_str},
+{model_additionals_py_line}    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
-    tools={_fmt_list(tool_refs)},
+    backend_tools={_fmt_list(tool_refs)},
 {disable_tool_approvals_line}    frontend_tools={_fmt_list(frontend_tool_refs)},
 {frontend_render_tools_py_line}    environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
@@ -567,7 +751,8 @@ from agent_runtimes.types import (
     goal={goal_str},
     delegable={delegable_str},
     protocol={protocol_str},
-    ui_plugin={ui_ext_str},
+    ui={ui_str},
+    protocols={_fmt_list([str(p) for p in spec.get("protocols") or []])},
     trigger={_fmt_py_literal(trigger_val)},
     model_configuration={_fmt_py_literal(model_cfg)},
     mcp_server_tools={_fmt_py_literal(mcp_srv_tools)},
@@ -585,7 +770,7 @@ from agent_runtimes.types import (
     tool_hooks={_fmt_py_literal(tool_hooks_val)},
     parameters={_fmt_py_literal(parameters_val)},
     subagents={subagents_str},
-)
+{voice_py_line})
 
 '''
 
@@ -699,7 +884,7 @@ def generate_typescript_code(
             used_mcp_servers.add(versioned_ref(*split_spec_ref(server)))
         for skill in spec.get("skills", []):
             used_skills.add(versioned_ref(*split_spec_ref(skill)))
-        for tool in spec.get("tools", []):
+        for tool in spec.get("backend_tools", []):
             used_tools.add(versioned_ref(*split_spec_ref(tool)))
         for ft in spec.get("frontend_tools", []):
             used_frontend_tools.add(versioned_ref(*split_spec_ref(ft)))
@@ -745,7 +930,7 @@ def generate_typescript_code(
         if tref in used_tools:
             const_name = (
                 tid.upper().replace("-", "_")
-                + "_TOOL_SPEC"
+                + "_BACKEND_TOOL_SPEC"
                 + version_suffix(spec["version"])
             )
             tool_imports.append(const_name)
@@ -789,7 +974,7 @@ def generate_typescript_code(
     types_import_path = "../../types" if is_root_layout else "../../../types"
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
-    tools_import_path = "../tools" if is_root_layout else "../../tools"
+    tools_import_path = "../backendTools" if is_root_layout else "../../backendTools"
     frontend_tools_import_path = (
         "../frontendTools" if is_root_layout else "../../frontendTools"
     )
@@ -888,7 +1073,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
     if has_tools:
         code += """
 /**
- * Map tool IDs to ToolSpec objects.
+ * Map backend tool IDs to BackendToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
 """
@@ -978,9 +1163,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             else:
                 skills_str = ""
 
-            # Get tools - resolve to ToolSpec via TOOL_MAP
+            # Get backend tools - resolve to BackendToolSpec via TOOL_MAP
             tool_ids_list = [
-                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("tools", [])
+                versioned_ref(*split_spec_ref(sid))
+                for sid in spec.get("backend_tools", [])
             ]
             if has_tools and tool_ids_list:
                 tools_str = ", ".join(f"TOOL_MAP['{tid}']" for tid in tool_ids_list)
@@ -1045,6 +1231,16 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             # Model field
             model_id = spec.get("model")
             model_ts = f"'{model_id}'" if model_id else "undefined"
+            model_additionals = spec.get("model_additionals") or []
+            model_additionals_ts_line = (
+                f"    modelAdditionals: {_fmt_ts_literal(model_additionals)},\n"
+                if model_additionals
+                else ""
+            )
+            voice = voice_of(spec)
+            voice_ts_line = (
+                f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_ts = (
                 f"'{inference_provider}'" if inference_provider else "undefined"
@@ -1075,8 +1271,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             protocol_val = spec.get("protocol")
             protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
             delegable_ts = _fmt_ts_delegable(spec.get("delegable", []))
-            ui_ext = spec.get("ui_plugin") or spec.get("ui_extension")
-            ui_ext_ts = f"'{ui_ext}'" if ui_ext else "undefined"
+            ui_ts = _fmt_ts_literal(list(spec.get("ui") or []))
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -1116,9 +1311,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     model: {model_ts},
-{inference_provider_line}    mcpServers: [{mcp_servers_str}],
+{model_additionals_ts_line}{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
-    tools: [{tools_str}],
+    backendTools: [{tools_str}],
 {disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
 {frontend_render_tools_ts_line}    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
     icon: {icon},
@@ -1135,7 +1330,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     goal: {goal_ts},
     delegable: {delegable_ts},
     protocol: {protocol_ts},
-    uiPlugin: {ui_ext_ts},
+    ui: {ui_ts},
+    protocols: {_fmt_ts_literal([str(p) for p in spec.get("protocols") or []])},
     trigger: {_fmt_ts_literal(trigger_val)},
     modelConfig: {_fmt_ts_literal(model_cfg)},
     mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},
@@ -1153,7 +1349,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     toolHooks: {_fmt_ts_literal(tool_hooks_val)},
     parameters: {_fmt_ts_literal(parameters_val)},
     subagents: {subagents_ts},
-}};
+{voice_ts_line}}};
 
 """
 
@@ -1291,7 +1487,7 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     # Get MCP and skills specs directories
     mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
     skills_specs_dir = args.specs_dir.parent / "skills"
-    tools_specs_dir = args.specs_dir.parent / "tools"
+    tools_specs_dir = args.specs_dir.parent / "backend-tools"
 
     # Determine base directories
     python_base = args.python_output.parent / "agents"
@@ -1569,25 +1765,33 @@ export * from './teams';
 export * from './envvars';
 export * from './evals';
 export * from './guardrails';
-export * from './loops';
+export * from './strategies';
 export * from './mcpServers';
 export * from './memory';
 export * from './models';
 export * from './modelProviders';
 export * from './notifications';
+export * from './voices';
 export * from './outputs';
 export * from './skills';
-export * from './tools';
+export * from './backendTools';
 export * from './triggers';
-export * from './uiPlugins';
+export * from './ui';
+export * from './uiRenderers';
+export * from './protocols';
 export * from './frames';
 export * from './cogs';
+export * from './harnesses';
+export * from './sessionFiles';
+export * from './policies';
 export * from './guards';
 export * from './gates';
 export * from './tracks';
 export * from './ops';
 export * from './apps';
+export * from './scenes';
 export * from './actions';
+export * from './appspecSchema';
 """
     )
 
@@ -1650,7 +1854,7 @@ def main():
         # Get MCP and skills specs directories (siblings to agents directory)
         mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
         skills_specs_dir = args.specs_dir.parent / "skills"
-        tools_specs_dir = args.specs_dir.parent / "tools"
+        tools_specs_dir = args.specs_dir.parent / "backend-tools"
         typescript_code = generate_typescript_code(
             specs,
             str(mcp_specs_dir),

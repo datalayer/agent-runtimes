@@ -12,7 +12,7 @@ never names it.
 
 ## In the browser
 
-The [Loop Web](/loop) workspace is built entirely from reactor plugins: the
+The [Loop Web](/apps) workspace is built entirely from reactor plugins: the
 chat, the editors, the command palette, even the theme arrive as
 contributions into declared extension points (`LoopViewType`,
 `LoopEditorView`, `LoopFrontendTool`, `LoopCommand`, the slots). A host
@@ -20,6 +20,102 @@ plugin that adds an editor, its agent tools, and a command is ordinary
 reactor code — the Loop page carries a complete example, and the generic
 machinery (`@datalayer/reactor-shell`, `@datalayer/reactor-commands`,
 `@datalayer/primer-theme`) is documented in the reactor's own docs.
+
+### Drawing a tool's result
+
+The chat never draws a tool's result itself: each tool call is resolved
+through the page's Reactor platform by `resolveToolResult`
+(`@datalayer/reactor/ui`), and a plugin draws it. Two contribution points do
+it:
+
+| Point | A contribution is | It says |
+|---|---|---|
+| `Renderers` | `defineRenderer({ type, component })` (`@datalayer/reactor/ui/react`) | how to draw one display type, a MIME-like name with a version |
+| `ToolBindings` | `{ tool, type }` | that a tool's plain result is drawn as that display type |
+
+A call is resolved in this order:
+
+1. **A display the result embeds.** A tool (or the gateway in front of it)
+   may answer with a Reactor UI display in its result's
+   `_meta["reactor.ui/display"]`. It is drawn by the renderer contributed for
+   its `type`.
+2. **A tool a plugin bound.** Otherwise the result is drawn as the display
+   type a `ToolBindings` contribution names for the tool (`data` holds
+   `toolName` and `result`).
+3. **Nothing claims it.** The chat draws its own row. There is no render
+   prop, and a plugin draws only the tools it binds: two plugins never
+   silence each other.
+
+The renderer receives the `display` and, in a chat, the tool call as its
+`context` (`ToolCallRenderContext`, with `defaultUI`, the row it replaces).
+
+**What the model reads.** A display declares, field by field, who may read it
+(`audience("page")`, `audience("both")` in Python's `reactor.ui`). When an
+MCP result carries a display, the runtime's `DisplayMCPToolset`
+(`agent_runtimes.mcp.displays`) gives the model the display's *model view*
+— its type, its text and its `both` fields, never a `page` one — and sends
+the whole display to the page beside the result (the AG-UI and Vercel AI
+transports put it in `_meta["reactor.ui/display"]`; a conversation read
+back from history keeps it). A display type the runtime has not registered
+gives the model its text only.
+
+**Worked example: *Sign in at a company*.** The gateway's `pap_sign_in`
+answers with the PAP SDK's `PapSignIn` display
+(`application/vnd.datalayer.pap.sign-in+json`, version 1), whose `open` (the
+company's page) and `code` are for the page alone; the model reads only where
+to sign in, how, and until when. The plugin
+`@datalayer/loop-plugin-pap-sign-in` (`src/apps/plugins/pap-sign-in`) contributes
+its renderer and binds the tool, so an older result without the display is
+drawn by the same card. The card draws the display's three modes: `direct`
+(the company's page), `device` (its page and a code, with a QR) and
+`mediated` (Datalayer's own page, where the person types what the company
+asks, never in the chat, with `sent_to` when the company sent a code). The
+gateway's `pact` toolset answers `pact_sign_in` with the same display, a
+`device` sign-in at the business, and the plugin binds that tool too
+(`/(^|[_.:\-/])pa(?:p|ct)_sign_in$/` in the plugin itself):
+
+```ts
+import { contribution, definePlugin } from '@datalayer/reactor';
+import { Renderers, ToolBindings } from '@datalayer/reactor/ui';
+import { defineRenderer } from '@datalayer/reactor/ui/react';
+
+const PAP_SIGN_IN_TYPE = 'application/vnd.datalayer.pap.sign-in+json';
+
+export const PapSignInPlugin = definePlugin({
+  name: '@datalayer/loop-plugin-pap-sign-in',
+  contributes: [
+    contribution(
+      Renderers,
+      defineRenderer({ type: PAP_SIGN_IN_TYPE, component: SignIn }),
+      { id: 'pap-sign-in' },
+    ),
+    contribution(
+      ToolBindings,
+      { tool: 'pap_sign_in', type: PAP_SIGN_IN_TYPE },
+      { id: 'pap-sign-in' },
+    ),
+  ],
+});
+```
+
+On the Python side, the display is a `reactor.ui` model registered with
+`@display_type(...)`, and the gateway returns it with the result:
+
+```python
+from mcp.types import CallToolResult, TextContent
+from personal_agent_protocol.ui import PapSignIn
+
+display = PapSignIn.from_answer(answer)
+CallToolResult(
+    content=[TextContent(type="text", text=display.text())],  # no page, no code
+    structured_content=said,                                  # the answer without them
+    meta=display.tool_meta(),                                 # {"reactor.ui/display": …}
+)
+```
+
+The A2UI surfaces are another such plugin, and the PAP SDK's `PapConfirm`
+(an operation for the person to confirm) and `PapOutcome` (what it came to)
+are drawn the same way by the Studio's cards.
 
 ## In Python
 

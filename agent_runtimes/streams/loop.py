@@ -65,7 +65,15 @@ def unsubscribe_stream(
 
 
 def enqueue_stream_message(agent_id: str | None, message: AgentStreamMessage) -> None:
-    """Push *message* to every queue subscribed to *agent_id*."""
+    """Push *message* to every queue subscribed to *agent_id*.
+
+    Never an agent's that serves a deployment: its events are every visitor's
+    (`serves_a_deployment`), and anybody reaches this stream.
+    """
+    from agent_runtimes.apps.principal import serves_a_deployment
+
+    if serves_a_deployment(agent_id):
+        return
     keys = [_stream_key(agent_id)]
     if keys[0] != "__global__":
         keys.append("__global__")
@@ -856,15 +864,22 @@ async def build_monitoring_snapshot_payload(
         are left empty (useful when the caller does not have access to the
         approval store).
     """
+    from agent_runtimes.apps.principal import serves_a_deployment
+
     approvals: list[dict[str, Any]] = []
     if list_approvals is not None:
         records = await list_approvals(agent_id=agent_id, status="pending")
-        approvals = [a.model_dump() for a in records]
+        # An agent's that serves a deployment are every visitor's: in nobody's snapshot.
+        approvals = [
+            a.model_dump() for a in records if not serves_a_deployment(a.agent_id)
+        ]
 
     context_snapshot: dict[str, Any] | None = None
     cost_usage: dict[str, Any] | None = None
     full_context: dict[str, Any] | None = None
-    if agent_id:
+    # What an agent that serves a deployment holds — its messages, its context —
+    # is every visitor's (`serves_a_deployment`): not in the snapshot.
+    if agent_id and not serves_a_deployment(agent_id):
         context_snapshot = build_context_snapshot(agent_id)
         cost_usage = get_cost_store().get_agent_usage_dict(agent_id)
         full_context = build_full_context(agent_id)
@@ -882,7 +897,7 @@ async def build_monitoring_snapshot_payload(
     codemode_status = build_codemode_status(agent_id)
 
     graph_telemetry: dict[str, Any] | None = None
-    if agent_id:
+    if agent_id and not serves_a_deployment(agent_id):
         from ..monitoring.graph_telemetry import get_graph_telemetry_dict
 
         graph_telemetry = get_graph_telemetry_dict(agent_id)
@@ -1105,6 +1120,10 @@ async def _push_fresh_snapshot(
 # ─── WebSocket stream loop ───────────────────────────────────────────
 
 
+#: What a client asks of the stream without changing anything.
+_READS = frozenset({"request_snapshot", "request_otel_flush"})
+
+
 async def stream_loop(
     websocket: WebSocket,
     agent_id: str | None,
@@ -1119,6 +1138,8 @@ async def stream_loop(
     Accepts the connection, streams an initial snapshot, then pushes
     periodic diffs and reactive messages until the client disconnects.
     """
+    from agent_runtimes.apps.principal import serves_a_deployment
+
     await websocket.accept()
     logger.info("[ws:connect] agent_id=%s", agent_id)
     websocket_user_jwt_token = extract_jwt_token(
@@ -1183,6 +1204,14 @@ async def stream_loop(
                         payload = json.loads(raw_text)
                         if isinstance(payload, dict):
                             msg_type = payload.get("type")
+                            if msg_type not in _READS and serves_a_deployment(agent_id):
+                                # Every visitor's agent: nobody changes it here.
+                                logger.warning(
+                                    "[ws:recv] %s refused for %s, which serves a deployment",
+                                    msg_type,
+                                    agent_id,
+                                )
+                                msg_type = None
 
                             if (
                                 msg_type == "tool_approval_decision"

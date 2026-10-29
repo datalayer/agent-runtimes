@@ -11,6 +11,7 @@
 
 import { QueryClient } from '@tanstack/react-query';
 
+import { sanitizeAssistantContent } from '../portable/adapterEvents';
 import type { ChatMessage, ContentPart } from '../types/messages';
 import type { ProtocolAdapterConfig, ProtocolConfig } from '../types/protocol';
 import {
@@ -57,42 +58,8 @@ export function isToolCallMessage(item: DisplayItem): item is ToolCallMessage {
   return 'type' in item && item.type === 'tool-call';
 }
 
-/**
- * Strip low-level protocol/tool-call markup from assistant text content.
- *
- * Some models occasionally leak internal call formats (for example,
- * <calls>...</calls> or <tml:invoke ...>) into natural-language responses.
- * Keep user/system text untouched and sanitize assistant-visible text only.
- */
-export function sanitizeAssistantContent(content: string): string {
-  if (!content || !content.includes('<')) {
-    return content;
-  }
-
-  let sanitized = content;
-
-  // Remove complete blocks first.
-  sanitized = sanitized
-    .replace(/<\s*calls\b[\s\S]*?<\s*\/\s*calls\s*>/gi, '')
-    .replace(
-      /<\s*(?:an:)?tml:invoke\b[\s\S]*?<\s*\/\s*(?:an:)?tml:invoke\s*>/gi,
-      '',
-    )
-    .replace(
-      /<\s*(?:an:)?tml:parameter\b[\s\S]*?<\s*\/\s*(?:an:)?tml:parameter\s*>/gi,
-      '',
-    );
-
-  // Remove standalone/open/close tags and malformed tag fragments.
-  sanitized = sanitized
-    .replace(/<\s*\/?\s*(?:an:[a-z_]+|tml:[a-z_]+|calls)\b[^>]*>?/gi, '')
-    .replace(/<\s*\/\s*>/g, '')
-    .replace(/^[ \t]+$/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  return sanitized;
-}
+// What a model leaked of its call markup, taken out: one rule for every client.
+export { sanitizeAssistantContent };
 
 /**
  * Extract text content from a ChatMessage
@@ -249,7 +216,16 @@ export function createProtocolAdapter(
 
   switch (config.type) {
     case 'ag-ui':
-      return new AGUIAdapter(adapterConfig);
+      if (config.ownRoutesOnly && !config.appSessions) {
+        // Its runtime answers no generic Stop: an application's own or none.
+        throw new Error(
+          'A chat whose runtime answers only the application’s own routes is an application’s: it needs its sessions (appSessions).',
+        );
+      }
+      return new AGUIAdapter({
+        ...adapterConfig,
+        ...(config.appSessions ? { appSessions: config.appSessions } : {}),
+      });
     case 'a2a':
       return new A2AAdapter(adapterConfig);
     case 'vercel-ai':

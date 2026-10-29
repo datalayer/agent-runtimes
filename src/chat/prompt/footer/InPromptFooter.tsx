@@ -26,6 +26,7 @@ import {
   PauseIcon,
 } from '@primer/octicons-react';
 import { PromptStacks, type PromptStack } from '../stack';
+import { useChatWords } from '../../ChatLanguage';
 
 export interface InPromptFooterProps {
   /** Bands above the control band. */
@@ -56,33 +57,32 @@ export function InPromptFooter({
   onSend,
   onStop,
 }: InPromptFooterProps) {
+  const chatText = useChatWords();
   return (
     <>
       {stacks && stacks.length > 0 ? <PromptStacks stacks={stacks} /> : null}
 
       <Box
         data-prompt-stack="controls"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 2,
-          pt: 1,
-          pb: 2,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={2}
+        pt={1}
+        pb={2}
       >
         {/* Left slot — dropdowns / indicators */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+        <Box display="flex" alignItems="center" gap={2} flex={1}>
           {children}
         </Box>
 
         {/* Right — indicators + submit / stop */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
           {rightContent}
           {isLoading ? (
             <IconButton
               icon={SquareCircleIcon}
-              aria-label="Stop"
+              aria-label={chatText.stop}
               // A stable hook for tests and probes: the tooltip turns the
               // label above into `aria-labelledby`.
               data-prompt-action="stop"
@@ -93,7 +93,7 @@ export function InPromptFooter({
           ) : isKernelBusy ? (
             <IconButton
               icon={PauseIcon}
-              aria-label="Pause (kernel busy)"
+              aria-label={chatText.pauseKernelBusy}
               onClick={onStop}
               size="small"
               variant="invisible"
@@ -102,7 +102,7 @@ export function InPromptFooter({
           ) : (
             <IconButton
               icon={PaperAirplaneIcon}
-              aria-label="Send"
+              aria-label={chatText.send}
               onClick={onSend}
               disabled={sendDisabled}
               size="small"

@@ -1,0 +1,5 @@
+# Examples that name a call which no longer exists. Empty since 2026-10-15:
+# the hooks, identity, integrations, programmatic-tools and protocols pages
+# were rewritten against the current package. check_examples.py fails on any
+# drift not listed here (and on a line here that no longer drifts, so that the
+# list only shrinks); keep it empty by fixing a page rather than listing it.

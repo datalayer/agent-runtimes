@@ -12,7 +12,8 @@
  *
  * Backend: managed AG-UI agent runtime (agentspec: example-human-in-the-loop)
  *
- * Pattern: Uses renderToolResult with respond callback for human-in-the-loop
+ * Pattern: contributes a renderer for the tool (a Reactor plugin, see
+ * `useToolRenderers`) that receives a respond callback for human-in-the-loop
  * interactions, matching the CopilotKit useHumanInTheLoop pattern.
  */
 
@@ -31,6 +32,7 @@ import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { useToolRenderers } from './hooks/useToolRenderers';
 import {
   TasklistIcon,
   CheckCircleFillIcon,
@@ -137,29 +139,25 @@ const StepsFeedback: React.FC<{
   return (
     <Box
       data-testid="select-steps"
-      sx={{
-        width: '100%',
-        padding: 3,
-        backgroundColor: 'canvas.default',
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: 'border.default',
-      }}
+      width="100%"
+      padding={3}
+      backgroundColor="canvas.default"
+      borderRadius={2}
+      border="1px solid"
+      borderColor="border.default"
     >
       {/* Header */}
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 3,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        marginBottom={3}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           <TasklistIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Select Steps</Text>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
             {enabledCount}/{displaySteps.length} Selected
           </Text>
@@ -176,26 +174,26 @@ const StepsFeedback: React.FC<{
       <ProgressBar progress={progress} barSize="small" sx={{ mb: 3 }} />
 
       {/* Steps list */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+      <Box display="flex" flexDirection="column" gap={2} mb={3}>
         {displaySteps.map((step, index) => (
           <Box
             key={index}
             data-testid="step-item"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              padding: 2,
-              borderRadius: 2,
-              backgroundColor:
-                step.status === 'enabled' ? 'success.subtle' : 'canvas.default',
-              border: '1px solid',
-              borderColor:
-                step.status === 'enabled' ? 'success.muted' : 'border.muted',
-              opacity: status !== 'executing' ? 0.7 : 1,
-              cursor: status === 'executing' ? 'pointer' : 'default',
-              transition: 'all 0.2s ease',
-            }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            padding={2}
+            borderRadius={2}
+            backgroundColor={
+              step.status === 'enabled' ? 'success.subtle' : 'canvas.default'
+            }
+            border="1px solid"
+            borderColor={
+              step.status === 'enabled' ? 'success.muted' : 'border.muted'
+            }
+            opacity={status !== 'executing' ? 0.7 : 1}
+            cursor={status === 'executing' ? 'pointer' : 'default'}
+            transition="all 0.2s ease"
             onClick={() => status === 'executing' && handleStepToggle(index)}
           >
             <FormControl disabled={status !== 'executing'}>
@@ -226,7 +224,7 @@ const StepsFeedback: React.FC<{
 
       {/* Action buttons - only show when executing and not yet responded */}
       {accepted === null && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 3 }}>
+        <Box display="flex" justifyContent="center" gap={3} mt={3}>
           <Button
             variant="default"
             disabled={status !== 'executing'}
@@ -269,19 +267,17 @@ const StepsFeedback: React.FC<{
 
       {/* Result state - show after responding */}
       {accepted !== null && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        <Box display="flex" justifyContent="center" mt={3}>
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              px: 4,
-              py: 2,
-              borderRadius: 2,
-              backgroundColor: accepted ? 'success.subtle' : 'danger.subtle',
-              border: '1px solid',
-              borderColor: accepted ? 'success.muted' : 'danger.muted',
-            }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            px={4}
+            py={2}
+            borderRadius={2}
+            backgroundColor={accepted ? 'success.subtle' : 'danger.subtle'}
+            border="1px solid"
+            borderColor={accepted ? 'success.muted' : 'danger.muted'}
           >
             {accepted ? (
               <>
@@ -314,6 +310,9 @@ const StepsFeedback: React.FC<{
  * - respond: Callback to send result back (only when status === 'executing')
  * - result: Tool result (only when status === 'complete')
  */
+/** The tool this example draws. */
+const TASK_STEPS_TOOLS = ['generate_task_steps'];
+
 const renderTaskStepsTool = (context: ToolCallRenderContext) => {
   const { toolName, args, status, respond, result } = context;
 
@@ -349,6 +348,12 @@ const AGENTSPEC_ID = 'example-human-in-the-loop';
 const AgUiHumanInTheLoopExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  // The steps card, contributed as the tool's renderer.
+  useToolRenderers(
+    '@examples/human-in-the-loop',
+    TASK_STEPS_TOOLS,
+    renderTaskStepsTool,
+  );
   const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiHumanInTheLoopExample',
     agentName,
@@ -363,20 +368,9 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -401,14 +395,12 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
 
           {/* About section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
           >
             <Text
               as="h2"
@@ -424,7 +416,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
             <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', marginTop: 2 }}>
               <strong>How it works:</strong>
             </Text>
-            <Box as="ul" sx={{ fontSize: 1, color: 'fg.muted', mt: 1, pl: 3 }}>
+            <Box as="ul" fontSize={1} color="fg.muted" mt={1} pl={3}>
               <li>The agent calls the generate_task_steps tool</li>
               <li>A custom UI renders with toggleable steps</li>
               <li>User clicks Reject or Confirm to send response back</li>
@@ -438,13 +430,11 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
 
           {/* Instructions */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'neutral.muted',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="neutral.muted"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -453,7 +443,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
               Key Concept: respond() Callback
             </Text>
             <Text as="p" sx={{ fontSize: 1, color: 'fg.default' }}>
-              The <code>renderToolResult</code> function receives a{' '}
+              The renderer this example contributes for the tool receives a{' '}
               <code>respond</code> callback when the tool status is "executing".
               Calling <code>respond({'{ accepted: true, steps: [...] }'})</code>{' '}
               sends the user's decision back to the agent, completing the
@@ -472,7 +462,6 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
             description="I can help you plan tasks. I'll generate steps for your review."
             position="bottom-right"
             brandColor={brandColor}
-            renderToolResult={renderTaskStepsTool}
             hideMessagesAfterToolUI={true}
             suggestions={[
               {

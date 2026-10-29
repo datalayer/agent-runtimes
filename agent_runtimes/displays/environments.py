@@ -5,9 +5,9 @@
 Display functions for Datalayer environments.
 
 ``display_environments`` renders the listing of ``datalayer envs ls``. The rest
-serves the registry commands of PLAN_ENV.md E1-20: the three output formats,
+serves the registry commands (E1-20): the three output formats,
 the tables of an environment, its versions with their promotion records,
-builds, validation reports and trial runtimes, a refusal with its section 10
+builds, validation reports and trial runtimes, a refusal with its error
 code and what it names, and the comparison of two versions' locks.
 """
 
@@ -257,7 +257,7 @@ def display_environments(environments: list[dict[str, Any]]) -> None:
     console.print("└" + "─" * inner_total + "┘")
 
 
-# -- The registry commands (PLAN_ENV.md, E1-20) -----------------------------------
+# -- The registry commands (E1-20) -----------------------------------
 
 
 class OutputFormat(str, Enum):
@@ -643,7 +643,7 @@ def display_environment_builds(
     """Display builds: one per variant and region.
 
     A `Kind` column appears only when one of these is not a build — a resolve
-    is a build record that makes no artifact (PLAN_ENVS.md E1-26), and a
+    is a build record that makes no artifact (E1-26), and a
     `succeeded` row that built nothing needs saying. Nothing else grows a
     column it has no use for.
     """
@@ -765,7 +765,7 @@ def display_publication(publication: EnvironmentPublicationRecord) -> None:
     """A publication and what its snapshot froze (D-12, E2-15).
 
     Every line is something the publication makes world-visible, named rather
-    than implied: section 14.5 of `PLAN_BENCHMARKS.md` publishes nothing by
+    than implied: the publication rules publish nothing by
     implication, and a person about to make a version public is owed the list.
     """
     snapshot = publication.snapshot
@@ -910,7 +910,7 @@ def locked_versions(lock_text: str) -> dict[str, str]:
     """
     The version a lock pins for each package, by normalized name.
 
-    A lock is what ``uv pip compile --generate-hashes`` writes (section 5): a
+    A lock is what ``uv pip compile --generate-hashes`` writes: a
     ``name==version`` requirement per package, its hashes on continuation
     lines, and ``# via`` comments. An option, or a line that pins no single
     version, is left out.

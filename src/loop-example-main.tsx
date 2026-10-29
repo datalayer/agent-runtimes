@@ -7,9 +7,9 @@
  * Entry point for the workspace example.
  *
  * Owns the providers, as every entry point does — the workspace mounts none of
- * its own (§3.5).
+ * its own.
  *
- * @module loop-example-main
+ * @module apps-example-main
  */
 
 // `@jupyter-widgets` assigns to a bare `__webpack_public_path__` at module

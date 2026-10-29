@@ -235,7 +235,7 @@ export function CodeSandboxCellVariables(
     [willSaveOutput],
   );
   return (
-    <Box as="form" sx={{ p: 3 }}>
+    <Box as="form" p={3}>
       <FormControl>
         <FormControl.Label id="cell-input-variables">
           {trans.__('Inputs')}

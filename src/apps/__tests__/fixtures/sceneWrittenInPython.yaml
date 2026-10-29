@@ -1,0 +1,75 @@
+# Built from scene.py by `loop scenes build`: the file is the source; edit it there.
+schema: loop.scene/v1
+id: desk-and-sales
+name: Desk & Sales
+description: The support desk takes a question about selling and asks Sales.
+tags:
+- example
+- scene
+- python
+emoji: 🎬
+entry: desk
+cast:
+- member: desk
+  app: support-desk
+  role: initiator
+  runs_in: browser
+  talks_to:
+  - member: sales
+  persona:
+    name: Desk
+    line: I take your question and ask Sales.
+  brief: 'Ask Sales whatever the audience asks about selling, in one request, and report what
+    it answers without adding to it. Do not question the audience first: nobody is there to
+    answer you back.'
+- member: sales
+  app: sales
+  runs_in: browser
+  persona:
+    name: Sales
+    line: I know how a pipeline is run.
+  brief: Answer the desk in two sentences at most, in plain words.
+setting:
+  language: en
+  assumes: 'Two agents over A2A: the desk asks, Sales answers.'
+script:
+- id: pipeline
+  cue:
+    say: Ask Sales what a sales pipeline is, in one sentence.
+  narration: The desk asks Sales.
+  moves:
+  - who: desk
+    asks: sales
+    over: a2a
+    what: what a sales pipeline is
+  - who: sales
+    what: a sentence on the pipeline
+    answers: words
+  - who: desk
+    what: what Sales answered
+    answers: words
+  expect: The desk asks Sales, and reports its sentence on the pipeline.
+stage:
+  positions:
+    desk:
+      x: 0.25
+      y: 0.5
+    sales:
+      x: 0.75
+      y: 0.5
+  opens_first: desk
+  inspectors:
+  - agent
+  - a2a
+rehearsal:
+  beats:
+  - beat: pipeline
+    lines:
+    - You → Desk
+    - Desk → Sales
+    - 'Desk: words'
+    must_say:
+    - pipeline
+    must_not_say:
+    - I cannot
+    within: 3m

@@ -1,0 +1,113 @@
+---
+sidebar_position: 12
+title: Sessions
+---
+
+# Sessions
+
+A **session** is one conversation of one person with one application's
+agent, kept in the application's record: one id a person lists, resumes,
+hands to another agent, clones, exports and ends — on the web, in `loop`,
+from a script. The runtime that runs the application holds a session while
+it is open; the record is its truth, so a session outlives its runtime and
+its agent.
+
+## What a session is
+
+| Field | Meaning |
+| --- | --- |
+| `uid` | The session's id, the same on every surface (8 to 128 letters, digits, hyphens or underscores). |
+| `state` | `open` (held by a runtime, a turn may run), `paused` (nothing runs; held or not) or `ended` (its code's `end` ran; the record stays). `stopped` is no state: posted or read as one, it is refused in a sentence. |
+| `turn` | While `open`, what the runtime does: `idle`, `running` or `waiting` (a question asked). |
+| `held` | Whether a runtime holds it now. |
+| `agent`, `harness` | The agentspec bound to it now; its harness when the agent runs on one (Claude Code, Codex, OpenCode, pi — see [Harness capabilities](./harnesses.mdx)). |
+| `turns` | The person's turns — the cursor a clone is cut at. |
+| `title`, `archived` | The person's title, else the first turn's first line; an archived session is hidden from the list unless asked for. |
+| `runs_on` | `{kind: runtime, uid}` where it runs when open; `null` on no runtime. |
+| `lineage` | `forked_from: {uid, at_turn}` for a clone; `imported_from: {digest, exported_at, exported_by, redactions}` for an import. |
+
+The record keeps the session's shape on its opening entry and says every
+change of state (`paused`, `ended`) and every operation (`swapped`,
+`cloned`, `exported`, `imported`, `titled`) as an entry of its own, so a
+listing of sessions the runtime no longer holds says the truth.
+
+## The operations
+
+| Operation | Route | What carries | What does not |
+| --- | --- | --- | --- |
+| **open** | `POST /api/v1/apps/sessions` | — | — |
+| **resume** | `POST /sessions/{uid}/resume` | The whole conversation from the record: turns, tool rows with their displays, the files given (their places in the sandbox re-stated), the session's Rules; then the harness's own session when it can load it (the replay compared with the record, a difference said), else a start-over said in a sentence | A turn that was running (cancelled, said) |
+| **swap** | `POST /sessions/{uid}/agent {agent}` | The conversation, the files, the Rules, the settings, the workspace; the new agent is told in a sentence | The harness's own state (kept for a swap back when it can be loaded again), model and effort picks, *always* answers given to the old harness's tools |
+| **clone** | `POST /sessions/{uid}/clone {up_to_turn?, agent?, title?}` → `201`, a new uid, `paused` | The conversation up to the turn, the files, the Rules | The harness's own session, what came after the turn, the mode (reset to the application's default) |
+| **export** | `GET /sessions/{uid}/export` → `application/x-ndjson` | Every entry of the record, redacted and counted; the files as entries (name, size, digest, place) | Credentials, a signed user, the runtime's addresses, a file's bytes |
+| **import** | `POST /sessions/import` (the file as the body) → `201`, always a new uid, `paused` | The entries, validated one by one | The source's uid, owner, runtime; an agent the runtime lacks (refused unless `?agent=` names one it has) |
+| **list** | `GET /sessions` | The caller's sessions, held and recorded, paged (`?limit=`, `?after=`, `has_more`), filtered (`?app=`, `?agent=`, `?state=`, `?q=`, `?archived=true`) | — |
+| **end** | `POST /sessions/{uid}/end` | — | — |
+
+Every refusal is a sentence that says what to do instead; none falls back to
+a default the caller did not ask for:
+
+```text
+POST /api/v1/apps/sessions/e67a52b2/agent {"agent": "shield-mvp-codex"}
+→ 200 {"uid": "e67a52b2", "agent": "shield-mvp-codex", "harness": "codex", "state": "open",
+       "said": "This conversation was with Claude Code until turn 4; from here it is with Codex. What was said stays; what Claude Code kept for itself waits for a swap back.",
+       "carried": {"turns": 4, "files": 1, "rules": 2, "settings": ["tone"], "workspace": true},
+       "dropped": {"allow_always": 1, "harness_state": "kept for a swap back"}}
+→ 409 {"detail": "Session e67a52b2 is answering turn 5: swap it when the turn is over, or interrupt it first."}
+
+POST /api/v1/apps/sessions/e67a52b2/clone {"up_to_turn": 7}
+→ 422 {"detail": "Session e67a52b2 has 4 turns; there is no turn 7 to clone it at."}
+
+POST /api/v1/apps/sessions/e67a52b2/resume        (an ended session)
+→ 409 {"detail": "Session e67a52b2 ended; an ended session is not resumed — clone it to go on from it."}
+
+GET /api/v1/apps/sessions?state=stopped
+→ 422 {"detail": "There is no session state 'stopped': one of open, paused, ended."}
+
+POST /api/v1/loop/sessions/e67a52b2/agent          (the old route)
+→ 410 {"detail": "A session's agent is swapped at POST /api/v1/apps/sessions/e67a52b2/agent; this route is gone."}
+```
+
+## What a swap says
+
+The sentence the new agent is told, appended to the conversation and read
+with its first turn, depends on the old harness's `resume` capability (see
+[Harness capabilities](./harnesses.mdx)):
+
+- *This conversation was with Claude Code until turn 4; from here it is with
+  Codex. What was said stays; what Claude Code kept for itself waits for a
+  swap back.* — the old harness loads its own session again on a swap back.
+- *… what OpenCode kept for itself is gone.* — it cannot (`resume: none`).
+- *A swap back to Codex later will start it over.* — added when the target's
+  `resume` is `none`.
+
+## Who may
+
+The opener, or a host session's linked person signed in as themselves, for
+every operation; the machine itself on a local runtime. An embed's visitor
+may neither clone, export nor resume: nothing is kept of them. A stranger's
+session — an organization's administrator included — is a `404`. A pending
+question answered from any surface first wins; the second answer is a `409`.
+
+## Where sessions are kept
+
+Through the `session.store` point (see [Plugins](./plugins.mdx)): the
+platform's record when `DATALAYER_AI_AGENTS_URL` or `DATALAYER_API_KEY` is
+set, a file store (`~/.datalayer/sessions/<uid>/entries.jsonl`) otherwise;
+`AGENT_RUNTIMES_SESSION_STORE` names one (`record` or `file`). Naming two,
+or one nothing contributes, refuses the runtime at start. The harness's own
+rows — the ACP session id and the vendor's own session id per (session,
+agent) — stay in the protocol state store.
+
+## Not built yet
+
+- The phone's session list and deep link.
+- Sharing a session with a second person (clone and export are the owner's alone).
+- Cross-plane import with people mapping; import of a vendor's own transcripts (`~/.claude`).
+- The harness bench provoking each capability live.
+- Side chats, projects, pins; a follow-up queued mid-turn; credits per session.
+- A clone rebuilding the vendor's own session file; an agent's own child sessions.
+
+See also: [`loop sessions`](./cli.mdx), [the session file](./files.mdx),
+[the plugin points and the worked examples](./plugins.mdx), the
+[`examples/sessions`](https://github.com/datalayer/agent-runtimes/tree/main/examples/sessions) scripts.

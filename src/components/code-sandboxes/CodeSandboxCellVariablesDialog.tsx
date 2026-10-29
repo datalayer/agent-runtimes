@@ -10,8 +10,12 @@ import { ISessionContext } from '@jupyterlab/apputils';
 import { CodeCellModel, ICellModel } from '@jupyterlab/cells';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { JSONExt } from '@lumino/coreutils';
-import { KernelExecutor } from '@datalayer/jupyter-react';
+import {
+  kernelConnectionExecutor,
+  listKernelVariables,
+} from '@datalayer/jupyter-react';
 import { RuntimeSnippetsFacade } from '../../jupyter';
+import { transferableVariables } from './CodeSandboxVariables';
 import { CodeSandboxCellVariables } from './CodeSandboxCellVariables';
 
 /**
@@ -95,19 +99,13 @@ export function CodeSandboxCellVariablesDialog(
     const connection = sessionContext.session!.kernel!;
     const spec =
       sessionContext.specsManager.specs!.kernelspecs[connection.model.name]!;
-    const snippets = new RuntimeSnippetsFacade(spec.language);
-    const outputs = await new KernelExecutor({ connection }).execute(
-      snippets.listVariables(),
+    return Object.keys(
+      transferableVariables(
+        await listKernelVariables(kernelConnectionExecutor(connection), {
+          language: spec.language,
+        }),
+      ),
     );
-    const content = outputs.get(0).data['text/plain'] as string;
-    if (content) {
-      const runtimeVariables = JSON.parse(
-        // We need to remove the quotes prior to parsing
-        content.slice(1, content.length - 1),
-      );
-      return Object.keys(runtimeVariables ?? {});
-    }
-    return [];
   }, [preference, sessionContext]);
   const getOutputCandidates = useCallback(async () => {
     // TODO this is only valid for python - using cell mimetype?

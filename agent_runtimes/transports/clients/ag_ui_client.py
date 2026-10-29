@@ -226,6 +226,7 @@ class AGUIClient:
         context: list[dict[str, Any]] | None = None,
         tools: list[dict[str, Any]] | None = None,
         identities: list[dict[str, Any]] | None = None,
+        forwarded_props: dict[str, Any] | None = None,
     ) -> AsyncGenerator[AGUIEvent, None]:
         """
         Run the agent on the given input with SSE streaming.
@@ -235,6 +236,8 @@ class AGUIClient:
             context: Optional context items (files, snippets, etc.).
             tools: Optional tool definitions for the agent.
             identities: Optional OAuth identities for tool authentication.
+            forwarded_props: What goes with the run besides the conversation:
+                ``voice``, how a spoken message was heard (VO-27).
 
         Yields:
             AGUIEvent objects for each SSE event.
@@ -253,7 +256,7 @@ class AGUIClient:
             "state": {},  # Required by AG-UI protocol
             "tools": tools or [],  # Required by AG-UI protocol
             "context": context or [],  # Required by AG-UI protocol
-            "forwardedProps": {},  # Required by AG-UI protocol
+            "forwardedProps": dict(forwarded_props or {}),  # Required by AG-UI
         }
 
         if identities:

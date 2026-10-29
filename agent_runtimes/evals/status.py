@@ -9,8 +9,8 @@ the online path ``failed``, older code ``init``, ``pending``, ``error``,
 ``success``, ``done``. Every reader then kept its own set of "finished"
 words, and a run the poller did not recognise as finished polled forever.
 
-This module is the mapping every reader uses (BENCHMARK.md, B0-08): the
-legacy words map onto the product vocabulary of section 11.4, and
+This module is the mapping every reader uses (B0-08): the
+legacy words map onto the product vocabulary, and
 "terminal" is answered here rather than by each caller. The service
 enforces the vocabulary on write in a later phase (B2-01); until then a
 value that means nothing maps to itself, lower-cased, so it is at least
@@ -127,7 +127,7 @@ def _word(value: Any) -> str:
 
 
 def normalize_run_status(value: Any) -> str:
-    """The section 11.4 word for a run status, whatever a writer wrote.
+    """The product word for a run status, whatever a writer wrote.
 
     A word nobody has used maps to itself, lower-cased, so an unexpected
     value shows up as what it is rather than as a guess.
@@ -137,7 +137,7 @@ def normalize_run_status(value: Any) -> str:
 
 
 def normalize_case_status(value: Any) -> str:
-    """The section 11.4 word for a case status."""
+    """The product word for a case status."""
     word = _word(value)
     return _LEGACY_CASE_STATUS.get(word, word)
 

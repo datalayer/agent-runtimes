@@ -1,0 +1,242 @@
+---
+sidebar_position: 30
+title: Web Bot Auth
+---
+
+# Web Bot Auth: signed agent requests
+
+An agent signs its outbound HTTP requests so that a website can tell which
+agent is calling; a website verifies them with the agent's published keys.
+Agent Runtimes implements
+[`draft-ietf-webbotauth-httpsig-protocol-00`](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/)
+(IETF Web Bot Auth working group, 2026-09-01) over RFC 9421 HTTP Message
+Signatures, in Python and TypeScript.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.protocols.web_bot_auth` | `@datalayer/agent-runtimes/lib/protocols/web-bot-auth` |
+| Built on | `http-sfv` and `cryptography` (see below why not `http-message-signatures`) | Cloudflare's `web-bot-auth` 0.2.0 |
+| Algorithms | `ed25519`, `ecdsa-p256-sha256` | `ed25519` (signing), what `web-bot-auth` verifies |
+| Checked against | the draft's vectors E.2.1, E.2.2, E.2.3, byte for byte | E.2.1 and E.2.3, byte for byte |
+
+Both read the same vectors, `agent_runtimes/protocols/web_bot_auth/fixtures/vectors.json`.
+
+## What a signed request carries
+
+```http
+Signature-Agent: sig1="https://agent.example"
+Signature-Input: sig1=("@method" "@authority" "@path" "@query" "signature-agent";key="sig1");created=…;keyid="…";alg="ed25519";expires=…;nonce="…";tag="web-bot-auth"
+Signature: sig1=:…:
+```
+
+- `Signature-Agent` is a Dictionary: where the agent's keys are, and how
+  (`directory` by default; `jwks_uri`; `cimd`).
+- The signature always covers `@authority` and the `Signature-Agent`
+  member; Agent Runtimes also covers `@method`, `@path` and `@query`, and a
+  body through its `Content-Digest`, narrower than the draft's minimum as
+  its §5.2 advises.
+- `keyid` is the key's JWK SHA-256 thumbprint; `created` and `expires` are
+  required (a signature lives 60 seconds by default, 24 hours at most);
+  a fresh `nonce` is sent every time.
+
+## Signing, as an agent
+
+```python
+from agent_runtimes.protocols.web_bot_auth import WebBotAuth
+
+async with httpx.AsyncClient(auth=WebBotAuth(signer, agent="https://agent.example")) as client:
+    await client.get("https://shop.example/products")
+```
+
+```ts
+import { signedFetch } from '@datalayer/agent-runtimes/lib/protocols/web-bot-auth';
+
+const fetchSigned = signedFetch(signer, { agent: 'https://agent.example' });
+await fetchSigned('https://shop.example/products');
+```
+
+The `signer` is never a key: it is anything with a `keyid`, an `algorithm`
+and an async `sign(bytes)`, contributed by the host to the Web Bot Auth
+plugin's `web_bot_auth.signer` point. On Datalayer it is Vault transit; a
+runtime pod never holds the key. `LocalSigner` (Python) and `localSigner`
+(TypeScript) hold one in process, for tests and examples only.
+
+## Publishing the keys
+
+The agent's origin serves its key directory at
+`/.well-known/http-message-signatures-directory`
+(`application/http-message-signatures-directory+json`): a JWK Set of public
+keys, each `kid` its thumbprint, the response signed by every key it lists
+(the draft's Appendix B), so the set cannot be served under another
+authority nor swapped under a captured signature.
+
+```python
+body = directory_body([signer.public_jwk for signer in signers])
+signed = await sign_directory_response(body=body, authority_url=url, signers=signers)
+return Response(signed.body, headers=signed.headers)
+```
+
+Rotate by publishing the new key beside the old one until the old one's
+signatures have expired.
+
+## Verifying, as a website
+
+```python
+from agent_runtimes.protocols.web_bot_auth import DirectoryResolver, WebBotAuthMiddleware
+
+app = WebBotAuthMiddleware(app, resolver=DirectoryResolver.with_fetch())
+# request.scope["state"]["web_bot_auth"].outcome: "verified", "invalid" or "unverified"
+```
+
+A request is `verified` (and says by which agent), `invalid` (a signature
+that does not hold, an expired one, a replayed nonce — refused with 401 by
+the middleware), or `unverified` (unsigned, or keys that could not be
+found): the agent is never named from a URL that could not be resolved.
+Keys are looked up by the pair (agent URL, `keyid`), never by `keyid`
+alone. A fetched directory counts only when its signature (tagged
+`http-message-signatures-directory`) covers `"@authority";req`, the authority
+it was fetched from, and its body's `Content-Digest`, with an `expires` not
+passed (1.5.90); otherwise its keys are not used. A directory is fetched over https only, never from a private or
+loopback address, with no redirect followed, a size limit, and a five-minute
+pause after a failed fetch that keeps what was cached. In Python the fetch is
+the PAP SDK's resolving client (`create_resolving_client`, the one egress
+path Datalayer's gateway uses towards companies): the name is resolved first
+and refused unless every address is public, only that address is dialled, no
+proxy is used — so a name pointing inside the network is refused before
+anything is sent, not only an address written in the URL
+(`test_protocols_web_bot_auth_egress.py`). The same fetch,
+`agent_runtimes.protocols.egress.metadata_fetch`, reads UCP and Agentic
+Commerce profiles.
+
+## In an application: a signed fetch
+
+An application on Datalayer signs every request its gateway sends to a
+company, a business or a merchant. To read pages at a website, it names the
+**exact sites** in its Appspec's `signed_fetch` block, with `web-bot-auth`
+listed under `protocols` (decided 2026-10-13):
+
+```yaml
+protocols: [web-bot-auth]
+
+signed_fetch:
+  sites:
+    - id: example-verifier
+      site: verify.examples.datalayer.run
+```
+
+Each site is one server of the gateway's `signed-fetch` toolset in the
+runtime (`/mcp?only=signed-fetch&signed-fetch-site=<domain>`,
+`agent_runtimes.apps.pap_connections`), granted as
+`datalayer_connection` `signed-fetch:<domain>`. Its one tool,
+`signed_fetch`, is a `read` under the application's Rules
+(`protocol-tools/signed-fetch.yaml`): a `GET` of a path at that site and no
+other, on the resolving client above, signed with the application's own key
+(held by Datalayer, never by the runtime) and recorded as a
+`signed-fetch.request.signed` row. *Signed Reader*, in the catalogue, reads
+Example Verifier, which checks the signature and says whom it saw.
+
+## The plugin and its points
+
+Web Bot Auth is a Reactor plugin, `agent-runtimes.protocols.web-bot-auth`,
+delivered with the other protocols by the `agent-protocols` Reactor
+Extension (see [Agent protocols as plugins](./agent-protocols)):
+
+| Point | Default | What a host contributes |
+| --- | --- | --- |
+| `web_bot_auth.signer` | none | its signer (the key stays with it) |
+| `web_bot_auth.nonceStore` | `memory` | a store shared by its processes |
+| `web_bot_auth.extension.directory` | the PAP SDK's resolving client / `fetch` | its own egress to fetch directories |
+| `web_bot_auth.extension.jwks_uri` | `httpx` / `fetch` | idem |
+| `web_bot_auth.extension.cimd` | none | a client-metadata-document discovery |
+
+Each `Signature-Agent` type is an extension of the protocol, so a contribution
+point of its plugin: a member of type `cimd` is `unverified` until a host
+contributes a discovery for it.
+
+## Why not `http-message-signatures` in Python
+
+`pyauth/http-message-signatures` 2.0.1, the maintained RFC 9421 library of
+PyPI, ignores a component's `;key=` parameter, and Web Bot Auth covers
+`"signature-agent";key="…"` on every request: it signs the wrong base and
+fails the draft's vectors. The signature base is written here over
+`http-sfv` (RFC 9651 structured fields), for the components the draft uses.
+
+## Example
+
+Runs locally, in one process with no network (examples EX-01 and EX-02):
+
+```bash
+python examples/protocols/web_bot_auth/signed_agent.py
+```
+
+It runs an agent, its key directory and a shop, and prints the three headers
+(`Signature-Agent`, `Signature-Input`, `Signature`) and the signature base,
+then what the shop sees: a signed request `verified` (200), the same request
+replayed refused (401, *the nonce was seen before*), an unsigned one and a
+stranger's `unverified`, and after a key rotation both keys verified while
+in-flight requests finish. The same key signs in TypeScript: `vectors.json`'s
+`cross` request is signed in Python, reproduced header for header by
+`webBotAuth.unit.test.ts` and verified by the Python verifier.
+
+### In the browser
+
+The examples gallery's **Signed requests** (*Agent protocols* group, example
+EX-10) does the same in a page, with no server: a fresh Ed25519 key made with
+WebCrypto signs `GET https://shop.example/products?q=tea` through
+`signRequest`; the page shows the three headers, the signature base exactly
+as the signer was handed it, and the public key the directory lists (the
+private key is never shown), then what the shop's `verifyRequest` finds —
+`verified`, the same request again `invalid` (*the nonce was seen before*),
+and the path changed `invalid`. *Sign again with a new key* repeats it.
+
+```bash
+EXAMPLE=ProtocolSignedRequestsExample npm run dev
+```
+
+Its work is `src/examples/protocols/signedRequestsDemo.ts`, run by
+`src/examples/__tests__/protocolExamples.test.ts`.
+
+## Conformance
+
+`draft-ietf-webbotauth-httpsig-protocol-00`. `web_bot_auth/fixtures/vectors.json` holds the draft's Ed25519 vectors E.2.1 to E.2.3, reproduced byte for byte by `test_protocols_web_bot_auth.py` and `webBotAuth.unit.test.ts`, and a `cross` request signed in Python that TypeScript reproduces header for header.
+
+TAP's draft profile (below) has its own vectors, `web_bot_auth/fixtures/tap.json`, computed in Python and reproduced byte for byte by Cloudflare's `http-message-sig` (`test_protocols_web_bot_auth_tap.py`, `tap.unit.test.ts`).
+
+## TAP, a draft profile
+
+**TAP**, Visa's Trusted Agent Protocol, is an agent-recognition profile over these signatures. It is built as a **draft** from Visa's public documentation, read on 2026-10-13 — the [Merchant Specifications](https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications), the [overview](https://developer.visa.com/capabilities/trusted-agent-protocol/overview) and the [reference repository](https://github.com/visa/trusted-agent-protocol) — and not confirmed by Visa; Datalayer's Studio says it *arriving* until it is.
+
+| | TAP (draft) | Web Bot Auth |
+| --- | --- | --- |
+| Headers | `Signature-Input`, `Signature` | the same, and `Signature-Agent` |
+| Covered | at least `@authority` and `@path` | `@authority` (or `@target-uri`) and the `Signature-Agent` member |
+| Parameters | `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag`, all required | `created`, `expires`, `keyid`, `tag`; `nonce` advised |
+| Tag | `agent-browser-auth` to browse, `agent-payer-auth` to pay | `web-bot-auth` |
+| Life | at most 8 minutes; a nonce seen in the last 8 minutes is a replay | 24 hours at most, advised |
+| Keys | by `keyid`, from Visa's directory (`https://mcp.visa.com/.well-known/jwks`) or a registry | found from the `Signature-Agent` member |
+
+```python
+from agent_runtimes.protocols.web_bot_auth.tap import sign_tap_request, verify_tap_request
+
+signed = await sign_tap_request(method="GET", url=url, signer=signer, intent="browse")
+found = await verify_tap_request(
+    method="GET", url=url, headers=signed.as_dict(), keys=keys, nonce_store=nonces
+)
+found.intent  # "browse" or "pay"
+```
+
+```ts
+import { signTapRequest, verifyTapRequest } from '@datalayer/agent-runtimes/lib/protocols/web-bot-auth/tap';
+
+const headers = await signTapRequest({ method: 'GET', url }, signer, { intent: 'pay' });
+const found = await verifyTapRequest(request, keys, { nonceStore });
+```
+
+Found reading Visa's page: its own sample's `expires` is an hour after `created`, against its 8-minute rule (the rule is followed); it names no `Signature-Agent`; it publishes no test vector. The Consumer Recognition Object and the Payment Container a TAP agent may send in a body are not implemented.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
+## What never leaves the host
+
+No private key reaches a header, a directory, a log line or the model: the
+tests check that the private key appears in none of them, and that a
+directory refuses a private JWK.

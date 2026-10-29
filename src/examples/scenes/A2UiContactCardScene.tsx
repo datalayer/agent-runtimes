@@ -151,10 +151,8 @@ function ContactCardContent({
   }, [loadCard]);
 
   return (
-    <Box
-      sx={{ display: 'flex', flexDirection: 'column', gap: 3, px: 3, pb: 3 }}
-    >
-      <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box display="flex" flexDirection="column" gap={3} px={3} pb={3}>
+      <Box display="flex" gap={2}>
         <Button size="small" variant="primary" onClick={loadCard}>
           Reload Card
         </Button>
@@ -174,13 +172,11 @@ function ContactCardContent({
         {surfaces.map(surface => (
           <Box
             key={surface.id}
-            sx={{
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              p: 3,
-              backgroundColor: 'canvas.default',
-            }}
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={2}
+            p={3}
+            backgroundColor="canvas.default"
           >
             <A2uiSurfaceComposed surface={surface} />
           </Box>
@@ -209,21 +205,17 @@ const A2UiContactCardScene: React.FC = () => {
     <>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            height: '100%',
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          height="100%"
+          overflow="auto"
+          display="flex"
+          flexDirection="column"
         >
           <Box
-            sx={{
-              px: 3,
-              py: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              backgroundColor: 'canvas.default',
-            }}
+            px={3}
+            py={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            backgroundColor="canvas.default"
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
               👤 A2UI Contact Card
@@ -235,27 +227,23 @@ const A2UiContactCardScene: React.FC = () => {
           </Box>
 
           <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: ['1fr', '2fr 1fr'],
-              gap: 3,
-              p: 3,
-            }}
+            display="grid"
+            gridTemplateColumns={['1fr', '2fr 1fr']}
+            gap={3}
+            p={3}
           >
             <ContactCardContent onAction={handleAction} />
 
             <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                p: 3,
-                backgroundColor: 'canvas.default',
-                fontFamily: 'mono',
-                fontSize: 0,
-                whiteSpace: 'pre-wrap',
-                overflow: 'auto',
-              }}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              p={3}
+              backgroundColor="canvas.default"
+              fontFamily="mono"
+              fontSize={0}
+              whiteSpace="pre-wrap"
+              overflow="auto"
             >
               {actionPreview}
             </Box>

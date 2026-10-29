@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import { Box, Link } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Link } from '@primer/react';
 
 /**
  * PoweredByTag props
@@ -46,22 +47,22 @@ export function PoweredByTag({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 1,
-        py: 2,
-        px: 3,
-        fontSize: 0,
-        color: 'fg.muted',
-        borderTop: '1px solid',
-        borderColor: 'border.default',
-        bg: 'canvas.subtle',
-      }}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={1}
+      py={2}
+      px={3}
+      fontSize={0}
+      color="fg.muted"
+      borderTop="1px solid"
+      borderColor="border.default"
+      bg="canvas.subtle"
     >
       {brandIcon && (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>{brandIcon}</Box>
+        <Box display="flex" alignItems="center">
+          {brandIcon}
+        </Box>
       )}
       <span>Powered by</span>
       <Link

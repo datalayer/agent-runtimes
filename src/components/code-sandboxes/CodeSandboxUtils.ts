@@ -38,7 +38,7 @@ export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
    * for this variant — is decided by the rules in `codeSandboxEnvironments`,
    * and they read the entry. Copying a field at a time here is how the
    * launcher and the picker came to disagree about the same environment
-   * (PLAN_ENV.md, E1-19). Absent on a sandbox that already runs and on a
+   * (E1-19). Absent on a sandbox that already runs and on a
    * kernelspec of a server or of the browser.
    */
   environment?: IDatalayerEnvironment;

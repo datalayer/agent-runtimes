@@ -1,0 +1,16 @@
+data: {"jsonrpc":"2.0","id":1,"result":{"task":{"id":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","status":{"state":"TASK_STATE_SUBMITTED","timestamp":"2026-10-05T09:52:48.257030"},"history":[{"role":"ROLE_USER","parts":[{"text":"Which customer invoices are still open?"}],"messageId":"m-1","taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3"}]}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"statusUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","status":{"state":"TASK_STATE_WORKING"}}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"statusUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","status":{"state":"TASK_STATE_WORKING","message":{"role":"ROLE_AGENT","parts":[{"data":{"tool_call":{"id":"c1","name":"odoo_accounting_list_invoices","arguments":{"state":"posted"}}}}],"messageId":"4fade1f7-d57a-4b4e-9183-294be73d94e1","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3"}}}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"statusUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","status":{"state":"TASK_STATE_WORKING","message":{"role":"ROLE_AGENT","parts":[{"data":{"tool_result":{"id":"c1","name":"odoo_accounting_list_invoices","result":"1 invoice","error":null}}}],"messageId":"cc31152c-91d4-4e5f-b4d7-68baef107097","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3"}}}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"artifactUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","artifact":{"artifactId":"d492cf9d-216c-4891-94c1-9017ed3a556a","name":"result","parts":[{"text":"Open invoices: "}]},"append":true,"lastChunk":false}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"artifactUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","artifact":{"artifactId":"d492cf9d-216c-4891-94c1-9017ed3a556a","name":"result","parts":[{"text":"INV/2026/0007, 1,200.00 EUR due."}]},"append":true,"lastChunk":false}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"artifactUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","artifact":{"artifactId":"d492cf9d-216c-4891-94c1-9017ed3a556a","name":"result","parts":[{"text":"Open invoices: INV/2026/0007, 1,200.00 EUR due."}]},"append":false,"lastChunk":true}}}
+
+data: {"jsonrpc":"2.0","id":1,"result":{"statusUpdate":{"taskId":"cba3d422-f2cf-4e2f-a848-f283544688f0","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3","status":{"state":"TASK_STATE_COMPLETED","message":{"role":"ROLE_AGENT","parts":[{"text":"Open invoices: INV/2026/0007, 1,200.00 EUR due."}],"messageId":"5f8de847-e7b8-463f-a573-8569f8c82124","contextId":"c9da5ef6-1737-4844-b041-52ff1771d0a3"}}}}}
+

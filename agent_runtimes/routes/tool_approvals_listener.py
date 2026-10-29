@@ -21,18 +21,33 @@ Lifecycle:
 * :func:`release_listener` is invoked by ``remove_approval_credentials``
   once an approval is decided. When the refcount reaches zero the WS
   task is cancelled.
+
+A narrowed token (a Preview's, held to its application; a run's; one acting
+in a person's name — any carrying ``authorization_details`` or a task grant)
+is refused by ai-agents' ``/ws``, which takes no narrowed token (fail closed,
+the release gates, decided 2026-10-14). Its approvals are read one
+by one instead — ``GET /tool-approvals/{id}`` takes a narrowed token for the
+approvals it asked — every ``NARROWED_POLL_SECONDS`` until each is decided:
+it learns of nothing else of the person's.
 """
 
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import hashlib
 import json
 import logging
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
+
 logger = logging.getLogger(__name__)
+
+#: How often a narrowed token's approvals are read at ai-agents while they wait.
+NARROWED_POLL_SECONDS = 2.0
 
 _LOCK = asyncio.Lock()
 _TASKS: dict[str, asyncio.Task[None]] = {}
@@ -57,12 +72,82 @@ def unregister_remote_to_local(remote_id: str) -> None:
     _REMOTE_TO_LOCAL.pop(remote_id, None)
 
 
-def _resolve_ws_url(ai_agents_url: str, jwt: str) -> str:
-    ws_base = ai_agents_url.rstrip("/")
+def is_narrowed(jwt: str) -> bool:
+    """Whether ai-agents reads this token as narrowed, as its ``narrowed_kind``
+    does: claims carrying ``authorization_details``, or a task grant. Read
+    unverified: it only chooses how the approvals are watched.
+    """
+    parts = jwt.split(".")
+    if len(parts) != 3:
+        return False
+    try:
+        claims = json.loads(
+            base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
+        )
+    except (ValueError, binascii.Error):
+        return False
+    if not isinstance(claims, dict):
+        return False
+    return "authorization_details" in claims or bool(
+        str(claims.get("task_grant_uid") or "").strip()
+    )
+
+
+def _service_base(ai_agents_url: str) -> str:
+    base = ai_agents_url.rstrip("/")
     for suffix in ("/api/ai-agents/v1", "/api/ai-agents"):
-        if ws_base.endswith(suffix):
-            ws_base = ws_base[: -len(suffix)]
-            break
+        if base.endswith(suffix):
+            return base[: -len(suffix)]
+    return base
+
+
+async def _watch_approvals(
+    jwt: str, ai_agents_url: str, client: httpx.AsyncClient | None = None
+) -> None:
+    """A narrowed token's approvals, each read at ai-agents until it is decided
+    (``GET /tool-approvals/{id}``): the approvals forwarded with this token only.
+    """
+    from agent_runtimes.routes.tool_approvals import _REMOTE_APPROVAL_REGISTRY
+
+    url = f"{_service_base(ai_agents_url)}/api/ai-agents/v1/tool-approvals"
+    owned = client is None
+    http = client or httpx.AsyncClient(timeout=10.0)
+    try:
+        while True:
+            for remote_id in [
+                remote
+                for remote, token in list(_REMOTE_APPROVAL_REGISTRY.values())
+                if token == jwt
+            ]:
+                try:
+                    answer = await http.get(
+                        f"{url}/{remote_id}", headers={"Authorization": f"Bearer {jwt}"}
+                    )
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "[tool-approval:watch] ai-agents could not be read for %s: %s",
+                        remote_id,
+                        exc,
+                    )
+                    continue
+                if answer.status_code != 200:
+                    logger.warning(
+                        "[tool-approval:watch] ai-agents answered %s for approval %s",
+                        answer.status_code,
+                        remote_id,
+                    )
+                    continue
+                record = answer.json()
+                if isinstance(record, dict):
+                    await _handle_record(record)
+            await asyncio.sleep(NARROWED_POLL_SECONDS)
+    finally:
+        if owned:
+            await http.aclose()
+
+
+def _resolve_ws_url(ai_agents_url: str, jwt: str) -> str:
+    ws_base = _service_base(ai_agents_url)
     stripped = ws_base.replace("https://", "").replace("http://", "")
     scheme = "wss" if ai_agents_url.startswith("https") else "ws"
     query = urlencode({"token": jwt}) if jwt else ""
@@ -162,6 +247,13 @@ async def _run_listener(jwt: str) -> None:
             "[tool-approval:listener] ai_agents_url not configured; listener "
             "will not start."
         )
+        return
+
+    if is_narrowed(jwt):
+        logger.info(
+            "[tool-approval:watch] A narrowed token: its approvals are read at ai-agents one by one"
+        )
+        await _watch_approvals(jwt, str(ai_agents_url))
         return
 
     ws_url = _resolve_ws_url(str(ai_agents_url), jwt)

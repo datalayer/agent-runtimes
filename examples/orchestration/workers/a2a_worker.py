@@ -8,7 +8,7 @@ A protocol shell and nothing else: it reads the objective out of the A2A
 message, calls ``notebook_analysis.analyse``, publishes what it is doing as it goes,
 and registers the report as the task's artifact. The analysis is the module
 next door, shared with the ACP worker, so the two workers cannot disagree
-about the notebook (PLAN_ORCHESTRATOR.md, O0-13).
+about the notebook (O0-13).
 
 Built on ``fasta2a``, which is what ``agent_runtimes.routes.a2a`` serves the
 platform's own agents with, so this worker is an A2A server of the same kind

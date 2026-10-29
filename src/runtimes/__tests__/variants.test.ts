@@ -22,16 +22,80 @@ import {
   defaultVariantForSpec,
   harnessOf,
   isAgentRuntimeVariant,
+  isServedCatalogueHarness,
   legacyTargetOf,
   locationOf,
   needsRuntimeService,
   runsInBrowser,
   specHarnessOf,
   toAgentRuntimeVariant,
+  unservedHarnessProblem,
   variantForLocation,
   variantSupportsSpecHarness,
   variantsForSpec,
 } from '../variants';
+
+describe('a harness of the catalogue (SH-01, SH-10)', () => {
+  const coder = { id: 'coder', harness: 'claude-code' };
+
+  it('is served by the Datalayer runtime, which launches it, and never by the page', () => {
+    expect(unservedHarnessProblem(coder)).toBeUndefined();
+    expect(specHarnessOf(coder)).toBe('claude-code');
+    expect(variantsForSpec(coder)).toEqual([
+      'local-pydanticai',
+      'cloud-pydanticai',
+    ]);
+    expect(defaultVariantForSpec(coder)).toBe(DEFAULT_AGENT_RUNTIME_VARIANT);
+    expect(variantSupportsSpecHarness('browser-vercelai', 'claude-code')).toBe(
+      false,
+    );
+    // The four the catalogue offers (28 October 2026); a harness it describes
+    // and does not offer is not served, and names its reason.
+    for (const harness of ['codex', 'opencode', 'pi']) {
+      expect(isServedCatalogueHarness(harness)).toBe(true);
+    }
+    for (const harness of ['goose', 'openhands', 'fast-agent']) {
+      expect(isServedCatalogueHarness(harness)).toBe(false);
+    }
+    expect(unservedHarnessProblem({ id: 'g', harness: 'goose' })).toMatch(
+      /^The agent “g” runs on the harness “goose” \(goose\), which is not offered: the catalogue offers four harnesses today/,
+    );
+    expect(variantsForSpec({ id: 'g', harness: 'goose' })).toEqual([]);
+  });
+
+  it('refuses custom in the shared catalogue, and never runs pydantic-ai in its place', () => {
+    const own = { id: 'own', harness: 'custom' };
+    expect(unservedHarnessProblem(own)).toBe(
+      "The agent “own” runs on the harness “custom”, which names no command: an organization's own harness spec names it, and is never typed into a form.",
+    );
+    expect(() => specHarnessOf(own)).toThrow('names no command');
+    expect(variantsForSpec(own)).toEqual([]);
+    expect(() => defaultVariantForSpec(own)).toThrow('names no command');
+    expect(isServedCatalogueHarness('custom')).toBe(false);
+  });
+
+  it('refuses a harness that is neither built in nor of the catalogue', () => {
+    expect(unservedHarnessProblem({ id: 'x', harness: 'nope' })).toBe(
+      'The agent “x” runs on “nope”, which is no harness.',
+    );
+    expect(() => specHarnessOf({ id: 'x', harness: 'nope' })).toThrow(
+      'no harness',
+    );
+    expect(variantsForSpec({ harness: 'nope' })).toEqual([]);
+    expect(isServedCatalogueHarness('nope')).toBe(false);
+    expect(isServedCatalogueHarness('pydantic-ai')).toBe(false);
+  });
+
+  it('says nothing of the built-in harnesses', () => {
+    expect(
+      unservedHarnessProblem({ id: 'a', harness: 'pydantic-ai' }),
+    ).toBeUndefined();
+    expect(
+      unservedHarnessProblem({ id: 'b', harness: 'vercel-ai' }),
+    ).toBeUndefined();
+    expect(unservedHarnessProblem({ id: 'c' })).toBeUndefined();
+  });
+});
 
 describe('variant shape', () => {
   it('splits every variant into a location and a harness', () => {

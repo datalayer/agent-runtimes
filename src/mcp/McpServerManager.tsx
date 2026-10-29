@@ -357,16 +357,10 @@ export function McpServerManager({
   const isMutating = enableMutation.isPending || disableMutation.isPending;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box display="flex" flexDirection="column" gap={4}>
       {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" justifyContent="space-between">
+        <Box display="flex" alignItems="center" gap={2}>
           <ToolsIcon size={16} />
           <Text sx={{ fontWeight: 'semibold' }}>MCP Server Management</Text>
         </Box>
@@ -398,7 +392,7 @@ export function McpServerManager({
 
       {/* Loading state */}
       {isLoading && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 3 }}>
+        <Box display="flex" alignItems="center" gap={2} py={3}>
           <Spinner size="small" />
           <Text sx={{ color: 'fg.muted' }}>Loading MCP servers...</Text>
         </Box>
@@ -406,7 +400,7 @@ export function McpServerManager({
 
       {/* Assigned Configured Servers Section (selected servers from mcp.json) */}
       {!isLoading && assignedConfigServers.length > 0 && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             Assigned Configured Servers ({assignedConfigServers.length})
           </Text>
@@ -415,7 +409,7 @@ export function McpServerManager({
             agent.
           </Text>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box display="flex" flexDirection="column" gap={2}>
             {assignedConfigServers.map(server => (
               <ServerCard
                 key={server.id}
@@ -435,12 +429,12 @@ export function McpServerManager({
 
       {/* Assigned Catalog Servers Section (selected servers from catalog) */}
       {!isLoading && assignedCatalogServers.length > 0 && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             Assigned Catalog Servers ({assignedCatalogServers.length})
           </Text>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box display="flex" flexDirection="column" gap={2}>
             {assignedCatalogServers.map(server => (
               <ServerCard
                 key={server.id}
@@ -464,7 +458,7 @@ export function McpServerManager({
 
       {/* Catalog Servers Section */}
       {!isLoading && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             Available from Catalog ({availableCatalogServers.length})
           </Text>
@@ -487,7 +481,7 @@ export function McpServerManager({
                 : 'All catalog servers are already enabled.'}
             </Text>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
               {filteredCatalogServers.map(server => (
                 <ServerCard
                   key={server.id}
@@ -542,18 +536,16 @@ function ServerCard({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 2,
-        padding: 2,
-        borderRadius: 2,
-        backgroundColor: 'canvas.subtle',
-        border: '1px solid',
-        borderColor: isSelected ? 'accent.emphasis' : 'border.default',
-        opacity: disabled || !isAvailable ? 0.6 : 1,
-        cursor: onSelect && !disabled && isAvailable ? 'pointer' : 'default',
-      }}
+      display="flex"
+      alignItems="flex-start"
+      gap={2}
+      padding={2}
+      borderRadius={2}
+      backgroundColor="canvas.subtle"
+      border="1px solid"
+      borderColor={isSelected ? 'accent.emphasis' : 'border.default'}
+      opacity={disabled || !isAvailable ? 0.6 : 1}
+      cursor={onSelect && !disabled && isAvailable ? 'pointer' : 'default'}
       onClick={() => {
         if (onSelect && !disabled && isAvailable) {
           onSelect(server, !isSelected);
@@ -562,24 +554,23 @@ function ServerCard({
     >
       {/* Server icon */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 32,
-          height: 32,
-          borderRadius: 2,
-          backgroundColor:
-            variant === 'config' ? 'attention.subtle' : 'accent.subtle',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        width={32}
+        height={32}
+        borderRadius={2}
+        backgroundColor={
+          variant === 'config' ? 'attention.subtle' : 'accent.subtle'
+        }
+        flexShrink={0}
       >
         <ServerIcon size={16} />
       </Box>
 
       {/* Server info */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Box flex={1} minWidth={0}>
+        <Box display="flex" alignItems="center" gap={2} mb={1}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             {server.name}
           </Text>
@@ -617,14 +608,12 @@ function ServerCard({
         {/* Missing env vars warning - show required env vars so user can fix */}
         {missingEnvVars && (
           <Box
-            sx={{
-              fontSize: 0,
-              color: 'danger.fg',
-              mb: 1,
-              p: 1,
-              bg: 'danger.subtle',
-              borderRadius: 1,
-            }}
+            fontSize={0}
+            color="danger.fg"
+            mb={1}
+            p={1}
+            bg="danger.subtle"
+            borderRadius={1}
           >
             <Text sx={{ fontWeight: 'semibold', display: 'block', mb: 1 }}>
               Missing environment variables:
@@ -675,9 +664,7 @@ function ServerCard({
       </Box>
 
       {/* Actions */}
-      <Box
-        sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-      >
+      <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
         {variant === 'catalog' && onAdd && (
           <Button
             variant="primary"

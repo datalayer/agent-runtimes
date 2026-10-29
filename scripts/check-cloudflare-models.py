@@ -69,14 +69,14 @@ def served(account: str, token: str) -> dict[str, dict]:
 def specs() -> list[dict]:
     """The Workers AI specs (``cloudflare-wrk-*.yaml``) that name a model Cloudflare
     hosts under ``@cf/``. The gateway flavour (``cloudflare-gtw-*``) and the typed
-    judgment models (``typesafe/jev``, with no ``@cf/`` namespace) are not in the
+    decision models (``typesafe/jev``, with no ``@cf/`` namespace) are not in the
     account's model listing and are left out.
     """
     found = []
     for path in sorted(SPECS.glob("cloudflare-wrk-*.yaml")):
         with open(path) as handle:
             data = yaml.safe_load(handle) or {}
-        if "judgments" in (data.get("capabilities") or []):
+        if "decisions" in (data.get("capabilities") or []):
             continue
         found.append({"file": path.name, **data})
     return found

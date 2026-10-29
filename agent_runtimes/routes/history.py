@@ -11,8 +11,10 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from reactor.ui import DISPLAY_META_KEY
 
 from agent_runtimes.context.usage import get_usage_tracker
+from agent_runtimes.transports.agui_displays import with_page_meta
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,19 @@ router = APIRouter(tags=["history"])
 
 MAX_UPSERT_MESSAGES = 500
 MAX_UPSERT_PAYLOAD_BYTES = 1_000_000
+
+
+def refuse_every_visitors(agent_id: str) -> None:
+    """Refuse an agent-wide read or change of the conversation of an agent that serves a deployment.
+
+    What it holds is every visitor's (`serves_a_deployment`): 404, in its sentence.
+    """
+    from agent_runtimes.apps.principal import EVERY_VISITORS, serves_a_deployment
+
+    if serves_a_deployment(agent_id):
+        raise HTTPException(
+            status_code=404, detail=EVERY_VISITORS.format(agent=agent_id)
+        )
 
 
 # =========================================================================
@@ -123,7 +138,12 @@ def _convert_to_chat_messages(
                         )
                     )
                 elif part_kind == "tool-return":
-                    # Tool return - create a tool message
+                    # Tool return - create a tool message. A result that
+                    # carried a display (RU-1) reaches the page as
+                    # it did live: the model view with the display in `_meta`.
+                    display = part.get("display")
+                    if display is not None:
+                        content = with_page_meta(content, {DISPLAY_META_KEY: display})
                     messages.append(
                         HistoryMessage(
                             id=str(uuid.uuid4()),
@@ -268,6 +288,7 @@ async def get_conversation_history(
 
     Returns messages in the format expected by the frontend ChatMessage interface.
     """
+    refuse_every_visitors(agent_id)
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
 
@@ -276,6 +297,10 @@ async def get_conversation_history(
     # resolve to the primary registered agent in this runtime.
     if (not stats or not stats.message_history) and agent_id == "default":
         for candidate_id in tracker.list_agents():
+            from agent_runtimes.apps.principal import serves_a_deployment
+
+            if serves_a_deployment(candidate_id):
+                continue
             candidate_stats = tracker.get_agent_stats(candidate_id)
             if candidate_stats and candidate_stats.message_history:
                 stats = candidate_stats
@@ -305,6 +330,7 @@ async def upsert_conversation_history(
     ),
 ) -> dict[str, Any]:
     """Inject/restore conversation history for an agent."""
+    refuse_every_visitors(agent_id)
     payload_size = len(
         json.dumps(
             [msg.model_dump(exclude_none=True) for msg in body.messages],
@@ -363,6 +389,7 @@ async def clear_conversation_history(
 
     This resets the message history but preserves usage statistics.
     """
+    refuse_every_visitors(agent_id)
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
 

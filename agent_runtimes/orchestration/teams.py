@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A catalogued team, as the control plane runs it (ORCHESTRATOR.md, O2-09).
+"""A catalogued team, as the control plane runs it (O2-09).
 
 A team's run is a tree of executions. Its root is the supervisor's, and each
 member runs as a child of it. Every one of them is bound by an agent id naming
@@ -16,6 +16,14 @@ the order `depends_on` gives, and the supervisor answers after them, briefed
 with what they produced. A `supervisor` team's supervisor routes the work
 itself: it is registered with the members as its subagents, each a seat it
 asks the control plane for (O2-06), and told the team's routing instructions.
+
+A member that is a **harness** (SH-45: Claude Code, Codex, an
+organization's own) is registered by its harness id, so its worker is that
+agent program over ACP behind the Shield — no model, no tools of the team's:
+its own, its MCP lent. It is bound over ACP when a member of the team talks
+to it ``over: acp`` (the runtime's ACP route, its plan and diffs coming back
+on the session), else over A2A like any seat (its diffs as ``text/x-diff``
+artifacts); either way with the execution's budget, deadline and manifest.
 """
 
 from __future__ import annotations
@@ -123,12 +131,38 @@ def supervisor_binding(team: TeamSpec) -> AgentBinding:
     )
 
 
+def member_protocol(team: TeamSpec, member: TeamAgentspec) -> AgentProtocol:
+    """
+    The protocol a member is bound over: ACP for a harness the team asks over ``acp``, else A2A.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+    member : TeamAgentspec
+        The member.
+
+    Returns
+    -------
+    AgentProtocol
+        ``ACP`` when the member is a harness and a member links to it over
+        ``acp``; ``A2A`` otherwise.
+    """
+    if member.harness and any(
+        link.member == member.id and link.over == "acp"
+        for other in team.agents
+        for link in (other.talks_to or [])
+    ):
+        return AgentProtocol.ACP
+    return AgentProtocol.A2A
+
+
 def member_binding(team: TeamSpec, member: TeamAgentspec) -> AgentBinding:
     """The binding of a member's execution, brought up for it."""
     return AgentBinding(
         agent_id=seat_agent_id(team.id, member.id),
         capability=member.role or member.id,
-        protocol=AgentProtocol.A2A,
+        protocol=member_protocol(team, member),
     )
 
 
@@ -202,6 +236,16 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
         and transport.
     """
     team, member = seat.team, seat.member
+    if member is not None and member.harness:
+        # A harness (SH-45): the agent program itself, over ACP behind the
+        # Shield; its goal in this team is what each delegation's objective
+        # says, never a system prompt it would not read.
+        return {
+            "agent_spec": {
+                "harness": member.harness,
+                "description": member.goal or member.role or member.id,
+            }
+        }
     if member is not None:
         ref, model = member.ref, member.model
         prompt = (
@@ -255,6 +299,74 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
             {"id": member.mcp_server, "origin": "catalog"}
         ]
     return fields
+
+
+#: What a team's application records of its seats' sessions: the conversation,
+#: the harnesses' actions and decisions, their diffs and terminals.
+TEAM_RECORD_INCLUDE = (
+    "conversations",
+    "actions",
+    "decisions",
+    "approvals",
+    "diffs",
+    "terminals",
+)
+
+
+def team_app(team: TeamSpec) -> dict[str, Any]:
+    """
+    The application a team's seats' sessions are of (MH-38).
+
+    A seat's task is a turn of an apps session; a session is of an
+    application, and a team's is the team itself: a ``loop.app/v1`` document
+    naming the team (``team:``), whose record keeps what the seats say and
+    do. Loaded by ``agent_runtimes.apps.loading.load_app``.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+
+    Returns
+    -------
+    dict[str, Any]
+        The application's document.
+    """
+    return {
+        "schema": "loop.app/v1",
+        "id": f"team-{team.id}",
+        "name": team.name,
+        "kind": "chat",
+        "team": team.id,
+        "record": {"keep_for": "30_days", "include": list(TEAM_RECORD_INCLUDE)},
+    }
+
+
+def seat_instance(team: TeamSpec) -> dict[str, Any]:
+    """
+    The instance a seat's session serves: the team as the platform names it.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{app_uid, deployment_uid, version}``: ``team:<id>``, no deployment, the spec's version.
+    """
+    version = str(team.version or "0").split(".")[-1]
+    return {
+        "app_uid": f"team:{team.id}",
+        "deployment_uid": "",
+        "version": int(version) if version.isdigit() else 0,
+    }
+
+
+def seat_runs_on(execution_id: str, seat: str) -> dict[str, Any]:
+    """Where a seat's session runs: ``{kind: team_run, execution_id, seat}`` (§2 of the session model)."""
+    return {"kind": "team_run", "execution_id": execution_id, "seat": seat}
 
 
 def briefing(produced: list[tuple[TeamAgentspec, str]]) -> str:

@@ -5,8 +5,8 @@
 Datalayer environments: the platform's catalogue, and the registry of user environments.
 
 ``GET /environments`` lists the platform's environments and the user
-environments the caller may use. The registry beside it (PLAN_ENV.md, section
-9, served by Runtimes since E1-01) creates environments, their versions,
+environments the caller may use. The registry beside it (served by Runtimes since E1-01)
+creates environments, their versions,
 builds and artifacts, and serves build logs. A version's specification, its
 states and its capability reports are the canonical models of
 ``code_sandboxes.environments`` (D-14), as the TypeScript client's types are
@@ -16,7 +16,7 @@ A conditional write names the record it replaces with ``if_match``, the
 ``etag`` every record carries. A keyed create is replayed with the same
 ``idempotency_key``. ``correlation_id`` travels as ``X-Correlation-Id``, and a
 refusal answers with it: a refusal raises :class:`EnvironmentsRequestError`, a
-``RuntimeError`` carrying the status and the section 10 body.
+``RuntimeError`` carrying the status and the error body.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ SpecDocument = Union[Environment, Mapping[str, Any], str]
 
 class EnvironmentsRequestError(RuntimeError):
     """
-    A refusal of the environments API: its HTTP status and its section 10 body.
+    A refusal of the environments API: its HTTP status and its error body.
 
     Parameters
     ----------
@@ -99,7 +99,7 @@ class EnvironmentsRequestError(RuntimeError):
     @property
     def error_code(self) -> Optional[ErrorCode]:
         """
-        The code of the section 10 taxonomy the refusal names.
+        The code of the error taxonomy the refusal names.
 
         Returns
         -------
@@ -966,7 +966,7 @@ class EnvironmentsListMixin:
 
         The resolver runs a BuildKit solve `FROM` the version's base digest,
         which is a build's work, so this queues a build with ``kind: resolve``
-        that stops once the lock is stored (PLAN_ENVS.md E1-26). The answer
+        that stops once the lock is stored (E1-26). The answer
         names it, so the caller can follow its log like any other build's:
         ``{"resolved": false, "build": {...}, "version": {...}}``.
 
@@ -1455,7 +1455,7 @@ class EnvironmentsListMixin:
         Queue the next attempt of a cancelled build, or of one that failed retryably.
 
         Asking twice for the same build answers the attempt the first ask
-        created. A build that failed is retried only under a code section 10
+        created. A build that failed is retried only under a code the error taxonomy
         calls retryable — a timeout, a quota, a missing artifact, an unmapped
         provider failure — and such a retry reopens its version, ``failed``
         back to ``building``. Any other failure is refused with

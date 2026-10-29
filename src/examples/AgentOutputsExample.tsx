@@ -19,6 +19,13 @@
  * We subscribe to the chat store, detect the output type of the latest
  * assistant message, auto-switch the sidebar tab, and render the payload
  * inline in the sidebar.
+ *
+ * A spreadsheet (a ```csv block) is also drawn in the chat message itself, by
+ * the `AgentOutputsSheetsPlugin` renderer the chat reads from its
+ * `ChatCodeBlock` point; the message's grid and the Sheet tab's are one
+ * workbook. The Cells agent tools (`AgentOutputsSheetToolsPlugin`, the
+ * `cells` bundle the spec's `frontend_tools` names) act on the last one, so
+ * "Chart the spreadsheet" inserts a chart that appears on both grids.
  */
 
 /// <reference types="vite/client" />
@@ -34,17 +41,23 @@ import {
   DownloadIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { CellsProvider, Spreadsheet } from '@datalayer/cells';
 import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../loop';
-import { AgentOutputsPlugin } from '../loop/plugins/agent-outputs';
+import { LoopEmbed } from '../apps';
+import {
+  downloadSheet,
+  parseSheetBlock,
+  type SheetBlock,
+  useFitHeight,
+  useSheetModel,
+} from '../apps/plugins/agent-outputs/sheets';
+import { AGENT_OUTPUTS_LOOP_PLUGINS } from './utils/agentOutputsPlugins';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-
-const LOOP_PLUGINS_AGENTOUT = [AgentOutputsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -54,13 +67,15 @@ const AGENT_NAME = 'outputs-example-agent';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type OutputTab = 'table' | 'json' | 'chart' | 'files';
+type OutputTab = 'table' | 'json' | 'chart' | 'sheet' | 'files';
 
 interface DetectedOutput {
   tab: OutputTab;
   payload: string;
   filename?: string;
   extension?: string;
+  /** A spreadsheet's block, for the Sheet tab. */
+  sheet?: SheetBlock;
   messageId: string;
 }
 
@@ -84,8 +99,6 @@ const expandCompactMarkdownTable = (text: string): string => {
 };
 
 const EXT_LIKE_INFOS = new Set([
-  'csv',
-  'tsv',
   'txt',
   'md',
   'markdown',
@@ -153,6 +166,21 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
 
     // File: info string is a known extension OR first line declares a filename.
     const filenameMatch = firstLine.match(/^#\s*filename:\s*([\w.-]+)/i);
+
+    // Spreadsheet: a CSV or TSV, by its fence (`csv`, `tsv`, `spreadsheet`,
+    // `cells`) or a `# filename:` ending in .csv or .tsv — read as the chat's
+    // renderer reads it, so both grids show the same workbook.
+    const sheet = parseSheetBlock(info, rawBody);
+    if (sheet) {
+      return {
+        tab: 'sheet',
+        payload: sheet.source,
+        filename: sheet.name,
+        extension: sheet.extension,
+        sheet,
+        messageId: m.id,
+      };
+    }
     if (filenameMatch || EXT_LIKE_INFOS.has(info)) {
       const filename =
         filenameMatch?.[1] ?? (info ? `output.${info}` : 'output.txt');
@@ -249,29 +277,21 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
 
   if (headers.length === 0) {
     return (
-      <Box
-        as="pre"
-        sx={{
-          fontFamily: 'mono',
-          fontSize: 0,
-          whiteSpace: 'pre-wrap',
-          m: 0,
-        }}
-      >
+      <Box as="pre" fontFamily="mono" fontSize={0} whiteSpace="pre-wrap" m={0}>
         {source}
       </Box>
     );
   }
 
   return (
-    <Box sx={{ overflowX: 'auto' }}>
+    <Box overflowX="auto">
       <Box
         as="table"
+        width="100%"
+        tableLayout="auto"
+        borderCollapse="collapse"
+        fontSize={0}
         sx={{
-          width: '100%',
-          tableLayout: 'auto',
-          borderCollapse: 'collapse',
-          fontSize: 0,
           'th, td': {
             border: '1px solid',
             borderColor: 'border.muted',
@@ -356,15 +376,13 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
     return (
       <Box
         as="pre"
-        sx={{
-          fontFamily: 'mono',
-          fontSize: 0,
-          whiteSpace: 'pre-wrap',
-          bg: 'canvas.default',
-          p: 2,
-          borderRadius: 2,
-          m: 0,
-        }}
+        fontFamily="mono"
+        fontSize={0}
+        whiteSpace="pre-wrap"
+        bg="canvas.default"
+        p={2}
+        borderRadius={2}
+        m={0}
       >
         {source}
       </Box>
@@ -373,6 +391,36 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
 
   return (
     <ReactECharts option={option} style={{ height: 280, width: '100%' }} />
+  );
+};
+
+// ─── Spreadsheet renderer (Datalayer Cells) ───────────────────────────────
+
+/**
+ * A CSV or TSV the agent wrote, in a Datalayer Cells grid: the workbook the
+ * chat message shows too (read once, on this thread), editable here, and
+ * where the agent's chart goes.
+ */
+const SheetView: React.FC<{ block: SheetBlock }> = ({ block }) => {
+  const { model, error } = useSheetModel(block);
+  // As tall as its data and charts (up to 640 px), so a chart the agent adds shows.
+  const height = useFitHeight(model, 200, 640);
+  if (error) {
+    return (
+      <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
+        Could not read the spreadsheet: {error}
+      </Text>
+    );
+  }
+  if (!model) {
+    return <Text sx={{ color: 'fg.muted', fontSize: 0 }}>Reading…</Text>;
+  }
+  return (
+    <CellsProvider model={model}>
+      <Box height={height} border="1px solid" borderColor="border.muted">
+        <Spreadsheet model={model} aria-label={block.name} />
+      </Box>
+    </CellsProvider>
   );
 };
 
@@ -436,25 +484,17 @@ const AgentOutputsInner: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <TableIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -462,9 +502,9 @@ const AgentOutputsInner: React.FC = () => {
         </Heading>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -472,35 +512,32 @@ const AgentOutputsInner: React.FC = () => {
             agentId={agentName}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTOUT}
+            plugins={AGENT_OUTPUTS_LOOP_PLUGINS}
           />
         </Box>
 
         {/* Right: Output panel */}
         <Box
-          sx={{
-            width: 420,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
+          width={420}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
         >
           {/* Output type tabs */}
           <Box
-            sx={{
-              display: 'flex',
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              flexShrink: 0,
-            }}
+            display="flex"
+            borderBottom="1px solid"
+            borderColor="border.default"
+            flexShrink={0}
           >
             {(
               [
                 { key: 'table' as OutputTab, icon: TableIcon, label: 'Table' },
                 { key: 'json' as OutputTab, icon: CodeIcon, label: 'JSON' },
                 { key: 'chart' as OutputTab, icon: GraphIcon, label: 'Chart' },
+                { key: 'sheet' as OutputTab, icon: TableIcon, label: 'Sheet' },
                 { key: 'files' as OutputTab, icon: FileIcon, label: 'Files' },
               ] as const
             ).map(t => {
@@ -532,7 +569,7 @@ const AgentOutputsInner: React.FC = () => {
           </Box>
 
           {/* Artifact list */}
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+          <Box p={3} flex={1} overflow="auto">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} outputs
             </Heading>
@@ -542,27 +579,25 @@ const AgentOutputsInner: React.FC = () => {
                 No {activeTab} outputs yet. Use one of the openers in the chat
                 to produce one — the side panel will switch to the matching tab
                 automatically.
+                {activeTab === 'sheet' &&
+                  ' For a spreadsheet, ask for the data as CSV, for example: "Give me twelve months of sales by region as a CSV".'}
               </Text>
             ) : (
               filtered.map((d, idx) => (
                 <Box
                   key={d.messageId + ':' + idx}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
+                  p={2}
+                  mb={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 2,
-                      gap: 2,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={2}
+                    gap={2}
                   >
                     <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
                       {d.filename ?? `${d.tab} output`}
@@ -576,17 +611,15 @@ const AgentOutputsInner: React.FC = () => {
                   {d.tab === 'json' && (
                     <Box
                       as="pre"
-                      sx={{
-                        bg: 'canvas.default',
-                        p: 2,
-                        borderRadius: 2,
-                        fontFamily: 'mono',
-                        fontSize: 0,
-                        maxHeight: 320,
-                        overflow: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        m: 0,
-                      }}
+                      bg="canvas.default"
+                      p={2}
+                      borderRadius={2}
+                      fontFamily="mono"
+                      fontSize={0}
+                      maxHeight={320}
+                      overflow="auto"
+                      whiteSpace="pre-wrap"
+                      m={0}
                     >
                       {(() => {
                         try {
@@ -598,22 +631,34 @@ const AgentOutputsInner: React.FC = () => {
                     </Box>
                   )}
                   {d.tab === 'chart' && <ChartView source={d.payload} />}
+                  {d.tab === 'sheet' && d.sheet && (
+                    <>
+                      <SheetView block={d.sheet} />
+                      <Box mt={2}>
+                        <Button
+                          size="small"
+                          leadingVisual={DownloadIcon}
+                          onClick={() => downloadSheet(d.sheet!)}
+                        >
+                          Download {d.filename ?? 'spreadsheet'}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
                   {d.tab === 'files' && (
                     <>
                       <Box
                         as="pre"
-                        sx={{
-                          bg: 'canvas.default',
-                          p: 2,
-                          borderRadius: 2,
-                          fontFamily: 'mono',
-                          fontSize: 0,
-                          maxHeight: 200,
-                          overflow: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          m: 0,
-                          mb: 2,
-                        }}
+                        bg="canvas.default"
+                        p={2}
+                        borderRadius={2}
+                        fontFamily="mono"
+                        fontSize={0}
+                        maxHeight={200}
+                        overflow="auto"
+                        whiteSpace="pre-wrap"
+                        m={0}
+                        mb={2}
                       >
                         {d.payload}
                       </Box>

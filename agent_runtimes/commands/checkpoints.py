@@ -17,6 +17,7 @@ app = typer.Typer(
     name="checkpoints",
     help="Runtime checkpoint management commands (CRIU full-pod checkpoints)",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

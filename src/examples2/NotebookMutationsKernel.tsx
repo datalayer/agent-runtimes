@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Box, SegmentedControl, Label, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { SegmentedControl, Label, Text } from '@primer/react';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { Session, ServiceManager } from '@jupyterlab/services';
 import {

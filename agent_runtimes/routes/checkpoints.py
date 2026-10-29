@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from ..checkpoints import CheckpointsCapability, apply_rewind, get_checkpoints
 from ..checkpoints.store import ConversationCheckpoint
+from .history import refuse_every_visitors
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ async def list_conversation_checkpoints(agent_id: str) -> dict[str, Any]:
     An agent without checkpoints answers too, with ``enabled`` false, so a
     sidebar can say so rather than fail.
     """
+    refuse_every_visitors(agent_id)
     capability = get_checkpoints(agent_id)
     if capability is None:
         return {"agent_id": agent_id, "enabled": False, "turn": 0, "checkpoints": []}
@@ -91,6 +93,7 @@ async def save_conversation_checkpoint(
     agent_id: str, body: SaveCheckpointRequest
 ) -> dict[str, Any]:
     """Take a checkpoint of the conversation as the last turn left it."""
+    refuse_every_visitors(agent_id)
     capability = _capability_or_404(agent_id)
     messages = capability.middleware.last_messages
     if not messages:
@@ -109,6 +112,7 @@ async def get_conversation_checkpoint(
     agent_id: str, checkpoint_id: str
 ) -> dict[str, Any]:
     """One checkpoint, messages included."""
+    refuse_every_visitors(agent_id)
     capability = _capability_or_404(agent_id)
     checkpoint = await _checkpoint_or_404(capability, checkpoint_id)
     return {**_summary(checkpoint), "messages": checkpoint.messages}
@@ -119,6 +123,7 @@ async def rewind_conversation_to_checkpoint(
     agent_id: str, checkpoint_id: str
 ) -> dict[str, Any]:
     """Set the conversation back to a checkpoint."""
+    refuse_every_visitors(agent_id)
     capability = _capability_or_404(agent_id)
     checkpoint = await _checkpoint_or_404(capability, checkpoint_id)
     message_count = apply_rewind(agent_id, checkpoint)
@@ -135,6 +140,7 @@ async def delete_conversation_checkpoint(
     agent_id: str, checkpoint_id: str
 ) -> dict[str, Any]:
     """Drop a checkpoint."""
+    refuse_every_visitors(agent_id)
     capability = _capability_or_404(agent_id)
     checkpoint = await _checkpoint_or_404(capability, checkpoint_id)
     await capability.middleware.delete_checkpoint(checkpoint.id)

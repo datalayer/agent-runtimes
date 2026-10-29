@@ -8,7 +8,7 @@ The same shell as its A2A twin, over the other protocol: read the prompt,
 call ``notebook_analysis.analyse``, stream what is happening as session updates, and
 end the turn. The analysis is the module next door, shared with the A2A
 worker, so the two cannot disagree about the notebook
-(PLAN_ORCHESTRATOR.md, O0-13).
+(O0-13).
 
 Why this is not ``agent_runtimes.routes.acp``: that route serves an agent
 that runs a model, so it needs credentials and gives a different answer every

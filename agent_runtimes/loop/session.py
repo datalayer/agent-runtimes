@@ -40,6 +40,13 @@ class LoopSession:
     sandbox: dict[str, Any] = field(default_factory=dict)
     #: Free-form extras a front-end wants to carry without subclassing.
     extras: dict[str, Any] = field(default_factory=dict)
+    #: The application session this conversation is (MH-07): what `/swap`,
+    #: `/clone` and `/export` act on; none for a conversation that is no session.
+    session_uid: Optional[str] = None
+    #: What the last swap said to the new agent.
+    said: str = ""
+    #: The token the session route is called with, when one is needed.
+    token: Optional[str] = None
 
     @property
     def api_base(self) -> str:
@@ -66,6 +73,45 @@ class LoopSession:
         )
 
     def with_agent(self, agent_id: str) -> "LoopSession":
-        """The same session bound to another agent."""
-        self.agent_id = agent_id
+        """The same session, its agent swapped in place through the session
+        route (MH-07): ``POST /api/v1/apps/sessions/{uid}/agent``, the
+        sentence the new agent was told kept in ``said``.
+
+        Raises
+        ------
+        LoopRefused
+            In a sentence: a conversation that is no session, or the route's
+            refusal (a turn running, an unknown agent, settings that do not
+            fit).
+        """
+        import httpx
+
+        if not self.session_uid:
+            raise LoopRefused(
+                "This conversation is not an application session: resume one with "
+                "`/resume <uid>` or `loop sessions resume <uid>`, then swap."
+            )
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        response = httpx.post(
+            f"{self.api_base}/apps/sessions/{self.session_uid}/agent",
+            json={"agent": agent_id},
+            headers=headers,
+            timeout=120.0,
+        )
+        if response.status_code >= 300:
+            detail: Any = ""
+            try:
+                detail = response.json().get("detail")
+            except ValueError:
+                detail = response.text
+            raise LoopRefused(
+                str(detail or f"The swap was refused ({response.status_code}).")
+            )
+        answer = response.json()
+        self.agent_id = str(answer.get("agent") or agent_id)
+        self.said = str(answer.get("said") or "")
         return self
+
+
+class LoopRefused(RuntimeError):
+    """What the session refused, in a sentence."""

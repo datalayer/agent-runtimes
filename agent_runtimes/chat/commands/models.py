@@ -21,37 +21,60 @@ SHORTCUT = "escape d"
 GROUP = "Agents"
 
 
-def _catalog_ids() -> list[str]:
-    """Model ids for completion, from the catalog rather than the network."""
-    try:
-        from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
+#: The model ids this session's runtime last listed: what ``/models <id>``
+#: completes against. Empty until the runtime answered.
+_listed_ids: list[str] = []
 
-        return sorted(AI_MODEL_CATALOGUE)
-    except Exception:  # noqa: BLE001
-        return []
+
+def _listed_model_ids() -> list[str]:
+    """Model ids for completion: the ones the runtime lists, not the catalog."""
+    return list(_listed_ids)
+
+
+def _remember_listed(payload: dict[str, Any]) -> None:
+    """Keep the ids the runtime listed, its chat models then its decision models."""
+    ids = [m["id"] for m in payload.get("models") or []]
+    ids += [m["id"] for m in payload.get("decision_models") or []]
+    _listed_ids[:] = ids
 
 
 ARGS = (
     CommandArgSpec(
         name="model-id",
-        description="Model to switch to, e.g. ollama:llama3.1:8b",
-        choices=_catalog_ids,
+        description="Model to switch to, among those this runtime lists",
+        choices=_listed_model_ids,
     ),
 )
 
 
 async def _fetch_catalog(tux: "CliTux") -> Optional[dict[str, Any]]:
-    """The catalog with readiness and reachability, from this session's server."""
+    """The agent's models with readiness and reachability, from this session's runtime.
+
+    The runtime answers — local or on Datalayer, through the session's one
+    address — with the agent's ``model`` and ``model_additionals``, each
+    saying whether its inference serves it, and who decided (``source``,
+    ``note``).
+    """
+    agent_id = getattr(tux, "agent_id", "") or ""
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{tux.server_url}/api/v1/configure/models", timeout=10.0
+                f"{tux.server_url}/api/v1/configure/models",
+                params={"agent_id": agent_id} if agent_id else None,
+                timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()
+            payload: dict[str, Any] = response.json()
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to fetch models: {error}[/red]")
         return None
+    _remember_listed(payload)
+    return payload
+
+
+async def prefetch(tux: "CliTux") -> None:
+    """Ask the runtime for its models once, so ``/models <id>`` completes them."""
+    await _fetch_catalog(tux)
 
 
 def _active_model(tux: "CliTux") -> str:
@@ -74,12 +97,22 @@ async def _show(tux: "CliTux") -> None:
     local = [m for m in models if m.get("local")]
     hosted = [m for m in models if not m.get("local")]
 
+    where = getattr(tux, "where", None)
     tux.console.print()
-    tux.console.print(f"● Models ({len(models)})", style=STYLE_PRIMARY)
+    tux.console.print(
+        f"● Models on {where} ({len(models)})"
+        if where
+        else f"● Models ({len(models)})",
+        style=STYLE_PRIMARY,
+    )
+    if payload.get("note"):
+        tux.console.print(f"  {payload['note']}", style=STYLE_MUTED)
 
     if local:
         tux.console.print()
-        tux.console.print("  Local", style=STYLE_ACCENT)
+        tux.console.print(
+            "  Local to the runtime" if where else "  Local", style=STYLE_ACCENT
+        )
         for model in local:
             marker = "[green]●[/green]" if model.get("reachable") else "○"
             selected = " [green](active)[/green]" if model["id"] == active else ""
@@ -122,10 +155,68 @@ async def _show(tux: "CliTux") -> None:
                 tux.console.print(
                     f"        missing {', '.join(missing)}", style=STYLE_WARNING
                 )
+            elif not model.get("available") and model.get("reason"):
+                tux.console.print(f"        {model['reason']}", style=STYLE_WARNING)
+
+    decisions = payload["decision_models"]
+    if decisions:
+        # Listed apart: a decision asks them, no agent runs on them.
+        tux.console.print()
+        tux.console.print("  Decisions", style=STYLE_ACCENT)
+        tux.console.print(f"    {payload['decisions_note']}", style=STYLE_MUTED)
+        for model in decisions:
+            marker = "[green]●[/green]" if model["available"] else "○"
+            tux.console.print(f"    {marker} {model['id']}", style=STYLE_MUTED)
+            tux.console.print(f"        {model['name']}", style=STYLE_MUTED)
+            if not model["available"]:
+                tux.console.print(f"        {model['reason']}", style=STYLE_WARNING)
 
     tux.console.print()
     tux.console.print("  /models <id> to switch", style=STYLE_MUTED)
     tux.console.print()
+
+
+def _refusal(
+    catalog: Optional[dict[str, Any]], model_id: str, where: str
+) -> Optional[str]:
+    """Why the runtime cannot switch to a model, in a sentence, or None."""
+    if catalog is None:
+        return f"{where} did not list its models: nothing was switched."
+    decision = next(
+        (m for m in catalog["decision_models"] if m["id"] == model_id), None
+    )
+    if decision is not None:
+        # The runtime's own sentence: a typed-decision model answers a
+        # decision's questions, not a conversation.
+        return str(decision["refusal"])
+    entry = next(
+        (m for m in catalog.get("models") or [] if m.get("id") == model_id), None
+    )
+    if entry is None:
+        refused = (
+            f"{where} does not offer {model_id} to this agent: nothing was switched."
+        )
+        # When ai-inference decides, a model it does not serve is not listed:
+        # what it serves is said beside the refusal.
+        if catalog["source"] == "ai-inference":
+            return f"{refused} {catalog['note']}"
+        return refused
+    if entry.get("local") and not entry.get("reachable"):
+        return f"{model_id} is not running on {where}: nothing was switched."
+    if not entry.get("local") and entry.get("available") is False:
+        missing = ", ".join(entry.get("missing_env_vars") or [])
+        why = f"has no {missing} for it" if missing else (entry.get("reason") or "")
+        return f"{model_id} cannot be used on {where} ({why}): nothing was switched."
+    return None
+
+
+def _detail(response: httpx.Response) -> str:
+    """The runtime's reason for a refusal: its ``detail``, else its text."""
+    try:
+        detail = response.json().get("detail")
+    except Exception:  # noqa: BLE001
+        detail = None
+    return str(detail or response.text[:200])
 
 
 async def _switch(tux: "CliTux", model_id: str) -> None:
@@ -144,6 +235,15 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
 
     from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
 
+    where = getattr(tux, "where", None)
+    # The runtime's answer decides — on Datalayer as locally, not this
+    # machine's catalogue: a model it does not offer this agent, or cannot
+    # use, is refused before the agent is touched.
+    problem = _refusal(await _fetch_catalog(tux), model_id, where or "this runtime")
+    if problem:
+        tux.console.print(f"[red]{problem}[/red]")
+        return
+
     model = get_model(model_id)
     if model is None:
         tux.console.print(f"[red]Unknown model: {model_id}[/red]", style=STYLE_MUTED)
@@ -158,11 +258,20 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
                 timeout=10.0,
             )
             spec_response.raise_for_status()
-            payload = spec_response.json()
-            spec = payload.get("spec") if isinstance(payload, dict) else None
-            spec = dict(spec or payload or {})
+            spec = dict(spec_response.json())
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to read the agent spec: {error}[/red]")
+        return
+
+    # The agent is recreated from its library spec, with this model: the
+    # library spec keeps its model_additionals, so the models offered stay
+    # the same after the switch.
+    agent_spec_id = spec.get("agent_spec_id")
+    if not agent_spec_id:
+        tux.console.print(
+            f"[red]{agent_id} was not created from an agentspec: "
+            "nothing was switched.[/red]"
+        )
         return
 
     spec["model"] = model_id
@@ -170,7 +279,11 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
 
     # A local model with a cloud sandbox would keep the tokens home while
     # sending the code away, which is the opposite of what was asked for.
-    if model.local and spec.get("sandbox_variant") != LOCAL_SANDBOX_VARIANT:
+    if (
+        model.local
+        and not where
+        and spec.get("sandbox_variant") != LOCAL_SANDBOX_VARIANT
+    ):
         spec["sandbox_variant"] = LOCAL_SANDBOX_VARIANT
         notes.append(f"sandbox moved to {LOCAL_SANDBOX_VARIANT} (local model)")
 
@@ -186,12 +299,18 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
             response = await client.post(
                 f"{tux.server_url}/api/v1/agents/configure-from-spec",
                 json={
-                    "agent_spec_id": spec.get("id") or agent_id,
+                    "agent_spec_id": agent_spec_id,
                     "agent_spec": spec,
+                    "agent_id": agent_id,
                 },
                 timeout=60.0,
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                tux.console.print(
+                    f"[red]{where or 'This runtime'} did not switch to {model_id} "
+                    f"({response.status_code}): {_detail(response)}[/red]"
+                )
+                return
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to switch model: {error}[/red]")
         return

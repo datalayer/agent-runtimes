@@ -46,7 +46,7 @@ describe('the ephemeral document before it is there', () => {
     const next = source.indexOf(') : null}', starting);
     const branch = source.slice(starting, next);
     expect(branch).toContain('<DocumentSkeleton');
-    expect(branch).toContain('backgroundColor: themeBackground');
+    expect(branch).toContain('backgroundColor={themeBackground}');
     expect(branch).toContain('<ThemeRoot');
   });
 

@@ -5,8 +5,8 @@
 Environment commands for Datalayer CLI.
 
 ``datalayer envs ls`` lists the environments a caller may launch. The other
-commands drive the registry of user environments (PLAN_ENV.md, section 9,
-E1-20): create one from a spec file, read it and its versions, edit, validate,
+commands drive the registry of user environments (E1-20):
+create one from a spec file, read it and its versions, edit, validate,
 resolve, compare two versions' locks, build and follow the log, try, promote,
 roll back, deprecate, archive and delete. Every command takes ``--output
 table|json|yaml``.
@@ -14,7 +14,7 @@ table|json|yaml``.
 An environment is named by its uid or by ``<account>/<name>`` (D-2); a version
 by its uid or by ``<environment>@<number>``. A conditional write sends as
 ``If-Match`` the ETag of the record the command has just read, so nobody types
-one. A refusal prints its section 10 code and message on stderr, and the
+one. A refusal prints its error code and message on stderr, and the
 command exits 1.
 """
 
@@ -71,7 +71,10 @@ _ClickException: type[Exception] = typer.BadParameter.__mro__[2]
 
 # Create a Typer app for environment commands
 app = typer.Typer(
-    name="envs", help="Environment management commands", invoke_without_command=True
+    name="envs",
+    help="Environment management commands",
+    invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()
@@ -128,7 +131,7 @@ def _make_client(
 
 
 def _refusals(function: _Command) -> _Command:
-    """Print what refused a command, with its section 10 code when it has one, and exit 1."""
+    """Print what refused a command, with its error code when it has one, and exit 1."""
 
     @wraps(function)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
@@ -485,7 +488,7 @@ def edit(
     """
     Edit a draft version, or an environment's title, description or visibility.
 
-    A version that has left draft never changes (section 2.1): a new spec for
+    A version that has left draft never changes: a new spec for
     it opens a new draft version of its environment instead.
     """
     version_edit = file is not None or label is not None

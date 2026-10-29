@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Hands-free and barge-in (VO-12, VO-13), on two fixtures Chrome's fake
+ * microphone plays over and over, one a file (`launchOptions` are a file's):
+ *
+ * - `quiet-then-eiffel-tower.wav` — a question that asks for a long answer
+ *   (*Tell me the history of the Eiffel Tower, in ten sentences.*, said by
+ *   `datalayer-speech`), ten seconds of silence before and sixteen after,
+ *   so that when it plays again the answer is being said: barge-in. The
+ *   file starts again each time the page opens the microphone, as it does
+ *   once a turn is sent: with a second before the question (as
+ *   `eiffel-tower-history.wav` has), the question was heard again while the
+ *   answer's first sentence was still being made into sound, so it was
+ *   spoken over before a word of it played (16 October 2026, 4–6 s for a
+ *   sentence).
+ * - `quiet-then-hello.wav` — 8 seconds of quiet, then *Reply with just
+ *   one word: hello.*, so that the answer ends by itself: listening again,
+ *   then paused with Esc and resumed, with the person's longer pause
+ *   (`voice-hands-free-quiet.spec.ts`).
+ *
+ * Every state the composer shows is recorded as it changes, so that a state
+ * shown for a moment (*Thinking…*) is seen too.
+ *
+ *   E2E_STATE=<signed-in storage state> E2E_VOICE_APP=<app id> \
+ *     npx playwright test -c e2e/playwright.config.ts voice-hands-free.spec.ts
+ *
+ * Pyodide and JupyterLite are refused, and the words are heard on
+ * Datalayer's servers: the Studio's page stays inside the memory a test is
+ * given (2.5 GB).
+ */
+
+import { expect, test } from '@playwright/test';
+import { PROBES } from './global-setup';
+import { activate, hearing, inOrder, talkWith } from './handsFree';
+
+const unreachable =
+  process.env[PROBES.landing] ||
+  (!process.env.E2E_STATE
+    ? 'E2E_STATE names no signed-in storage state: the Preview needs a person.'
+    : !process.env.E2E_VOICE_APP
+      ? 'E2E_VOICE_APP names no application to preview.'
+      : '');
+
+/**
+ * Always in the Studio's Preview, signed in, heard on the servers: its
+ * question asks for a long answer, which the Preview's application gives
+ * and a hosted address's (an application of its own) may not.
+ */
+const STUDIO = '';
+
+test.use(hearing('quiet-then-eiffel-tower.wav', STUDIO));
+
+test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
+  test.skip(Boolean(unreachable), unreachable);
+  test('hands-free: the turn sent by itself after the silence, Thinking then Speaking with its sentence marked, and the voice stopped when spoken over', async ({
+    page,
+    context,
+  }) => {
+    const { runs, syntheses, toggle, state, states, times, sentenceMarked } =
+      await talkWith(page, context, {}, STUDIO);
+    // The question is said, then silence: the turn goes by itself (VO-12).
+    await expect
+      .poll(() => runs.length, { timeout: 120_000 })
+      .toBeGreaterThan(0);
+    // The answer is said as it is written (hands-free implies always), and
+    // the sentence being said is marked in the conversation (VO-65).
+    await expect(state).toHaveAttribute('data-hands-free-state', 'speaking', {
+      timeout: 120_000,
+    });
+    // *Speaking…* shows while the first sentence's voice is being made (it
+    // no longer shows *Listening…* then), so its answer is waited for.
+    await expect
+      .poll(() => syntheses.length, { timeout: 30_000 })
+      .toBeGreaterThan(0);
+    // Seen as it happened: the voice may be spoken over a moment later.
+    await expect.poll(sentenceMarked, { timeout: 30_000 }).toBe(true);
+    // The question plays again while the answer is said: barge-in stops the
+    // voice, and the answer is marked interrupted (VO-13).
+    await expect(page.locator('[data-interrupted]').first()).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(state).not.toHaveAttribute(
+      'data-hands-free-state',
+      'speaking',
+    );
+    await expect(page.locator('[data-voice-saying]')).toHaveCount(0);
+    // Listening, thinking while it answers, speaking, then spoken over.
+    const seen = await states();
+    // Kept in the run's output: what the person saw, in order.
+    console.log(`hands-free states: ${seen.join(' → ')}; runs ${runs.length}`);
+    // The moments the latency budgets are measured between (VO-52).
+    console.log(`voice times: ${JSON.stringify(await times())}`);
+    // Never *Listening…* while the answer's voice is being made: speech then
+    // is the person speaking over it (VO-13), not a new turn.
+    expect(seen.join(' ')).not.toContain('thinking listening speaking');
+    expect([
+      seen,
+      inOrder(seen, ['listening', 'thinking', 'speaking']),
+    ]).toEqual([seen, true]);
+    await activate(toggle, STUDIO);
+    await expect(page.locator('[data-hands-free-state]')).toHaveCount(0);
+    expect(syntheses.every(status => status === 200)).toBe(true);
+    expect(runs.length).toBeLessThanOrEqual(5);
+  });
+});

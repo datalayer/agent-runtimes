@@ -16,7 +16,7 @@ same ``agent.subagent`` events an in-process subagent produces, with
 ``transport: "a2a"`` on them so a reader can tell the two apart.
 
 A run the orchestration control plane dispatched takes no child this way
-(ORCHESTRATOR.md, 19.8 decision 2, O2-06): it asks the control plane for one
+(O2-06): it asks the control plane for one
 (``request_child``), which resolves, authorizes and dispatches it inside the
 tree's budget and depth, and resolving, launching or relaying to an agent
 itself is refused (``ChildNotRequested``).
@@ -31,7 +31,15 @@ import os
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Literal, Mapping
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Literal,
+    Mapping,
+)
 
 if TYPE_CHECKING:
     from datalayer_core.orchestration import AgentBinding
@@ -162,7 +170,7 @@ def refuse_in_an_orchestrated_run(what: str) -> None:
 
     Such a run asks for its children (``request_child``). An agent it
     resolved, launched or relayed to itself would be a child the tree's
-    budget and depth never saw (19.8, decision 2).
+    budget and depth never saw.
 
     Parameters
     ----------
@@ -572,7 +580,11 @@ class RelayOutcome:
     """What the remote agent said with its final status: the reason, when it failed."""
     metadata: dict[str, Any] | None = None
     """The final status message's metadata: which limit of a delegated model
-    budget stopped the run, when one did (ORCHESTRATOR.md, O1-07)."""
+    budget stopped the run, when one did (O1-07)."""
+    asked: dict[str, Any] | None = None
+    """The approval an ``input-required`` status carries
+    (``datalayer.approvalRequest``): what the task waits on, for a caller
+    that answers it on the same task."""
 
     @property
     def output(self) -> str:
@@ -623,8 +635,20 @@ def _relay_message(message: dict[str, Any], emit: EmitFn) -> None:
             )
 
 
+def approval_request_of(message: Any) -> dict[str, Any] | None:
+    """The ``datalayer.approvalRequest`` an ``input-required`` status message carries, or ``None``."""
+    meta = message.get("metadata") if isinstance(message, dict) else None
+    ours = meta.get("datalayer") if isinstance(meta, dict) else None
+    asked = ours.get("approvalRequest") if isinstance(ours, dict) else None
+    return dict(asked) if isinstance(asked, dict) else None
+
+
 async def relay_stream(
-    responses: AsyncIterator[Any], emit: EmitFn, outcome: RelayOutcome | None = None
+    responses: AsyncIterator[Any],
+    emit: EmitFn,
+    outcome: RelayOutcome | None = None,
+    *,
+    stop_at_input: bool = False,
 ) -> RelayOutcome:
     """Republish an A2A ``message/stream`` as subagent phases; return what it amounted to.
 
@@ -632,7 +656,9 @@ async def relay_stream(
     naming a ``tool_call`` or ``tool_result`` becomes that phase; every task
     state change is a ``status`` with the task id, so a reader can follow the
     task; a whole artifact (``append`` false) is kept as the final answer
-    rather than repeated as text. Stops at a terminal state.
+    rather than repeated as text. Stops at a terminal state — and, with
+    ``stop_at_input``, at an ``input-required`` status carrying an approval
+    request, kept on ``outcome.asked`` for the caller to answer.
     """
     # The caller may hand the outcome in, to keep what was learnt — the task
     # id above all — if the relay is cancelled midway.
@@ -679,6 +705,13 @@ async def relay_stream(
             if isinstance(status_message, dict):
                 _relay_message(status_message, emit)
             emit("status", taskId=outcome.task_id, state=outcome.state)
+            if outcome.state == "input-required" and stop_at_input:
+                asked = approval_request_of(status_message)
+                if asked is not None:
+                    # The task waits on an approval the caller answers: the
+                    # stream says nothing more until it is answered.
+                    outcome.asked = asked
+                    break
 
         artifact_update = result.get("artifact_update")
         if isinstance(artifact_update, dict):
@@ -704,11 +737,18 @@ async def relay_a2a_task(
     context_id: str,
     emit: EmitFn,
     metadata: dict[str, Any] | None = None,
+    on_input: Callable[[dict[str, Any]], Awaitable[str | None]] | None = None,
 ) -> str:
     """Send ``task`` to the remote agent and republish its run; return its answer.
 
     ``metadata`` goes on the message: what an orchestrated delegation carries
-    beside the objective, its model budget (ORCHESTRATOR.md, O1-07).
+    beside the objective, its model budget (O1-07).
+
+    ``on_input`` answers an approval the task waits on (``input-required``
+    carrying ``datalayer.approvalRequest``): given the request, it returns the
+    option chosen — ``None`` for none, answered with the request's refusing
+    option — and the answer is sent on the same task, whose stream is then
+    followed to its end. Without it, the wait is left on the outcome's state.
 
     Refused inside a run the control plane dispatched, which asks for its
     children instead (O2-06).
@@ -744,7 +784,29 @@ async def relay_a2a_task(
             message["metadata"] = metadata
         outcome = RelayOutcome()
         try:
-            await relay_stream(client.stream_message(message), emit, outcome)
+            await relay_stream(
+                client.stream_message(message),
+                emit,
+                outcome,
+                stop_at_input=on_input is not None,
+            )
+            while on_input is not None and outcome.asked is not None:
+                asked, outcome.asked = outcome.asked, None
+                option = await on_input(asked) or refusing_option(asked)
+                answer = Message(
+                    role="user",
+                    parts=[Part(text=option or "no")],
+                    message_id=str(uuid.uuid4()),
+                    context_id=context_id,
+                    task_id=outcome.task_id or "",
+                )
+                if option:
+                    answer["metadata"] = {
+                        "datalayer": {"approval": {"optionId": option}}
+                    }
+                await relay_stream(
+                    client.stream_message(answer), emit, outcome, stop_at_input=True
+                )
         except asyncio.CancelledError:
             # Stopped from the parent's side: tell the remote agent, so it does
             # not go on spending on an answer nobody will read.
@@ -769,6 +831,16 @@ async def relay_a2a_task(
                     )
                 )
         return output
+
+
+def refusing_option(asked: Mapping[str, Any]) -> str | None:
+    """The option of an approval request that refuses: ``reject_once``, else ``reject_always``."""
+    options = [o for o in asked.get("options") or [] if isinstance(o, dict)]
+    for kind in ("reject_once", "reject_always"):
+        for option in options:
+            if option.get("kind") == kind and option.get("optionId"):
+                return str(option["optionId"])
+    return None
 
 
 async def cancel_remote_task(remote: A2ARemoteAgent, task_id: str | None) -> None:

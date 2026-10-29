@@ -7,8 +7,8 @@
  * Computing environments API functions for the Datalayer platform.
  *
  * `GET /environments` lists the platform's environments and the user
- * environments the caller may use. The registry beside it (PLAN_ENV.md,
- * section 9, served by Runtimes since E1-01) creates environments, their
+ * environments the caller may use. The registry beside it (served by Runtimes since E1-01)
+ * creates environments, their
  * versions, builds and artifacts, and serves build logs. The specification a
  * version carries is typed from the JSON Schema `code-sandboxes` exports
  * (D-14), in `models/environments.generated.ts`.
@@ -16,7 +16,7 @@
  * A conditional write names the record it replaces with `If-Match`, the
  * `etag` every record carries. A keyed create is replayed with the same
  * `Idempotency-Key`. Every call may carry the caller's `X-Correlation-Id`,
- * which a refusal answers in its section 10 body: `asEnvironmentsError` reads
+ * which a refusal answers in its error body: `asEnvironmentsError` reads
  * that body from the error a call rejects with.
  *
  * @module api/runtimes/environments
@@ -160,7 +160,7 @@ const send = <T>(
 };
 
 /**
- * The section 10 body of a refusal, from the error a call rejected with.
+ * The error body of a refusal, from the error a call rejected with.
  *
  * @param error - What an environments call rejected with
  * @returns The body, with its `code` and `correlationId`; `undefined` when the
@@ -537,7 +537,7 @@ export const validateEnvironmentVersion = async (
 };
 
 /**
- * Resolve a version into its lock. The service answers 501 until PLAN_ENV.md
+ * Resolve a version into its lock. The service answers 501 until
  * E1-04 builds the resolver, whose answer this resolves to.
  * @param token - Authentication token
  * @param versionUid - The version's uid

@@ -63,7 +63,7 @@ export interface CreateRuntimeRequest {
   environment: {
     /**
      * A platform environment by its name, or a user environment as
-     * `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+     * `<account-handle>/<name>` or by its uid (D-2).
      */
     name: string;
     /**
@@ -215,6 +215,18 @@ export class RuntimeDTO {
   get expiredAt(): Date {
     this._checkDeleted();
     return new Date(Number(this._data.expired_at) * 1000);
+  }
+
+  /** The deployment this runtime serves, `''` when it serves none. */
+  get deploymentUid(): string {
+    this._checkDeleted();
+    return this._data.deployment_uid ?? '';
+  }
+
+  /** The application of the deployment this runtime serves, `''` for none. */
+  get appUid(): string {
+    this._checkDeleted();
+    return this._data.app_uid ?? '';
   }
 
   /** Environment title for display. */

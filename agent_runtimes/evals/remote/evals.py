@@ -203,7 +203,7 @@ def build_eval_report_lexical(
     run: Optional[dict[str, Any]] = None,
     cases: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
-    """The report as a serialized Lexical editor state (BENCHMARK.md, B3-03)."""
+    """The report as a serialized Lexical editor state (B3-03)."""
     from agent_runtimes.evals.lexical import build_eval_report_lexical as _build
 
     return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)

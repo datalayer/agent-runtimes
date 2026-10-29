@@ -12,7 +12,9 @@ Requires ``mem0ai`` package: ``pip install mem0ai``
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from .base import BaseMemoryBackend
@@ -50,7 +52,7 @@ class Mem0Backend(BaseMemoryBackend):
     ):
         self.user_id = user_id
         self.agent_id = agent_id
-        self._memory = None
+        self._memory: Any = None
         self._config = config
 
     def _ensure_initialized(self) -> Any:
@@ -76,6 +78,13 @@ class Mem0Backend(BaseMemoryBackend):
                 "Install with: pip install mem0ai"
             )
 
+    def _scope(self) -> dict[str, Any]:
+        """The memories this backend reads and writes: its user's, of its agent."""
+        scope: dict[str, Any] = {"user_id": self.user_id}
+        if self.agent_id:
+            scope["agent_id"] = self.agent_id
+        return scope
+
     async def add(
         self,
         messages: list[dict],
@@ -83,77 +92,113 @@ class Mem0Backend(BaseMemoryBackend):
     ) -> None:
         """Add messages to Mem0 memory."""
         memory = self._ensure_initialized()
-        try:
-            kwargs: dict[str, Any] = {"user_id": self.user_id}
-            if self.agent_id:
-                kwargs["agent_id"] = self.agent_id
-            scoped_metadata: dict[str, Any] = dict(metadata or {})
-            scoped_metadata.setdefault("scope", "agent" if self.agent_id else "user")
-            kwargs["metadata"] = scoped_metadata
-            memory.add(messages, **kwargs)
-            logger.debug(
-                "Added %d messages to Mem0 (user=%s)", len(messages), self.user_id
-            )
-        except Exception as exc:
-            logger.error("Mem0 add failed: %s", exc)
+        scoped_metadata: dict[str, Any] = dict(metadata or {})
+        scoped_metadata.setdefault("scope", "agent" if self.agent_id else "user")
+        await asyncio.to_thread(
+            memory.add, messages, metadata=scoped_metadata, **self._scope()
+        )
+        logger.debug("Added %d messages to Mem0 (user=%s)", len(messages), self.user_id)
 
     async def search(
         self,
         query: str,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
-        """Search Mem0 memory for relevant entries."""
+        """Search Mem0 memory for relevant entries.
+
+        Mem0 2.x takes who the memories are of as ``filters``, never as
+        arguments of their own: it refuses ``user_id`` and ``agent_id`` there.
+        """
         memory = self._ensure_initialized()
-        try:
-            kwargs: dict[str, Any] = {"user_id": self.user_id, "limit": limit}
-            if self.agent_id:
-                kwargs["agent_id"] = self.agent_id
-            results = memory.search(query, **kwargs)
-            # Normalize results to list of dicts with 'content' and 'score'
-            normalized = []
-            if isinstance(results, dict) and "results" in results:
-                results = results["results"]
-            for item in results:
-                if isinstance(item, dict):
-                    normalized.append(
-                        {
-                            "content": item.get("memory", item.get("content", "")),
-                            "score": item.get("score", 0.0),
-                            "id": item.get("id", ""),
-                            "metadata": item.get("metadata", {}),
-                        }
-                    )
-            return normalized
-        except Exception as exc:
-            logger.error("Mem0 search failed: %s", exc)
-            return []
+        results = await asyncio.to_thread(
+            memory.search, query, top_k=limit, filters=self._scope()
+        )
+        return [_normalized(item) for item in _results_of(results)]
 
     async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
-        """Return all stored memories for the user/agent."""
+        """Every memory of the user and agent, newest first, up to ``limit``."""
         memory = self._ensure_initialized()
-        try:
-            kwargs: dict[str, Any] = {"user_id": self.user_id, "limit": limit}
-            if self.agent_id:
-                kwargs["agent_id"] = self.agent_id
-            results = memory.get_all(**kwargs)
-            if isinstance(results, dict) and "results" in results:
-                results = results["results"]
-            normalized: list[dict[str, Any]] = []
-            for item in results:
-                if isinstance(item, dict):
-                    normalized.append(
-                        {
-                            "content": item.get("memory", item.get("content", "")),
-                            "score": item.get("score", 0.0),
-                            "id": item.get("id", ""),
-                            "metadata": item.get("metadata", {}),
-                        }
-                    )
-            return normalized
-        except Exception as exc:
-            logger.error("Mem0 get_all failed: %s", exc)
-            return []
+        results = await asyncio.to_thread(
+            memory.get_all, filters=self._scope(), top_k=limit
+        )
+        listed = [_normalized(item) for item in _results_of(results)]
+        return sorted(listed, key=lambda entry: entry["created_at"] or "", reverse=True)
+
+    async def forget(self, memory_id: str) -> bool:
+        """Delete one memory of the user and agent; False when it is not theirs.
+
+        Somebody else's memory, or another agent's, is not found rather than
+        deleted: the id alone never reaches across the scope.
+        """
+        memory = self._ensure_initialized()
+        found = await asyncio.to_thread(memory.get, memory_id)
+        if not isinstance(found, dict) or any(
+            found.get(key) != value for key, value in self._scope().items()
+        ):
+            return False
+        await asyncio.to_thread(memory.delete, memory_id)
+        return True
+
+    async def correct(
+        self, memory_id: str, text: str, corrected_by: str
+    ) -> dict[str, Any] | None:
+        """Correct one memory of the user and agent in its words; None when it is not theirs.
+
+        mem0 updates it — its words, their embedding and the entities they
+        name — keeping what else it was kept with, and the correction is
+        kept beside it: who made it and when (``corrected_by``,
+        ``corrected_at``). Somebody else's, or another agent's, is not found.
+        """
+        memory = self._ensure_initialized()
+        found = await asyncio.to_thread(memory.get, memory_id)
+        if not isinstance(found, dict) or any(
+            found.get(key) != value for key, value in self._scope().items()
+        ):
+            return None
+        metadata = {
+            **(found.get("metadata") or {}),
+            "corrected_by": corrected_by,
+            "corrected_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await asyncio.to_thread(memory.update, memory_id, text, metadata=metadata)
+        return _normalized(await asyncio.to_thread(memory.get, memory_id))
+
+    async def forget_all(self, batch: int = 500) -> int:
+        """Delete every memory of the user and agent; answers how many."""
+        memory = self._ensure_initialized()
+        forgotten = 0
+        while True:
+            results = await asyncio.to_thread(
+                memory.get_all, filters=self._scope(), top_k=batch
+            )
+            ids = [
+                str(item.get("id")) for item in _results_of(results) if item.get("id")
+            ]
+            if not ids:
+                return forgotten
+            for memory_id in ids:
+                await asyncio.to_thread(memory.delete, memory_id)
+            forgotten += len(ids)
 
     async def close(self) -> None:
         """Release Mem0 resources."""
         self._memory = None
+
+
+def _results_of(results: Any) -> list[dict[str, Any]]:
+    """Read mem0's answer as a list of its items."""
+    if isinstance(results, dict):
+        results = results.get("results", [])
+    return [item for item in results or [] if isinstance(item, dict)]
+
+
+def _normalized(item: dict[str, Any]) -> dict[str, Any]:
+    """Answer one memory as every backend does, with when it was learned."""
+    return {
+        "id": str(item.get("id") or ""),
+        "content": item.get("memory", item.get("content", "")),
+        "score": item.get("score") or 0.0,
+        "metadata": item.get("metadata") or {},
+        "created_at": item.get("created_at"),
+        "updated_at": item.get("updated_at"),
+    }

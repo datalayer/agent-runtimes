@@ -1,6 +1,6 @@
 {
   "name": "Data Analysis Agent Benchmark",
-  "description": "The reference benchmark of the Datalayer plan (BENCHMARK.md, B0-13): a data analysis agent works a customer table that hides duplicate customers under distinct rows. Every case is answerable from customers.csv, which the preamble builds deterministically on the sandbox, so the same benchmark runs the same everywhere and its report is the golden file the test suites compare against.",
+  "description": "The reference benchmark of the Datalayer plan (B0-13): a data analysis agent works a customer table that hides duplicate customers under distinct rows. Every case is answerable from customers.csv, which the preamble builds deterministically on the sandbox, so the same benchmark runs the same everywhere and its report is the golden file the test suites compare against.",
   "run_environment": "sdk",
   "kind": "batch",
   "category": "data",

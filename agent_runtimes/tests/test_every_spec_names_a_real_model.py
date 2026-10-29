@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Every model a spec names is one that can be built (ORCHESTRATOR.md, O2-09, O2-13).
+"""Every model a spec names is one that can be built (O2-09, O2-13).
 
 Found on prod1 on 2026-09-12 by delegating to a team. The root failed:
 

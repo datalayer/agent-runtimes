@@ -59,13 +59,13 @@ import { HistoryExtension } from '@lexical/history';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
+  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
   type ToolbarItem,
 } from '@datalayer/primer-addons';
-import { Box } from '@primer/react';
 import {
   JupyterReactTheme,
   Kernel,
@@ -686,14 +686,12 @@ export function EphemeralDocument({
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        bg: 'canvas.default',
-      }}
+      flex={1}
+      minHeight={0}
+      height="100%"
+      position="relative"
+      overflow="hidden"
+      bg="canvas.default"
     >
       {activeServiceManager ? (
         <ThemeRoot
@@ -891,14 +889,12 @@ export function EphemeralDocument({
           themeConfig={themeConfig}
         >
           <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              padding: 2,
-              backgroundColor: themeBackground,
-            }}
+            position="absolute"
+            inset={0}
+            display="flex"
+            flexDirection="column"
+            padding={2}
+            backgroundColor={themeBackground}
           >
             <DocumentSkeleton label="Starting the document" maxWidth="100%" />
           </Box>

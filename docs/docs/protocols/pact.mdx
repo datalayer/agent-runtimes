@@ -1,0 +1,193 @@
+---
+sidebar_position: 33
+title: PACT
+---
+
+# PACT: a personal agent at a business
+
+[PACT](https://github.com/openpactprotocol/openpactprotocol) (Personal Agent
+Consent & Trust, by Decagon and Instinct) lets a person's own agent talk to a
+business's agent over A2A, proving which agent it is and, when the person
+allows, acting on their account at the business within the scopes they
+approved. Agent Runtimes implements **PACT 1.0** (`docs/spec.md` at
+`838c6bd`, 2026-10-06; reviewed 2026-10-12) on the personal-agent side, in
+Python and TypeScript, and a local Provider for tests and examples.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.protocols.pact` | `@datalayer/agent-runtimes/lib/protocols/pact` |
+| JWTs | PyJWT (verification); the JWT is signed by the host's signer | `jose` (receipts); same signer |
+| Plugin | `agent-runtimes.protocols.pact` | `PactPlugin` |
+
+## The two profiles
+
+- **Identity** (§2–4): every request but the card carries a
+  personal-agent JWT — ES256, `iss` the platform, `sub` a stable opaque id
+  for the person (never an address), `aud` the Provider's audience, valid
+  120 seconds — signed by the host's key through `pact.signer`. The
+  conversation goes on in its `contextId`; resending a `messageId` is a safe
+  retry.
+- **Delegated**, when the Brand's card offers it: the agent asks for
+  scopes on the card only; the person signs in **at the Brand** (RFC 8628
+  device code: the Brand's link and code, never a login of the agent's) and
+  approves some of them; the agent reads back what was granted, sends the
+  delegation token in `X-A2A-User-Delegation`, meets a step-up
+  (`TASK_STATE_AUTH_REQUIRED`, `pact.missingScopes`) by asking again, and
+  verifies every reply's signed receipt before keeping it.
+
+```python
+agent = PactPersonalAgent(card_url=CARD, issuer=ISSUER, audience=AUDIENCE,
+                          signer=signer_of(platform),
+                          delegations=delegation_store_of(platform),
+                          receipts=receipt_store_of(platform))
+sign_in = await agent.request_sign_in("user-7f3a", ["bookings:read"])
+# show sign_in.verification_uri and sign_in.user_code to the person
+granted = await agent.finish_sign_in("user-7f3a", sign_in)
+reply = await agent.send("user-7f3a", "When is my booking?")
+```
+
+## The card, read
+
+`read_card` / `readCard` take the interface by binding and version
+(`HTTP+JSON`, `1.0`), require the personal-agent JWT alone in one security
+requirement, and read the delegation from the `oauth2SecurityScheme`'s
+`deviceCode` flow: its URLs, its RFC 8414 metadata and its scopes. PACT's
+scopes are not A2A card extensions. Each scope gets an action class for
+Rules: `…:read`, `…:view`, `…:list`, `…:status`, `…:lookup` are `read`;
+anything else is `write` — a Brand's word nobody classed is never taken for a
+reader.
+
+In Python, `PactPersonalAgent` reads the card, the delegation's OAuth
+metadata and its keys through `agent_runtimes.protocols.egress.metadata_fetch`,
+the PAP SDK's resolving client: the name is resolved first and refused
+unless https with every address public, only that address is dialled, no
+redirect is followed, no proxy is used, and each document is bounded. A local
+test Provider is read over the client you trust by saying so —
+`metadata=client_fetch(http)`, as the examples do
+(`test_protocols_metadata_egress.py`).
+
+## The plugin and its points
+
+| Point | Default | What a host contributes |
+| --- | --- | --- |
+| `pact.signer` | none | its ES256 signer (the key stays with it) |
+| `pact.delegationStore` | `memory` | custody for delegation tokens |
+| `pact.receiptStore` | `memory` | the record receipts are kept in |
+| `pact.extension.delegated` | `device-code` | the Delegated profile; without it, Identity alone |
+
+## In an application
+
+An application lists `pact` in `protocols` and names each business in its
+`pact` block (`pact.connections[]`: the Brand's domain, the audience its
+Provider assigned, a level, the scopes it may ask each person for). On
+Datalayer the runtime holds nothing of it: each business is one server,
+`pact_<domain>` (`pact_air_example` for `air.example`), which is the MCP
+gateway's `pact` toolset (`/mcp?only=pact&pact-brand=<domain>`) reached in
+the person's name; its tools are named with it
+(`pact_air_example_pact_ask`). The gateway signs the personal-agent JWT with
+the application's key and keeps the person's delegation.
+
+The application's Rules decide those tools as any other, by what agentspecs
+says each does (`protocol-tools/pact.yaml`): `pact_brand`, `pact_ask`,
+`pact_sign_in` and `pact_sign_in_status` read; `pact_ask_for_person` and
+`pact_disconnect` write. A connection that reads gives only what reads.
+PAP companies are reached the same way (`pap_<domain>`,
+`agent_runtimes.apps.pap_connections`).
+
+## Answering as a business
+
+`agent_runtimes.protocols.pact.provider.PactBrand` is the Provider's side of
+one Brand: its card (with the device-code delegation when it offers scopes),
+its A2A HTTP+JSON interface, its RFC 8414 metadata and keys, the device code,
+the delegation token, the step-up, and a signed receipt on every reply under
+a delegation. Everything a host decides is handed to it:
+
+```python
+brand = PactBrand(
+    base="https://desk.example", brand_id="desk", name="Trip Desk",
+    provider=("Datalayer", "https://datalayer.ai"),
+    scopes={"trips:read": "See your trips"},
+    audience="https://desk.example/a2a/desk",
+    signer=signer,            # ES256, the Provider's key (an HttpSigner)
+    jwks=published_keys,      # its public keys, what the metadata names
+    issuers=registered,       # IssuerKeys: the personal agents it accepts
+    store=store,              # BrandStore: grants, contexts, replies
+    agent=desk,               # BrandAgent: answers a BrandTurn with a BrandAnswer
+    verification_uri="https://desk.example/device",  # where the person signs in
+)
+await brand.approve(user_code, "ada", ["trips:read"])  # the person, at that page
+```
+
+A personal-agent JWT is verified against the keys of a registered issuer only;
+any other is refused before the Brand's agent is asked. Datalayer hosts an
+application as a business this way (the Appspec's `pact.business`).
+
+The catalogue pairs a business with the personal agent that asks it (the
+Appspec's `pair`: *Guest Desk* and *Errand Runner*). A Datalayer personal
+agent's issuer is its own application's, so it is known only once a copy
+exists: when a person has copied both, the Studio writes the personal agent's
+copy into the business's copy's `registered_agents` (its issuer,
+`<IAM>/api/iam/v1/pap/agents/<uid>`, and its keys at `…/jwks.json`), turns the
+business on, and points the personal agent at the business's own domain.
+
+## The local Provider
+
+`agent_runtimes.protocols.pact.provider.ExampleAir` is one `PactBrand` with
+everything in memory: it serves one Brand's card,
+verifies personal-agent JWTs against registered JWKS, keeps contexts per
+(agent, user), answers retries from what it said, runs the device code with a
+simulated Brand sign-in where the person may untick scopes, issues delegation
+tokens, asks for more with a step-up, and signs receipts. The checks it makes
+(`verify_personal_agent_jwt`, `verify_delegation_token`, `verify_receipt`)
+are the ones a business application uses.
+
+## Examples
+
+Both run locally, against Example Air, in one process with no network and
+no model.
+
+```bash
+python examples/protocols/pact/personal_agent.py
+```
+
+(example EX-06) prints the card (*Example Air Support: PACT delegated*, its
+two scopes with their action classes), an answer under the personal-agent
+JWT alone, the Brand's sign-in link and code, the one scope of two the
+person granted, an answer within it, a step-up for the other scope
+(`missing: ('bookings:change',)`), the change once granted, and *Receipts
+verified and kept: 2*.
+
+The TypeScript personal agent talks to the same Brand over HTTP: serve
+Example Air on localhost, then run the TypeScript agent against it.
+
+```bash
+python examples/protocols/pact/provider_server.py --port 8811
+PACT_PROVIDER=http://127.0.0.1:8811 npx vitest run --project=integration \
+  src/protocols/pact/pactProvider.integration.test.ts
+```
+
+The server is the Provider above with two routes of the example's own
+(`/example/register`, the agent's registration; `/example/approve`, the
+person approving at the Brand's page). The TypeScript agent reads the card,
+asks under its JWT alone, signs in for one scope of two, steps up, makes the
+change, and verifies the two receipts the Python Brand signed.
+`test_protocols_pact_two_languages.py` serves the Provider and runs it.
+
+```bash
+python examples/protocols/pap_and_pact/app.py
+```
+
+(example EX-07) asks a PAP company and a PACT Brand one question and keeps
+one record: see [PAP and PACT](./pap-and-pact).
+
+## Conformance
+
+PACT 1.0. `pact/fixtures/card.json` (a Brand's card and how it is read) is read by `test_protocols_pact.py` and `pact.unit.test.ts`: both languages read the same interface, delegation, scopes and action classes. Both personal agents are run against the one local Provider: the Python one in process, the TypeScript one over HTTP (`test_protocols_pact_two_languages.py`, `pactProvider.integration.test.ts`); `pact.unit.test.ts` also runs the TypeScript one against an in-memory Brand.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
+## What never reaches a model
+
+The device code, the delegation token and the signing key stay with the
+host: a `SignIn` shows the Brand's link and code only, replies carry the
+Brand's words and the scopes it used, and the tests check that no token is in
+them.

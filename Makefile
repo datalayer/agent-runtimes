@@ -6,8 +6,8 @@ SHELL=/bin/bash
 .DEFAULT_GOAL := default
 
 .PHONY: \
-	help default clean build test test-js test-py kill warning \
-	publish-npm publish-pypi publish-conda pydoc typedoc docs \
+	help default clean build dist-embed test test-js test-py kill \
+	publish-npm publish-pypi pydoc typedoc docs \
 	examples examples\:prod examples-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
@@ -16,7 +16,7 @@ SHELL=/bin/bash
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
-AGENTSPECS_BRANCH ?= "main"
+AGENTSPECS_BRANCH ?= feat/apps-next
 
 AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
@@ -169,15 +169,23 @@ BEDROCK_ENV = \
 	AWS_DEFAULT_REGION=$${DATALAYER_BEDROCK_AWS_DEFAULT_REGION:-$${AWS_DEFAULT_REGION}}
 
 RUFF_TARGETS = \
+	agent_runtimes/specs/voices.py \
+	agent_runtimes/specs/scenes.py \
 	agent_runtimes/specs/agents/ \
 	agent_runtimes/specs/teams/ \
 	agent_runtimes/specs/skills.py \
-	agent_runtimes/specs/tools.py \
+	agent_runtimes/specs/backend_tools.py \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
-	agent_runtimes/specs/ui_plugins.py \
+	agent_runtimes/specs/ui.py \
+	agent_runtimes/specs/ui_renderers.py \
+	agent_runtimes/specs/protocols.py \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
+	agent_runtimes/specs/harnesses.py \
+	agent_runtimes/specs/session_files.py \
+	agent_runtimes/specs/policies.py \
+	agent_runtimes/specs/standards.py \
 	agent_runtimes/specs/guards.py \
 	agent_runtimes/specs/gates.py \
 	agent_runtimes/specs/tracks.py \
@@ -187,7 +195,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
-	agent_runtimes/specs/loops.py \
+	agent_runtimes/specs/strategies.py \
 	agent_runtimes/specs/guardrails.py \
 	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
@@ -227,6 +235,9 @@ build: ## build
 build-lib: ## build-lib
 	npm run build:lib
 
+dist-embed: ## dist-embed – build the embed bundle (dist-embed/) from this tree, replacing any there; nothing is taken from npm
+	node scripts/dist-embed.mjs --force
+
 test: test-js test-py ## run tests
 
 test-js: ## run js tests
@@ -238,8 +249,6 @@ test-py: ## run python tests
 kill:
 	npm run kill
 
-warning:
-	echo "\x1b[34m\x1b[43mEnsure you have run \x1b[1;37m\x1b[41m conda deactivate \x1b[22m\x1b[34m\x1b[43m before invoking this.\x1b[0m"
 
 publish-npm: clean build-lib ## publish-npm
 	npm publish
@@ -247,18 +256,12 @@ publish-npm: clean build-lib ## publish-npm
 
 publish-pypi: clean build # publish the pypi package
 	git clean -fdx -e dist -e agent_runtimes/static/dist && \
-		python -m build --outdir python-dist
+		python -m build --sdist --wheel --outdir python-dist
 	@exec echo
-	@exec echo twine upload ./python-dist/*-py3-none-any.whl
+	@exec echo twine upload ./python-dist/*
 	@exec echo
 	@exec echo https://pypi.org/project/agent-runtimes/#history
 
-publish-conda: # publish the conda package
-	@exec echo
-	cd ./conda-recipe; ./publish-conda.sh
-	@exec echo
-	@exec echo https://anaconda.org/datalayer/agent-runtimes
-	@exec echo conda install datalayer::agent-runtimes
 
 pydoc: # pydoc
 	rm -fr docs/docs/python_api
@@ -432,7 +435,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -446,7 +449,7 @@ specs-clone: ## clone/update agentspecs repository
 	else \
 		cd $(AGENTSPECS_DIR) && git fetch origin; \
 	fi
-	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH)
+	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH) && git merge --ff-only origin/$(AGENTSPECS_BRANCH)
 
 specs-generate: ## generate all Python and TypeScript specs from YAML
 	$(call step,Generating agent specifications)
@@ -471,11 +474,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/skills \
 	  --python-output agent_runtimes/specs/skills.py \
 	  --typescript-output src/specs/skills.ts
-	$(call step,Generating tool specifications)
-	python scripts/codegen/generate_tools.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/tools \
-	  --python-output agent_runtimes/specs/tools.py \
-	  --typescript-output src/specs/tools.ts
+	$(call step,Generating backend tool specifications)
+	python scripts/codegen/generate_backend_tools.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/backend-tools \
+	  --python-output agent_runtimes/specs/backend_tools.py \
+	  --typescript-output src/specs/backendTools.ts
 	$(call step,Generating frontend tool specifications)
 	python scripts/codegen/generate_frontend_tools.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/frontend-tools \
@@ -483,7 +486,7 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --typescript-output src/specs/frontendTools.ts
 	$(call step,Generating environment variable specifications)
 	python scripts/codegen/generate_envvars.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/envvars \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/env-vars \
 	  --python-output agent_runtimes/specs/envvars.py \
 	  --typescript-output src/specs/envvars.ts
 	$(call step,Generating AI model specifications)
@@ -496,15 +499,21 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/model-providers \
 	  --python-output agent_runtimes/specs/model_providers.py \
 	  --typescript-output src/specs/modelProviders.ts
-	$(call step,Generating UI plugin specifications)
-	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/ui-plugins" ]; then \
-	  python scripts/codegen/generate_ui_plugins.py \
-	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/ui-plugins \
-	    --python-output agent_runtimes/specs/ui_plugins.py \
-	    --typescript-output src/specs/uiPlugins.ts; \
-	else \
-	  echo "Skipping UI plugin specifications: $(AGENTSPECS_DIR)/agentspecs/ui-plugins not found (agentspecs < 0.0.11)"; \
-	fi
+	$(call step,Generating UI renderer specifications)
+	python scripts/codegen/generate_ui_renderers.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/ui-renderers \
+	  --python-output agent_runtimes/specs/ui_renderers.py \
+	  --typescript-output src/specs/uiRenderers.ts
+	$(call step,Generating UI specifications)
+	python scripts/codegen/generate_ui.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/ui \
+	  --python-output agent_runtimes/specs/ui.py \
+	  --typescript-output src/specs/ui.ts
+	$(call step,Generating protocol specifications)
+	python scripts/codegen/generate_protocols.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/protocols \
+	  --python-output agent_runtimes/specs/protocols.py \
+	  --typescript-output src/specs/protocols.ts
 	$(call step,Generating Frame specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/frames" ]; then \
 	  python scripts/codegen/generate_frames.py \
@@ -523,6 +532,30 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	else \
 	  echo "Skipping Cog specifications: $(AGENTSPECS_DIR)/agentspecs/cogs not found (agentspecs < 0.0.12)"; \
 	fi
+	$(call step,Generating harness specifications)
+	python scripts/codegen/generate_harnesses.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/harnesses \
+	  --python-output agent_runtimes/specs/harnesses.py \
+	  --typescript-output src/specs/harnesses.ts
+	$(call step,Generating session file specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/sessions" ]; then \
+	  python scripts/codegen/generate_session_files.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/sessions \
+	    --python-output agent_runtimes/specs/session_files.py \
+	    --typescript-output src/specs/sessionFiles.ts; \
+	else \
+	  echo "Skipping session file specifications: $(AGENTSPECS_DIR)/agentspecs/sessions not found (agentspecs < 0.0.119)"; \
+	fi
+	$(call step,Generating policy specifications)
+	python scripts/codegen/generate_policies.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/policies \
+	  --python-output agent_runtimes/specs/policies.py \
+	  --typescript-output src/specs/policies.ts
+	$(call step,Generating standard specifications)
+	python scripts/codegen/generate_standards.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/standards \
+	  --python-output agent_runtimes/specs/standards.py \
+	  --typescript-output src/specs/standards.ts
 	$(call step,Generating Guard specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/guards" ]; then \
 	  python scripts/codegen/generate_ops.py --kind guards \
@@ -570,16 +603,25 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	else \
 	  echo "Skipping application specifications: $(AGENTSPECS_DIR)/agentspecs/apps not found (agentspecs < 0.0.15)"; \
 	fi
+	$(call step,Generating scene specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/scenes" ]; then \
+	  python scripts/codegen/generate_scenes.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/scenes \
+	    --python-output agent_runtimes/specs/scenes.py \
+	    --typescript-output src/specs/scenes.ts; \
+	else \
+	  echo "Skipping scene specifications: $(AGENTSPECS_DIR)/agentspecs/scenes not found (agentspecs < 0.0.61)"; \
+	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
-	$(call step,Generating loop specifications)
-	python scripts/codegen/generate_loops.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/loops \
-	  --python-output agent_runtimes/specs/loops.py \
-	  --typescript-output src/specs/loops.ts
+	$(call step,Generating strategy specifications)
+	python scripts/codegen/generate_strategies.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/strategies \
+	  --python-output agent_runtimes/specs/strategies.py \
+	  --typescript-output src/specs/strategies.ts
 	$(call step,Generating guardrail specifications)
 	python scripts/codegen/generate_guardrails.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \
@@ -616,6 +658,10 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
+	$(call step,Generating the voice catalogue)
+	python scripts/codegen/generate_voices.py \
+	  --python-output agent_runtimes/specs/voices.py \
+	  --typescript-output src/specs/voices.ts
 	$(call step,Generating persona specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/personas" ]; then \
 	  python scripts/codegen/generate_personas.py \

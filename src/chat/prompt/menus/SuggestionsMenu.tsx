@@ -57,7 +57,7 @@ export function SuggestionsMenu({
         </Tooltip>
       </ActionMenu.Anchor>
       <ActionMenu.Overlay side="outside-top" align="start" width="large">
-        <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <Box maxHeight="60vh" overflowY="auto">
           <ActionList>
             {suggestions.length === 0 ? (
               <ActionList.Item disabled>

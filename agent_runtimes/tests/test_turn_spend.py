@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What one turn of an agent spent, as its answer says it (ORCHESTRATOR.md, O2-10).
+"""What one turn of an agent spent, as its answer says it (O2-10).
 
 The run's own count when its end reports one; otherwise what the agent's
 counters grew by during the turn, and a cost only where the model was priced.

@@ -5,8 +5,8 @@
 
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box } from '@datalayer/primer-addons';
 import {
-  Box,
   Button,
   Heading,
   Label,
@@ -657,7 +657,7 @@ export function AgentNodeGallery({
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+      <Box display="flex" justifyContent="center" py={6}>
         <Spinner size="large" />
       </Box>
     );
@@ -665,7 +665,7 @@ export function AgentNodeGallery({
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
+      <Box mb={3}>
         <Heading as="h2" sx={{ fontSize: 3, mb: 1 }}>
           {hasActiveAgent ? 'Running agent' : 'Choose an agent'}
         </Heading>
@@ -678,14 +678,12 @@ export function AgentNodeGallery({
 
       {error && (
         <Box
-          sx={{
-            mb: 3,
-            p: 2,
-            borderRadius: 2,
-            bg: 'danger.subtle',
-            color: 'danger.fg',
-            fontSize: 1,
-          }}
+          mb={3}
+          p={2}
+          borderRadius={2}
+          bg="danger.subtle"
+          color="danger.fg"
+          fontSize={1}
         >
           {error}
         </Box>
@@ -693,18 +691,16 @@ export function AgentNodeGallery({
 
       {hasActiveAgent ? (
         <Box
-          sx={{
-            p: 4,
-            border: '1px solid',
-            borderColor: 'accent.muted',
-            borderRadius: 2,
-            bg: 'accent.subtle',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
+          p={4}
+          border="1px solid"
+          borderColor="accent.muted"
+          borderRadius={2}
+          bg="accent.subtle"
+          display="flex"
+          flexDirection="column"
+          gap={3}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             <Label
               variant="secondary"
               sx={{
@@ -729,18 +725,16 @@ export function AgentNodeGallery({
           </Text>
           {activeAgentSpec && (
             <Box
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
+              p={3}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
+              display="flex"
+              flexDirection="column"
+              gap={2}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box display="flex" alignItems="center" gap={2}>
                 <Label size="small" variant="accent">
                   Spec
                 </Label>
@@ -758,7 +752,7 @@ export function AgentNodeGallery({
                   {activeAgentSpec.description}
                 </Text>
               )}
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Box display="flex" gap={1} flexWrap="wrap">
                 <Label size="small" variant="secondary">
                   id: {activeAgentSpec.id}
                 </Label>
@@ -782,7 +776,7 @@ export function AgentNodeGallery({
               </Box>
             </Box>
           )}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <Box display="flex" justifyContent="flex-start">
             <Button
               variant="danger"
               disabled={terminating}
@@ -794,20 +788,18 @@ export function AgentNodeGallery({
         </Box>
       ) : specs.length === 0 ? (
         <Box
-          sx={{
-            p: 4,
-            textAlign: 'center',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            color: 'fg.muted',
-          }}
+          p={4}
+          textAlign="center"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          color="fg.muted"
         >
           No agents are available in the library yet.
         </Box>
       ) : (
         <>
-          <Box sx={{ mb: 3, maxWidth: 420 }}>
+          <Box mb={3} maxWidth={420}>
             <TextInput
               value={search}
               onChange={event => setSearch(event.target.value)}
@@ -815,13 +807,7 @@ export function AgentNodeGallery({
               block
             />
           </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: GRID_TEMPLATE,
-              gap: 3,
-            }}
-          >
+          <Box display="grid" gridTemplateColumns={GRID_TEMPLATE} gap={3}>
             {filteredSpecs.map(spec => {
               const IconComponent = resolveAgentspecIcon(
                 spec.icon,
@@ -860,59 +846,47 @@ export function AgentNodeGallery({
                   aria-label={`${launchLabel} ${spec.name || spec.id}`}
                   aria-busy={isLaunching}
                   aria-disabled={isLaunching}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    textAlign: 'left',
-                    cursor: isLaunching ? 'progress' : 'pointer',
-                    p: 3,
-                    border: '1px solid',
+                  display="flex"
+                  flexDirection="column"
+                  textAlign="left"
+                  cursor={isLaunching ? 'progress' : 'pointer'}
+                  p={3}
+                  border="1px solid"
+                  borderColor={isActive ? 'success.emphasis' : 'border.default'}
+                  borderRadius={2}
+                  bg="canvas.default"
+                  // Hover feedback is border + shadow only. No transform: a
+                  // transform here promotes the card to its own layer and makes
+                  // the line-clamped description re-rasterize (per-paragraph
+                  // motion artifact).
+                  transition="box-shadow 180ms ease, border-color 180ms ease"
+                  hover={{
+                    boxShadow: 'shadow.medium',
                     borderColor: isActive
                       ? 'success.emphasis'
-                      : 'border.default',
-                    borderRadius: 2,
-                    bg: 'canvas.default',
-                    // Hover feedback is border + shadow only. No transform: a
-                    // transform here promotes the card to its own layer and makes
-                    // the line-clamped description re-rasterize (per-paragraph
-                    // motion artifact).
-                    transition:
-                      'box-shadow 180ms ease, border-color 180ms ease',
-                    '&:hover': {
-                      boxShadow: 'shadow.medium',
-                      borderColor: isActive
-                        ? 'success.emphasis'
-                        : 'accent.emphasis',
-                    },
-                    '&:focus-visible': {
-                      outline: '2px solid',
-                      outlineColor: 'accent.fg',
-                      outlineOffset: '2px',
-                    },
+                      : 'accent.emphasis',
+                  }}
+                  focusVisible={{
+                    outline: '2px solid',
+                    outlineColor: 'accent.fg',
+                    outlineOffset: '2px',
+                  }}
+                  sx={{
                     '&[aria-disabled="true"]': {
                       opacity: 0.8,
                     },
                   }}
                 >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      mb: 2,
-                    }}
-                  >
+                  <Box display="flex" alignItems="center" gap={2} mb={2}>
                     <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 40,
-                        height: 40,
-                        borderRadius: 2,
-                        fontSize: 3,
-                        bg: 'canvas.subtle',
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      width={40}
+                      height={40}
+                      borderRadius={2}
+                      fontSize={3}
+                      bg="canvas.subtle"
                     >
                       {spec.emoji ? (
                         <Text sx={{ fontSize: 3, lineHeight: 1 }}>
@@ -922,7 +896,7 @@ export function AgentNodeGallery({
                         <IconComponent size={20} />
                       )}
                     </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box flex={1} minWidth={0}>
                       <Heading
                         as="h3"
                         sx={{
@@ -973,14 +947,7 @@ export function AgentNodeGallery({
                   )}
 
                   {spec.tags && spec.tags.length > 0 && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 1,
-                        mb: 3,
-                      }}
-                    >
+                    <Box display="flex" flexWrap="wrap" gap={1} mb={3}>
                       {spec.tags.slice(0, 4).map(tag => (
                         <Label key={tag} size="small" variant="secondary">
                           {tag}
@@ -989,25 +956,21 @@ export function AgentNodeGallery({
                     </Box>
                   )}
 
-                  <Box sx={{ mt: 'auto', pt: 1 }}>
+                  <Box mt="auto" pt={1}>
                     <Box
                       as="span"
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        px: 2,
-                        py: 1,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: isActive
-                          ? 'border.default'
-                          : 'accent.muted',
-                        bg: isActive ? 'canvas.subtle' : 'accent.subtle',
-                        color: isActive ? 'fg.default' : 'accent.fg',
-                        fontSize: 1,
-                        fontWeight: 600,
-                      }}
+                      display="inline-flex"
+                      alignItems="center"
+                      gap={1}
+                      px={2}
+                      py={1}
+                      borderRadius={2}
+                      border="1px solid"
+                      borderColor={isActive ? 'border.default' : 'accent.muted'}
+                      bg={isActive ? 'canvas.subtle' : 'accent.subtle'}
+                      color={isActive ? 'fg.default' : 'accent.fg'}
+                      fontSize={1}
+                      fontWeight={600}
                     >
                       <IconComponent size={14} />
                       {launchLabel}
@@ -1019,13 +982,11 @@ export function AgentNodeGallery({
           </Box>
           {filteredSpecs.length === 0 && (
             <Box
-              sx={{
-                mt: 3,
-                p: 3,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              mt={3}
+              p={3}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                 No agents match this filter.

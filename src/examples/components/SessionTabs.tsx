@@ -36,7 +36,7 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
   onAddSession: _onAddSession,
 }) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box display="flex" flexDirection="column" gap={1}>
       <Text sx={{ fontWeight: 'bold', fontSize: 2 }}>{agentName}</Text>
       {agentDescription && (
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>{agentDescription}</Text>

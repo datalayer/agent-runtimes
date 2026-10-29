@@ -113,7 +113,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
           Datalayer Notebook Collaboration Example
         </Heading>
 
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <FormControl>
             <Checkbox
               checked={enableCollaboration}
@@ -126,7 +126,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
         </Box>
 
         {(!configuration?.spacerUrl || !configuration?.token) && (
-          <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
+          <Box mb={2} p={2} bg="danger.subtle">
             Warning: Datalayer configuration is missing. Please configure
             spacerUrl and token to use DatalayerServiceManager and collaboration
             features.
@@ -134,36 +134,26 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
         )}
 
         {!serviceManager && (
-          <Box sx={{ mb: 2, p: 2, bg: 'attention.subtle' }}>
+          <Box mb={2} p={2} bg="attention.subtle">
             Note: DatalayerServiceManager is not available. Notebook
             functionality will be limited.
           </Box>
         )}
 
         {enableCollaboration ? (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              flexDirection: 'row',
-            }}
-          >
+          <Box display="flex" gap={2} flexDirection="row">
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Box
-                sx={{
-                  p: 2,
-                  bg: 'canvas.subtle',
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  fontWeight: 'bold',
-                }}
+                p={2}
+                bg="canvas.subtle"
+                borderBottom="1px solid"
+                borderColor="border.default"
+                fontWeight="bold"
               >
                 Collaborator 1
               </Box>
@@ -178,21 +168,17 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
               />
             </Box>
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Box
-                sx={{
-                  p: 2,
-                  bg: 'canvas.subtle',
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  fontWeight: 'bold',
-                }}
+                p={2}
+                bg="canvas.subtle"
+                borderBottom="1px solid"
+                borderColor="border.default"
+                fontWeight="bold"
               >
                 Collaborator 2
               </Box>
@@ -208,13 +194,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
             </Box>
           </Box>
         ) : (
-          <Box
-            sx={{
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-            }}
-          >
+          <Box border="1px solid" borderColor="border.default" borderRadius={2}>
             {serviceManager ? (
               <Notebook
                 id={NOTEBOOK_ID}
@@ -226,14 +206,14 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
                 collaborationProvider={collaborationProvider}
               />
             ) : (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Box p={4} textAlign="center">
                 Loading ServiceManager...
               </Box>
             )}
           </Box>
         )}
 
-        <Box sx={{ mt: 2, fontSize: 1, color: 'fg.subtle' }}>
+        <Box mt={2} fontSize={1} color="fg.subtle">
           <p>
             This example demonstrates how to use Datalayer services with
             Notebook:

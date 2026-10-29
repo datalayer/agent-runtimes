@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The adapters, over a worker that speaks the orchestration extension (ORCHESTRATOR.md, O2-05).
+"""The adapters, over a worker that speaks the orchestration extension (O2-05).
 
 A worker that declares the Datalayer orchestration extension — on its A2A
 agent card, or in its ACP capabilities at initialize — is resolved with

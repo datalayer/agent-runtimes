@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Button, Label, Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, Card } from '@datalayer/primer-addons';
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -128,32 +128,22 @@ export function ToolApprovalCard({
       : `, ${statusDescriptor}`;
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: isRead ? 'transparent' : 'accent.muted',
-        bg: isRead ? 'canvas.default' : 'accent.subtle',
-      }}
-    >
+    // primer-addons' Card, as the other pages' rows: an unread request is the
+    // selected one (an accent border on an accent wash).
+    <Card border shadow="none" display="block" p={3} selected={!isRead}>
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 3,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        gap={3}
       >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              mb: 1,
-              flexWrap: 'wrap',
-            }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            mb={1}
+            flexWrap="wrap"
           >
             <Text sx={{ fontWeight: 'bold', fontSize: 2 }}>
               {approval.toolName}
@@ -168,15 +158,13 @@ export function ToolApprovalCard({
             {reviewSummary}
           </Text>
           <Box
-            sx={{
-              mt: 2,
-              width: '100%',
-              p: 2,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.muted',
-              bg: 'canvas.subtle',
-            }}
+            mt={2}
+            width="100%"
+            p={2}
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.muted"
+            bg="canvas.subtle"
           >
             <details open={isDetailsExpanded}>
               <summary
@@ -191,17 +179,15 @@ export function ToolApprovalCard({
                   minWidth: 0,
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'fg.muted',
-                      transition: 'transform 0.15s ease',
-                      transform: isDetailsExpanded
-                        ? 'rotate(180deg)'
-                        : 'rotate(0deg)',
-                    }}
+                    display="flex"
+                    alignItems="center"
+                    color="fg.muted"
+                    transition="transform 0.15s ease"
+                    transform={
+                      isDetailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }
                   >
                     <ChevronDownIcon size={12} />
                   </Box>
@@ -210,7 +196,7 @@ export function ToolApprovalCard({
                   </Text>
                 </Box>
               </summary>
-              <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+              <Box mt={2} display="grid" gap={1}>
                 <Text sx={detailLineSx}>
                   <Text as="span" sx={detailLabelSx}>
                     Source:{' '}
@@ -272,7 +258,7 @@ export function ToolApprovalCard({
                 </Text>
               </Box>
               {parameterCount > 0 && (
-                <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                <Box mt={2} display="grid" gap={1}>
                   {Object.entries(approval.parameters || {}).map(
                     ([key, value]) => (
                       <Text key={key} sx={detailLineSx}>
@@ -291,7 +277,7 @@ export function ToolApprovalCard({
           </Box>
         </Box>
         {approval.status === 'pending' && (
-          <Box sx={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+          <Box display="flex" gap={2} flexShrink={0}>
             <Button
               size="small"
               variant="primary"
@@ -310,9 +296,7 @@ export function ToolApprovalCard({
             </Button>
           </Box>
         )}
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-        >
+        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
           <Button
             size="small"
             variant="invisible"
@@ -335,7 +319,7 @@ export function ToolApprovalCard({
           </Button>
         </Box>
       </Box>
-    </Box>
+    </Card>
   );
 }
 

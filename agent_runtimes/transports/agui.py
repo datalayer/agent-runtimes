@@ -18,19 +18,14 @@ AG-UI is a lightweight protocol focused on UI integration with:
 """
 
 import asyncio
+import contextvars
 import json
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
-
-if TYPE_CHECKING:
-    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-else:
-    try:
-        from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-    except (ImportError, ModuleNotFoundError):
-        AGUIAdapter = None  # type: ignore[assignment,misc]
+from contextlib import contextmanager
+from typing import Any, AsyncIterator, Iterator
 
 from starlette.applications import Starlette
+from starlette.responses import Response
 
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities, set_request_user_jwt
@@ -41,9 +36,193 @@ from ..otel.prompt_turn_metrics import (
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
+
+# AG-UI's adapter, with a tool's display beside the result the page draws
+# (RU-1).
+from .agui_displays import DisplayAGUIAdapter as AGUIAdapter
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
+
+#: What a run is told besides its agent's instructions, set by the runtime
+#: itself, never by the request: the modes an application's session is in
+#: (P-19), for the run it forwards to its agent.
+_run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "run_instructions", default=None
+)
+
+
+#: The events that end an AG-UI run: one of them is the last thing a page reads.
+RUN_ENDS = frozenset({"RUN_FINISHED", "RUN_ERROR"})
+
+
+def _run_events(text: str) -> Iterator[dict[str, Any]]:
+    """The AG-UI events in complete SSE text."""
+    for line in text.splitlines():
+        if line.startswith("data:"):
+            try:
+                event = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            if isinstance(event, dict):
+                yield event
+
+
+async def watch_run_stream(
+    chunks: AsyncIterator[Any], agent_id: str, started: float
+) -> AsyncIterator[bytes]:
+    """
+    A run's AG-UI stream, passed through, that always ends with a statement.
+
+    A Preview run on Datalayer gave no answer for minutes and nothing in the
+    runtime's logs (PAP browser pass, 2026-10-12): a run that ends in error
+    says so only to the page (`RUN_ERROR`), and a stream cut before its end
+    said so to nobody. Here each end is logged with the agent and how long
+    the run took — an error with its message, a stream the page closed
+    before the run ended — and a stream that ends without `RUN_FINISHED` or
+    `RUN_ERROR` ends with a `RUN_ERROR` of its own: the page never waits for
+    an end that is not coming.
+
+    Parameters
+    ----------
+    chunks : AsyncIterator[Any]
+        The stream's chunks, as the AG-UI adapter yields them.
+    agent_id : str
+        The agent the run belongs to, for the log.
+    started : float
+        `time.perf_counter()` when the request arrived.
+
+    Yields
+    ------
+    bytes
+        The chunks, unchanged, and a closing `RUN_ERROR` when none ended it.
+    """
+    import time  # noqa: PLC0415
+
+    ended: str | None = None
+    pending = ""
+    try:
+        async for chunk in chunks:
+            data = chunk if isinstance(chunk, bytes) else str(chunk).encode("utf-8")
+            pending += data.decode("utf-8", errors="replace")
+            complete, separator, pending = pending.rpartition("\n\n")
+            for event in _run_events(complete + separator):
+                kind = event.get("type")
+                if kind in RUN_ENDS:
+                    ended = kind
+                if kind == "RUN_ERROR":
+                    logger.warning(
+                        "AG-UI run of %s ended in error after %.1f s: %s",
+                        agent_id,
+                        time.perf_counter() - started,
+                        event.get("message") or "(no message)",
+                    )
+            yield data
+    except (asyncio.CancelledError, GeneratorExit):
+        if ended is None:
+            logger.warning(
+                "AG-UI run of %s stopped after %.1f s: the page closed its "
+                "stream before the run ended",
+                agent_id,
+                time.perf_counter() - started,
+            )
+        raise
+    if ended is None:
+        message = (
+            "The run stopped without finishing and without saying why: "
+            "no answer came back."
+        )
+        logger.error(
+            "AG-UI run of %s ended after %.1f s without RUN_FINISHED or "
+            "RUN_ERROR; the page is told it stopped",
+            agent_id,
+            time.perf_counter() - started,
+        )
+        closing = json.dumps({"type": "RUN_ERROR", "message": message})
+        yield f"data: {closing}\n\n".encode("utf-8")
+
+
+async def hear_client_audio(
+    body: Any, authorization: str | None
+) -> tuple[dict[str, Any], bytes] | Response | None:
+    """
+    An AG-UI run whose newest user message carries audio, heard (VO-28).
+
+    The audio is heard by ai-agents' speech service with the caller's own
+    token; the message becomes its transcript, marked spoken in
+    ``forwardedProps.voice`` and for the record (``hear``).
+
+    Parameters
+    ----------
+    body : Any
+        The run's JSON body.
+    authorization : str | None
+        The request's ``Authorization`` header.
+
+    Returns
+    -------
+    tuple[dict[str, Any], bytes] | Response | None
+        The heard body and its bytes; a 422 saying why the audio could not be
+        heard; or ``None`` when the run carries no audio.
+    """
+    if not isinstance(body, dict):
+        return None
+    import httpx  # noqa: PLC0415
+    from starlette.responses import JSONResponse  # noqa: PLC0415
+
+    from ..voice import hear  # noqa: PLC0415
+    from ..voice.protocol_audio import (  # noqa: PLC0415
+        AudioNotHeard,
+        hear_agui_messages,
+    )
+
+    header = authorization or ""
+    token = header[7:].strip() if header.lower().startswith("bearer ") else ""
+    try:
+        heard_body, spoken = await hear_agui_messages(body, token=token)
+    except AudioNotHeard as refused:
+        return JSONResponse({"detail": str(refused)}, status_code=422)
+    except httpx.HTTPError as error:
+        return JSONResponse(
+            {
+                "detail": "The audio could not be heard: Datalayer's speech "
+                f"service did not answer ({type(error).__name__})."
+            },
+            status_code=502,
+        )
+    if spoken is None:
+        return None
+    hear(spoken)
+    return heard_body, json.dumps(heard_body).encode("utf-8")
+
+
+def mark_spoken(body: Any) -> None:
+    """
+    Say, for the run this body starts, whether its message was said (VO-27).
+
+    ``forwardedProps.voice`` is how a client that heard the person itself —
+    the page, ``loop --voice`` — says so: ``{"input": "voice", "language",
+    "engine", "where"}``.
+
+    Parameters
+    ----------
+    body : Any
+        The run's JSON body.
+    """
+    from ..voice import hear, spoken_of  # noqa: PLC0415
+
+    forwarded = body.get("forwardedProps") if isinstance(body, dict) else None
+    hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
+
+
+@contextmanager
+def run_instructions(instructions: str | None) -> Iterator[None]:
+    """Tell the runs started inside this block ``instructions`` besides their agent's."""
+    token = _run_instructions.set(instructions or None)
+    try:
+        yield
+    finally:
+        _run_instructions.reset(token)
 
 
 class AGUITransport(BaseTransport):
@@ -166,6 +345,13 @@ class AGUITransport(BaseTransport):
         Returns:
             Starlette application implementing the AG-UI protocol.
         """
+        if self._app is None and not hasattr(self.agent, "_agent"):
+            # An agent that is not pydantic-ai's — a harness driven over ACP
+            # (SH-10) — is served from its own stream.
+            from .agui_stream import agui_app_of
+
+            self._app = agui_app_of(self.agent, self._agent_id)
+            return self._app
         if self._app is None:
             from typing import TYPE_CHECKING
 
@@ -214,6 +400,19 @@ class AGUITransport(BaseTransport):
                     # Read the body once and cache it
                     body_bytes = await request.body()
                     body = json.loads(body_bytes)
+                    # Audio a protocol client sent is heard first, and the
+                    # message is its transcript (VO-28).
+                    heard = await hear_client_audio(
+                        body, request.headers.get("authorization")
+                    )
+                    if isinstance(heard, Response):
+                        return heard
+                    if heard is not None:
+                        body, body_bytes = heard
+                    else:
+                        # A message said and heard by the client: marked
+                        # spoken for the run and the record (VO-15, VO-27).
+                        mark_spoken(body)
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
@@ -311,6 +510,22 @@ class AGUITransport(BaseTransport):
                     logger.debug(
                         f"Could not extract model/identities from AG-UI request body: {e}"
                     )
+
+                # A model the request names is called as the agent's own is:
+                # through its provider — ai-inference on a Datalayer runtime,
+                # naming the application it serves — never handed to
+                # pydantic-ai as a bare string it would call directly (a
+                # hosted page's agent called Bedrock with no region, P-24).
+                run_model: Any = model
+                if isinstance(model, str) and model:
+                    from ..models.models import RequestModelRefused, model_of_request
+
+                    try:
+                        run_model = model_of_request(transport_self._agent_id, model)
+                    except RequestModelRefused as refused:
+                        from starlette.responses import JSONResponse
+
+                        return JSONResponse({"detail": str(refused)}, status_code=400)
 
                 # Apply per-turn enablement to backend guardrail state.
                 try:
@@ -514,6 +729,18 @@ class AGUITransport(BaseTransport):
 
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = transport_self._get_runtime_toolsets()
+                # An application's run reaches the Datalayer MCP gateway as
+                # the application, never with the process's key: a session's
+                # run of a deployment as its principal (I-03), of a
+                # Preview with the token the session gives the run, narrowed
+                # to its granted Spaces (R-25) — which the gateway holds.
+                from ..apps.principal import gateway_toolsets_of_the_run
+
+                runtime_toolsets = await gateway_toolsets_of_the_run(
+                    agent_id,
+                    runtime_toolsets,
+                    extract_jwt_token(request.headers.get("authorization"), None),
+                )
 
                 # Log detailed toolset information
                 if runtime_toolsets:
@@ -552,12 +779,14 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
+                    told = _run_instructions.get()
                     response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
-                        model=model,
+                        model=run_model,
                         toolsets=runtime_toolsets,
                         on_complete=on_complete,
+                        **({"instructions": told} if told else {}),
                         **agui_kwargs,
                     )
 
@@ -592,11 +821,10 @@ class AGUITransport(BaseTransport):
                             )
 
                         async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
-                            async for chunk in original_iter:
-                                if isinstance(chunk, bytes):
-                                    yield chunk
-                                else:
-                                    yield str(chunk).encode("utf-8")
+                            async for chunk in watch_run_stream(
+                                original_iter, agent_id, request_start
+                            ):
+                                yield chunk
                             if usage_event_payload is not None:
                                 payload = json.dumps(usage_event_payload)
                                 yield f"data: {payload}\n\n".encode("utf-8")

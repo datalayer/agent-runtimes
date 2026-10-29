@@ -13,8 +13,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
-import { LoopEmbed } from '../loop';
-import { AgentParametersPlugin } from '../loop/plugins/agent-parameters';
+import { LoopEmbed } from '../apps';
+import { AgentParametersPlugin } from '../apps/plugins/agent-parameters';
 
 const LOOP_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 
@@ -233,20 +233,18 @@ const AgentParametersExample: React.FC = () => {
     return (
       <ThemedProvider>
         <Box
-          sx={{
-            maxWidth: 760,
-            mx: 'auto',
-            mt: 6,
-            px: 3,
-            py: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            bg: 'canvas.default',
-          }}
+          maxWidth={760}
+          mx="auto"
+          mt={6}
+          px={3}
+          py={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          display="flex"
+          flexDirection="column"
+          gap={2}
+          bg="canvas.default"
         >
           <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
             CONFIGURE AGENT
@@ -260,19 +258,12 @@ const AgentParametersExample: React.FC = () => {
             generated form, then launch with validated parameters.
           </Text>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-            }}
-          >
+          <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
             <Label variant="accent">Spec: {AGENTSPEC_ID}</Label>
             <Label variant="secondary">Transport: vercel-ai</Label>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box display="flex" gap={2} flexWrap="wrap">
             <Button
               variant="primary"
               size="small"
@@ -304,18 +295,16 @@ const AgentParametersExample: React.FC = () => {
 
           {schema && (
             <Box
-              sx={{
-                display: 'flex',
-                gap: 2,
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                py: 2,
-                px: 3,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-              }}
+              display="flex"
+              gap={2}
+              flexWrap="wrap"
+              alignItems="center"
+              py={2}
+              px={3}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
             >
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                 Required fields:{' '}
@@ -329,13 +318,11 @@ const AgentParametersExample: React.FC = () => {
 
           {showSchemaForm && schema && (
             <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                p: 2,
-                bg: 'canvas.default',
-              }}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              p={2}
+              bg="canvas.default"
             >
               <Form
                 schema={schema}

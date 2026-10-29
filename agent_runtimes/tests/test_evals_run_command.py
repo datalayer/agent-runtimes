@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`agent-runtimes evals run` and `evals launches` (BENCHMARK.md, B2-15).
+"""`agent-runtimes evals run` and `evals launches` (B2-15).
 
 A cloud run is a launch the platform executes: the command imports the
 spec, finds or creates one experiment per subject, validates, submits and

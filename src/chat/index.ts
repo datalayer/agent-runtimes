@@ -64,10 +64,7 @@ export {
   ChatMessageList,
   type ChatMessageListProps,
 } from './messages/ChatMessageList';
-export {
-  NotebookToolSurfaces,
-  notebookToolSurfacesRenderer,
-} from './messages/NotebookToolSurfaces';
+export { NotebookToolSurfaces } from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
@@ -115,6 +112,29 @@ export {
 
 // Components - Tool UI
 export { ToolCallDisplay, type ToolCallDisplayProps } from './tools';
+
+// Marks: the icon (by package), else the emoji, of an MCP server, a skill, a
+// frontend tool set or a runtime tool — and whose a tool call is.
+export {
+  ICON_PACKAGES,
+  SpecMark,
+  hasMark,
+  marksOfFrontendTool,
+  marksOfMcpServer,
+  marksOfRuntimeTool,
+  marksOfSkill,
+  marksOfToolCall,
+  parseIconRef,
+  useMarkIcon,
+  type IconPackage,
+  type IconRef,
+  type MarkIcon,
+  type MarkedMcpServer,
+  type Marks,
+  type SpecMarkProps,
+  type ToolKind,
+  type ToolMarks,
+} from './marks';
 export {
   ToolApprovalDialog,
   useToolApprovalDialog,
@@ -127,7 +147,7 @@ export {
 } from './tools/ToolApprovalBanner';
 
 // Components - Transport-agnostic chat
-export { Chat, type ChatProps } from './Chat';
+export { Chat, type ChatProps, type ChatSessionActions } from './Chat';
 export { ChatFloating, type ChatFloatingProps } from './ChatFloating';
 export {
   ChatInline,
@@ -141,3 +161,14 @@ export {
   type AgentRuntimeChatProps,
 } from '../agents/AgentRuntimeChat';
 export * from './EphemeralSurfaceControl';
+
+// The chat's own words in the person's language (P-26)
+export { ChatLanguage, useChatLanguage, useChatWords } from './ChatLanguage';
+export {
+  CHAT_WORDS,
+  ENGLISH_CHAT_WORDS,
+  chatLanguage,
+  chatWords,
+  type AroundName,
+  type ChatWords,
+} from './words';

@@ -8,6 +8,7 @@ Tracks token usage, message history, and tool calls for agents
 to provide real-time context usage information.
 """
 
+import json
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -15,6 +16,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from datalayer_core.orchestration import Usage
+from reactor.ui import DISPLAY_META_KEY
 
 from agent_runtimes.context.costs import get_cost_store
 
@@ -89,8 +91,20 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
                 part_kind = getattr(part, "part_kind", None)
                 part_dict["part_kind"] = part_kind
 
+                # A tool's display (RU-1): the model view is the
+                # content, as JSON; the whole display is kept beside it for
+                # the page a reloaded history draws.
+                metadata = getattr(part, "metadata", None)
+                display = (
+                    metadata.get(DISPLAY_META_KEY)
+                    if part_kind == "tool-return" and isinstance(metadata, dict)
+                    else None
+                )
+                if display is not None:
+                    part_dict["content"] = json.dumps(part.content)
+                    part_dict["display"] = display
                 # Extract content based on part type
-                if hasattr(part, "content"):
+                elif hasattr(part, "content"):
                     content = part.content
                     if isinstance(content, str):
                         part_dict["content"] = content
@@ -106,8 +120,6 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
                     part_dict["tool_call_id"] = part.tool_call_id
                 if hasattr(part, "args"):
                     try:
-                        import json
-
                         part_dict["args"] = (
                             json.dumps(part.args, default=str) if part.args else "{}"
                         )

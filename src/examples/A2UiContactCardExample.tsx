@@ -17,8 +17,8 @@
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../loop';
-import { defineA2uiScenePlugin } from '../loop/plugins/a2ui-scene';
+import { LoopEmbed } from '../apps';
+import { defineA2uiScenePlugin } from '../apps/plugins/a2ui-scene';
 
 setupPrimerPortals();
 
@@ -34,7 +34,7 @@ const A2UiContactCardExample: React.FC = () => {
   const plugins = useMemo(() => [ScenePlugin], []);
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <LoopEmbed
           target="browser"
           agentId="loop-shell"
