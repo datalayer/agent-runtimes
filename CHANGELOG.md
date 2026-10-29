@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.93
+
+29 October 2026. OpenCode on Datalayer calls ai-inference's own chat completions: a `datalayer` provider on `@ai-sdk/openai-compatible` at ai-inference's v1 root, the catalogue's default model, the runtime's token, each call metered under the application and deployment it serves and paid in credits; no Anthropic key of the account's is read. An application may be lent one repository (`permissions.computer.repository`), checked out at a pinned commit as its harness's workspace, its commands decided by its Rules. A fourth scene backdrop, `space`. Needs agentspecs 0.0.138.
+
 ## 1.5.92
 
 29 October 2026. A key granted to an application's A2A route is answered again: a token exchanged from a task grant (a run's key, a deployment's principal, a kept runtime's key) is verified at IAM's task-grant route, which takes it and says whether its grant still stands, instead of `whoami`, which refuses narrowed tokens since 14 October 2026; a grant revoked is refused. Spreadsheets in the Loop: a spreadsheet editor beside the notebook and the document, and an agent's XLSX output drawn read-only in Datalayer Cells in the chat.

@@ -259,6 +259,10 @@ def test_record_keeps_the_recording_beside_the_specs_and_names_it(
 def test_record_refuses_a_rehearsal_that_did_not_pass(
     scene: Any, specs: Path, tmp_path: Path
 ) -> None:
+    before = yaml.safe_load((specs / "sales-and-accounting.yaml").read_text())[
+        "rehearsal"
+    ]
+    recording = specs / "sales-and-accounting" / "recording.json"
     run = tmp_path / "run.json"
     run.write_text(
         json.dumps(transcript_of_rehearsal(_verdict(scene, state=FAILED), at="now"))
@@ -276,10 +280,9 @@ def test_record_refuses_a_rehearsal_that_did_not_pass(
     )
     assert result.exit_code == 1
     assert "The rehearsal did not pass" in result.output
-    assert not (specs / "sales-and-accounting" / "recording.json").exists()
+    # Nothing written: the scene's rehearsal, recorded or not, is as it was.
+    assert not recording.exists()
     assert (
-        "recording"
-        not in yaml.safe_load((specs / "sales-and-accounting.yaml").read_text())[
-            "rehearsal"
-        ]
+        yaml.safe_load((specs / "sales-and-accounting.yaml").read_text())["rehearsal"]
+        == before
     )

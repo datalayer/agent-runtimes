@@ -729,7 +729,9 @@ def preview_grants(app: Any) -> dict[str, Any]:
         mode="json", by_alias=True, exclude_none=True
     )
     return {
-        "permissions": app.permissions.model_dump(mode="json"),
+        # A repository lent to its computer, unset, is not said: ai-agents
+        # is asked with the shape it knows.
+        "permissions": app.permissions.model_dump(mode="json", exclude_none=True),
         "pap": {"connections": pap.get("connections") or []},
         "pact": {"connections": pact.get("connections") or []},
         "commerce": {"merchants": commerce.get("merchants") or []},

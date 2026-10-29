@@ -2976,7 +2976,7 @@ export const EXAMPLE_HARNESS_OPENCODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-harness-opencode',
   version: '0.0.1',
   name: 'An OpenCode Agent',
-  description: `OpenCode as a Datalayer agent: launched in the runtime over the Agent Client Protocol, its files, terminals and permissions decided by the Shield under the application's Rules, every action in the record. Needs the account's ANTHROPIC_API_KEY.`,
+  description: `OpenCode as a Datalayer agent: launched in the runtime over the Agent Client Protocol, its files, terminals and permissions decided by the Shield under the application's Rules, every action in the record. Its model calls go through Datalayer's ai-inference, paid in credits.`,
   tags: ['coding', 'harness', 'acp'],
   domain: undefined,
   enabled: false,
