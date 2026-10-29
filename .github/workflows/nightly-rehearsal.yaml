@@ -1,0 +1,224 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# The nightly rehearsal of the demo stages: each demo scene rehearsed on
+# Datalayer, where it is kept running under the demo account, with
+# `loop scenes rehearse --cloud`. Each run writes the scene's
+# `<id>/rehearsal.json` (what the stage's *Live* reads, or *Needs attention*
+# with the failing beat) and the transcript of what it played, both kept as
+# the run's artifacts; with a token that may push to agentspecs, the
+# rehearsal files are committed there too.
+#
+# It asks the stages where they are served and launches nothing: a scene
+# whose members' addresses are not set is skipped with a sentence, and the
+# whole run does nothing, saying so, when the demo account's key is absent.
+#
+# Secrets (repository settings, never in this file):
+#   DATALAYER_DEMO_API_KEY             the demo account's API key (required)
+#   DATALAYER_SCENE_KEY_<MEMBER>       a key granted to each runtime member's A2A route:
+#                                      ACCOUNTING, MONTH_END_CLOSE, CROP_MONITORING,
+#                                      DISASTER_ASSESSMENT, CHANGE_DETECTION, CODE_EXPLAINER
+#   DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID, DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY,
+#   DATALAYER_BEDROCK_AWS_DEFAULT_REGION
+#                                      the model of the members a page plays in the
+#                                      browser (Sales, Event response), played here
+#   AGENTSPECS_PUSH_TOKEN              optional: commit rehearsal.json to agentspecs
+# Variables (or secrets) — where each kept stage is served, as its scene's
+# `deployment.addresses` names them:
+#   DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL,
+#   DATALAYER_DEMO_SCENE_<SCENE>_<MEMBER>_A2A_URL for the others.
+
+name: Nightly rehearsal
+
+on:
+  schedule:
+    # Every night at 03:17 UTC, away from the hour's crowd.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      scene:
+        description: One scene to rehearse, by id; every demo scene when empty.
+        required: false
+        default: ''
+
+concurrency:
+  group: nightly-rehearsal
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AGENTSPECS_BRANCH: feat/apps-next
+
+jobs:
+  scenes:
+    name: The demo scenes
+    runs-on: ubuntu-latest
+    outputs:
+      scenes: ${{ steps.which.outputs.scenes }}
+      ready: ${{ steps.which.outputs.ready }}
+    steps:
+      - name: Which scenes, and whether the demo account's key is set
+        id: which
+        env:
+          DEMO_KEY: ${{ secrets.DATALAYER_DEMO_API_KEY }}
+          ONE: ${{ github.event.inputs.scene }}
+        run: |
+          if [ -z "$DEMO_KEY" ]; then
+            echo "::notice title=Nightly rehearsal::Nothing rehearsed: the secret DATALAYER_DEMO_API_KEY (the demo account's API key) is not set in this repository."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo 'scenes=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          all='["sales-and-accounting","month-end-close","crop-monitoring","disaster-assessment","coding-agent-behind-the-shield"]'
+          if [ -n "$ONE" ]; then
+            all="[\"$ONE\"]"
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "scenes=$all" >> "$GITHUB_OUTPUT"
+
+  rehearse:
+    name: Rehearse ${{ matrix.scene }}
+    needs: scenes
+    if: needs.scenes.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      # One at a time: the demo account's runtimes answer one rehearsal at once.
+      max-parallel: 1
+      matrix:
+        scene: ${{ fromJSON(needs.scenes.outputs.scenes) }}
+    env:
+      DATALAYER_API_KEY: ${{ secrets.DATALAYER_DEMO_API_KEY }}
+      DATALAYER_SCENE_KEY_ACCOUNTING: ${{ secrets.DATALAYER_SCENE_KEY_ACCOUNTING }}
+      DATALAYER_SCENE_KEY_MONTH_END_CLOSE: ${{ secrets.DATALAYER_SCENE_KEY_MONTH_END_CLOSE }}
+      DATALAYER_SCENE_KEY_CROP_MONITORING: ${{ secrets.DATALAYER_SCENE_KEY_CROP_MONITORING }}
+      DATALAYER_SCENE_KEY_DISASTER_ASSESSMENT: ${{ secrets.DATALAYER_SCENE_KEY_DISASTER_ASSESSMENT }}
+      DATALAYER_SCENE_KEY_CHANGE_DETECTION: ${{ secrets.DATALAYER_SCENE_KEY_CHANGE_DETECTION }}
+      DATALAYER_SCENE_KEY_CODE_EXPLAINER: ${{ secrets.DATALAYER_SCENE_KEY_CODE_EXPLAINER }}
+      DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL: ${{ vars.DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL || secrets.DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL }}
+      DATALAYER_DEMO_SCENE_MONTH_END_CLOSE_MONTH_END_CLOSE_A2A_URL: ${{ vars.DATALAYER_DEMO_SCENE_MONTH_END_CLOSE_MONTH_END_CLOSE_A2A_URL || secrets.DATALAYER_DEMO_SCENE_MONTH_END_CLOSE_MONTH_END_CLOSE_A2A_URL }}
+      DATALAYER_DEMO_SCENE_CROP_MONITORING_CROP_MONITORING_A2A_URL: ${{ vars.DATALAYER_DEMO_SCENE_CROP_MONITORING_CROP_MONITORING_A2A_URL || secrets.DATALAYER_DEMO_SCENE_CROP_MONITORING_CROP_MONITORING_A2A_URL }}
+      DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_DISASTER_ASSESSMENT_A2A_URL: ${{ vars.DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_DISASTER_ASSESSMENT_A2A_URL || secrets.DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_DISASTER_ASSESSMENT_A2A_URL }}
+      DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_CHANGE_DETECTION_A2A_URL: ${{ vars.DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_CHANGE_DETECTION_A2A_URL || secrets.DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_CHANGE_DETECTION_A2A_URL }}
+      DATALAYER_DEMO_SCENE_CODING_AGENT_BEHIND_THE_SHIELD_CODE_EXPLAINER_A2A_URL: ${{ vars.DATALAYER_DEMO_SCENE_CODING_AGENT_BEHIND_THE_SHIELD_CODE_EXPLAINER_A2A_URL || secrets.DATALAYER_DEMO_SCENE_CODING_AGENT_BEHIND_THE_SHIELD_CODE_EXPLAINER_A2A_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.DATALAYER_BEDROCK_AWS_DEFAULT_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Checkout agentspecs
+        uses: actions/checkout@v7
+        with:
+          repository: datalayer/agentspecs
+          ref: ${{ env.AGENTSPECS_BRANCH }}
+          path: agentspecs-clone
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          python-version: "3.12"
+          activate-environment: true
+
+      # The scenes are read from the agentspecs checkout, so that the
+      # rehearsal it keeps is written there, beside the specs.
+      - name: Install
+        run: |
+          uv pip install -e .
+          uv pip install --no-deps -e ./agentspecs-clone
+
+      - name: Is the scene kept on Datalayer?
+        id: kept
+        env:
+          SCENE: ${{ matrix.scene }}
+        run: |
+          python - <<'EOF'
+          import os
+          from agentspecs.scenes import get_scene
+
+          scene = get_scene(os.environ["SCENE"])
+          output = open(os.environ["GITHUB_OUTPUT"], "a")
+          if scene is None:
+              print(f"::warning title=Nightly rehearsal::No scene {os.environ['SCENE']!r} in agentspecs.")
+              output.write("kept=false\n")
+              raise SystemExit(0)
+          missing = [
+              f"{variable} ({member})"
+              for member, variable in scene.deployment.addresses.items()
+              if not os.environ.get(variable)
+          ]
+          keys = [
+              "DATALAYER_SCENE_KEY_" + member.upper().replace("-", "_")
+              for member in scene.deployment.addresses
+          ]
+          unkeyed = [key for key in keys if not os.environ.get(key)]
+          if missing or unkeyed:
+              said = ", ".join(missing + unkeyed)
+              print(
+                  f"::notice title=Nightly rehearsal::{scene.name} is not rehearsed: "
+                  f"where its stage is served, or the key to its route, is not set ({said})."
+              )
+              output.write("kept=false\n")
+          else:
+              output.write("kept=true\n")
+          EOF
+
+      - name: Rehearse on Datalayer
+        if: steps.kept.outputs.kept == 'true'
+        env:
+          SCENE: ${{ matrix.scene }}
+        run: |
+          set +e
+          loop scenes rehearse "$SCENE" --cloud --transcript "rehearsals/$SCENE/transcript.json"
+          code=$?
+          mkdir -p "rehearsals/$SCENE"
+          if [ -f "agentspecs-clone/agentspecs/scenes/$SCENE/rehearsal.json" ]; then
+            cp "agentspecs-clone/agentspecs/scenes/$SCENE/rehearsal.json" "rehearsals/$SCENE/rehearsal.json"
+          fi
+          echo "code=$code" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Keep what it played
+        if: steps.kept.outputs.kept == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rehearsal-${{ matrix.scene }}
+          path: rehearsals/${{ matrix.scene }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit the rehearsal to agentspecs
+        if: steps.kept.outputs.kept == 'true'
+        env:
+          SCENE: ${{ matrix.scene }}
+          PUSH_TOKEN: ${{ secrets.AGENTSPECS_PUSH_TOKEN }}
+        run: |
+          if [ -z "$PUSH_TOKEN" ]; then
+            echo "::notice title=Nightly rehearsal::The rehearsal of $SCENE is kept as this run's artifact only: AGENTSPECS_PUSH_TOKEN is not set."
+            exit 0
+          fi
+          cd agentspecs-clone
+          file="agentspecs/scenes/$SCENE/rehearsal.json"
+          [ -f "$file" ] || { echo "No rehearsal of $SCENE was kept."; exit 0; }
+          git config user.name "Datalayer nightly rehearsal"
+          git config user.email "info@datalayer.io"
+          git add "$file"
+          git diff --cached --quiet && exit 0
+          git commit -m "Nightly rehearsal of $SCENE on Datalayer"
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/datalayer/agentspecs.git" "HEAD:${AGENTSPECS_BRANCH}" \
+            || { git pull --rebase "https://x-access-token:${PUSH_TOKEN}@github.com/datalayer/agentspecs.git" "${AGENTSPECS_BRANCH}" \
+                 && git push "https://x-access-token:${PUSH_TOKEN}@github.com/datalayer/agentspecs.git" "HEAD:${AGENTSPECS_BRANCH}"; }
+
+      - name: Say the verdict
+        if: steps.kept.outputs.kept == 'true'
+        env:
+          SCENE: ${{ matrix.scene }}
+        run: |
+          if [ "${code:-3}" != "0" ]; then
+            echo "::error title=Nightly rehearsal::$SCENE needs attention: the rehearsal exited $code (1: a beat failed, 3: a beat was not run). Its rehearsal.json says the failing beat."
+            exit 1
+          fi

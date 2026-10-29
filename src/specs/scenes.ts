@@ -15,6 +15,163 @@
 
 import type { SceneSpec } from '../types/scenes';
 
+export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'coding-agent-behind-the-shield',
+  version: '0.0.1',
+  name: 'A Coding Agent Behind the Shield',
+  description:
+    'A coding agent lent one repository to read explains a file; the edit it is then asked for is refused by the Shield, which says the rule.',
+  tags: ['example', 'scene', 'coding', 'harness', 'shield', 'a2a'],
+  icon: 'code',
+  emoji: '🔒',
+  kind: 'team',
+  team: '',
+  entry: 'code-explainer',
+  cast: [
+    {
+      member: 'code-explainer',
+      app: 'code-explainer:0.0.1',
+      ref: '',
+      server: '',
+      role: 'initiator',
+      runsIn: 'runtime',
+      persona: {
+        name: 'Code Explainer',
+        face: '🔦',
+        line: 'I read the repository I am lent and explain it; the Shield decides what I may do.',
+      },
+      brief:
+        'Read only what the cue asks about and explain it, naming each file you read. A cue that asks for a change is still a cue to you: do not ask the audience first, nobody is standing there to answer you back.',
+    },
+  ],
+  setting: {
+    systems: [],
+    contents: ['The repository it is lent, read only'],
+    period: '',
+    language: 'en',
+    assumes:
+      "One coding agent, OpenCode, on Datalayer, lent one repository to read; the Shield in front of it decides every file it opens and every edit it tries, by the application's Rules.",
+  },
+  script: [
+    {
+      id: 'explain-a-file',
+      cue: {
+        say: 'Explain what README.md says about this project, and how the repository is laid out.',
+        schedule: '',
+        event: '',
+      },
+      narration:
+        'The agent reads the file through the Shield, step by step, and explains it.',
+      moves: [
+        {
+          who: 'code-explainer',
+          asks: '',
+          what: 'what README.md says, and how the repository is laid out',
+          tool: '',
+          answers: 'words',
+        },
+      ],
+      expect:
+        'Each file it reads is a line of the transcript, allowed by the rule *Read the repository*; it explains the README and the layout, naming the files it read, and changes nothing.',
+      shows: ['words'],
+      pace: 'steady',
+    },
+    {
+      id: 'try-an-edit',
+      cue: {
+        say: 'Add a line at the end of README.md that says who explained it.',
+        schedule: '',
+        event: '',
+      },
+      narration:
+        'A write, refused by the Shield — the drill-down names the rule.',
+      moves: [
+        {
+          who: 'code-explainer',
+          asks: '',
+          what: 'that the edit was refused, and the change it would make, in words',
+          tool: '',
+          answers: 'words',
+        },
+      ],
+      expect:
+        "The edit it tries is a line of the transcript marked refused; its drill-down shows the Shield's decision, *leave it to me*, and the rule *Change a file*. README.md is unchanged.",
+      shows: ['words'],
+      pace: 'slow',
+    },
+  ],
+  stage: {
+    positions: {
+      'code-explainer': {
+        x: 0.5,
+        y: 0.5,
+      },
+    },
+    opensFirst: 'code-explainer',
+    transcript: {
+      tools: true,
+      narration: true,
+      withhold: ['credentials'],
+    },
+    inspectors: ['agent', 'tools'],
+    restsAfter: '10m',
+    pace: 'steady',
+    backdrop: 'hero',
+  },
+  audience: {
+    who: 'visitors',
+    ceilingPerAsk: 0.1,
+    asksADay: 3,
+  },
+  rehearsal: {
+    beats: [
+      {
+        beat: 'explain-a-file',
+        lines: [
+          'You → Code Explainer',
+          'Code Explainer → its workspace: *README*',
+          'Code Explainer: words',
+        ],
+        mustSay: ['README'],
+        mustNotSay: ['I edited', 'I changed'],
+        within: '180s',
+      },
+      {
+        beat: 'try-an-edit',
+        lines: [
+          'You → Code Explainer',
+          'Code Explainer → its workspace: *README*',
+          'Code Explainer: words',
+        ],
+        mustSay: ['Change a file'],
+        mustNotSay: ['I added', 'I have added'],
+        within: '180s',
+      },
+    ],
+    within: '10m',
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Not played yet: its runtime is not deployed under the demo account, and the repository it is lent is the workspace of that runtime.',
+      ],
+    },
+  },
+  deployment: {
+    account: 'demo',
+    page: '/',
+    addresses: {
+      'code-explainer':
+        'DATALAYER_DEMO_SCENE_CODING_AGENT_BEHIND_THE_SHIELD_CODE_EXPLAINER_A2A_URL',
+    },
+  },
+  actors: [],
+  lines: [],
+  live: '',
+  setup: ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+};
+
 export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'crop-monitoring',
@@ -2535,6 +2692,7 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
 };
 
 export const SCENE_CATALOGUE: Record<string, SceneSpec> = {
+  'coding-agent-behind-the-shield': CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1,
   'crop-monitoring': CROP_MONITORING_SCENE_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_SCENE_0_0_1,
   'month-end-close': MONTH_END_CLOSE_SCENE_0_0_1,

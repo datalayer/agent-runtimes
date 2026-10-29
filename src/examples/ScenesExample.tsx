@@ -63,6 +63,7 @@ import {
   latestLineOnEdge,
   selectedEdgeOf,
   selectionOfLine,
+  stageBackdropOf,
   type A2ATeamConnection,
   type A2ATeamPeerOptions,
   type SceneStage,
@@ -427,7 +428,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             // Room for the balloons: suggestions, *more* and a notebook.
             balloonRoom={320}
             // Drawn as the scene says: studio, hero or plain.
-            backdrop={scene.stage.backdrop}
+            backdrop={stageBackdropOf(scene)}
             selected={selectedEdge}
             onSelectEdge={edge => {
               const line = latestLineOnEdge(edge, lines, transcriptMembers);

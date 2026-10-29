@@ -35,8 +35,10 @@ const fixture = JSON.parse(
   readFileSync(resolve(FIXTURES, 'scene_transcript.json'), 'utf8'),
 ) as Fixture;
 
-/** The members: Sales, and Accounting with Odoo. */
-export const MEMBERS: readonly SceneTranscriptMember[] = fixture.members;
+/** The members: Sales, and Accounting with Odoo (the harness's case names its own). */
+export const MEMBERS: readonly SceneTranscriptMember[] = fixture.members.filter(
+  member => member.id === 'sales' || member.id === 'accounting',
+);
 
 /** A case's spans and lines: the scripted scene (0), the open call and the refusal (1)… */
 export function recorded(index: number): {
@@ -56,3 +58,5 @@ export function recorded(index: number): {
 export const SCRIPTED = 0;
 /** An open call to Odoo, and Accounting's refusal: `TASK_STATE_FAILED`. */
 export const OPEN_AND_FAILED = 1;
+/** A coding harness's turn behind the Shield: a read allowed, an edit refused under the rule *Change a file*. */
+export const HARNESS_STEPS = 4;

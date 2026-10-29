@@ -209,6 +209,48 @@ export interface SceneRecordingSpec {
   note: string;
 }
 
+/** A line of a recording: the transcript's line as a stage exports it (`SceneTranscriptLine`). */
+export interface SceneRecordedLine {
+  key: string;
+  /** When, in milliseconds since the epoch. */
+  at: number;
+  from: string;
+  to?: string;
+  kind: 'said' | 'asked' | 'called';
+  text: string;
+  open?: boolean;
+  failed?: boolean;
+  ended?: number;
+}
+
+/** A beat of a recording: which of its lines it played (`first`, `count`). */
+export interface SceneRecordedBeat {
+  beat: string;
+  cue: string;
+  state: string;
+  seconds: number;
+  first: number;
+  count: number;
+}
+
+/**
+ * A scene's recording, as `<id>/recording.json` holds it: the transcript of
+ * a passing rehearsal (version 1, the JSON a stage exports), when it was
+ * taken, the rehearsal it came from and the beats its lines belong to.
+ */
+export interface SceneRecordingFile {
+  version: 1;
+  scene: string;
+  /** When it was taken: the label says *Recording, taken <date>*. */
+  taken: string;
+  /** What the audience is told of it. */
+  note?: string;
+  exported?: string;
+  rehearsal?: { at: string; where: string; passed: boolean; says: string };
+  beats?: SceneRecordedBeat[];
+  lines: SceneRecordedLine[];
+}
+
 /** The scene's tests: a passing rehearsal is the gallery's *Live*. */
 export interface SceneRehearsalSpec {
   beats: SceneRehearsalBeatSpec[];

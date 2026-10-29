@@ -52,3 +52,13 @@ export const DEFAULT_SCENE_BACKDROP_ID: SceneBackdropId = 'studio';
 export const sceneBackdropChoice = (id?: string): SceneBackdropChoice =>
   SCENE_BACKDROP_CHOICES.find(choice => choice.id === id) ??
   SCENE_BACKDROP_CHOICES[0];
+
+/**
+ * The backdrop a stage is drawn with: its scene's `stage.backdrop`, `studio`
+ * when the scene says none or one no backdrop has. Every stage reads it
+ * here — a card's thumbnail, a stage's page, the home page — so that a
+ * scene plays on the same backdrop wherever it plays.
+ */
+export const stageBackdropOf = (
+  scene?: { stage?: { backdrop?: string } } | null,
+): SceneBackdropId => sceneBackdropChoice(scene?.stage?.backdrop).id;

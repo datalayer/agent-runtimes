@@ -512,6 +512,136 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
+CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "code-explainer",
+        "version": "0.0.1",
+        "name": "Code Explainer",
+        "kind": "chat",
+        "description": "A coding agent lent one repository, read only: it reads the files it is asked about and explains them, and every edit it tries is refused by the Shield, which says the rule.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "example-harness-opencode:0.0.1",
+        "team": "",
+        "instructions": "You explain code. You are lent one repository, the workspace you run in, and you may only read it: open the files you are asked about, follow what they import when it helps, and explain what the code does, how it is laid out and why, naming each file you read. You change nothing: you never edit, create, move or delete a file, and you never run a command that would. Asked to change a file, try nothing behind the person's back: say that this repository is lent to you to read, that the Shield refuses an edit here, and describe the change in words for a person to make. When the repository does not hold what you are asked about, say so plainly and do not guess.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": ["The repository it is lent, read only"],
+        "connections": [],
+        "protocols": [],
+        "ui": [{"plugin": "chat", "renderer": None}],
+        "pair": None,
+        "rules": [
+            {
+                "action": "Read the repository",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Change a file",
+                "applies_to": ["write", "delete"],
+                "behaviour": "leave_to_me",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": True, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sky",
+            "theme": None,
+            "welcome": "Ask me what a file of this repository does, and I'll read it and explain. I only read: the Shield refuses any edit I try here.",
+            "starters": [
+                {
+                    "label": "Explain a file",
+                    "message": "Explain what README.md says about this project, and how the repository is laid out.",
+                },
+                {
+                    "label": "Try an edit",
+                    "message": "Add a line at the end of README.md that says who explained it.",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "actions": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "avatar": "wizard",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": ["text/markdown"],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Explain what README.md says about this project, and how the repository is laid out.",
+                    "expect": "It reads README.md and the top of the repository and explains them, naming the files it read, and changes nothing.",
+                },
+                {
+                    "ask": "Add a line at the end of README.md that says who explained it.",
+                    "expect": "The edit it tries is refused by the Shield under the rule *Change a file*; it says the repository is lent to it to read, and describes the change for a person to make.",
+                },
+                {
+                    "ask": "Explain the file that does not exist, src/nothing.py.",
+                    "expect": "It says the repository holds no such file, and invents nothing.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace of the runtime it runs on."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": ["example", "coding", "harness", "shield", "a2a", "scene"],
+        "icon": "code",
+        "emoji": "🔦",
+        "avatar": "",
+        "banner": "",
+        "setup": ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+    }
+)
+
 CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -5686,6 +5816,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "accounting": ACCOUNTING_APP_0_0_2,
     "bookkeeping-desk": BOOKKEEPING_DESK_APP_0_0_2,
     "change-detection": CHANGE_DETECTION_APP_0_0_2,
+    "code-explainer": CODE_EXPLAINER_APP_0_0_1,
     "crop-monitoring": CROP_MONITORING_APP_0_0_2,
     "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_3,
     "data-quality": DATA_QUALITY_APP_0_0_3,
@@ -5723,6 +5854,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "accounting": "written",
     "bookkeeping-desk": "written",
     "change-detection": "written",
+    "code-explainer": "written",
     "crop-monitoring": "written",
     "customer-interview": "python",
     "data-quality": "written",

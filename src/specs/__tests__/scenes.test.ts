@@ -19,6 +19,8 @@ import {
   scenesStaging,
 } from '../scenes';
 import { getTeamSpec } from '../teams';
+import { SCENE_RECORDINGS, getSceneRecording } from '../sceneRecordings';
+import { stageBackdropOf } from '../../components/teams/backdrops/catalogue';
 import * as specs from '..';
 
 /** The four scenes of the home page (A-08): the entry, the members on a runtime. */
@@ -32,6 +34,12 @@ const HOME_SCENES: Record<string, [string, string[]]> = {
   ],
 };
 
+/** The demo stages: the home page's four, and a coding agent behind the Shield. */
+const DEMO_SCENES = [
+  ...Object.keys(HOME_SCENES),
+  'coding-agent-behind-the-shield',
+];
+
 describe('the scene catalogue', () => {
   it('holds the four scenes of the home page, each with a face of its own', () => {
     // The teams staged; the scripted scenes (`kind: scripted`)
@@ -41,7 +49,7 @@ describe('the scene catalogue', () => {
         .filter(scene => scene.kind === 'team')
         .map(scene => scene.id)
         .sort(),
-    ).toEqual(Object.keys(HOME_SCENES).sort());
+    ).toEqual([...DEMO_SCENES].sort());
     const faces = listSceneSpecs().map(scene => scene.emoji);
     expect(new Set(faces).size).toBe(faces.length);
     expect(faces).not.toContain('👀');
@@ -96,7 +104,8 @@ describe('the scene catalogue', () => {
 
   it('says each beat’s cue, its moves and what it shows', () => {
     for (const scene of listSceneSpecs().filter(s => s.kind === 'team')) {
-      expect(scene.script).toHaveLength(4);
+      // The home page's scenes play four beats; the coding agent two.
+      expect(scene.script).toHaveLength(scene.id in HOME_SCENES ? 4 : 2);
       for (const beat of scene.script) {
         expect(beat.cue.say).toBeTruthy();
         expect(beat.moves.length).toBeGreaterThan(0);
@@ -126,6 +135,47 @@ describe('the scene catalogue', () => {
       { member: 'accounting', over: 'a2a' },
     ]);
     expect(pair.stage.transcript.withhold).toEqual(['ids']);
+  });
+
+  it('draws every demo stage on the hero backdrop, and every other on the studio', () => {
+    for (const scene of listSceneSpecs()) {
+      const wanted = DEMO_SCENES.includes(scene.id) ? 'hero' : 'studio';
+      expect(stageBackdropOf(scene), scene.id).toBe(wanted);
+    }
+    // A stage whose scene says none, or one no backdrop has, is drawn on the studio.
+    expect(stageBackdropOf({ stage: {} })).toBe('studio');
+    expect(stageBackdropOf({ stage: { backdrop: 'neon' } })).toBe('studio');
+    expect(stageBackdropOf(undefined)).toBe('studio');
+  });
+
+  it('lets a coding agent act in its workspace behind the Shield', () => {
+    const scene = SCENE_CATALOGUE['coding-agent-behind-the-shield'];
+    expect(scene.team).toBe('');
+    expect(scene.cast.map(member => [member.member, member.app])).toEqual([
+      ['code-explainer', 'code-explainer:0.0.1'],
+    ]);
+    expect(scene.rehearsal.beats.flatMap(item => item.lines)).toContain(
+      'Code Explainer → its workspace: *README*',
+    );
+    expect(
+      scene.rehearsal.beats.find(item => item.beat === 'try-an-edit')?.mustSay,
+    ).toEqual(['Change a file']);
+  });
+
+  it('keeps the recordings apart from the catalogue, one per scene that names one', () => {
+    for (const [id, recording] of Object.entries(SCENE_RECORDINGS)) {
+      expect(SCENE_CATALOGUE[id].rehearsal.recording?.path).toBe(
+        `${id}/recording.json`,
+      );
+      expect(recording.version).toBe(1);
+      expect(recording.lines.length).toBeGreaterThan(0);
+    }
+    for (const scene of listSceneSpecs()) {
+      expect(Boolean(getSceneRecording(scene.id))).toBe(
+        Boolean(scene.rehearsal.recording),
+      );
+    }
+    expect(getSceneRecording('constructor')).toBeUndefined();
   });
 
   it('carries what a scene needs as setup', () => {

@@ -7,18 +7,52 @@
  * What a line's span says (SCENES S3-01): the words sent and the words
  * answered, a tool's name, arguments and result when the span recorded
  * them, when it started and ended, its status and an error's message, the
- * span and trace ids. Pure: a line and its span in, the detail out
+ * span and trace ids; for a coding harness's step, the Shield's decision on
+ * it and the rule it decided by. Pure: a line and its span in, the detail out
  * ({@link TranscriptDetail} draws it).
  *
  * @module components/teams/transcript/transcriptDetailRules
  */
 
 import type { OtelSpan } from '@datalayer/core/lib/otel/types';
-import type { SceneTranscriptLine } from '../sceneTranscriptRules';
+import {
+  isShieldTurn,
+  SHIELD_STEP_EVENTS,
+  stepCallOf,
+  type SceneTranscriptLine,
+} from '../sceneTranscriptRules';
 import { exchangeOf } from './transcriptRows';
 
 /** The ids that name a span: what *Open in the Inspector* opens. */
 export type TranscriptSpanIds = { traceId: string; spanId: string };
+
+/** What the Shield decided of a coding harness's step, from its events. */
+export type TranscriptShieldStep = {
+  /** `allow`, `ask` or `deny`: the last decision on the step. */
+  decision: string;
+  /** The decision in a person's words: *do it*, *ask me first*, *leave it to me*. */
+  said: string;
+  /** The rule it decided by: an application's Rule names it (*Change a file*). */
+  rule?: string;
+  /** The policy the rule is of: `team` (the application's Rules), `session` (the platform's default)… */
+  scope?: string;
+  /** Who decided: the policy, a person asked, the Shield. */
+  decidedBy?: string;
+  /** The harness's kind of step (`read`, `edit`, `execute`) and its class (`read`, `write`…). */
+  kind?: string;
+  actionClass?: string;
+  path?: string;
+  command?: string;
+  /** The harness, from the turn: `opencode`. */
+  harness?: string;
+};
+
+/** A decision, as a person reads it. */
+export const SHIELD_DECISION_WORDS: Record<string, string> = {
+  allow: 'do it',
+  ask: 'ask me first',
+  deny: 'leave it to me',
+};
 
 /** The detail of a line, from its span. */
 export type TranscriptDetailOf = {
@@ -30,6 +64,8 @@ export type TranscriptDetailOf = {
   /** The words answered. */
   answered?: string;
   tool?: { name: string; arguments?: string; result?: string };
+  /** A coding harness's step: what the Shield decided, and by which rule. */
+  shield?: TranscriptShieldStep;
   startedAt?: number;
   endedAt?: number;
   durationMs?: number;
@@ -82,13 +118,75 @@ const millis = (iso: string | undefined): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-/** The span a line was read from: the one whose id its key begins with. */
+/**
+ * The span a line was read from: the one whose id its key begins with — a
+ * harness's step names its turn's span and its call, `<span>/<call>`.
+ */
 export function spanOfLine(
   line: Pick<SceneTranscriptLine, 'key'>,
   spans: readonly OtelSpan[] | undefined,
 ): OtelSpan | undefined {
   const id = exchangeOf(line.key);
-  return spans?.find(span => span.span_id === id);
+  return spans?.find(
+    span => span.span_id === id || id.startsWith(`${span.span_id}/`),
+  );
+}
+
+/** What the Shield decided of the step a line is, from its turn's span; none for any other line. */
+export function shieldStepOf(
+  line: Pick<SceneTranscriptLine, 'key'>,
+  span: OtelSpan,
+): TranscriptShieldStep | undefined {
+  if (!isShieldTurn(span)) {
+    return undefined;
+  }
+  const exchange = exchangeOf(line.key);
+  const call = exchange.slice(span.span_id.length + 1);
+  let found: TranscriptShieldStep | undefined;
+  for (const event of span.events ?? []) {
+    if (
+      !SHIELD_STEP_EVENTS.includes(event.name) ||
+      stepCallOf(event) !== call
+    ) {
+      continue;
+    }
+    const attributes = event.attributes ?? {};
+    const decision = text(attributes.decision);
+    const step: TranscriptShieldStep = found ?? {
+      decision: '',
+      said: '',
+    };
+    // A refusal stands: what the Shield did after it (a completion row) does not undo it.
+    if (decision && step.decision !== 'deny') {
+      step.decision = decision;
+      step.said = SHIELD_DECISION_WORDS[decision] ?? decision;
+      step.rule = text(attributes.rule) ?? step.rule;
+      step.scope = text(attributes.scope) ?? step.scope;
+      step.decidedBy =
+        text(attributes.decided_by) ?? text(attributes.by) ?? step.decidedBy;
+    }
+    step.kind = step.kind ?? text(attributes.kind);
+    step.actionClass = step.actionClass ?? text(attributes.class);
+    step.path = step.path ?? text(attributes.path);
+    step.command = step.command ?? text(attributes.command);
+    found = step;
+  }
+  if (!found) {
+    return undefined;
+  }
+  const harness = text(span.attributes?.['shield.harness']);
+  return Object.fromEntries(
+    Object.entries({ ...found, harness }).filter(
+      ([, value]) => value !== undefined && value !== '',
+    ),
+  ) as TranscriptShieldStep;
+}
+
+/** The sentence for a step the Shield refused. */
+export function shieldRefusalText(step: TranscriptShieldStep): string {
+  return step.rule
+    ? `Refused by the Shield: ${step.said}, by the rule '${step.rule}'${step.scope ? ` (${step.scope})` : ''}.`
+    : `Refused by the Shield: ${step.said}.`;
 }
 
 /** The detail of a line: from its span when there is one. */
@@ -100,6 +198,30 @@ export function transcriptDetailOf(
     return {
       line,
       status: line.open ? 'running' : line.failed ? 'failed' : 'done',
+    };
+  }
+  const shield = shieldStepOf(line, span);
+  if (shield) {
+    // A harness's step: its turn's span holds every step, so the times are the line's.
+    const refused = shield.decision === 'deny';
+    return {
+      line,
+      span,
+      sent: line.text,
+      shield,
+      startedAt: line.at,
+      endedAt: line.ended,
+      durationMs:
+        line.ended === undefined
+          ? undefined
+          : Math.max(0, line.ended - line.at),
+      status: line.open ? 'running' : refused || line.failed ? 'failed' : 'ok',
+      error: refused ? shieldRefusalText(shield) : undefined,
+      ids: {
+        traceId: span.trace_id,
+        spanId: span.span_id,
+        ...(span.parent_span_id ? { parentSpanId: span.parent_span_id } : {}),
+      },
     };
   }
   const attributes = span.attributes ?? {};

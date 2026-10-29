@@ -7,7 +7,8 @@
  * The message views of a scene (SCENES S2, S3): the transcript as rows and
  * as a mermaid sequence diagram from the one list of lines, the three
  * views under one switch, the drill-down, the selection the stage shares,
- * and the JSON export. mermaid is loaded by `SequenceDiagram` when the
+ * the JSON export, and a recording played at its recorded pace
+ * (`useSceneRecording`, `RecordingLabel`). mermaid is loaded by `SequenceDiagram` when the
  * view opens, never from here.
  *
  * @module components/teams/transcript
@@ -23,3 +24,6 @@ export * from './TranscriptTable';
 export * from './SequenceDiagram';
 export * from './TranscriptDetail';
 export * from './TranscriptViews';
+export * from './recordingPlayback';
+export * from './useSceneRecording';
+export * from './RecordingLabel';

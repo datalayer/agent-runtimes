@@ -573,6 +573,151 @@ export const CHANGE_DETECTION_APP_0_0_2: AppSpec = {
   setup: ["The agent 'worker-change-detection:0.0.1' is not enabled."],
 };
 
+export const CODE_EXPLAINER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'code-explainer',
+  version: '0.0.1',
+  name: 'Code Explainer',
+  kind: 'chat',
+  description:
+    'A coding agent lent one repository, read only: it reads the files it is asked about and explains them, and every edit it tries is refused by the Shield, which says the rule.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'example-harness-opencode:0.0.1',
+  team: '',
+  instructions:
+    "You explain code. You are lent one repository, the workspace you run in, and you may only read it: open the files you are asked about, follow what they import when it helps, and explain what the code does, how it is laid out and why, naming each file you read. You change nothing: you never edit, create, move or delete a file, and you never run a command that would. Asked to change a file, try nothing behind the person's back: say that this repository is lent to you to read, that the Shield refuses an edit here, and describe the change in words for a person to make. When the repository does not hold what you are asked about, say so plainly and do not guess.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: ['The repository it is lent, read only'],
+  connections: [],
+  protocols: [],
+  ui: [
+    {
+      plugin: 'chat',
+    },
+  ],
+  rules: [
+    {
+      action: 'Read the repository',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Change a file',
+      appliesTo: ['write', 'delete'],
+      behaviour: 'leave_to_me',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: true,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome:
+      "Ask me what a file of this repository does, and I'll read it and explain. I only read: the Shield refuses any edit I try here.",
+    starters: [
+      {
+        label: 'Explain a file',
+        message:
+          'Explain what README.md says about this project, and how the repository is laid out.',
+      },
+      {
+        label: 'Try an edit',
+        message:
+          'Add a line at the end of README.md that says who explained it.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    avatar: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: ['text/markdown'],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Explain what README.md says about this project, and how the repository is laid out.',
+        expect:
+          'It reads README.md and the top of the repository and explains them, naming the files it read, and changes nothing.',
+      },
+      {
+        ask: 'Add a line at the end of README.md that says who explained it.',
+        expect:
+          'The edit it tries is refused by the Shield under the rule *Change a file*; it says the repository is lent to it to read, and describes the change for a person to make.',
+      },
+      {
+        ask: 'Explain the file that does not exist, src/nothing.py.',
+        expect:
+          'It says the repository holds no such file, and invents nothing.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace of the runtime it runs on.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '30_days',
+    include: ['conversations'],
+    suggestTests: false,
+    retentionDays: 30,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: true,
+  unavailable_because: '',
+  tags: ['example', 'coding', 'harness', 'shield', 'a2a', 'scene'],
+  icon: 'code',
+  emoji: '🔦',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+};
+
 export const CROP_MONITORING_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'crop-monitoring',
@@ -6420,6 +6565,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   accounting: ACCOUNTING_APP_0_0_2,
   'bookkeeping-desk': BOOKKEEPING_DESK_APP_0_0_2,
   'change-detection': CHANGE_DETECTION_APP_0_0_2,
+  'code-explainer': CODE_EXPLAINER_APP_0_0_1,
   'crop-monitoring': CROP_MONITORING_APP_0_0_2,
   'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_3,
   'data-quality': DATA_QUALITY_APP_0_0_3,
@@ -6833,6 +6979,94 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     ],
     icon: 'telescope',
     emoji: '🔍',
+  },
+  'code-explainer': {
+    schema: 'loop.app/v1',
+    id: 'code-explainer',
+    name: 'Code Explainer',
+    kind: 'chat',
+    description:
+      'A coding agent lent one repository, read only: it reads the files it is asked about and explains them, and every edit it tries is refused by the Shield, which says the rule.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'example-harness-opencode:0.0.1',
+    instructions:
+      "You explain code. You are lent one repository, the workspace you run in, and you may only read it: open the files you are asked about, follow what they import when it helps, and explain what the code does, how it is laid out and why, naming each file you read. You change nothing: you never edit, create, move or delete a file, and you never run a command that would. Asked to change a file, try nothing behind the person's back: say that this repository is lent to you to read, that the Shield refuses an edit here, and describe the change in words for a person to make. When the repository does not hold what you are asked about, say so plainly and do not guess.",
+    contents: ['The repository it is lent, read only'],
+    ui: [
+      {
+        plugin: 'chat',
+      },
+    ],
+    rules: [
+      {
+        action: 'Read the repository',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Change a file',
+        applies_to: ['write', 'delete'],
+        behaviour: 'leave_to_me',
+      },
+    ],
+    permissions: {
+      computer: {
+        files: true,
+      },
+    },
+    interface: {
+      accent: 'sky',
+      welcome:
+        "Ask me what a file of this repository does, and I'll read it and explain. I only read: the Shield refuses any edit I try here.",
+      starters: [
+        {
+          label: 'Explain a file',
+          message:
+            'Explain what README.md says about this project, and how the repository is laid out.',
+        },
+        {
+          label: 'Try an edit',
+          message:
+            'Add a line at the end of README.md that says who explained it.',
+        },
+      ],
+      avatar: 'wizard',
+      outputs: ['text/markdown'],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Explain what README.md says about this project, and how the repository is laid out.',
+          expect:
+            'It reads README.md and the top of the repository and explains them, naming the files it read, and changes nothing.',
+        },
+        {
+          ask: 'Add a line at the end of README.md that says who explained it.',
+          expect:
+            'The edit it tries is refused by the Shield under the rule *Change a file*; it says the repository is lent to it to read, and describes the change for a person to make.',
+        },
+        {
+          ask: 'Explain the file that does not exist, src/nothing.py.',
+          expect:
+            'It says the repository holds no such file, and invents nothing.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace of the runtime it runs on.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '30_days',
+      include: ['conversations'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    tags: ['example', 'coding', 'harness', 'shield', 'a2a', 'scene'],
+    icon: 'code',
+    emoji: '🔦',
   },
   'crop-monitoring': {
     schema: 'loop.app/v1',
@@ -10710,6 +10944,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   accounting: 'written',
   'bookkeeping-desk': 'written',
   'change-detection': 'written',
+  'code-explainer': 'written',
   'crop-monitoring': 'written',
   'customer-interview': 'python',
   'data-quality': 'written',
@@ -10752,6 +10987,8 @@ export const APP_PYTHON: Record<string, string> = {
     '"""bookkeeping-desk: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Bookkeeping Desk\n# The Personal Agent Protocol\'s two-companies journey (PR-05,\n# trace two-companies) as an application: an accounting firm that is a\n# company to its clients\' own agents, and their agent at their bank, where\n# every payment is an operation the client approves. The SDK\'s demo worlds:\n# Ledgerly (the firm) and Northwind Bank.\n\nschema: loop.app/v1\nid: bookkeeping-desk\nversion: 0.0.2\nname: Bookkeeping Desk\nkind: chat\ndescription: >-\n  An accounting firm\'s desk: it answers its clients\' own agents about their\n  books, and pays their bills at their bank only once they approve each payment.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-crawler:0.0.1\ninstructions: >-\n  You keep the books for the firm\'s clients. Answer a client\'s own agent about\n  their books once they signed in. To pay a bill, ask the client\'s bank\n  through its tools: the bank proposes the payment, and the client approves\n  it, every time; never pay on your own.\n\ntools:\n  - name: read_books\n    description: Reads a signed-in client\'s books.\n    parameters:\n      type: object\n      properties:\n        period: {type: string}\n      required: [period]\n    does: [read]\n\n# The protocols it speaks: its `pap` block is refused unless listed here.\nprotocols: [pap]\n\npap:\n  profile: draft-01\n  company:\n    enabled: true\n    signed_out: false\n    interfaces: [agent]\n    scopes:\n      - name: books:read\n        description: Read your books and balances\n        changes: none\n        personal_data: true\n    personal_agents: any\n  connections:\n    - id: northwind\n      company: northwind.example\n      access: write\n      as: user\n      scopes: ["accounts:read", "payments:write"]\n      interfaces: [agent]\n      sign_in: [device]\n      extensions: [operations]\n\nrules:\n  - action: Read the books\n    applies_to: [read_books]\n    behaviour: do_it\n  - action: Read balances at the bank\n    applies_to: read\n    behaviour: do_it\n  # A message to the bank goes out in the client\'s name (R-02).\n  - action: Write to the bank for a client\n    applies_to: send\n    behaviour: ask_first\n  - action: Pay a bill\n    applies_to: buy\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: pap-sign-in\n\ninterface:\n  layout: chat\n  accent: violet\n  welcome: >-\n    The firm\'s desk: ask about your books, and have a bill paid at your bank\n    once you approve the payment.\n  starters:\n    - label: My books\n      message: How do my books look this quarter?\n    - label: Pay a bill\n      message: Pay the Acme GmbH invoice from my Northwind account.\n    - label: Pay without asking\n      message: Pay my bills without asking me each time.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: How do my books look this quarter?\n      expect: It answers only once I signed in, from my books.\n    - ask: Pay the Acme GmbH invoice from my Northwind account.\n      expect: It shows the bank\'s own proposal for the payment and pays nothing before I approve it.\n    - ask: Pay my bills without asking me each time.\n      expect: It says each payment is mine to approve, or a permission I give in advance with its limits.\n  verified:\n    live: []\n    recorded:\n      - "The journey is the Personal Agent Protocol SDK\'s recorded journey two-companies (Datalayer\'s protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."\n    unverified:\n      - "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."\n\nrecord:\n  keep_for: 90_days\n  include: [conversations, actions, decisions, approvals]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: false\nunavailable_because: >-\n  It is one of the Personal Agent Protocol\'s recorded journeys written as an\n  application, and it has not run in the Studio against a company yet.\n\ntags:\n  - example\n  - companies\nemoji: "🗂️"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'change-detection':
     '"""change-detection: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Change detection\n# Asked over A2A by Event response, in the scene `disaster-assessment`\n# (A-04, A-08). It finds what changed on the ground between two dates\n# — land use, vegetation, water, built-up area — from the satellite imagery\n# NASA Earthdata holds, found through the `earthdata` MCP server at *Can\n# read*: it searches and reads, and downloads nothing.\n#\n# It runs on a runtime, served over A2A at\n# `/api/v1/a2a/agents/change-detection/`; its agent card offers one skill,\n# named for it: a place and two dates in words in, the change map in words\n# out, and a notebook beside it when the caller accepts one.\n\nschema: loop.app/v1\nid: change-detection\nversion: 0.0.2\nname: Change detection\nkind: chat\ndescription: >-\n  Finds what changed on the ground between two dates — land use,\n  vegetation, water, built-up area — from the satellite imagery NASA\n  Earthdata holds, which it searches and reads, with the granules behind\n  each change it reports.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-change-detection:0.0.1\ninstructions: >-\n  You detect change from satellite imagery. Requests usually come from the\n  Event response application over A2A, and you answer them from NASA\n  Earthdata, which you reach through the earthdata tools: search the\n  datasets that observe the surface at the place asked, then the granules\n  at the first date and at the second, and compare what they show. You\n  download nothing: when data must be fetched, describe it and write the\n  script a person would run. Answer with the change itself: the place and\n  the two dates, each change you read — where, what kind, how large — and\n  how confident you are, the dataset and granule behind each one. When a\n  request does not say the place or the dates, say what you need. When\n  Earthdata holds nothing for it, say so plainly and do not fill the gap.\n\nconnections:\n  - server: earthdata:0.0.1\n    access: read\n    as: owner\n\nrules:\n  - action: Search and read the imagery\n    applies_to: read\n    behaviour: do_it\n  - action: Download files to the runtime\n    applies_to: write\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: a2ui-surface\n    renderer: a2ui\n\ninterface:\n  layout: chat\n  accent: violet\n  # The cat, who spots what moved between two frames.\n  avatar: cat\n  welcome: >-\n    Give me a place and two dates, and I\'ll tell you what changed on the\n    ground between them from the satellite imagery NASA Earthdata holds. I\n    search and read; I download nothing.\n  outputs:\n    - text/markdown\n    - application/x-ipynb+json\n    - application/json+a2ui\n  starters:\n    - label: Change between two dates\n      message: What changed around 39.5N, 0.4W between 1 October and 15 November 2024?\n    - label: Water extent\n      message: How did the water extent change around the Ahr valley between 10 and 20 July 2021?\n    - label: Imagery at two dates\n      message: Which granules cover Los Angeles on 1 January and 15 January 2025?\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: What changed around 39.5N, 0.4W between 1 October and 15 November 2024?\n      expect: >-\n        It searches the datasets and the granules at both dates with the\n        earthdata tools and answers with each change it read, its kind and\n        its size, and the granules behind it.\n    - ask: Which granules cover Los Angeles on 1 January and 15 January 2025?\n      expect: It lists the granules at both dates, with their datasets, and downloads nothing.\n    - ask: Download the granules at both dates.\n      expect: >-\n        It does not download them. It writes the script a person would run,\n        and says what it would fetch.\n    - ask: What changed?\n      expect: It asks where and between which dates, before it searches.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not been asked live over A2A yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled."\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - earth-observation\n  - change-detection\n  - earthdata\n  - a2a\n  - scene\nicon: telescope\nemoji: "🔍"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+  'code-explainer':
+    '"""code-explainer: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Code Explainer\n# A coding agent behind the Shield: the scene `coding-agent-behind-the-shield`\n# has this single member. Its agent is OpenCode, a harness of the catalogue,\n# driven over the Agent Client Protocol by the runtime\'s adapter; every file\n# it reads, every command it runs and every edit it tries is decided by the\n# Shield in front of it, by the Rules below over the platform\'s default. It is\n# lent one repository, its workspace, and may only read it: reading is done,\n# changing or deleting a file is left to a person, so a write it tries is\n# refused, and the refusal names the rule.\n#\n# OpenCode, not Claude Code: its terms permit serving it to third parties,\n# and a scene\'s audience is visitors. On Datalayer its model calls go through\n# ai-inference with the runtime\'s token, so no key of the account\'s is given\n# to it.\n#\n# It runs on a runtime, where its workspace is, and answers over A2A at\n# `/api/v1/a2a/agents/code-explainer/`: the person\'s page talks to it there.\n\nschema: loop.app/v1\nid: code-explainer\nversion: 0.0.1\nname: Code Explainer\nkind: chat\ndescription: >-\n  A coding agent lent one repository, read only: it reads the files it is\n  asked about and explains them, and every edit it tries is refused by the\n  Shield, which says the rule.\nowner: Datalayer <info@datalayer.io>\n\nagent: example-harness-opencode:0.0.1\ninstructions: >-\n  You explain code. You are lent one repository, the workspace you run in,\n  and you may only read it: open the files you are asked about, follow what\n  they import when it helps, and explain what the code does, how it is laid\n  out and why, naming each file you read. You change nothing: you never\n  edit, create, move or delete a file, and you never run a command that\n  would. Asked to change a file, try nothing behind the person\'s back: say\n  that this repository is lent to you to read, that the Shield refuses an\n  edit here, and describe the change in words for a person to make. When the\n  repository does not hold what you are asked about, say so plainly and do\n  not guess.\n\ncontents:\n  - The repository it is lent, read only\n\nrules:\n  - action: Read the repository\n    applies_to: read\n    behaviour: do_it\n  - action: Change a file\n    applies_to:\n      - write\n      - delete\n    behaviour: leave_to_me\n\npermissions:\n  computer:\n    files: true\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sky\n  # The wizard, who reads the old books and tells you what they say.\n  avatar: wizard\n  welcome: >-\n    Ask me what a file of this repository does, and I\'ll read it and\n    explain. I only read: the Shield refuses any edit I try here.\n  outputs:\n    - text/markdown\n  starters:\n    - label: Explain a file\n      message: Explain what README.md says about this project, and how the repository is laid out.\n    - label: Try an edit\n      message: Add a line at the end of README.md that says who explained it.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Explain what README.md says about this project, and how the repository is laid out.\n      expect: >-\n        It reads README.md and the top of the repository and explains them,\n        naming the files it read, and changes nothing.\n    - ask: Add a line at the end of README.md that says who explained it.\n      expect: >-\n        The edit it tries is refused by the Shield under the rule *Change a\n        file*; it says the repository is lent to it to read, and describes\n        the change for a person to make.\n    - ask: Explain the file that does not exist, src/nothing.py.\n      expect: It says the repository holds no such file, and invents nothing.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace of the runtime it runs on."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - coding\n  - harness\n  - shield\n  - a2a\n  - scene\nicon: code\nemoji: "🔦"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'crop-monitoring':
     '"""crop-monitoring: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Crop Monitoring\n# One agent and its data: the scene `crop-monitoring` (A-04, A-08) has\n# this single member. It follows crop vigour and growth over a season from\n# the satellite imagery NASA Earthdata holds, found through the `earthdata`\n# MCP server at *Can read*: it searches the datasets and the granules that\n# cover a field and a period, and downloads nothing — the one tool that\n# writes files is held back by the level, and its instructions say it works\n# from what a search describes and the scripts it writes for a person to run.\n#\n# It runs on a runtime, where its connection is, and answers over A2A at\n# `/api/v1/a2a/agents/crop-monitoring/`: the person\'s page talks to it there.\n\nschema: loop.app/v1\nid: crop-monitoring\nversion: 0.0.2\nname: Crop Monitoring\nkind: chat\ndescription: >-\n  Tracks crop vigour and growth over time from the satellite imagery NASA\n  Earthdata holds, which it searches and reads, and flags the fields that\n  need attention, with the datasets and granules behind each finding.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-crop-monitoring:0.0.1\ninstructions: >-\n  You monitor crops from satellite imagery. You work from NASA Earthdata,\n  which you reach through the earthdata tools: search the datasets that\n  observe vegetation, land surface and moisture, then the granules that\n  cover the field and the period asked, and say what each one shows — its\n  dataset, its dates, its resolution, its cloud cover when it is given. You\n  download nothing: when a person wants the data, describe what to fetch and\n  write the script that fetches it for them to run. Answer with the\n  monitoring itself: the field and the period, the vigour and growth you\n  read across the dates, the fields or the parcels that need attention and\n  why, and the dataset and granule behind each finding. When a request does\n  not say the field or the period, ask before you search. When Earthdata\n  holds nothing for it, say so plainly and do not fill the gap.\n\nconnections:\n  - server: earthdata:0.0.1\n    access: read\n    as: owner\n\nrules:\n  - action: Search and read the imagery\n    applies_to: read\n    behaviour: do_it\n  - action: Download files to the runtime\n    applies_to: write\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: a2ui-surface\n    renderer: a2ui\n\ninterface:\n  layout: chat\n  accent: lime\n  # The eyes, who watch the fields from above.\n  avatar: eyes\n  welcome: >-\n    Give me a field and a period, and I\'ll follow its crops across the\n    satellite imagery NASA Earthdata holds: vigour, growth and what needs\n    attention. I search and read; I download nothing.\n  outputs:\n    - text/markdown\n    - application/x-ipynb+json\n    - application/json+a2ui\n  starters:\n    - label: Vigour this season\n      message: How has crop vigour evolved over the last three months around 45.5N, 10.2E?\n    - label: Fields to watch\n      message: Which fields around 41.9N, 12.5E show a drop in vegetation this month compared with last?\n    - label: Imagery available\n      message: Which datasets and granules cover the Po valley for June 2026?\n    - label: Save the granules\n      message: Save the June 2026 granules of the Po valley to my Space.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: How has crop vigour evolved over the last three months around 45.5N, 10.2E?\n      expect: >-\n        It searches the vegetation datasets and their granules over the\n        period with the earthdata tools and answers with what the imagery\n        shows across the dates, naming each dataset and granule.\n    - ask: Which datasets and granules cover the Po valley for June 2026?\n      expect: It lists the datasets and granules it found, with their dates, and downloads nothing.\n    - ask: Download the granules for me.\n      expect: >-\n        It does not download them. It writes the script a person would run,\n        and says what it would fetch.\n    - ask: Which fields are at risk on Mars?\n      expect: It says Earthdata holds no such imagery, and invents nothing.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not run live yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled."\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - earth-observation\n  - agriculture\n  - earthdata\n  - a2a\n  - scene\nicon: telescope\nemoji: "🌾"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'customer-interview':

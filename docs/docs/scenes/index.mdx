@@ -1,0 +1,98 @@
+---
+title: Scenes
+---
+
+# Scenes
+
+A **scene** is a team of agents put on a stage: who is on it, what they say
+to each other, and what the audience sees. A scene is written as a scene
+spec (`schema: loop.scene/v1`) in [agentspecs](https://agentspecs.datalayer.tech/docs/scenes);
+this page is about how a scene looks once it plays: its backdrop, the three
+ways to read its messages, and the drill-down into one message.
+
+## The backdrop
+
+Every scene is drawn on a **backdrop**. The scene's spec chooses it, under
+`stage.backdrop`, and the scene is drawn the same way wherever it plays: in
+the Studio's editor, on its stage, on the home page.
+
+```yaml
+stage:
+  backdrop: hero
+```
+
+| Backdrop | What you see |
+| --- | --- |
+| `studio` | Each member is a character with a speech balloon; each message flows along its line. A scene that names no backdrop is drawn this way. |
+| `hero` | Round faces on a deep tint, thin lines, and a dot that flies along a line with each message: out while one member asks, back while the other answers. |
+| `plain` | Boxes and arrows that do not move, with what is happening written on each arrow. Made for a printout or a slide. |
+
+The demo scenes are all drawn on `hero`. If you ask for reduced motion in
+your system settings, nothing flies: the dot stands at the end the message
+goes to.
+
+In code, `A2ATeamGraph` draws the scene and takes the backdrop as a prop;
+`stageBackdropOf(scene)` reads it from a scene spec, `studio` when the
+scene says none or names one that does not exist:
+
+```tsx
+import {
+  A2ATeamGraph,
+  stageBackdropOf,
+} from '@datalayer/agent-runtimes/lib/components/teams';
+
+<A2ATeamGraph entry={sales} peers={[accounting]} connected backdrop={stageBackdropOf(scene)} />;
+```
+
+`SCENE_BACKDROP_CHOICES` lists the three, with a name and one line each, for
+a chooser.
+
+## The three message views
+
+Under the stage, the **transcript** says what happened, in order: who asked
+whom, which tool was called, what came back. You can read it three ways,
+with the switch above it:
+
+- **Lines** — one line per message, with its time: *Sales → Accounting:
+  Which invoices are open?*, *Accounting → Odoo: odoo_accounting_list_invoices*.
+- **Table** — one row per message, sortable by time: who, to whom, over what
+  (A2A between members, MCP to a system, a tool of the member's own), how
+  long it took, and whether it failed. A failed row is marked in red.
+- **Sequence** — a sequence diagram: one column per member and system, an
+  arrow per question, a dashed arrow per answer, a red box around an
+  exchange that failed.
+
+The three views show the same lines. Filter them by member or by kind, keep
+only what failed (*Failed only*) or put it first (*Failed first*), and copy
+the view: the lines as text, the table as Markdown, the diagram as its
+mermaid source. *Export JSON* saves the lines as a file you can read back,
+in a test or with `loop`.
+
+A coding agent's steps are lines too. When a member is a coding agent
+working behind the Shield, each file it reads and each edit it tries is a
+line to **its workspace**: *Code Explainer → its workspace: Read README.md*.
+An edit the Shield refused is marked failed.
+
+In code: `TranscriptViews` draws the three views from the lines
+(`transcriptOfSpans` reads them from the spans the Agent Inspector reads).
+
+## The drill-down
+
+Click a line, a row or an arrow, and the **drill-down** opens beside the
+view (under it on a narrow screen). It shows what that one message carried:
+
+- the words sent and the words answered;
+- for a tool call, the tool's name, its arguments and its result, when they
+  were recorded;
+- for a coding agent's step, **what the Shield decided** — *do it*, *ask me
+  first* or *leave it to me* — and the **rule** it decided by, such as the
+  application's rule *Change a file*;
+- when it started and ended, and how long it took;
+- whether it succeeded, and the error when it failed;
+- the span and trace ids, and *Open in the Inspector*.
+
+The same line is highlighted on the stage: its edge gets a halo on every
+backdrop, and clicking an edge selects its latest message.
+
+A line played from a [recording](./stages.mdx#recordings) has no span behind it:
+the drill-down says so.

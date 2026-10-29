@@ -11,8 +11,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { OtelSpan } from '@datalayer/core/lib/otel/types';
-import { spanOfLine, transcriptDetailOf } from '../transcriptDetailRules';
-import { OPEN_AND_FAILED, SCRIPTED, recorded } from './fixture';
+import {
+  shieldStepOf,
+  spanOfLine,
+  transcriptDetailOf,
+} from '../transcriptDetailRules';
+import { HARNESS_STEPS, OPEN_AND_FAILED, SCRIPTED, recorded } from './fixture';
 
 describe('transcriptDetailOf', () => {
   it('reads a failed call: the tool, its arguments, the error, the ids', () => {
@@ -85,6 +89,39 @@ describe('transcriptDetailOf', () => {
     expect(running.status).toBe('running');
     expect(running.endedAt).toBeUndefined();
     expect(running.tool?.name).toBe('odoo_accounting_list_invoices');
+  });
+
+  it('reads a harness step: the Shield’s decision and the rule it refused by', () => {
+    const { spans, lines } = recorded(HARNESS_STEPS);
+    const [, read, edit] = lines;
+    expect(read.to).toBe('its workspace');
+    const span = spanOfLine(edit, spans);
+    expect(span?.span_name).toBe('shield.turn');
+    const refused = transcriptDetailOf(edit, span);
+    expect(refused.status).toBe('failed');
+    expect(refused.shield).toEqual({
+      decision: 'deny',
+      said: 'leave it to me',
+      rule: 'Change a file',
+      scope: 'team',
+      decidedBy: 'policy',
+      kind: 'edit',
+      actionClass: 'write',
+      path: 'README.md',
+      harness: 'opencode',
+    });
+    expect(refused.error).toBe(
+      "Refused by the Shield: leave it to me, by the rule 'Change a file' (team).",
+    );
+    expect(refused.durationMs).toBe(0);
+    const allowed = transcriptDetailOf(read, spanOfLine(read, spans));
+    expect(allowed.status).toBe('ok');
+    expect(allowed.shield?.said).toBe('do it');
+    expect(allowed.shield?.rule).toBe('Read the repository');
+    expect(allowed.durationMs).toBe(1000);
+    expect(allowed.error).toBeUndefined();
+    // Any other line of the turn's span is not a step.
+    expect(shieldStepOf({ key: 's91/call-z:called' }, span!)).toBeUndefined();
   });
 
   it('has no span for a line from a recording', () => {

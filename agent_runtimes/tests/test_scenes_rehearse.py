@@ -597,6 +597,37 @@ def test_rehearse_passes_in_the_validate_tab_s_words(
     assert "Rehearsal: 1 of 1 beats passed. The scene is Live." in result.output
 
 
+def test_rehearse_writes_what_it_played_as_a_transcript(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """`--transcript`: the lines played, the beats they belong to, the verdict — what `record` keeps."""
+    from agent_runtimes.loop.scenes.transcript import lines_of_json
+
+    _here(monkeypatch, cast())
+    path = tmp_path / "run.json"
+    result = runner.invoke(
+        scenes_command.app,
+        [
+            "rehearse",
+            "sales-and-accounting",
+            "--beat",
+            "open-invoices",
+            "--transcript",
+            str(path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    written = json.loads(path.read_text())
+    assert written["version"] == 1 and written["scene"] == "sales-and-accounting"
+    assert written["rehearsal"]["passed"] is True
+    assert written["rehearsal"]["where"] == "on this machine"
+    [beat] = written["beats"]
+    assert beat["beat"] == "open-invoices" and beat["first"] == 0
+    lines = lines_of_json(path.read_text())
+    assert beat["count"] == len(lines) and lines[0].who == "You"
+    assert any(line.text == "odoo_accounting_list_invoices" for line in lines)
+
+
 def test_rehearse_fails_with_what_differed_and_exits_1(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

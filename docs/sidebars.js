@@ -45,6 +45,12 @@ const sidebars = {
         'apps/inbox-triage',
       ],
     },
+    {
+      type: 'category',
+      label: 'Scenes',
+      link: { type: 'doc', id: 'scenes/index' },
+      items: ['scenes/stages'],
+    },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },
     { type: 'doc', id: 'protocols/index', label: 'Protocols' },

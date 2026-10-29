@@ -30,7 +30,13 @@ import {
   sequenceCastOf,
 } from '../TranscriptViews';
 import type { MermaidLike } from '../SequenceDiagram';
-import { MEMBERS, OPEN_AND_FAILED, SCRIPTED, recorded } from './fixture';
+import {
+  HARNESS_STEPS,
+  MEMBERS,
+  OPEN_AND_FAILED,
+  SCRIPTED,
+  recorded,
+} from './fixture';
 
 afterEach(cleanup);
 
@@ -186,6 +192,39 @@ describe('TranscriptViews', () => {
     fireEvent.click(detail.querySelector('[data-transcript-detail-close]')!);
     expect(container.querySelector('[data-transcript-detail]')).toBeNull();
     expect(onSelect).toHaveBeenLastCalledWith(null);
+  });
+
+  it('opens a harness step refused by the Shield with its rule', () => {
+    const { lines, spans } = recorded(HARNESS_STEPS);
+    const { container } = draw(
+      <TranscriptViews
+        lines={lines}
+        members={MEMBERS}
+        spans={spans}
+        loadMermaid={load}
+      />,
+    );
+    const edit = container.querySelectorAll<HTMLElement>(
+      '[data-transcript-line]',
+    )[2];
+    fireEvent.click(edit);
+    const detail = container.querySelector<HTMLElement>(
+      '[data-transcript-detail]',
+    )!;
+    expect(detail.dataset.transcriptDetailStatus).toBe('failed');
+    const shield = detail.querySelector<HTMLElement>(
+      '[data-transcript-detail-shield]',
+    )!;
+    expect(shield.dataset.transcriptDetailShield).toBe('deny');
+    expect(shield.textContent).toContain('leave it to me');
+    expect(
+      detail.querySelector('[data-transcript-detail-rule]')!.textContent,
+    ).toBe('by the rule \u2018Change a file\u2019 (team)');
+    expect(
+      detail.querySelector('[data-transcript-detail-error]')!.textContent,
+    ).toBe(
+      "Refused by the Shield: leave it to me, by the rule 'Change a file' (team).",
+    );
   });
 
   it('reads the refused call from its span in the table, and opens the Inspector', () => {

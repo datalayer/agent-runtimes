@@ -4155,6 +4155,13 @@ class SceneStageSpec(BaseModel):
         description="How long the scene plays before it rests",
     )
     pace: Literal["quick", "steady", "slow"] = Field(default="steady")
+    backdrop: Literal["studio", "hero", "plain"] = Field(
+        default="studio",
+        description=(
+            "How the stage is drawn wherever the scene plays: `studio`, `hero` "
+            "or `plain`; `studio` when the scene says none"
+        ),
+    )
 
 
 class SceneAudienceSpec(BaseModel):

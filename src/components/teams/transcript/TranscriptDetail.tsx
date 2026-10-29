@@ -7,7 +7,8 @@
  * The drill-down (SCENES S3-01): the selected line's span — the words sent
  * and answered, a tool's name, arguments and result when the span recorded
  * them, when it started and ended, its status and an error's message, the
- * span and trace ids — and *Open in the Inspector*. For a line read from a
+ * span and trace ids, and for a coding harness's step what the Shield
+ * decided and by which rule — and *Open in the Inspector*. For a line read from a
  * recording, it says there is no span to open.
  *
  * @module components/teams/transcript/TranscriptDetail
@@ -147,6 +148,54 @@ export function TranscriptDetail({
         >
           {NO_SPAN_TEXT}
         </Text>
+      )}
+      {detail.shield && (
+        <Part label="The Shield">
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={1}
+            data-transcript-detail-shield={detail.shield.decision}
+          >
+            <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
+              <Label
+                size="small"
+                variant={
+                  detail.shield.decision === 'deny'
+                    ? 'danger'
+                    : detail.shield.decision === 'ask'
+                      ? 'attention'
+                      : 'success'
+                }
+              >
+                {detail.shield.said || 'no decision'}
+              </Label>
+              {detail.shield.rule && (
+                <Text data-transcript-detail-rule="">
+                  {`by the rule \u2018${detail.shield.rule}\u2019`}
+                  {detail.shield.scope ? ` (${detail.shield.scope})` : ''}
+                </Text>
+              )}
+            </Box>
+            {(detail.shield.decidedBy || detail.shield.harness) && (
+              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                {[
+                  detail.shield.decidedBy
+                    ? `decided by the ${detail.shield.decidedBy}`
+                    : '',
+                  detail.shield.harness ? `for ${detail.shield.harness}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </Text>
+            )}
+            {(detail.shield.path || detail.shield.command) && (
+              <Text sx={{ fontFamily: 'mono', fontSize: 0 }}>
+                {detail.shield.command ?? detail.shield.path}
+              </Text>
+            )}
+          </Box>
+        </Part>
       )}
       {detail.tool ? (
         <>

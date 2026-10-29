@@ -14,7 +14,10 @@
  * tool call an `execute_tool` span (the member and, for an MCP call, the
  * server it reaches: a connection of the member's), and a request to
  * another member an `a2a` span (who asked whom, in what words, and what came
- * back as its events). Once a run is over, the same lines are read from its
+ * back as its events). A coding harness's turn is a `shield.turn` span whose
+ * events are the Shield's decisions on each of its steps: one line per step,
+ * *Code Explainer → its workspace: Read README.md*, failed when the Shield
+ * refused it ({@link shieldStepsOf}). Once a run is over, the same lines are read from its
  * record (`RecordEntry`: a `turn`, a `tool_call`), the session's entries as
  * ai-agents kept them.
  *
@@ -75,7 +78,17 @@ const TOOL_HOMES: Record<string, string> = {
   skill: 'a skill',
   codemode: 'codemode',
   runtime: 'its runtime',
+  harness: 'its workspace',
 };
+
+/** Where a harness's steps go (agentspecs' `WORKSPACE`): its files, its terminal. */
+export const WORKSPACE = TOOL_HOMES.harness;
+
+/** The Shield's events that decide a harness's step, each naming the step's call. */
+export const SHIELD_STEP_EVENTS: readonly string[] = [
+  'shield.tool_call',
+  'shield.permission',
+];
 
 /** Whether a call goes to a tool's home (*the page*, *a skill*…) rather than to a connection over MCP. */
 export function isToolHome(to: string | undefined): boolean {
@@ -162,6 +175,113 @@ function onceEach(lines: SceneTranscriptLine[]): SceneTranscriptLine[] {
   });
 }
 
+/** Whether a span is a coding harness's turn behind the Shield. */
+export const isShieldTurn = (span: OtelSpan): boolean =>
+  span.span_name === 'shield.turn' ||
+  Object.prototype.hasOwnProperty.call(span.attributes ?? {}, 'shield.harness');
+
+/** The call a Shield event decides, as a line's key carries it (no `:`). */
+export const stepCallOf = (event: { attributes?: Attributes }): string =>
+  text(event.attributes?.tool_call_id).replace(/:/g, '_');
+
+/** A step in words: its title (*Read README.md*), else its path, command or kind. */
+function stepText(attributes: Attributes): string {
+  for (const name of ['title', 'path', 'command', 'url', 'kind']) {
+    const said = text(attributes[name]).trim();
+    if (said) {
+      return said;
+    }
+  }
+  return 'a step';
+}
+
+/**
+ * A harness's steps in a `shield.turn` span: one line per call the Shield
+ * decided, at its first decision, saying its title, ended when the call
+ * completed or failed, failed when the Shield refused it (any of its
+ * decisions a `deny`). Its key is `<span>/<call>:called`: the drill-down
+ * reads the Shield's rule from the span's events by it.
+ */
+export function shieldStepsOf(
+  span: OtelSpan,
+  member: SceneTranscriptMember,
+): SceneTranscriptLine[] {
+  const start = millis(span.start_time);
+  const steps = new Map<
+    string,
+    { at: number; text: string; failed: boolean; ended?: number }
+  >();
+  for (const event of span.events ?? []) {
+    if (!SHIELD_STEP_EVENTS.includes(event.name)) {
+      continue;
+    }
+    const call = stepCallOf(event);
+    if (!call) {
+      continue;
+    }
+    const attributes = event.attributes ?? {};
+    const at = millis(event.timestamp, start);
+    let step = steps.get(call);
+    if (!step) {
+      step = { at, text: '', failed: false };
+      steps.set(call, step);
+    }
+    if (
+      !step.text &&
+      ['title', 'path', 'command', 'url'].some(name =>
+        text(attributes[name]).trim(),
+      )
+    ) {
+      step.text = stepText(attributes);
+    }
+    if (attributes.decision === 'deny') {
+      step.failed = true;
+      step.ended = at;
+    }
+    if (attributes.status === 'completed' || attributes.status === 'failed') {
+      step.ended = at;
+      step.failed = step.failed || attributes.status === 'failed';
+    }
+  }
+  const lines: SceneTranscriptLine[] = [];
+  for (const [call, step] of steps) {
+    // A step the Shield saw no end of ends with the turn, or is still going.
+    const ended =
+      step.ended ??
+      (span.in_progress ? undefined : millis(span.end_time, step.at));
+    lines.push({
+      key: `${span.span_id}/${call}:called`,
+      at: step.at,
+      from: member.name,
+      to: WORKSPACE,
+      kind: 'called',
+      text: step.text || 'a step',
+      ...(ended === undefined ? { open: true } : { ended }),
+      ...(step.failed ? { failed: true } : {}),
+    });
+  }
+  return lines;
+}
+
+/** Whose turn a `shield.turn` span is: the agent of the turn above it, else its service. */
+function turnMember(
+  span: OtelSpan,
+  byId: ReadonlyMap<string, OtelSpan>,
+  members: readonly SceneTranscriptMember[],
+): SceneTranscriptMember {
+  let parent = span.parent_span_id ? byId.get(span.parent_span_id) : undefined;
+  for (let seen = 0; parent && seen < 32; seen += 1) {
+    const name = text(parent.attributes?.['gen_ai.agent.name']);
+    if (name) {
+      return memberNamed(name, members);
+    }
+    parent = parent.parent_span_id
+      ? byId.get(parent.parent_span_id)
+      : undefined;
+  }
+  return memberNamed(span.service_name, members);
+}
+
 /**
  * The transcript of a scene from the spans recorded while it works (the
  * Agent Inspector's, one tracer for every member).
@@ -171,6 +291,7 @@ export function transcriptOfSpans(
   members: readonly SceneTranscriptMember[],
 ): SceneTranscriptLine[] {
   const lines: SceneTranscriptLine[] = [];
+  const byId = new Map(spans.map(span => [span.span_id, span]));
   // A tool call under which an A2A request sits is the asking itself: the
   // request says it, with its words.
   const asking = new Set<string>();
@@ -185,6 +306,10 @@ export function transcriptOfSpans(
     const end = millis(span.end_time, start);
     const operation = attributes['gen_ai.operation.name'];
     const failed = span.status_code === 'ERROR';
+    if (isShieldTurn(span)) {
+      lines.push(...shieldStepsOf(span, turnMember(span, byId, members)));
+      continue;
+    }
     if (operation === 'invoke_agent') {
       const agent = memberNamed(
         text(attributes['gen_ai.agent.name']) || span.service_name,

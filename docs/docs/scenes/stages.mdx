@@ -1,0 +1,136 @@
+---
+title: Stages
+---
+
+# Stages
+
+A **stage** is a scene that is shipped and kept running, so that anyone can
+watch it play. The Studio's *Stages* step lists them. A stage is drawn on
+its scene's [backdrop](./index.mdx#the-backdrop), shows the three message views
+and the drill-down, and says whether it is **Live**: whether its last
+rehearsal passed.
+
+## The demo stages
+
+Five stages are kept running under Datalayer's demo account, all on the
+`hero` backdrop:
+
+| Stage | What happens |
+| --- | --- |
+| Sales & Accounting | A sales desk asks Accounting for the figures; Accounting reads the Odoo books and answers. |
+| Month-end Close | One agent drives the close from the Odoo books: the checklist, the accruals, the expenses. |
+| Crop Monitoring | One agent follows crop vigour from the satellite imagery NASA Earthdata holds. |
+| Disaster Assessment | An event desk asks two specialists what a disaster affected and what changed on the ground. |
+| A Coding Agent Behind the Shield | A coding agent, lent one repository to read, explains a file; the edit it is then asked for is refused by the Shield. |
+
+## Rehearsals
+
+A scene's spec says, for each beat, what its transcript must look like: the
+lines in order, the words the answer must say and must not say, and how
+long the beat may take. A **rehearsal** plays every beat and checks it:
+
+```bash
+loop scenes rehearse sales-and-accounting --cloud
+```
+
+Each beat is **passed**, **failed** (with what differed), or **not run**
+(with why). A rehearsal on Datalayer of every beat is kept beside the scene's
+spec, in `<id>/rehearsal.json`, and a stage is *Live* when that rehearsal
+passed. Add `--transcript run.json` to also save what was played, as the
+same JSON a stage exports.
+
+## The nightly rehearsal
+
+Every night, a GitHub Actions workflow of agent-runtimes
+(`.github/workflows/nightly-rehearsal.yaml`) rehearses each demo stage on
+Datalayer, where it is kept running, and keeps its `rehearsal.json` and its
+transcript. A stage whose rehearsal passed says *Live* with the time; one
+that failed says *Needs attention* with the failing beat. You can also run
+it by hand from the Actions tab, for one scene.
+
+It asks the stages where they are already served and launches nothing. It
+does nothing, and says so, until the repository holds the demo account's
+key; a scene whose address or key is not set is skipped with a sentence.
+
+## Recordings
+
+When a stage cannot play live — its runtime asleep, a system it reads down —
+it plays its **recording** instead: the transcript of a rehearsal that
+passed, played at the pace it was recorded, under the label *Recording,
+taken &lt;date&gt;*.
+
+Take one from a passing rehearsal:
+
+```bash
+loop scenes rehearse sales-and-accounting --cloud --transcript run.json
+loop scenes record sales-and-accounting --from run.json --note "Recorded on Datalayer."
+```
+
+`record` refuses a transcript whose rehearsal did not pass, that misses a
+beat, or that is of another scene. It keeps the recording beside the spec,
+as `<id>/recording.json`, and names it in the spec:
+
+```yaml
+rehearsal:
+  recording:
+    path: sales-and-accounting/recording.json
+    taken: "2026-10-30"
+    note: Recorded on Datalayer.
+```
+
+`--specs-dir` says which folder of scene specs to write to, such as the
+`agentspecs/scenes` folder of your agentspecs checkout. After `make specs`,
+the recordings are in `SCENE_RECORDINGS`
+(`@datalayer/agent-runtimes/lib/specs/sceneRecordings`), apart from the
+scene catalogue, so that a page that never plays one never loads one.
+
+To play one on a page, `useSceneRecording` gives you the lines said so far,
+the graph's flows and calls at each moment, the label, and play, pause and
+restart; `RecordingLabel` draws the label:
+
+```tsx
+import {
+  A2ATeamGraph,
+  RecordingLabel,
+  TranscriptViews,
+  useSceneRecording,
+} from '@datalayer/agent-runtimes/lib/components/teams';
+import { getSceneRecording } from '@datalayer/agent-runtimes/lib/specs/sceneRecordings';
+
+const played = useSceneRecording(getSceneRecording(scene.id), {
+  members,          // id, name and connections of each member
+  entry: scene.entry,
+  maxGapMs: 4000,   // cut the long pauses between beats
+});
+
+<RecordingLabel taken={played.taken} note={played.note} />
+<A2ATeamGraph … flows={played.flows} calls={played.calls} />
+<TranscriptViews lines={played.lines} members={members} />
+```
+
+Pass `beat` to play one beat only, `speed` to play faster, `loop` to start
+again at the end.
+
+## The coding-agent stage
+
+*A Coding Agent Behind the Shield* stages one member, **Code Explainer**: an
+application whose agent is OpenCode, a coding agent, run behind the
+[Shield](../shield/index.mdx). It is lent one repository — the workspace it
+runs in — and its rules let it read and nothing more:
+
+```yaml
+rules:
+  - action: Read the repository
+    applies_to: read
+    behaviour: do_it
+  - action: Change a file
+    applies_to: [write, delete]
+    behaviour: leave_to_me
+```
+
+The audience asks it to explain a file. Each file it opens is a line of the
+transcript, *Code Explainer → its workspace: Read README.md*, allowed by
+*Read the repository*. Then the audience asks it to change the file: the
+edit it tries is refused, its line is marked failed, and its drill-down
+shows the Shield's decision, *leave it to me*, and the rule, *Change a
+file*. The file is unchanged.
