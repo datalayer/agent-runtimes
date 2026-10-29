@@ -212,6 +212,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -617,6 +618,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "slow",
+            "backdrop": "studio",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.1, "asks_a_day": 3},
         "rehearsal": {
@@ -935,6 +937,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -1066,6 +1069,7 @@ PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {
@@ -1207,6 +1211,7 @@ PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {
@@ -1349,6 +1354,7 @@ PAP_APPROVE_ONCE_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {
@@ -1469,6 +1475,7 @@ PAP_TWO_COMPANIES_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {
@@ -1641,6 +1648,7 @@ PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {
@@ -2000,6 +2008,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -2138,6 +2147,7 @@ UCP_A_PURCHASE_APPROVED_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": [],
             "rests_after": "",
             "pace": "steady",
+            "backdrop": "studio",
         },
         "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
         "rehearsal": {

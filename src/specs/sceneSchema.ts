@@ -70,6 +70,13 @@ export const SCENE_SCHEMA: JsonSchema = {
       title: 'AppVerified',
       type: 'object',
     },
+    Backdrop: {
+      description:
+        'How a stage is drawn, wherever the scene plays: the same cast, systems and links, in another look.',
+      enum: ['studio', 'hero', 'plain'],
+      title: 'Backdrop',
+      type: 'string',
+    },
     Inspector: {
       description: 'The inspectors a page may offer under a scene.',
       enum: ['agent', 'tools', 'a2a', 'notebook', 'cost'],
@@ -787,6 +794,12 @@ export const SCENE_SCHEMA: JsonSchema = {
           $ref: '#/$defs/Pace',
           default: 'steady',
           description: 'The pace of the beats that say none',
+        },
+        backdrop: {
+          $ref: '#/$defs/Backdrop',
+          default: 'studio',
+          description:
+            'How the stage is drawn, here and wherever the scene plays: `studio`, characters with speech balloons and each message flowing along its line; `hero`, round faces on a deep tint, thin lines and a dot that flies with each message; `plain`, boxes and arrows that do not move, for a printout or a slide',
         },
       },
       title: 'SceneStage',

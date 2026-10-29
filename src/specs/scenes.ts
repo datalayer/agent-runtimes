@@ -226,6 +226,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'visitors',
@@ -659,6 +660,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'a2a', 'tools'],
     restsAfter: '10m',
     pace: 'slow',
+    backdrop: 'studio',
   },
   audience: {
     who: 'visitors',
@@ -995,6 +997,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'visitors',
@@ -1138,6 +1141,7 @@ export const PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',
@@ -1308,6 +1312,7 @@ export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',
@@ -1475,6 +1480,7 @@ export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',
@@ -1620,6 +1626,7 @@ export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',
@@ -1826,6 +1833,7 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',
@@ -2233,6 +2241,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'a2a', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'visitors',
@@ -2384,6 +2393,7 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
     inspectors: [],
     restsAfter: '',
     pace: 'steady',
+    backdrop: 'studio',
   },
   audience: {
     who: 'signed-in',

@@ -170,7 +170,18 @@ export interface SceneStageSpec {
   /** How long the scene plays before it rests, `10m`. */
   restsAfter: string;
   pace: ScenePace;
+  /**
+   * How the stage is drawn, here and wherever the scene plays: `studio`,
+   * characters with speech balloons and each message flowing along its
+   * line; `hero`, round faces on a deep tint, thin lines and a dot that
+   * flies with each message; `plain`, boxes and arrows that do not move.
+   * `studio` when unsaid, so every scene written before draws as before.
+   */
+  backdrop?: SceneBackdropId;
 }
+
+/** A backdrop, by its id (agentspecs `Backdrop`). */
+export type SceneBackdropId = 'studio' | 'hero' | 'plain';
 
 /** Who may watch and ask, and what an ask may cost. */
 export interface SceneAudienceSpec {
