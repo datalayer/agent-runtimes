@@ -14,7 +14,7 @@
 
 // @vitest-environment jsdom
 import * as React from 'react';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ReactFlowProvider, useStoreApi } from '@xyflow/react';
 import {
@@ -447,6 +447,82 @@ describe('the space', () => {
     // No other backdrop has a ground.
     const { container: hero } = render(<Scene backdrop="hero" />);
     expect(hero.querySelector('[data-scene-ground]')).toBeNull();
+  });
+
+  it('draws each node compact: its mark and its name, the details on hover or focus, kept by a click, closed by Escape', () => {
+    const { container } = render(<Scene backdrop="space" />);
+    const accounting = container.querySelector(
+      '[data-team-member="accounting"]',
+    )!;
+    const name = accounting.querySelector(
+      'button[data-member-name]',
+    ) as HTMLButtonElement;
+    const card = accounting.querySelector('[data-member-details]')!;
+    // At rest: the name alone; where it runs is in the card, hidden.
+    expect(name.textContent).toBe('Accounting');
+    expect(accounting.querySelector('[data-member-where]')).toBeNull();
+    expect(card.hasAttribute('hidden')).toBe(true);
+    expect(name.getAttribute('aria-controls')).toBe(card.id);
+    expect(card.textContent).toContain('On a runtime.');
+    expect(card.textContent).toContain('Working.');
+    expect(card.textContent).toContain('Reaches Odoo over MCP.');
+    // Hovered or focused: a peek.
+    act(() => {
+      fireEvent.mouseEnter(name);
+    });
+    expect(card.hasAttribute('hidden')).toBe(false);
+    expect(card.getAttribute('data-member-details')).toBe('peek');
+    act(() => {
+      fireEvent.mouseLeave(name);
+    });
+    expect(card.hasAttribute('hidden')).toBe(true);
+    act(() => {
+      fireEvent.focus(name);
+    });
+    expect(card.hasAttribute('hidden')).toBe(false);
+    act(() => {
+      fireEvent.blur(name);
+    });
+    // Clicked: kept, said expanded; Escape closes it; a second click too.
+    act(() => {
+      fireEvent.click(name);
+    });
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(card.getAttribute('data-member-details')).toBe('kept');
+    act(() => {
+      fireEvent.keyDown(name, { key: 'Escape' });
+    });
+    expect(name.getAttribute('aria-expanded')).toBe('false');
+    expect(card.hasAttribute('hidden')).toBe(true);
+    act(() => {
+      fireEvent.click(name);
+    });
+    act(() => {
+      fireEvent.click(name);
+    });
+    expect(card.hasAttribute('hidden')).toBe(true);
+    // A system: its mark and its label; how it is reached in its card.
+    const odoo = container.querySelector(
+      '[data-team-connection="odoo-accounting"]',
+    )!;
+    const mark = odoo.querySelector('button[data-connection-figure]')!;
+    const told = odoo.querySelector('[data-connection-details]')!;
+    expect(told.hasAttribute('hidden')).toBe(true);
+    act(() => {
+      fireEvent.mouseEnter(mark);
+    });
+    expect(told.hasAttribute('hidden')).toBe(false);
+    expect(told.textContent).toContain('via MCP');
+    act(() => {
+      fireEvent.keyDown(mark, { key: 'Escape' });
+    });
+    expect(told.hasAttribute('hidden')).toBe(true);
+    // Another backdrop keeps its words under the figure.
+    const { container: hero } = render(<Scene backdrop="hero" />);
+    expect(
+      hero.querySelector('[data-team-member="accounting"] [data-member-where]')
+        ?.textContent,
+    ).toBe('on a runtime');
   });
 
   it('flows a light along the edge: out while asking, back while answering, none at rest', () => {

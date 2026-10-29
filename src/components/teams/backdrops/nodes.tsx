@@ -191,6 +191,63 @@ export interface MemberLook {
    * smaller than its figure). Under it, unsaid.
    */
   beside?: number;
+  /**
+   * A compact node (`space`): the figure and its name alone, the rest —
+   * where it runs, what it is doing, the systems it reaches — in a card
+   * shown while the figure or the name is hovered or focused, and kept
+   * open by a click on the name (a second click, or Escape, closes it).
+   * The card's look; unsaid, the words are always shown.
+   */
+  details?: StageSx;
+}
+
+/**
+ * A node's details, shown on hover or focus and kept by a click: whether
+ * they are peeked at, kept, and the handlers that say so.
+ */
+export function useNodeDetails() {
+  const id = useId();
+  const [kept, setKept] = useState(false);
+  const [peek, setPeek] = useState(false);
+  return {
+    id,
+    kept,
+    shown: kept || peek,
+    peekOn: () => setPeek(true),
+    peekOff: () => setPeek(false),
+    toggle: () => {
+      setKept(current => !current);
+      // Closing by a click closes the peek too, though the pointer is still on it.
+      setPeek(false);
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key === 'Escape' && (kept || peek)) {
+        event.stopPropagation();
+        setKept(false);
+        setPeek(false);
+      }
+    },
+  };
+}
+
+/** A member's details, in words: where it runs, what it is doing, the systems it reaches. */
+export function memberDetails(
+  member: Pick<A2ATeamGraphMember, 'where' | 'connections'>,
+  state?: string,
+): string[] {
+  const doing: Record<string, string> = {
+    thinking: 'Thinking.',
+    working: 'Working.',
+    speaking: 'Answering.',
+  };
+  const reaches = member.connections?.map(one => one.label) ?? [];
+  return [
+    member.where
+      ? `${member.where.charAt(0).toUpperCase()}${member.where.slice(1)}.`
+      : '',
+    state ? (doing[state] ?? '') : '',
+    reaches.length ? `Reaches ${reaches.join(', ')} over MCP.` : '',
+  ].filter(Boolean);
 }
 
 /** A member of the team, drawn in a look. */
@@ -205,6 +262,8 @@ export function MemberNodeBase({
   const stageRef = useRef<HTMLDivElement>(null);
   // Its balloon's display, as its menu changes it.
   const [display, setDisplay] = useState<BalloonDisplay | undefined>();
+  // Its details, on a compact node (`look.details`): peeked at, or kept.
+  const details = useNodeDetails();
   // Its balloon as a click on it left it: shown, hidden, or as the team
   // says (`auto`: what it is doing, and on hover).
   const [shown, setShown] = useState<'auto' | 'shown' | 'hidden'>('auto');
@@ -326,7 +385,19 @@ export function MemberNodeBase({
         style={{ ...HANDLE(size), top: size }}
         isConnectable={false}
       />
-      <Box width={size} height={size} position="relative">
+      <Box
+        width={size}
+        height={size}
+        position="relative"
+        {...(look.details
+          ? {
+              onMouseEnter: details.peekOn,
+              onMouseLeave: details.peekOff,
+              onFocus: details.peekOn,
+              onBlur: details.peekOff,
+            }
+          : {})}
+      >
         {persona.away ? (
           <Button
             size="small"
@@ -492,16 +563,70 @@ export function MemberNodeBase({
           flexDirection="column"
           alignItems={side === 'right' ? 'flex-start' : 'flex-end'}
           whiteSpace="nowrap"
-          pointerEvents="none"
+          pointerEvents={look.details ? 'all' : 'none'}
           data-member-beside={side}
         >
-          <Text sx={look.name} data-member-name="">
-            {member.name}
-          </Text>
-          {look.where !== false && (
-            <Text sx={look.where} data-member-where="">
-              {member.where}
-            </Text>
+          {look.details ? (
+            <>
+              {/* The name opens the card: hovered or focused, a peek; clicked, kept. */}
+              <Box
+                as="button"
+                type="button"
+                className="nodrag nopan"
+                aria-expanded={details.kept}
+                aria-controls={details.id}
+                aria-label={`${member.name}: details`}
+                data-member-name=""
+                onClick={details.toggle}
+                onKeyDown={details.onKeyDown}
+                onMouseEnter={details.peekOn}
+                onMouseLeave={details.peekOff}
+                onFocus={details.peekOn}
+                onBlur={details.peekOff}
+                sx={{
+                  p: 0,
+                  border: 0,
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  ...(look.name as Record<string, unknown>),
+                }}
+                focusVisible={{
+                  outline: '2px solid',
+                  outlineColor:
+                    'var(--focus-outlineColor, var(--fgColor-accent))',
+                  outlineOffset: 2,
+                }}
+              >
+                {member.name}
+              </Box>
+              <Box
+                id={details.id}
+                role="note"
+                hidden={!details.shown}
+                data-member-details={details.kept ? 'kept' : 'peek'}
+                position="absolute"
+                top="100%"
+                mt={1}
+                {...(side === 'right' ? { left: 0 } : { right: 0 })}
+                zIndex={2}
+                sx={look.details}
+              >
+                {memberDetails(member, persona.state).map(line => (
+                  <Box key={line}>{line}</Box>
+                ))}
+              </Box>
+            </>
+          ) : (
+            <>
+              <Text sx={look.name} data-member-name="">
+                {member.name}
+              </Text>
+              {look.where !== false && (
+                <Text sx={look.where} data-member-where="">
+                  {member.where}
+                </Text>
+              )}
+            </>
           )}
         </Box>
       )}
@@ -560,6 +685,12 @@ export interface ConnectionLook {
   via: StageSx;
   /** Its details, shown by a click on the mark. */
   details: StageSx;
+  /**
+   * A compact node (`space`): the mark and its label alone; how it is
+   * reached and its details in a card, shown while the mark is hovered or
+   * focused and kept by a click on it.
+   */
+  compact?: boolean;
 }
 
 /** A connection of a member's: the server's mark, what it reaches, and how. */
@@ -578,7 +709,10 @@ export function ConnectionNodeBase({
   const tool = useContext(Busy)[id];
   // Its details, shown and hidden by a click or Enter on its mark.
   const [told, setTold] = useState(false);
+  // On a compact node, hovered or focused: its card peeks.
+  const [peek, setPeek] = useState(false);
   const detailsId = useId();
+  const shown = told || (Boolean(look.compact) && peek);
   if (!connection) {
     return null;
   }
@@ -611,13 +745,25 @@ export function ConnectionNodeBase({
         aria-expanded={told}
         aria-controls={detailsId}
         data-connection-figure=""
-        onClick={() => setTold(shown => !shown)}
+        onClick={() => {
+          setTold(current => !current);
+          setPeek(false);
+        }}
         onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
-          if (event.key === 'Escape' && told) {
+          if (event.key === 'Escape' && (told || (look.compact && peek))) {
             event.stopPropagation();
             setTold(false);
+            setPeek(false);
           }
         }}
+        {...(look.compact
+          ? {
+              onMouseEnter: () => setPeek(true),
+              onMouseLeave: () => setPeek(false),
+              onFocus: () => setPeek(true),
+              onBlur: () => setPeek(false),
+            }
+          : {})}
         width={size}
         height={size}
         p={0}
@@ -639,19 +785,32 @@ export function ConnectionNodeBase({
         />
       </Box>
       <Text sx={look.label}>{connection.label}</Text>
-      {connection.via && (
+      {connection.via && !look.compact && (
         <Text sx={look.via} data-connection-via="">
           {connection.via}
         </Text>
       )}
       <Box
         id={detailsId}
-        hidden={!told}
-        data-connection-details=""
+        hidden={!shown}
+        data-connection-details={look.compact ? (told ? 'kept' : 'peek') : ''}
         textAlign="center"
-        maxWidth={look.width + 40}
+        maxWidth={look.compact ? 220 : look.width + 40}
+        {...(look.compact
+          ? {
+              role: 'note',
+              position: 'absolute',
+              top: '100%',
+              mt: 1,
+              zIndex: 2,
+              width: 'max-content',
+            }
+          : {})}
         sx={look.details}
       >
+        {look.compact && connection.via ? (
+          <Box data-connection-via="">{connection.via}</Box>
+        ) : null}
         {connectionDetails(connection, owner?.name, tool)}
       </Box>
     </Box>

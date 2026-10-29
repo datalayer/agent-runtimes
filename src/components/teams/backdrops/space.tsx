@@ -8,7 +8,10 @@
  * repo's `Svg*Hero`). Behind the flow, a ground of fine dots, a faint grid,
  * a triangle mesh and rings, soft glows in its corners and dashed rings
  * about its middle; each member a glowing round mark with a halo and an
- * orbit, its name beside it in capitals; each system a smaller mark; each
+ * orbit, its name beside it in capitals — and nothing else: where it
+ * runs, what it does, the systems it reaches show in a card on hover or
+ * focus, kept open by a click on the name; each system a smaller mark
+ * with its label, its card on its mark; each
  * link a thin luminous line, and for each message a light that flows along
  * it — out from the one that asks while it asks, back from the one that
  * answers while it answers (the flows of `a2aTeamFlow`).
@@ -82,7 +85,8 @@ export const SPACE_LAYOUT: SceneBackdropLayout = {
   connectionWidth: CONNECTION_WIDTH,
   connectionGap: 130,
   connectionsApart: 16,
-  connectionHeight: size => size + 40,
+  // The mark and its label: how it is reached is in its details.
+  connectionHeight: size => size + 24,
   connectionsTop: size => size / 4,
   balloonRoom: 144,
 };
@@ -116,6 +120,31 @@ function spaceMark(member: SceneBackdropFace): AssistantCharacter {
   return mark;
 }
 
+/**
+ * The card a compact node's details open in: on the stage's own ground,
+ * a hairline in the node's colour and its glow, the hero drawings' mono.
+ */
+const card = (color: string) => ({
+  px: 2,
+  py: 1,
+  borderRadius: 2,
+  border: '1px solid',
+  borderColor: mix(color, 55),
+  background: `color-mix(in srgb, var(--scene-stage-bg) 88%, var(${color}))`,
+  boxShadow: `0 0 18px ${mix(color, 28)}`,
+  fontFamily: 'mono',
+  fontSize: '11px',
+  lineHeight: 1.5,
+  color: 'var(--scene-stage-fg)',
+  textAlign: 'left',
+  whiteSpace: 'normal',
+  minWidth: 160,
+  maxWidth: 240,
+  '&[data-member-details="kept"], &[data-connection-details="kept"]': {
+    borderColor: `var(${color})`,
+  },
+});
+
 const MEMBER_LOOK: MemberLook = {
   width: NODE_WIDTH,
   figure: spaceMark,
@@ -129,12 +158,9 @@ const MEMBER_LOOK: MemberLook = {
     textTransform: 'uppercase',
     color: 'var(--scene-space-glow)',
   },
-  where: {
-    fontFamily: 'mono',
-    fontSize: '10px',
-    letterSpacing: '0.04em',
-    color: 'var(--scene-stage-muted)',
-  },
+  // Where it runs is in its details: the node is its mark and its name.
+  where: false,
+  details: card('--scene-space-glow'),
 };
 
 const CONNECTION_LOOK: ConnectionLook = {
@@ -164,7 +190,8 @@ const CONNECTION_LOOK: ConnectionLook = {
     color: 'var(--scene-stage-muted)',
     textAlign: 'center',
   },
-  details: { fontSize: '10px', color: 'var(--scene-stage-muted)' },
+  details: card('--scene-space-pop'),
+  compact: true,
 };
 
 /** A member: its glowing mark in an orbit, and its name beside it. */
@@ -718,6 +745,13 @@ export const SPACE_BACKDROP: SceneBackdrop = {
         { animation: 'sceneSpaceOrbit 12s linear infinite' },
       '@media (prefers-reduced-motion: reduce)': {
         '& [data-scene-orbit]': { animation: 'none' },
+      },
+      // A node whose card is open stands over the others; the one hovered
+      // or focused over every one, so its card is read whole.
+      '& .react-flow__node:has([data-member-details]:not([hidden])), & .react-flow__node:has([data-connection-details]:not([hidden]))':
+        { zIndex: '10 !important' },
+      '& .react-flow__node:hover, & .react-flow__node:focus-within': {
+        zIndex: '11 !important',
       },
     },
   },
