@@ -89,6 +89,7 @@ import {
   type MemberOffset,
 } from './backdrops/nodes';
 import { STUDIO_LAYOUT } from './backdrops/studio';
+import type { SelectedEdge } from './transcript/selection';
 
 export type {
   A2ATeamGraphLink,
@@ -156,7 +157,36 @@ export type A2ATeamGraphProps = {
    * and for an id the graph does not know.
    */
   backdrop?: SceneBackdropId;
+  /**
+   * The exchange selected in the transcript, as the edge it is on
+   * (`selectedEdgeOf`, SCENES S3-02): drawn with a halo on every backdrop —
+   * the edge by its id, or by its ends either way, since an answer travels
+   * the asker's edge back.
+   */
+  selected?: SelectedEdge | null;
+  /**
+   * An edge was clicked: the page selects its latest exchange
+   * (`latestLineOnEdge`). With it, the edges take the pointer.
+   */
+  onSelectEdge?: (edge: A2ATeamGraphEdge) => void;
 };
+
+/** An edge of the graph, as a click names it: `selectedEdgeOf`'s shape without the selection's key. */
+export type A2ATeamGraphEdge = Omit<SelectedEdge, 'key'>;
+
+/** Whether a selection is on the edge between two ends: by its id, or by its ends either way. */
+export function edgeSelected(
+  selected: SelectedEdge | null | undefined,
+  from: string,
+  to: string,
+): boolean {
+  return Boolean(
+    selected &&
+    (selected.id === `${from}->${to}` ||
+      (selected.from === from && selected.to === to) ||
+      (selected.from === to && selected.to === from)),
+  );
+}
 
 /** The studio's width at full scale: the entry, a peer, and the room between them. */
 const WIDTH = STUDIO_LAYOUT.nodeWidth * 2 + STUDIO_LAYOUT.gap;
@@ -343,8 +373,12 @@ const NO_PEERS: readonly A2ATeamGraphMember[] = [];
  * pulse, and no movement under reduced motion — then the backdrop's own
  * and its variables, light and dark (`sceneStageSx`).
  */
-function stageRules(theme: SceneBackdropTheme): StageSx {
+function stageRules(theme: SceneBackdropTheme, clickable: boolean): StageSx {
   return {
+    // An edge is clicked for its latest exchange: it takes the pointer.
+    ...(clickable
+      ? { '& .react-flow__edge': { cursor: 'pointer', pointerEvents: 'all' } }
+      : {}),
     '@keyframes a2aTeamPulse': {
       '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
       '50%': {
@@ -389,6 +423,8 @@ export function A2ATeamGraph({
   calls = [],
   balloonRoom,
   backdrop,
+  selected,
+  onSelectEdge,
 }: A2ATeamGraphProps): JSX.Element {
   // How the stage is drawn: its nodes and edges, its colours, its layout.
   const look = sceneBackdrop(backdrop);
@@ -687,6 +723,7 @@ export function A2ATeamGraph({
       label: wordsOf(link)
         ? `${labelOf(link.to)} · ${wordsOf(link)}`
         : labelOf(link.to),
+      selected: edgeSelected(selected, link.from, link.to),
       ...handlesBetween(layoutOf(link.from), layoutOf(link.to)),
     })),
   );
@@ -702,6 +739,7 @@ export function A2ATeamGraph({
           flow: linkFlow,
           connected: reached,
           label: said,
+          selected: chosen,
           sourceHandle,
           targetHandle,
         }) => ({
@@ -713,7 +751,12 @@ export function A2ATeamGraph({
           type: 'a2a',
           selectable: false,
           focusable: false,
-          data: { flow: linkFlow, connected: reached, label: said },
+          data: {
+            flow: linkFlow,
+            connected: reached,
+            label: said,
+            selected: chosen,
+          },
         }),
       ),
       ...(JSON.parse(placedKey) as typeof placed).flatMap(
@@ -734,16 +777,21 @@ export function A2ATeamGraph({
                 flow: carried?.flow ?? 'still',
                 calling,
                 label: carried?.label ?? MCP_LABEL,
+                selected: edgeSelected(selected, member, node),
               },
             };
           }),
       ),
     ],
-    [linkKey, placedKey, busy],
+    [linkKey, placedKey, busy, selected],
   );
   const heard = [...words, ...busy.said].filter(Boolean).join('. ');
   const flowNow = flowOfAll(peers.map(one => flowOf(one.id)));
-  const stageSx = useMemo(() => stageRules(theme), [theme]);
+  const clickable = Boolean(onSelectEdge);
+  const stageSx = useMemo(
+    () => stageRules(theme, clickable),
+    [theme, clickable],
+  );
 
   return (
     <Box
@@ -753,6 +801,7 @@ export function A2ATeamGraph({
       data-a2a-flow={flowNow}
       data-a2a-calls={calls.length}
       data-a2a-members={members.length}
+      data-a2a-selected={selected ? selected.id : undefined}
       width="100%"
       height={height}
       position="relative"
@@ -779,6 +828,18 @@ export function A2ATeamGraph({
               edges={edges}
               nodeTypes={look.nodeTypes}
               edgeTypes={look.edgeTypes}
+              // A click on an edge: its latest exchange, for the page (S3-02).
+              onEdgeClick={
+                onSelectEdge
+                  ? (_event, edge) =>
+                      onSelectEdge({
+                        id: edge.id,
+                        from: edge.source,
+                        to: edge.target,
+                        over: edge.type === 'mcp' ? 'mcp' : 'a2a',
+                      })
+                  : undefined
+              }
               viewport={viewport}
               nodesDraggable={false}
               nodesConnectable={false}

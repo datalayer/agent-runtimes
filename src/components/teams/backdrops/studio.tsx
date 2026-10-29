@@ -43,6 +43,7 @@ import {
   type MemberLook,
 } from './nodes';
 import { arrowPath, straightPath } from './edges';
+import { EdgeHalo } from './halo';
 import { sceneBackdropChoice } from './catalogue';
 
 /** The graph's own coordinates: the members, and room above them for their balloons. */
@@ -124,6 +125,9 @@ export const LinkEdge = memo(function LinkEdge({
   const arrow = arrowPath(source, target, towardPeer);
   return (
     <>
+      {data?.selected && (
+        <EdgeHalo path={path} color="var(--bgColor-accent-emphasis)" />
+      )}
       <BaseEdge
         id={id}
         path={path}
@@ -187,6 +191,9 @@ export const CallEdge = memo(function CallEdge({
   const arrow = arrowPath(source, target, flow === 'asking');
   return (
     <>
+      {data?.selected && (
+        <EdgeHalo path={path} color="var(--bgColor-accent-emphasis)" />
+      )}
       <BaseEdge
         id={id}
         path={path}

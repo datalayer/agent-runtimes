@@ -52,6 +52,7 @@ import {
 } from './nodes';
 import { arrowPath, midpoint, straightPath, type Point } from './edges';
 import { faceCharacter } from './faces';
+import { EdgeHalo } from './halo';
 import { sceneBackdropChoice } from './catalogue';
 
 const NODE_WIDTH = 160;
@@ -249,12 +250,20 @@ export const HeroLinkEdge = memo(function HeroLinkEdge({
   const target = { x: targetX, y: targetY };
   return (
     <>
+      {data?.selected && (
+        <EdgeHalo
+          path={straightPath(source, target)}
+          color="var(--scene-stage-glow)"
+        />
+      )}
       <BaseEdge
         id={id}
         path={straightPath(source, target)}
         style={{
-          stroke: 'var(--scene-stage-line)',
-          strokeWidth: 1,
+          stroke: data?.selected
+            ? 'var(--scene-stage-dot)'
+            : 'var(--scene-stage-line)',
+          strokeWidth: data?.selected ? 1.5 : 1,
           strokeDasharray: data?.connected ? undefined : '4 6',
           opacity: data?.connected ? 1 : 0.6,
         }}
@@ -289,10 +298,21 @@ export const HeroCallEdge = memo(function HeroCallEdge({
   const target = { x: targetX, y: targetY };
   return (
     <>
+      {data?.selected && (
+        <EdgeHalo
+          path={straightPath(source, target)}
+          color="var(--scene-stage-glow)"
+        />
+      )}
       <BaseEdge
         id={id}
         path={straightPath(source, target)}
-        style={{ stroke: 'var(--scene-stage-line)', strokeWidth: 1 }}
+        style={{
+          stroke: data?.selected
+            ? 'var(--scene-stage-dot)'
+            : 'var(--scene-stage-line)',
+          strokeWidth: data?.selected ? 1.5 : 1,
+        }}
       />
       {flow !== 'still' && (
         <g data-mcp-edge-call={data?.calling} data-mcp-edge-flow={flow}>

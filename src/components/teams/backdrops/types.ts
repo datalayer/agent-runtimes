@@ -145,6 +145,8 @@ export type LinkData = {
   connected: boolean;
   /** What it says: `A2A`, and the flow's words while it carries a message. */
   label: string;
+  /** The exchange selected in the transcript is on it: drawn with a halo (S3-02). */
+  selected: boolean;
 };
 
 /** What a member's link to a connection is given. */
@@ -155,6 +157,8 @@ export type CallData = {
   calling: string;
   /** What it says: `MCP`, and what it carries while it carries something. */
   label: string;
+  /** The call selected in the transcript is on it: drawn with a halo (S3-02). */
+  selected: boolean;
 };
 
 /**

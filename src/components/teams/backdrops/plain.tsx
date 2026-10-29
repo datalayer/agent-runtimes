@@ -48,6 +48,7 @@ import {
 } from './nodes';
 import { arrowPath, midpoint, straightPath, type Point } from './edges';
 import { faceCharacter } from './faces';
+import { EdgeHalo } from './halo';
 import { sceneBackdropChoice } from './catalogue';
 
 const NODE_WIDTH = 180;
@@ -132,22 +133,31 @@ function Arrow({
   target,
   forward,
   flowing,
+  selected,
 }: {
   id: string;
   source: Point;
   target: Point;
   forward: boolean;
   flowing: boolean;
+  selected: boolean;
 }): JSX.Element {
-  const stroke = flowing
-    ? 'var(--fgColor-default)'
-    : 'var(--borderColor-emphasis, var(--borderColor-default))';
+  const stroke =
+    flowing || selected
+      ? 'var(--fgColor-default)'
+      : 'var(--borderColor-emphasis, var(--borderColor-default))';
   return (
     <>
+      {selected && (
+        <EdgeHalo
+          path={straightPath(source, target)}
+          color="var(--bgColor-neutral-emphasis)"
+        />
+      )}
       <BaseEdge
         id={id}
         path={straightPath(source, target)}
-        style={{ stroke, strokeWidth: 1.5 }}
+        style={{ stroke, strokeWidth: selected ? 2.5 : 1.5 }}
       />
       <path
         d={arrowPath(source, target, forward)}
@@ -208,6 +218,7 @@ export const PlainLinkEdge = memo(function PlainLinkEdge({
           target={target}
           forward={flow !== 'answering'}
           flowing={flow !== 'still'}
+          selected={Boolean(data?.selected)}
         />
       </g>
       <Words at={midpoint(source, target)} flowing={flow !== 'still'}>
@@ -241,6 +252,7 @@ export const PlainCallEdge = memo(function PlainCallEdge({
           target={target}
           forward={flow !== 'answering'}
           flowing={flow !== 'still'}
+          selected={Boolean(data?.selected)}
         />
       </g>
       <Words

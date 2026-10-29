@@ -31,7 +31,8 @@ import {
 } from '..';
 import { HeroCallEdge, HeroLinkEdge, HERO_BACKDROP } from '../backdrops/hero';
 import { PlainLinkEdge, PLAIN_BACKDROP } from '../backdrops/plain';
-import { STUDIO_BACKDROP } from '../backdrops/studio';
+import { LinkEdge, STUDIO_BACKDROP } from '../backdrops/studio';
+import { edgeSelected } from '../A2ATeamGraph';
 import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
 
@@ -82,9 +83,11 @@ const member = (
 function Scene({
   backdrop,
   flows = {},
+  selected,
 }: {
   backdrop?: string;
   flows?: Record<string, A2ATeamFlow>;
+  selected?: React.ComponentProps<typeof A2ATeamGraph>['selected'];
 }) {
   return (
     <A2ATeamGraph
@@ -117,6 +120,7 @@ function Scene({
         },
       ]}
       backdrop={backdrop as 'studio'}
+      selected={selected}
     />
   );
 }
@@ -442,5 +446,88 @@ describe('the plain edge', () => {
     expect(tip(container)).toBe('0,50');
     expect(container.textContent).toContain('A2A · Accounting answers Sales');
     expect(container.querySelector('animateMotion')).toBeNull();
+  });
+});
+
+describe('the selected exchange on the stage (S3-02)', () => {
+  it('is on the edge by its id, or by its ends either way: an answer travels the ask’s edge back', () => {
+    const on = {
+      id: 'sales->accounting',
+      from: 'sales',
+      to: 'accounting',
+      over: 'a2a' as const,
+      key: 'k1',
+    };
+    expect(edgeSelected(on, 'sales', 'accounting')).toBe(true);
+    expect(edgeSelected(on, 'accounting', 'sales')).toBe(true);
+    expect(edgeSelected(on, 'sales', 'shipping')).toBe(false);
+    expect(edgeSelected(null, 'sales', 'accounting')).toBe(false);
+    expect(
+      edgeSelected(
+        {
+          ...on,
+          id: 'accounting->accounting/odoo-accounting',
+          from: 'accounting',
+          to: 'accounting/odoo-accounting',
+          over: 'mcp',
+        },
+        'accounting',
+        'accounting/odoo-accounting',
+      ),
+    ).toBe(true);
+  });
+
+  it('says the selection on the graph’s box, and draws a halo under the edge on every backdrop', () => {
+    const { container } = render(
+      <Scene
+        backdrop="hero"
+        selected={{
+          id: 'sales->accounting',
+          from: 'sales',
+          to: 'accounting',
+          over: 'a2a',
+          key: 'k1',
+        }}
+      />,
+    );
+    expect(
+      container
+        .querySelector('[data-a2a-team-graph]')
+        ?.getAttribute('data-a2a-selected'),
+    ).toBe('sales->accounting');
+    for (const [name, EdgeView] of [
+      ['studio', LinkEdge],
+      ['hero', HeroLinkEdge],
+      ['plain', PlainLinkEdge],
+    ] as const) {
+      const draw = (selected: boolean) => (
+        <ReactFlowProvider>
+          <LabelLayer />
+          <svg>
+            <EdgeView
+              {...({
+                ...EDGE,
+                data: {
+                  flow: 'still',
+                  connected: true,
+                  label: 'A2A',
+                  selected,
+                },
+              } as unknown as React.ComponentProps<typeof EdgeView>)}
+            />
+          </svg>
+        </ReactFlowProvider>
+      );
+      const drawn = render(draw(false));
+      expect(
+        drawn.container.querySelector('[data-edge-selected]'),
+        name,
+      ).toBeNull();
+      act(() => drawn.rerender(draw(true)));
+      const halo = drawn.container.querySelector('[data-edge-selected]');
+      expect(halo, name).not.toBeNull();
+      expect(halo?.getAttribute('d'), name).toBe('M 0,50 L 200,50');
+      drawn.unmount();
+    }
   });
 });

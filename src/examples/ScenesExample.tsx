@@ -59,10 +59,15 @@ import {
   teamConnectionsOf,
   teamToolClassifier,
   useA2ATeam,
+  useSceneTranscript,
+  latestLineOnEdge,
+  selectedEdgeOf,
+  selectionOfLine,
   type A2ATeamConnection,
   type A2ATeamPeerOptions,
   type SceneStage,
   type SceneStageMember,
+  type SelectedEdge,
 } from '../components/teams';
 import { listSceneSpecs } from '../specs/scenes';
 import type { SceneSpec } from '../types/scenes';
@@ -246,6 +251,11 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
       })),
     [stage, runtimeMembers],
   );
+  // The exchange selected in the transcript, as the edge of the graph it is
+  // on (S3-02): the graph draws it with a halo; a click on an edge selects
+  // its latest exchange.
+  const [selectedEdge, setSelectedEdge] = useState<SelectedEdge | null>(null);
+  const lines = useSceneTranscript(inspector, transcriptMembers);
   const whereOf = (member: SceneStageMember): string =>
     member.runsIn === 'browser'
       ? 'in your browser'
@@ -337,6 +347,11 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
         <SceneView
           members={transcriptMembers}
           tracer={inspector}
+          onSelect={selection =>
+            setSelectedEdge(
+              selectedEdgeOf(selection, transcriptMembers) ?? null,
+            )
+          }
           emptyText={`Nothing said yet: ask ${entry.app.name} with one of the suggestions.`}
         >
           <A2ATeamGraph
@@ -413,6 +428,16 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             balloonRoom={320}
             // Drawn as the scene says: studio, hero or plain.
             backdrop={scene.stage.backdrop}
+            selected={selectedEdge}
+            onSelectEdge={edge => {
+              const line = latestLineOnEdge(edge, lines, transcriptMembers);
+              setSelectedEdge(
+                line
+                  ? (selectedEdgeOf(selectionOfLine(line), transcriptMembers) ??
+                      null)
+                  : null,
+              );
+            }}
           />
         </SceneView>
       </Box>
