@@ -44,6 +44,7 @@ from agent_runtimes.loop.scenes.transcript import (
     connection_of_tool,
     transcript_of_spans,
 )
+from agent_runtimes.output.formats import A2UI_MEDIA_TYPE, NOTEBOOK_MEDIA_TYPE
 
 #: The kinds of answer a rehearsal line may name (agentspecs' ``AnswerKind``).
 ANSWER_KINDS = (
@@ -66,12 +67,6 @@ _KIND_WORDS = re.compile(
 
 #: The catalog's components that show a kind not named in theirs (H-02).
 _COMPONENT_KINDS = {"evidence": "sources", "button": "choice"}
-
-#: A2UI's media type, as an answer's surface comes under it.
-A2UI_MEDIA_TYPE = "application/json+a2ui"
-
-#: A Jupyter notebook's, the one kind that is a format of its own.
-NOTEBOOK_MEDIA_TYPE = "application/x-ipynb+json"
 
 #: What the stage accepts of an answer over A2A (``acceptedOutputModes``), as the
 #: page does (`a2aPeer.ts`'s ``accept``): words, and the components a surface

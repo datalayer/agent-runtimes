@@ -249,8 +249,10 @@ def _with_credential(body: bytes, token: str) -> bytes:
         return body
     if not isinstance(request, dict) or request.get("method") not in _RUN_METHODS:
         return body
-    from agent_runtimes.context.delegation import CREDENTIAL_FIELD
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.context.delegation import (
+        CREDENTIAL_FIELD,
+        DELEGATION_META_KEY,
+    )
 
     params = request.get("params")
     message = params.get("message") if isinstance(params, dict) else None
@@ -281,8 +283,10 @@ def as_visitors_run(body: bytes, visitor: str, key: Optional[str]) -> bytes:
     if not isinstance(request, dict) or request.get("method") not in _RUN_METHODS:
         return body
     from agent_runtimes.apps.visitors import A2A_VISITOR_FIELD
-    from agent_runtimes.context.delegation import CREDENTIAL_FIELD
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.context.delegation import (
+        CREDENTIAL_FIELD,
+        DELEGATION_META_KEY,
+    )
 
     params = request.get("params")
     message = params.get("message") if isinstance(params, dict) else None

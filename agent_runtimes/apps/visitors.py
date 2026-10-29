@@ -197,7 +197,7 @@ A2A_VISITOR_FIELD = "visitor"
 
 def visitor_of_a2a(meta: Any) -> str:
     """The visitor an A2A message was marked for by the gate, or ``""``."""
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.context.delegation import DELEGATION_META_KEY
 
     ours = meta.get(DELEGATION_META_KEY) if isinstance(meta, Mapping) else None
     visitor = ours.get(A2A_VISITOR_FIELD) if isinstance(ours, Mapping) else None
