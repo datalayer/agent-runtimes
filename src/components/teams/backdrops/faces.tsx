@@ -22,7 +22,7 @@ import type {
   AssistantDrawingProps,
 } from '../../../chat/assistant/characters';
 import { shippedAssistantCharacter } from '../../../chat/assistant/catalogue';
-import type { A2ATeamGraphMember } from './types';
+import type { SceneBackdropFace } from './types';
 
 /** How a backdrop frames a face. */
 export interface FaceFrame {
@@ -34,7 +34,7 @@ export interface FaceFrame {
 
 /** The character a member's `character` id names, when one does; none for a 3D model or an id the catalogue does not know. */
 function drawnCharacter(
-  member: A2ATeamGraphMember,
+  member: SceneBackdropFace,
 ): AssistantCharacter | undefined {
   if (typeof member.character !== 'string') {
     return undefined;
@@ -48,7 +48,7 @@ function drawnCharacter(
 
 /** A member's face in a frame, as a character the stage draws. */
 export function faceCharacter(
-  member: A2ATeamGraphMember,
+  member: SceneBackdropFace,
   frame: FaceFrame,
 ): AssistantCharacter {
   const inner = member.emoji ? undefined : drawnCharacter(member);

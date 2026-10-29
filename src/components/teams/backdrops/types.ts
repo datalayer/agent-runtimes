@@ -22,7 +22,10 @@
 import type { EdgeTypes, NodeTypes } from '@xyflow/react';
 import type { BoxProps } from '@datalayer/primer-addons';
 import type { AssistantModel3D } from '../../../chat/assistant/avatar3dModel';
-import type { AssistantAbout } from '../../../chat/assistant/AssistantStage';
+import type {
+  AssistantAbout,
+  AssistantStageProps,
+} from '../../../chat/assistant/AssistantStage';
 import type { BalloonSuggestion } from '../../../chat/assistant/SpeechBalloon';
 import type { DisplayItem } from '../../../types/chat';
 import type { AssistantMenuItem } from '../../../chat/assistant/AssistantContextMenu';
@@ -209,4 +212,18 @@ export interface SceneBackdrop {
   edgeTypes: EdgeTypes;
   theme: SceneBackdropTheme;
   layout: SceneBackdropLayout;
+  /**
+   * What a member is drawn as in this look — its own character, or a face
+   * made from its emoji, its character or its initial — for a stage that
+   * draws one member alone (the home page's solo scenes) in the graph's
+   * look. The same object for the same member, so the figure is not drawn
+   * anew.
+   */
+  figure: (member: SceneBackdropFace) => AssistantStageProps['character'];
 }
+
+/** What a face is made from: the member's id, name, emoji and character. */
+export type SceneBackdropFace = Pick<
+  A2ATeamGraphMember,
+  'id' | 'name' | 'emoji' | 'character'
+>;

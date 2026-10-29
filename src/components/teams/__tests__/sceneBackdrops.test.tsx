@@ -21,7 +21,10 @@ import {
   A2ATeamGraph,
   DEFAULT_SCENE_BACKDROP,
   SCENE_BACKDROPS,
+  SCENE_BACKDROP_CHOICES,
   sceneBackdrop,
+  sceneBackdropChoice,
+  sceneStageSx,
   type A2ATeamFlow,
   type A2ATeamConnection,
   type A2ATeamGraphMember,
@@ -138,6 +141,33 @@ describe('the backdrops', () => {
       ]);
       expect(Object.keys(backdrop.edgeTypes).sort()).toEqual(['a2a', 'mcp']);
     }
+    // The catalogue, pure, says the same names and lines as the drawings.
+    expect(
+      SCENE_BACKDROPS.map(({ id, name, description }) => ({
+        id,
+        name,
+        description,
+      })),
+    ).toEqual(SCENE_BACKDROP_CHOICES);
+    expect(sceneBackdropChoice('plain').name).toBe('Plain');
+    expect(sceneBackdropChoice('neon').id).toBe('studio');
+    // Each draws a member alone as it draws it in the graph: the studio its
+    // character, the hero and the plain a face, the same object each time.
+    const sales = member('sales', 'Sales', { emoji: '🤝' });
+    expect(STUDIO_BACKDROP.figure(sales)).toBe('paperclip');
+    expect(HERO_BACKDROP.figure(sales)).toBe(HERO_BACKDROP.figure(sales));
+    expect(HERO_BACKDROP.figure(sales)).not.toBe(PLAIN_BACKDROP.figure(sales));
+    // The hero's theme tints a box deep, in both modes; the studio's leaves it to the page.
+    const tinted = sceneStageSx(HERO_BACKDROP.theme) as Record<string, unknown>;
+    expect(tinted['--scene-stage-bg']).toMatch(/^#/);
+    expect(
+      (tinted['[data-color-mode="dark"] &'] as Record<string, string>)[
+        '--scene-stage-bg'
+      ],
+    ).toMatch(/^#/);
+    expect(sceneStageSx(STUDIO_BACKDROP.theme)).not.toHaveProperty(
+      '--scene-stage-bg',
+    );
     expect(sceneBackdrop('hero')).toBe(HERO_BACKDROP);
     expect(sceneBackdrop('plain')).toBe(PLAIN_BACKDROP);
     expect(sceneBackdrop()).toBe(STUDIO_BACKDROP);

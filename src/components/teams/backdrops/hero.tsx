@@ -36,12 +36,12 @@ import { Box } from '@datalayer/primer-addons';
 import type { AssistantCharacter } from '../../../chat/assistant/characters';
 import { prefersReducedMotion } from '../../../chat/assistant/avatar3dModel';
 import type {
-  A2ATeamGraphMember,
   CallData,
   ConnectionData,
   LinkData,
   MemberData,
   SceneBackdrop,
+  SceneBackdropFace,
   SceneBackdropLayout,
 } from './types';
 import {
@@ -52,6 +52,7 @@ import {
 } from './nodes';
 import { arrowPath, midpoint, straightPath, type Point } from './edges';
 import { faceCharacter } from './faces';
+import { sceneBackdropChoice } from './catalogue';
 
 const NODE_WIDTH = 160;
 const CONNECTION_WIDTH = 88;
@@ -76,7 +77,7 @@ export const HERO_LAYOUT: SceneBackdropLayout = {
 const FACES = new Map<string, AssistantCharacter>();
 
 /** The member's face in a ring: made once per member, so the figure is not drawn anew. */
-function heroFace(member: A2ATeamGraphMember): AssistantCharacter {
+function heroFace(member: SceneBackdropFace): AssistantCharacter {
   const key = `${member.id}\u0000${member.emoji ?? ''}\u0000${typeof member.character === 'string' ? member.character : member.character.url}`;
   let face = FACES.get(key);
   if (!face) {
@@ -318,10 +319,8 @@ const EDGE_TYPES = { a2a: HeroLinkEdge, mcp: HeroCallEdge };
 
 /** The `hero` backdrop. */
 export const HERO_BACKDROP: SceneBackdrop = {
-  id: 'hero',
-  name: 'Hero',
-  description:
-    'Round faces on a deep tint, thin lines, and a dot that flies with each message.',
+  ...sceneBackdropChoice('hero'),
+  figure: heroFace,
   nodeTypes: NODE_TYPES,
   edgeTypes: EDGE_TYPES,
   theme: {

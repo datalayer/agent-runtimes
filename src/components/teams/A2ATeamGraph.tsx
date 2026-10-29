@@ -64,7 +64,7 @@ import {
   type A2ATeamFlow,
 } from './a2aTeamFlow';
 import { useBalloonRoom } from './useBalloonRoom';
-import { sceneBackdrop } from './backdrops';
+import { sceneBackdrop, sceneStageSx } from './backdrops';
 import type {
   A2ATeamGraphLink,
   A2ATeamGraphMember,
@@ -341,8 +341,7 @@ const NO_PEERS: readonly A2ATeamGraphMember[] = [];
  * The rules on the graph's box: what every backdrop needs — React Flow
  * overflowing so a balloon shows whole, the cursors, a busy connection's
  * pulse, and no movement under reduced motion — then the backdrop's own
- * (its keyframes, its background) and its variables, light and dark
- * (Primer's `data-color-mode`: `dark`, or `auto` on a dark system).
+ * and its variables, light and dark (`sceneStageSx`).
  */
 function stageRules(theme: SceneBackdropTheme): StageSx {
   return {
@@ -370,12 +369,7 @@ function stageRules(theme: SceneBackdropTheme): StageSx {
     '& [data-team-member] [data-assistant-figure]:active': {
       cursor: 'grabbing',
     },
-    ...(theme.sx as Record<string, unknown>),
-    ...theme.light,
-    '[data-color-mode="dark"] &': theme.dark,
-    '@media (prefers-color-scheme: dark)': {
-      '[data-color-mode="auto"] &': theme.dark,
-    },
+    ...(sceneStageSx(theme) as Record<string, unknown>),
   } as StageSx;
 }
 

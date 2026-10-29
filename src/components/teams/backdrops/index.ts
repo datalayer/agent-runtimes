@@ -19,10 +19,14 @@ import { PLAIN_BACKDROP } from './plain';
 
 export type {
   SceneBackdrop,
+  SceneBackdropFace,
   SceneBackdropId,
   SceneBackdropLayout,
   SceneBackdropTheme,
+  StageSx,
 } from './types';
+export * from './catalogue';
+export { sceneStageSx } from './theme';
 
 /** The three backdrops, in a chooser's order: the drawing every scene had first. */
 export const SCENE_BACKDROPS: readonly SceneBackdrop[] = [

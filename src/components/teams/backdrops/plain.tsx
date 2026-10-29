@@ -31,12 +31,12 @@ import { Label } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { AssistantCharacter } from '../../../chat/assistant/characters';
 import type {
-  A2ATeamGraphMember,
   CallData,
   ConnectionData,
   LinkData,
   MemberData,
   SceneBackdrop,
+  SceneBackdropFace,
   SceneBackdropLayout,
   StageSx,
 } from './types';
@@ -48,6 +48,7 @@ import {
 } from './nodes';
 import { arrowPath, midpoint, straightPath, type Point } from './edges';
 import { faceCharacter } from './faces';
+import { sceneBackdropChoice } from './catalogue';
 
 const NODE_WIDTH = 180;
 const CONNECTION_WIDTH = 90;
@@ -71,7 +72,7 @@ export const PLAIN_LAYOUT: SceneBackdropLayout = {
 const FACES = new Map<string, AssistantCharacter>();
 
 /** The member's face in a box: made once per member. */
-function plainFace(member: A2ATeamGraphMember): AssistantCharacter {
+function plainFace(member: SceneBackdropFace): AssistantCharacter {
   const key = `${member.id}\u0000${member.emoji ?? ''}\u0000${typeof member.character === 'string' ? member.character : member.character.url}`;
   let face = FACES.get(key);
   if (!face) {
@@ -258,9 +259,8 @@ const EDGE_TYPES = { a2a: PlainLinkEdge, mcp: PlainCallEdge };
 
 /** The `plain` backdrop. */
 export const PLAIN_BACKDROP: SceneBackdrop = {
-  id: 'plain',
-  name: 'Plain',
-  description: 'Boxes and arrows, nothing moves: for a printout or a slide.',
+  ...sceneBackdropChoice('plain'),
+  figure: plainFace,
   nodeTypes: NODE_TYPES,
   edgeTypes: EDGE_TYPES,
   theme: {

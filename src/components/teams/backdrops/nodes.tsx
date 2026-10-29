@@ -47,6 +47,7 @@ import type {
   A2ATeamGraphMember,
   ConnectionData,
   MemberData,
+  SceneBackdropFace,
   StageSx,
 } from './types';
 
@@ -178,7 +179,7 @@ export interface MemberLook {
    * initial (hero, plain). Called on each render: give the same object
    * for the same member, so that the figure is not drawn anew.
    */
-  figure: (member: A2ATeamGraphMember) => AssistantStageProps['character'];
+  figure: (member: SceneBackdropFace) => AssistantStageProps['character'];
   /** The name under the figure. */
   name: StageSx;
   /** Where it runs, under the name; `false` leaves it to the figure's label alone. */

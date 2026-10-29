@@ -43,6 +43,7 @@ import {
   type MemberLook,
 } from './nodes';
 import { arrowPath, straightPath } from './edges';
+import { sceneBackdropChoice } from './catalogue';
 
 /** The graph's own coordinates: the members, and room above them for their balloons. */
 const NODE_WIDTH = 200;
@@ -231,10 +232,8 @@ const EDGE_TYPES = { a2a: LinkEdge, mcp: CallEdge };
 
 /** The `studio` backdrop. */
 export const STUDIO_BACKDROP: SceneBackdrop = {
-  id: 'studio',
-  name: 'Studio',
-  description:
-    'Characters with speech balloons; each message flows along its line.',
+  ...sceneBackdropChoice('studio'),
+  figure: MEMBER_LOOK.figure,
   nodeTypes: NODE_TYPES,
   edgeTypes: EDGE_TYPES,
   theme: {
