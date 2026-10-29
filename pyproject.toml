@@ -67,7 +67,8 @@ dependencies = [
     # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
     # catalogue's Python applications import agent_runtimes.apps.
-    "agentspecs>=0.0.132",
+    # agentspecs 0.0.137: the coding-agent-behind-the-shield scene and code-explainer, scene recordings, stage.backdrop.
+    "agentspecs>=0.0.137",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
