@@ -1085,8 +1085,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
         self.agent_env[route.token_variable] = token
         if route.config_variable:
+            from agent_runtimes.models.models import app_instance_of, app_usage_headers
+
+            # Each call metered under the application and deployment served.
             self.agent_env[route.config_variable] = harness_inference.inline_config(
-                route, self.agent_env[route.base_url_variable], token
+                route,
+                self.agent_env[route.base_url_variable],
+                token,
+                headers=app_usage_headers(app_instance_of(self._agent_id)),
             )
 
     async def initialize(self) -> None:

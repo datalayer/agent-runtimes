@@ -1589,14 +1589,16 @@ class TestResolvingACatalogueHarness:
         with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
             harness_environment(codex, {})
 
-    def test_on_datalayer_opencode_calls_through_ai_inference_by_its_own_configuration(
+    def test_on_datalayer_opencode_calls_ai_inferences_chat_completions(
         self, monkeypatch
     ) -> None:
-        """The user's decision of 28 October 2026: OpenCode through ai-inference as Claude Code is, never on the account's secret."""
+        """The user's decision of 29 October 2026: OpenCode on ai-inference's own models, never on an Anthropic key."""
         import json
 
+        from agent_runtimes.adapters import harness_inference
         from agent_runtimes.models import offered
         from agent_runtimes.specs.harnesses import get_harness
+        from agent_runtimes.specs.models import DEFAULT_MODEL
 
         opencode = get_harness("opencode")
         assert opencode is not None
@@ -1609,19 +1611,35 @@ class TestResolvingACatalogueHarness:
             offered, "_given", {"token": "the-inference-token", "expires_at": None}
         )
         given = harness_environment(opencode, datalayer)
-        assert "ANTHROPIC_API_KEY" not in given
-        assert (
-            given["ANTHROPIC_BASE_URL"]
-            == "https://r1.example/api/ai-inference/v1/anthropic"
-        )
+        assert not any(name.startswith("ANTHROPIC_") for name in given)
         config = json.loads(given["OPENCODE_CONFIG_CONTENT"])
-        assert config["enabled_providers"] == ["anthropic"]
-        anthropic = config["provider"]["anthropic"]
-        assert anthropic["npm"] == "@ai-sdk/anthropic"
-        assert anthropic["options"] == {
-            "baseURL": "https://r1.example/api/ai-inference/v1/anthropic/v1",
+        assert config["enabled_providers"] == ["datalayer"]
+        assert config["model"] == f"datalayer/{DEFAULT_MODEL.value}"
+        datalayer_provider = config["provider"]["datalayer"]
+        assert datalayer_provider["npm"] == "@ai-sdk/openai-compatible"
+        assert datalayer_provider["models"] == {
+            DEFAULT_MODEL.value: {"name": DEFAULT_MODEL.value, "tool_call": True}
+        }
+        assert datalayer_provider["options"] == {
+            "baseURL": "https://r1.example/api/ai-inference/v1",
             "apiKey": "the-inference-token",
             "headers": {"Authorization": "Bearer the-inference-token"},
+        }
+        # The application and deployment a call is metered under go with it.
+        route = harness_inference.ROUTES["opencode"]
+        headed = json.loads(
+            harness_inference.inline_config(
+                route,
+                "https://r1.example/api/ai-inference/v1",
+                "t",
+                model="bedrock:a-model",
+                headers={"X-Datalayer-App-Uid": "app-1"},
+            )
+        )
+        assert headed["model"] == "datalayer/bedrock:a-model"
+        assert headed["provider"]["datalayer"]["options"]["headers"] == {
+            "X-Datalayer-App-Uid": "app-1",
+            "Authorization": "Bearer t",
         }
         # Off Datalayer, the person's own key, as the spec says; no configuration written.
         own = harness_environment(opencode, {"ANTHROPIC_API_KEY": "sk-ant-own"})

@@ -11,10 +11,13 @@ and calls it with the runtime's ai-inference token as ``ANTHROPIC_AUTH_TOKEN``.
 ai-inference calls Anthropic on the account's own ``ANTHROPIC_API_KEY``, which
 it reads from the account's secrets, and meters the call under the account.
 OpenCode reads no base-URL variable: it is given its configuration inline
-(``OPENCODE_CONFIG_CONTENT``), an ``anthropic`` provider on the AI SDK's
-``@ai-sdk/anthropic`` whose ``baseURL`` is that route and whose key and
-``Authorization`` header carry the runtime's token (META_HARNESS, the user's
-decision of 28 October 2026: OpenCode through ai-inference as Claude Code is).
+(``OPENCODE_CONFIG_CONTENT``), a ``datalayer`` provider on the AI SDK's
+``@ai-sdk/openai-compatible`` whose ``baseURL`` is ai-inference's own v1 root
+— its chat completions, on the platform's models and paid in the account's
+credits, as the runtime's own agents call it — and whose key and
+``Authorization`` header carry the runtime's token. No call of OpenCode's
+reaches Anthropic on a key of the account's (the user's decision of 29
+October 2026, superseding the Anthropic route of 28 October).
 
 So the runtime is never given the key: it is not declared to the platform
 (:func:`routed_secret`, read by ``guardrails.declared_secrets``), not passed
@@ -40,40 +43,73 @@ OPENAI_ROUTE = "/openai/v1"
 BASE_URL_VARIABLE = "ANTHROPIC_BASE_URL"
 AUTH_TOKEN_VARIABLE = "ANTHROPIC_AUTH_TOKEN"
 
+#: Where ai-inference serves its own chat completions: its v1 root.
+CHAT_COMPLETIONS_ROUTE = ""
+
 #: OpenCode's inline configuration (opencode.ai/docs/config: precedence 6 of
 #: 8, over the global and project files).
 OPENCODE_CONFIG_VARIABLE = "OPENCODE_CONFIG_CONTENT"
 
+#: The provider OpenCode's configuration names ai-inference by.
+OPENCODE_PROVIDER = "datalayer"
 
-def opencode_config(base_url: str, token: str) -> str:
-    """Write OpenCode's configuration for ai-inference's Anthropic route: one
-    provider, ``anthropic`` on ``@ai-sdk/anthropic`` (which adds ``/messages``
-    to its ``baseURL``, so the route's ``/v1`` is given), the runtime's token
-    as its key and as a bearer, every other provider off.
+
+def opencode_config(
+    base_url: str, token: str, *, model: str, headers: Mapping[str, str] | None = None
+) -> str:
+    """Write OpenCode's configuration for ai-inference's chat completions: one
+    provider, ``datalayer`` on ``@ai-sdk/openai-compatible`` (which adds
+    ``/chat/completions`` to its ``baseURL``, ai-inference's v1 root), the
+    runtime's token as its key and as a bearer, ``headers`` (the application
+    and deployment a call is metered under) beside it, ``model`` its only
+    model and the one it uses, every other provider off.
     """
     return json.dumps(
         {
             "$schema": "https://opencode.ai/config.json",
             "provider": {
-                "anthropic": {
-                    "npm": "@ai-sdk/anthropic",
+                OPENCODE_PROVIDER: {
+                    "npm": "@ai-sdk/openai-compatible",
                     "name": "Datalayer (ai-inference)",
                     "options": {
-                        "baseURL": f"{base_url}/v1",
+                        "baseURL": base_url,
                         "apiKey": token,
-                        "headers": {"Authorization": f"Bearer {token}"},
+                        "headers": {
+                            **dict(headers or {}),
+                            "Authorization": f"Bearer {token}",
+                        },
                     },
+                    "models": {model: {"name": model, "tool_call": True}},
                 }
             },
-            "enabled_providers": ["anthropic"],
+            "enabled_providers": [OPENCODE_PROVIDER],
+            "model": f"{OPENCODE_PROVIDER}/{model}",
         }
     )
 
 
-def inline_config(route: "Route", base_url: str, token: str) -> str:
-    """The configuration a routed harness is given inline, for its ``config_variable``."""
+def inline_config(
+    route: "Route",
+    base_url: str,
+    token: str,
+    *,
+    model: str | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> str:
+    """The configuration a routed harness is given inline, for its ``config_variable``.
+
+    ``model`` is the catalogue model it calls, the platform's default
+    unsaid; ``headers`` go with each call.
+    """
     if route.config_variable == OPENCODE_CONFIG_VARIABLE:
-        return opencode_config(base_url, token)
+        from agent_runtimes.specs.models import DEFAULT_MODEL
+
+        return opencode_config(
+            base_url,
+            token,
+            model=model or DEFAULT_MODEL.value,
+            headers=headers,
+        )
     raise ValueError(
         f"No inline configuration is written for {route.config_variable!r}."
     )
@@ -108,13 +144,16 @@ ROUTES: dict[str, Route] = {
     "claude-code": Route(
         "ANTHROPIC_API_KEY", ANTHROPIC_ROUTE, BASE_URL_VARIABLE, AUTH_TOKEN_VARIABLE
     ),
-    # OpenCode (the user's decision, 28 October 2026): the same Anthropic
-    # route, through its own provider configuration rather than a variable.
+    # OpenCode (the user's decision, 29 October 2026): ai-inference's own
+    # chat completions, on the platform's models and the account's credits,
+    # through its own provider configuration; its spec's ANTHROPIC_API_KEY is
+    # neither needed nor given. The two variables are read by nobody but
+    # this runtime: OpenCode reads its configuration.
     "opencode": Route(
         "ANTHROPIC_API_KEY",
-        ANTHROPIC_ROUTE,
-        BASE_URL_VARIABLE,
-        AUTH_TOKEN_VARIABLE,
+        CHAT_COMPLETIONS_ROUTE,
+        "DATALAYER_AI_INFERENCE_BASE_URL",
+        "DATALAYER_AI_INFERENCE_TOKEN",
         config_variable=OPENCODE_CONFIG_VARIABLE,
     ),
     "codex": Route(
@@ -193,7 +232,9 @@ def routed_token() -> tuple[str | None, str | None]:
 
 __all__ = [
     "ANTHROPIC_ROUTE",
+    "CHAT_COMPLETIONS_ROUTE",
     "OPENAI_ROUTE",
+    "OPENCODE_PROVIDER",
     "OPENCODE_CONFIG_VARIABLE",
     "inline_config",
     "opencode_config",
