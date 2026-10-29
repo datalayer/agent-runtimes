@@ -93,7 +93,10 @@ that does not hold, an expired one, a replayed nonce — refused with 401 by
 the middleware), or `unverified` (unsigned, or keys that could not be
 found): the agent is never named from a URL that could not be resolved.
 Keys are looked up by the pair (agent URL, `keyid`), never by `keyid`
-alone; a directory is fetched over https only, never from a private or
+alone. A fetched directory counts only when its signature (tagged
+`http-message-signatures-directory`) covers `"@authority";req`, the authority
+it was fetched from, and its body's `Content-Digest`, with an `expires` not
+passed (1.5.90); otherwise its keys are not used. A directory is fetched over https only, never from a private or
 loopback address, with no redirect followed, a size limit, and a five-minute
 pause after a failed fetch that keeps what was cached. In Python the fetch is
 the PAP SDK's resolving client (`create_resolving_client`, the one egress

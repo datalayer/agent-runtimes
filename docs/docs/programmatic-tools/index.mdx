@@ -323,6 +323,7 @@ The same server ID can exist in both config and catalog - they are tracked indep
 
 - **Automatic Server Lifecycle** — Config servers start with the application and stop on shutdown
 - **Retry with Backoff** — Transient failures trigger automatic retries with exponential backoff
+- **A start deadline** — A server's whole start (3 attempts, each handshake and tool listing at its 45 s timeout, the backoff between them) is given 290 s, or `AGENT_RUNTIMES_MCP_START_DEADLINE` seconds when set. A start that has not ended by then (a handshake that ignores its cancellation, for example) fails closed: the reason is kept with the server's failure, its lock released, and a later turn that needs the server starts it again with the config it was first given
 - **Sequential Startup** — Multiple MCP servers start sequentially to avoid resource conflicts
 - **Status Monitoring** — Real-time status of all MCP toolsets via API endpoint
 - **Separate Storage** — Config and catalog servers are stored independently, allowing same IDs in both
@@ -349,7 +350,7 @@ Agent Runtimes supports **any MCP-compatible server**—if it follows the [MCP s
 - **Local servers** run as child processes on your machine (started via `npx` or `uvx`)
 - **Remote servers** are hosted externally and accessed over HTTP (e.g., Kaggle MCP)
 
-Both types are configured in the same `mcp.json` file, but remote servers use `mcp-remote` as a bridge.
+Both are configured in the same `mcp.json` file. A local server names its `command`; a remote server names its `url` (and its `headers`, if it needs any) and no `command`. The runtime reaches a remote server itself over Streamable HTTP: nothing is installed or spawned, so it works on a Datalayer runtime too, whose pod reaches no package registry. A `Bearer` header whose variable is empty is refused before anything is sent, and the variable is named. When a server refuses the handshake (a wrong key, for example), the start fails at once with the server's own sentence.
 :::
 
 See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
@@ -364,18 +365,14 @@ MCP Config servers are configured in `~/.datalayer/mcp.json`. These servers star
 {
     "mcpServers": {
         "tavily-remote": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "mcp-remote",
-                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
-            ]
+            "url": "https://mcp.tavily.com/mcp/",
+            "headers": {"Authorization": "Bearer ${TAVILY_API_KEY}"}
         }
     }
 }
 ```
 
-Environment variables are automatically expanded using `${VAR_NAME}` syntax.
+Environment variables are expanded using `${VAR_NAME}` syntax, in `args`, `env` and `headers` (not in `url`), as the server starts; the values are never shown to the model.
 
 #### Using MCP Tools in Agents
 
@@ -405,12 +402,8 @@ agent = Agent(
 {
     "mcpServers": {
         "tavily-remote": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "mcp-remote",
-                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
-            ]
+            "url": "https://mcp.tavily.com/mcp/",
+            "headers": {"Authorization": "Bearer ${TAVILY_API_KEY}"}
         },
         "filesystem": {
             "command": "npx",
@@ -425,13 +418,9 @@ agent = Agent(
             ]
         },
         "kaggle": {
-            "command": "npx",
-            "args": [
-                    "mcp-remote",
-                    "https://www.kaggle.com/mcp",
-                    "--header",
-                    "Authorization: Bearer <KAGGLE_API_TOKEN>"
-            ]
+            "url": "https://www.kaggle.com/mcp",
+            "headers": {"Authorization": "Bearer ${KAGGLE_API_TOKEN}"}
+        }
     }
 }
 ```
@@ -446,12 +435,8 @@ The [Tavily MCP Server](https://docs.tavily.com/documentation/mcp) provides web 
 {
     "mcpServers": {
         "tavily-remote": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "mcp-remote",
-                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
-            ]
+            "url": "https://mcp.tavily.com/mcp/",
+            "headers": {"Authorization": "Bearer ${TAVILY_API_KEY}"}
         }
     }
 }
@@ -540,37 +525,20 @@ The [Slack MCP Server](https://github.com/zencoderai/slack-mcp-server) provides 
 
 The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP server** that provides access to Kaggle datasets, models, competitions, notebooks, and benchmarks.
 
-**Option 1: Token Authentication (recommended for Agent Runtimes)**
+Its bearer is your Kaggle API token, sent with every request:
 
 ```json
 {
     "mcpServers": {
         "kaggle": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "mcp-remote",
-                "https://www.kaggle.com/mcp",
-                "--header",
-                "Authorization: Bearer <KAGGLE_API_TOKEN>"
-            ]
+            "url": "https://www.kaggle.com/mcp",
+            "headers": {"Authorization": "Bearer ${KAGGLE_API_TOKEN}"}
         }
     }
 }
 ```
 
-**Option 2: Browser OAuth (auto-login)**
-
-```json
-{
-    "mcpServers": {
-        "kaggle": {
-            "command": "npx",
-            "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
-        }
-    }
-}
-```
+Without a token the server would ask for a sign-in in a browser, which a runtime does not have: an empty bearer is refused before anything is sent, naming `KAGGLE_API_TOKEN`.
 
 #### AlphaVantage MCP Server
 

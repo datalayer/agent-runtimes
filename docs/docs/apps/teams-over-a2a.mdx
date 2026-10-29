@@ -643,12 +643,14 @@ team.send('Which invoices are still open?');
 - **A member's connections** are the MCP servers it reaches. Each is a node
   half a member's size under it, with the server's mark (`SpecMark`, from
   the spec's `icon`: `@datalayer/icons-react:odoo`), the system it reaches
-  (*Odoo*) and *via MCP*, linked to the member by an edge of its own. That
-  edge is still until the member calls one of the connection's tools. Then
-  it flows toward the connection for as long as the call runs, with the
-  tool's name on it (*list invoices*), and the node pulses. A quick call is
-  shown for at least `CALL_SHOWN_MS` (0.9 s). With reduced motion the arrow
-  and the words stay and nothing moves.
+  (*Odoo*) and *via MCP*, linked to the member by an edge of its own, drawn
+  as the A2A edge is (1.5.90). At rest it says *MCP*. When the member calls
+  one of the connection's tools, the call flows toward the connection with
+  its tool on the label (*MCP · list invoices*), and the node pulses; the
+  result flows back (*MCP · Odoo answers*). The label sits under the edge,
+  and a screen reader is told both ways. A quick call is shown for at least
+  `CALL_SHOWN_MS` (0.9 s). With reduced motion the arrow and the words stay
+  and nothing moves.
 - **`teamConnectionsOf(app)`** reads the connections from the Appspec: each
   `connections[].server`, then the MCP server's spec for its name, mark and
   tools (the tool names of its `actions`). A tool belongs to a connection

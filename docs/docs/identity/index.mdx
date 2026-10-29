@@ -178,11 +178,7 @@ This section provides step-by-step instructions for setting up identity with com
 Kaggle provides access to datasets, models, competitions, and notebooks. Unlike GitHub, **Kaggle does not offer public OAuth app registration**, so Agent Runtimes uses **token-based authentication**.
 
 :::info Authentication Model
-Kaggle uses two authentication methods:
-- **MCP OAuth** — Handled automatically by `mcp-remote` (browser-based login on first tool call)
-- **API Token** — Manual token for Agent Runtimes identity integration
-
-For the Agent Runtimes UI identity features, use the **API Token** method described below.
+Agent Runtimes authenticates to Kaggle with your **API token**: the identity features use it, and the Kaggle MCP server receives it as its bearer. Kaggle's browser sign-in is not used: a runtime has no browser.
 :::
 
 #### Step 1: Generate Your Kaggle API Token
@@ -290,37 +286,20 @@ KAGGLE_API_TOKEN=your-api-key-from-kaggle-json
 
 #### Kaggle MCP Server Configuration
 
-For MCP tools, configure with token authentication:
+For MCP tools, the Kaggle server is a remote server, reached at its url with the token as its bearer:
 
 ```json
 {
   "mcpServers": {
     "kaggle": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://www.kaggle.com/mcp",
-        "--header",
-        "Authorization: Bearer ${KAGGLE_API_TOKEN}"
-      ]
+      "url": "https://www.kaggle.com/mcp",
+      "headers": {"Authorization": "Bearer ${KAGGLE_API_TOKEN}"}
     }
   }
 }
 ```
 
-Alternatively, let `mcp-remote` handle OAuth automatically (triggers browser login):
-
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
-    }
-  }
-}
-```
+An empty `KAGGLE_API_TOKEN` is refused before anything is sent. See [remote MCP servers](../programmatic-tools/#mcp-server-examples).
 
 #### Available Kaggle Resources
 

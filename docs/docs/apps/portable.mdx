@@ -54,7 +54,10 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   or one channel's rule from the host itself, which Datalayer takes only from
   the host user linked to the installation's owner);
 - the agent client over the session API (`HttpAgentClient`,
-  `HostKeyCredentials`): the host credential exchange, a turn run once by the
+  `HostKeyCredentials`): the host credential exchange (with `visitor: true`
+  for a host user who never linked: ai-agents answers it only when the
+  installation's owner opened the deployment to visitors; see
+  [a host's visitor](./session-api.mdx#a-hosts-visitor)), a turn run once by the
   host's event id, its stream reduced, its session mapped to the host's
   thread. What is the host's own is injected as a `HostShape`: the session uid
   (`hostSessionUid(kind, parts, generation)`), the place Datalayer checks the
@@ -65,9 +68,15 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   exists only once the answer is shown), replacing the binding;
 - approval renderers (`renderApproval`) and `hostMayDecide`: a decision is
   offered only for a complete action the server says a host may decide, and
-  only for mail (a send whose tool names mail, `MAIL_WORDS`): reads, writes,
-  other sends and every destructive, financial, publishing or unknown action
-  are reviewed in Datalayer;
+  only for mail (a send whose tool names mail, `MAIL_WORDS`) and for a
+  company's `pap_confirm` (since 1.5.90): reads, writes, other sends and every
+  destructive, financial, publishing or unknown action are reviewed in
+  Datalayer. The `pap-confirm` renderer shows the company, its own summary,
+  every term, the operation and its **exact revision** (and the revision it
+  replaces, if any); the decision is on that revision only, and a changed
+  revision is another approval. A card missing the company, the summary, the
+  operation, the revision or the digest of the terms fails closed, to be
+  reviewed in Datalayer;
 - deliveries: the signed webhook (`deliveryRoute`), the outbox poller and a
   delivery handled once (`receiveDelivery`), over the host's `DeliverySink`;
 - `TurnState`, a turn's state from its semantic events, which each host
@@ -84,10 +93,9 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
 
 ## Why a Node service bundles it
 
-`tsc` writes `lib/` with extensionless relative imports, which a bundler,
-Metro, vitest and `tsx` resolve and plain `node` does not. And installing the
-package would install its Jupyter and React dependencies. So a chat-host
-service:
+Since 1.5.72 `lib/` loads under plain `node` too (every relative import is
+written whole). But installing the package would install its Jupyter and React
+dependencies. So a chat-host service:
 
 1. declares `@datalayer/agent-runtimes` as an **optional peer** and pins one
    release in `config.agentRuntimesVersion`;

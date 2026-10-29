@@ -115,7 +115,7 @@ The element looks in three places and uses the first one it finds:
 | `theme`   | `light`, `dark` or `auto` (the visitor's system setting). `auto` by default.                    |
 | `font`    | A CSS font family for the application's text. By default, Inter, then the system's sans-serif.  |
 | `server`  | An agent-runtimes server that runs the application's agent. By default, a Datalayer runtime.    |
-| `api`     | Datalayer's services, where an application is read with its token (Spacer) and, without one, read and run for a visitor (ai-agents, ai-inference, the visitors' runtime beside them). By default, the platform's: for a visitor, Datalayer's AI plane (`https://r1.datalayer.run`), where ai-agents, ai-inference and the visitors' runtime answer. |
+| `api`     | Datalayer's services, where an application is read with its token (Spacer) and, without one, read and run for a visitor (ai-agents, ai-inference, the visitors' runtime beside them). By default, the platform's: for a visitor, Datalayer's AI plane (`https://r1.datalayer.run`), where ai-agents, ai-inference and the visitors' runtime answer, read from the plane table (`DEFAULT_PLANE_URLS` in `@datalayer/core`), never a literal. ai-inference is resolved on its own: `api`, else the platform's `aiInferenceUrl`, else the plane's. `api` overrides both. |
 | `height`  | The height of an inline application in pixels. 640 by default; never less than 240.             |
 | `resume`  | `true` or `false`: pick the visit's conversation up again after a reload. `true` by default.     |
 | `user-token` | A token your server signed with the deployment's secret, naming your user: what an application that says `user: signed` opens its session with. See [Who your user is](#who-your-user-is-when-it-matters). |

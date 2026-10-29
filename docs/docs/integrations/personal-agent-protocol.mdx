@@ -298,7 +298,12 @@ gateway asks the person on *Waiting for you* for that exact revision,
 confirming once it is approved. Only the person's decision on that revision
 lets it through, so a model or a Maker's rule can never confirm what the
 company reserved for them. While the person decides, the result carries the
-SDK's `PapConfirm` display; once confirmed, its `PapOutcome`.
+SDK's `PapConfirm` display; once confirmed, its `PapOutcome`. In a chat
+host (Slack, Discord, WhatsApp) the person can decide it where they talk
+(1.5.90): the host's `pap-confirm` card shows the company, its summary, every
+term, the operation and its exact revision, and fails closed, back to
+Datalayer, when any of them is missing (see
+[the hosts entry](../apps/portable.mdx#the-hosts-entry)).
 
 **A change asked through the company's API.** With `interfaces: [openapi]`,
 `pap_propose` sends a `POST` to one of the API's paths (`/orders/ord_7Hk2/gift-wrap`)

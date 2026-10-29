@@ -82,10 +82,28 @@ refused when the agent runs something else: a Preview is never run by a
 deployment's agent, and a deployment's session never by a Preview's.
 
 Every route checks who is calling before anything else, as every application
-route does: a person's token, an embed token for the application, or the
-machine itself — and, on the visitors' runtime only, a visitor's token (see
-below). A session answers only the caller who opened it (and the machine
+route does: a person's token, an embed token for the application, a host
+token (Slack, Discord, WhatsApp, an editor), or the machine itself — and, on
+the visitors' runtime only, a visitor's token (see below). A session answers only the caller who opened it (and the machine
 itself); somebody else's is *not found*.
+
+## A host's visitor
+
+A host (Datalayer's Slack, Discord or WhatsApp app, an editor, a desktop app)
+holds no person's token: it exchanges its installation's key and a linked user
+for a **host token**, which ai-agents issued and answers for
+(`/apps/hosts/whoami`). When the host user never linked, the host exchanges
+with `visitor: true`, and ai-agents answers only when the installation's owner
+opened the deployment to visitors. The runtime takes such a token as a
+**visitor of that one deployment** (1.5.90):
+
+- it opens a session of the deployment its token was issued for, and of no
+  other (`403`, *This host token runs a session of the deployment it was
+  issued for, and no other.*), as somebody signed out would;
+- its turns run as the deployment's principal, only reading: an approval is
+  refused in the visitor's sentence rather than addressed to anybody;
+- nothing of the session is resumed, cloned or exported;
+- its turns are capped at ai-agents' exchange, not by the visitors' runtime.
 
 ## An embed's visitor
 

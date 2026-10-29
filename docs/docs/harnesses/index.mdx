@@ -309,8 +309,15 @@ ai-inference relays `POST /v1/messages` (streamed or not) and
 `ANTHROPIC_API_KEY`, read from the account's secrets (`datalayer secrets`), and
 records each call's tokens on the account's usage. An account with no key is
 answered *403: This account keeps no ANTHROPIC_API_KEY in its Datalayer
-secrets…*, which Claude Code shows as the turn's error; a runtime with no
-ai-inference token is refused in a sentence before the harness starts. The key
+secrets…*, which Claude Code shows as the turn's error.
+
+A routed harness (Claude Code, Codex, OpenCode) **waits for the runtime's
+ai-inference token** before it starts (1.5.90): a kept deployment's first keep
+on a fresh runtime can start its harness while the platform is still giving
+the runtime its token. It waits up to 30 seconds
+(`AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT`, in seconds); with still no token it is
+refused in a sentence that says how long it waited, and a token that has
+already expired is refused at once. The key
 is not declared for Claude Code there, so the platform does not copy it into
 the runtime (`adapters/harness_inference.py`). Elsewhere — a runtime started by
 hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the

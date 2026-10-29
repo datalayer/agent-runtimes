@@ -9,17 +9,27 @@ import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 # 🤖 🚀 Agent Runtimes
 
-**Agent Runtimes** is a flexible framework for building and deploying AI agents with protocol-driven UX, runtime controls, and MCP integrations.
+**Agent Runtimes** runs AI agents and serves them over the protocols the agent world speaks. It is a Python server that hosts agents built from [agentspecs](https://agentspecs.datalayer.tech) (Pydantic AI by default), with their MCP tools, skills, code sandbox and guardrails. It is also a set of React components (chat, floating assistant, the Loop workspace) and a terminal, `loop`. It drives coding agents such as Claude Code as harnesses, behind the Shield. It runs on your machine with your own model keys, or on [Datalayer](https://datalayer.ai) runtimes.
+
+![An agent answering in the chat, its code execution shown](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-chat.gif)
+
+## Quick start
+
+```bash
+pip install agent-runtimes        # Python 3.11 or later
+loop --local -a example-simple    # a local server and a chat in the terminal, on your own model keys
+```
+
+![The loop CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-loop-cli.gif)
 
 ## What is Agent Runtimes?
 
-Agent Runtimes simplifies deploying AI agents by combining key capabilities in one package:
-
-1. **Protocol abstraction** — deploy once and connect through AG-UI, Vercel AI, ACP, MCP-UI, or A2A.
-2. **UX patterns and workflows** — power interactive and triggered flows across chat and evented interfaces.
-3. **Identity and controls** — enforce guardrails, monitoring, and tool-approval policies.
-4. **Programmatic tooling** — compose MCP and Skills with Sandbox + Codemode.
-5. **Collaboration** — support real-time users, subagents, and multi-agent execution patterns.
+1. **The meta-harness**: coding agents run as harnesses, driven over the Agent Client Protocol (ACP): Claude Code, Codex, OpenCode and pi. The runtime lends them tools, skills and models, and serves them like its own agents; the [Shield](/shield/) keeps the boundary, the rules, the audit and the trace. See [Harnesses](/harnesses/).
+2. **Protocols**: AG-UI, the Vercel AI SDK, ACP and A2A to reach an agent; A2UI, MCP-UI and MCP Apps for generative UI; MCP for tools (local and remote servers); and the agent protocols Web Bot Auth, PAP, PACT, UCP and the Agentic Commerce Protocol, each a Reactor plugin. See [Protocols](/protocols/).
+3. **Applications**: an Appspec or a Python `app.py` becomes a chat, a widget, a worker or a decision. You run it with `loop apps run`, deploy it at its own address and embed it anywhere with `<datalayer-app>`. See [Loop Web](/apps/).
+4. **Identity and controls**: guardrails, tool approvals, budgets, hooks, monitoring and OpenTelemetry.
+5. **Programmatic tooling**: MCP and skills composed in a sandbox with Codemode.
+6. **Sessions and collaboration**: sessions you resume, swap, clone, export and import; subagents; teams over A2A.
 
 ## Package Scope
 
@@ -40,8 +50,10 @@ Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stac
 
 **Responsibilities:**
 - ✅ Agent hosting and lifecycle management
-- ✅ Multiple protocols (AG-UI, Vercel AI, ACP, A2A, A2UI, MCP-UI)
-- ✅ MCP server management and tool routing
+- ✅ Multiple protocols (AG-UI, Vercel AI, ACP, A2A, A2UI, MCP-UI) and the agent protocols (Web Bot Auth, PAP, PACT, UCP, Agentic Commerce)
+- ✅ Harnesses: Claude Code, Codex, OpenCode and pi over ACP, behind the Shield
+- ✅ Applications: Appspecs, `app.py`, deployments and the `<datalayer-app>` embed
+- ✅ MCP server management and tool routing (local servers over stdio, remote servers over Streamable HTTP)
 - ✅ React UI components (ChatBase, ChatSidebar, ChatFloating)
 - ✅ Loop — the plugin-based browser workspace (chat + editors + sandbox)
 - ✅ Agent identity controls (guardrails, monitoring, tool approvals)
@@ -65,17 +77,19 @@ The detailed capability content has moved to [Features](/features), including:
 
 For agent and provider specifications, see [agentspecs.datalayer.tech](https://agentspecs.datalayer.tech) and [Agentspecs](/agentspecs/).
 
-## Documentation
-
 ## Capability Coverage Map
 
 The docs below explicitly cover the main building blocks used in the example gallery.
 
 | Concern | Where to Read |
 |---------|---------------|
+| Coding agents as harnesses, and the Shield around them | [Harnesses](/harnesses/), [The Shield](/shield/) |
+| Applications: Appspecs, Python, deploy, embed | [Loop Web](/apps), [Embedding](/apps/embedding) |
+| Sessions: resume, swap, clone, export, import | [Sessions](/sessions/) |
 | The browser workspace (plugins, editors, commands) | [Loop Web](/apps) |
-| The interactive terminal | [Loop REPL](/loop-repl) |
+| The interactive terminal | [Loop REPL](/loop-repl), [Loop CLI](/cli) |
 | UX patterns (GenUI) with A2UI and AG-UI | [Protocols](/protocols), [Chat](/chat) |
+| Agent protocols: MCP, A2A, Web Bot Auth, PAP, PACT, UCP, Agentic Commerce | [Agent protocols](/protocols/agent-protocols), [Personal Agent Protocol](/integrations/personal-agent-protocol) |
 | Interactive or triggered workflows | [Agentspecs](/agentspecs), [Endpoints](/endpoints) |
 | Agent Identity and Controls (guardrails, monitoring, tool approvals) | [Identity](/identity), [Endpoints](/endpoints#tool-approvals--monitoring-stream-websocket) |
 | Programmatic tooling with Sandbox and Codemode for MCP and Skills | [Programmatic Tools](/programmatic-tools), [Hooks](/hooks), [Endpoints](/endpoints#sandbox-status-websocket) |
