@@ -31,7 +31,16 @@ import {
   setEditorOptions,
 } from '../plugins/shell';
 import { PROMPT_PLUGIN_NAME } from '../plugins/prompt';
-import { LoopChatSurface, LoopCommand, onSurfaceRequest } from '../core';
+import {
+  LoopChatSurface,
+  LoopCommand,
+  LoopEditorView,
+  onSurfaceRequest,
+} from '../core';
+import {
+  SpreadsheetPlugin,
+  SPREADSHEET_SURFACE_ID,
+} from '../plugins/spreadsheet';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
 import { loopPlugins } from '../presets';
 
@@ -168,10 +177,73 @@ describe('the /editor command', () => {
     expect(getEditorChoice().editorId).toBe('notebook');
 
     await expect(
-      command.run({ workspace: {} as never, argv: 'spreadsheet' }),
-    ).rejects.toThrow(/No editor called 'spreadsheet'/);
+      command.run({ workspace: {} as never, argv: 'whiteboard' }),
+    ).rejects.toThrow(/No editor called 'whiteboard'/);
 
     stop();
+  });
+
+  it('opens a workbook in Cells as the spreadsheet', async () => {
+    const asked: string[] = [];
+    const stop = onSurfaceRequest(id => asked.push(id));
+    const { container, root } = await mount([ShellPlugin, SpreadsheetPlugin]);
+
+    // Offered beside the others, and never gated: the grid needs no sandbox.
+    const offered = buttonByText(container, 'Spreadsheet')!;
+    expect(offered).toBeDefined();
+    expect(offered.getAttribute('aria-disabled')).not.toBe('true');
+    expect(getEditorChoice().options).toContain(SPREADSHEET_SURFACE_ID);
+
+    const command = commandOf(ShellPlugin, 'editor')!;
+    await command.run({ workspace: {} as never, argv: 'spreadsheet' });
+    expect(getEditorChoice().editorId).toBe('spreadsheet');
+    expect(asked).toEqual(['spreadsheet']);
+
+    // What the chat draws for it: the lazy view, a workbook in Cells.
+    const editor = commandOf(SpreadsheetPlugin, 'spreadsheet');
+    expect(editor?.keybinding).toBe('Mod+Alt+S');
+    const view = (SpreadsheetPlugin.contributes ?? []).find(
+      entry => entry.point === LoopEditorView,
+    )!.value as { load: () => Promise<{ default: React.ComponentType<any> }> };
+    const { default: SpreadsheetView, spreadsheetWorkbook } =
+      (await view.load()) as typeof import('../plugins/spreadsheet/SpreadsheetView');
+    // jsdom has no ResizeObserver, which the grid sizes itself with.
+    const hadObserver = 'ResizeObserver' in globalThis;
+    if (!hadObserver) {
+      (globalThis as any).ResizeObserver = class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+    }
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const viewRoot = createRoot(host);
+    try {
+      await act(async () => {
+        viewRoot.render(
+          <SpreadsheetView
+            surfaceId="conversation-1"
+            workspace={{ surfaceId: 'conversation-1' } as never}
+          />,
+        );
+      });
+      expect(
+        host.querySelector('[data-spreadsheet-editor="conversation-1"]'),
+      ).not.toBeNull();
+      expect(host.querySelector('[role="grid"]')).not.toBeNull();
+      // The same workbook each time the editor comes back.
+      const workbook = spreadsheetWorkbook('conversation-1');
+      expect(workbook.sheets.length).toBeGreaterThan(0);
+      expect(spreadsheetWorkbook('conversation-1')).toBe(workbook);
+    } finally {
+      await act(async () => viewRoot.unmount());
+      if (!hadObserver) {
+        delete (globalThis as any).ResizeObserver;
+      }
+      stop();
+      await act(async () => root.unmount());
+    }
   });
 
   it('says so when no chat is listening', async () => {

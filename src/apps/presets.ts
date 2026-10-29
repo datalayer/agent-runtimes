@@ -51,10 +51,13 @@ import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { PapSignInPlugin } from './plugins/pap-sign-in';
 import { ShieldDisplaysPlugin } from './plugins/shield-displays';
+import { AgentOutputsXlsxPlugin } from './plugins/agent-outputs/xlsx';
 import { ChatViewPlugin } from './plugins/chat-view';
 import { DocumentViewPlugin } from './plugins/document-view';
 import { InputPromptPlugin } from './plugins/input-prompt';
 import { NotebookViewPlugin } from './plugins/notebook-view';
+import { SpreadsheetPlugin } from './plugins/spreadsheet';
+import { SpreadsheetViewPlugin } from './plugins/spreadsheet-view';
 import { LoopCommandsPlugin } from './plugins/commands';
 import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
@@ -215,10 +218,11 @@ export type LoopPresetOptions = {
    */
   floatingPrompt?: boolean;
   /**
-   * Whether the notebook and document editors are mounted beside the chat.
+   * Whether the notebook, document and spreadsheet editors are mounted
+   * beside the chat.
    *
    * True by default. A host that wants the chat alone passes `false`: the
-   * two editor plugins, their toolbars and the surface strip all stay out,
+   * editor plugins, their toolbars and the surface strip all stay out,
    * and the chat opens on no surface — rather than mounting editors and
    * hiding the way to them, which leaves a workspace that still speaks of
    * cells and documents.
@@ -373,12 +377,18 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // A coding agent's diff and terminal, where its tool results carry them:
     // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,
+    // An XLSX the agent gives, read-only in Cells in its message: the
+    // renderer loads Cells when a workbook is drawn, so it costs a chat
+    // with none nothing.
+    AgentOutputsXlsxPlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not
     // contributed, so mounting these unconditionally costs an absent editor
     // nothing.
     ChatViewPlugin,
-    ...(editors ? [NotebookViewPlugin, DocumentViewPlugin] : []),
+    ...(editors
+      ? [NotebookViewPlugin, DocumentViewPlugin, SpreadsheetViewPlugin]
+      : []),
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,
@@ -407,7 +417,12 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     }),
     // Two extensions rather than four plugins: each delivers an editor and the
     // toolbar that reports on it. Every member is still switched individually.
-    ...(editors ? [NotebookExtension, DocumentExtension] : []),
+    // The spreadsheet has no toolbar plugin of its own (Cells draws its
+    // chrome), so it is a plugin, not an extension; its view is lazy, so
+    // Cells loads only when a workbook is opened.
+    ...(editors
+      ? [NotebookExtension, DocumentExtension, SpreadsheetPlugin]
+      : []),
     A2uiPlugin,
     AgentspecsPlugin,
     ModelsPlugin,
