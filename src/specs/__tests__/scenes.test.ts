@@ -129,7 +129,13 @@ describe('the scene catalogue', () => {
     expect(solo.setting.frames).toBeUndefined();
     expect(solo.script[2].branch).toBeUndefined();
     expect(solo.script[0].branch).toHaveLength(1);
-    expect(solo.rehearsal.recording).toBeUndefined();
+    // The demo scenes are recorded (29 October 2026); a scene never recorded says none.
+    expect(solo.rehearsal.recording?.path).toBe(
+      'month-end-close/recording.json',
+    );
+    expect(
+      SCENE_CATALOGUE['pap-approve-once'].rehearsal.recording,
+    ).toBeUndefined();
     const pair = SCENE_CATALOGUE['sales-and-accounting'];
     expect(pair.cast[0].talksTo).toEqual([
       { member: 'accounting', over: 'a2a' },
