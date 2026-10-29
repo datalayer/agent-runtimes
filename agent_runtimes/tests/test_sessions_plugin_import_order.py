@@ -54,7 +54,8 @@ def test_the_sessions_plugin_contributes_on_agent_teams_platform(first: str) -> 
         f"""
         import importlib, json
         importlib.import_module({first!r})
-        from agent_teams.app import app
+        from agent_teams.app import create_app
+        app = create_app()  # agent-teams builds no app at import time
         from agent_runtimes.plugins.host import BUILTIN_PLUGIN, accepted
         from agent_runtimes.plugins.points import POINTS
         platform = app.state.team_manager.platform
