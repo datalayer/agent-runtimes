@@ -226,7 +226,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
-    backdrop: 'studio',
+    backdrop: 'hero',
   },
   audience: {
     who: 'visitors',
@@ -660,7 +660,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'a2a', 'tools'],
     restsAfter: '10m',
     pace: 'slow',
-    backdrop: 'studio',
+    backdrop: 'hero',
   },
   audience: {
     who: 'visitors',
@@ -997,7 +997,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
-    backdrop: 'studio',
+    backdrop: 'hero',
   },
   audience: {
     who: 'visitors',
@@ -2241,7 +2241,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
     inspectors: ['agent', 'a2a', 'tools'],
     restsAfter: '10m',
     pace: 'steady',
-    backdrop: 'studio',
+    backdrop: 'hero',
   },
   audience: {
     who: 'visitors',

@@ -212,7 +212,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -618,7 +618,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "slow",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.1, "asks_a_day": 3},
         "rehearsal": {
@@ -937,7 +937,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -2008,7 +2008,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
