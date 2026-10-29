@@ -17,6 +17,7 @@ export * from './teamConnections';
 export * from './useA2ATeam';
 export * from './usePeerSandbox';
 export * from './A2ATeamGraph';
+export * from './backdrops';
 export * from './TeamNotebook';
 export * from './NotebookPreview';
 export * from './sceneTranscriptRules';

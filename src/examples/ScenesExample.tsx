@@ -411,6 +411,8 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             )}
             // Room for the balloons: suggestions, *more* and a notebook.
             balloonRoom={320}
+            // Drawn as the scene says: studio, hero or plain.
+            backdrop={scene.stage.backdrop}
           />
         </SceneView>
       </Box>
