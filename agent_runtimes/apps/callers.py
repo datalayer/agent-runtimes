@@ -302,7 +302,9 @@ class CallerVerifier:
                 # them, and refused once the grant no longer stands.
                 status, live = await self._ask_live(f"{iam}{TASK_GRANT_LIVE}", token)
                 if status == 200 and not live:
-                    raise CallerRefused(401, "The task grant behind this token no longer stands.")
+                    raise CallerRefused(
+                        401, "The task grant behind this token no longer stands."
+                    )
             else:
                 status = await self._ask(f"{iam}/api/iam/v1/whoami", token)
             agent = str(claims.get("agent_uid") or "")

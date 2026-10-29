@@ -105,7 +105,9 @@ def test_a_task_grants_token_is_verified_where_iam_takes_it() -> None:
     assert grants.asked == ["http://iam/api/iam/v1/oauth/task-grants/live"]
     assert whoami.asked == []
     principal = asyncio.run(
-        verifier.verify(token(sub="01P", agent_uid="01P", app_uid="01APP", task_grant_uid="g2"))
+        verifier.verify(
+            token(sub="01P", agent_uid="01P", app_uid="01APP", task_grant_uid="g2")
+        )
     )
     assert (principal.kind, principal.uid) == ("principal", "01P")
 
@@ -115,7 +117,9 @@ def test_a_task_grants_token_is_refused_once_its_grant_no_longer_stands() -> Non
     with pytest.raises(CallerRefused) as refused:
         asyncio.run(revoked.verify(token(sub="u1", task_grant_uid="g1")))
     assert refused.value.status == 401 and "no longer stands" in refused.value.reason
-    unknown = CallerVerifier(fetch=Platform(), fetch_live=Grants(status=403, live=False))
+    unknown = CallerVerifier(
+        fetch=Platform(), fetch_live=Grants(status=403, live=False)
+    )
     with pytest.raises(CallerRefused) as refused:
         asyncio.run(unknown.verify(token(sub="u1", task_grant_uid="g1")))
     assert refused.value.status == 401
