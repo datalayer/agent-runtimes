@@ -610,7 +610,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace of the runtime it runs on."
+                    "It has not run live yet: its agent is set up, not enabled, and the repository it is lent is the workspace it is given on Datalayer."
                 ],
             },
         },
