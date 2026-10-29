@@ -5,13 +5,17 @@
 
 /**
  * A scene on a page: its graph (`A2ATeamGraph`) and its transcript
- * ({@link SceneTranscript}), one shown at a time behind a *Graph · Transcript*
- * toggle (A-06). The graph stays mounted while the transcript shows, so
- * that what its members were doing is still there when it comes back.
+ * ({@link TranscriptViews}: the lines, the table, the sequence diagram, the
+ * drill-down — SCENES S2, S3), one shown at a time behind a *Graph ·
+ * Transcript* toggle (A-06). The graph stays mounted while the transcript
+ * shows, so that what its members were doing is still there when it comes
+ * back.
  *
  * The lines come from the Agent Inspector's tracer the graph's members
  * record into (`tracer`, with the `members` to name them), or are given
- * (`lines`: a finished run's, from its record).
+ * (`lines`: a finished run's, from its record — a recording, whose
+ * drill-down says it has no span to open). *Open in the Inspector* opens
+ * the Agent Inspector over the page on the tracer's record.
  *
  * @module components/teams/SceneView
  */
@@ -21,11 +25,15 @@ import { useState } from 'react';
 import { SegmentedControl } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
-import { SceneTranscript, useSceneTranscript } from './SceneTranscript';
+import { AgentInspectorDialog } from '../inspector/AgentInspectorDialog';
+import { useSceneTranscript } from './SceneTranscript';
 import type {
   SceneTranscriptLine,
   SceneTranscriptMember,
 } from './sceneTranscriptRules';
+import { TranscriptViews } from './transcript/TranscriptViews';
+import type { TranscriptSelection } from './transcript/selection';
+import type { TranscriptSpanIds } from './transcript/transcriptDetailRules';
 
 /** Which of the two the scene shows. */
 export type SceneViewChoice = 'graph' | 'transcript';
@@ -50,6 +58,12 @@ export type SceneViewProps = {
   maxHeight?: number;
   /** Something of the page's beside the toggle: a clock, a line. */
   aside?: ReactNode;
+  /** The scene, by id: the transcript's export is named after it. */
+  scene?: string;
+  /** The selected line changed (SCENES S3-02): the page hands the stage its edge (`selectedEdgeOf`). */
+  onSelect?: (selection: TranscriptSelection | null) => void;
+  /** The Inspector's page for a span, when the site has one. */
+  inspectorHref?: (ids: TranscriptSpanIds) => string | undefined;
 };
 
 const NO_MEMBERS: readonly SceneTranscriptMember[] = [];
@@ -66,8 +80,13 @@ export function SceneView({
   emptyText,
   maxHeight = 360,
   aside,
+  scene,
+  onSelect,
+  inspectorHref,
 }: SceneViewProps): JSX.Element {
   const [own, setOwn] = useState<SceneViewChoice>(defaultView);
+  // *Open in the Inspector*: the Agent Inspector over the page, on the tracer's record.
+  const [inspecting, setInspecting] = useState(false);
   const shown = view ?? own;
   const choose = (next: SceneViewChoice) => {
     setOwn(next);
@@ -109,10 +128,25 @@ export function SceneView({
         {children}
       </Box>
       {shown === 'transcript' && (
-        <SceneTranscript
+        <TranscriptViews
           lines={transcript}
+          members={members}
+          tracer={lines ? null : tracer}
+          recorded={Boolean(lines)}
+          scene={scene}
           emptyText={emptyText}
           maxHeight={maxHeight}
+          onSelect={onSelect}
+          inspectorHref={inspectorHref}
+          onOpenInspector={
+            tracer && !lines ? () => setInspecting(true) : undefined
+          }
+        />
+      )}
+      {inspecting && tracer && (
+        <AgentInspectorDialog
+          tracer={tracer}
+          onClose={() => setInspecting(false)}
         />
       )}
     </Box>

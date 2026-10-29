@@ -49,6 +49,10 @@ export type SceneTranscriptProps = {
   copy?: boolean;
   /** The clipboard: `navigator.clipboard.writeText` unless a test gives one. */
   writeText?: (text: string) => Promise<void>;
+  /** The selected line's key: drawn marked (SCENES S2-03). */
+  selected?: string | null;
+  /** A line was clicked: its key. */
+  onSelect?: (key: string) => void;
 };
 
 /** How long *Copied* stays, in milliseconds. */
@@ -61,6 +65,8 @@ export function SceneTranscript({
   maxHeight,
   copy = true,
   writeText,
+  selected,
+  onSelect,
 }: SceneTranscriptProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const onCopy = async () => {
@@ -100,6 +106,9 @@ export function SceneTranscript({
               data-transcript-from={line.from}
               data-transcript-to={line.to}
               aria-busy={line.open ? 'true' : undefined}
+              aria-selected={onSelect ? selected === line.key : undefined}
+              onClick={onSelect ? () => onSelect(line.key) : undefined}
+              bg={selected === line.key ? 'accent.subtle' : undefined}
               display="grid"
               gridTemplateColumns="auto 1fr"
               gap={2}
@@ -107,6 +116,7 @@ export function SceneTranscript({
               borderBottom="1px solid"
               borderColor="border.muted"
               opacity={line.open ? 0.75 : 1}
+              sx={onSelect ? { cursor: 'pointer' } : undefined}
             >
               <Text
                 as="time"

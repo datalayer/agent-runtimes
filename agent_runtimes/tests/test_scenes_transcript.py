@@ -9,6 +9,7 @@ TypeScript test reads (``agent_runtimes/tests/fixtures/scene_transcript.json``).
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -20,7 +21,9 @@ from agent_runtimes.loop.scenes.transcript import (
     SceneMember,
     connection_of_tool,
     line_text,
+    lines_of_json,
     millis,
+    read_transcript_json,
     time_text,
     transcript_of_record,
     transcript_of_spans,
@@ -130,3 +133,49 @@ def test_a_tool_is_its_connection_s_by_name_then_by_prefix() -> None:
     assert connection_of_tool("gateway.odoo_accounting_aged_balance", [odoo]) is odoo
     assert connection_of_tool("odoo_accounting_list_journals", [odoo]) is odoo
     assert connection_of_tool("write_notebook", [odoo]) is None
+
+
+EXPORTED = Path(__file__).parent / "fixtures" / "scene_transcript_export.json"
+
+
+def test_reads_back_the_pages_export(fixture: Dict[str, Any]) -> None:
+    """The Sales & Accounting transcript with one refused call, exported by the
+    page (`transcriptExport.ts`, SCENES S3-03), reads back as the lines the
+    spans gave: the same words, the open call open, the refusal failed."""
+    lines = read_transcript_json(EXPORTED)
+    case = fixture["cases"][1]
+    assert [line_text(line) for line in lines] == case["lines"]
+    assert [line.open for line in lines] == case["open"]
+    assert [line.failed for line in lines] == case["failed"]
+    assert [line.kind for line in lines] == ["asked", "asked", "called", "said"]
+    # The same lines the Python twin reads from the spans; `ended` is the
+    # page's (the table's durations), which the twin does not compute.
+    members = members_of(fixture["members"])
+    assert [replace(line, ended=None) for line in lines] == transcript_of_spans(
+        case["spans"], members
+    )
+    assert lines[1].ended == lines[1].at + 1000
+    assert lines[2].ended is None
+    assert transcript_text(lines) == transcript_text(
+        transcript_of_spans(case["spans"], members)
+    )
+
+
+def test_refuses_what_is_not_an_export() -> None:
+    with pytest.raises(ValueError, match="not JSON"):
+        lines_of_json("nope")
+    with pytest.raises(ValueError, match="not an object"):
+        lines_of_json("[]")
+    with pytest.raises(ValueError, match="version 2; this reads version 1"):
+        lines_of_json({"version": 2, "lines": []})
+    with pytest.raises(ValueError, match="no lines"):
+        lines_of_json({"version": 1})
+    with pytest.raises(ValueError, match="Line 1"):
+        lines_of_json(
+            {
+                "version": 1,
+                "lines": [
+                    {"key": "a", "at": 0, "from": "You", "kind": "sang", "text": "la"}
+                ],
+            }
+        )

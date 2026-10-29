@@ -58,6 +58,12 @@ export type SceneTranscriptLine = {
   open?: boolean;
   /** It failed: the span's status, the task's state. */
   failed?: boolean;
+  /**
+   * When a call or an ask that is over ended, in milliseconds since the
+   * epoch: the span's end (SCENES S2-01, the table's durations). None while
+   * it is open, and none for a line read from a record.
+   */
+  ended?: number;
 };
 
 /** The person in the scene, as the transcript names them. */
@@ -70,6 +76,11 @@ const TOOL_HOMES: Record<string, string> = {
   codemode: 'codemode',
   runtime: 'its runtime',
 };
+
+/** Whether a call goes to a tool's home (*the page*, *a skill*…) rather than to a connection over MCP. */
+export function isToolHome(to: string | undefined): boolean {
+  return Object.values(TOOL_HOMES).includes(to ?? '');
+}
 
 type Attributes = Record<string, unknown>;
 
@@ -230,7 +241,7 @@ export function transcriptOfSpans(
         to: calledOf(tool, text(attributes['datalayer.tool.kind']), agent),
         kind: 'called',
         text: tool,
-        ...(span.in_progress ? { open: true } : {}),
+        ...(span.in_progress ? { open: true } : { ended: end }),
         ...(failed ? { failed } : {}),
       });
       continue;
@@ -250,7 +261,7 @@ export function transcriptOfSpans(
         to: peer.name,
         kind: 'asked',
         text: request,
-        ...(span.in_progress ? { open: true } : {}),
+        ...(span.in_progress ? { open: true } : { ended: end }),
       });
       // What came back: the answer, or the last words of its events.
       let answer = text(attributes['a2a.answer.text']).trim();

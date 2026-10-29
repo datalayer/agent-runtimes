@@ -23,6 +23,7 @@ export * from './NotebookPreview';
 export * from './sceneTranscriptRules';
 export * from './SceneTranscript';
 export * from './SceneView';
+export * from './transcript';
 export * from './useBalloonRoom';
 export * from './sceneStage';
 export * from './AnswerSurfaces';

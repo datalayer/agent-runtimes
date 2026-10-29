@@ -105,6 +105,8 @@ class TranscriptLine:
     """It failed: the span's status, the task's state."""
     shows: Tuple[str, ...] = ()
     """What the words come with, when known: ``table``, ``chart``, ``notebook``… (the rehearsal's *a table*)."""
+    ended: Optional[int] = None
+    """When a call or an ask that is over ended, in milliseconds since the epoch; none while open (the page's ``ended``)."""
 
 
 def connection_of_tool(
@@ -481,3 +483,76 @@ def transcript_text(lines: Sequence[TranscriptLine]) -> str:
 def with_shows(line: TranscriptLine, shows: Sequence[str]) -> TranscriptLine:
     """The line, saying what its words come with."""
     return replace(line, shows=tuple(shows))
+
+
+#: The version of the page's JSON export (``transcriptExport.ts``): another is refused.
+TRANSCRIPT_JSON_VERSION = 1
+
+_KINDS = frozenset({SAID, ASKED, CALLED})
+
+
+def line_of_json(data: Mapping[str, Any], index: int = 0) -> TranscriptLine:
+    """One line of the page's export (its ``from`` is ``who``); a sentence when it is not one."""
+    key = data.get("key")
+    at = data.get("at")
+    who = data.get("from")
+    kind = data.get("kind")
+    text = data.get("text")
+    if (
+        not isinstance(key, str)
+        or not isinstance(at, int)
+        or isinstance(at, bool)
+        or not isinstance(who, str)
+        or kind not in _KINDS
+        or not isinstance(text, str)
+    ):
+        raise ValueError(f"Line {index + 1} of the transcript file is not a line.")
+    to = data.get("to")
+    ended = data.get("ended")
+    return TranscriptLine(
+        key=key,
+        at=at,
+        who=who,
+        kind=kind,
+        text=text,
+        to=to if isinstance(to, str) else "",
+        open=bool(data.get("open")),
+        failed=bool(data.get("failed")),
+        ended=ended if isinstance(ended, int) and not isinstance(ended, bool) else None,
+    )
+
+
+def lines_of_json(data: Any) -> List[TranscriptLine]:
+    """The lines of a file the page exported (*Export JSON*): its text, or the object it parses to.
+
+    The same lines the page showed, so that a problem seen on a stage is
+    replayed here; a file of another version, or that is not one, is refused
+    in a sentence.
+    """
+    if isinstance(data, (str, bytes)):
+        try:
+            data = json.loads(data)
+        except ValueError as error:
+            raise ValueError("The transcript file is not JSON.") from error
+    if not isinstance(data, Mapping):
+        raise ValueError("The transcript file is not an object.")
+    version = data.get("version")
+    if version != TRANSCRIPT_JSON_VERSION:
+        raise ValueError(
+            f"The transcript file is version {version!r}; this reads version {TRANSCRIPT_JSON_VERSION}."
+        )
+    lines = data.get("lines")
+    if not isinstance(lines, list):
+        raise ValueError("The transcript file has no lines.")
+    return [
+        line_of_json(line, index)
+        if isinstance(line, Mapping)
+        else line_of_json({}, index)
+        for index, line in enumerate(lines)
+    ]
+
+
+def read_transcript_json(path: Any) -> List[TranscriptLine]:
+    """The lines of an exported transcript file, by path."""
+    with open(path, "r", encoding="utf-8") as handle:
+        return lines_of_json(handle.read())
