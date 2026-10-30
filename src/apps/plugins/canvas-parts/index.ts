@@ -79,6 +79,16 @@ const partsPlugin = (
   });
 
 /**
+ * What the Studio cannot run: its applications run on Datalayer, where a
+ * harness's model calls go through ai-inference, and Codex's Responses API is
+ * not served there (`adapters/harness_inference.py`, the runtime's refusal).
+ */
+const NOT_ON_DATALAYER: Record<string, string> = {
+  codex:
+    'It is not offered on Datalayer: it speaks OpenAI’s Responses API, which Datalayer does not serve yet.',
+};
+
+/**
  * The catalogue's harnesses as the agent (SH-43): each harness an
  * agent program over ACP behind the Shield, offered by the catalogue agent
  * that runs on it — dropped on the surface, it is the application's agent.
@@ -89,17 +99,18 @@ export const AGENT_PARTS: CanvasPartContribution[] = listHarnesses()
   .filter(harness => harness.id !== 'custom')
   .map(harness => {
     const agent = listAgentspecs().find(spec => spec.harness === harness.id);
+    const notHere = NOT_ON_DATALAYER[harness.id];
     return {
       id: `agent:${harness.id}`,
       kind: 'agent' as const,
       label: harness.name,
       says: agent
-        ? `${agent.name}: ${harness.description}`
+        ? `${agent.name}: ${notHere ?? harness.description}`
         : `${harness.description} No agent of the catalogue runs on it yet.`,
       emoji: '🛡️',
       harness: harness.id,
       example: agent?.id ?? '',
-      enabled: Boolean(agent) && harness.enabled,
+      enabled: Boolean(agent) && harness.enabled && !notHere,
     };
   });
 

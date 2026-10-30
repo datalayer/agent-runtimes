@@ -135,6 +135,11 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
     expect(claude?.example).toBe('example-harness-claude-code');
+    expect(claude?.enabled).toBe(true);
+    // Datalayer runs what goes through ai-inference; Codex is said, never set.
+    const codex = parts.find(part => part.id === 'agent:codex');
+    expect(codex?.enabled).toBe(false);
+    expect(codex?.says).toContain('not offered on Datalayer');
     for (const harness of [
       'codex',
       'pi',
