@@ -269,6 +269,10 @@ class A2AStep:
     """When it was told, ISO 8601; now when unsaid."""
     ended: bool = False
     error: str = ""
+    id: str = ""
+    """The call's id, when told: its start and its end are one step."""
+    harness: str = ""
+    """A harness's kind of step (``read``, ``edit``, ``execute``…), when a harness told it."""
 
 
 @dataclass(frozen=True)
@@ -350,8 +354,27 @@ def _components_of(parts: Any) -> List[Mapping[str, Any]]:
     return found
 
 
-def _steps_of(parts: Any) -> List[A2AStep]:
-    """The tool steps a working status carries (`a2aPeer.ts`'s ``stepOf``)."""
+def _harness_step_name(kind: str, title: str) -> str:
+    """A harness's step as a line says it: *Read README.md*, its kind then its title."""
+    word = kind.strip().capitalize() if kind.strip() and kind != "other" else ""
+    title = title.strip()
+    if not word:
+        return title
+    if not title or title.lower() == kind.strip().lower():
+        return word
+    if title.lower().startswith(kind.strip().lower() + " "):
+        return title[0].upper() + title[1:]
+    return f"{word} {title}"
+
+
+def _steps_of(parts: Any, metadata: Any = None) -> List[A2AStep]:
+    """The tool steps a working status carries (`a2aPeer.ts`'s ``stepOf``).
+
+    A harness's call says its kind and title in the status message's metadata
+    (the runtime's ``_harness_call_meta``): the step is named by both and
+    keeps its kind, so it is drawn on the member's workspace.
+    """
+    told_by = metadata if isinstance(metadata, dict) and metadata.get("kind") else None
     steps: List[A2AStep] = []
     for part in parts or []:
         data = part.get("data") if isinstance(part, dict) else None
@@ -361,14 +384,21 @@ def _steps_of(parts: Any) -> List[A2AStep]:
         result = data.get("tool_result")
         told = call if isinstance(call, dict) else result
         if isinstance(told, dict) and told.get("name"):
+            name = str(told["name"])
+            if told_by is not None:
+                name = _harness_step_name(
+                    str(told_by.get("kind") or ""), str(told_by.get("title") or name)
+                )
             steps.append(
                 A2AStep(
-                    name=str(told["name"]),
+                    name=name,
                     at=_now_iso(),
                     ended=not isinstance(call, dict),
                     error=str((result or {}).get("error") or "")
                     if not isinstance(call, dict)
                     else "",
+                    id=str(told.get("id") or ""),
+                    harness=str(told_by.get("kind") or "") if told_by else "",
                 )
             )
     return steps
@@ -448,7 +478,9 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
                     state = str(status.get("state") or "")
                     message = status.get("message") or {}
                     if state in ("TASK_STATE_WORKING", "working"):
-                        steps.extend(_steps_of(message.get("parts")))
+                        steps.extend(
+                            _steps_of(message.get("parts"), message.get("metadata"))
+                        )
                     elif state:
                         ended = state
                         final = _parts_text(message.get("parts")) or final
@@ -752,6 +784,9 @@ class Stage:
             ) from None
         open_steps: Dict[str, Dict[str, Any]] = {}
         for step in answered.steps:
+            # A step's start and end are one call: by its id, else by its name.
+            key = step.id or step.name
+            kind = "harness" if step.harness else _tool_kind(step.name, member)
             if not step.ended:
                 call = recording.start(
                     f"execute_tool {step.name}",
@@ -760,17 +795,20 @@ class Stage:
                         "gen_ai.operation.name": "execute_tool",
                         "gen_ai.agent.name": member.name,
                         "gen_ai.tool.name": step.name,
-                        "datalayer.tool.kind": _tool_kind(step.name, member),
+                        "datalayer.tool.kind": kind,
                     },
                     parent=span["span_id"],
                 )
                 if step.at:
                     call["start_time"] = step.at
-                open_steps[step.name] = call
+                open_steps[key] = call
             else:
-                opened = open_steps.pop(step.name, None)
+                opened = open_steps.pop(key, None)
                 if opened is not None:
                     call = opened
+                    # The end names it as it was done: *Read README.md*, not *Read*.
+                    call["span_name"] = f"execute_tool {step.name}"
+                    call.setdefault("attributes", {})["gen_ai.tool.name"] = step.name
                 else:
                     call = recording.start(
                         f"execute_tool {step.name}",
@@ -779,7 +817,7 @@ class Stage:
                             "gen_ai.operation.name": "execute_tool",
                             "gen_ai.agent.name": member.name,
                             "gen_ai.tool.name": step.name,
-                            "datalayer.tool.kind": _tool_kind(step.name, member),
+                            "datalayer.tool.kind": kind,
                         },
                         parent=span["span_id"],
                     )
