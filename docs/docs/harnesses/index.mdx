@@ -134,7 +134,7 @@ unknown is not in the catalogue. The entries, in short:
 | Harness | Offered | Adapter, pinned | Credential | Third parties | Why |
 | --- | --- | --- | --- | --- | --- |
 | Claude Code | yes | `@agentclientprotocol/claude-agent-acp` 0.91.0, Apache-2.0, Node 22 | `ANTHROPIC_API_KEY` | API key only | Anthropic's [legal page](https://code.claude.com/docs/en/legal-and-compliance): each end user authenticates with their own key; developers may not route requests through Free, Pro or Max plan credentials for their users |
-| Codex | locally | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser. Not offered on Datalayer (below) |
+| Codex | yes | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser |
 | OpenCode | yes | `opencode-ai` 1.19.0 `acp`, MIT | `ANTHROPIC_API_KEY` (the provider it is configured with) | permitted | Open source |
 | pi | yes | `pi-acp` 0.0.34, MIT, spawning `@earendil-works/pi-coding-agent` 1.4.0 (MIT) as published — chosen over `@automatalabs/pi-acp`, which embeds an older pi in process | `ANTHROPIC_API_KEY` (the provider pi is configured with) | permitted | Open source on both sides; pi speaks no ACP itself, the adapter does |
 | Gemini CLI | no | `@google/gemini-cli` 0.64.0 `--experimental-acp`, Apache-2.0, Node 20+ | `GEMINI_API_KEY`, or a Google login on Code Assist Standard or Enterprise | API key only | The individuals tier [stopped being served on 18 June 2026](https://developers.google.com/gemini-code-assist/resources/privacy-notice-gemini-code-assist-individuals). Not offered: its API host is outside a runtime pod's boundary, not routed through ai-inference, unfunded (the user's decision, 28 October 2026) |
@@ -143,10 +143,10 @@ unknown is not in the catalogue. The entries, in short:
 | fast-agent | no | `fast-agent-acp` 0.10.45 (uvx), Apache-2.0 | the provider's key | permitted | Open source; a framework, not a coding agent. Not offered: a Python tool the runtime image does not carry, not drilled |
 | custom | no | the organization's own | the organization's own | the organization's own | Not launchable from the shared catalogue |
 
-Claude Code's *API key only* entry was written for a person's own key. On a
-Datalayer runtime it is offered through ai-inference instead, on no key of the
-person's, by the user's decision of 30 October 2026; counsel has not reviewed
-that entry against this use.
+Claude Code's and Codex's *API key only* entries were written for a person's own
+key. On a Datalayer runtime each is offered through ai-inference instead, on no
+key of the person's, by the user's decision of 30 October 2026; counsel has not
+reviewed those entries against this use.
 
 Reviewed by counsel: not yet. The register's engine side — the Shield reading
 it to refuse a credential kind — is SH-04's part in `agent-shield`.
@@ -283,9 +283,9 @@ terms), nor is a key of Datalayer's own lent to a harness.
 | Claude Code | ai-inference's Anthropic-shaped route, answered from Bedrock, with the runtime's own token (below) | `ANTHROPIC_API_KEY` from the environment, or set once for the Shield |
 | OpenCode | ai-inference's chat completions: its configuration given inline (`OPENCODE_CONFIG_CONTENT`), one `datalayer` provider on `@ai-sdk/openai-compatible`, every other provider off | `ANTHROPIC_API_KEY` (the provider it is configured with) from the environment |
 | pi | ai-inference's Anthropic-shaped route: a configuration directory (`PI_CODING_AGENT_DIR`, under the workspace's `.datalayer/`) with one `datalayer` provider, which reads the runtime's token from the environment and holds none; `PI_OFFLINE=1`, so it fetches nothing from pi.dev. pi-acp spawns `pi` from the PATH: install `pi` beside it | `ANTHROPIC_API_KEY` (the provider pi is configured with) from the environment |
-| Codex | **not offered**: it speaks OpenAI's Responses API, which ai-inference does not serve from Bedrock or Alibaba. A runtime refuses it in a sentence and `GET /api/v1/harnesses` leaves it out | `OPENAI_API_KEY` from the environment |
+| Codex | ai-inference's Responses route, answered from Bedrock: a configuration directory (`CODEX_HOME`, under the workspace's `.datalayer/`) with one `datalayer` provider, its model the catalogue's, its token read from the environment and never in the file. No call reaches OpenAI | `OPENAI_API_KEY` from the environment |
 
-Any other harness is refused on a runtime the same way, an organization's own
+Any other harness is refused on a runtime in a sentence, an organization's own
 included: a harness is served there only when its calls are known to go through
 ai-inference.
 
@@ -323,7 +323,19 @@ turn's error. Each call is metered in credits at the catalogue's price, with the
 prompt cache at Bedrock's rates, under the account, the application and the
 deployment.
 
-A routed harness (Claude Code, OpenCode, pi) **waits for the runtime's
+## On Datalayer, Codex answers from Bedrock
+
+Codex speaks OpenAI's Responses API. ai-inference serves it at
+`/api/ai-inference/v1/openai/v1/responses`, translated to Bedrock's Anthropic
+`invoke` API: `function_call` and `function_call_output`, a namespace's tools, a
+freeform tool as one text field, and every event from `response.created` to
+`response.completed`. A hosted tool such as web search has nothing to run it on
+Bedrock and is turned off. Codex compacts its conversation with an ordinary
+turn. Each call is metered in credits as Claude Code's are, a stream cut short
+on what passed. A model the catalogue does not offer, a GPT name among them, is
+refused in a sentence.
+
+A routed harness (Claude Code, Codex, OpenCode, pi) **waits for the runtime's
 ai-inference token** before it starts: a kept deployment's first keep
 on a fresh runtime can start its harness while the platform is still giving
 the runtime its token. It waits up to 30 seconds

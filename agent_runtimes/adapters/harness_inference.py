@@ -22,9 +22,13 @@ takes the person's own key from the environment, as its spec declares.
 * pi reads no base-URL variable either: it is given a configuration directory
   of its own (``PI_CODING_AGENT_DIR``, :func:`write_config_directory`), with a
   ``datalayer`` provider on the same Anthropic-shaped route and no token in it.
+* Codex reads no base-URL variable either: it is given a configuration
+  directory (``CODEX_HOME``, :func:`write_config_directory`) with a ``datalayer``
+  provider on ai-inference's Responses route, answered from Bedrock, its model
+  pinned to the catalogue's, its token read from the environment. Nothing of
+  its configuration reaches OpenAI.
 * Any other harness is not offered there (:func:`refusal`): a harness served
-  on Datalayer is one whose calls are known to go through ai-inference. Codex
-  speaks OpenAI's Responses API, which ai-inference does not serve.
+  on Datalayer is one whose calls are known to go through ai-inference.
 
 So the runtime is never given a key: none is declared to the platform
 (``guardrails.declared_secrets``), none is passed to the harness's process, and
@@ -41,6 +45,10 @@ from typing import Any, Mapping
 
 #: Where ai-inference serves Anthropic's Messages API, under its v1 root.
 ANTHROPIC_ROUTE = "/anthropic"
+
+#: Where ai-inference serves OpenAI's Responses API, under its v1 root: Codex
+#: adds ``/responses``.
+RESPONSES_ROUTE = "/openai/v1"
 
 BASE_URL_VARIABLE = "ANTHROPIC_BASE_URL"
 AUTH_TOKEN_VARIABLE = "ANTHROPIC_AUTH_TOKEN"
@@ -61,6 +69,16 @@ PI_DIRECTORY_VARIABLE = "PI_CODING_AGENT_DIR"
 #: The provider pi's configuration names ai-inference by.
 PI_PROVIDER = "datalayer"
 
+#: The variable Codex reads its configuration directory from.
+CODEX_DIRECTORY_VARIABLE = "CODEX_HOME"
+
+#: The provider Codex's configuration names ai-inference by.
+CODEX_PROVIDER = "datalayer"
+
+#: Codex compacts its own conversation past this share of the context window;
+#: it knows nothing of a model that is not OpenAI's.
+CODEX_COMPACT_SHARE = 0.8
+
 #: Where a harness's configuration directory goes, under its workspace: the
 #: one place a sidecar's harness shares with the runtime.
 CONFIG_DIRECTORY = ".datalayer"
@@ -70,15 +88,6 @@ CONFIG_DIRECTORY = ".datalayer"
 #: configuration.
 INFERENCE_BASE_URL_VARIABLE = "DATALAYER_AI_INFERENCE_BASE_URL"
 INFERENCE_TOKEN_VARIABLE = "DATALAYER_AI_INFERENCE_TOKEN"
-
-#: Why a harness is not offered on Datalayer, when more can be said than that
-#: its calls would not go through ai-inference.
-NOT_OFFERED_BECAUSE = {
-    "codex": (
-        "it speaks OpenAI's Responses API, which ai-inference does not serve "
-        "from Bedrock or Alibaba"
-    ),
-}
 
 
 #: OpenCode's tools, as its ``permission`` configuration names them (opencode
@@ -290,6 +299,53 @@ def pi_settings(model: str) -> str:
     )
 
 
+def codex_config(
+    base_url: str, *, model: str, headers: Mapping[str, str] | None = None
+) -> str:
+    """Write Codex's ``config.toml``: one provider, ai-inference's Responses route.
+
+    ``env_key`` names the variable the token is read from, so it stays out of
+    the file; ``requires_openai_auth`` off, so Codex asks for no OpenAI login.
+    Its hosted web search has nothing to run it on Bedrock, and a pod reaches
+    nothing else of OpenAI's. JSON's strings are TOML's basic strings.
+    """
+    from agentspecs.models import get_model
+
+    spec = get_model(model)
+    bedrock = model.removeprefix("bedrock:")
+    lines = [
+        f"model = {json.dumps(bedrock)}",
+        f"model_provider = {json.dumps(CODEX_PROVIDER)}",
+        'web_search = "disabled"',
+        "check_for_update_on_startup = false",
+    ]
+    if spec is not None and spec.context_window:
+        lines.append(f"model_context_window = {spec.context_window}")
+        limit = int(spec.context_window * CODEX_COMPACT_SHARE)
+        lines.append(f"model_auto_compact_token_limit = {limit}")
+    if spec is not None and spec.tokens_limit:
+        lines.append(f"model_max_output_tokens = {spec.tokens_limit}")
+    named = ", ".join(
+        f"{json.dumps(name)} = {json.dumps(value)}"
+        for name, value in (headers or {}).items()
+    )
+    lines += [
+        "",
+        "[analytics]",
+        "enabled = false",
+        "",
+        f"[model_providers.{CODEX_PROVIDER}]",
+        'name = "Datalayer (ai-inference)"',
+        f"base_url = {json.dumps(base_url)}",
+        f"env_key = {json.dumps(INFERENCE_TOKEN_VARIABLE)}",
+        'wire_api = "responses"',
+        "requires_openai_auth = false",
+        f"http_headers = {{ {named} }}" if named else "http_headers = {}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def write_config_directory(
     route: "Route",
     workspace: Path,
@@ -303,13 +359,20 @@ def write_config_directory(
     It holds no token. ``model`` is the catalogue model the harness calls, the
     platform's default unsaid; ``headers`` go with each call.
     """
+    from agent_runtimes.specs.models import DEFAULT_MODEL
+
+    chosen = model or DEFAULT_MODEL.value
+    if route.directory_variable == CODEX_DIRECTORY_VARIABLE:
+        directory = workspace / CONFIG_DIRECTORY / "codex"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "config.toml").write_text(
+            codex_config(base_url, model=chosen, headers=headers), encoding="utf-8"
+        )
+        return directory
     if route.directory_variable != PI_DIRECTORY_VARIABLE:
         raise ValueError(
             f"No configuration directory is written for {route.directory_variable!r}."
         )
-    from agent_runtimes.specs.models import DEFAULT_MODEL
-
-    chosen = model or DEFAULT_MODEL.value
     directory = workspace / CONFIG_DIRECTORY / "pi"
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "models.json").write_text(
@@ -374,6 +437,14 @@ ROUTES: dict[str, Route] = {
             "PI_TELEMETRY": "0",
         },
     ),
+    # Codex: the Responses route, answered from Bedrock, through its own
+    # configuration directory.
+    "codex": Route(
+        RESPONSES_ROUTE,
+        INFERENCE_BASE_URL_VARIABLE,
+        INFERENCE_TOKEN_VARIABLE,
+        directory_variable=CODEX_DIRECTORY_VARIABLE,
+    ),
 }
 
 
@@ -398,11 +469,9 @@ def refusal(
     """
     if not on_datalayer(environment) or harness.id in ROUTES:
         return None
-    why = NOT_OFFERED_BECAUSE.get(
-        harness.id, "its model calls would not go through ai-inference"
-    )
     return (
-        f"{harness.name} is not offered on Datalayer: {why}. "
+        f"{harness.name} is not offered on Datalayer: its model calls would not "
+        "go through ai-inference. "
         f"Run it locally on your own key with `loop --harness {harness.id}`."
     )
 
@@ -461,7 +530,9 @@ __all__ = [
     "OPENCODE_PROVIDER",
     "OPENCODE_CONFIG_VARIABLE",
     "OPENCODE_PERMISSION_KEYS",
+    "CODEX_PROVIDER",
     "PI_PROVIDER",
+    "RESPONSES_ROUTE",
     "asking_config",
     "claude_code_environment",
     "custom_headers",

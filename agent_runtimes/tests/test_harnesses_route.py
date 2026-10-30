@@ -72,8 +72,6 @@ def test_on_datalayer_only_what_goes_through_ai_inference_is_offered(
     monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
     listed = {item["id"] for item in client.get("/api/v1/harnesses").json()["harnesses"]}
-    assert listed == {"claude-code", "opencode", "pi"}
-    refused = client.get("/api/v1/harnesses/codex")
-    assert refused.status_code == 404
-    assert "not offered on Datalayer" in refused.json()["detail"]
-    assert "Responses API" in refused.json()["detail"]
+    assert listed == {"claude-code", "codex", "opencode", "pi"}
+    assert client.get("/api/v1/harnesses/codex").status_code == 200
+    assert client.get("/api/v1/harnesses/claude-code").status_code == 200

@@ -1621,28 +1621,87 @@ class TestResolvingACatalogueHarness:
             "X-Datalayer-Deployment-Uid: dep-1",
         ]
 
-    def test_on_datalayer_codex_is_refused_in_a_sentence(self, monkeypatch) -> None:
-        """Codex speaks OpenAI's Responses API, which ai-inference does not serve from Bedrock or Alibaba."""
+    def test_on_datalayer_codex_calls_ai_inferences_responses_route(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Codex reads a configuration directory: its model the catalogue's, no token in it, no route to OpenAI."""
+        import tomllib
+
+        from agent_runtimes.models import models, offered
+        from agent_runtimes.specs.harnesses import get_harness
+        from agent_runtimes.specs.models import DEFAULT_MODEL
+
+        codex = get_harness("codex")
+        assert codex is not None
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        given = harness_environment(
+            codex,
+            {
+                "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+                "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+                "OPENAI_API_KEY": "sk-not-given",
+            },
+        )
+        assert "OPENAI_API_KEY" not in given and "OPENAI_BASE_URL" not in given
+        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (
+            "https://r1.example/api/ai-inference/v1/openai/v1"
+        )
+        assert given["DATALAYER_AI_INFERENCE_TOKEN"] == "the-inference-token"
+
+        monkeypatch.setitem(
+            models._APP_INSTANCES,
+            "codex-app",
+            {"app_uid": "app-1", "deployment_uid": "dep-1"},
+        )
+        agent = ACPAgent(
+            agent_id="codex-app",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        directory = Path(agent.agent_env["CODEX_HOME"])
+        assert tmp_path in directory.parents
+        text = (directory / "config.toml").read_text()
+        assert "the-inference-token" not in text
+        config = tomllib.loads(text)
+        bedrock = DEFAULT_MODEL.value.removeprefix("bedrock:")
+        assert config["model"] == bedrock and config["model_provider"] == "datalayer"
+        assert config["web_search"] == "disabled"
+        assert config["model_context_window"] > 0
+        provider = config["model_providers"]["datalayer"]
+        assert provider["base_url"] == "https://r1.example/api/ai-inference/v1/openai/v1"
+        assert provider["env_key"] == "DATALAYER_AI_INFERENCE_TOKEN"
+        assert provider["wire_api"] == "responses"
+        assert provider["requires_openai_auth"] is False
+        assert provider["http_headers"] == {
+            "X-Datalayer-App-Uid": "app-1",
+            "X-Datalayer-Deployment-Uid": "dep-1",
+        }
+
+    def test_off_datalayer_codex_takes_the_persons_key_and_writes_nothing(
+        self, tmp_path: Path
+    ) -> None:
         from agent_runtimes.specs.harnesses import get_harness
 
         codex = get_harness("codex")
         assert codex is not None
-        datalayer = {
-            "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
-            "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
-            "OPENAI_API_KEY": "sk-not-given",
-        }
-        with pytest.raises(HarnessRefused, match="not offered on Datalayer") as refused:
-            harness_environment(codex, datalayer)
-        assert "Responses API" in str(refused.value)
-        assert "--harness codex" in str(refused.value)
-        # Off Datalayer, the person's own key is required, as the spec says.
         with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
             harness_environment(codex, {})
-        assert harness_environment(codex, {"OPENAI_API_KEY": "sk-own"}) == {
-            "NO_BROWSER": "1",
-            "OPENAI_API_KEY": "sk-own",
-        }
+        given = harness_environment(codex, {"OPENAI_API_KEY": "sk-own"})
+        assert given == {"NO_BROWSER": "1", "OPENAI_API_KEY": "sk-own"}
+        agent = ACPAgent(
+            agent_id="codex-local",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        assert list(tmp_path.iterdir()) == []
 
     @pytest.mark.parametrize("harness_id", ["goose", "gemini-cli", "openhands", "fast-agent"])
     def test_on_datalayer_a_harness_with_no_route_is_refused(
@@ -1671,8 +1730,8 @@ class TestResolvingACatalogueHarness:
         from agent_runtimes.adapters import acp_agent
         from agent_runtimes.specs.harnesses import get_harness
 
-        codex = get_harness("codex")
-        assert codex is not None
+        goose = get_harness("goose")
+        assert goose is not None
         monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
         monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
 
@@ -1681,7 +1740,7 @@ class TestResolvingACatalogueHarness:
 
         monkeypatch.setattr(acp_agent, "lend_repository", lent)
         with pytest.raises(HarnessRefused, match="not offered on Datalayer"):
-            acp_agent.acp_harness_agent("refused", codex, workspace=tmp_path)
+            acp_agent.acp_harness_agent("refused", goose, workspace=tmp_path)
 
     def test_on_datalayer_pi_calls_ai_inferences_anthropic_route(
         self, tmp_path: Path, monkeypatch
@@ -1761,10 +1820,15 @@ class TestResolvingACatalogueHarness:
         assert list(tmp_path.iterdir()) == []
 
     def test_the_routes_declare_no_secret(self) -> None:
-        """The own-key path is gone: a route carries no account's secret, and Codex has none."""
+        """The own-key path is gone: a route carries no account's secret."""
         from agent_runtimes.adapters import harness_inference
 
-        assert set(harness_inference.ROUTES) == {"claude-code", "opencode", "pi"}
+        assert set(harness_inference.ROUTES) == {
+            "claude-code",
+            "codex",
+            "opencode",
+            "pi",
+        }
         assert not hasattr(harness_inference, "ROUTED")
         assert not hasattr(harness_inference, "routed_secret")
         assert not hasattr(harness_inference, "OPENAI_ROUTE")
