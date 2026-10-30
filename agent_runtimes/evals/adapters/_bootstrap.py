@@ -103,6 +103,71 @@ def isolate(config: dict) -> None:
     for path in config["read_only"]:
         mount(path, path, None, MS_BIND | MS_REC)
         mount(path, path, None, MS_BIND | MS_REMOUNT | MS_RDONLY | MS_NOSUID | MS_NODEV)
+    if config["root_dirs"]:
+        try:
+            own_root(config)
+        except OSError as error:
+            refuse(f"a root of its own: {error}")
+
+
+#: What a root of the sandbox's own holds of the system, read-only.
+SYSTEM_DIRS = ("/usr", "/bin", "/lib", "/lib64", "/sbin", "/etc")
+PIVOT_ROOT = 155
+
+
+def bind(path: str, target: str, *, read_only: bool) -> None:
+    """Bind `path` at `target`, read-only when asked; a link stays a link."""
+    if os.path.islink(path):
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        os.symlink(os.readlink(path), target)
+        return
+    if os.path.isdir(path):
+        os.makedirs(target, exist_ok=True)
+    else:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "a"):
+            pass
+    mount(path, target, None, MS_BIND | MS_REC)
+    if read_only:
+        mount(
+            path, target, None, MS_BIND | MS_REMOUNT | MS_RDONLY | MS_NOSUID | MS_NODEV
+        )
+
+
+def own_root(config: dict) -> None:
+    """A new root: the system read-only, what it was given, the paths its
+    framework names (kept under the working directory, where the host reads
+    them afterwards), and nothing else of the host.
+    """
+    workdir = config["workdir"]
+    held = os.path.join(workdir, ".root")
+    new = f"{workdir}.new-root"
+    os.makedirs(held, exist_ok=True)
+    os.makedirs(new, exist_ok=True)
+    mount("tmpfs", new, "tmpfs", MS_NOSUID | MS_NODEV, "size=16m,nr_inodes=4096")
+    # First: what was given may live under it.
+    private_tmp = new + "/tmp"  # nosec B108 - a tmpfs of this sandbox's own, in its own root
+    os.makedirs(private_tmp, exist_ok=True)
+    mount("tmpfs", private_tmp, "tmpfs", MS_NOSUID | MS_NODEV, "size=256m")
+    for path in SYSTEM_DIRS:
+        if os.path.lexists(path):
+            bind(path, new + path, read_only=True)
+    for path in [*config["root_keep"], *config["read_only"]]:
+        if os.path.exists(path):
+            bind(path, new + path, read_only=True)
+    bind(workdir, new + workdir, read_only=False)
+    for path in config["root_dirs"]:
+        inside = held + path
+        os.makedirs(inside, exist_ok=True)
+        bind(inside, new + path, read_only=False)
+    bind("/dev", new + "/dev", read_only=False)
+    bind("/proc", new + "/proc", read_only=False)
+    os.chdir(new)
+    os.makedirs("old-root", exist_ok=True)
+    checked(libc.syscall(PIVOT_ROOT, b".", b"old-root"), "pivot_root")
+    os.chdir("/")
+    checked(libc.umount2(b"/old-root", 2), "umount old root")
+    os.rmdir("/old-root")
 
 
 def loopback_up() -> None:

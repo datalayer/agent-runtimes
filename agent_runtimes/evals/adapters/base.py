@@ -335,6 +335,7 @@ def policy_to(policy: SandboxPolicy) -> dict[str, Any]:
         "max_files": policy.max_files,
         "max_bytes": policy.max_bytes,
         "secrets": list(policy.secrets),
+        "root_dirs": list(policy.root_dirs),
     }
 
 
@@ -348,6 +349,7 @@ def policy_from(values: Mapping[str, Any]) -> SandboxPolicy:
         "max_files",
         "max_bytes",
         "secrets",
+        "root_dirs",
     }
     extra = set(values) - known
     if extra:
@@ -359,7 +361,13 @@ def policy_from(values: Mapping[str, Any]) -> SandboxPolicy:
         raise ValueError(
             f"a provider key does not reach a sandbox: {', '.join(keys)}; model calls go through ai-inference"
         )
-    return SandboxPolicy(**{**values, "secrets": tuple(values.get("secrets") or ())})
+    return SandboxPolicy(
+        **{
+            **values,
+            "secrets": tuple(values.get("secrets") or ()),
+            "root_dirs": tuple(values.get("root_dirs") or ()),
+        }
+    )
 
 
 class ExternalAdapter(ABC):

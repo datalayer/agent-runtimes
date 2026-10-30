@@ -1,0 +1,3 @@
+n_attempts: 2
+agents:
+  - name: oracle

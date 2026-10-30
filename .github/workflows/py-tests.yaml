@@ -119,8 +119,15 @@ jobs:
           uv pip install --python "$RUNNER_TEMP/inspect/bin/python" "inspect-ai==$version" openai packaging
           TIKTOKEN_CACHE_DIR="$RUNNER_TEMP/tiktoken" "$RUNNER_TEMP/inspect/bin/python" -c "import tiktoken; tiktoken.get_encoding('o200k_base')"
 
+      - name: Install the pinned Harbor
+        run: |
+          version=$(sed -n 's/^HARBOR_VERSION = "\(.*\)"$/\1/p' agent_runtimes/evals/adapters/harbor.py)
+          uv venv "$RUNNER_TEMP/harbor"
+          uv pip install --python "$RUNNER_TEMP/harbor/bin/python" "harbor==$version"
+
       - name: Run the adapter tests
         env:
           DATALAYER_INSPECT_AI_PYTHON: ${{ runner.temp }}/inspect/bin/python
           DATALAYER_INSPECT_AI_TIKTOKEN_CACHE: ${{ runner.temp }}/tiktoken
-        run: pytest agent_runtimes/tests/test_evals_adapters.py agent_runtimes/tests/test_evals_adapters_sandbox.py agent_runtimes/tests/test_evals_adapters_inspect.py agent_runtimes/tests/test_evals_adapters_command.py
+          DATALAYER_HARBOR_PYTHON: ${{ runner.temp }}/harbor/bin/python
+        run: pytest agent_runtimes/tests/test_evals_adapters.py agent_runtimes/tests/test_evals_adapters_sandbox.py agent_runtimes/tests/test_evals_adapters_inspect.py agent_runtimes/tests/test_evals_adapters_harbor.py agent_runtimes/tests/test_evals_adapters_command.py

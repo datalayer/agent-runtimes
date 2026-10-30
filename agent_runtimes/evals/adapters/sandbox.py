@@ -103,6 +103,9 @@ class SandboxPolicy:
     processes: int = 256
     secrets: tuple[str, ...] = ()
     hidden_paths: tuple[str, ...] = DEFAULT_HIDDEN_PATHS
+    #: Paths a framework's tasks name, in a root of the sandbox's own: only the
+    #: system, these and what it was given. Empty keeps the pod's root.
+    root_dirs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Refuse a value that is no bound."""
@@ -174,6 +177,25 @@ def _hidden(policy: SandboxPolicy, keep: Sequence[Path]) -> list[str]:
     return hidden
 
 
+def _interpreter_root() -> Path:
+    """The interpreter that starts a sandbox: its bootstrap must still run."""
+    return Path(sys.base_prefix).resolve()
+
+
+def _framework_roots(argv: Sequence[str]) -> set[Path]:
+    """The prefixes of what the command runs, kept in a root of its own."""
+    found: set[Path] = {_BOOTSTRAP.parent}
+    for item in argv:
+        path = Path(item)
+        if not path.is_absolute() or not path.exists():
+            continue
+        if path.parent.name == "bin":
+            found.update({path.parent.parent, path.resolve().parent.parent})
+        else:
+            found.add(path.resolve().parent)
+    return found
+
+
 def _kill(process: subprocess.Popen) -> None:
     """End the process tree."""
     try:
@@ -222,6 +244,10 @@ def run_sandboxed(
         "processes": int(policy.processes),
         "hidden_paths": _hidden(policy, [workdir, *read_only]),
         "read_only": [str(path) for path in read_only],
+        "root_dirs": list(policy.root_dirs),
+        "root_keep": [
+            str(path) for path in [_interpreter_root(), *sorted(_framework_roots(argv))]
+        ],
         "workdir": str(workdir),
         "argv": list(argv),
         "env": environment,

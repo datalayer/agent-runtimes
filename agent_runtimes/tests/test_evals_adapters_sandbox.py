@@ -162,6 +162,35 @@ class TestTheInferenceNetwork:
             _run(tmp_path, "pass", policy=self.POLICY)
 
 
+class TestARootOfItsOwn:
+    """A framework whose tasks name fixed paths gets a root of its own."""
+
+    POLICY = SandboxPolicy(
+        wall_seconds=30, cpu_seconds=30, root_dirs=("/logs", "/tests")
+    )
+
+    def test_its_paths_exist_are_writable_and_end_up_in_the_workdir(self, tmp_path):
+        code = "open('/logs/out.txt', 'w').write('written'); import os; print(sorted(os.listdir('/')))"
+        outcome = _run(tmp_path, code, policy=self.POLICY)
+        assert outcome.returncode == 0, outcome.stderr
+        assert b"logs" in outcome.stdout and b"tests" in outcome.stdout
+        assert (
+            tmp_path / "work" / ".root" / "logs" / "out.txt"
+        ).read_text() == "written"
+
+    def test_it_sees_nothing_of_the_host_but_the_system(self, tmp_path):
+        secret = tmp_path / "private.txt"
+        secret.write_text("the person's")
+        code = f"import os; print(os.path.exists({str(secret)!r}), os.path.exists('/home/nobody'), os.path.exists('/usr/bin'))"
+        outcome = _run(tmp_path, code, policy=self.POLICY)
+        assert outcome.stdout.split() == [b"False", b"False", b"True"], outcome.stderr
+
+    def test_the_system_is_read_only(self, tmp_path):
+        code = "\ntry:\n    open('/usr/x', 'w')\n    print('written')\nexcept OSError:\n    print('refused')\n"
+        outcome = _run(tmp_path, code, policy=self.POLICY)
+        assert outcome.stdout.strip() == b"refused"
+
+
 def test_the_environment_is_only_what_was_handed_in(tmp_path, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "must-not-be-seen")
     code = "import json, os; print(json.dumps(dict(os.environ)))"

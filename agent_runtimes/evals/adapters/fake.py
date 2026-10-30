@@ -99,7 +99,10 @@ class FakeAdapter(ExternalAdapter):
             scorers=[{"name": "exact"}],
             secrets=[str(item) for item in loaded.get("secrets") or []],
             network=loaded.get("network") or "none",
-            configuration={"components": list(loaded.get("components") or [])},
+            configuration={
+                "components": list(loaded.get("components") or []),
+                "attempts": int(loaded.get("attempts") or 1),
+            },
         )
         return inspection.model_copy(update={"capabilities": self.validate(inspection)})
 
@@ -164,6 +167,7 @@ class FakeAdapter(ExternalAdapter):
                     "components": inspection.configuration.get("components") or [],
                     "secrets": inspection.secrets,
                     "network": inspection.network,
+                    "attempts": int(inspection.configuration.get("attempts") or 1),
                 },
                 capabilities=inspection.capabilities,
                 content_digest=inspection.content_digest,
@@ -200,7 +204,10 @@ class FakeAdapter(ExternalAdapter):
             policy=policy_to(policy),
             capabilities=components
             + _grant_capabilities(network=network, secrets=secrets, grant=grant),
-            resolved_configuration={"entry_point": definition.entry_point},
+            resolved_configuration={
+                "entry_point": definition.entry_point,
+                "attempts": int(configuration.get("attempts") or 1),
+            },
             reproduction=f"python _fake_runner.py  # {definition.entry_point}",
         )
 
