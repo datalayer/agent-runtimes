@@ -25,6 +25,7 @@ from agent_runtimes.evals.adapters.sandbox import (
     SandboxExceeded,
     SandboxPolicy,
     SandboxUnavailable,
+    _links_on_the_way,
     isolation_available,
     run_sandboxed,
 )
@@ -172,6 +173,38 @@ class TestTheInferenceNetwork:
     def test_it_needs_a_relay(self, tmp_path):
         with pytest.raises(ValueError):
             _run(tmp_path, "pass", policy=self.POLICY)
+
+
+class TestALinkedInterpreter:
+    """A venv's Python, through a link such as uv's `cpython-3.13-…`.
+
+    A root of its own must hold the link as well as the target.
+    """
+
+    def test_a_venvs_python_through_a_linked_directory_starts(self, tmp_path):
+        link = tmp_path / "python-minor"
+        link.symlink_to(Path(sys.base_prefix).resolve())
+        (tmp_path / "env" / "bin").mkdir(parents=True)
+        python = tmp_path / "env" / "bin" / "python"
+        python.symlink_to(link / "bin" / f"python{sys.version_info[0]}")
+        policy = SandboxPolicy(root_dirs=("/logs",), wall_seconds=30, cpu_seconds=30)
+        outcome = run_sandboxed(
+            [str(python), "-I", "-S", "-c", "print('started')"],
+            workdir=tmp_path / "w",
+            policy=policy,
+        )
+        assert outcome.stdout.strip() == b"started", outcome.stderr
+
+    def test_every_link_on_the_way_is_found(self, tmp_path):
+        target = tmp_path / "real"
+        (target / "bin").mkdir(parents=True)
+        (target / "bin" / "python").write_text("")
+        (tmp_path / "minor").symlink_to(target)
+        (tmp_path / "python").symlink_to(tmp_path / "minor" / "bin" / "python")
+        assert _links_on_the_way(tmp_path / "python") == [
+            tmp_path / "python",
+            tmp_path / "minor",
+        ]
 
 
 class TestARootOfItsOwn:

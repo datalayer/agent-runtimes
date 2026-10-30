@@ -182,6 +182,45 @@ def _interpreter_root() -> Path:
     return Path(sys.base_prefix).resolve()
 
 
+def _links_on_the_way(path: Path) -> list[Path]:
+    """Every symbolic link walked to reach `path`, in the order they are met."""
+    found: list[Path] = []
+    pending = list(Path(path).parts[1:])
+    current = Path("/")
+    for _ in range(256):
+        if not pending:
+            break
+        part = pending.pop(0)
+        candidate = current.parent if part == ".." else current / part
+        if not candidate.is_symlink():
+            current = candidate
+            continue
+        found.append(candidate)
+        target = Path(os.readlink(candidate))
+        if target.is_absolute():
+            current = Path("/")
+            pending = [*target.parts[1:], *pending]
+        else:
+            pending = [*target.parts, *pending]
+    return found
+
+
+def _kept(argv: Sequence[str]) -> list[Path]:
+    """What a root of its own holds: the prefixes, then each link to them.
+
+    A link from outside them would otherwise dangle, as uv's `cpython-3.13-…` does.
+    """
+    roots = [_interpreter_root(), *sorted(_framework_roots(argv))]
+    links = [
+        link
+        for item in argv
+        if Path(item).is_absolute() and Path(item).exists()
+        for link in _links_on_the_way(Path(item))
+        if not any(link.is_relative_to(root) for root in roots)
+    ]
+    return [*roots, *dict.fromkeys(links)]
+
+
 def _framework_roots(argv: Sequence[str]) -> set[Path]:
     """The prefixes of what the command runs, kept in a root of its own."""
     found: set[Path] = {_BOOTSTRAP.parent}
@@ -245,9 +284,7 @@ def run_sandboxed(
         "hidden_paths": _hidden(policy, [workdir, *read_only]),
         "read_only": [str(path) for path in read_only],
         "root_dirs": list(policy.root_dirs),
-        "root_keep": [
-            str(path) for path in [_interpreter_root(), *sorted(_framework_roots(argv))]
-        ],
+        "root_keep": [str(path) for path in _kept(argv)],
         "workdir": str(workdir),
         "argv": list(argv),
         "env": environment,

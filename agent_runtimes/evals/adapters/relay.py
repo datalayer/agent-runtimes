@@ -139,10 +139,12 @@ class _Tally:
     def _take(self, value: Any) -> None:
         if not isinstance(value, dict):
             return
-        for source in (
+        message = value.get("message")
+        sources: list[dict[str, Any]] = [
             value,
-            value.get("message") if isinstance(value.get("message"), dict) else {},
-        ):
+            message if isinstance(message, dict) else {},
+        ]
+        for source in sources:
             found = source.get("usage")
             if isinstance(found, dict):
                 self.usage.update(
@@ -236,29 +238,31 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         """Route one request: a model call, or this task's environment."""
         path = self.path.split("?", 1)[0]
+        # Read before any answer: a refusal over an unread body resets a client
+        # that is still sending it, and it never sees the refusal.
+        body = self._read()
+        if body is None:
+            return
         if path.startswith(ENVIRONMENT_PATH):
-            self._environment(path[len(ENVIRONMENT_PATH) :])
+            self._environment(path[len(ENVIRONMENT_PATH) :], body)
         elif path == CHAT_PATH:
-            self._model_call("/chat/completions", counted=True)
+            self._model_call("/chat/completions", body, counted=True)
         elif path in (MESSAGES_PATH, COUNT_TOKENS_PATH):
             route = self.server.route
             if route is None or not route.anthropic:
                 self._refuse(404, "ai-inference's Anthropic route is not offered here.")
                 return
-            self._model_call(path, counted=path == MESSAGES_PATH)
+            self._model_call(path, body, counted=path == MESSAGES_PATH)
         else:
             self._refuse(
                 404, "Only model calls and this task's environment go through here."
             )
 
-    def _environment(self, operation: str) -> None:
+    def _environment(self, operation: str, body: bytes) -> None:
         """One operation on the task's environment, and no other's."""
         backend = self.server.environment
         if backend is None:
             self._refuse(404, "This execution has no task environment.")
-            return
-        body = self._read()
-        if body is None:
             return
         try:
             request = json.loads(body)
@@ -305,15 +309,12 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             self._answer(200, answer)
 
-    def _model_call(self, upstream: str, *, counted: bool) -> None:
+    def _model_call(self, upstream: str, raw: bytes, *, counted: bool) -> None:
         """Forward one model call, counted against the budget."""
         route = self.server.route
         usage = self.server.usage
         if route is None:
             self._refuse(403, "This execution has no route to ai-inference.")
-            return
-        raw = self._read()
-        if raw is None:
             return
         try:
             request = json.loads(raw)

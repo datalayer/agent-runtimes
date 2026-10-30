@@ -304,6 +304,14 @@ class TestAnEnvironment:
         with InferenceRelay(tmp_path / "r", route=None):
             assert _post(tmp_path / "r", "/environment/exec", {"argv": ["x"]})[0] == 404
 
+    def test_it_answers_a_refusal_however_much_is_still_being_sent(self, tmp_path):
+        """A refusal before the body is read resets a client still writing it."""
+        body = {"argv": ["x" * 2_000_000]}
+        with InferenceRelay(tmp_path / "r", route=None):
+            assert _post(tmp_path / "r", "/environment/exec", body)[0] == 404
+            assert _post(tmp_path / "r", "/nowhere", body)[0] == 404
+            assert _post(tmp_path / "r", "/v1/chat/completions", body)[0] == 403
+
     def test_no_route_makes_no_model_call(self, tmp_path):
         with InferenceRelay(tmp_path / "r", route=None):
             assert _post(tmp_path / "r", "/v1/chat/completions", CHAT)[0] == 403

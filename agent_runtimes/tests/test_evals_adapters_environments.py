@@ -193,7 +193,7 @@ class TestTheRuntimeBackend:
                     token="person",
                 )
             )
-            backend.route = route  # type: ignore[attr-defined]
+            backend.route = route
             yield backend
 
     def test_a_command_runs_with_its_input_directory_and_environment(
