@@ -488,6 +488,39 @@ describe('the A2A capture', () => {
   });
 });
 
+describe('a harness behind the Shield, over A2A', () => {
+  it('names its steps by kind and title, on its workspace, one span from start to end', async () => {
+    // OpenCode on r1 (30 October 2026): a step told as `read`, then ended as
+    // `README.md`, the runtime's status metadata saying its kind and title.
+    const harness = (data: unknown, metadata: Record<string, string>) => {
+      const event = working(data) as {
+        statusUpdate: { status: { message: Record<string, unknown> } };
+      };
+      event.statusUpdate.status.message.metadata = metadata;
+      return event;
+    };
+    const { tracer } = await ask([
+      { task },
+      harness(
+        { tool_call: { id: 'e1', name: 'edit', arguments: {} } },
+        { kind: 'edit', title: 'edit', status: 'pending' },
+      ),
+      harness(
+        { tool_result: { id: 'e1', name: 'README.md', error: 'refused' } },
+        { kind: 'edit', title: 'README.md', status: 'failed' },
+      ),
+    ]);
+    await flush();
+    const calls = tracer
+      .spans()
+      .filter(span => span.span_name.startsWith('execute_tool'))
+      .filter(span => span.attributes?.['gen_ai.agent.name'] === 'Accounting');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].attributes?.['datalayer.tool.kind']).toBe('harness');
+    expect(calls[0].attributes?.['gen_ai.tool.name']).toBe('Edit README.md');
+  });
+});
+
 describe('the view', () => {
   it('draws each agent its own spans, a request in the asker’s and the peer’s', async () => {
     const { tracer } = await ask([
