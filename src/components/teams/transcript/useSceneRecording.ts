@@ -35,6 +35,8 @@ import {
   recordedMomentAt,
   recordedStageAt,
   recordingLabel,
+  settledStage,
+  settleMs,
   type RecordedStage,
 } from './recordingPlayback';
 
@@ -73,7 +75,7 @@ export type SceneRecordingPlayback = RecordedStage & {
   /** What the audience is told of it, when the recording says. */
   note?: string;
   playing: boolean;
-  /** Every line was shown. */
+  /** Every line was shown and the stage has played them out: it rests (`settledStage`). */
   done: boolean;
   play: () => void;
   pause: () => void;
@@ -111,6 +113,9 @@ export function useSceneRecording(
   // Where the clock started, minus what was played before a pause.
   const started = useRef<number>(now());
   const total = offsets.length ? offsets[offsets.length - 1] : 0;
+  // Played once, the clock runs on until the stage has played its last answer
+  // out; a loop's hold, `loopAfterMs`, does that.
+  const end = loop ? total : total + settleMs(all, { speed });
 
   useEffect(() => {
     setElapsed(0);
@@ -124,31 +129,31 @@ export function useSceneRecording(
     }
     const timer = setInterval(() => {
       const at = now() - started.current;
-      if (at >= total + (loop ? loopAfterMs : 0)) {
+      if (at >= end + (loop ? loopAfterMs : 0)) {
         if (loop) {
           started.current = now();
           setElapsed(0);
           return;
         }
-        setElapsed(total);
+        setElapsed(end);
         setPlaying(false);
         return;
       }
       setElapsed(at);
     }, tickMs);
     return () => clearInterval(timer);
-  }, [playing, total, loop, loopAfterMs, tickMs]);
+  }, [playing, end, loop, loopAfterMs, tickMs]);
 
   const play = useCallback(() => {
     if (all.length === 0) {
       return;
     }
-    started.current = now() - (elapsed >= total ? 0 : elapsed);
-    if (elapsed >= total) {
+    started.current = now() - (elapsed >= end ? 0 : elapsed);
+    if (elapsed >= end) {
       setElapsed(0);
     }
     setPlaying(true);
-  }, [all.length, elapsed, total]);
+  }, [all.length, elapsed, end]);
   const pause = useCallback(() => setPlaying(false), []);
   const restart = useCallback(() => {
     started.current = now();
@@ -158,18 +163,19 @@ export function useSceneRecording(
 
   const shown = offsets.filter(offset => offset <= elapsed).length;
   const lines = useMemo(() => all.slice(0, shown), [all, shown]);
-  const stage = useMemo(
-    () =>
-      all.length
-        ? recordedStageAt(
-            all,
-            recordedMomentAt(all, offsets, elapsed, speed),
-            members,
-            entry,
-          )
-        : { flows: {}, calls: [] },
-    [all, offsets, elapsed, speed, members, entry],
-  );
+  const done = all.length > 0 && elapsed >= end && !playing;
+  const stage = useMemo(() => {
+    if (!all.length) {
+      return { flows: {}, calls: [] };
+    }
+    const moment = recordedStageAt(
+      all,
+      recordedMomentAt(all, offsets, elapsed, speed),
+      members,
+      entry,
+    );
+    return done ? settledStage(moment) : moment;
+  }, [all, offsets, elapsed, speed, members, entry, done]);
   const taken = recording?.taken ?? '';
   return {
     ...stage,
@@ -179,7 +185,7 @@ export function useSceneRecording(
     taken,
     ...(recording?.note ? { note: recording.note } : {}),
     playing,
-    done: all.length > 0 && shown === all.length && !playing,
+    done,
     play,
     pause,
     restart,

@@ -23,6 +23,8 @@ import {
   recordedMomentAt,
   recordedStageAt,
   recordingLabel,
+  settledStage,
+  settleMs,
 } from '../recordingPlayback';
 import {
   useSceneRecording,
@@ -105,6 +107,39 @@ describe('recordingPlayback', () => {
     expect(recordedMomentAt(lines, offsets, 900)).toBe(start + 1100);
     expect(recordedMomentAt(lines, offsets, 1599)).toBe(start + 1799);
   });
+
+  it('says how long the stage moves after the last line, and what it rests on', () => {
+    const lines = recordedLinesOf(recording());
+    // The last words come at 5 s, and show for 1.8 s.
+    expect(settleMs(lines)).toBe(1800);
+    expect(settleMs(lines, { speed: 2 })).toBe(900);
+    // A call that outlives the last line: its end, and its result coming back.
+    const call = {
+      key: 'c:called',
+      at: 0,
+      ended: 5000,
+      from: 'Accounting',
+      to: 'Odoo',
+      kind: 'called' as const,
+      text: 'odoo_accounting_aged_balance',
+    };
+    expect(settleMs([call])).toBe(6200);
+    expect(settleMs([])).toBe(0);
+    expect(
+      settledStage({
+        flows: { accounting: 'answering', sales: 'asking' },
+        calls: [
+          {
+            member: 'accounting',
+            connection: 'odoo-accounting',
+            tool: 'odoo_accounting_aged_balance',
+            id: 'c:called',
+            started: 0,
+          },
+        ],
+      }),
+    ).toEqual({ flows: { accounting: 'still', sales: 'still' }, calls: [] });
+  });
 });
 
 function Probe({
@@ -155,6 +190,9 @@ describe('useSceneRecording', () => {
       vi.advanceTimersByTime(4000);
     });
     expect(last!.lines).toHaveLength(5);
+    act(() => {
+      vi.advanceTimersByTime(1300);
+    });
     expect(last!.done).toBe(true);
     act(() => last!.restart());
     expect(last!.lines).toHaveLength(1);
@@ -164,6 +202,62 @@ describe('useSceneRecording', () => {
       vi.advanceTimersByTime(10000);
     });
     expect(last!.lines).toHaveLength(1);
+  });
+
+  it('plays the last answer out, then leaves the stage at rest', () => {
+    let last: SceneRecordingPlayback | undefined;
+    render(<Probe file={recording()} onPlayback={played => (last = played)} />);
+    act(() => {
+      vi.advanceTimersByTime(5100);
+    });
+    // Every line shown, and the answer still coming back.
+    expect(last!.lines).toHaveLength(5);
+    expect(last!.flows).toEqual({ accounting: 'answering' });
+    expect(last!.playing).toBe(true);
+    expect(last!.done).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(last!.flows).toEqual({ accounting: 'still' });
+    expect(last!.calls).toEqual([]);
+    expect(last!.playing).toBe(false);
+    expect(last!.done).toBe(true);
+  });
+
+  it('leaves no call running once it is over, even one recorded with no end', () => {
+    const file = recording();
+    const noEnds = {
+      ...file,
+      lines: file.lines.map(({ ended: _ended, ...line }) => line),
+    };
+    let last: SceneRecordingPlayback | undefined;
+    render(<Probe file={noEnds} onPlayback={played => (last = played)} />);
+    act(() => {
+      vi.advanceTimersByTime(5100);
+    });
+    expect(last!.calls).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(last!.done).toBe(true);
+    expect(last!.calls).toEqual([]);
+  });
+
+  it('picks the last answer up where it was paused', () => {
+    let last: SceneRecordingPlayback | undefined;
+    render(<Probe file={recording()} onPlayback={played => (last = played)} />);
+    act(() => {
+      vi.advanceTimersByTime(5100);
+    });
+    act(() => last!.pause());
+    expect(last!.done).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(last!.flows).toEqual({ accounting: 'answering' });
+    act(() => last!.play());
+    expect(last!.lines).toHaveLength(5);
+    expect(last!.flows).toEqual({ accounting: 'answering' });
   });
 
   it('plays nothing without a recording', () => {

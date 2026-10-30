@@ -127,6 +127,49 @@ export type RecordedStage = {
   calls: A2ATeamCall[];
 };
 
+/**
+ * How long the stage still moves after the last line, in playback
+ * milliseconds: until the last answer and the last result have been shown.
+ */
+export function settleMs(
+  lines: readonly SceneTranscriptLine[],
+  { speed = 1 }: { speed?: number } = {},
+): number {
+  const last = lines[lines.length - 1];
+  if (!last) {
+    return 0;
+  }
+  const settled = Math.max(
+    ...lines.map(line => {
+      if (line.kind === 'said') {
+        return line.at + ANSWER_SHOWN_MS;
+      }
+      if (line.ended === undefined) {
+        return line.at;
+      }
+      return (
+        line.ended +
+        (line.kind === 'called' ? RESULT_SHOWN_MS : ANSWER_SHOWN_MS)
+      );
+    }),
+  );
+  return Math.round(Math.max(0, settled - last.at) / (speed > 0 ? speed : 1));
+}
+
+/**
+ * The stage once a recording is over: no link carries a message and no call
+ * runs, whatever the lines left open (a call recorded with no end is over
+ * when the recording is).
+ */
+export function settledStage(stage: RecordedStage): RecordedStage {
+  return {
+    flows: Object.fromEntries(
+      Object.keys(stage.flows).map(peer => [peer, 'still' as A2ATeamFlow]),
+    ),
+    calls: [],
+  };
+}
+
 function memberIdOf(
   name: string | undefined,
   members: readonly SceneTranscriptMember[],
