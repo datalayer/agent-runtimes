@@ -1,18 +1,18 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company, through the SDK's reference company (PR-04).
+"""A Loop application as a PAP company, through the SDK's reference company.
 
 ``PapCompanyCapability`` assembles ``personal_agent_protocol.company`` for an
 application whose Appspec enables ``pap.company``. Its Reactor points:
 
-- ``pap.company.agent`` is the application, asked over its A2A route (R-03)
+- ``pap.company.agent`` is the application, asked over its A2A route
   with the message marked ``metadata.pap`` — the turn the runtime reads in
   :mod:`agent_runtimes.apps.pap_company`: a declared operation's tool
   call is proposed rather than made, returned as a ``pap_operation`` data
   part, and the Maker's sentence with the terms is what the person sees;
 - ``pap.company.operationExecutor``, one per declared operation, is the
-  application again: once the person confirmed the exact revision, a one-use
+  application again: once the person approved the exact revision, a one-use
   ticket is issued and the application is asked to perform; the runtime
   redeems the ticket at ``pap.company.operationTickets`` (contributed by
   :meth:`PapCompanyCapability.runtime_plugin` on the runtime's platform) and
@@ -29,6 +29,7 @@ is refused when the capability is built.
 
 from __future__ import annotations
 
+import json
 import secrets
 import time
 import uuid
@@ -42,6 +43,7 @@ from personal_agent_protocol.company import (
     COMPANY_AGENTS,
     OPERATION_EXECUTORS,
     AccountDirectory,
+    ActionResult,
     CompanyConfig,
     CompanyService,
     OperationFailed,
@@ -52,7 +54,7 @@ from personal_agent_protocol.company import (
     build_company,
     company_app,
 )
-from personal_agent_protocol.models import Operation, OperationResult
+from personal_agent_protocol.models import Operation
 from personal_agent_protocol.reactor import resolve_addresses
 from reactor import PluginManifest
 
@@ -213,8 +215,9 @@ class ApplicationCompanyAgent:
                 )
             ]
         text = "\n\n".join(a2a_texts(result)) or "…"
-        # What it proposed, as its Appspec declares it: the wording and whether
-        # only the person may confirm are the Maker's, never the model's.
+        # What it proposed, as its Appspec declares it: the wording is the
+        # Maker's, never the model's. Nothing but the terms says what an action
+        # is done to, so other terms are another operation, not a new revision.
         proposed = []
         for proposal in a2a_data(result, "pap_operation"):
             declared = self._declared(str(proposal.get("action") or ""))
@@ -226,7 +229,7 @@ class ApplicationCompanyAgent:
                     action=declared.action,
                     summary=summary_of(declared.summary, terms),
                     terms=terms,
-                    user_approval_required=bool(declared.user_approval_required),
+                    subject=json.dumps(terms, sort_keys=True, default=str),
                 )
             )
         if not proposed:
@@ -292,7 +295,9 @@ class ApplicationOperationExecutor:
         self.application = application
         self.tickets = tickets
 
-    async def perform(self, operation: Operation, account_id: str) -> OperationResult:
+    async def perform(
+        self, operation: Operation, account_id: str | None
+    ) -> ActionResult:
         """Perform the operation for the account with a ticket."""
         ticket = self.tickets.issue(
             {
@@ -320,13 +325,11 @@ class ApplicationOperationExecutor:
             )
         if not performed[0].get("done"):
             raise OperationFailed(
-                OperationResult(
-                    summary=said or "Nothing was done: the call was not made."
-                )
+                ActionResult(summary=said or "Nothing was done: the call was not made.")
             )
         if state not in (None, "completed"):
             raise OperationOutcomeUnknown(f"the application's turn ended {state}")
-        return OperationResult(summary=said or "Done.")
+        return ActionResult(summary=said or "Done.")
 
 
 class RegisteredAgents:
@@ -423,14 +426,6 @@ class PapCompanyCapability:
             raise ValueError(
                 "A local company offers the agent interface only (its A2A route); "
                 f"the Appspec asks for {', '.join(sorted(interfaces))}"
-            )
-        giving = [o.action for o in company.operations if o.allows is not None]
-        if giving:
-            # Recorded as the person's approval in advance, which only Datalayer
-            # keeps (R-07): a company in this process has nowhere to.
-            raise ValueError(
-                f"A local company gives no standing permission: {giving[0]} is given "
-                "only by the application shipped on Datalayer"
             )
         if not company.scopes:
             raise ValueError(
