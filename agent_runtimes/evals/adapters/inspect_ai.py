@@ -65,7 +65,10 @@ from agent_runtimes.evals.adapters.base import (
     stable_case_id,
 )
 from agent_runtimes.evals.adapters.sandbox import SandboxPolicy
-from agent_runtimes.evals.adapters.task_environments import environment_of
+from agent_runtimes.evals.adapters.task_environments import (
+    EnvironmentRefused,
+    environment_of,
+)
 
 __all__ = ["InspectAdapter", "score_as_float"]
 
@@ -146,13 +149,31 @@ def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _buildable(task: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The Environment of a task that has one and can be built.
+
+    A refusal is `_unmapped`'s to say, so a plan still answers.
+    """
+    try:
+        return _task_environment(task)
+    except EnvironmentRefused:
+        return None
+
+
 def _unmapped(task: Mapping[str, Any], kind: str) -> str:
     """Why a Docker sandbox cannot be a task environment; `""` when it can, or need not."""
     if kind != "docker" or "datalayer" not in _sandboxes():
         return ""
     if kind in (task.get("sample_sandboxes") or []):
         return "Its samples name their Docker sandboxes one by one, and a task runs in one environment."
-    return str(dict(task.get("environment_source") or {}).get("refused") or "")
+    refused = str(dict(task.get("environment_source") or {}).get("refused") or "")
+    if refused:
+        return refused
+    try:
+        _task_environment(task)
+    except EnvironmentRefused as error:
+        return str(error)
+    return ""
 
 
 def _sandboxes() -> set[str]:
@@ -612,7 +633,7 @@ class InspectAdapter(ExternalAdapter):
         environments = {
             str(task["entry_point"]): spec
             for task in configuration.get("tasks") or []
-            if (spec := _task_environment(task))
+            if (spec := _buildable(task))
         }
         calls_models = any(is_inference_model(model) for model in models)
         policy = SandboxPolicy(

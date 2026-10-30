@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 
 import pytest
+from code_sandboxes.environments.spec import BUILD_SOURCES
 
 from agent_runtimes.evals.adapters.base import (
     AdapterPlan,
@@ -63,6 +64,13 @@ def archive_of(root: Path) -> bytes:
     return buffer.getvalue()
 
 
+#: A task's Dockerfile needs the code-sandboxes that builds one on its own base.
+needs_foreign_builds = pytest.mark.skipif(
+    "foreignDockerfile" not in BUILD_SOURCES,
+    reason="this code-sandboxes does not build a Dockerfile on a foreign base",
+)
+
+
 def _task(**extra):
     return {"name": "t", "path": "tasks/t", "instruction": "x", **extra}
 
@@ -87,6 +95,7 @@ class TestWhatATaskNeeds:
             item.code for item in blocking(_task_capabilities(_task(**task)))
         }
 
+    @needs_foreign_builds
     def test_a_deployment_says_what_it_provides(self, monkeypatch):
         monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image,compose")
         assert (
@@ -134,6 +143,21 @@ class TestAgents:
         assert "no route" in _agent_capability("gemini-cli").reason
 
 
+class TestAnImageFromElsewhere:
+    @needs_foreign_builds
+    def test_it_is_refused_by_name_and_the_plan_still_answers(self, monkeypatch):
+        monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image")
+        task = _task(docker_image="registry.example.com/team/task:1")
+        plan = HarborAdapter().plan(
+            _definition(tasks=[task], agents=["oracle"], n_attempts=1),
+            grant=LaunchGrant(),
+        )
+        refused = blocking(plan.capabilities)
+        assert [item.code for item in refused] == ["environment_refused"]
+        assert "is not an allowed registry" in refused[0].reason
+        assert plan.resolved_configuration["task_environments"] == {}
+
+
 class TestClaudeCode:
     """It runs where the deployment says ai-inference has the Bedrock route."""
 
@@ -172,6 +196,7 @@ class TestClaudeCode:
         assert plan.resolved_configuration["anthropic"] is True
         assert plan.resolved_configuration["environment_only"] is False
 
+    @needs_foreign_builds
     def test_on_a_task_with_its_own_environment_it_is_out_of_the_relays_reach(
         self, monkeypatch
     ):

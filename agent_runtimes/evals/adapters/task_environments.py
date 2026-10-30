@@ -37,8 +37,12 @@ __all__ = [
 
 #: What every Environment here is built on, until a task says otherwise.
 PYTHON_VERSION = "3.12"
-BASE_REF = "python:3.12"
-BASE_CHANNEL = "stable"
+#: The approved base the sandbox contract is layered from, and no more than that.
+BASE_REF = "datalayer/python-cpu"
+BASE_CHANNEL = "2026.09"
+#: Where a layered image keeps its own working directory, which a task's commands
+#: start in; the sandbox's own stays the contract's.
+TASK_WORKDIR_FILE = "/opt/datalayer/task-workdir"
 #: Where the sandbox's answer starts in what the kernel printed.
 ANSWER_MARK = "<<datalayer-task-environment>>"
 EXECUTE_PATH = "/api/v1/sandbox/execute"
@@ -97,9 +101,12 @@ def environment_of(
 ) -> dict[str, Any]:
     """The Environment a task needs, as `POST /environments` takes it.
 
-    A prebuilt image is imported; a Dockerfile is built. A Dockerfile that
-    copies files in needs a build context, which this does not upload yet, so
-    such a task is refused here rather than failing halfway through a build.
+    A prebuilt image is imported; a Dockerfile is built, on the base it names.
+    Either way the Environments pipeline layers the sandbox contract on top at
+    build. A Dockerfile that copies files in needs a build context, which this
+    does not upload yet, so such a task is refused here rather than failing
+    halfway through a build; so is anything Environments itself would refuse,
+    an image from a registry outside its list among them.
     """
     if image and dockerfile:
         raise EnvironmentRefused("It names both an image and a Dockerfile.")
@@ -112,14 +119,14 @@ def environment_of(
     build: dict[str, Any] = (
         {"source": "image", "image": {"reference": image}}
         if image
-        else {"source": "dockerfile", "dockerfile": {"content": dockerfile}}
+        else {"source": "foreignDockerfile", "dockerfile": {"content": dockerfile}}
     )
     spec = {
         "language": {"name": "python", "version": PYTHON_VERSION},
         "base": {"ref": BASE_REF, "channel": BASE_CHANNEL},
         "build": build,
     }
-    return {
+    document = {
         "apiVersion": "environments.datalayer.io/v1alpha1",
         "kind": "Environment",
         "metadata": {
@@ -128,6 +135,29 @@ def environment_of(
         },
         "spec": spec,
     }
+    _refuse_unbuildable(document)
+    return document
+
+
+def _refuse_unbuildable(document: Mapping[str, Any]) -> None:
+    """Environments' own answer, at the launch rather than at the build."""
+    from code_sandboxes.environments.errors import EnvironmentsError
+    from code_sandboxes.environments.spec import (
+        BUILD_SOURCES,
+        parse_environment,
+        spec_findings,
+    )
+
+    if document["spec"]["build"]["source"] not in BUILD_SOURCES:
+        raise EnvironmentRefused(
+            "Its Dockerfile names its own base, which this deployment's Environments do not build yet."
+        )
+    try:
+        findings = spec_findings(parse_environment(dict(document)))
+    except EnvironmentsError as error:
+        raise EnvironmentRefused(error.message) from None
+    if findings:
+        raise EnvironmentRefused(f"It cannot be built: {findings[0].message}")
 
 
 #: Runs in the sandbox's kernel. One operation, its answer printed after a mark.
@@ -137,8 +167,12 @@ _request = json.loads(base64.b64decode({request!r}))
 _answer = {{}}
 try:
     if _request["op"] == "exec":
+        _cwd = _request["cwd"]
+        if not _cwd and os.path.exists({workdir!r}):
+            with open({workdir!r}) as _file:
+                _cwd = _file.read().strip()
         _done = subprocess.run(
-            _request["argv"], input=base64.b64decode(_request["stdin"]), cwd=_request["cwd"], capture_output=True,
+            _request["argv"], input=base64.b64decode(_request["stdin"]), cwd=_cwd, capture_output=True,
             env={{**os.environ, **_request["env"]}}, timeout=_request["timeout"],
         )
         _answer = {{"returncode": _done.returncode, "stdout": _done.stdout.decode("utf-8", "replace"), "stderr": _done.stderr.decode("utf-8", "replace")}}
@@ -173,6 +207,7 @@ class RuntimeBackend:
         from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
         code = _REMOTE.format(
+            workdir=TASK_WORKDIR_FILE,
             request=base64.b64encode(json.dumps(request).encode()).decode(),
             mark=ANSWER_MARK,
         )

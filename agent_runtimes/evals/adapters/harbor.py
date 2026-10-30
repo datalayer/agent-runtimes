@@ -161,6 +161,14 @@ def _agent_model(model: str) -> str:
     return f"anthropic/{model.removeprefix('bedrock:')}" if model else ""
 
 
+#: A sandbox is not root, and Harbor's own paths are written during a trial.
+TASK_PATHS_LAYER = (
+    "USER root\n"
+    "RUN mkdir -p /workspace /logs/agent /logs/verifier /logs/artifacts /tests /solution "
+    "&& chmod -R 1777 /workspace /logs /tests /solution\n"
+)
+
+
 def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
     """The Environment a task's image becomes, when this deployment builds them."""
     if (
@@ -169,11 +177,24 @@ def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
     ):
         return None
     extra = list(task.get("build_context") or [])
+    image = str(task.get("docker_image") or "")
+    # A prebuilt image stands before a Dockerfile, as it does in Harbor.
+    base = f"FROM {image}\n" if image else str(task.get("dockerfile_content") or "")
     return environment_of(
-        image=str(task.get("docker_image") or ""),
-        dockerfile=str(task.get("dockerfile_content") or ""),
-        extra_files=extra,
+        dockerfile=f"{base.rstrip()}\n{TASK_PATHS_LAYER}" if base.strip() else "",
+        extra_files=[] if image else extra,
     )
+
+
+def _buildable(task: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The Environment of a task that has one and can be built.
+
+    A refusal is its capability's to say, so a plan still answers.
+    """
+    try:
+        return _task_environment(task)
+    except EnvironmentRefused:
+        return None
 
 
 def _task_capabilities(task: Mapping[str, Any]) -> list[Capability]:
@@ -387,7 +408,7 @@ class HarborAdapter(ExternalAdapter):
                 f"The agent {agent} reaches ai-inference through the relay, and a task with an environment of its own runs it out of the relay's reach.",
             )
             for task in tasks
-            if _task_environment(task)
+            if _buildable(task)
         ]
 
     def _capabilities(
@@ -523,9 +544,7 @@ class HarborAdapter(ExternalAdapter):
         attempts = int(configuration.get("n_attempts") or 1)
         tasks = list(configuration.get("tasks") or [])
         environments = {
-            str(task["path"]): spec
-            for task in tasks
-            if (spec := _task_environment(task))
+            str(task["path"]): spec for task in tasks if (spec := _buildable(task))
         }
         calls_models = ANTHROPIC_AGENT in agents
         policy = replace(

@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import pytest
+from code_sandboxes.environments.spec import BUILD_SOURCES
 
 from agent_runtimes.evals.adapters.base import (
     LaunchGrant,
@@ -53,6 +54,9 @@ FIXTURES = Path(__file__).parent / "fixtures"
 HARBOR = os.environ.get("DATALAYER_HARBOR_PYTHON", "")
 INSPECT = os.environ.get("DATALAYER_INSPECT_AI_PYTHON", "")
 IMAGE = "python:3.12-slim"
+#: A layered image to run the same trials in, as the contract's user. One a
+#: build made; the plain image stands for the sandbox without it.
+TASK_IMAGE = os.environ.get("DATALAYER_TASK_ENVIRONMENT_IMAGE", IMAGE)
 
 
 def _docker_ready() -> bool:
@@ -66,6 +70,11 @@ def _docker_ready() -> bool:
     )
 
 
+#: A Dockerfile on a task's own base needs the code-sandboxes that builds one.
+needs_foreign_builds = pytest.mark.skipif(
+    "foreignDockerfile" not in BUILD_SOURCES,
+    reason="this code-sandboxes does not build a Dockerfile on a foreign base",
+)
 needs_docker = pytest.mark.skipif(
     not (isolation_available() and _docker_ready()),
     reason=f"no namespaces, or no Docker with {IMAGE}",
@@ -93,19 +102,29 @@ class TestAnEnvironment:
         assert parsed.spec.build.source == "image"
         assert parsed.spec.build.image.reference.endswith("python:3.12-slim")
 
-    def test_a_dockerfile_is_built(self):
+    @needs_foreign_builds
+    def test_a_dockerfile_is_built_on_the_base_it_names(self):
         parsed = self._validated(environment_of(dockerfile="FROM python:3.12-slim\n"))
-        assert parsed.spec.build.source == "dockerfile"
+        assert parsed.spec.build.source == "foreignDockerfile"
+
+    @needs_foreign_builds
+    def test_a_registry_outside_the_list_is_refused_at_the_launch(self):
+        with pytest.raises(EnvironmentRefused, match="is not an allowed registry"):
+            environment_of(dockerfile="FROM registry.example.com/team/task:1\n")
+
+    def test_an_image_from_elsewhere_is_refused_at_the_launch(self):
+        with pytest.raises(EnvironmentRefused, match="is not an allowed registry"):
+            environment_of(image="registry.example.com/team/task:1")
 
     def test_the_same_task_is_the_same_environment(self):
         one, two = (
-            environment_of(dockerfile="FROM a\n"),
-            environment_of(dockerfile="FROM a\n"),
+            environment_of(image="docker.io/a:1"),
+            environment_of(image="docker.io/a:1"),
         )
         assert one["metadata"]["name"] == two["metadata"]["name"]
         assert (
             one["metadata"]["name"]
-            != environment_of(dockerfile="FROM b\n")["metadata"]["name"]
+            != environment_of(image="docker.io/b:1")["metadata"]["name"]
         )
         assert environment_name_of(one["spec"]) == one["metadata"]["name"]
 
@@ -203,6 +222,16 @@ class TestTheRuntimeBackend:
     def test_a_timeout_is_a_timeout(self, backend):
         assert backend.exec(["sleep", "5"], timeout=1)["returncode"] == 124
 
+    def test_a_command_starts_where_the_task_worked(
+        self, backend, tmp_path, monkeypatch
+    ):
+        (tmp_path / "workdir").write_text(str(tmp_path))
+        monkeypatch.setattr(
+            "agent_runtimes.evals.adapters.task_environments.TASK_WORKDIR_FILE",
+            str(tmp_path / "workdir"),
+        )
+        assert backend.exec(["pwd"])["stdout"].strip() == str(tmp_path)
+
     def test_it_runs_as_the_sandboxs_own_user(self, backend):
         with pytest.raises(PermissionError):
             backend.exec(["true"], user="someone")
@@ -223,7 +252,7 @@ class DockerBackend:
                 "none",
                 "--name",
                 self.name,
-                IMAGE,
+                TASK_IMAGE,
                 "sleep",
                 "300",
             ],
@@ -295,6 +324,7 @@ REF = TaskEnvironmentRef(ingress="https://unused", token="environment-token")
 
 
 @needs_docker
+@needs_foreign_builds
 @pytest.mark.skipif(not HARBOR, reason="DATALAYER_HARBOR_PYTHON names no Harbor")
 class TestHarborInAnImage:
     def test_a_task_with_a_dockerfile_runs_its_trial_in_a_real_container(
@@ -328,7 +358,7 @@ class TestHarborInAnImage:
             plan.resolved_configuration["task_environments"][marks["entry_point"]][
                 "spec"
             ]["build"]["source"]
-            == "dockerfile"
+            == "foreignDockerfile"
         )
         trial = Trial(
             case_id=case["id"],
