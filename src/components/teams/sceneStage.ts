@@ -49,7 +49,7 @@ export function appOfMember(
 /**
  * An application's colour on a stage: its agent's, as its spec names it — a
  * name of the palette or a hex, drawn in the current theme by
- * `useSpecColor` — or none, when it has no agent or its agent no colour.
+ * `usePaletteColor` — or none, when it has no agent or its agent no colour.
  */
 export function appColorOf(
   app: Pick<AppSpec, 'agent'> | undefined,

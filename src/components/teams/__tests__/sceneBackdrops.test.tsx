@@ -42,7 +42,7 @@ import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
 import { getColorPalette, useThemeStore } from '@datalayer/primer-addons';
 import { appColorOf } from '../sceneStage';
-import { resolveSpecColor } from '../backdrops/paletteColor';
+import { resolvePaletteColor } from '@datalayer/primer-addons';
 
 beforeAll(() => {
   class Observer {
@@ -770,7 +770,7 @@ describe('a member’s colour', () => {
           container.querySelector(`[data-team-member="${id}"]`) as HTMLElement
         ).style.getPropertyValue('--scene-member');
       expect(tone('sales'), backdrop).toBe(
-        resolveSpecColor('indigo', palette()) ?? '',
+        resolvePaletteColor('indigo', palette()) ?? '',
       );
       expect(tone('accounting'), backdrop).toBe('#0F766E');
       expect(tone('shipping'), backdrop).toBe('');
@@ -787,14 +787,14 @@ describe('a member’s colour', () => {
         '[data-team-member="sales"]',
       ) as HTMLElement;
       expect(sales.style.getPropertyValue('--scene-member')).toBe(
-        resolveSpecColor(
+        resolvePaletteColor(
           'indigo',
           getColorPalette(useThemeStore.getState().theme, 'light'),
         ) ?? '',
       );
       act(() => useThemeStore.setState({ colorMode: 'dark' }));
       expect(sales.style.getPropertyValue('--scene-member')).toBe(
-        resolveSpecColor(
+        resolvePaletteColor(
           'indigo',
           getColorPalette(useThemeStore.getState().theme, 'dark'),
         ) ?? '',
@@ -837,11 +837,11 @@ describe('a member’s colour', () => {
 
   it('resolves a hex as it is, a role by the palette, nothing else', () => {
     const dark = getColorPalette('datalayer', 'dark');
-    expect(resolveSpecColor('#abc', dark)).toBe('#abc');
-    expect(resolveSpecColor('primary', dark)).toBe(dark.primary);
-    expect(resolveSpecColor('isLight', dark)).toBeUndefined();
-    expect(resolveSpecColor('toString', dark)).toBeUndefined();
-    expect(resolveSpecColor('#12345', dark)).toBeUndefined();
-    expect(resolveSpecColor('', dark)).toBeUndefined();
+    expect(resolvePaletteColor('#abc', dark)).toBe('#abc');
+    expect(resolvePaletteColor('primary', dark)).toBe(dark.primary);
+    expect(resolvePaletteColor('isLight', dark)).toBeUndefined();
+    expect(resolvePaletteColor('toString', dark)).toBeUndefined();
+    expect(resolvePaletteColor('#12345', dark)).toBeUndefined();
+    expect(resolvePaletteColor('', dark)).toBeUndefined();
   });
 });

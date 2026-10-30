@@ -1226,7 +1226,7 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
         "tags": ["sales", "board", "reporting"],
         "icon": "workflow",
         "emoji": "📊",
-        "color": "#1F883D",
+        "color": "green",
         "lineage": ["datalayer", "sales-pipeline", "board-reporting"],
         "frame_guards": [
             {

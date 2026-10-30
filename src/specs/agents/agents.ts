@@ -205,7 +205,7 @@ export const EXAMPLE_A2A_RESEARCHER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'search',
   emoji: '🔎',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Gather the key facts on a topic, with sources',
@@ -259,7 +259,7 @@ export const EXAMPLE_A2A_WRITER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pencil',
   emoji: '✍️',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [
     {
       text: 'Turn a set of notes into a short, structured write-up',
@@ -313,7 +313,7 @@ export const EXAMPLE_A2A_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'broadcast',
   emoji: '📡',
-  color: '#7C3AED',
+  color: 'violet',
   suggestions: [
     {
       text: 'Research three key facts about the A2A protocol through the researcher, then have the writer turn them into one short paragraph.',
@@ -399,7 +399,7 @@ export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'browser',
   emoji: '🎛️',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'Build a support ticket intake form with category, priority and a description.',
@@ -484,7 +484,7 @@ export const EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'notebook',
   emoji: '📓',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run something in the code sandbox that prints as it goes.',
@@ -599,7 +599,7 @@ export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'browser',
   emoji: '🔍',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'Show a recipe card for a Mediterranean quinoa bowl, with a photo, its rating and review count, prep and cook time, and how many it serves.',
@@ -718,7 +718,7 @@ export const EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'sync',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.',
@@ -773,7 +773,7 @@ export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'clock',
   emoji: '🕒',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: 'What is the current time?', summary: 'Current time' },
     { text: "What's the current date?", summary: 'Current date' },
@@ -829,7 +829,7 @@ export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'list-unordered',
   emoji: '📋',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'Create a project plan for building a mobile app.',
@@ -907,7 +907,7 @@ export const EXAMPLE_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.',
@@ -969,7 +969,7 @@ export const EXAMPLE_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'note',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.',
@@ -1031,7 +1031,7 @@ export const EXAMPLE_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'code',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.',
@@ -1093,7 +1093,7 @@ export const EXAMPLE_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Load /home/datalayer/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.',
@@ -1151,7 +1151,7 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'sun',
   emoji: '🌤️',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: "What's the weather like in Paris?", summary: 'Weather in Paris' },
     {
@@ -1217,7 +1217,7 @@ export const EXAMPLE_BLANK_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'agent',
   emoji: '⬜',
-  color: '#6B7280',
+  color: 'gray',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -1274,7 +1274,7 @@ export const EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'note',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.',
@@ -1329,7 +1329,7 @@ export const EXAMPLE_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'versions',
   emoji: '💾',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Save a checkpoint labelled "baseline", then list every checkpoint you have, with its turn and message count.',
@@ -1404,7 +1404,7 @@ export const EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'cloud',
   emoji: '☁️',
-  color: '#F38020',
+  color: 'orange',
   suggestions: [
     {
       text: 'Multiply 12 by 34 with a tool call, then explain which model answered and where it ran.',
@@ -1467,7 +1467,7 @@ export const EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'codespaces',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Write and run Python that computes the first 20 Fibonacci numbers and prints them on one line.',
@@ -1535,7 +1535,7 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'code',
   emoji: '⚙️',
-  color: '#8250DF',
+  color: 'purple',
   suggestions: [
     {
       text: 'Run three web searches — Datalayer notebooks, Datalayer runtimes, Datalayer AI agents — extract the top result of each, and store the key points of all three in a variable named about_datalayer in the sandbox.',
@@ -1599,7 +1599,7 @@ export const EXAMPLE_COMPACTION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'history',
   emoji: '🗜️',
-  color: '#BF8700',
+  color: 'amber',
   suggestions: [
     {
       text: 'Write a 1500-word short story about a lighthouse keeper named Maren, in six chapters with headings, introducing at least four named characters.',
@@ -1669,7 +1669,7 @@ export const EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Compare /home/datalayer/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/datalayer/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.',
@@ -1731,7 +1731,7 @@ export const EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.',
@@ -1792,7 +1792,7 @@ export const EXAMPLE_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'project',
   emoji: '🖼️',
-  color: '#8250DF',
+  color: 'purple',
   suggestions: [
     {
       text: 'Draft a five-slide deck introducing our Q3 roadmap',
@@ -1925,7 +1925,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📝',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     { text: 'Can you help me write a document?', summary: 'Help me write' },
     {
@@ -1993,7 +1993,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📝',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Insert a heading that says "Welcome"',
@@ -2068,7 +2068,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '🧪',
-  color: '#0284C7',
+  color: 'sky',
   suggestions: [
     { text: 'hello world', summary: 'Uppercase a phrase' },
     { text: '  Paris  ', summary: 'Trim and uppercase' },
@@ -2130,7 +2130,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '🧪',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     { text: 'hello world', summary: 'Uppercase a phrase' },
     { text: '  Paris  ', summary: 'Trim and uppercase' },
@@ -2194,7 +2194,7 @@ export const EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.',
@@ -2256,7 +2256,7 @@ export const EXAMPLE_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.',
@@ -2318,7 +2318,7 @@ export const EXAMPLE_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'note',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.',
@@ -2401,7 +2401,7 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '🛡️',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: 'list your tools', summary: 'List your tools' },
     {
@@ -2489,7 +2489,7 @@ export const EXAMPLE_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.',
@@ -2551,7 +2551,7 @@ export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [
     {
       text: 'Call runtime_sensitive_echo with text "hello" and reason "audit", wait for my decision, then report the result.',
@@ -2664,7 +2664,7 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pencil',
   emoji: '🖋️',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'Write me a haiku about cherry blossoms in spring.',
@@ -3138,7 +3138,7 @@ export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '🪝',
-  color: '#0E7490',
+  color: 'cyan',
   suggestions: [
     {
       text: 'Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.',
@@ -3274,7 +3274,7 @@ export const EXAMPLE_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
@@ -3329,7 +3329,7 @@ export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'tasklist',
   emoji: '🧑‍⚖️',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: 'Plan a weekend trip to Paris.', summary: 'Weekend trip to Paris' },
     {
@@ -3406,7 +3406,7 @@ export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '🧠',
-  color: '#2563EB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Compare local and datalayer inference providers for latency and routing.',
@@ -3476,7 +3476,7 @@ export const EXAMPLE_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'play',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.',
@@ -3539,7 +3539,7 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Search the web for recent news about AI agents',
@@ -3610,7 +3610,7 @@ export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '🧠',
-  color: '#0D9488',
+  color: 'teal',
   suggestions: [
     {
       text: 'Remember that I prefer dark mode, metric units and concise answers, then confirm what you stored.',
@@ -3677,7 +3677,7 @@ export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '📊',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Show my current monitoring context summary',
@@ -3747,7 +3747,7 @@ export const EXAMPLE_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'tools',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.',
@@ -3810,7 +3810,7 @@ export const EXAMPLE_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1: Agentspec 
     environmentName: 'ai-agents-env',
     icon: 'bug',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.',
@@ -3870,7 +3870,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run three web searches — Datalayer notebooks, Datalayer runtimes, Datalayer AI agents — extract the top result of each, and store the key points of all three in a variable named about_datalayer in the sandbox.',
@@ -3933,7 +3933,7 @@ export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'bell',
   emoji: '🔔',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [
     {
       text: 'Send me an in-app notification titled "Hello from the example" saying the notifications channel works, then tell me which channels are enabled.',
@@ -4000,7 +4000,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '🛡️',
-  color: '#ef4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -4063,7 +4063,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
-  color: '#f59e0b',
+  color: 'amber',
   suggestions: [
     {
       text: 'Which trigger are you configured with, what prompt does it run, and what happens when it fires?',
@@ -4134,7 +4134,7 @@ export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'telescope',
   emoji: '🔭',
-  color: '#7C3AED',
+  color: 'violet',
   suggestions: [
     { text: 'What do the most recent traces show?', summary: 'Recent traces' },
     {
@@ -4199,7 +4199,7 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📦',
-  color: '#7C3AED',
+  color: 'violet',
   suggestions: [
     {
       text: 'Return a Markdown table of the top 5 US cities by population, with the columns City, State and Population.',
@@ -4295,7 +4295,7 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'sliders',
   emoji: '🎛️',
-  color: '#0F766E',
+  color: 'teal',
   suggestions: [
     {
       text: 'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
@@ -4385,7 +4385,7 @@ export const EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Load /home/datalayer/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.',
@@ -4448,7 +4448,7 @@ export const EXAMPLE_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'sync',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.',
@@ -4511,7 +4511,7 @@ export const EXAMPLE_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'shield',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
@@ -4566,7 +4566,7 @@ export const EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4629,7 +4629,7 @@ export const EXAMPLE_SANDBOX_DATALAYER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4692,7 +4692,7 @@ export const EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4755,7 +4755,7 @@ export const EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4818,7 +4818,7 @@ export const EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4881,7 +4881,7 @@ export const EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -4944,7 +4944,7 @@ export const EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -5007,7 +5007,7 @@ export const EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#1F6FEB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run Python that prints platform.platform(), sys.version and os.getenv("DATALAYER_CODE_SANDBOX_VARIANT"), and tell me where this code ran.',
@@ -5070,7 +5070,7 @@ export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'book',
   emoji: '🍳',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: 'Help me create a simple pasta recipe.', summary: 'Pasta recipe' },
     { text: 'Add tomatoes to the recipe.', summary: 'Add tomatoes' },
@@ -5142,7 +5142,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'agent',
   emoji: '🤖',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     { text: 'Tell me a joke', summary: 'Tell a joke' },
     {
@@ -5241,7 +5241,7 @@ export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'briefcase',
   emoji: '🧰',
-  color: '#0D9488',
+  color: 'teal',
   suggestions: [
     {
       text: 'List all your available skills and group them by source type',
@@ -5312,7 +5312,7 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '👥',
-  color: '#2563EB',
+  color: 'blue',
   suggestions: [
     {
       text: 'Delegate to the researcher: three source-backed facts about the Jupyter kernel protocol; then have the writer turn them into one short paragraph.',
@@ -5506,7 +5506,7 @@ export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'browser',
   emoji: '🎨',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'Create a project plan for building a mobile app.',
@@ -5566,7 +5566,7 @@ export const JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'bug',
   emoji: '🩹',
-  color: '#CF222E',
+  color: 'red',
   suggestions: [
     { text: 'Fix the cell that just failed.', summary: 'Fix the failing cell' },
     {
@@ -5672,7 +5672,7 @@ export const JUPYTER_DATA_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Analyze this dataset and summarize the main findings.',
@@ -5811,7 +5811,7 @@ export const JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'fold',
   emoji: '🗜️',
-  color: '#8250DF',
+  color: 'purple',
   suggestions: [
     {
       text: 'Compact this notebook without changing any of its results.',
@@ -5915,7 +5915,7 @@ export const JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'sync',
   emoji: '🔁',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Run this notebook on a clean kernel and tell me what breaks.',
@@ -6019,7 +6019,7 @@ export const JUPYTER_NOTEBOOK_REVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'checklist',
   emoji: '🧐',
-  color: '#BF8700',
+  color: 'amber',
   suggestions: [
     { text: 'Find what is wrong', summary: 'Find what is wrong', emoji: '🧐' },
     {
@@ -6108,7 +6108,7 @@ export const JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pencil',
   emoji: '✍️',
-  color: '#1A7F37',
+  color: 'green',
   suggestions: [
     {
       text: 'Verify the conclusion',
@@ -6211,7 +6211,7 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mortar-board',
   emoji: '🎓',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Explore this notebook and tell me what you find.',
@@ -6374,7 +6374,7 @@ export const LOOP_SHELL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'browser',
   emoji: '🪟',
-  color: '#0969DA',
+  color: 'blue',
   suggestions: [
     {
       text: 'Print two rows of ten growing dots, one dot per second.',
@@ -6521,7 +6521,7 @@ export const WORKER_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'book',
   emoji: '🧮',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Connect to Odoo and list unpaid customer invoices older than 30 days, grouped by customer with totals and top delinquencies.',
@@ -6595,7 +6595,7 @@ export const WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'code',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.',
@@ -6666,7 +6666,7 @@ export const WORKER_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
   emoji: '📢',
-  color: '#8250df',
+  color: 'purple',
   suggestions: [
     {
       text: 'Show cross-channel campaign performance for this week',
@@ -6824,7 +6824,7 @@ export const WORKER_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'issue-opened',
   emoji: '🎫',
-  color: '#bf8700',
+  color: 'amber',
   suggestions: [
     {
       text: 'Show me the latest ticket triage summary',
@@ -6942,7 +6942,7 @@ export const WORKER_AP_INVOICE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7008,7 +7008,7 @@ export const WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#0969da',
+  color: 'blue',
   suggestions: [
     { text: 'Run a full inventory audit now', summary: 'Full inventory audit' },
     {
@@ -7119,7 +7119,7 @@ export const WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7181,7 +7181,7 @@ export const WORKER_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '🏦',
-  color: '#0969da',
+  color: 'blue',
   suggestions: [
     {
       text: 'Generate the monthly Basel III capital adequacy report',
@@ -7328,7 +7328,7 @@ export const WORKER_BACKTEST_AUDITOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7390,7 +7390,7 @@ export const WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'sync',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7455,7 +7455,7 @@ export const WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
   emoji: '📣',
-  color: '#8B5CF6',
+  color: 'violet',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7520,7 +7520,7 @@ export const WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7585,7 +7585,7 @@ export const WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'telescope',
   emoji: '🛰️',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7650,7 +7650,7 @@ export const WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '📬',
-  color: '#0969da',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7757,7 +7757,7 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file-added',
   emoji: '✍️',
-  color: '#8250DF',
+  color: 'purple',
   suggestions: [
     {
       text: 'Crawl the RSS feed https://openteams.com/feed/, show me the pages you found, then create polished draft posts from the first three.',
@@ -7928,7 +7928,7 @@ export const WORKER_CODING_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'code',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -7993,7 +7993,7 @@ export const WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8055,7 +8055,7 @@ export const WORKER_COLLECTIONS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8120,7 +8120,7 @@ export const WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'comment-discussion',
   emoji: '📣',
-  color: '#8B5CF6',
+  color: 'violet',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8185,7 +8185,7 @@ export const WORKER_COMPETITIVE_INTELLIGENCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'search',
   emoji: '🔎',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8247,7 +8247,7 @@ export const WORKER_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.',
@@ -8323,7 +8323,7 @@ export const WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
-  color: '#1a7f37',
+  color: 'green',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8422,7 +8422,7 @@ export const WORKER_COMPUTE_COST_OPTIMIZER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'cpu',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8487,7 +8487,7 @@ export const WORKER_CONTENT_REPURPOSING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'share-2',
   emoji: '📣',
-  color: '#8B5CF6',
+  color: 'violet',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8547,7 +8547,7 @@ export const WORKER_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [
     {
       text: 'Search the web for recent news about AI agents',
@@ -8654,7 +8654,7 @@ export const WORKER_CROP_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'telescope',
   emoji: '🛰️',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8713,7 +8713,7 @@ export const WORKER_CURTAILMENT_INVESTIGATOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
-  color: '#EAB308',
+  color: 'yellow',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -8775,7 +8775,7 @@ export const WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'issue-opened',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.',
@@ -8845,7 +8845,7 @@ export const WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'comment-discussion',
   emoji: '🎙️',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Start an interview about why I chose this product',
@@ -8970,7 +8970,7 @@ export const WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '📊',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [
     {
       text: 'Find popular machine learning datasets on Kaggle',
@@ -9072,7 +9072,7 @@ export const WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '🛰️',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9135,7 +9135,7 @@ export const WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'search',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Load PDFs from /home/datalayer/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.',
@@ -9205,7 +9205,7 @@ export const WORKER_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#1f883d',
+  color: 'green',
   suggestions: [
     {
       text: 'Generate the latest end-of-month sales performance report',
@@ -9435,7 +9435,7 @@ export const WORKER_ENERGY_TRADING_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '⚡',
-  color: '#EAB308',
+  color: 'yellow',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9500,7 +9500,7 @@ export const WORKER_ENVIRONMENTAL_COMPLIANCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '🛰️',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9565,7 +9565,7 @@ export const WORKER_EVENT_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9630,7 +9630,7 @@ export const WORKER_EVIDENCE_REPOSITORY_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'book',
   emoji: '🔎',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9692,7 +9692,7 @@ export const WORKER_EXPENSE_AUDIT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'credit-card',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9757,7 +9757,7 @@ export const WORKER_EXPOSURE_DATA_QUALITY_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'tools',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9829,7 +9829,7 @@ export const WORKER_EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '🗃️',
-  color: '#bf8700',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -9945,7 +9945,7 @@ export const WORKER_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'pulse',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use the PDF set in /home/datalayer/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.',
@@ -10019,7 +10019,7 @@ export const WORKER_FACTOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10078,7 +10078,7 @@ export const WORKER_FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   emoji: '📈',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [
     {
       text: 'Show me the stock price history for AAPL',
@@ -10181,7 +10181,7 @@ export const WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📝',
-  color: '#cf222e',
+  color: 'red',
   suggestions: [
     {
       text: "Generate this week's executive report",
@@ -10316,7 +10316,7 @@ export const WORKER_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   emoji: '🐙',
-  color: '#6366F1',
+  color: 'indigo',
   suggestions: [
     {
       text: 'List my open pull requests across all repositories',
@@ -10412,7 +10412,7 @@ export const WORKER_GRID_FORECAST_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'pulse',
   emoji: '⚡',
-  color: '#EAB308',
+  color: 'yellow',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10477,7 +10477,7 @@ export const WORKER_INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'share-2',
   emoji: '🔀',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [
     {
       text: 'Find documents shared with me in Google Drive',
@@ -10583,7 +10583,7 @@ export const WORKER_INFRASTRUCTURE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'telescope',
   emoji: '🛰️',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10639,7 +10639,7 @@ export const WORKER_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.',
@@ -10714,7 +10714,7 @@ export const WORKER_INTERVIEW_GUIDE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'note',
   emoji: '🔎',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10776,7 +10776,7 @@ export const WORKER_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.',
@@ -10850,7 +10850,7 @@ export const WORKER_JOB_HUNTER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'search',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10900,7 +10900,7 @@ export const WORKER_MAIL_TRIAGE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -10956,7 +10956,7 @@ export const WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.',
@@ -11018,7 +11018,7 @@ export const WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'beaker',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.',
@@ -11095,7 +11095,7 @@ export const WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -11161,7 +11161,7 @@ export const WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#2da44e',
+  color: 'green',
   suggestions: [
     {
       text: "Show me today's sales KPI dashboard",
@@ -11297,7 +11297,7 @@ export const WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'sync',
   emoji: '🧾',
-  color: '#F59E0B',
+  color: 'amber',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -11362,7 +11362,7 @@ export const WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'rss',
   emoji: '📰',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [
     {
       text: 'Build my daily briefing for AI and cloud computing',
@@ -11496,7 +11496,7 @@ export const WORKER_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'tag',
   emoji: '🏷️',
-  color: '#bf8700',
+  color: 'amber',
   suggestions: [
     {
       text: 'Show competitor price movements in the last 24 hours',
@@ -11648,7 +11648,7 @@ export const WORKER_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
-  color: '#1a7f37',
+  color: 'green',
   suggestions: [
     {
       text: 'Show current grid health across all substations',
@@ -11787,7 +11787,7 @@ export const WORKER_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'zap',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.',
@@ -11855,7 +11855,7 @@ export const WORKER_PERFORMANCE_ATTRIBUTION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -11924,7 +11924,7 @@ export const WORKER_PIPELINE_DEBUGGER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'bug',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -11980,7 +11980,7 @@ export const WORKER_PITCHER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'rocket',
   emoji: '🚀',
-  color: '#BF3989',
+  color: 'pink',
   suggestions: [
     {
       text: 'Draft a seed pitch deck: problem, solution, traction, market, team, ask',
@@ -12169,7 +12169,7 @@ export const WORKER_PORTFOLIO_ACCUMULATION_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '🛡️',
-  color: '#EF4444',
+  color: 'red',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12231,7 +12231,7 @@ export const WORKER_PORTFOLIO_RISK_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12290,7 +12290,7 @@ export const WORKER_PREDICTIVE_MAINTENANCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'tools',
   emoji: '⚡',
-  color: '#EAB308',
+  color: 'yellow',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12349,7 +12349,7 @@ export const WORKER_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'organization',
   emoji: '🏛️',
-  color: '#0550ae',
+  color: 'blue',
   suggestions: [
     {
       text: "Show today's citizen request intake summary",
@@ -12499,7 +12499,7 @@ export const WORKER_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'heart',
   emoji: '🏥',
-  color: '#cf222e',
+  color: 'red',
   suggestions: [
     {
       text: 'Process the latest data batch from Site 014',
@@ -12652,7 +12652,7 @@ export const WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'credit-card',
     emoji: '💳',
-    color: '#8250df',
+    color: 'purple',
     suggestions: [
       {
         text: 'Process the latest batch of transactions',
@@ -12788,7 +12788,7 @@ export const WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'search',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12850,7 +12850,7 @@ export const WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'beaker',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12909,7 +12909,7 @@ export const WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
-  color: '#EAB308',
+  color: 'yellow',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -12974,7 +12974,7 @@ export const WORKER_RESEARCH_RECRUITER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔎',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13039,7 +13039,7 @@ export const WORKER_RNA_SEQ_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'beaker',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13095,7 +13095,7 @@ export const WORKER_SALES_FORECASTING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.',
@@ -13157,7 +13157,7 @@ export const WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.',
@@ -13230,7 +13230,7 @@ export const WORKER_SCENARIO_TESTING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'play',
   emoji: '📈',
-  color: '#3B82F6',
+  color: 'blue',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13293,7 +13293,7 @@ export const WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agent
     environmentName: 'ai-agents-env',
     icon: 'sync',
     emoji: '📊',
-    color: '#1F883D',
+    color: 'green',
     suggestions: [
       {
         text: 'Use /home/datalayer/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.',
@@ -13359,7 +13359,7 @@ export const WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'beaker',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.',
@@ -13436,7 +13436,7 @@ export const WORKER_SINGLE_CELL_PROCESSING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'cpu',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13501,7 +13501,7 @@ export const WORKER_SOCIAL_LISTENING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'comment-discussion',
   emoji: '📣',
-  color: '#8B5CF6',
+  color: 'violet',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13566,7 +13566,7 @@ export const WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
   emoji: '📣',
-  color: '#8B5CF6',
+  color: 'violet',
   suggestions: [
     {
       text: 'What conversations should I engage with today?',
@@ -13684,7 +13684,7 @@ export const WORKER_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🛰️',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Find precipitation datasets for West Africa from the last 10 years',
@@ -13771,7 +13771,7 @@ export const WORKER_SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📄',
-  color: '#8250df',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -13884,7 +13884,7 @@ export const WORKER_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔄',
-  color: '#0969da',
+  color: 'blue',
   suggestions: [
     { text: 'Run a full CRM contact sync now', summary: 'Full CRM sync' },
     { text: 'Show the latest sync report', summary: 'Latest sync report' },
@@ -13999,7 +13999,7 @@ export const WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'note',
   emoji: '🔎',
-  color: '#EC4899',
+  color: 'pink',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -14067,7 +14067,7 @@ export const WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -14135,7 +14135,7 @@ export const WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '🤖',
-  color: '#A855F7',
+  color: 'purple',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -14200,7 +14200,7 @@ export const WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'beaker',
   emoji: '🧬',
-  color: '#06B6D4',
+  color: 'cyan',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -14262,7 +14262,7 @@ export const WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'lightbulb',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.',
