@@ -290,9 +290,7 @@ class TestTheBenchmark:
 def test_the_fixture_is_the_examples():
     """The example people read is the one these tests run."""
     example = (
-        Path(__file__).parents[3]
-        / ".."
-        / ".."
+        Path(__file__).parents[4]
         / "tech"
         / "datalayer"
         / "examples"
