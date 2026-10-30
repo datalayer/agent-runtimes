@@ -256,6 +256,56 @@ def test_record_keeps_the_recording_beside_the_specs_and_names_it(
     ).rehearsal.recording.path == ("sales-and-accounting/recording.json")
 
 
+def test_record_updates_the_yaml_file_it_was_given(
+    scene: Any, specs: Path, tmp_path: Path
+) -> None:
+    """A scene's file need not be named after its id: the file given is the one written."""
+    given = specs / "demo.yml"
+    (specs / "sales-and-accounting.yaml").rename(given)
+    run = tmp_path / "run.json"
+    run.write_text(
+        json.dumps(
+            transcript_of_rehearsal(_verdict(scene), at="2026-10-30T02:00:00+00:00")
+        )
+    )
+    result = runner.invoke(
+        scenes_command.app, ["record", str(given), "--from", str(run)]
+    )
+    assert result.exit_code == 0, result.output
+    assert yaml.safe_load(given.read_text())["rehearsal"]["recording"]["path"] == (
+        "sales-and-accounting/recording.json"
+    )
+    assert (specs / "sales-and-accounting" / "recording.json").is_file()
+    assert not (specs / "sales-and-accounting.yaml").exists()
+
+
+def test_record_with_a_folder_says_the_file_in_that_folder(
+    scene: Any, specs: Path, tmp_path: Path
+) -> None:
+    """`--specs-dir` still says where the scene's specs are: the file given is only read."""
+    elsewhere = tmp_path / "elsewhere.yaml"
+    shutil.copy(specs / "sales-and-accounting.yaml", elsewhere)
+    before = elsewhere.read_text()
+    run = tmp_path / "run.json"
+    run.write_text(
+        json.dumps(
+            transcript_of_rehearsal(_verdict(scene), at="2026-10-30T02:00:00+00:00")
+        )
+    )
+    result = runner.invoke(
+        scenes_command.app,
+        ["record", str(elsewhere), "--from", str(run), "--specs-dir", str(specs)],
+    )
+    assert result.exit_code == 0, result.output
+    assert elsewhere.read_text() == before
+    assert (
+        "recording"
+        in yaml.safe_load((specs / "sales-and-accounting.yaml").read_text())[
+            "rehearsal"
+        ]
+    )
+
+
 def test_record_refuses_a_rehearsal_that_did_not_pass(
     scene: Any, specs: Path, tmp_path: Path
 ) -> None:

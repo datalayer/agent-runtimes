@@ -627,6 +627,16 @@ def specs_folder(module: Any, scene_name: str, given: Optional[Path]) -> Path:
     return Path(module.__file__).parent
 
 
+def spec_file_of(
+    module: Any, scene_name: str, scene_id: str, given: Optional[Path]
+) -> Path:
+    """The scene's YAML: the file named, else ``<id>.yaml`` in its folder of specs."""
+    path = Path(scene_name)
+    if given is None and path.suffix in (".yaml", ".yml") and path.is_file():
+        return path
+    return specs_folder(module, scene_name, given) / f"{scene_id}.yaml"
+
+
 @app.command(name="record")
 def scenes_record(
     scene_name: str = typer.Argument(
@@ -693,7 +703,7 @@ def scenes_record(
         console.print(f"[red]✗[/red] {refused}", highlight=False)
         raise typer.Exit(1)
     folder = specs_folder(module, scene_name, specs_dir)
-    spec_file = folder / f"{scene.id}.yaml"
+    spec_file = spec_file_of(module, scene_name, scene.id, specs_dir)
     if not spec_file.is_file():
         console.print(
             f"[red]✗[/red] {spec_file} is not there: say the folder of the scene specs with --specs-dir.",
