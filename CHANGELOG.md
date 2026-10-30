@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.96
+
+30 October 2026. A lent repository's state, read by its owner: `GET /api/v1/apps/agents/{agent}/computer/repository` answers its URL, its pinned revision, the workspace's HEAD and its `git status` lines, never a file's content — what a nightly rehearsal checks after a coding agent was asked to change a file. Over A2A, a harness's steps are named by their kind and title (*Edit README.md*) and drawn on its workspace, on the page as in a rehearsal.
+
 ## 1.5.95
 
 30 October 2026. Colours by palette name: a member, an agent or a team names a colour of primer-addons' palette (a role or one of its twenty hues) and it is drawn in the theme's own value, light or dark; a hex still works. Scenes: two more backdrops, `minimal` (glowing circles in each member's colour, no name, a dark ground) and `orb` (Datalayer's orb in each member's colour); on every backdrop a member's details open on hover and stay open on a click. The coding agent behind the Shield's recording. Needs agentspecs 0.0.140 and primer-addons 1.0.46.
