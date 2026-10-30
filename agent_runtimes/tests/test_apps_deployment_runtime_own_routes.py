@@ -112,6 +112,7 @@ OWN = {
     ("GET", "/api/v1/apps/agents/{agent}/computer"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/files"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/file"),
+    ("GET", "/api/v1/apps/agents/{agent}/computer/repository"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/take-over"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/run"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/hand-back"),
