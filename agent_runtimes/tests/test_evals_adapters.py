@@ -237,6 +237,13 @@ class TestTheFakeAdapter:
         result = host.execute("fake", digest, plan=plan, trial=Trial(case_id="c", native_id="alpha"), secrets={})
         assert (result.status, result.failure_stage, result.failure_mode) == ("failed", "infrastructure", "sandbox_time_exceeded")
 
+    def test_a_definition_the_adapter_chokes_on_is_refused_not_a_crash(self, host):
+        data = archive_of({"cases": "nonsense"})
+        digest = archive_digest(data)
+        host.put_source(digest, data)
+        with pytest.raises(ValueError):
+            host.inspect("fake", digest)
+
     def test_a_cancel_reaches_a_running_trial(self, host):
         from agent_runtimes.evals.adapters.sandbox import SandboxCancelled
 

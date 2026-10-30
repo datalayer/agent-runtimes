@@ -32,7 +32,7 @@ from agent_runtimes.evals.adapters.base import (
     policy_from,
 )
 from agent_runtimes.evals.adapters.registry import adapter
-from agent_runtimes.evals.adapters.sandbox import SandboxExceeded, run_sandboxed
+from agent_runtimes.evals.adapters.sandbox import SandboxCancelled, SandboxExceeded, SandboxUnavailable, run_sandboxed
 from agent_runtimes.evals.adapters.source import (
     archive_digest,
     content_digest,
@@ -130,6 +130,10 @@ class AdapterHost:
         workdir = self._workdir()
         try:
             return chosen.inspect(source, sandbox=self._sandbox(source=source, policy=chosen.default_policy, workdir=workdir, cancel=None), options=dict(options or {}))
+        except (SandboxUnavailable, SandboxCancelled):
+            raise
+        except Exception as error:  # noqa: BLE001 - whatever a source does to its reader is a refusal of that source
+            raise ValueError(f"the definition could not be read: {error}") from error
         finally:
             shutil.rmtree(workdir, ignore_errors=True)
 
@@ -153,7 +157,10 @@ class AdapterHost:
                 raw = chosen.execute(trial, plan=plan, source=source, sandbox=sandbox, env=secrets)
             except SandboxExceeded as exceeded:
                 return NormalizedResult(status="failed", explanation=str(exceeded), failure_stage="infrastructure", failure_mode=f"sandbox_{exceeded.bound}_exceeded")
-            return _redacted(chosen.normalize_result(trial, raw, plan=plan), secrets)
+            try:
+                return _redacted(chosen.normalize_result(trial, raw, plan=plan), secrets)
+            except Exception as error:  # noqa: BLE001 - what a framework left is data; it may be anything
+                return NormalizedResult(status="failed", explanation=redact(f"What the framework left could not be read: {error}", secrets), failure_stage="infrastructure", failure_mode="result_unreadable")
         finally:
             with self._lock:
                 self._running.pop(key, None)
