@@ -72,7 +72,6 @@ import {
   type SceneStage,
   type SceneStageMember,
   memberAppDetails,
-  type SelectedEdge,
 } from '../components/teams';
 import { listSceneSpecs } from '../specs/scenes';
 import type { SceneBackdropId, SceneSpec } from '../types/scenes';
@@ -263,11 +262,17 @@ function Scene({
       })),
     [stage, runtimeMembers],
   );
-  // The exchange selected in the transcript, as the edge of the graph it is
-  // on (S3-02): the graph draws it with a halo; a click on an edge selects
-  // its latest exchange.
-  const [selectedEdge, setSelectedEdge] = useState<SelectedEdge | null>(null);
+  // The line selected, held here for the transcript and the graph (S3-02):
+  // the transcript opens it, the graph draws its edge with a halo, and a
+  // click on an edge selects its latest exchange.
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const lines = useSceneTranscript(inspector, transcriptMembers);
+  const selectedEdge = useMemo(() => {
+    const line = lines.find(one => one.key === selectedLine);
+    return line
+      ? (selectedEdgeOf(selectionOfLine(line), transcriptMembers) ?? null)
+      : null;
+  }, [lines, selectedLine, transcriptMembers]);
   const whereOf = (member: SceneStageMember): string =>
     member.runsIn === 'browser'
       ? 'in your browser'
@@ -359,11 +364,8 @@ function Scene({
         <SceneView
           members={transcriptMembers}
           tracer={inspector}
-          onSelect={selection =>
-            setSelectedEdge(
-              selectedEdgeOf(selection, transcriptMembers) ?? null,
-            )
-          }
+          selected={selectedLine}
+          onSelect={selection => setSelectedLine(selection?.key ?? null)}
           emptyText={`Nothing said yet: ask ${entry.app.name} with one of the suggestions.`}
         >
           <A2ATeamGraph
@@ -446,15 +448,11 @@ function Scene({
             // studio, hero, plain, space, minimal or orb.
             backdrop={backdrop ?? stageBackdropOf(scene)}
             selected={selectedEdge}
-            onSelectEdge={edge => {
-              const line = latestLineOnEdge(edge, lines, transcriptMembers);
-              setSelectedEdge(
-                line
-                  ? (selectedEdgeOf(selectionOfLine(line), transcriptMembers) ??
-                      null)
-                  : null,
-              );
-            }}
+            onSelectEdge={edge =>
+              setSelectedLine(
+                latestLineOnEdge(edge, lines, transcriptMembers)?.key ?? null,
+              )
+            }
           />
         </SceneView>
       </Box>

@@ -30,6 +30,7 @@ import {
   transcriptOfRecord,
   transcriptOfSpans,
   transcriptText,
+  type SceneTranscriptLine,
   type SceneTranscriptMember,
 } from '../sceneTranscriptRules';
 import { SceneTranscript } from '../SceneTranscript';
@@ -491,6 +492,45 @@ describe('SceneTranscript and SceneView', () => {
     expect(said[0].textContent).toContain('2 open invoices');
     expect(said[0].textContent).not.toContain('**');
     expect(said[0].textContent).not.toContain('|---|');
+  });
+
+  it('keeps the selection the page holds when the transcript comes back', () => {
+    const lines: SceneTranscriptLine[] = [
+      { key: 'a:asked', at: 0, from: PERSON, kind: 'asked', text: 'Open?' },
+      { key: 'a:said', at: 1, from: 'Sales', kind: 'said', text: 'Two.' },
+    ];
+    function Page({ start }: { start: string | null }): React.JSX.Element {
+      const [selected, setSelected] = React.useState(start);
+      return (
+        <ThemeProvider>
+          <SceneView
+            members={MEMBERS}
+            lines={lines}
+            selected={selected}
+            onSelect={selection => setSelected(selection?.key ?? null)}
+          >
+            <div>the graph</div>
+          </SceneView>
+        </ThemeProvider>
+      );
+    }
+    // Selected from the graph, before the transcript was ever open.
+    const { container } = render(<Page start="a:said" />);
+    const choose = (view: string) =>
+      fireEvent.click(
+        container.querySelector(`[data-scene-choice="${view}"]`)!,
+      );
+    const detail = () =>
+      container
+        .querySelector('[data-transcript-detail]')
+        ?.getAttribute('data-transcript-detail');
+    choose('transcript');
+    expect(detail()).toBe('a:said');
+    fireEvent.click(container.querySelectorAll('[data-transcript-line]')[0]);
+    expect(detail()).toBe('a:asked');
+    choose('graph');
+    choose('transcript');
+    expect(detail()).toBe('a:asked');
   });
 
   it('takes a finished run’s lines instead of the tracer', () => {

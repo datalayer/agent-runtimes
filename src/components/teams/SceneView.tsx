@@ -60,6 +60,12 @@ export type SceneViewProps = {
   aside?: ReactNode;
   /** The scene, by id: the transcript's export is named after it. */
   scene?: string;
+  /**
+   * The selected line's key, held by the page; with `onSelect`. The transcript
+   * is mounted only while it shows: held here, a line selected from the graph
+   * is there when it opens.
+   */
+  selected?: string | null;
   /** The selected line changed (SCENES S3-02): the page hands the stage its edge (`selectedEdgeOf`). */
   onSelect?: (selection: TranscriptSelection | null) => void;
   /** The Inspector's page for a span, when the site has one. */
@@ -81,6 +87,7 @@ export function SceneView({
   maxHeight = 360,
   aside,
   scene,
+  selected,
   onSelect,
   inspectorHref,
 }: SceneViewProps): JSX.Element {
@@ -136,6 +143,7 @@ export function SceneView({
           scene={scene}
           emptyText={emptyText}
           maxHeight={maxHeight}
+          selected={selected}
           onSelect={onSelect}
           inspectorHref={inspectorHref}
           onOpenInspector={
