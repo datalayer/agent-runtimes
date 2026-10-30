@@ -3,6 +3,7 @@
 
 """Server routes for agent-runtimes."""
 
+from ..evals.adapters.routes import router as evals_adapters_router
 from ..evals.routes import router as evals_router
 from .a2a import (
     A2AAgentCard,
@@ -95,6 +96,7 @@ __all__ = [
     "checkpoints_router",
     "notifications_router",
     "configure_router",
+    "evals_adapters_router",
     "evals_router",
     "get_a2a_agents",
     "get_a2a_mounts",
