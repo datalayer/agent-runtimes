@@ -218,7 +218,8 @@ def asked_tool_call(harness_id: str, tool_call: Any) -> Any:
     if not isinstance(asked, dict):
         return tool_call
     tool = str(asked.get("tool") or "")
-    given = asked.get("input") if isinstance(asked.get("input"), dict) else {}
+    given = asked.get("input")
+    given = given if isinstance(given, dict) else {}
     subject = given.get("command") or given.get("path") or ""
     return tool_call.model_copy(
         update={

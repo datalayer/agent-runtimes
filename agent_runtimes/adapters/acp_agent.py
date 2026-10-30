@@ -1052,7 +1052,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         await self._hold_asking_mode(session_id)
         return answer
 
-    async def set_session_mode(self, mode_id: str, session_id: str, **kwargs: Any) -> Any:
+    async def set_session_mode(
+        self, mode_id: str, session_id: str, **kwargs: Any
+    ) -> Any:
         """Change a session's mode; never out of the one that makes its harness ask."""
         from agent_runtimes.adapters import harness_inference
 
@@ -1096,7 +1098,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 **kwargs,
             )
 
-        self.inner.request_permission = request_permission  # type: ignore[method-assign]
+        self.inner.request_permission = request_permission
 
     @property
     def started(self) -> bool:

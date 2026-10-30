@@ -1827,7 +1827,9 @@ class TestResolvingACatalogueHarness:
 
         from agent_runtimes.adapters import harness_inference
 
-        other = ToolCallUpdate(toolCallId="pi-ui-2", title="Something else", kind="other")
+        other = ToolCallUpdate(
+            toolCallId="pi-ui-2", title="Something else", kind="other"
+        )
         assert harness_inference.asked_tool_call("pi", other) is other
         malformed = ToolCallUpdate(
             toolCallId="pi-ui-3",

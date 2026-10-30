@@ -13,6 +13,7 @@ import json
 import os
 import shlex
 import urllib.request
+from typing import Any
 
 from harbor.agents.base import BaseAgent
 
@@ -44,10 +45,10 @@ class Answerer(BaseAgent):
         """Say its version."""
         return "1"
 
-    async def setup(self, environment) -> None:
+    async def setup(self, environment: Any) -> None:
         """Need nothing."""
 
-    async def run(self, instruction, environment, context) -> None:
+    async def run(self, instruction: str, environment: Any, context: Any) -> None:
         """Ask, and write the answer in the environment."""
         answer = await asyncio.to_thread(_ask, self.model_name, instruction)
         text = answer["choices"][0]["message"]["content"]
