@@ -26,7 +26,13 @@ HERE = Path(__file__).parent
 def arithmetic_in_docker() -> Task:
     return Task(
         dataset=json_dataset(str(HERE / "data" / "samples.jsonl")),
-        solver=[system_message("Compute with the bash tool, then answer with the number only."), use_tools(bash(timeout=30)), generate()],
+        solver=[
+            system_message(
+                "Compute with the bash tool, then answer with the number only."
+            ),
+            use_tools(bash(timeout=30)),
+            generate(),
+        ],
         scorer=[includes(), answer_length()],
         sandbox=("docker", str(HERE / "compose.yaml")),
     )

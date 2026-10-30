@@ -69,7 +69,8 @@ CapabilityStatus = Literal["native", "framework-run", "unsupported"]
 
 class Sandbox(Protocol):
     """Runs one command of an adapter: its argv, what it reads on stdin, the
-    environment beyond the sandbox's own. The source and the bounds are bound."""
+    environment beyond the sandbox's own. The source and the bounds are bound.
+    """
 
     workdir: Path
 
@@ -79,10 +80,13 @@ class Sandbox(Protocol):
         *,
         stdin: bytes = b"",
         env: Mapping[str, str] | None = None,
-    ) -> SandboxOutcome: ...
+    ) -> SandboxOutcome:
+        """Run one command to its end or to a bound."""
 
 
 class _Record(BaseModel):
+    """A record that refuses a field it does not know."""
+
     model_config = ConfigDict(extra="forbid")
 
 
@@ -115,6 +119,8 @@ class SourceTree(_Record):
 
 
 class InspectedCase(_Record):
+    """One sample or task of a source, as it was found."""
+
     native_id: str
     name: str = ""
     input: Any = None
@@ -184,7 +190,8 @@ class ImportedDefinition(_Record):
 
 class InferenceRoute(_Record):
     """How one execution reaches ai-inference. Held by the relay, on the
-    runtime, for that execution; never in the sandbox, a plan or a result."""
+    runtime, for that execution; never in the sandbox, a plan or a result.
+    """
 
     url: str
     token: str
@@ -236,6 +243,7 @@ class ResultArtifact(_Record):
 
     @property
     def content(self) -> bytes:
+        """The artifact's bytes."""
         return base64.b64decode(self.content_base64)
 
 
@@ -297,13 +305,15 @@ def is_inference_model(model: str) -> bool:
 
 def is_provider_key(name: str) -> bool:
     """Whether a secret's name is a credential for a model provider. No such
-    key reaches a sandbox: every model call goes through ai-inference."""
+    key reaches a sandbox: every model call goes through ai-inference.
+    """
     return bool(_PROVIDER_KEY.search(name.upper()))
 
 
 def stable_case_id(*, framework: str, native_id: str, content_digest: str) -> str:
     """A case's id: its native id under its source. A retried attempt keeps it,
-    and the same native id in another source is another case."""
+    and the same native id in another source is another case.
+    """
     digest = hashlib.sha256(
         f"{framework}\0{content_digest}\0{native_id}".encode()
     ).hexdigest()

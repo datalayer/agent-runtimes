@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
+import base64
 import io
 import json
+import stat
 import tarfile
 import threading
 import time
@@ -17,12 +19,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from agent_runtimes.evals.adapters import routes
+from agent_runtimes.evals.adapters import source as source_module
 from agent_runtimes.evals.adapters.base import (
     LaunchGrant,
     Selection,
     SourceRef,
     Trial,
     blocking,
+    is_provider_key,
     policy_from,
     policy_to,
     stable_case_id,
@@ -143,6 +147,53 @@ class TestTheSource:
         with pytest.raises(SourceRefused):
             unpack_archive(buffer.getvalue(), tmp_path / "tree")
 
+    def test_a_hard_link_is_refused(self, tmp_path):
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w") as tar:
+            info = tarfile.TarInfo("link")
+            info.type = tarfile.LNKTYPE
+            info.linkname = "/etc/passwd"
+            tar.addfile(info)
+        with pytest.raises(SourceRefused):
+            unpack_archive(buffer.getvalue(), tmp_path / "tree")
+
+    def test_a_device_is_refused(self, tmp_path):
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w") as tar:
+            info = tarfile.TarInfo("device")
+            info.type = tarfile.CHRTYPE
+            tar.addfile(info)
+        with pytest.raises(SourceRefused):
+            unpack_archive(buffer.getvalue(), tmp_path / "tree")
+
+    def test_a_link_in_a_zip_is_refused(self, tmp_path):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            info = zipfile.ZipInfo("link")
+            info.external_attr = (stat.S_IFLNK | 0o777) << 16
+            archive.writestr(info, "/etc/passwd")
+        with pytest.raises(SourceRefused):
+            unpack_archive(buffer.getvalue(), tmp_path / "tree")
+
+    def test_an_archive_that_unpacks_past_the_bound_is_refused(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(source_module, "MAX_UNPACKED_BYTES", 1024)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("bomb", b"0" * 1024 * 1024)
+        assert len(buffer.getvalue()) < 4096
+        with pytest.raises(SourceRefused):
+            unpack_archive(buffer.getvalue(), tmp_path / "tree")
+
+    def test_a_tampered_tree_changes_the_content_digest(self, tmp_path):
+        unpack_archive(archive_of(DEFINITION), tmp_path / "tree")
+        before = content_digest(tmp_path / "tree")
+        (tmp_path / "tree").chmod(0o755)
+        (tmp_path / "tree" / "fake-eval.json").chmod(0o644)
+        (tmp_path / "tree" / "fake-eval.json").write_text("{}")
+        assert content_digest(tmp_path / "tree") != before
+
     def test_bytes_that_are_not_their_digest_are_refused(self, host):
         with pytest.raises(ValueError):
             host.put_source("0" * 64, archive_of(DEFINITION))
@@ -167,6 +218,45 @@ def test_a_policy_survives_a_plan_and_refuses_what_it_does_not_know():
     assert policy_from(policy_to(policy)).secrets == ("TOKEN",)
     with pytest.raises(ValueError):
         policy_from({**policy_to(policy), "privileged": True})
+
+
+@pytest.mark.parametrize(
+    "name,refused",
+    [
+        ("ANTHROPIC_API_KEY", True),
+        ("OPENAI_API_KEY", True),
+        ("ANTHROPIC_AUTH_TOKEN", True),
+        ("AWS_SECRET_ACCESS_KEY", True),
+        ("AWS_ACCESS_KEY_ID", True),
+        ("AWS_SESSION_TOKEN", True),
+        ("FAKE_TOKEN", False),
+        ("DATABASE_PASSWORD", False),
+    ],
+)
+def test_a_provider_key_never_reaches_a_policy(name, refused):
+    if refused:
+        assert is_provider_key(name)
+        with pytest.raises(ValueError, match="ai-inference"):
+            policy_from(policy_to(SandboxPolicy(secrets=(name,))))
+    else:
+        assert not is_provider_key(name)
+
+
+def test_a_value_is_redacted_where_json_escaped_it():
+    from agent_runtimes.evals.adapters.base import NormalizedResult, ResultArtifact
+    from agent_runtimes.evals.adapters.host import _redacted
+
+    secret = 'va"lue\\with'
+    log = base64.b64encode(f"token {secret}".encode()).decode()
+    result = NormalizedResult(
+        status="passed",
+        output=f"said {secret}",
+        artifacts=[ResultArtifact(name="l", content_base64=log)],
+    )
+    clean = _redacted(result, {"TOKEN": secret})
+    assert secret not in clean.output
+    assert secret.encode() not in clean.artifacts[0].content
+    assert "[secret:TOKEN]" in clean.output
 
 
 def test_redaction_takes_a_value_out_wherever_it_is():

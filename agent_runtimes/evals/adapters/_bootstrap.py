@@ -48,11 +48,13 @@ libc = ctypes.CDLL(None, use_errno=True)
 
 
 def refuse(what: str) -> None:
+    """Stop here, saying what could not be isolated."""
     os.write(2, f"sandbox-refused: {what}\n".encode())
     os._exit(REFUSED)
 
 
 def checked(result: int, what: str) -> None:
+    """Refuse if a libc call failed."""
     if result != 0:
         refuse(f"{what}: {os.strerror(ctypes.get_errno())}")
 
@@ -60,6 +62,7 @@ def checked(result: int, what: str) -> None:
 def mount(
     source: str, target: str, kind: str | None, flags: int, data: str | None = None
 ) -> None:
+    """One mount, or the refusal."""
     checked(
         libc.mount(
             source.encode(),
@@ -73,11 +76,13 @@ def mount(
 
 
 def write(path: str, text: str) -> None:
+    """Write one file of `/proc`."""
     with open(path, "w") as handle:
         handle.write(text)
 
 
 def isolate(config: dict) -> None:
+    """Move into new namespaces and hide what the sandbox has no business reading."""
     uid, gid = os.getuid(), os.getgid()
     flags = CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWIPC | CLONE_NEWPID
     if config["network"] in ("none", "inference"):
@@ -121,11 +126,13 @@ def relay_until_exit(listener: socket.socket, path: str, child: int) -> int:
     """Carry the sandbox's loopback to the relay's socket on the host until the
     child ends; its wait status. In this process's main thread: after
     `unshare(CLONE_NEWPID)` no thread can be made, and this process stands
-    outside that namespace, so nothing the sandbox runs can signal it."""
+    outside that namespace, so nothing the sandbox runs can signal it.
+    """
     selector = selectors.DefaultSelector()
     selector.register(listener, selectors.EVENT_READ, None)
 
     def drop(one: socket.socket, other: socket.socket) -> None:
+        """Close both ends of one connection."""
         for side in (one, other):
             try:
                 selector.unregister(side)
@@ -162,6 +169,7 @@ def relay_until_exit(listener: socket.socket, path: str, child: int) -> int:
 
 
 def limit(config: dict) -> None:
+    """Set the bounds the kernel holds."""
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     # The soft limit ends a process that lets it; the hard one ends the rest.
     resource.setrlimit(
@@ -183,6 +191,7 @@ def limit(config: dict) -> None:
 
 
 def main() -> None:
+    """Isolate, limit, and exec what was asked for."""
     config = json.loads(sys.argv[1])
     checked(libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0), "no_new_privs")
     isolate(config)

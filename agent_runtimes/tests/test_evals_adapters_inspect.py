@@ -19,6 +19,7 @@ import tarfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -89,12 +90,14 @@ def archive_of(root: Path) -> bytes:
 
 
 class _Inference:
-    """ai-inference as far as a chat completion goes, answering as it really
+    """AI Inference as far as a chat completion goes, answering as it really
     does: the `DataResponse` envelope flattened over `ChatResponseData`, with
-    `choices` and no OpenAI `id` or `object`. It calls the tool, then answers."""
+    `choices` and no OpenAI `id` or `object`. It calls the tool, then answers.
+    """
 
     def __enter__(self) -> "_Inference":
-        calls = self.calls = []
+        calls: list[dict[str, Any]] = []
+        self.calls = calls
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *_args):
@@ -758,7 +761,8 @@ class TestTheRealInspect:
         self, world, model
     ):
         """Real Inspect in the real sandbox, through the real relay, to a server
-        answering as ai-inference does: `DataResponse` flattened over `choices`."""
+        answering as ai-inference does: `DataResponse` flattened over `choices`.
+        """
         with _Inference() as inference:
             imported = InspectAdapter().import_definition(
                 world["inspection"].model_copy(
@@ -855,7 +859,8 @@ class TestTheRealInspect:
 
     def test_a_project_of_its_own_runs_without_the_adapter_knowing_it(self, world):
         """The custom solver, tool, scorer and metric are the fixture's: their
-        names appear nowhere in this package."""
+        names appear nowhere in this package.
+        """
         package = Path(__file__).resolve().parents[1] / "evals" / "adapters"
         for name in ("ask_to_use_the_tool", "answer_length", "longest"):
             assert not any(name in path.read_text() for path in package.glob("*.py"))

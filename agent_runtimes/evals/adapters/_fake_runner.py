@@ -16,11 +16,13 @@ import time
 
 
 def definition(source: str) -> dict:
+    """The definition in the source."""
     with open(os.path.join(source, "fake-eval.json")) as handle:
         return json.load(handle)
 
 
 def main() -> None:
+    """Answer one request."""
     request = json.loads(sys.stdin.read())
     loaded = definition(request["source"])
     if request["op"] == "inspect":

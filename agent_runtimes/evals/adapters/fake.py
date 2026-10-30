@@ -44,6 +44,8 @@ _RUNNER = Path(__file__).with_name("_fake_runner.py")
 
 
 class FakeAdapter(ExternalAdapter):
+    """The adapter of the fake framework."""
+
     framework = "fake"
     adapter_version = "1"
     framework_version = "0"
@@ -58,6 +60,7 @@ class FakeAdapter(ExternalAdapter):
         sandbox: Sandbox,
         env: Mapping[str, str] | None = None,
     ) -> SandboxOutcome:
+        """One request to the fake framework, in the sandbox."""
         return sandbox(
             [sys.executable, "-I", "-S", str(_RUNNER)],
             stdin=json.dumps(request).encode(),
@@ -67,6 +70,7 @@ class FakeAdapter(ExternalAdapter):
     def inspect(
         self, source: SourceTree, *, sandbox: Sandbox, options: dict[str, Any]
     ) -> Inspection:
+        """Read the definition in the sandbox."""
         outcome = self._ask({"op": "inspect", "source": source.root}, sandbox=sandbox)
         if outcome.returncode != 0:
             raise ValueError(
@@ -102,6 +106,7 @@ class FakeAdapter(ExternalAdapter):
     def validate(
         self, inspection: Inspection, *, grant: LaunchGrant | None = None
     ) -> list[Capability]:
+        """The components it declares, and what it needs of a launch."""
         capabilities = [
             Capability(
                 component=str(item["name"]),
@@ -119,6 +124,7 @@ class FakeAdapter(ExternalAdapter):
     def import_definition(
         self, inspection: Inspection, *, selection: Selection, source: SourceRef
     ) -> ImportedDefinition:
+        """An evalset of its cases and one experiment."""
         cases = (
             inspection.cases[: selection.limit] if selection.limit else inspection.cases
         )
@@ -167,6 +173,7 @@ class FakeAdapter(ExternalAdapter):
     def plan(
         self, definition: ExternalDefinition, *, grant: LaunchGrant
     ) -> AdapterPlan:
+        """How a launch runs, under what it grants."""
         configuration = definition.configuration
         secrets = [str(item) for item in configuration.get("secrets") or []]
         declared = configuration.get("network")
@@ -206,6 +213,7 @@ class FakeAdapter(ExternalAdapter):
         sandbox: Sandbox,
         env: Mapping[str, str],
     ) -> RawResult:
+        """Run one case in the sandbox."""
         outcome = self._ask(
             {"op": "execute", "source": source.root, "native_id": trial.native_id},
             sandbox=sandbox,
@@ -235,6 +243,7 @@ class FakeAdapter(ExternalAdapter):
     def normalize_result(
         self, trial: Trial, raw: RawResult, *, plan: AdapterPlan
     ) -> NormalizedResult:
+        """One task result, from the one score it gives."""
         if raw.payload is None:
             return NormalizedResult(
                 status="failed",
@@ -273,7 +282,8 @@ def _grant_capabilities(
     *, network: str, secrets: list[str], grant: LaunchGrant | None
 ) -> list[Capability]:
     """What a definition asks of a launch, against what the launch allows.
-    Before a launch is known (`grant` None) nothing is refused on this account."""
+    Before a launch is known (`grant` None) nothing is refused on this account.
+    """
     capabilities: list[Capability] = []
     if network != "none":
         allowed = grant is None or grant.network != "none"

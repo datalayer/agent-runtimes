@@ -32,6 +32,7 @@ _host: AdapterHost | None = None
 
 
 def host() -> AdapterHost:
+    """Answer the host of this runtime, made on first use."""
     global _host
     if _host is None:
         _host = AdapterHost()
@@ -45,6 +46,8 @@ def use_host(replacement: AdapterHost | None) -> None:
 
 
 class InspectRequest(BaseModel):
+    """What `inspect` is asked."""
+
     model_config = ConfigDict(extra="forbid")
 
     digest: str
@@ -52,6 +55,8 @@ class InspectRequest(BaseModel):
 
 
 class ExecuteRequest(BaseModel):
+    """What `execute` is asked."""
+
     model_config = ConfigDict(extra="forbid")
 
     digest: str
@@ -65,6 +70,7 @@ class ExecuteRequest(BaseModel):
 
 
 def _refusal(error: Exception) -> HTTPException:
+    """An operation's failure as an HTTP refusal."""
     if isinstance(error, UnknownAdapter):
         return HTTPException(status_code=404, detail=str(error))
     if isinstance(error, SourceMissing):
@@ -83,6 +89,7 @@ def _refusal(error: Exception) -> HTTPException:
 
 @router.put("/sources/{digest}")
 async def put_source(digest: str, request: Request) -> dict[str, Any]:
+    """Hand this runtime an archive."""
     data = bytearray()
     async for chunk in request.stream():
         data.extend(chunk)
@@ -97,6 +104,7 @@ async def put_source(digest: str, request: Request) -> dict[str, Any]:
 
 @router.post("/{framework}/inspect")
 async def inspect(framework: str, body: InspectRequest) -> dict[str, Any]:
+    """Discover what a source defines."""
     try:
         inspection = await run_in_threadpool(
             host().inspect, framework, body.digest, options=body.options
@@ -114,6 +122,7 @@ async def inspect(framework: str, body: InspectRequest) -> dict[str, Any]:
 
 @router.post("/{framework}/execute")
 async def execute(framework: str, body: ExecuteRequest) -> dict[str, Any]:
+    """Run one trial."""
     try:
         result = await run_in_threadpool(
             host().execute,
@@ -138,4 +147,5 @@ async def execute(framework: str, body: ExecuteRequest) -> dict[str, Any]:
 
 @router.post("/executions/{key}/cancel")
 async def cancel(key: str) -> dict[str, Any]:
+    """Stop one trial."""
     return {"cancelled": host().cancel(key)}

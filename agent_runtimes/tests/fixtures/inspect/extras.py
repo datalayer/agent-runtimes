@@ -35,7 +35,9 @@ def add() -> Tool:
 
 
 @solver
-def ask_to_use_the_tool(reminder: str = "Use the add tool, then answer with the number only.") -> Solver:
+def ask_to_use_the_tool(
+    reminder: str = "Use the add tool, then answer with the number only.",
+) -> Solver:
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         state.messages.append(ChatMessageUser(content=reminder))
         return state
@@ -57,7 +59,9 @@ def longest() -> Metric:
 def answer_length() -> Scorer:
     async def score(state: TaskState, target: Target) -> Score:
         answer = state.output.completion
-        return Score(value=len(answer), answer=answer, explanation=f"{len(answer)} characters")
+        return Score(
+            value=len(answer), answer=answer, explanation=f"{len(answer)} characters"
+        )
 
     return score
 
@@ -66,10 +70,14 @@ def _scripted(messages, tools, tool_choice, config) -> ModelOutput:
     """A model that calls the tool, then says what it answered. No provider, no key."""
     answered = [item for item in messages if item.role == "tool"]
     if answered:
-        return ModelOutput.from_content("mockllm/model", f"The answer is {answered[-1].text}")
+        return ModelOutput.from_content(
+            "mockllm/model", f"The answer is {answered[-1].text}"
+        )
     asked = next(item.text for item in messages if item.role == "user")
     first, second = re.findall(r"\d+", asked)[:2]
-    return ModelOutput.for_tool_call("mockllm/model", "add", {"x": int(first), "y": int(second)})
+    return ModelOutput.for_tool_call(
+        "mockllm/model", "add", {"x": int(first), "y": int(second)}
+    )
 
 
 def scripted_model():

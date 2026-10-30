@@ -92,14 +92,16 @@ INSPECT_INFERENCE_PREFIX = "openai-api/datalayer/"
 
 def inspect_model(model: str) -> str:
     """A model as Inspect is told it: the mock as it is, a catalogue id through
-    ai-inference's OpenAI-compatible chat completions."""
+    ai-inference's OpenAI-compatible chat completions.
+    """
     return f"{INSPECT_INFERENCE_PREFIX}{model}" if is_inference_model(model) else model
 
 
 def score_as_float(value: Any) -> float | None:
     """A scorer's value as Inspect's `value_to_float` reads a scalar: `C` 1,
     `P` 0.5, `I` and `N` 0, booleans and numbers as they are. `None` for what
-    has no number (a dict, a list), which Inspect turns into a warned zero."""
+    has no number (a dict, a list), which Inspect turns into a warned zero.
+    """
     if isinstance(value, bool):
         return 1.0 if value else 0.0
     if isinstance(value, (int, float)):
@@ -124,12 +126,14 @@ def score_as_float(value: Any) -> float | None:
 def _command_capability(
     *, component: str, kind: str, reason: str, code: str
 ) -> Capability:
+    """A component that stops a launch."""
     return Capability(
         component=component, kind=kind, status="unsupported", reason=reason, code=code
     )
 
 
 def _sandboxes() -> set[str]:
+    """The sandbox types this deployment provides."""
     declared = {
         item.strip()
         for item in os.environ.get(SANDBOXES_VARIABLE, "").split(",")
@@ -139,6 +143,8 @@ def _sandboxes() -> set[str]:
 
 
 class InspectAdapter(ExternalAdapter):
+    """The adapter of Inspect AI, at its pinned version."""
+
     framework = "inspect-ai"
     adapter_version = ADAPTER_VERSION
     framework_version = INSPECT_VERSION
@@ -158,6 +164,7 @@ class InspectAdapter(ExternalAdapter):
         sandbox: Sandbox,
         env: Mapping[str, str] | None = None,
     ) -> Any:
+        """Run the runner in the sandbox, with the interpreter that holds Inspect."""
         python = os.environ.get(PYTHON_VARIABLE) or sys.executable
         # `-I` keeps this directory off the path: this module's name is Inspect's.
         cache = os.environ.get(TIKTOKEN_VARIABLE)
@@ -172,6 +179,7 @@ class InspectAdapter(ExternalAdapter):
         )
 
     def _pinned(self, version: str) -> None:
+        """Refuse any Inspect but the pinned one."""
         if version != self.framework_version:
             raise ValueError(
                 f"the sandbox holds Inspect {version}; this adapter is pinned to {self.framework_version}"
@@ -180,6 +188,7 @@ class InspectAdapter(ExternalAdapter):
     def inspect(
         self, source: SourceTree, *, sandbox: Sandbox, options: dict[str, Any]
     ) -> Inspection:
+        """Load the tasks in the sandbox and read what they declare."""
         task_args = dict(options.get("task_args") or {})
         outcome = self._run(
             {"op": "inspect", "source": source.root, "task_args": task_args},
@@ -269,6 +278,7 @@ class InspectAdapter(ExternalAdapter):
     def _declared_capabilities(
         self, tasks: list[dict[str, Any]], *, missing: list[str]
     ) -> list[Capability]:
+        """What the tasks declare, classified."""
         capabilities: list[Capability] = []
         for task in tasks:
             entry = str(task["entry_point"])
@@ -370,7 +380,8 @@ class InspectAdapter(ExternalAdapter):
         self, *, tools: list[str], models: list[str], grant: LaunchGrant | None
     ) -> list[Capability]:
         """What a definition needs of a launch. Before a launch is known
-        (`grant` None) a need is listed, and refused only if it never could be."""
+        (`grant` None) a need is listed, and refused only if it never could be.
+        """
         capabilities: list[Capability] = []
         for name in tools:
             approved = grant is None or name in grant.tools
@@ -425,6 +436,7 @@ class InspectAdapter(ExternalAdapter):
     def validate(
         self, inspection: Inspection, *, grant: LaunchGrant | None = None
     ) -> list[Capability]:
+        """Every component, under what a launch grants."""
         tasks = list(inspection.configuration.get("tasks") or [])
         return self._declared_capabilities(
             tasks, missing=list(inspection.environment.get("missing") or [])
@@ -433,6 +445,7 @@ class InspectAdapter(ExternalAdapter):
     def import_definition(
         self, inspection: Inspection, *, selection: Selection, source: SourceRef
     ) -> ImportedDefinition:
+        """An evalset of the chosen tasks, one experiment per model."""
         chosen = selection.entry_points or inspection.entry_points
         unknown = set(chosen) - set(inspection.entry_points)
         if unknown:
@@ -552,6 +565,7 @@ class InspectAdapter(ExternalAdapter):
     def plan(
         self, definition: ExternalDefinition, *, grant: LaunchGrant
     ) -> AdapterPlan:
+        """How a launch runs: the policy, the approved tools, the reproduction."""
         configuration = definition.configuration
         models = [str(model) for model in configuration.get("models") or []]
         tools = [str(name) for name in configuration.get("tools") or []]
@@ -596,6 +610,7 @@ class InspectAdapter(ExternalAdapter):
         task_args: dict[str, Any],
         models: list[str],
     ) -> str:
+        """The pinned command, with no secret in it."""
         arguments = " ".join(
             f"-T {shlex.quote(f'{name}={json.dumps(value)}')}"
             for name, value in task_args.items()
@@ -626,6 +641,7 @@ class InspectAdapter(ExternalAdapter):
         sandbox: Sandbox,
         env: Mapping[str, str],
     ) -> RawResult:
+        """Run one sample through Inspect, and keep its log."""
         subject = dict(trial.configuration.get("subject") or {})
         outcome = self._run(
             {
@@ -674,6 +690,7 @@ class InspectAdapter(ExternalAdapter):
     def normalize_result(
         self, trial: Trial, raw: RawResult, *, plan: AdapterPlan
     ) -> NormalizedResult:
+        """One task result, with every scorer on it."""
         log = (raw.payload or {}).get("log") if raw.payload else None
         if not isinstance(log, dict):
             return NormalizedResult(
@@ -854,6 +871,7 @@ def _failure_stage(traceback: str) -> tuple[str, str]:
 
 
 def _usage(sample: Mapping[str, Any]) -> dict[str, Any]:
+    """A sample's tokens, across its models."""
     used = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     for entry in (sample.get("model_usage") or {}).values():
         for key in used:
@@ -862,6 +880,7 @@ def _usage(sample: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _text_of(value: Any) -> str:
+    """A message's or an input's text."""
     if isinstance(value, str):
         return value
     if isinstance(value, list):
@@ -875,6 +894,7 @@ def _text_of(value: Any) -> str:
 
 
 def _trajectory(messages: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """What was said, in order, with the tool calls."""
     steps: list[dict[str, Any]] = []
     for message in messages:
         step: dict[str, Any] = {

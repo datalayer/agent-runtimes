@@ -57,6 +57,7 @@ def archive_digest(data: bytes) -> str:
 
 
 def _inside(name: str) -> PurePosixPath:
+    """A name inside the archive, or the refusal."""
     path = PurePosixPath(name)
     if path.is_absolute() or ".." in path.parts or "\\" in name:
         raise SourceRefused(f"the archive names a path outside itself: {name}")
@@ -66,6 +67,7 @@ def _inside(name: str) -> PurePosixPath:
 def _write(
     destination: Path, name: str, stream: IO[bytes], *, spent: list[int]
 ) -> None:
+    """One file, counted against the unpacked bound."""
     relative = _inside(name)
     target = destination.joinpath(*relative.parts)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -131,13 +133,14 @@ def unpack_archive(data: bytes, destination: Path) -> None:
         for name in names:
             os.chmod(os.path.join(root, name), 0o444)
         for name in directories:
-            os.chmod(os.path.join(root, name), 0o555)
-    os.chmod(destination, 0o555)
+            os.chmod(os.path.join(root, name), 0o555)  # nosec B103 - read-only, and a directory needs its execute bit to be entered
+    os.chmod(destination, 0o555)  # nosec B103 - read-only, and a directory needs its execute bit to be entered
 
 
 def pack_source(root: Path) -> bytes:
     """A directory as an archive: the same bytes for the same files, so the
-    same source has the same digest wherever it is packed from."""
+    same source has the same digest wherever it is packed from.
+    """
     buffer = io.BytesIO()
     with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as compressed:
         with tarfile.open(fileobj=compressed, mode="w") as tar:
@@ -159,7 +162,8 @@ def pack_source(root: Path) -> bytes:
 
 def content_digest(root: Path) -> str:
     """A digest covering every file under `root`: each path with its bytes'
-    sha256, in order. Independent of how the archive packed them."""
+    sha256, in order. Independent of how the archive packed them.
+    """
     digest = hashlib.sha256()
     files = sorted(path for path in root.rglob("*") if path.is_file())
     for path in files:

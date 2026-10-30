@@ -43,21 +43,28 @@ _PASSED_ON = ("content-type", "retry-after")
 
 
 class _UnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    """A threaded HTTP server on a unix socket."""
+
     daemon_threads = True
     route: InferenceRoute
 
 
 class _Handler(BaseHTTPRequestHandler):
+    """One sandbox request."""
+
     server: _UnixServer
     protocol_version = "HTTP/1.1"
 
     def address_string(self) -> str:
+        """Name the peer, which a unix socket has no address for."""
         return "sandbox"
 
     def log_message(self, format: str, *args: object) -> None:
+        """Log at debug: a request carries nothing worth more."""
         logger.debug("relay: " + format, *args)
 
     def _refuse(self, status: int, message: str) -> None:
+        """Answer a refusal in the shape an OpenAI client reads."""
         body = json.dumps({"error": {"message": message, "type": "refused"}}).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -68,9 +75,11 @@ class _Handler(BaseHTTPRequestHandler):
         self.close_connection = True
 
     def do_GET(self) -> None:
+        """Refuse: nothing is read through here."""
         self._refuse(404, "Only chat completions go through here.")
 
     def do_POST(self) -> None:
+        """Forward one chat completion for a catalogue model."""
         if self.path.split("?", 1)[0] != CHAT_PATH:
             self._refuse(404, "Only chat completions go through here.")
             return
@@ -123,12 +132,14 @@ class InferenceRelay:
     """One execution's relay, for as long as the `with` lasts."""
 
     def __init__(self, path: Path, *, route: InferenceRoute) -> None:
+        """Name the socket and the route."""
         self.path = Path(path)
         self.route = route
         self._server: _UnixServer | None = None
         self._thread: threading.Thread | None = None
 
     def __enter__(self) -> "InferenceRelay":
+        """Start serving."""
         self._server = _UnixServer(str(self.path), _Handler)
         self._server.route = self.route
         os.chmod(self.path, 0o600)
@@ -141,6 +152,7 @@ class InferenceRelay:
         return self
 
     def __exit__(self, *_: object) -> None:
+        """Stop serving and remove the socket."""
         if self._server is not None:
             self._server.shutdown()
             self._server.server_close()

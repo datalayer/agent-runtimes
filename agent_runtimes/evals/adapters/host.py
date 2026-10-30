@@ -74,6 +74,7 @@ def redact(text: str, secrets: Mapping[str, str]) -> str:
 
 
 def _redacted(result: NormalizedResult, secrets: Mapping[str, str]) -> NormalizedResult:
+    """A result with every secret value taken out, its artifacts too."""
     if not any(secrets.values()):
         return result
     artifacts = [
@@ -96,6 +97,7 @@ def _redacted(result: NormalizedResult, secrets: Mapping[str, str]) -> Normalize
 
 
 def _redact_bytes(data: bytes, secrets: Mapping[str, str]) -> bytes:
+    """Take every secret value out of some bytes."""
     for name, value in secrets.items():
         if value:
             data = data.replace(value.encode(), f"[secret:{name}]".encode())
@@ -114,6 +116,7 @@ class _BoundSandbox:
         cancel: threading.Event | None = None,
         relay: Path | None = None,
     ) -> None:
+        """Bind one operation's source, bounds and working directory."""
         self.relay = relay
         self.source = source
         self.policy = policy
@@ -127,6 +130,7 @@ class _BoundSandbox:
         stdin: bytes = b"",
         env: Mapping[str, str] | None = None,
     ) -> SandboxOutcome:
+        """Run one command in the sandbox."""
         return run_sandboxed(
             argv,
             workdir=self.workdir,
@@ -143,11 +147,13 @@ class AdapterHost:
     """One runtime's adapter work, under `root`."""
 
     def __init__(self, root: Path | None = None) -> None:
+        """Keep the sources under `root`."""
         self.root = Path(root or tempfile.mkdtemp(prefix="evals-adapters-"))
         self._running: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
 
     def _source_dir(self, digest: str) -> Path:
+        """Where a digest is kept."""
         return self.root / "sources" / digest
 
     def put_source(self, digest: str, data: bytes) -> SourceTree:
@@ -167,6 +173,7 @@ class AdapterHost:
         return self.source(digest)
 
     def source(self, digest: str) -> SourceTree:
+        """A source already handed in, unpacked."""
         require_digest(digest)
         tree = self._source_dir(digest) / "tree"
         if not tree.exists():
@@ -176,6 +183,7 @@ class AdapterHost:
         )
 
     def _workdir(self) -> Path:
+        """A fresh working directory for one operation."""
         place = self.root / "work" / uuid.uuid4().hex
         place.mkdir(parents=True)
         return place
@@ -215,7 +223,8 @@ class AdapterHost:
     ) -> NormalizedResult:
         """Run one trial and normalize what it left. A bound overrun is the
         trial's own failure, in a sentence, with nothing of it kept. An
-        `inference` policy needs its route, which stays in the relay here."""
+        `inference` policy needs its route, which stays in the relay here.
+        """
         chosen = adapter(framework)
         source = self.source(digest)
         policy = policy_from(plan.policy)

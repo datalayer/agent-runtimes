@@ -24,12 +24,14 @@ from typing import Any
 
 
 def _plain(value: Any) -> Any:
+    """A value as JSON can carry it."""
     from pydantic_core import to_jsonable_python
 
     return to_jsonable_python(value, fallback=str)
 
 
 def _named(item: Any) -> dict[str, Any]:
+    """A component by its registered name and arguments."""
     from inspect_ai._util.registry import (
         is_registry_object,
         registry_log_name,
@@ -42,6 +44,7 @@ def _named(item: Any) -> dict[str, Any]:
 
 
 def _solvers(solver: Any) -> list[dict[str, Any]]:
+    """A solver chain, flattened, in order."""
     from inspect_ai.solver._chain import Chain
 
     if solver is None:
@@ -55,6 +58,7 @@ def _solvers(solver: Any) -> list[dict[str, Any]]:
 
 
 def _tool_names(solvers: list[dict[str, Any]]) -> list[str]:
+    """The tools a chain makes available, by name."""
     names: list[str] = []
     for solver in solvers:
         tools = (
@@ -70,6 +74,7 @@ def _tool_names(solvers: list[dict[str, Any]]) -> list[str]:
 
 
 def _scorers(task: Any) -> list[dict[str, Any]]:
+    """A task's scorers with their metrics."""
     from inspect_ai.scorer._scorer import scorer_metrics
 
     found = []
@@ -89,12 +94,14 @@ def _scorers(task: Any) -> list[dict[str, Any]]:
 
 
 def _sandbox_of(value: Any) -> dict[str, Any] | None:
+    """A sandbox specification, as JSON can carry it."""
     if value is None:
         return None
     return {"type": str(value.type), "config": _plain(value.config)}
 
 
 def _sample(sample: Any, index: int) -> dict[str, Any]:
+    """One sample, with the id Inspect runs it under."""
     return {
         # Inspect numbers a sample that has no id from 1, in dataset order.
         "id": sample.id if sample.id is not None else index + 1,
@@ -152,6 +159,7 @@ def _missing(declared: list[str]) -> list[str]:
 
 
 def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
+    """What the source defines. Runs no solver and calls no model."""
     from inspect_ai import list_tasks
     from inspect_ai._eval.loader import load_tasks
 
@@ -208,6 +216,7 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
 
 
 def execute(request: dict[str, Any]) -> dict[str, Any]:
+    """Run one sample through `inspect_ai.eval`."""
     from inspect_ai import eval as run_eval
     from inspect_ai.approval import ApprovalPolicy, auto_approver
 
@@ -244,6 +253,7 @@ def execute(request: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
+    """Answer one request in `answer.json`."""
     request = json.loads(sys.stdin.read())
     answer = inspect_source(request) if request["op"] == "inspect" else execute(request)
     Path("answer.json").write_text(json.dumps(answer))

@@ -78,6 +78,7 @@ class SandboxExceeded(RuntimeError):
     """A bound was overrun and the process tree is gone."""
 
     def __init__(self, bound: str, message: str) -> None:
+        """Say which bound, and how."""
         super().__init__(message)
         self.bound = bound
 
@@ -104,6 +105,7 @@ class SandboxPolicy:
     hidden_paths: tuple[str, ...] = DEFAULT_HIDDEN_PATHS
 
     def __post_init__(self) -> None:
+        """Refuse a value that is no bound."""
         if self.network not in ("none", "inference", "boundary"):
             raise ValueError(f"no such network policy: {self.network}")
         for name in (
@@ -147,6 +149,7 @@ def isolation_available() -> bool:
 
 
 def _count(workdir: Path) -> tuple[int, int]:
+    """How many files and bytes are under `workdir`."""
     files, size = 0, 0
     for root, _, names in os.walk(workdir):
         files += len(names)
@@ -160,7 +163,8 @@ def _count(workdir: Path) -> tuple[int, int]:
 
 def _hidden(policy: SandboxPolicy, keep: Sequence[Path]) -> list[str]:
     """The hidden paths that do not hold what the process needs: its
-    interpreter's prefix or a directory it was given."""
+    interpreter's prefix or a directory it was given.
+    """
     needed = [Path(sys.prefix).resolve(), *(Path(path).resolve() for path in keep)]
     hidden = []
     for path in policy.hidden_paths:
@@ -171,6 +175,7 @@ def _hidden(policy: SandboxPolicy, keep: Sequence[Path]) -> list[str]:
 
 
 def _kill(process: subprocess.Popen) -> None:
+    """End the process tree."""
     try:
         os.killpg(process.pid, signal.SIGKILL)
     except ProcessLookupError:

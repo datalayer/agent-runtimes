@@ -29,7 +29,12 @@ HERE = Path(__file__).parent
 def arithmetic(mock: bool = True) -> Task:
     return Task(
         dataset=json_dataset(str(HERE / "data" / "samples.jsonl")),
-        solver=[system_message("You are careful with sums."), ask_to_use_the_tool(), use_tools(add()), generate()],
+        solver=[
+            system_message("You are careful with sums."),
+            ask_to_use_the_tool(),
+            use_tools(add()),
+            generate(),
+        ],
         scorer=[includes(), answer_length()],
         model=scripted_model() if mock else None,
     )
