@@ -49,7 +49,9 @@ def checked(result: int, what: str) -> None:
         refuse(f"{what}: {os.strerror(ctypes.get_errno())}")
 
 
-def mount(source: str, target: str, kind: str | None, flags: int, data: str | None = None) -> None:
+def mount(
+    source: str, target: str, kind: str | None, flags: int, data: str | None = None
+) -> None:
     checked(
         libc.mount(
             source.encode(),
@@ -93,12 +95,22 @@ def isolate(config: dict) -> None:
 def limit(config: dict) -> None:
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     # The soft limit ends a process that lets it; the hard one ends the rest.
-    resource.setrlimit(resource.RLIMIT_CPU, (config["cpu_seconds"], config["cpu_seconds"] + 2))
-    resource.setrlimit(resource.RLIMIT_AS, (config["memory_bytes"], config["memory_bytes"]))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (config["max_bytes"], config["max_bytes"]))
-    resource.setrlimit(resource.RLIMIT_NOFILE, (config["open_files"], config["open_files"]))
+    resource.setrlimit(
+        resource.RLIMIT_CPU, (config["cpu_seconds"], config["cpu_seconds"] + 2)
+    )
+    resource.setrlimit(
+        resource.RLIMIT_AS, (config["memory_bytes"], config["memory_bytes"])
+    )
+    resource.setrlimit(
+        resource.RLIMIT_FSIZE, (config["max_bytes"], config["max_bytes"])
+    )
+    resource.setrlimit(
+        resource.RLIMIT_NOFILE, (config["open_files"], config["open_files"])
+    )
     # Counted per user namespace, so what else this uid runs does not spend it.
-    resource.setrlimit(resource.RLIMIT_NPROC, (config["processes"], config["processes"]))
+    resource.setrlimit(
+        resource.RLIMIT_NPROC, (config["processes"], config["processes"])
+    )
 
 
 def main() -> None:

@@ -28,7 +28,8 @@ from __future__ import annotations
 import base64
 import hashlib
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Literal, Mapping, Sequence
+from pathlib import Path
+from typing import Any, Literal, Mapping, Protocol, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,9 +62,20 @@ __all__ = [
 
 CapabilityStatus = Literal["native", "framework-run", "unsupported"]
 
-#: One sandboxed command of an adapter: its argv, what it reads on stdin, the
-#: environment beyond the sandbox's own. The source and the bounds are bound.
-Sandbox = Callable[..., SandboxOutcome]
+
+class Sandbox(Protocol):
+    """Runs one command of an adapter: its argv, what it reads on stdin, the
+    environment beyond the sandbox's own. The source and the bounds are bound."""
+
+    workdir: Path
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        stdin: bytes = b"",
+        env: Mapping[str, str] | None = None,
+    ) -> SandboxOutcome: ...
 
 
 class _Record(BaseModel):
@@ -255,7 +267,9 @@ class NormalizedResult(_Record):
 def stable_case_id(*, framework: str, native_id: str, content_digest: str) -> str:
     """A case's id: its native id under its source. A retried attempt keeps it,
     and the same native id in another source is another case."""
-    digest = hashlib.sha256(f"{framework}\0{content_digest}\0{native_id}".encode()).hexdigest()
+    digest = hashlib.sha256(
+        f"{framework}\0{content_digest}\0{native_id}".encode()
+    ).hexdigest()
     return f"x{digest[:31]}"
 
 
@@ -279,7 +293,15 @@ def policy_to(policy: SandboxPolicy) -> dict[str, Any]:
 
 def policy_from(values: Mapping[str, Any]) -> SandboxPolicy:
     """A plan's policy back. A key this does not know is refused, not ignored."""
-    known = {"network", "wall_seconds", "cpu_seconds", "memory_bytes", "max_files", "max_bytes", "secrets"}
+    known = {
+        "network",
+        "wall_seconds",
+        "cpu_seconds",
+        "memory_bytes",
+        "max_files",
+        "max_bytes",
+        "secrets",
+    }
     extra = set(values) - known
     if extra:
         raise ValueError(f"unknown sandbox policy keys: {', '.join(sorted(extra))}")
@@ -298,27 +320,45 @@ class ExternalAdapter(ABC):
     default_policy: SandboxPolicy = SandboxPolicy()
 
     @abstractmethod
-    def inspect(self, source: SourceTree, *, sandbox: Sandbox, options: dict[str, Any]) -> Inspection:
+    def inspect(
+        self, source: SourceTree, *, sandbox: Sandbox, options: dict[str, Any]
+    ) -> Inspection:
         """Discover what `source` defines. Executes no sample."""
 
     @abstractmethod
-    def validate(self, inspection: Inspection, *, grant: LaunchGrant | None = None) -> list[Capability]:
+    def validate(
+        self, inspection: Inspection, *, grant: LaunchGrant | None = None
+    ) -> list[Capability]:
         """Classify every component, under what a launch grants."""
 
     @abstractmethod
-    def import_definition(self, inspection: Inspection, *, selection: Selection, source: SourceRef) -> ImportedDefinition:
+    def import_definition(
+        self, inspection: Inspection, *, selection: Selection, source: SourceRef
+    ) -> ImportedDefinition:
         """The evalset and its experiments. Never touches the source."""
 
     @abstractmethod
-    def plan(self, definition: ExternalDefinition, *, grant: LaunchGrant) -> AdapterPlan:
+    def plan(
+        self, definition: ExternalDefinition, *, grant: LaunchGrant
+    ) -> AdapterPlan:
         """How a launch of `definition` runs under `grant`."""
 
     @abstractmethod
-    def execute(self, trial: Trial, *, plan: AdapterPlan, source: SourceTree, sandbox: Sandbox, env: Mapping[str, str]) -> RawResult:
+    def execute(
+        self,
+        trial: Trial,
+        *,
+        plan: AdapterPlan,
+        source: SourceTree,
+        sandbox: Sandbox,
+        env: Mapping[str, str],
+    ) -> RawResult:
         """Run one trial, in `sandbox`."""
 
     @abstractmethod
-    def normalize_result(self, trial: Trial, raw: RawResult, *, plan: AdapterPlan) -> NormalizedResult:
+    def normalize_result(
+        self, trial: Trial, raw: RawResult, *, plan: AdapterPlan
+    ) -> NormalizedResult:
         """One task result, keeping every score. No invented aggregate."""
 
     def describe(self) -> dict[str, Any]:

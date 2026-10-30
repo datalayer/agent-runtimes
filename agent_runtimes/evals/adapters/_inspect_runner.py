@@ -30,7 +30,11 @@ def _plain(value: Any) -> Any:
 
 
 def _named(item: Any) -> dict[str, Any]:
-    from inspect_ai._util.registry import is_registry_object, registry_log_name, registry_params
+    from inspect_ai._util.registry import (
+        is_registry_object,
+        registry_log_name,
+        registry_params,
+    )
 
     if not is_registry_object(item):
         return {"name": type(item).__name__, "params": {}}
@@ -53,7 +57,11 @@ def _solvers(solver: Any) -> list[dict[str, Any]]:
 def _tool_names(solvers: list[dict[str, Any]]) -> list[str]:
     names: list[str] = []
     for solver in solvers:
-        tools = solver["params"].get("tools") if solver["name"].rsplit("/", 1)[-1] == "use_tools" else None
+        tools = (
+            solver["params"].get("tools")
+            if solver["name"].rsplit("/", 1)[-1] == "use_tools"
+            else None
+        )
         for tool in tools if isinstance(tools, list) else []:
             name = tool.get("name") if isinstance(tool, dict) else tool
             if isinstance(name, str) and name not in names:
@@ -67,8 +75,16 @@ def _scorers(task: Any) -> list[dict[str, Any]]:
     found = []
     for scorer in task.scorer or []:
         metrics = scorer_metrics(scorer)
-        named = metrics if isinstance(metrics, list) else [item for values in metrics.values() for item in values] if isinstance(metrics, dict) else []
-        found.append({**_named(scorer), "metrics": [_named(item)["name"] for item in named]})
+        named = (
+            metrics
+            if isinstance(metrics, list)
+            else [item for values in metrics.values() for item in values]
+            if isinstance(metrics, dict)
+            else []
+        )
+        found.append(
+            {**_named(scorer), "metrics": [_named(item)["name"] for item in named]}
+        )
     return found
 
 
@@ -97,10 +113,18 @@ def _declared(source: Path) -> list[str]:
     """What the project says it needs, by requirement line."""
     declared: list[str] = []
     for path in source.glob("requirements*.txt"):
-        declared.extend(line.strip() for line in path.read_text().splitlines() if line.strip() and not line.startswith(("#", "-")))
+        declared.extend(
+            line.strip()
+            for line in path.read_text().splitlines()
+            if line.strip() and not line.startswith(("#", "-"))
+        )
     pyproject = source / "pyproject.toml"
     if pyproject.exists():
-        declared.extend(tomllib.loads(pyproject.read_text()).get("project", {}).get("dependencies", []))
+        declared.extend(
+            tomllib.loads(pyproject.read_text())
+            .get("project", {})
+            .get("dependencies", [])
+        )
     return declared
 
 
@@ -144,7 +168,12 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
                 "entry_point": entry,
                 "name": info.name,
                 "description": str(getattr(task, "description", "") or ""),
-                "dataset": {"name": task.dataset.name, "location": task.dataset.location, "shuffled": bool(task.dataset.shuffled), "dynamic": task.sample_source is not None},
+                "dataset": {
+                    "name": task.dataset.name,
+                    "location": task.dataset.location,
+                    "shuffled": bool(task.dataset.shuffled),
+                    "dynamic": task.sample_source is not None,
+                },
                 "samples": samples,
                 "solvers": solvers,
                 "tools": _tool_names(solvers),
@@ -153,11 +182,26 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
                 "sandbox": _sandbox_of(task.sandbox),
                 "approval": bool(task.approval),
                 "epochs": task.epochs or 1,
-                "limits": {name: getattr(task, name) for name in ("message_limit", "turn_limit", "time_limit", "working_limit", "cost_limit")},
+                "limits": {
+                    name: getattr(task, name)
+                    for name in (
+                        "message_limit",
+                        "turn_limit",
+                        "time_limit",
+                        "working_limit",
+                        "cost_limit",
+                    )
+                },
             }
         )
     declared = _declared(source)
-    return {"version": importlib.metadata.version("inspect_ai"), "python": sys.version.split()[0], "tasks": tasks, "declared": declared, "missing": _missing(declared)}
+    return {
+        "version": importlib.metadata.version("inspect_ai"),
+        "python": sys.version.split()[0],
+        "tasks": tasks,
+        "declared": declared,
+        "missing": _missing(declared),
+    }
 
 
 def execute(request: dict[str, Any]) -> dict[str, Any]:
@@ -168,7 +212,9 @@ def execute(request: dict[str, Any]) -> dict[str, Any]:
     native = request["native_id"]
     approved = list(request.get("approved_tools") or [])
     # Tools the launch approved run; any other a model calls is rejected.
-    policies = ([ApprovalPolicy(auto_approver("approve"), approved)] if approved else []) + [ApprovalPolicy(auto_approver("reject"), "*")]
+    policies = (
+        [ApprovalPolicy(auto_approver("approve"), approved)] if approved else []
+    ) + [ApprovalPolicy(auto_approver("reject"), "*")]
     logs = run_eval(
         str(source / request["entry_point"]),
         model=request.get("model") or None,
@@ -184,7 +230,10 @@ def execute(request: dict[str, Any]) -> dict[str, Any]:
         approval=policies,
         log_level="warning",
     )
-    return {"version": importlib.metadata.version("inspect_ai"), "logs": [log.location for log in logs]}
+    return {
+        "version": importlib.metadata.version("inspect_ai"),
+        "logs": [log.location for log in logs],
+    }
 
 
 def main() -> None:

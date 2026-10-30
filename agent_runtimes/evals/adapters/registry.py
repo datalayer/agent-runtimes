@@ -37,12 +37,18 @@ def adapter(framework: str) -> ExternalAdapter:
     """The adapter of `framework`."""
     location = _ADAPTERS.get(framework)
     if location is None:
-        raise UnknownAdapter(f"no adapter for the framework {framework!r}; known: {', '.join(sorted(_ADAPTERS))}")
+        raise UnknownAdapter(
+            f"no adapter for the framework {framework!r}; known: {', '.join(sorted(_ADAPTERS))}"
+        )
     module, name = location.split(":")
     return getattr(importlib.import_module(module), name)()
 
 
 def offered_adapters() -> list[ExternalAdapter]:
     """The adapters this deployment offers, in the order it named them."""
-    names = [item.strip() for item in os.environ.get(OFFERED_VARIABLE, "").split(",") if item.strip()]
+    names = [
+        item.strip()
+        for item in os.environ.get(OFFERED_VARIABLE, "").split(",")
+        if item.strip()
+    ]
     return [adapter(name) for name in names]

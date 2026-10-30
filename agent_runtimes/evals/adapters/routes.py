@@ -68,9 +68,14 @@ def _refusal(error: Exception) -> HTTPException:
     if isinstance(error, SourceMissing):
         return HTTPException(status_code=409, detail=str(error))
     if isinstance(error, SandboxUnavailable):
-        return HTTPException(status_code=503, detail={"code": "sandbox_unavailable", "message": str(error)})
+        return HTTPException(
+            status_code=503,
+            detail={"code": "sandbox_unavailable", "message": str(error)},
+        )
     if isinstance(error, SandboxCancelled):
-        return HTTPException(status_code=409, detail={"code": "cancelled", "message": str(error)})
+        return HTTPException(
+            status_code=409, detail={"code": "cancelled", "message": str(error)}
+        )
     return HTTPException(status_code=422, detail=str(error))
 
 
@@ -91,8 +96,16 @@ async def put_source(digest: str, request: Request) -> dict[str, Any]:
 @router.post("/{framework}/inspect")
 async def inspect(framework: str, body: InspectRequest) -> dict[str, Any]:
     try:
-        inspection = await run_in_threadpool(host().inspect, framework, body.digest, options=body.options)
-    except (UnknownAdapter, SourceMissing, SandboxUnavailable, SandboxCancelled, ValueError) as error:
+        inspection = await run_in_threadpool(
+            host().inspect, framework, body.digest, options=body.options
+        )
+    except (
+        UnknownAdapter,
+        SourceMissing,
+        SandboxUnavailable,
+        SandboxCancelled,
+        ValueError,
+    ) as error:
         raise _refusal(error) from error
     return inspection.model_dump()
 
@@ -101,9 +114,21 @@ async def inspect(framework: str, body: InspectRequest) -> dict[str, Any]:
 async def execute(framework: str, body: ExecuteRequest) -> dict[str, Any]:
     try:
         result = await run_in_threadpool(
-            host().execute, framework, body.digest, plan=body.plan, trial=body.trial, secrets=body.secrets, key=body.key
+            host().execute,
+            framework,
+            body.digest,
+            plan=body.plan,
+            trial=body.trial,
+            secrets=body.secrets,
+            key=body.key,
         )
-    except (UnknownAdapter, SourceMissing, SandboxUnavailable, SandboxCancelled, ValueError) as error:
+    except (
+        UnknownAdapter,
+        SourceMissing,
+        SandboxUnavailable,
+        SandboxCancelled,
+        ValueError,
+    ) as error:
         raise _refusal(error) from error
     return result.model_dump()
 

@@ -15,12 +15,12 @@ import sys
 import time
 
 
-def definition(source):
+def definition(source: str) -> dict:
     with open(os.path.join(source, "fake-eval.json")) as handle:
         return json.load(handle)
 
 
-def main():
+def main() -> None:
     request = json.loads(sys.stdin.read())
     loaded = definition(request["source"])
     if request["op"] == "inspect":
@@ -35,13 +35,23 @@ def main():
     with open("framework.log", "w") as log:
         log.write(f"ran {case['id']} with token {os.environ.get('FAKE_TOKEN', '')}\n")
     answer = case.get("answer", "")
-    print(json.dumps({
-        "sample": case["id"],
-        "input": case.get("input"),
-        "answer": answer,
-        "scores": [{"name": "exact", "value": 1.0 if answer == case.get("target") else 0.0, "answer": answer}],
-        "usage": {"input_tokens": 3, "output_tokens": 1},
-    }))
+    print(
+        json.dumps(
+            {
+                "sample": case["id"],
+                "input": case.get("input"),
+                "answer": answer,
+                "scores": [
+                    {
+                        "name": "exact",
+                        "value": 1.0 if answer == case.get("target") else 0.0,
+                        "answer": answer,
+                    }
+                ],
+                "usage": {"input_tokens": 3, "output_tokens": 1},
+            }
+        )
+    )
 
 
 main()

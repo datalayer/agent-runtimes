@@ -102,7 +102,15 @@ class SandboxPolicy:
     def __post_init__(self) -> None:
         if self.network not in ("none", "boundary"):
             raise ValueError(f"no such network policy: {self.network}")
-        for name in ("wall_seconds", "cpu_seconds", "memory_bytes", "max_files", "max_bytes", "open_files", "processes"):
+        for name in (
+            "wall_seconds",
+            "cpu_seconds",
+            "memory_bytes",
+            "max_files",
+            "max_bytes",
+            "open_files",
+            "processes",
+        ):
             if getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be a positive bound")
 
@@ -184,7 +192,12 @@ def run_sandboxed(
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     workdir.chmod(0o700)
-    environment = {"HOME": str(workdir), "PATH": "/usr/bin:/bin", "TMPDIR": str(workdir), **(env or {})}
+    environment = {
+        "HOME": str(workdir),
+        "PATH": "/usr/bin:/bin",
+        "TMPDIR": str(workdir),
+        **(env or {}),
+    }
     config = {
         "network": policy.network,
         "cpu_seconds": int(policy.cpu_seconds),
@@ -200,7 +213,11 @@ def run_sandboxed(
         "refuse": _BOOTSTRAP_FLAGS_FOR_TEST == "refuse",
     }
     started = time.monotonic()
-    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err, tempfile.TemporaryFile() as given:
+    with (
+        tempfile.TemporaryFile() as out,
+        tempfile.TemporaryFile() as err,
+        tempfile.TemporaryFile() as given,
+    ):
         given.write(stdin)
         given.seek(0)
         process = subprocess.Popen(
@@ -219,15 +236,23 @@ def run_sandboxed(
                 ticks += 1
                 if cancel is not None and cancel.is_set():
                     _kill(process)
-                    raise SandboxCancelled("the run was cancelled and its sandbox stopped")
+                    raise SandboxCancelled(
+                        "the run was cancelled and its sandbox stopped"
+                    )
                 if time.monotonic() - started >= policy.wall_seconds:
                     _kill(process)
-                    raise SandboxExceeded("time", f"the sandbox ran past its {policy.wall_seconds:g} seconds")
+                    raise SandboxExceeded(
+                        "time",
+                        f"the sandbox ran past its {policy.wall_seconds:g} seconds",
+                    )
                 if ticks % _COUNT_EVERY == 0:
                     files, size = _count(workdir)
                     if files > policy.max_files or size >= policy.max_bytes:
                         _kill(process)
-                        raise SandboxExceeded("files", f"the sandbox wrote {files} files and {size} bytes; it may write {policy.max_files} and {policy.max_bytes}")
+                        raise SandboxExceeded(
+                            "files",
+                            f"the sandbox wrote {files} files and {size} bytes; it may write {policy.max_files} and {policy.max_bytes}",
+                        )
         except BaseException:
             if process.poll() is None:
                 _kill(process)
@@ -241,11 +266,20 @@ def run_sandboxed(
     if returncode == _REFUSED and stderr.startswith(b"sandbox-refused:"):
         raise SandboxUnavailable(stderr.decode("utf-8", "replace").strip())
     if returncode == 128 + signal.SIGXCPU:
-        raise SandboxExceeded("cpu", f"the sandbox spent its {policy.cpu_seconds} seconds of CPU")
+        raise SandboxExceeded(
+            "cpu", f"the sandbox spent its {policy.cpu_seconds} seconds of CPU"
+        )
     # A file stopped at the limit is the limit reached, whatever the process
     # made of the error it got.
-    if returncode == 128 + signal.SIGXFSZ or files > policy.max_files or size >= policy.max_bytes:
-        raise SandboxExceeded("files", f"the sandbox wrote {files} files and {size} bytes; it may write {policy.max_files} and {policy.max_bytes}")
+    if (
+        returncode == 128 + signal.SIGXFSZ
+        or files > policy.max_files
+        or size >= policy.max_bytes
+    ):
+        raise SandboxExceeded(
+            "files",
+            f"the sandbox wrote {files} files and {size} bytes; it may write {policy.max_files} and {policy.max_bytes}",
+        )
     return SandboxOutcome(
         returncode=returncode,
         stdout=stdout,

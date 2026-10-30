@@ -46,7 +46,9 @@ def _run(tmp_path: Path, code: str, *, policy: SandboxPolicy | None = None, **kw
 
 
 def test_a_process_runs_and_answers_on_stdout(tmp_path):
-    outcome = _run(tmp_path, "import sys; print(sys.stdin.read().upper())", stdin=b"asked")
+    outcome = _run(
+        tmp_path, "import sys; print(sys.stdin.read().upper())", stdin=b"asked"
+    )
     assert outcome.returncode == 0
     assert outcome.stdout.strip() == b"ASKED"
 
@@ -83,7 +85,11 @@ def test_the_boundary_network_is_only_what_a_policy_grants(tmp_path):
         f"print(s.connect_ex(('127.0.0.1', {port})))\n"
     )
     try:
-        outcome = _run(tmp_path, code, policy=SandboxPolicy(network="boundary", wall_seconds=30, cpu_seconds=30))
+        outcome = _run(
+            tmp_path,
+            code,
+            policy=SandboxPolicy(network="boundary", wall_seconds=30, cpu_seconds=30),
+        )
     finally:
         listener.close()
     assert outcome.stdout.strip() == b"0", outcome.stderr
@@ -101,14 +107,22 @@ def test_the_environment_is_only_what_was_handed_in(tmp_path, monkeypatch):
 def test_wall_time_is_bounded(tmp_path):
     started = time.monotonic()
     with pytest.raises(SandboxExceeded) as refused:
-        _run(tmp_path, "import time; time.sleep(60)", policy=SandboxPolicy(wall_seconds=1, cpu_seconds=30))
+        _run(
+            tmp_path,
+            "import time; time.sleep(60)",
+            policy=SandboxPolicy(wall_seconds=1, cpu_seconds=30),
+        )
     assert refused.value.bound == "time"
     assert time.monotonic() - started < 10
 
 
 def test_cpu_is_bounded(tmp_path):
     with pytest.raises(SandboxExceeded) as refused:
-        _run(tmp_path, "while True:\n    pass", policy=SandboxPolicy(wall_seconds=30, cpu_seconds=1))
+        _run(
+            tmp_path,
+            "while True:\n    pass",
+            policy=SandboxPolicy(wall_seconds=30, cpu_seconds=1),
+        )
     assert refused.value.bound == "cpu"
 
 
@@ -116,7 +130,9 @@ def test_memory_is_bounded(tmp_path):
     outcome = _run(
         tmp_path,
         "try:\n    x = bytearray(1024 * 1024 * 1024)\n    print('allocated')\nexcept MemoryError:\n    print('refused')",
-        policy=SandboxPolicy(wall_seconds=30, cpu_seconds=30, memory_bytes=256 * 1024 * 1024),
+        policy=SandboxPolicy(
+            wall_seconds=30, cpu_seconds=30, memory_bytes=256 * 1024 * 1024
+        ),
     )
     assert outcome.stdout.strip() == b"refused"
 
@@ -126,7 +142,9 @@ def test_one_file_is_bounded(tmp_path):
         _run(
             tmp_path,
             "open('big', 'wb').write(b'x' * (64 * 1024 * 1024))",
-            policy=SandboxPolicy(wall_seconds=30, cpu_seconds=30, max_bytes=1024 * 1024),
+            policy=SandboxPolicy(
+                wall_seconds=30, cpu_seconds=30, max_bytes=1024 * 1024
+            ),
         )
     assert refused.value.bound == "files"
 
@@ -134,7 +152,11 @@ def test_one_file_is_bounded(tmp_path):
 def test_the_number_of_files_is_bounded(tmp_path):
     code = "import os\nfor i in range(200):\n    open(f'f{i}', 'w').close()\nimport time; time.sleep(5)"
     with pytest.raises(SandboxExceeded) as refused:
-        _run(tmp_path, code, policy=SandboxPolicy(wall_seconds=30, cpu_seconds=30, max_files=20))
+        _run(
+            tmp_path,
+            code,
+            policy=SandboxPolicy(wall_seconds=30, cpu_seconds=30, max_files=20),
+        )
     assert refused.value.bound == "files"
 
 
@@ -190,7 +212,9 @@ def test_a_hidden_path_is_empty_inside(tmp_path):
     outcome = _run(
         tmp_path,
         code,
-        policy=SandboxPolicy(wall_seconds=30, cpu_seconds=30, hidden_paths=(str(hidden),)),
+        policy=SandboxPolicy(
+            wall_seconds=30, cpu_seconds=30, hidden_paths=(str(hidden),)
+        ),
     )
     assert outcome.stdout.strip() == b"[]", outcome.stderr
 

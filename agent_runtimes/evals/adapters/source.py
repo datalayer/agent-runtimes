@@ -20,6 +20,7 @@ import re
 import tarfile
 import zipfile
 from pathlib import Path, PurePosixPath
+from typing import IO
 
 __all__ = [
     "MAX_ARCHIVE_BYTES",
@@ -60,7 +61,9 @@ def _inside(name: str) -> PurePosixPath:
     return path
 
 
-def _write(destination: Path, name: str, stream, *, spent: list[int]) -> None:
+def _write(
+    destination: Path, name: str, stream: IO[bytes], *, spent: list[int]
+) -> None:
     relative = _inside(name)
     target = destination.joinpath(*relative.parts)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -71,7 +74,9 @@ def _write(destination: Path, name: str, stream, *, spent: list[int]) -> None:
                 break
             spent[0] += len(chunk)
             if spent[0] > MAX_UNPACKED_BYTES:
-                raise SourceRefused(f"the archive unpacks past {MAX_UNPACKED_BYTES} bytes")
+                raise SourceRefused(
+                    f"the archive unpacks past {MAX_UNPACKED_BYTES} bytes"
+                )
             handle.write(chunk)
 
 
@@ -97,22 +102,28 @@ def unpack_archive(data: bytes, destination: Path) -> None:
                     _write(destination, entry.filename, stream, spent=spent)
     else:
         try:
-            archive = tarfile.open(fileobj=io.BytesIO(data), mode="r:*")
+            tar = tarfile.open(fileobj=io.BytesIO(data), mode="r:*")
         except tarfile.TarError as error:
-            raise SourceRefused(f"the archive is neither a tar nor a zip: {error}") from None
-        with archive:
-            entries = archive.getmembers()
-            if len(entries) > MAX_FILES:
+            raise SourceRefused(
+                f"the archive is neither a tar nor a zip: {error}"
+            ) from None
+        with tar:
+            members = tar.getmembers()
+            if len(members) > MAX_FILES:
                 raise SourceRefused(f"the archive holds more than {MAX_FILES} entries")
-            for entry in entries:
-                if entry.isdir():
+            for member in members:
+                if member.isdir():
                     _inside(entry.name)
                     continue
                 if not entry.isfile():
-                    raise SourceRefused(f"the archive holds something other than a file: {entry.name}")
+                    raise SourceRefused(
+                        f"the archive holds something other than a file: {entry.name}"
+                    )
                 stream = archive.extractfile(entry)
                 if stream is None:
-                    raise SourceRefused(f"the archive's entry cannot be read: {entry.name}")
+                    raise SourceRefused(
+                        f"the archive's entry cannot be read: {entry.name}"
+                    )
                 _write(destination, entry.name, stream, spent=spent)
     for root, directories, names in os.walk(destination):
         for name in names:

@@ -5,14 +5,12 @@
 
 from __future__ import annotations
 
-import base64
 import io
 import json
 import tarfile
 import threading
 import time
 import zipfile
-from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -30,7 +28,11 @@ from agent_runtimes.evals.adapters.base import (
     stable_case_id,
 )
 from agent_runtimes.evals.adapters.host import AdapterHost, SourceMissing, redact
-from agent_runtimes.evals.adapters.registry import UnknownAdapter, adapter, offered_adapters
+from agent_runtimes.evals.adapters.registry import (
+    UnknownAdapter,
+    adapter,
+    offered_adapters,
+)
 from agent_runtimes.evals.adapters.sandbox import SandboxPolicy, isolation_available
 from agent_runtimes.evals.adapters.source import (
     SourceRefused,
@@ -39,7 +41,9 @@ from agent_runtimes.evals.adapters.source import (
     unpack_archive,
 )
 
-needs_isolation = pytest.mark.skipif(not isolation_available(), reason="no unprivileged namespaces here")
+needs_isolation = pytest.mark.skipif(
+    not isolation_available(), reason="no unprivileged namespaces here"
+)
 
 DEFINITION = {
     "name": "Two tasks",
@@ -92,11 +96,18 @@ class TestTheRegistry:
     def test_each_adapter_says_its_own_versions(self, monkeypatch):
         monkeypatch.setenv("DATALAYER_EVALS_ADAPTERS", "fake")
         [fake] = offered_adapters()
-        assert fake.describe() == {"framework": "fake", "adapter_version": "1", "framework_version": "0", "environment": "ai-agents-env"}
+        assert fake.describe() == {
+            "framework": "fake",
+            "adapter_version": "1",
+            "framework_version": "0",
+            "environment": "ai-agents-env",
+        }
 
 
 class TestTheSource:
-    def test_the_digest_is_of_the_bytes_and_the_content_digest_of_the_files(self, tmp_path):
+    def test_the_digest_is_of_the_bytes_and_the_content_digest_of_the_files(
+        self, tmp_path
+    ):
         data = archive_of(DEFINITION)
         unpack_archive(data, tmp_path / "one")
         buffer = io.BytesIO()
@@ -143,8 +154,12 @@ class TestTheSource:
 
 def test_a_case_id_is_stable_and_belongs_to_its_source():
     one = stable_case_id(framework="fake", native_id="alpha", content_digest="d1")
-    assert one == stable_case_id(framework="fake", native_id="alpha", content_digest="d1")
-    assert one != stable_case_id(framework="fake", native_id="alpha", content_digest="d2")
+    assert one == stable_case_id(
+        framework="fake", native_id="alpha", content_digest="d1"
+    )
+    assert one != stable_case_id(
+        framework="fake", native_id="alpha", content_digest="d2"
+    )
 
 
 def test_a_policy_survives_a_plan_and_refuses_what_it_does_not_know():
@@ -155,7 +170,10 @@ def test_a_policy_survives_a_plan_and_refuses_what_it_does_not_know():
 
 
 def test_redaction_takes_a_value_out_wherever_it_is():
-    assert redact("key=abc and abc", {"TOKEN": "abc"}) == "key=[secret:TOKEN] and [secret:TOKEN]"
+    assert (
+        redact("key=abc and abc", {"TOKEN": "abc"})
+        == "key=[secret:TOKEN] and [secret:TOKEN]"
+    )
 
 
 @needs_isolation
@@ -171,43 +189,89 @@ class TestTheFakeAdapter:
         host, digest = ready
         fake = adapter("fake")
         imported = fake.import_definition(
-            host.inspect("fake", digest), selection=Selection(), source=SourceRef(kind="archive", reference=digest, filename="x.tar.gz")
+            host.inspect("fake", digest),
+            selection=Selection(),
+            source=SourceRef(kind="archive", reference=digest, filename="x.tar.gz"),
         )
         assert len(imported.cases) == 2
         assert imported.external_definition.source.reference == digest
         assert imported.external_definition.framework == "fake"
         assert imported.cases[0]["id"] == stable_case_id(
-            framework="fake", native_id="alpha", content_digest=imported.external_definition.content_digest
+            framework="fake",
+            native_id="alpha",
+            content_digest=imported.external_definition.content_digest,
         )
 
     def _plan(self, host, digest, *, grant=None):
         fake = adapter("fake")
-        imported = fake.import_definition(host.inspect("fake", digest), selection=Selection(), source=SourceRef(kind="archive", reference=digest))
+        imported = fake.import_definition(
+            host.inspect("fake", digest),
+            selection=Selection(),
+            source=SourceRef(kind="archive", reference=digest),
+        )
         return fake.plan(imported.external_definition, grant=grant or LaunchGrant())
 
     def test_an_execution_normalizes_to_a_task_result(self, ready):
         host, digest = ready
         plan = self._plan(host, digest)
-        passed = host.execute("fake", digest, plan=plan, trial=Trial(case_id="c1", native_id="alpha"), secrets={})
-        failed = host.execute("fake", digest, plan=plan, trial=Trial(case_id="c2", native_id="beta"), secrets={})
+        passed = host.execute(
+            "fake",
+            digest,
+            plan=plan,
+            trial=Trial(case_id="c1", native_id="alpha"),
+            secrets={},
+        )
+        failed = host.execute(
+            "fake",
+            digest,
+            plan=plan,
+            trial=Trial(case_id="c2", native_id="beta"),
+            secrets={},
+        )
         assert (passed.status, passed.score, passed.output) == ("passed", 1.0, "4")
-        assert (failed.status, failed.failure_stage, failed.failure_mode) == ("failed", "scorer", "wrong_answer")
+        assert (failed.status, failed.failure_stage, failed.failure_mode) == (
+            "failed",
+            "scorer",
+            "wrong_answer",
+        )
         assert [score.name for score in passed.scores] == ["exact"]
 
-    def test_a_definition_needing_more_than_the_launch_grants_is_unsupported(self, host):
-        data = archive_of({**DEFINITION, "network": "boundary", "secrets": ["FAKE_TOKEN"]})
+    def test_a_definition_needing_more_than_the_launch_grants_is_unsupported(
+        self, host
+    ):
+        data = archive_of(
+            {**DEFINITION, "network": "boundary", "secrets": ["FAKE_TOKEN"]}
+        )
         digest = archive_digest(data)
         host.put_source(digest, data)
         refused = blocking(self._plan(host, digest).capabilities)
-        assert {item.code for item in refused} == {"network_not_granted", "secret_not_granted"}
-        assert blocking(self._plan(host, digest, grant=LaunchGrant(network="boundary", secrets=["FAKE_TOKEN"])).capabilities) == []
+        assert {item.code for item in refused} == {
+            "network_not_granted",
+            "secret_not_granted",
+        }
+        assert (
+            blocking(
+                self._plan(
+                    host,
+                    digest,
+                    grant=LaunchGrant(network="boundary", secrets=["FAKE_TOKEN"]),
+                ).capabilities
+            )
+            == []
+        )
 
     def test_a_secret_is_handed_in_and_comes_out_of_nothing(self, host):
         data = archive_of({**DEFINITION, "secrets": ["FAKE_TOKEN"]})
         digest = archive_digest(data)
         host.put_source(digest, data)
         plan = self._plan(host, digest, grant=LaunchGrant(secrets=["FAKE_TOKEN"]))
-        result = host.execute("fake", digest, plan=plan, trial=Trial(case_id="c1", native_id="alpha"), secrets={"FAKE_TOKEN": "s3cr3t-value"})
+        result = host.execute(
+            "fake",
+            digest,
+            plan=plan,
+            trial=Trial(case_id="c1", native_id="alpha"),
+            secrets={"FAKE_TOKEN": "s3cr3t-value"},
+        )
         log = result.artifacts[0].content.decode()
         assert "s3cr3t-value" not in result.model_dump_json()
         assert "s3cr3t-value" not in log
@@ -216,26 +280,56 @@ class TestTheFakeAdapter:
     def test_a_secret_the_plan_does_not_name_is_refused(self, ready):
         host, digest = ready
         with pytest.raises(ValueError):
-            host.execute("fake", digest, plan=self._plan(host, digest), trial=Trial(case_id="c", native_id="alpha"), secrets={"OTHER": "x"})
+            host.execute(
+                "fake",
+                digest,
+                plan=self._plan(host, digest),
+                trial=Trial(case_id="c", native_id="alpha"),
+                secrets={"OTHER": "x"},
+            )
 
     def test_a_framework_that_crashes_is_a_failed_task(self, host):
-        definition = {**DEFINITION, "cases": [{"id": "alpha", "input": "x", "target": "y", "crash": True}]}
+        definition = {
+            **DEFINITION,
+            "cases": [{"id": "alpha", "input": "x", "target": "y", "crash": True}],
+        }
         data = archive_of(definition)
         digest = archive_digest(data)
         host.put_source(digest, data)
-        result = host.execute("fake", digest, plan=self._plan(host, digest), trial=Trial(case_id="c", native_id="alpha"), secrets={})
+        result = host.execute(
+            "fake",
+            digest,
+            plan=self._plan(host, digest),
+            trial=Trial(case_id="c", native_id="alpha"),
+            secrets={},
+        )
         assert (result.status, result.failure_mode) == ("failed", "framework_failed")
         assert "crashed" in result.explanation
 
     def test_a_bound_overrun_is_the_trials_failure(self, host):
-        definition = {**DEFINITION, "cases": [{"id": "alpha", "input": "x", "target": "y", "sleep_seconds": 30}]}
+        definition = {
+            **DEFINITION,
+            "cases": [
+                {"id": "alpha", "input": "x", "target": "y", "sleep_seconds": 30}
+            ],
+        }
         data = archive_of(definition)
         digest = archive_digest(data)
         host.put_source(digest, data)
         plan = self._plan(host, digest)
         plan = plan.model_copy(update={"policy": {**plan.policy, "wall_seconds": 1}})
-        result = host.execute("fake", digest, plan=plan, trial=Trial(case_id="c", native_id="alpha"), secrets={})
-        assert (result.status, result.failure_stage, result.failure_mode) == ("failed", "infrastructure", "sandbox_time_exceeded")
+        result = host.execute(
+            "fake",
+            digest,
+            plan=plan,
+            trial=Trial(case_id="c", native_id="alpha"),
+            secrets={},
+        )
+        assert (result.status, result.failure_stage, result.failure_mode) == (
+            "failed",
+            "infrastructure",
+            "sandbox_time_exceeded",
+        )
 
     def test_a_definition_the_adapter_chokes_on_is_refused_not_a_crash(self, host):
         data = archive_of({"cases": "nonsense"})
@@ -247,7 +341,12 @@ class TestTheFakeAdapter:
     def test_a_cancel_reaches_a_running_trial(self, host):
         from agent_runtimes.evals.adapters.sandbox import SandboxCancelled
 
-        definition = {**DEFINITION, "cases": [{"id": "alpha", "input": "x", "target": "y", "sleep_seconds": 30}]}
+        definition = {
+            **DEFINITION,
+            "cases": [
+                {"id": "alpha", "input": "x", "target": "y", "sleep_seconds": 30}
+            ],
+        }
         data = archive_of(definition)
         digest = archive_digest(data)
         host.put_source(digest, data)
@@ -255,7 +354,14 @@ class TestTheFakeAdapter:
         threading.Timer(0.5, lambda: host.cancel("k1")).start()
         started = time.monotonic()
         with pytest.raises(SandboxCancelled):
-            host.execute("fake", digest, plan=plan, trial=Trial(case_id="c", native_id="alpha"), secrets={}, key="k1")
+            host.execute(
+                "fake",
+                digest,
+                plan=plan,
+                trial=Trial(case_id="c", native_id="alpha"),
+                secrets={},
+                key="k1",
+            )
         assert time.monotonic() - started < 5
         assert host.cancel("k1") is False
 
@@ -273,25 +379,52 @@ class TestTheRoutes:
     def test_the_whole_way_through_http(self, client):
         data = archive_of(DEFINITION)
         digest = archive_digest(data)
-        assert client.put(f"/evals/adapters/sources/{digest}", content=data).status_code == 200
-        inspection = client.post("/evals/adapters/fake/inspect", json={"digest": digest}).json()
+        assert (
+            client.put(f"/evals/adapters/sources/{digest}", content=data).status_code
+            == 200
+        )
+        inspection = client.post(
+            "/evals/adapters/fake/inspect", json={"digest": digest}
+        ).json()
         assert len(inspection["cases"]) == 2
         fake = adapter("fake")
         from agent_runtimes.evals.adapters.base import Inspection
 
-        imported = fake.import_definition(Inspection(**inspection), selection=Selection(), source=SourceRef(kind="archive", reference=digest))
+        imported = fake.import_definition(
+            Inspection(**inspection),
+            selection=Selection(),
+            source=SourceRef(kind="archive", reference=digest),
+        )
         plan = fake.plan(imported.external_definition, grant=LaunchGrant())
         answered = client.post(
             "/evals/adapters/fake/execute",
-            json={"digest": digest, "plan": plan.model_dump(), "trial": {"case_id": "c", "native_id": "alpha"}, "key": "k"},
+            json={
+                "digest": digest,
+                "plan": plan.model_dump(),
+                "trial": {"case_id": "c", "native_id": "alpha"},
+                "key": "k",
+            },
         )
         assert answered.status_code == 200, answered.text
         assert answered.json()["status"] == "passed"
 
     def test_refusals_are_status_codes(self, client):
-        assert client.post("/evals/adapters/nobody/inspect", json={"digest": "0" * 64}).status_code == 404
-        assert client.post("/evals/adapters/fake/inspect", json={"digest": "0" * 64}).status_code == 409
-        assert client.put("/evals/adapters/sources/" + "0" * 64, content=b"x").status_code == 422
+        assert (
+            client.post(
+                "/evals/adapters/nobody/inspect", json={"digest": "0" * 64}
+            ).status_code
+            == 404
+        )
+        assert (
+            client.post(
+                "/evals/adapters/fake/inspect", json={"digest": "0" * 64}
+            ).status_code
+            == 409
+        )
+        assert (
+            client.put("/evals/adapters/sources/" + "0" * 64, content=b"x").status_code
+            == 422
+        )
 
     def test_a_kernel_that_will_not_isolate_answers_503(self, client, monkeypatch):
         from agent_runtimes.evals.adapters import sandbox
@@ -299,7 +432,9 @@ class TestTheRoutes:
         data = archive_of(DEFINITION)
         digest = archive_digest(data)
         client.put(f"/evals/adapters/sources/{digest}", content=data)
-        monkeypatch.setattr(sandbox, "_BOOTSTRAP_FLAGS_FOR_TEST", "refuse", raising=False)
+        monkeypatch.setattr(
+            sandbox, "_BOOTSTRAP_FLAGS_FOR_TEST", "refuse", raising=False
+        )
         answered = client.post("/evals/adapters/fake/inspect", json={"digest": digest})
         assert answered.status_code == 503
         assert answered.json()["detail"]["code"] == "sandbox_unavailable"

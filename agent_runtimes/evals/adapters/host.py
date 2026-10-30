@@ -20,7 +20,7 @@ import tempfile
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from agent_runtimes.evals.adapters.base import (
     AdapterPlan,
@@ -32,7 +32,14 @@ from agent_runtimes.evals.adapters.base import (
     policy_from,
 )
 from agent_runtimes.evals.adapters.registry import adapter
-from agent_runtimes.evals.adapters.sandbox import SandboxCancelled, SandboxExceeded, SandboxUnavailable, run_sandboxed
+from agent_runtimes.evals.adapters.sandbox import (
+    SandboxCancelled,
+    SandboxExceeded,
+    SandboxOutcome,
+    SandboxPolicy,
+    SandboxUnavailable,
+    run_sandboxed,
+)
 from agent_runtimes.evals.adapters.source import (
     archive_digest,
     content_digest,
@@ -62,11 +69,18 @@ def _redacted(result: NormalizedResult, secrets: Mapping[str, str]) -> Normalize
         ResultArtifact(
             name=item.name,
             media_type=item.media_type,
-            content_base64=base64.b64encode(_redact_bytes(item.content, secrets)).decode(),
+            content_base64=base64.b64encode(
+                _redact_bytes(item.content, secrets)
+            ).decode(),
         )
         for item in result.artifacts
     ]
-    scrubbed = NormalizedResult.model_validate_json(redact(result.model_copy(update={"artifacts": []}).model_dump_json(), {name: json.dumps(value)[1:-1] for name, value in secrets.items()}))
+    scrubbed = NormalizedResult.model_validate_json(
+        redact(
+            result.model_copy(update={"artifacts": []}).model_dump_json(),
+            {name: json.dumps(value)[1:-1] for name, value in secrets.items()},
+        )
+    )
     return scrubbed.model_copy(update={"artifacts": artifacts})
 
 
@@ -75,6 +89,40 @@ def _redact_bytes(data: bytes, secrets: Mapping[str, str]) -> bytes:
         if value:
             data = data.replace(value.encode(), f"[secret:{name}]".encode())
     return data
+
+
+class _BoundSandbox:
+    """`run_sandboxed`, with one operation's source, bounds and working directory."""
+
+    def __init__(
+        self,
+        *,
+        source: SourceTree,
+        policy: SandboxPolicy,
+        workdir: Path,
+        cancel: threading.Event | None = None,
+    ) -> None:
+        self.source = source
+        self.policy = policy
+        self.workdir = workdir
+        self.cancel = cancel
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        stdin: bytes = b"",
+        env: Mapping[str, str] | None = None,
+    ) -> SandboxOutcome:
+        return run_sandboxed(
+            argv,
+            workdir=self.workdir,
+            policy=self.policy,
+            stdin=stdin,
+            env=env,
+            read_only=[Path(self.source.root)],
+            cancel=self.cancel,
+        )
 
 
 class AdapterHost:
@@ -109,27 +157,30 @@ class AdapterHost:
         tree = self._source_dir(digest) / "tree"
         if not tree.exists():
             raise SourceMissing(f"the source {digest} was not handed to this runtime")
-        return SourceTree(archive_digest=digest, content_digest=content_digest(tree), root=str(tree))
-
-    def _sandbox(self, *, source: SourceTree, policy, workdir: Path, cancel: threading.Event | None):
-        def sandbox(argv, *, stdin: bytes = b"", env: Mapping[str, str] | None = None):
-            return run_sandboxed(argv, workdir=workdir, policy=policy, stdin=stdin, env=env, read_only=[Path(source.root)], cancel=cancel)
-
-        sandbox.workdir = workdir  # type: ignore[attr-defined]
-        return sandbox
+        return SourceTree(
+            archive_digest=digest, content_digest=content_digest(tree), root=str(tree)
+        )
 
     def _workdir(self) -> Path:
         place = self.root / "work" / uuid.uuid4().hex
         place.mkdir(parents=True)
         return place
 
-    def inspect(self, framework: str, digest: str, *, options: dict[str, Any] | None = None) -> Inspection:
+    def inspect(
+        self, framework: str, digest: str, *, options: dict[str, Any] | None = None
+    ) -> Inspection:
         """Discover what a source defines, in a sandbox with no network."""
         chosen = adapter(framework)
         source = self.source(digest)
         workdir = self._workdir()
         try:
-            return chosen.inspect(source, sandbox=self._sandbox(source=source, policy=chosen.default_policy, workdir=workdir, cancel=None), options=dict(options or {}))
+            return chosen.inspect(
+                source,
+                sandbox=_BoundSandbox(
+                    source=source, policy=chosen.default_policy, workdir=workdir
+                ),
+                options=dict(options or {}),
+            )
         except (SandboxUnavailable, SandboxCancelled):
             raise
         except Exception as error:  # noqa: BLE001 - whatever a source does to its reader is a refusal of that source
@@ -137,7 +188,16 @@ class AdapterHost:
         finally:
             shutil.rmtree(workdir, ignore_errors=True)
 
-    def execute(self, framework: str, digest: str, *, plan: AdapterPlan, trial: Trial, secrets: Mapping[str, str], key: str = "") -> NormalizedResult:
+    def execute(
+        self,
+        framework: str,
+        digest: str,
+        *,
+        plan: AdapterPlan,
+        trial: Trial,
+        secrets: Mapping[str, str],
+        key: str = "",
+    ) -> NormalizedResult:
         """Run one trial and normalize what it left. A bound overrun is the
         trial's own failure, in a sentence, with nothing of it kept."""
         chosen = adapter(framework)
@@ -145,22 +205,42 @@ class AdapterHost:
         policy = policy_from(plan.policy)
         unnamed = set(secrets) - set(policy.secrets)
         if unnamed:
-            raise ValueError(f"secrets the plan does not name: {', '.join(sorted(unnamed))}")
+            raise ValueError(
+                f"secrets the plan does not name: {', '.join(sorted(unnamed))}"
+            )
         cancel = threading.Event()
         key = key or uuid.uuid4().hex
         with self._lock:
             self._running[key] = cancel
         workdir = self._workdir()
         try:
-            sandbox = self._sandbox(source=source, policy=policy, workdir=workdir, cancel=cancel)
+            sandbox = _BoundSandbox(
+                source=source, policy=policy, workdir=workdir, cancel=cancel
+            )
             try:
-                raw = chosen.execute(trial, plan=plan, source=source, sandbox=sandbox, env=secrets)
+                raw = chosen.execute(
+                    trial, plan=plan, source=source, sandbox=sandbox, env=secrets
+                )
             except SandboxExceeded as exceeded:
-                return NormalizedResult(status="failed", explanation=str(exceeded), failure_stage="infrastructure", failure_mode=f"sandbox_{exceeded.bound}_exceeded")
+                return NormalizedResult(
+                    status="failed",
+                    explanation=str(exceeded),
+                    failure_stage="infrastructure",
+                    failure_mode=f"sandbox_{exceeded.bound}_exceeded",
+                )
             try:
-                return _redacted(chosen.normalize_result(trial, raw, plan=plan), secrets)
+                return _redacted(
+                    chosen.normalize_result(trial, raw, plan=plan), secrets
+                )
             except Exception as error:  # noqa: BLE001 - what a framework left is data; it may be anything
-                return NormalizedResult(status="failed", explanation=redact(f"What the framework left could not be read: {error}", secrets), failure_stage="infrastructure", failure_mode="result_unreadable")
+                return NormalizedResult(
+                    status="failed",
+                    explanation=redact(
+                        f"What the framework left could not be read: {error}", secrets
+                    ),
+                    failure_stage="infrastructure",
+                    failure_mode="result_unreadable",
+                )
         finally:
             with self._lock:
                 self._running.pop(key, None)
@@ -174,5 +254,3 @@ class AdapterHost:
             return False
         running.set()
         return True
-
-
