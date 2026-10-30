@@ -268,7 +268,7 @@ class Trace:
                 "title": self.title,
                 "description": self.description,
                 "generator": "examples/personal-agent-protocol/traces/generate.py",
-                # The released SDK it was recorded with: the views say it (E-14).
+                # The released SDK it was recorded with: the views say it.
                 "sdk": f"personal-agent-protocol {sdk_version}",
                 "parties": self.parties,
                 "steps": self.steps,

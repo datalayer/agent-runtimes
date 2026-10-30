@@ -7,7 +7,7 @@ The capability opens a pairwise Session at Manzanita (the SDK's demo company),
 talks in one conversation, signs Ada in with Device Sign-In on the company's
 own page, and confirms the exchange Manzanita proposes only once Ada approved
 that exact revision on the host's approval surface (``pap.approvalSurface``).
-Every answer is a summary: no Session Token, proof, device code or pairwise id.
+Every answer is a summary: no access token, Session JWT, device code or pairwise id.
 """
 
 from __future__ import annotations

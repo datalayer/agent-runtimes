@@ -1,20 +1,19 @@
-# PAP Mediated Sign-In
+# Mediated Sign-In
 
-Mediated Sign-In is the mode a company offers when its users cannot leave for
-a browser: the personal agent collects the fields the company declares and
-sends them to the company's own endpoint, once. This `Application` runs the
-real `MediatedSignInClient` against Manzanita Outfitters, the SDK's demo
-company.
+This example signs Ada in to Manzanita Outfitters at the company's token
+endpoint, with the Mediated Sign-In extension grant and the real Python SDK
+`MediatedSignInClient`. Her email, password, and one-time code are collected by
+the host's trusted input surface (the Reactor `pap.protectedInput` contribution,
+scripted here), never by the model. It also shows a forbidden field name refused
+before the user is asked, a wrong code asking again under the same sign-in, and
+a sign-in that ends with a refresh token kept behind a reference.
 
-The credentials and the one-time code are collected through the Reactor
-point `pap.protectedInput`, the host's own trusted surface (a script in this
-demo), never from the model or a tool argument. A mistyped code is asked for
-again; the right one signs the same Session in. The tool reports which
-questions were asked, where the company sent the code (as the company masked
-it), and the outcome, and checks that the password appears in no result.
+The Agent Runtimes tool receives field labels, statuses, the company's masked
+`sent_to`, and granted scopes. Credentials, codes, and tokens never enter it.
 
 ```bash
 loop apps run examples/personal-agent-protocol/mediated-sign-in/app.py
 ```
 
-See the [PAP personal agent guide](https://personal-agent-protocol.datalayer.tech/guides/personal-agent/).
+Read the [Mediated Sign-In guide](https://personalagentprotocol.org/docs/guides/mediated-sign-in)
+and the [example flow](https://personalagentprotocol.org/docs/examples/mediated-sign-in).

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PAP and PACT in one task (EX-07, PR-14).
+"""PAP and PACT in one task.
 
 Ada asks her application, *Atlas*, one question: *where is my jacket order,
 and when do I fly?* The order is at a PAP company, Manzanita Outfitters (the
@@ -9,10 +9,10 @@ PAP SDK's demo world); the flight is at a PACT Brand, Example Air (agent
 runtimes' local Provider). Atlas asks both, Ada signs in at each business's
 own page, and one record keeps what each protocol did — written through the
 same contribution points a Datalayer host fills (`pact.receiptStore` is the
-record, R-07).
+record).
 
 Everything runs in one process with no network and no model: real keys,
-DPoP proofs, personal-agent JWTs and signed receipts over in-process HTTP.
+Session JWTs, personal-agent JWTs and signed receipts over in-process HTTP.
 
     python examples/protocols/pap_and_pact/app.py
     loop apps run examples/protocols/pap_and_pact/app.py
@@ -30,9 +30,9 @@ from personal_agent_protocol import (
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
-    DpopHttpClient,
     Message,
     SessionClient,
+    SessionHttpClient,
     generate_message_id,
 )
 from personal_agent_protocol.demo.kit import (
@@ -71,7 +71,7 @@ QUESTION = "Where is my jacket order, and when do I fly?"
 
 
 class Record:
-    """The task's record: what each protocol did, in the order it did it (R-07).
+    """The task's record: what each protocol did, in the order it did it.
 
     Contributed to ``pact.receiptStore`` below the default, so a Brand's
     verified receipt is kept here; PAP's steps are written by the tool. Only
@@ -135,7 +135,7 @@ async def _at_manzanita(record: Record) -> str:
     async with network.client() as http:
         reactor = personal_agent_reactor(host, network=network, http_client=http)
         conversations = ConversationClient(
-            transport=DpopHttpClient(reactor=reactor, http_client=http)
+            transport=SessionHttpClient(reactor=reactor, http_client=http)
         )
 
         def say(text: str) -> Message:
@@ -155,14 +155,11 @@ async def _at_manzanita(record: Record) -> str:
             client_id=atlas.client_id,
             pairwise_user_id=PAP_USER,
             issuer=metadata.issuer,
-            token_endpoint=metadata.token_endpoint,
             tenant_id=TENANT,
         )
-        # The Session Token's key says who: a call names no User ID (PAP draft 0.3).
-        who = {"tenant_id": TENANT, "issuer": metadata.issuer}
         endpoint = company.document.agent.protocols[0].endpoint
         page = await conversations.start(
-            endpoint, say("Where is my jacket order?"), token=session, wait=0, **who
+            endpoint, say("Where is my jacket order?"), session=session, wait=0
         )
         error = _last(page, "error")
         record.write("PAP", name, "sign-in asked", error=error)
@@ -175,8 +172,6 @@ async def _at_manzanita(record: Record) -> str:
             client_id=atlas.client_id,
             scopes=("orders:read",),
             tenant_id=TENANT,
-            # The code is bound to the Session's own key (PAP draft 0.3 §4.6).
-            session_key=session.session_key,
             organization=company.document.organization,
             protected_resources=metadata.protected_resources,
         )
@@ -192,10 +187,10 @@ async def _at_manzanita(record: Record) -> str:
             endpoint,
             page.conversation_id,
             say("Where is my jacket order?"),
+            session=session,
             token=done.token,
             cursor=page.cursor,
             wait=0,
-            **who,
         )
         answer = _last(page, "message").text
         record.write("PAP", name, "answered", conversation="the same one")

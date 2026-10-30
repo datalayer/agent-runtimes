@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Demonstrate PAP Device Sign-In through a safe Agent Runtimes tool."""
+"""An application demonstrating a real PAP Device Sign-In state machine."""
 
 from __future__ import annotations
 
@@ -12,11 +12,9 @@ import httpx
 from personal_agent_protocol import (
     AUTHORIZATION_STATE_STORES,
     CLOCKS,
-    DPOP_PROOF_PROVIDERS,
     SIGNERS,
     TOKEN_STORES,
     DeviceSignInClient,
-    DpopProofRequest,
     build_pap_reactor,
 )
 from personal_agent_protocol.models import Organization
@@ -24,10 +22,6 @@ from pydantic import SecretStr
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
-
-#: The Session Key's JWK thumbprint (RFC 7638): it names the Session. The key's
-#: private half stays with the host's proof provider.
-SESSION_KEY = "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
 
 
 class MutableClock:
@@ -67,19 +61,14 @@ class ProtectedTokenStore:
 
 
 class ProtectedSigner:
+    def __init__(self) -> None:
+        self.signed = 0
+
     async def sign(self, _: dict[str, object], *, purpose: str) -> SecretStr:
         if purpose != "client_assertion":
             raise ValueError("Device Sign-In requires a client assertion signer")
-        return SecretStr("host-only-client-assertion")
-
-
-class ProtectedDpop:
-    def __init__(self) -> None:
-        self.requests: list[DpopProofRequest] = []
-
-    async def create(self, request: DpopProofRequest) -> SecretStr:
-        self.requests.append(request)
-        return SecretStr("host-only-dpop-proof")
+        self.signed += 1
+        return SecretStr(f"host-only-client-assertion-{self.signed}")
 
 
 class DeviceSecurityPlugin:
@@ -87,7 +76,7 @@ class DeviceSecurityPlugin:
         self.clock = MutableClock()
         self.state = OneUseStateStore()
         self.tokens = ProtectedTokenStore()
-        self.dpop = ProtectedDpop()
+        self.signer = ProtectedSigner()
 
     def provide_contributions(self, contributions: object) -> None:
         contribute = contributions.contribute  # type: ignore[attr-defined]
@@ -96,8 +85,7 @@ class DeviceSecurityPlugin:
             AUTHORIZATION_STATE_STORES, self.state, contribution_id="one-use-state"
         )
         contribute(TOKEN_STORES, self.tokens, contribution_id="protected-tokens")
-        contribute(SIGNERS, ProtectedSigner(), contribution_id="protected-signer")
-        contribute(DPOP_PROOF_PROVIDERS, self.dpop, contribution_id="protected-dpop")
+        contribute(SIGNERS, self.signer, contribution_id="protected-signer")
 
 
 app = Application(
@@ -109,15 +97,15 @@ app = Application(
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_device_sign_in. Never request or expose a device code, "
-        "assertion, proof, Session Token, or Account Token."
+        "Use explain_device_sign_in to explain PAP Device Sign-In. Never ask "
+        "for or expose a device code, assertion, access token, or refresh token."
     ),
 )
 
 
 @app.tool(does="read")
 async def explain_device_sign_in() -> dict[str, Any]:
-    """Run the real PAP client and return only non-secret lifecycle evidence."""
+    """Run the actual SDK state machine and return only safe evidence."""
 
     calls = 0
 
@@ -143,13 +131,12 @@ async def explain_device_sign_in() -> dict[str, Any]:
         return httpx.Response(
             200,
             json={
-                "access_token": "host-only-session-token",
-                "token_type": "DPoP",
+                # Plain OAuth: a Bearer token for the account, naming no Session.
+                "access_token": "host-only-access-token",
+                "token_type": "Bearer",
                 "expires_in": 300,
                 "scope": "orders:read",
-                # No Session ID and no `signed_in` on the wire: the proof's key names
-                # the Session, and the grant (device code) says it is signed in.
-                "refresh_token": "host-only-account-token",
+                "refresh_token": "host-only-refresh-token",
             },
         )
 
@@ -168,12 +155,9 @@ async def explain_device_sign_in() -> dict[str, Any]:
             client_id="https://assistant.example/agent.json",
             scopes=("orders:read", "orders:return"),
             tenant_id="example-tenant",
-            # The existing Session's Session Key (its JWK thumbprint): every poll is
-            # proved with it, and the company binds the device code to it.
-            session_key=SESSION_KEY,
             organization=Organization(name="Shop", domain="shop.example"),
-            # The issuer's `protected_resources`: the verification link must be on
-            # the issuer's host or one of these.
+            # The issuer's `protected_resources`: the verification link must be on the
+            # issuer's host or one of these.
             protected_resources=("https://shop.example",),
         )
         early = await client.poll(started.reference)
@@ -197,17 +181,13 @@ async def explain_device_sign_in() -> dict[str, Any]:
         == started.expires_at - timedelta(seconds=595),
         "authorization_pending_respected": pending.status == "pending",
         "slow_down_added_five_seconds": slow_down_added_five_seconds,
-        "same_session": completed.token is not None
-        and completed.token.session_key == SESSION_KEY
-        and completed.token.signed_in,
+        "token_type": completed.token.token_type if completed.token else None,
         "granted_scopes": completed.granted_scopes,
         "missing_scopes": completed.missing_scopes,
-        "account_token_stored_by_reference": completed.account_token_reference
+        "refresh_token_stored_by_reference": completed.refresh_token_reference
         in security.tokens.values,
         "device_code_withheld": True,
-        "session_and_account_tokens_withheld": True,
-        "fresh_dpop_for_each_network_poll": len(security.dpop.requests) == 3,
-        "every_proof_signed_with_the_session_key": all(
-            request.session_key == SESSION_KEY for request in security.dpop.requests
-        ),
+        "access_and_refresh_tokens_withheld": True,
+        # One for the device authorization request, then one for each network poll.
+        "fresh_assertion_for_each_network_poll": security.signer.signed == 4,
     }

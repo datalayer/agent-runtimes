@@ -10,8 +10,7 @@ from typing import Any
 
 from agentspecs.apps import parse_app
 from personal_agent_protocol.demo.kit import AgentIdentity
-from personal_agent_protocol.models import Operation
-from personal_agent_protocol.operations import approve, terms_digest
+from personal_agent_protocol.models import Approval, Operation
 
 from agent_runtimes.apps import Application
 from agent_runtimes.apps.pap_company import (
@@ -45,7 +44,7 @@ app = Application(
     ),
 )
 
-# The company role (`pap.company`, the typed builder of S-04).
+# The company role (`pap.company`, its typed builder).
 app.as_company(
     # A personal agent may ask before the person signs in.
     signed_out=True,
@@ -75,19 +74,15 @@ async def exchange_order(order_id: str, size: str) -> dict[str, Any]:
     return {"order_id": order_id, "size": size, "status": "exchanged"}
 
 
-def _revision(proposal: dict[str, Any], revision: int) -> Operation:
-    """The proposal as the company service shows it to the person: one revision."""
+def _revision(proposal: dict[str, Any], revision: str) -> Operation:
+    """The proposal as the company service returns it to the person: one revision, opaque."""
 
     return Operation(
         operation_id="op_exchange_A1001",
         revision=revision,
-        state="proposed",
         summary=proposal["summary"],
         terms=proposal["terms"],
         expires_at=datetime(2026, 10, 25, tzinfo=timezone.utc),
-        user_approval_required=True,
-        confirmation=None,
-        result=None,
     )
 
 
@@ -118,13 +113,15 @@ async def explain_company_role() -> dict[str, Any]:
 
     # 2. The company service shows the person each revision; they approved the
     #    first, which no longer matches what would be done.
-    revision_1 = _revision(first, 1)
-    revision_2 = _revision(second, 2)
-    approval = approve(revision_1)
-    stale = approval.revision != revision_2.revision or approval.digest != terms_digest(
-        revision_2
+    revision_1 = _revision(first, "rev_a")
+    revision_2 = _revision(second, "rev_b")
+    approval = Approval(
+        operation_id=revision_1.operation_id, revision=revision_1.revision
     )
-    confirmed = approve(revision_2)
+    stale = approval.revision != revision_2.revision
+    confirmed = Approval(
+        operation_id=revision_2.operation_id, revision=revision_2.revision
+    )
 
     # 3. The perform turn, redeemed for the confirmed revision: the declared
     #    tool, with exactly those terms, once.
@@ -155,11 +152,7 @@ async def explain_company_role() -> dict[str, Any]:
         "personal_agents": company.personal_agents.value,
         "registered_agents": company.registered_agents,
         "declared_operations": [
-            {
-                "action": operation.action,
-                "tool": operation.tool,
-                "user_approval_required": operation.user_approval_required,
-            }
+            {"action": operation.action, "tool": operation.tool}
             for operation in company.operations
         ],
         "the_model_was_told": first_said,
