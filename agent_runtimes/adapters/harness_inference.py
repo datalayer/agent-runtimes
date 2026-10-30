@@ -100,12 +100,12 @@ def opencode_permission() -> dict[str, str]:
 
 
 def opencode_agents_asking() -> dict[str, dict[str, Any]]:
-    """OpenCode's own agents, each asking as the configuration does."""
+    """Give each of OpenCode's own agents the asking the configuration has."""
     return {name: {"permission": opencode_permission()} for name in OPENCODE_AGENTS}
 
 
 def opencode_asking_config() -> str:
-    """OpenCode's configuration where its calls are not routed: the asking alone."""
+    """Write OpenCode's configuration where its calls are not routed: the asking alone."""
     return json.dumps(
         {
             "$schema": "https://opencode.ai/config.json",
