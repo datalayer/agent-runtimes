@@ -113,8 +113,12 @@ def _environment_source(sandbox: dict[str, Any] | None, source: Path) -> dict[st
             "refused": "It uses Inspect's default Docker image, which names nothing to build."
         }
     path = path if path.is_absolute() else source / path
+    sys.path.insert(0, str(Path(__file__).parent / "_providers"))
+    from _build_context import read_context
+
     if path.name == "Dockerfile":
-        return {"dockerfile": path.read_text()}
+        text = path.read_text()
+        return {"dockerfile": text, **read_context(path.parent, text)}
     import yaml
 
     services = dict(yaml.safe_load(path.read_text()).get("services") or {})
@@ -125,9 +129,16 @@ def _environment_source(sandbox: dict[str, Any] | None, source: Path) -> dict[st
     service = next(iter(services.values()))
     if service.get("image") and not service.get("build"):
         return {"image": str(service["image"])}
-    return {
-        "refused": "Its one service is built, which a Compose file cannot hand to an Environment yet."
-    }
+    build = service.get("build")
+    if not build:
+        return {"refused": "Its one service names neither an image nor a build."}
+    build = {"context": build} if isinstance(build, str) else dict(build)
+    folder = path.parent / str(build.get("context") or ".")
+    dockerfile = folder / str(build.get("dockerfile") or "Dockerfile")
+    if not folder.resolve().is_relative_to(source.resolve()) or not dockerfile.exists():
+        return {"refused": "Its build is not a Dockerfile inside the source."}
+    text = dockerfile.read_text()
+    return {"dockerfile": text, **read_context(folder, text)}
 
 
 def _sample(sample: Any, index: int) -> dict[str, Any]:

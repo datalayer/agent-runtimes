@@ -206,13 +206,16 @@ def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
         or "image" not in _provided()
     ):
         return None
-    extra = list(task.get("build_context") or [])
+    if task.get("context_too_large"):
+        raise EnvironmentRefused(
+            "Its build context is over the 1 MiB a task's environment can carry."
+        )
     image = str(task.get("docker_image") or "")
     # A prebuilt image stands before a Dockerfile, as it does in Harbor.
     base = f"FROM {image}\n" if image else str(task.get("dockerfile_content") or "")
     return environment_of(
         dockerfile=f"{base.rstrip()}\n{TASK_PATHS_LAYER}" if base.strip() else "",
-        extra_files=[] if image else extra,
+        context=[] if image else list(task.get("context") or []),
     )
 
 

@@ -97,29 +97,34 @@ def environment_name_of(document: Mapping[str, Any]) -> str:
 
 
 def environment_of(
-    *, image: str = "", dockerfile: str = "", extra_files: Sequence[str] = ()
+    *,
+    image: str = "",
+    dockerfile: str = "",
+    context: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """The Environment a task needs, as `POST /environments` takes it.
 
     A prebuilt image is imported; a Dockerfile is built, on the base it names.
     Either way the Environments pipeline layers the sandbox contract on top at
-    build. A Dockerfile that copies files in needs a build context, which this
-    does not upload yet, so such a task is refused here rather than failing
-    halfway through a build; so is anything Environments itself would refuse,
-    an image from a registry outside its list among them.
+    build. A Dockerfile's `context` goes inline in the spec, so its digest covers
+    it. What Environments itself would refuse is refused here rather than
+    halfway through a build: an image from a registry outside its list, a
+    context over its bound, a `COPY` of what the context does not hold.
     """
     if image and dockerfile:
         raise EnvironmentRefused("It names both an image and a Dockerfile.")
     if not image and not dockerfile:
         raise EnvironmentRefused("It names neither an image nor a Dockerfile.")
-    if extra_files:
-        raise EnvironmentRefused(
-            f"Its Dockerfile has a build context ({', '.join(sorted(extra_files))}), which is not uploaded yet."
-        )
     build: dict[str, Any] = (
         {"source": "image", "image": {"reference": image}}
         if image
-        else {"source": "foreignDockerfile", "dockerfile": {"content": dockerfile}}
+        else {
+            "source": "foreignDockerfile",
+            "dockerfile": {
+                "content": dockerfile,
+                **({"context": list(context)} if context else {}),
+            },
+        }
     )
     spec = {
         "language": {"name": "python", "version": PYTHON_VERSION},
@@ -144,6 +149,7 @@ def _refuse_unbuildable(document: Mapping[str, Any]) -> None:
     from code_sandboxes.environments.errors import EnvironmentsError
     from code_sandboxes.environments.spec import (
         BUILD_SOURCES,
+        DockerfileSpec,
         parse_environment,
         spec_findings,
     )
@@ -151,6 +157,11 @@ def _refuse_unbuildable(document: Mapping[str, Any]) -> None:
     if document["spec"]["build"]["source"] not in BUILD_SOURCES:
         raise EnvironmentRefused(
             "Its Dockerfile names its own base, which this deployment's Environments do not build yet."
+        )
+    dockerfile = dict(document["spec"]["build"].get("dockerfile") or {})
+    if dockerfile.get("context") and "context" not in DockerfileSpec.model_fields:
+        raise EnvironmentRefused(
+            "Its Dockerfile has a build context, which this deployment's Environments do not take yet."
         )
     try:
         findings = spec_findings(parse_environment(dict(document)))

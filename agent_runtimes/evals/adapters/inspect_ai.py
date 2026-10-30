@@ -143,9 +143,14 @@ def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
         source.get("image") or source.get("dockerfile")
     ):
         return None
+    if source.get("context_too_large"):
+        raise EnvironmentRefused(
+            "Its build context is over the 1 MiB a task's environment can carry."
+        )
     return environment_of(
         image=str(source.get("image") or ""),
         dockerfile=str(source.get("dockerfile") or ""),
+        context=list(source.get("context") or []),
     )
 
 

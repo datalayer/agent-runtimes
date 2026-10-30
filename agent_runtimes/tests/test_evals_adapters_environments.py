@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import pytest
-from code_sandboxes.environments.spec import BUILD_SOURCES
+from code_sandboxes.environments.spec import BUILD_SOURCES, DockerfileSpec
 
 from agent_runtimes.evals.adapters.base import (
     LaunchGrant,
@@ -76,6 +76,10 @@ def _docker_ready() -> bool:
 needs_foreign_builds = pytest.mark.skipif(
     "foreignDockerfile" not in BUILD_SOURCES,
     reason="this code-sandboxes does not build a Dockerfile on a foreign base",
+)
+needs_context = pytest.mark.skipif(
+    "context" not in DockerfileSpec.model_fields,
+    reason="this code-sandboxes does not take an inline build context",
 )
 needs_docker = pytest.mark.skipif(
     not (isolation_available() and _docker_ready()),
@@ -130,11 +134,40 @@ class TestAnEnvironment:
         )
         assert environment_name_of(one["spec"]) == one["metadata"]["name"]
 
-    def test_a_build_context_is_refused_not_lost(self):
-        with pytest.raises(EnvironmentRefused, match="requirements.txt"):
+    CONTEXT = [{"path": "data.txt", "contentBase64": "aGk=", "executable": False}]
+
+    @pytest.mark.skipif(
+        "context" in DockerfileSpec.model_fields, reason="this one takes a context"
+    )
+    def test_a_build_context_is_said_to_wait_for_environments_that_take_one(self):
+        with pytest.raises(EnvironmentRefused, match="do not take yet"):
             environment_of(
-                dockerfile="FROM a\nCOPY requirements.txt .\n",
-                extra_files=["requirements.txt"],
+                dockerfile="FROM a:1\nCOPY data.txt /\n", context=self.CONTEXT
+            )
+
+    @needs_context
+    def test_a_build_context_goes_inline(self):
+        document = environment_of(
+            dockerfile="FROM a:1\nCOPY data.txt /\n", context=self.CONTEXT
+        )
+        assert document["spec"]["build"]["dockerfile"]["context"] == self.CONTEXT
+        assert self._validated(document).spec.build.dockerfile.context
+
+    @needs_context
+    def test_its_bytes_are_in_the_name(self):
+        other = [{**self.CONTEXT[0], "contentBase64": "aG8="}]
+        text = "FROM a:1\nCOPY data.txt /\n"
+        one = environment_of(dockerfile=text, context=self.CONTEXT)
+        assert (
+            one["metadata"]["name"]
+            != environment_of(dockerfile=text, context=other)["metadata"]["name"]
+        )
+
+    @needs_context
+    def test_a_copy_of_what_it_does_not_hold_is_refused_at_the_launch(self):
+        with pytest.raises(EnvironmentRefused, match="build context"):
+            environment_of(
+                dockerfile="FROM a:1\nCOPY other.txt /\n", context=self.CONTEXT
             )
 
     def test_nothing_to_build_is_refused(self):
@@ -426,6 +459,37 @@ def in_docker():
         model=get_model("mockllm/model", custom_outputs=scripted),
     )
 """
+
+    def test_a_compose_service_that_is_built_is_a_dockerfile(
+        self, host, tmp_path, monkeypatch
+    ):
+        monkeypatch.setenv(SANDBOXES_VARIABLE, "datalayer")
+        root = tmp_path / "project"
+        (root / "image").mkdir(parents=True)
+        (root / "task.py").write_text(self.TASK)
+        (root / "image" / "Dockerfile").write_text(f"FROM {IMAGE}\nRUN true\n")
+        (root / "compose.yaml").write_text(
+            "services:\n  default:\n    build:\n      context: image\n"
+        )
+        data = archive_of(root)
+        digest = archive_digest(data)
+        host.put_source(digest, data)
+        inspection = host.inspect("inspect-ai", digest)
+        assert blocking(inspection.capabilities) == []
+        adapter = InspectAdapter()
+        imported = adapter.import_definition(
+            inspection,
+            selection=Selection(),
+            source=SourceRef(kind="archive", reference=digest),
+        )
+        plan = adapter.plan(
+            imported.external_definition, grant=LaunchGrant(tools=["bash"])
+        )
+        marks = imported.cases[0]["metadata"]["external"]
+        spec = plan.resolved_configuration["task_environments"][marks["entry_point"]]
+        assert spec["spec"]["build"]["dockerfile"]["content"].startswith(
+            f"FROM {IMAGE}"
+        )
 
     def test_a_tool_runs_in_the_task_image_through_inspects_extension_api(
         self, host, tmp_path, monkeypatch

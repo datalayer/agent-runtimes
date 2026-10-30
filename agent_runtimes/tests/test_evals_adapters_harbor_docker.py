@@ -17,6 +17,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -50,11 +51,13 @@ from agent_runtimes.tests.test_evals_adapters_environments import (
     IMAGE,
     STARTED,
     DockerBackend,
+    needs_context,
     needs_docker,
     needs_foreign_builds,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "harbor-docker"
+PROVIDERS = Path(__file__).parents[1] / "evals" / "adapters" / "_providers"
 MODEL = "bedrock:us.anthropic.claude-haiku-4-5"
 HARBOR = os.environ.get(PYTHON_VARIABLE, "")
 ANSWERS = {"40 + 2": "42", "Greet": "hello"}
@@ -285,6 +288,116 @@ class TestTheBenchmark:
             cancelled.start()
             with pytest.raises(SandboxCancelled):
                 self._execute(run, imported.cases[0], inference.route(), key="the-key")
+
+
+class TestTheContextRead:
+    """Standard library code, run here as a runner runs it in a sandbox."""
+
+    def _read(self, folder, dockerfile):
+        sys.path.insert(0, str(PROVIDERS))
+        try:
+            from _build_context import read_context
+
+            return read_context(folder, dockerfile)
+        finally:
+            sys.path.remove(str(PROVIDERS))
+
+    def test_a_dockerfile_that_copies_nothing_reads_nothing(self, tmp_path):
+        (tmp_path / "big").write_bytes(b"x" * 2_000_000)
+        assert self._read(tmp_path, "FROM a:1\nRUN true\n") == {"context": []}
+
+    def test_what_it_copies_is_read_with_its_mode(self, tmp_path):
+        (tmp_path / "bin").mkdir()
+        (tmp_path / "bin" / "run.sh").write_text("#!/bin/sh\n")
+        (tmp_path / "bin" / "run.sh").chmod(0o755)
+        (tmp_path / "Dockerfile").write_text("x")
+        [file] = self._read(tmp_path, "FROM a:1\ncopy bin /bin\n")["context"]
+        assert (file["path"], file["executable"]) == ("bin/run.sh", True)
+
+    def test_too_much_is_said_and_not_read(self, tmp_path):
+        (tmp_path / "big").write_bytes(b"x" * 2_000_000)
+        answer = self._read(tmp_path, "FROM a:1\nCOPY big /\n")
+        assert answer == {"context": [], "context_too_large": True}
+
+    def test_too_much_is_refused_in_a_sentence(self, monkeypatch):
+        monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image")
+        definition = _definition(agents=["oracle"])
+        definition.configuration["tasks"][0].update(
+            dockerfile=True, dockerfile_content="FROM a:1\n", context_too_large=True
+        )
+        plan = HarborAdapter().plan(definition, grant=LaunchGrant())
+        assert [item.code for item in blocking(plan.capabilities)] == [
+            "environment_refused"
+        ]
+
+
+@needs_docker
+@needs_context
+@pytest.mark.skipif(not HARBOR, reason="no Harbor")
+def test_a_tasks_context_reaches_its_image(tmp_path, monkeypatch):
+    """Inspected in the sandbox, carried in the spec, built, and read by a verifier."""
+    monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image")
+    root = tmp_path / "project"
+    shutil.copytree(FIXTURE, root)
+    task = root / "tasks" / "sum-file" / "environment"
+    (task / "marker.txt").write_text("sum-file\n")
+    (task / "Dockerfile").write_text(
+        "FROM python:3.12-slim\nCOPY marker.txt /etc/task-image\n"
+    )
+    host = AdapterHost(tmp_path / "host", backend_for=DockerBackend)
+    data = pack_source(root)
+    digest = archive_digest(data)
+    host.put_source(digest, data)
+    adapter = HarborAdapter()
+    imported = adapter.import_definition(
+        host.inspect("harbor", digest),
+        selection=Selection(models=[MODEL], entry_points=["tasks/sum-file"]),
+        source=SourceRef(kind="archive", reference=digest),
+    )
+    plan = adapter.plan(imported.external_definition, grant=LaunchGrant())
+    assert blocking(plan.capabilities) == []
+    dockerfile = plan.resolved_configuration["task_environments"]["tasks/sum-file"][
+        "spec"
+    ]["build"]["dockerfile"]
+    context = tmp_path / "context"
+    context.mkdir()
+    (context / "Dockerfile").write_text(dockerfile["content"])
+    for item in dockerfile["context"]:
+        (context / item["path"]).write_bytes(base64.b64decode(item["contentBase64"]))
+    tag = f"{BUILT}context"
+    subprocess.run(
+        ["docker", "build", "-q", "-t", tag, str(context)],
+        check=True,
+        capture_output=True,
+        timeout=120,
+    )
+    marks = imported.cases[0]["metadata"]["external"]
+    try:
+        with _Inference() as inference:
+            result = host.execute(
+                "harbor",
+                digest,
+                plan=plan,
+                trial=Trial(
+                    case_id=imported.cases[0]["id"],
+                    native_id=marks["native_id"],
+                    entry_point=marks["entry_point"],
+                    configuration={"subject": imported.experiments[0]["subject"]},
+                ),
+                secrets={},
+                inference=inference.route(),
+                environment=TaskEnvironmentRef(ingress=tag, token="environment-token"),
+            )
+    finally:
+        for name in STARTED:
+            subprocess.run(
+                ["docker", "rm", "-f", name], capture_output=True, timeout=30
+            )
+        STARTED.clear()
+    assert {score.name: score.value for score in result.scores} == {
+        "correct": 1,
+        "image": 1,
+    }, (result.explanation, result.framework)
 
 
 def test_the_fixture_is_the_examples():

@@ -28,6 +28,7 @@ def _tasks(source: Path) -> list[Path]:
 
 def _task_record(path: Path, source: Path) -> dict[str, Any]:
     """One task package, as the adapter classifies it."""
+    from _build_context import read_context
     from harbor.lint.task import lint_task
     from harbor.models.task.task import Task
 
@@ -45,11 +46,12 @@ def _task_record(path: Path, source: Path) -> dict[str, Any]:
         "dockerfile_content": (directory / "Dockerfile").read_text()
         if (directory / "Dockerfile").exists()
         else "",
-        "build_context": sorted(
-            item.name for item in directory.iterdir() if item.name != "Dockerfile"
-        )
-        if directory.is_dir()
-        else [],
+        **read_context(
+            directory,
+            (directory / "Dockerfile").read_text()
+            if (directory / "Dockerfile").exists()
+            else "",
+        ),
         "compose": any(
             (directory / name).exists()
             for name in ("compose.yaml", "docker-compose.yaml")
