@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Any, Mapping
 
 #: Where ai-inference serves Anthropic's Messages API, under its v1 root.
 ANTHROPIC_ROUTE = "/anthropic"
@@ -52,6 +52,74 @@ OPENCODE_CONFIG_VARIABLE = "OPENCODE_CONFIG_CONTENT"
 
 #: The provider OpenCode's configuration names ai-inference by.
 OPENCODE_PROVIDER = "datalayer"
+
+
+#: OpenCode's tools, as its ``permission`` configuration names them (opencode
+#: 1.19.0, ``packages/core/src/v1/config/permission.ts``; ``edit`` covers
+#: write, patch and apply_patch).
+OPENCODE_PERMISSION_KEYS = (
+    "read",
+    "edit",
+    "glob",
+    "grep",
+    "list",
+    "bash",
+    "task",
+    "external_directory",
+    "todowrite",
+    "todoread",
+    "question",
+    "webfetch",
+    "websearch",
+    "codesearch",
+    "lsp",
+    "skill",
+    "doom_loop",
+    "plan_enter",
+    "plan_exit",
+)
+
+#: OpenCode's own agents, each given the same asking so a repository's
+#: agent rules (merged after the global ones) cannot allow a tool again.
+OPENCODE_AGENTS = ("build", "plan", "general", "explore")
+
+
+def opencode_permission() -> dict[str, str]:
+    """Every OpenCode tool asks: its decision is the Shield's.
+
+    OpenCode allows every tool by default (``"*": "allow"``, its
+    ``agent.ts``), and a tool it allows never sends ACP's
+    ``session/request_permission``: on r1, on 30 October 2026, an edit the
+    Shield answered *leave it to me* went through all the same. Asked, the
+    Shield answers each step by the application's Rules, and OpenCode does
+    only what it allows. The wildcard first, then each tool by name, so a
+    tool a project's configuration names is overridden where it stands.
+    Nothing is allowed here, ever: fail closed.
+    """
+    return {"*": "ask", **{key: "ask" for key in OPENCODE_PERMISSION_KEYS}}
+
+
+def opencode_agents_asking() -> dict[str, dict[str, Any]]:
+    """OpenCode's own agents, each asking as the configuration does."""
+    return {name: {"permission": opencode_permission()} for name in OPENCODE_AGENTS}
+
+
+def opencode_asking_config() -> str:
+    """OpenCode's configuration where its calls are not routed: the asking alone."""
+    return json.dumps(
+        {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": opencode_permission(),
+            "agent": opencode_agents_asking(),
+        }
+    )
+
+
+def asking_config(harness_id: str) -> tuple[str, str] | None:
+    """The variable and configuration that make a harness ask the Shield for every step, or ``None``."""
+    if harness_id == "opencode":
+        return OPENCODE_CONFIG_VARIABLE, opencode_asking_config()
+    return None
 
 
 def opencode_config(
@@ -84,6 +152,8 @@ def opencode_config(
             },
             "enabled_providers": [OPENCODE_PROVIDER],
             "model": f"{OPENCODE_PROVIDER}/{model}",
+            "permission": opencode_permission(),
+            "agent": opencode_agents_asking(),
         }
     )
 
@@ -236,6 +306,11 @@ __all__ = [
     "OPENAI_ROUTE",
     "OPENCODE_PROVIDER",
     "OPENCODE_CONFIG_VARIABLE",
+    "OPENCODE_PERMISSION_KEYS",
+    "asking_config",
+    "opencode_agents_asking",
+    "opencode_asking_config",
+    "opencode_permission",
     "inline_config",
     "opencode_config",
     "ROUTES",

@@ -234,6 +234,12 @@ def harness_environment(
         )
     for name in required:
         given[name] = source[name]
+    # A harness that would act before asking is made to ask the Shield for
+    # every step (OpenCode allows its tools by default); a routed harness's
+    # configuration below carries the same asking.
+    asking = harness_inference.asking_config(harness.id)
+    if asking:
+        given[asking[0]] = asking[1]
     if route:
         given[route.base_url_variable] = harness_inference.base_url(route, source)
         token, _ = harness_inference.routed_token()

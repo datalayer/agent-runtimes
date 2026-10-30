@@ -1641,9 +1641,52 @@ class TestResolvingACatalogueHarness:
             "X-Datalayer-App-Uid": "app-1",
             "Authorization": "Bearer t",
         }
-        # Off Datalayer, the person's own key, as the spec says; no configuration written.
+        # Every step asks, so the Shield decides it (r1, 30 October 2026: an
+        # edit OpenCode was allowed by its own defaults went through).
+        assert config["permission"] == harness_inference.opencode_permission()
+        # Off Datalayer, the person's own key, as the spec says, and the same
+        # asking: OpenCode never acts before the Shield has answered.
         own = harness_environment(opencode, {"ANTHROPIC_API_KEY": "sk-ant-own"})
-        assert own == {"ANTHROPIC_API_KEY": "sk-ant-own"}
+        assert own["ANTHROPIC_API_KEY"] == "sk-ant-own"
+        assert json.loads(own["OPENCODE_CONFIG_CONTENT"]) == {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": harness_inference.opencode_permission(),
+            "agent": harness_inference.opencode_agents_asking(),
+        }
+
+    def test_opencode_asks_the_shield_for_every_step_and_allows_none(self) -> None:
+        """OpenCode 1.19.0 allows every tool by default (``"*": "allow"``):
+        a tool it allows never sends ``session/request_permission``, so the
+        Shield's answer came after the write. Every tool asks, by wildcard and
+        by name, globally and on each of its own agents."""
+        import json
+
+        from agent_runtimes.adapters import harness_inference
+
+        permission = harness_inference.opencode_permission()
+        assert permission["*"] == "ask"
+        assert {"edit", "bash", "webfetch", "read", "external_directory"} <= set(
+            permission
+        )
+        assert set(permission.values()) == {"ask"}
+        agents = harness_inference.opencode_agents_asking()
+        assert {"build", "plan", "general", "explore"} <= set(agents)
+        assert all(agent["permission"] == permission for agent in agents.values())
+        routed = json.loads(
+            harness_inference.opencode_config(
+                "https://r1.example/api/ai-inference/v1", "t", model="bedrock:a-model"
+            )
+        )
+        assert routed["permission"] == permission and routed["agent"] == agents
+        text = json.dumps(routed) + json.dumps(
+            json.loads(harness_inference.opencode_asking_config())
+        )
+        assert '"allow"' not in text
+        assert harness_inference.asking_config("claude-code") is None
+        assert harness_inference.asking_config("opencode") == (
+            "OPENCODE_CONFIG_CONTENT",
+            harness_inference.opencode_asking_config(),
+        )
 
     def test_an_adapter_installed_in_the_prefix_has_its_bin_first_on_the_path(
         self, tmp_path, monkeypatch
