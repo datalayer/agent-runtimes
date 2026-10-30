@@ -160,11 +160,16 @@ function inOrder(lines: SceneTranscriptLine[]): SceneTranscriptLine[] {
 /**
  * The same thing said twice is said once: a member's answer comes back as
  * the A2A request's events and, on a runtime whose own spans are read, as
- * its `invoke_agent` span too. The first one stands.
+ * its `invoke_agent` span too. The first one stands. A harness's step is no
+ * words said twice: each is a call of its own (`<span>/<call>:called`), and
+ * two that read the same are two, one of which the Shield may have refused.
  */
 function onceEach(lines: SceneTranscriptLine[]): SceneTranscriptLine[] {
   const seen = new Set<string>();
   return lines.filter(line => {
+    if (line.key.includes('/')) {
+      return true;
+    }
     // Words said are the same words whoever they were said to.
     const said = `${line.kind}\u0000${line.from}\u0000${line.kind === 'said' ? '' : (line.to ?? '')}\u0000${line.text}`;
     if (seen.has(said)) {

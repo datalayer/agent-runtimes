@@ -452,6 +452,87 @@
         true,
         false
       ]
+    },
+    {
+      "name": "keeps a harness's steps apart when they read the same, and the one it refused of them",
+      "spans": [
+        {
+          "trace_id": "t10",
+          "span_id": "s100",
+          "span_name": "shield.turn",
+          "service_name": "Code Explainer",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-29T14:00:00.000Z",
+          "end_time": "2026-10-29T14:00:09.000Z",
+          "duration_ms": 9000,
+          "attributes": {
+            "shield.session": "acp-2",
+            "shield.harness": "opencode",
+            "shield.agent": "code-explainer-2"
+          },
+          "status_code": "OK",
+          "events": [
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:01.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-a",
+                "title": "Read README.md",
+                "status": "completed",
+                "decision": "allow"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:03.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-b",
+                "title": "Read README.md",
+                "status": "completed",
+                "decision": "allow"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:05.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-c",
+                "title": "Read README.md",
+                "status": "pending",
+                "decision": "deny"
+              }
+            }
+          ]
+        }
+      ],
+      "lines": [
+        "Code Explainer → its workspace: Read README.md",
+        "Code Explainer → its workspace: Read README.md",
+        "Code Explainer → its workspace: Read README.md (failed)"
+      ],
+      "kinds": [
+        "called",
+        "called",
+        "called"
+      ],
+      "offsets": [
+        0,
+        2000,
+        4000
+      ],
+      "open": [
+        false,
+        false,
+        false
+      ],
+      "failed": [
+        false,
+        false,
+        true
+      ]
     }
   ],
   "record": {

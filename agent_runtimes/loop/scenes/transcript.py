@@ -214,11 +214,16 @@ def once_each(lines: Sequence[TranscriptLine]) -> List[TranscriptLine]:
     """The same thing said twice is said once: an answer comes back as the A2A
     request's events and, when a runtime's own spans are read, as its turn
     too. The first one stands. Words said are the same words whoever they
-    were said to.
+    were said to. A harness's step is no words said twice: each is a call of
+    its own (``<span>/<call>:called``), and two that read the same are two,
+    one of which the Shield may have refused.
     """
     seen: set = set()
     kept: List[TranscriptLine] = []
     for line in lines:
+        if "/" in line.key:
+            kept.append(line)
+            continue
         said = (line.kind, line.who, "" if line.kind == SAID else line.to, line.text)
         if said in seen:
             continue
