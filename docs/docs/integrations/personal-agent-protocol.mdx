@@ -333,7 +333,7 @@ pap:
     enabled: true                  # publish it as a company at Ship
     signed_out: true               # personal agents may ask before sign-in
     interfaces: [agent, openapi, mcp]
-    scopes:                        # its own, never poppy:; each says what it allows
+    scopes:                        # its own; each says what it allows
       - name: orders:read
         description: Read your orders
         changes: none              # hints, when the Maker says them: none | reversible | irreversible
@@ -363,8 +363,7 @@ signed out offers at least one scope, `registered_agents` are HTTPS
 `client_id` URLs named only with `personal_agents: registered`, operations
 require the `operations` extension, and each action and each tool is declared
 once. `web` is not an interface a company application offers yet. Since
-agentspecs 0.0.126 (PAP draft 0.3) each scope is an object: its `name` (never
-under the reserved `poppy:` prefix), its `description`, published as the
+agentspecs 0.0.126 (PAP draft 0.3) each scope is an object: its `name`, its `description`, published as the
 company's `auth.scopes`, and, when given, its hints `changes` and
 `personal_data`, published as `auth.scope_hints` (left out, Datalayer derives
 them from the Rules classes of the tools behind the scope); `excluded_tasks`

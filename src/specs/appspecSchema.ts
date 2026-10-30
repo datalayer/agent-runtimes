@@ -1392,8 +1392,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'A scope the company offers: its name, what it allows, and its hints (PAP draft 0.3 §4.4).\n\nThe description is published in `auth.scopes`; the hints, when given, in\n`auth.scope_hints`. Without them the hints are derived from the Rules\nclasses of the tools behind the scope.',
       properties: {
         name: {
-          description:
-            'The scope, in OAuth syntax and never `poppy:`: `orders:read`',
+          description: 'The scope, in OAuth syntax: `orders:read`',
           title: 'Name',
           type: 'string',
         },
