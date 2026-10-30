@@ -263,6 +263,22 @@ class TestManagedFromIam:
         assert not [r for r in caplog.records if "unmanaged" in r.getMessage()]
         managed_policies.use_source(None)
 
+
+    def test_the_account_key_is_read_before_a_token_that_lapses(self, monkeypatch) -> None:
+        """A kept runtime lives for days: a user's token lapsed within the hour, IAM
+        answered 401, and the Shield refused every action."""
+        policies = runtime_policies()
+        token = "x.eyJ1aWQiOiAiYWNjdDEifQ.y"
+        key = "x.eyJzdWIiOiAiYWNjdDEifQ.key"
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://iam.test")
+        monkeypatch.setenv("DATALAYER_USER_TOKEN", token)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        policies._source(None)
+        assert policies._credential == token
+        monkeypatch.setenv("DATALAYER_API_KEY", key)
+        policies._source(token)
+        assert policies._credential == key
+
     def test_a_token_without_iams_url_runs_unmanaged_and_says_so(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:

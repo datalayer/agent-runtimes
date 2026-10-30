@@ -67,6 +67,9 @@ __all__ = [
 #: The variables the runtime reads IAM and its token from (the configure route sets the token).
 IAM_URL_VARIABLE = "DATALAYER_IAM_URL"
 TOKEN_VARIABLE = "DATALAYER_USER_TOKEN"  # noqa: S105 - a variable's name, not a secret
+#: The account's own key, among its secrets: it outlives a runtime kept for days,
+#: where the user's token lapses within the hour and nothing renews it here.
+API_KEY_VARIABLE = "DATALAYER_API_KEY"
 #: Where ai-agents is, whose ``/ws`` pushes a policy change (the approvals' socket).
 AI_AGENTS_URL_VARIABLE = "DATALAYER_AI_AGENTS_URL"
 
@@ -162,7 +165,9 @@ class RuntimePolicies:
     def _source(self, token: Optional[str]) -> Optional[PolicySource]:
         if self._source_override is not None:
             return self._source_override
-        credential = (token or os.environ.get(TOKEN_VARIABLE) or "").strip()
+        credential = (
+            os.environ.get(API_KEY_VARIABLE) or token or os.environ.get(TOKEN_VARIABLE) or ""
+        ).strip()
         if not credential:
             return None
         iam_url = (os.environ.get(IAM_URL_VARIABLE) or "").strip().rstrip("/")
