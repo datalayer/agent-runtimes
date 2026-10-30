@@ -266,7 +266,9 @@ export function ToolApprovalCard({
                           {key}:{' '}
                         </Text>
                         <Text as="span" sx={detailValueSx}>
-                          {String(value)}
+                          {typeof value === 'object' && value !== null
+                            ? JSON.stringify(value)
+                            : String(value)}
                         </Text>
                       </Text>
                     ),
