@@ -69,11 +69,55 @@ PI_DIRECTORY_VARIABLE = "PI_CODING_AGENT_DIR"
 #: The provider pi's configuration names ai-inference by.
 PI_PROVIDER = "datalayer"
 
+#: The title pi's extension asks under: what tells its confirm from any other.
+PI_ASKING_TITLE = "datalayer-shield"
+
+#: pi's tools, as the ACP kinds the Shield's Rules name; another is `other`.
+PI_TOOL_KINDS = {
+    "bash": "execute",
+    "edit": "edit",
+    "write": "edit",
+    "read": "read",
+    "ls": "read",
+    "find": "search",
+    "grep": "search",
+}
+
+#: pi runs every tool itself and pi-acp asks nothing of its own, but it turns an
+#: extension's `ctx.ui.confirm` into ACP's `session/request_permission`, and a
+#: `tool_call` handler that returns `block` stops the step (one that fails blocks
+#: it too, pi's docs/extensions.md). So every tool asks, and the Shield decides.
+PI_EXTENSION = (
+    "// Written by Datalayer: pi asks the Shield before every tool.\n"
+    "export default function (pi) {\n"
+    '  pi.on("tool_call", async (event, ctx) => {\n'
+    "    if (!ctx.hasUI) {\n"
+    '      return { block: true, reason: "Nobody can decide this step." };\n'
+    "    }\n"
+    "    const asked = JSON.stringify({ tool: event.toolName, input: event.input });\n"
+    f'    const allowed = await ctx.ui.confirm("{PI_ASKING_TITLE}", asked);\n'
+    "    if (!allowed) {\n"
+    '      return { block: true, reason: "The Shield refused this step." };\n'
+    "    }\n"
+    "    return undefined;\n"
+    "  });\n"
+    "}\n"
+)
+
 #: The variable Codex reads its configuration directory from.
 CODEX_DIRECTORY_VARIABLE = "CODEX_HOME"
 
 #: The provider Codex's configuration names ai-inference by.
 CODEX_PROVIDER = "datalayer"
+
+#: The session mode that makes a harness ask. Codex's default, `agent`, runs what
+#: its own review passes, and its sandbox lets it write the workspace: the Shield
+#: hears of those steps as they run. In `read-only` its sandbox lets nothing
+#: change, so a write or a command that needs more is asked first over
+#: `session/request_permission`, and what the sandbox runs unasked reads. Its
+#: `approval_policy` cannot say this (`untrusted` is refused by Codex 0.160, and
+#: the mode overrides `sandbox_mode`).
+ASKING_MODES = {"codex": "read-only"}
 
 #: Codex compacts its own conversation past this share of the context window;
 #: it knows nothing of a model that is not OpenAI's.
@@ -147,6 +191,40 @@ def opencode_asking_config() -> str:
             "$schema": "https://opencode.ai/config.json",
             "permission": opencode_permission(),
             "agent": opencode_agents_asking(),
+        }
+    )
+
+
+def asking_mode(harness_id: str) -> str | None:
+    """The session mode a harness is held in so that it asks the Shield, or ``None``."""
+    return ASKING_MODES.get(harness_id)
+
+
+def asked_tool_call(harness_id: str, tool_call: Any) -> Any:
+    """A permission request as the tool it is about.
+
+    pi-acp says every confirm is kind `other`, with what was asked in its
+    message. The Shield's Rules name kinds, paths and commands: pi's asking
+    (:data:`PI_EXTENSION`) is read back into the tool it was made for. Anything
+    else comes back as it came, and is decided as what it says it is.
+    """
+    if harness_id != "pi" or getattr(tool_call, "title", None) != PI_ASKING_TITLE:
+        return tool_call
+    raw = getattr(tool_call, "raw_input", None)
+    try:
+        asked = json.loads(raw.get("message") or "") if isinstance(raw, dict) else None
+    except ValueError:
+        return tool_call
+    if not isinstance(asked, dict):
+        return tool_call
+    tool = str(asked.get("tool") or "")
+    given = asked.get("input") if isinstance(asked.get("input"), dict) else {}
+    subject = given.get("command") or given.get("path") or ""
+    return tool_call.model_copy(
+        update={
+            "kind": PI_TOOL_KINDS.get(tool, "other"),
+            "title": f"{tool} {subject}".strip(),
+            "raw_input": given,
         }
     )
 
@@ -379,6 +457,9 @@ def write_config_directory(
         pi_models(base_url, model=chosen, headers=headers), encoding="utf-8"
     )
     (directory / "settings.json").write_text(pi_settings(chosen), encoding="utf-8")
+    extensions = directory / "extensions"
+    extensions.mkdir(exist_ok=True)
+    (extensions / "shield.ts").write_text(PI_EXTENSION, encoding="utf-8")
     return directory
 
 
@@ -529,7 +610,10 @@ __all__ = [
     "OPENCODE_CONFIG_VARIABLE",
     "OPENCODE_PERMISSION_KEYS",
     "CODEX_PROVIDER",
+    "PI_ASKING_TITLE",
     "PI_PROVIDER",
+    "asked_tool_call",
+    "asking_mode",
     "RESPONSES_ROUTE",
     "asking_config",
     "claude_code_environment",

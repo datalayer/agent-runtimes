@@ -911,6 +911,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             tool_class=shield_authorizer.lent_tool_class,
             companies=self.companies,
         )
+        self._read_what_is_asked()
 
     @property
     def subject(self) -> Any:
@@ -1034,6 +1035,68 @@ class ACPAgent(BaseAgent, ShieldProxy):
     def client(self) -> Any:
         """The face the inner client answers to: the runtime's, not an ACP client."""
         return self._face
+
+    async def new_session(self, cwd: str, mcp_servers: list, **kwargs: Any) -> Any:
+        """A session of the harness, held in the mode that makes it ask."""
+        answer = await ShieldProxy.new_session(self, cwd, mcp_servers, **kwargs)
+        await self._hold_asking_mode(answer.session_id)
+        return answer
+
+    async def load_session(
+        self, cwd: str, mcp_servers: list, session_id: str, **kwargs: Any
+    ) -> Any:
+        """A session loaded again, held in the mode that makes it ask."""
+        answer = await ShieldProxy.load_session(
+            self, cwd, mcp_servers, session_id, **kwargs
+        )
+        await self._hold_asking_mode(session_id)
+        return answer
+
+    async def set_session_mode(self, mode_id: str, session_id: str, **kwargs: Any) -> Any:
+        """Change a session's mode; never out of the one that makes its harness ask."""
+        from agent_runtimes.adapters import harness_inference
+
+        asking = harness_inference.asking_mode(self.harness.id)
+        if asking is not None and mode_id != asking:
+            raise RequestError(
+                REFUSED,
+                f"{self.harness.name} stays in {asking}: in {mode_id} it would act "
+                "before the Shield has decided.",
+            )
+        return await ShieldProxy.set_session_mode(self, mode_id, session_id, **kwargs)
+
+    async def _hold_asking_mode(self, session_id: str) -> None:
+        """Put a session in the mode that makes its harness ask, or refuse it: fail closed."""
+        from agent_runtimes.adapters import harness_inference
+
+        asking = harness_inference.asking_mode(self.harness.id)
+        if asking is None:
+            return
+        try:
+            await ShieldProxy.set_session_mode(self, asking, session_id)
+        except Exception as exc:
+            raise HarnessRefused(
+                f"{self.harness.name} would not take the {asking} mode, so the Shield "
+                f"could not decide its steps: {exc}"
+            ) from None
+
+    def _read_what_is_asked(self) -> None:
+        """Permission requests read as the tool they are about, before the Shield decides."""
+        from agent_runtimes.adapters import harness_inference
+
+        asked = self.inner.request_permission
+
+        async def request_permission(
+            options: list[Any], session_id: str, tool_call: Any, **kwargs: Any
+        ) -> Any:
+            return await asked(
+                options,
+                session_id,
+                harness_inference.asked_tool_call(self.harness.id, tool_call),
+                **kwargs,
+            )
+
+        self.inner.request_permission = request_permission  # type: ignore[method-assign]
 
     @property
     def started(self) -> bool:

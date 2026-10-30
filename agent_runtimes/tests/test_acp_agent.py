@@ -1684,6 +1684,160 @@ class TestResolvingACatalogueHarness:
             "X-Datalayer-Deployment-Uid": "dep-1",
         }
 
+    @pytest.mark.asyncio
+    async def test_a_codex_session_is_held_in_the_mode_that_asks(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Its default mode runs commands and edits itself: read-only makes it ask, so the Shield decides."""
+        from acp.exceptions import RequestError
+        from agent_shield.acp.proxy import ShieldProxy
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+        modes: list[tuple[str, str]] = []
+
+        async def set_mode(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            modes.append((mode_id, session_id))
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", set_mode)
+        agent = ACPAgent(
+            agent_id="codex-asks",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment={"OPENAI_API_KEY": "k"},
+        )
+        await agent._hold_asking_mode("s-1")
+        assert modes == [("read-only", "s-1")]
+        await agent.set_session_mode("read-only", "s-1")
+        with pytest.raises(RequestError, match="read-only"):
+            await agent.set_session_mode("agent-full-access", "s-1")
+        assert modes[-1] == ("read-only", "s-1") and len(modes) == 2
+
+    @pytest.mark.asyncio
+    async def test_a_session_codex_will_not_hold_in_that_mode_is_refused(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Fail closed: a Codex that would not ask is not started on a turn."""
+        from agent_shield.acp.proxy import ShieldProxy
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+
+        async def refused(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            raise RuntimeError("no such mode")
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", refused)
+        agent = ACPAgent(
+            agent_id="codex-refuses",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment={"OPENAI_API_KEY": "k"},
+        )
+        with pytest.raises(HarnessRefused, match="Shield"):
+            await agent._hold_asking_mode("s-1")
+
+    @pytest.mark.asyncio
+    async def test_another_harness_is_left_in_its_own_mode(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        from agent_shield.acp.proxy import ShieldProxy
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        pi = get_harness("pi")
+        assert pi is not None
+        modes: list[str] = []
+
+        async def set_mode(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            modes.append(mode_id)
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", set_mode)
+        agent = ACPAgent(
+            agent_id="pi-mode",
+            harness=pi,
+            command=["/nonexistent/pi-acp"],
+            workspace=tmp_path,
+            environment={"ANTHROPIC_API_KEY": "k"},
+        )
+        await agent._hold_asking_mode("s-1")
+        await agent.set_session_mode("anything", "s-1")
+        assert modes == ["anything"]
+
+    def test_pi_is_told_to_ask_before_every_tool_and_blocks_on_any_refusal(
+        self, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.adapters import harness_inference
+
+        directory = harness_inference.write_config_directory(
+            harness_inference.ROUTES["pi"], tmp_path, "https://r1.example/a"
+        )
+        extension = (directory / "extensions" / "shield.ts").read_text()
+        assert 'pi.on("tool_call"' in extension
+        assert harness_inference.PI_ASKING_TITLE in extension
+        assert "block: true" in extension
+        # No interface to ask through is a refusal, never a step.
+        assert "ctx.hasUI" in extension
+
+    @pytest.mark.parametrize(
+        ("tool", "given", "kind", "path", "command"),
+        [
+            ("bash", {"command": "touch x"}, "execute", None, "touch x"),
+            ("write", {"path": "a.txt", "content": "b"}, "edit", "a.txt", None),
+            ("edit", {"path": "a.txt", "edits": []}, "edit", "a.txt", None),
+            ("read", {"path": "a.txt"}, "read", "a.txt", None),
+            ("grep", {"pattern": "x", "path": "."}, "search", ".", None),
+            ("an_extension_tool", {}, "other", None, None),
+        ],
+    )
+    def test_pis_asking_is_the_tool_it_asks_about(
+        self, tool: str, given: dict, kind: str, path: str | None, command: str | None
+    ) -> None:
+        """pi-acp says every confirm is kind `other`: the Shield decides the real tool."""
+        import json
+
+        from acp.schema import ToolCallUpdate
+
+        from agent_runtimes.adapters import harness_inference
+
+        asked = ToolCallUpdate(
+            toolCallId="pi-ui-1",
+            title=harness_inference.PI_ASKING_TITLE,
+            kind="other",
+            status="pending",
+            rawInput={
+                "method": "confirm",
+                "title": harness_inference.PI_ASKING_TITLE,
+                "message": json.dumps({"tool": tool, "input": given}),
+            },
+        )
+        read = harness_inference.asked_tool_call("pi", asked)
+        assert read.kind == kind and read.tool_call_id == "pi-ui-1"
+        assert read.raw_input.get("path") == path
+        assert read.raw_input.get("command") == command
+        assert tool in read.title
+
+    def test_a_confirm_that_is_not_the_shields_is_left_as_it_came(self) -> None:
+        from acp.schema import ToolCallUpdate
+
+        from agent_runtimes.adapters import harness_inference
+
+        other = ToolCallUpdate(toolCallId="pi-ui-2", title="Something else", kind="other")
+        assert harness_inference.asked_tool_call("pi", other) is other
+        malformed = ToolCallUpdate(
+            toolCallId="pi-ui-3",
+            title=harness_inference.PI_ASKING_TITLE,
+            kind="other",
+            rawInput={"message": "not json"},
+        )
+        assert harness_inference.asked_tool_call("pi", malformed).kind == "other"
+        assert harness_inference.asked_tool_call("codex", malformed) is malformed
+
     def test_off_datalayer_codex_takes_the_persons_key_and_writes_nothing(
         self, tmp_path: Path
     ) -> None:

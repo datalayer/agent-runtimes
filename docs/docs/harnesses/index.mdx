@@ -335,6 +335,25 @@ turn. Each call is metered in credits as Claude Code's are, a stream cut short
 on what passed. A model the catalogue does not offer, a GPT name among them, is
 refused in a sentence.
 
+## Every step asks the Shield
+
+A tool call a harness only reports is seen as it runs: the Shield can record it
+and end the turn, not stop the step. What stops a step is ACP's
+`session/request_permission`, so each harness is made to ask before it acts:
+
+| Harness | How it is made to ask |
+|---|---|
+| Claude Code | it asks by itself |
+| OpenCode | its configuration sets every tool, and each of its agents, to `ask` |
+| Codex | its sessions are held in the `read-only` mode: its sandbox lets nothing change, so a write or a command that needs more is asked first. `session/set_mode` cannot take it out, and a session that will not take that mode is refused |
+| pi | on Datalayer, an extension in its configuration directory asks before every tool, and pi's `tool_call` hook blocks the step on any answer but yes. pi-acp reports that request as kind `other`, so the runtime reads it back into the tool it is about, and the Rules see its real kind, path and command |
+
+What Codex's sandbox runs unasked only reads: a command that reads is reported,
+and a Rule that denies it ends the turn after it ran. A file edit through Codex's
+`apply_patch` is refused by the sandbox without asking, and Codex then asks to do it
+another way. pi run locally has no such extension yet: its configuration
+directory is the person's own.
+
 A routed harness (Claude Code, Codex, OpenCode, pi) **waits for the runtime's
 ai-inference token** before it starts: a kept deployment's first keep
 on a fresh runtime can start its harness while the platform is still giving
