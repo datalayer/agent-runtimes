@@ -1528,7 +1528,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapOperation: {
       additionalProperties: false,
       description:
-        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.\nAn operation that `allows` instead gives a standing permission once the\nperson confirms it: it calls no tool, and is asked for through the\napplication's API or its server for agents.",
+        "Something a personal agent may ask the application to do for the person,\ndone only once they approve its exact terms (Operations v2).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe company answers with the operation, its arguments the terms, and the\npersonal agent asks the person about that revision. Its request sent again\nwith their approval runs the tool, with those arguments and only once.",
       properties: {
         action: {
           description:
@@ -1537,31 +1537,10 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'string',
         },
         tool: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
           description:
             "The application's tool that does it, called with the terms",
           title: 'Tool',
-        },
-        allows: {
-          anyOf: [
-            {
-              $ref: '#/$defs/AppPapStanding',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description:
-            'Instead of a tool: the standing permission confirming it gives',
+          type: 'string',
         },
         summary: {
           description:
@@ -1569,15 +1548,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Summary',
           type: 'string',
         },
-        user_approval_required: {
-          default: true,
-          description:
-            'Whether only the person may confirm it, never an approval in advance',
-          title: 'User Approval Required',
-          type: 'boolean',
-        },
       },
-      required: ['action', 'summary'],
+      required: ['action', 'tool', 'summary'],
       title: 'AppPapOperation',
       type: 'object',
     },
@@ -1625,88 +1597,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['type', 'url'],
       title: 'AppPapReference',
-      type: 'object',
-    },
-    AppPapStanding: {
-      additionalProperties: false,
-      description:
-        "An operation whose effect is a standing permission (the Ledgerly pattern).\n\nConfirmed by the person, it is recorded as the approval in advance they\nwould give in Datalayer: this application may confirm, at the company of\none of its own connections and in the person's account there, operations\nof that class whose terms stay within these limits, so many times, for so\nmany days — and the person reads it back and withdraws it there.",
-      properties: {
-        connection: {
-          description:
-            'The id of its own company connection the permission is used at',
-          title: 'Connection',
-          type: 'string',
-        },
-        action: {
-          $ref: '#/$defs/PapStandingAction',
-          description: 'What confirming there does: `write`, or `buy`',
-        },
-        limits: {
-          description: 'Every term bounded, 1 to 20',
-          items: {
-            $ref: '#/$defs/AppPapStandingLimit',
-          },
-          title: 'Limits',
-          type: 'array',
-        },
-        uses: {
-          description:
-            'The term of this operation giving how many times, at most',
-          title: 'Uses',
-          type: 'string',
-        },
-        days: {
-          description:
-            'The term of this operation giving for how many days, at most 90',
-          title: 'Days',
-          type: 'string',
-        },
-      },
-      required: ['connection', 'action', 'limits', 'uses', 'days'],
-      title: 'AppPapStanding',
-      type: 'object',
-    },
-    AppPapStandingLimit: {
-      additionalProperties: false,
-      description:
-        "One bound of a standing permission: a term of the other company's operations,\nbounded by a term of this one — its maximum, or the one value allowed.",
-      properties: {
-        path: {
-          description:
-            "The other company's term, by its dotted path: `amount.amount`, `payee`",
-          title: 'Path',
-          type: 'string',
-        },
-        maximum: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description: 'The term of this operation giving its maximum',
-          title: 'Maximum',
-        },
-        allowed: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description: 'The term of this operation giving the value allowed',
-          title: 'Allowed',
-        },
-      },
-      required: ['path'],
-      title: 'AppPapStandingLimit',
       type: 'object',
     },
     AppPermissions: {
@@ -2847,13 +2737,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'How a person signs in at a company, in the order the application prefers.',
       enum: ['direct', 'device', 'mediated'],
       title: 'PapSignIn',
-      type: 'string',
-    },
-    PapStandingAction: {
-      description:
-        'What a standing permission lets the application confirm at another company: a class of action.',
-      enum: ['write', 'buy'],
-      title: 'PapStandingAction',
       type: 'string',
     },
     RecordItem: {

@@ -1755,49 +1755,26 @@ PAP_TWO_COMPANIES_SCENE_0_0_1 = SceneSpec.model_validate(
             {
                 "from": "ada",
                 "to": "atlas",
-                "says": "“Allow Ledgerly to pay Acme without asking, within limits.”",
+                "says": "“Pay Acme without asking me each time.”",
                 "how": "",
             },
             {
                 "from": "ledgerly",
                 "to": "ada",
-                "says": "Even a permission given in advance is something Ada approves.",
-                "card": {
-                    "kind": "approval",
-                    "title": "Ledgerly asks you to confirm",
-                    "rows": [
-                        ["Up to", "EUR 2000.00 each"],
-                        ["At most", "5 payments"],
-                        ["For", "30 days"],
-                    ],
-                    "lines": [
-                        "Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days."
-                    ],
-                },
-                "how": "",
-                "turn": {
-                    "yes": "Approve",
-                    "no": "Decline",
-                    "declined": "Ada declined: Ledgerly asks her again for every payment.",
-                },
+                "says": "Not that: every payment the bank returns is Ada’s to approve, this one and the next.",
+                "how": "The bank’s operation goes to Ada each time; nothing approves one in her name.",
             },
             {
                 "from": "ledgerly",
                 "to": "ada",
-                "says": "INV-0043, EUR 980.00, is within the limits: Ledgerly pays it and tells Ada what was done.",
-                "how": "Approved in advance: the bank is told it was, never that Ada approved this one.",
-            },
-            {
-                "from": "ledgerly",
-                "to": "ada",
-                "says": "INV-0044, EUR 3400.00, is beyond them: Ledgerly asks Ada again.",
+                "says": "INV-0043, EUR 980.00, is the next bill: Ledgerly asks Ada again.",
                 "card": {
                     "kind": "done",
-                    "title": "Within limits, done; beyond them, asked",
+                    "title": "Every payment, asked",
                     "rows": [],
                     "lines": [
-                        "INV-0043 paid under your permission (1 of 5 used).",
-                        "INV-0044 waits for your approval.",
+                        "INV-0042 paid with your approval.",
+                        "INV-0043 waits for your approval.",
                     ],
                 },
                 "how": "",

@@ -630,7 +630,7 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
             "pap_sign_in": ["read"],
             "pap_sign_in_status": ["read"],
             "pap_read": ["read"],
-            "pap_propose": ["send"],
+            "pap_propose": ["write"],
             "pap_mcp_tools": ["read"],
             "pap_mcp_call": ["write"],
             "pap_confirm": ["write", "buy"],
