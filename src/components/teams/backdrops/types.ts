@@ -56,7 +56,7 @@ export type A2ATeamGraphMember = {
   /**
    * Its colour, as its spec names it: a name of the palette (`teal`,
    * `indigo`…) or a hex. Drawn in the value the current theme and mode
-   * give it (`usePaletteColor`): its face, and the lines that reach it.
+   * give it (`useSpecColor`): its face, and the lines that reach it.
    * The backdrop's own colours, unsaid.
    */
   color?: string;

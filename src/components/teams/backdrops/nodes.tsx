@@ -32,7 +32,8 @@ import {
 } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { Button, Text } from '@primer/react';
-import { Box, usePaletteColor } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { useSpecColor } from './paletteColor';
 import {
   AssistantStage,
   type AssistantStageProps,
@@ -261,7 +262,7 @@ export function MemberNodeBase({
   const offset = moving.offsetOf(id);
   // Its colour as the theme draws it: `--scene-member`, which a backdrop's
   // face reads before its own colour.
-  const tone = usePaletteColor()(member?.color);
+  const tone = useSpecColor()(member?.color);
   const stageRef = useRef<HTMLDivElement>(null);
   // Its balloon's display, as its menu changes it.
   const [display, setDisplay] = useState<BalloonDisplay | undefined>();

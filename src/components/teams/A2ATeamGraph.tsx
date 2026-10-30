@@ -54,7 +54,8 @@ import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlow, type Edge, type Node, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
-import { Box, usePaletteColor } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { useSpecColor } from './backdrops/paletteColor';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { teamNotebookKernel } from './teamNotebookKernel';
 import {
@@ -732,7 +733,7 @@ export function A2ATeamGraph({
   }, [calls, members]);
   // A link in the colour of the member it reaches, a call in its caller's:
   // their spec's colour, as the current theme and mode draw it.
-  const paletteColor = usePaletteColor();
+  const paletteColor = useSpecColor();
   const colorOf = (id: string): string | undefined =>
     paletteColor(memberOf(id)?.color);
   const linkKey = JSON.stringify(
