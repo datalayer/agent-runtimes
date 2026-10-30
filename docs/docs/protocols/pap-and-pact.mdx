@@ -7,7 +7,7 @@ title: PAP and PACT
 
 Two consent protocols let a person's own agent work with a business for
 them: the [Personal Agent Protocol](../integrations/personal-agent-protocol)
-(PAP, draft 0.3, Sierra and Meta; [personalagentprotocol.org](https://personalagentprotocol.org)) and [PACT](./pact) (1.0, Decagon and
+(PAP, draft 0.3 as of its revision 2026-10-28, Sierra and Meta; [personalagentprotocol.org](https://personalagentprotocol.org)) and [PACT](./pact) (1.0, Decagon and
 Instinct). They answer the same questions — *which agent is this, for whom,
 and how far may it go* — in different ways, and one application can use
 both in the same task.
@@ -16,15 +16,15 @@ both in the same task.
 
 | | PAP (draft 0.3) | PACT 1.0 |
 | --- | --- | --- |
-| The business is found at | its domain: `https://{domain}/.well-known/poppy.json`, the organization's domain checked, its OAuth issuer's metadata checked | an A2A Agent Card URL; the interface chosen by binding and version (`HTTP+JSON`, `1.0`) |
-| The agent proves itself with | its client metadata and same-domain JWKS; a short-lived Session Token bound to the Session's own DPoP key (the Session Key) | a personal-agent JWT (ES256), `iss` the platform, its JWKS registered once with the Provider |
-| The person is | a pairwise id per company, signed out until needed | `sub`, a stable opaque id per person, in every JWT |
-| Signing in at the business | Direct (OAuth with PKCE), Device (RFC 8628) as the issuer's `grant_types_supported` offers them, or Mediated (`pap.protectedInput`); an Account Token afterwards | Device code (RFC 8628), the personal-agent JWT as client authentication; a delegation token |
+| The business is found at | its domain: `https://{domain}/.well-known/poppy.json`, the organization's domain checked, its issuer from the domain's protected resource metadata, its OAuth metadata checked | an A2A Agent Card URL; the interface chosen by binding and version (`HTTP+JSON`, `1.0`) |
+| The agent proves itself with | its client metadata and same-domain JWKS; a delegation from a key there vouches for a delegated key per User ID, which signs a `Poppy-Session` JWT on every request | a personal-agent JWT (ES256), `iss` the platform, its JWKS registered once with the Provider |
+| The person is | a pairwise User ID per company, in a Session the agent starts with a random `sid`, signed out until needed | `sub`, a stable opaque id per person, in every JWT |
+| Signing in at the business | Direct (OAuth with PKCE), Device (RFC 8628) as the issuer's `grant_types_supported` offers them, or Mediated, an extension grant (`pap.protectedInput`); a Bearer access token and a refresh token afterwards | Device code (RFC 8628), the personal-agent JWT as client authentication; a delegation token |
 | What the person allows | scopes asked at sign-in; may be fewer than asked | scopes from the card's `deviceCode` flow; may be fewer than asked, read back from `scope` |
 | Asking for more | `insufficient_scope` on the conversation | `TASK_STATE_AUTH_REQUIRED` with `pact.missingScopes` (a step-up) |
 | How the agent talks to the business | conversations with the company's agent or a person, OpenAPI, MCP, a browser joined to the Session | A2A messages (`message:send`), one `contextId` per agent, person and Brand |
-| A consequential action | the Operations extension: an exact revision, approved by the person, performed at most once | the business acts within the granted scopes; every reply under delegation carries a signed receipt (`pact.receipt`) |
-| What is kept | the operation, its revision and its confirmation | the receipt: grant, scopes used, actions, verified before it is kept |
+| A consequential action | the Operations extension, version 2: every operation asked of the person, an opaque revision, their approval sent as a retry of the request, performed at most once | the business acts within the granted scopes; every reply under delegation carries a signed receipt (`pact.receipt`) |
+| What is kept | the operation, its revision and what it came to | the receipt: grant, scopes used, actions, verified before it is kept |
 | In Agent Runtimes | the PAP SDK's plugins (`pap.*`), `PapPersonalAgentCapability`, `pap.connections` and `pap.company` in the Appspec | `agent_runtimes.protocols.pact` (`pact.*`), `pact.connections` in the Appspec |
 
 Both keep the person's credentials at the business: the agent shows the
