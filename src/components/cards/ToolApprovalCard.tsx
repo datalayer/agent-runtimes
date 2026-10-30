@@ -157,14 +157,14 @@ export function ToolApprovalCard({
             {formatRelativeTime(approval.requestedAt)}
             {reviewSummary}
           </Text>
-          <Box
+          <Card
+            border
+            shadow="none"
+            variant="accent"
+            display="block"
             mt={2}
             width="100%"
             p={2}
-            borderRadius={2}
-            border="1px solid"
-            borderColor="border.muted"
-            bg="canvas.subtle"
           >
             <details open={isDetailsExpanded}>
               <summary
@@ -274,7 +274,7 @@ export function ToolApprovalCard({
                 </Box>
               )}
             </details>
-          </Box>
+          </Card>
         </Box>
         {approval.status === 'pending' && (
           <Box display="flex" gap={2} flexShrink={0}>
