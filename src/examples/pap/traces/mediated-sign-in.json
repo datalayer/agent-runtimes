@@ -1,7 +1,7 @@
 {
   "slug": "mediated-sign-in",
   "title": "Mediated Sign-In",
-  "description": "Ada signs in to Manzanita without leaving Atlas: the host's protected input collects the fields Manzanita declares and sends them to Manzanita's endpoint, once.",
+  "description": "Ada signs in to Manzanita without leaving Atlas: the host's protected input collects the fields Manzanita declares in its mediated-sign-in extension and sends them to Manzanita's token endpoint, once, as an extension grant.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
   "sdk": "personal-agent-protocol 0.27.0",
   "parties": [
@@ -30,7 +30,7 @@
     {
       "title": "Atlas finds Manzanita",
       "channel": "Discovery + Session",
-      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "summary": "Atlas reads Manzanita's protected resource metadata, public poppy.json and OAuth metadata. A Session is local: Atlas chooses a random sid for Ada's pairwise User ID, and no request is sent. Manzanita verifies Atlas's delegation at its first request.",
       "chat": [
         {
           "speaker": "user",
@@ -46,7 +46,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -60,15 +60,11 @@
         "manzanita": [
           {
             "label": "Verified client",
-            "value": "atlas.example/agent.json"
+            "value": "None yet"
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
-          },
-          {
-            "label": "Who is it?",
-            "value": "A pairwise identifier only"
+            "value": "None"
           }
         ]
       },
@@ -97,22 +93,6 @@
               },
               "auth": {
                 "issuer": "https://manzanita.example",
-                "mediated": {
-                  "endpoint": "https://manzanita.example/poppy/sign-in",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                },
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
                   "orders:write": "Exchange or return items in your orders"
@@ -159,10 +139,49 @@
               },
               "extensions": {
                 "operations": {
+                  "version": "2"
+                },
+                "mediated-sign-in": {
                   "version": "1",
-                  "endpoint": "https://manzanita.example/poppy/operations"
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
                 }
               }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-protected-resource",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "resource": "https://manzanita.example",
+              "authorization_servers": ["https://manzanita.example"],
+              "scopes_supported": ["orders:read", "orders:write"],
+              "bearer_methods_supported": ["header"]
             }
           }
         },
@@ -187,22 +206,77 @@
               "token_endpoint": "https://manzanita.example/oauth/token",
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "grant_types_supported": [
-                "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 "refresh_token",
                 "authorization_code",
-                "urn:ietf:params:oauth:grant-type:device_code"
+                "urn:ietf:params:oauth:grant-type:device_code",
+                "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
               "scopes_supported": ["orders:read", "orders:write"],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
               ],
-              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
               "device_1": "https://manzanita.example/oauth/device"
             }
           }
+        }
+      ]
+    },
+    {
+      "title": "The declared fields, once",
+      "channel": "pap.protectedInput",
+      "summary": "Manzanita declares Email, Password (secret). The host asks Ada on its trusted surface, never through the model, sends the values with the grant to the issuer's token endpoint with no redirect followed, and drops them. Manzanita answers code_required.",
+      "chat": [
+        {
+          "speaker": "atlas",
+          "kind": "page",
+          "title": "Protected input · Manzanita Outfitters",
+          "text": "Ada enters: Email, Password (secret)."
+        },
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "Manzanita sent a code to a•••@example.com."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · a Session JWT on every request"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "None"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Types email and password on Atlas's protected input"
         },
         {
           "kind": "http",
@@ -210,16 +284,17 @@
           "to": "manzanita",
           "method": "POST",
           "url": "https://manzanita.example/oauth/token",
-          "status": 200,
+          "status": 400,
           "request": {
             "headers": {
               "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
+              "accept": "application/json"
             },
             "body": {
-              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-              "assertion": "‹session assertion›",
+              "grant_type": "https://personalagentprotocol.org/grant/mediated-sign-in",
+              "scope": "orders:read",
+              "email": "‹email›",
+              "password": "‹password›",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
               "client_assertion": "‹client assertion›"
@@ -232,9 +307,10 @@
               "cache-control": "no-store"
             },
             "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
-              "expires_in": 3600
+              "error": "code_required",
+              "sign_in_id": "sgn_1",
+              "sent_to": "a•••@example.com",
+              "expires_in": 300
             }
           }
         },
@@ -262,7 +338,7 @@
               "token_endpoint_auth_method": "private_key_jwt",
               "extensions": {
                 "operations": {
-                  "version": "1"
+                  "version": "2"
                 }
               }
             }
@@ -302,106 +378,9 @@
       ]
     },
     {
-      "title": "The declared fields, once",
-      "channel": "pap.protectedInput",
-      "summary": "Manzanita declares Email, Password (secret). The host asks Ada on its trusted surface, never through the model, sends the values to the endpoint on Manzanita's domain with no redirect followed, and drops them. Manzanita answers code_required.",
-      "chat": [
-        {
-          "speaker": "atlas",
-          "kind": "page",
-          "title": "Protected input · Manzanita Outfitters",
-          "text": "Ada enters: Email, Password (secret)."
-        },
-        {
-          "speaker": "atlas",
-          "kind": "message",
-          "text": "Manzanita sent a code to a•••@example.com."
-        }
-      ],
-      "views": {
-        "atlas": [
-          {
-            "label": "Company",
-            "value": "Manzanita Outfitters · discovery verified"
-          },
-          {
-            "label": "Session",
-            "value": "signed out · DPoP-bound"
-          },
-          {
-            "label": "Vault (host only)",
-            "value": "Empty"
-          },
-          {
-            "label": "Model sees",
-            "value": "Summaries and statuses, never a credential"
-          }
-        ],
-        "manzanita": [
-          {
-            "label": "Verified client",
-            "value": "atlas.example/agent.json"
-          },
-          {
-            "label": "Sessions",
-            "value": "1 live · 0 signed in"
-          },
-          {
-            "label": "Who is it?",
-            "value": "A pairwise identifier only"
-          }
-        ]
-      },
-      "sequence": [
-        {
-          "kind": "action",
-          "from": "user",
-          "to": "atlas",
-          "label": "Types email and password on Atlas's protected input"
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/sign-in",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "scope": "orders:read",
-              "credentials": {
-                "email": "‹email›",
-                "password": "‹password›"
-              }
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json",
-              "cache-control": "no-store"
-            },
-            "body": {
-              "status": "code_required",
-              "sign_in_id": "si_1",
-              "code": {
-                "sent_to": "a•••@example.com"
-              },
-              "expires_at": "2026-10-11T09:05:00Z"
-            }
-          }
-        }
-      ]
-    },
-    {
       "title": "The one-time code",
       "channel": "Mediated Sign-In",
-      "summary": "Only the code goes to …/sign-in/{sign_in_id}, from the Session that started it. A mistyped code is code_required again; the right one signs the same Session in and the Account Token goes to the vault.",
+      "summary": "Only the sign_in_id and the code go to the token endpoint. A mistyped code is code_required again; the right one signs Ada in, and the refresh token goes to the vault.",
       "chat": [
         {
           "speaker": "atlas",
@@ -434,7 +413,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -442,7 +421,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -456,10 +435,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "None"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -467,7 +446,7 @@
             "value": "orders:read"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           }
         ]
@@ -484,18 +463,22 @@
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/sign-in/si_1",
-          "status": 200,
+          "url": "https://manzanita.example/oauth/token",
+          "status": 400,
           "request": {
             "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
             },
             "body": {
-              "code": "‹one-time code›"
-            }
+              "grant_type": "https://personalagentprotocol.org/grant/mediated-sign-in",
+              "sign_in_id": "sgn_1",
+              "one_time_code": "‹one-time code›",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
           },
           "response": {
             "headers": {
@@ -503,10 +486,10 @@
               "cache-control": "no-store"
             },
             "body": {
-              "status": "code_required",
-              "sign_in_id": "si_1",
-              "code": {},
-              "expires_at": "2026-10-11T09:05:00Z"
+              "error": "code_required",
+              "sign_in_id": "sgn_1",
+              "sent_to": "a•••@example.com",
+              "expires_in": 300
             }
           }
         },
@@ -521,18 +504,22 @@
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/sign-in/si_1",
+          "url": "https://manzanita.example/oauth/token",
           "status": 200,
           "request": {
             "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
             },
             "body": {
-              "code": "‹one-time code›"
-            }
+              "grant_type": "https://personalagentprotocol.org/grant/mediated-sign-in",
+              "sign_in_id": "sgn_1",
+              "one_time_code": "‹one-time code›",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
           },
           "response": {
             "headers": {
@@ -540,12 +527,10 @@
               "cache-control": "no-store"
             },
             "body": {
-              "status": "complete",
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
+              "access_token": "‹access token›",
+              "token_type": "Bearer",
               "expires_in": 3600,
-              "refresh_token": "‹account token›",
-              "refresh_token_expires_in": 7776000
+              "refresh_token": "‹refresh token›"
             }
           }
         }

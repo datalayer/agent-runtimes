@@ -1,7 +1,7 @@
 {
   "slug": "user-with-a-company",
   "title": "A user with a company",
-  "description": "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. Both sides are the PAP Python SDK's demo world: real keys and proofs over in-process HTTP, recorded and redacted.",
+  "description": "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. Both sides are the PAP Python SDK's demo world: real keys and Session JWTs over in-process HTTP, recorded and redacted.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
   "sdk": "personal-agent-protocol 0.27.0",
   "parties": [
@@ -30,7 +30,7 @@
     {
       "title": "Atlas finds Manzanita",
       "channel": "Discovery + Session",
-      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "summary": "Atlas reads Manzanita's protected resource metadata, public poppy.json and OAuth metadata. A Session is local: Atlas chooses a random sid for Ada's pairwise User ID, and no request is sent. Manzanita verifies Atlas's delegation at its first request.",
       "chat": [
         {
           "speaker": "user",
@@ -51,7 +51,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -65,15 +65,11 @@
         "manzanita": [
           {
             "label": "Verified client",
-            "value": "atlas.example/agent.json"
+            "value": "None yet"
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
-          },
-          {
-            "label": "Who is it?",
-            "value": "A pairwise identifier only"
+            "value": "None"
           }
         ]
       },
@@ -102,22 +98,6 @@
               },
               "auth": {
                 "issuer": "https://manzanita.example",
-                "mediated": {
-                  "endpoint": "https://manzanita.example/poppy/sign-in",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                },
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
                   "orders:write": "Exchange or return items in your orders"
@@ -164,10 +144,49 @@
               },
               "extensions": {
                 "operations": {
+                  "version": "2"
+                },
+                "mediated-sign-in": {
                   "version": "1",
-                  "endpoint": "https://manzanita.example/poppy/operations"
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
                 }
               }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-protected-resource",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "resource": "https://manzanita.example",
+              "authorization_servers": ["https://manzanita.example"],
+              "scopes_supported": ["orders:read", "orders:write"],
+              "bearer_methods_supported": ["header"]
             }
           }
         },
@@ -192,115 +211,19 @@
               "token_endpoint": "https://manzanita.example/oauth/token",
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "grant_types_supported": [
-                "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 "refresh_token",
                 "authorization_code",
-                "urn:ietf:params:oauth:grant-type:device_code"
+                "urn:ietf:params:oauth:grant-type:device_code",
+                "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
               "scopes_supported": ["orders:read", "orders:write"],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
               ],
-              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
               "device_1": "https://manzanita.example/oauth/device"
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/oauth/token",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-              "assertion": "‹session assertion›",
-              "client_id": "https://atlas.example/agent.json",
-              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-              "client_assertion": "‹client assertion›"
-            },
-            "encoding": "form"
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json",
-              "cache-control": "no-store"
-            },
-            "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
-              "expires_in": 3600
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
             }
           }
         }
@@ -330,7 +253,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -348,7 +271,7 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
@@ -372,8 +295,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -446,13 +368,74 @@
               "responder": "agent"
             }
           }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
         }
       ]
     },
     {
       "title": "Ada signs in on Manzanita's page",
       "channel": "Device Sign-In",
-      "summary": "Atlas shows Manzanita's link and code. Ada signs in on manzanita.example and approves. Atlas polls at the company's pace; the same Session is upgraded and the Account Token goes to the host's vault, by reference.",
+      "summary": "Atlas shows Manzanita's link and code. Ada signs in on manzanita.example and approves. Atlas polls at the company's pace; sign-in is plain OAuth and names no Session. The same Session sends the access token from now on, and the refresh token goes to the host's vault, by reference.",
       "chat": [
         {
           "speaker": "atlas",
@@ -479,7 +462,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -487,7 +470,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -501,10 +484,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "1 live"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -512,7 +495,7 @@
             "value": "orders:read orders:write"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           },
           {
@@ -567,8 +550,7 @@
           "request": {
             "headers": {
               "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
+              "accept": "application/json"
             },
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -605,8 +587,7 @@
           "request": {
             "headers": {
               "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
+              "accept": "application/json"
             },
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -623,11 +604,10 @@
               "cache-control": "no-store"
             },
             "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
+              "access_token": "‹access token›",
+              "token_type": "Bearer",
               "expires_in": 3600,
-              "refresh_token": "‹account token›",
-              "refresh_token_expires_in": 7776000
+              "refresh_token": "‹refresh token›"
             }
           }
         }
@@ -636,7 +616,7 @@
     {
       "title": "The same conversation, signed in",
       "channel": "Conversation + Operation",
-      "summary": "The conversation keeps its ID; now signed in, Manzanita proposes the exchange as an operation: one summary, exact terms, revision 1. Nothing happens until it is confirmed.",
+      "summary": "The conversation keeps its ID; now signed in, Manzanita returns the exchange as an operation: one summary, exact terms, an opaque revision. Nothing happens until Ada approves it.",
       "chat": [
         {
           "speaker": "user",
@@ -651,7 +631,7 @@
         {
           "speaker": "manzanita",
           "kind": "approval",
-          "title": "Revision 1 · needs your approval",
+          "title": "Revision rev_1 · needs your approval",
           "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
         }
       ],
@@ -663,7 +643,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -671,7 +651,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -685,10 +665,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "1 live"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -696,7 +676,7 @@
             "value": "orders:read orders:write"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           },
           {
@@ -705,7 +685,7 @@
           },
           {
             "label": "Operation orders.exchange",
-            "value": "revision 1 · proposed"
+            "value": "revision rev_1 · open"
           }
         ]
       },
@@ -721,8 +701,8 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -774,8 +754,7 @@
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "operation": {
                       "operation_id": "op_1",
-                      "revision": 1,
-                      "state": "proposed",
+                      "revision": "rev_1",
                       "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
                       "terms": {
                         "order_id": "ord_7Hk2",
@@ -784,11 +763,7 @@
                           "currency": "USD"
                         }
                       },
-                      "expires_at": "2026-10-11T09:15:10Z",
-                      "user_approval_required": true,
-                      "url": "https://manzanita.example/operations/op_1",
-                      "confirmation": null,
-                      "result": null
+                      "expires_at": "2026-10-11T09:15:10Z"
                     }
                   }
                 },
@@ -811,13 +786,13 @@
     },
     {
       "title": "Ada approves this exact revision",
-      "channel": "Operations v1",
-      "summary": "Atlas confirms the revision Ada saw, with approved_by: user. Manzanita performs the exchange once and returns the result summary, which Atlas shows as written.",
+      "channel": "Operations version 2",
+      "summary": "Atlas asks Ada in its own interface, and sends her approval of that revision as a message in the conversation. Manzanita performs the exchange once and says how it went, which Atlas shows as written.",
       "chat": [
         {
           "speaker": "user",
           "kind": "approval",
-          "title": "Revision 1 · approved",
+          "title": "Revision rev_1 · approved",
           "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
         },
         {
@@ -835,7 +810,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -843,7 +818,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -857,10 +832,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "1 live"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -868,16 +843,16 @@
             "value": "orders:read orders:write"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 9 events"
+            "value": "idle · agent · 13 events"
           },
           {
             "label": "Operation orders.exchange",
-            "value": "revision 1 · succeeded · approved by user"
+            "value": "revision rev_1 · performed"
           }
         ]
       },
@@ -886,25 +861,33 @@
           "kind": "action",
           "from": "user",
           "to": "atlas",
-          "label": "Approves revision 1 as shown"
+          "label": "Approves revision rev_1 as shown"
         },
         {
           "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/operations/op_1/confirm",
-          "status": 200,
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?wait=0",
+          "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "accept": "*/*",
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "revision": 1,
-              "approved_by": "user"
+              "message": {
+                "id": "msg_5",
+                "author": {
+                  "type": "agent"
+                },
+                "approval": {
+                  "operation_id": "op_1",
+                  "revision": "rev_1"
+                }
+              }
             }
           },
           "response": {
@@ -912,34 +895,163 @@
               "content-type": "application/json"
             },
             "body": {
-              "operation_id": "op_1",
-              "revision": 1,
-              "state": "succeeded",
-              "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-              "terms": {
-                "order_id": "ord_7Hk2",
-                "price_difference": {
-                  "amount": "70.00",
-                  "currency": "USD"
-                }
-              },
-              "user_approval_required": true,
-              "url": "https://manzanita.example/operations/op_1",
-              "confirmation": {
-                "revision": 1,
-                "approved_by": "user",
-                "confirmed_at": "2026-10-11T09:00:10Z"
-              },
-              "result": {
-                "summary": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
-                "data": {
-                  "order_id": "ord_7Hk2",
-                  "charged": {
-                    "amount": "70.00",
-                    "currency": "USD"
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "author": {
+                      "type": "human"
+                    },
+                    "text": "Where is my jacket order?",
+                    "role": "user"
                   }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_2",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "I can look that up once you sign in to your Manzanita account."
+                  }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "authorization",
+                  "error": "insufficient_scope",
+                  "scope": "orders:read orders:write"
+                },
+                {
+                  "id": "evt_5",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_3",
+                    "author": {
+                      "type": "human"
+                    },
+                    "text": "Exchange it for something warmer",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_7",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_4",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        }
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_9",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_10",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_5",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1"
+                    },
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_11",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_12",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_6",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
+                    "data": {
+                      "order_id": "ord_7Hk2",
+                      "charged": {
+                        "amount": "70.00",
+                        "currency": "USD"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "evt_13",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
-              }
+              ],
+              "cursor": "evt_13",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
             }
           }
         }
@@ -947,8 +1059,8 @@
     },
     {
       "title": "Ada disconnects Atlas",
-      "channel": "Account Token revocation",
-      "summary": "Atlas revokes the Account Token at Manzanita, then forgets it. Every Session signed in with it continues signed out.",
+      "channel": "Refresh token revocation",
+      "summary": "Atlas revokes the refresh token at Manzanita, then forgets it. With no valid refresh token left, the account is signed out.",
       "chat": [
         {
           "speaker": "user",
@@ -983,23 +1095,23 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
             "value": "A pairwise identifier only"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 0 not revoked"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 9 events"
+            "value": "idle · agent · 13 events"
           },
           {
             "label": "Operation orders.exchange",
-            "value": "revision 1 · succeeded · approved by user"
+            "value": "revision rev_1 · performed"
           }
         ]
       },
@@ -1023,7 +1135,7 @@
               "accept": "application/json"
             },
             "body": {
-              "token": "‹account token›",
+              "token": "‹refresh token›",
               "token_type_hint": "refresh_token",
               "client_id": "https://atlas.example/agent.json",
               "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",

@@ -30,7 +30,7 @@
     {
       "title": "Atlas finds Manzanita",
       "channel": "Discovery + Session",
-      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "summary": "Atlas reads Manzanita's protected resource metadata, public poppy.json and OAuth metadata. A Session is local: Atlas chooses a random sid for Ada's pairwise User ID, and no request is sent. Manzanita verifies Atlas's delegation at its first request.",
       "chat": [
         {
           "speaker": "user",
@@ -46,7 +46,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -60,15 +60,11 @@
         "manzanita": [
           {
             "label": "Verified client",
-            "value": "atlas.example/agent.json"
+            "value": "None yet"
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
-          },
-          {
-            "label": "Who is it?",
-            "value": "A pairwise identifier only"
+            "value": "None"
           }
         ]
       },
@@ -97,22 +93,6 @@
               },
               "auth": {
                 "issuer": "https://manzanita.example",
-                "mediated": {
-                  "endpoint": "https://manzanita.example/poppy/sign-in",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                },
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
                   "orders:write": "Exchange or return items in your orders"
@@ -159,10 +139,49 @@
               },
               "extensions": {
                 "operations": {
+                  "version": "2"
+                },
+                "mediated-sign-in": {
                   "version": "1",
-                  "endpoint": "https://manzanita.example/poppy/operations"
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
                 }
               }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-protected-resource",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "resource": "https://manzanita.example",
+              "authorization_servers": ["https://manzanita.example"],
+              "scopes_supported": ["orders:read", "orders:write"],
+              "bearer_methods_supported": ["header"]
             }
           }
         },
@@ -187,115 +206,19 @@
               "token_endpoint": "https://manzanita.example/oauth/token",
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "grant_types_supported": [
-                "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 "refresh_token",
                 "authorization_code",
-                "urn:ietf:params:oauth:grant-type:device_code"
+                "urn:ietf:params:oauth:grant-type:device_code",
+                "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
               "scopes_supported": ["orders:read", "orders:write"],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
               ],
-              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
               "device_1": "https://manzanita.example/oauth/device"
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/oauth/token",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-              "assertion": "‹session assertion›",
-              "client_id": "https://atlas.example/agent.json",
-              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-              "client_assertion": "‹client assertion›"
-            },
-            "encoding": "form"
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json",
-              "cache-control": "no-store"
-            },
-            "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
-              "expires_in": 3600
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
             }
           }
         }
@@ -325,7 +248,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -343,7 +266,7 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
@@ -371,8 +294,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -441,6 +363,67 @@
         },
         {
           "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
@@ -450,8 +433,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -490,7 +472,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -508,7 +490,7 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
@@ -536,8 +518,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -581,7 +562,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -599,7 +580,7 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
@@ -627,8 +608,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {}
           },
@@ -654,8 +634,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {}
           },
@@ -691,7 +670,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -709,7 +688,7 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
+            "value": "1 live"
           },
           {
             "label": "Who is it?",
@@ -737,8 +716,7 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "poppy-session": "‹Session JWT›"
             },
             "body": {}
           },
