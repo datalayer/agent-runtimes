@@ -125,9 +125,13 @@ jobs:
           uv venv "$RUNNER_TEMP/harbor"
           uv pip install --python "$RUNNER_TEMP/harbor/bin/python" "harbor==$version"
 
+      # What a task's own Dockerfile starts from, so those tests run rather than skip.
+      - name: Pull the task image
+        run: docker pull python:3.12-slim
+
       - name: Run the adapter tests
         env:
           DATALAYER_INSPECT_AI_PYTHON: ${{ runner.temp }}/inspect/bin/python
           DATALAYER_INSPECT_AI_TIKTOKEN_CACHE: ${{ runner.temp }}/tiktoken
           DATALAYER_HARBOR_PYTHON: ${{ runner.temp }}/harbor/bin/python
-        run: pytest agent_runtimes/tests/test_evals_adapters.py agent_runtimes/tests/test_evals_adapters_sandbox.py agent_runtimes/tests/test_evals_adapters_inspect.py agent_runtimes/tests/test_evals_adapters_harbor.py agent_runtimes/tests/test_evals_adapters_command.py
+        run: pytest agent_runtimes/tests/test_evals_adapters.py agent_runtimes/tests/test_evals_adapters_environments.py agent_runtimes/tests/test_evals_adapters_relay.py agent_runtimes/tests/test_evals_adapters_harbor_docker.py agent_runtimes/tests/test_evals_adapters_harbor_sources.py agent_runtimes/tests/test_evals_adapters_sandbox.py agent_runtimes/tests/test_evals_adapters_inspect.py agent_runtimes/tests/test_evals_adapters_harbor.py agent_runtimes/tests/test_evals_adapters_command.py

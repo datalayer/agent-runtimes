@@ -85,6 +85,7 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
         "job": job or {},
         "dataset": _dataset(source, tasks),
         "remote": _remote(job or {}),
+        "custom_agents": _custom_agents(job or {}, source),
         "origin": json.loads(origin.read_text()) if origin.exists() else {},
     }
 
@@ -122,6 +123,24 @@ def _dataset(source: Path, tasks: list[dict[str, Any]]) -> dict[str, Any]:
         "description": manifest.dataset.description or "",
         "tasks": refs,
     }
+
+
+def _custom_agents(job: dict[str, Any], source: Path) -> dict[str, dict[str, Any]]:
+    """A job's own agents: the file each names, and whether the source holds it."""
+    agents = {}
+    for item in job.get("agents") or []:
+        path = str(item.get("import_path") or "")
+        if path:
+            module = path.split(":", 1)[0].replace(".", "/") + ".py"
+            held = [
+                found.relative_to(source).parent.as_posix()
+                for found in sorted(source.rglob(module))
+            ]
+            agents[str(item.get("name") or path)] = {
+                "import_path": path,
+                "folder": held[0] if held else "",
+            }
+    return agents
 
 
 def _remote(job: dict[str, Any]) -> list[str]:
@@ -164,11 +183,22 @@ async def _trial(request: dict[str, Any]) -> dict[str, Any]:
     from harbor.trial.trial import Trial
 
     source = Path(request["source"])
+    custom = dict(request.get("custom_agent") or {})
+    if custom:
+        # The source's own agent, in this sandbox: its file was found at inspection.
+        sys.path.insert(0, str(source / custom["folder"]))
     config = TrialConfig(
         task=TaskConfig(path=source / request["entry_point"]),
         trial_name=f"attempt-{request['attempt']}",
         trials_dir=Path("trials").resolve(),
-        agent=AgentConfig(name=request["agent"], **agent_arguments(request)),
+        agent=AgentConfig(
+            **(
+                {"import_path": custom["import_path"]}
+                if custom
+                else {"name": request["agent"]}
+            ),
+            **agent_arguments(request),
+        ),
         environment=EnvironmentConfig(
             import_path=f"_harbor_environment:{'TaskEnvironment' if request.get('task_environment') else 'SandboxEnvironment'}"
         ),

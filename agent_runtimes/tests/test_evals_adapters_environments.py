@@ -57,6 +57,8 @@ IMAGE = "python:3.12-slim"
 #: A layered image to run the same trials in, as the contract's user. One a
 #: build made; the plain image stands for the sandbox without it.
 TASK_IMAGE = os.environ.get("DATALAYER_TASK_ENVIRONMENT_IMAGE", IMAGE)
+#: An image a test built from a task's own Dockerfile, named as the ingress.
+BUILT = "evals-task-image:"
 
 
 def _docker_ready() -> bool:
@@ -252,7 +254,9 @@ class DockerBackend:
                 "none",
                 "--name",
                 self.name,
-                TASK_IMAGE,
+                reference.ingress
+                if reference.ingress.startswith(BUILT)
+                else TASK_IMAGE,
                 "sleep",
                 "300",
             ],

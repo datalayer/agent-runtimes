@@ -92,6 +92,18 @@ ANTHROPIC_AGENT = "claude-code"
 #: Where it finds the route, from the adapter's sandbox: the relay.
 ANTHROPIC_URL = f"http://127.0.0.1:{INFERENCE_PORT}/anthropic"
 
+#: What a trial leaves that is kept as its evidence, beside what it was asked for.
+KEPT_TRIAL_FILES = frozenset(
+    {
+        "result.json",
+        "trial.log",
+        "test-stdout.txt",
+        "test-stderr.txt",
+        "reward.json",
+        "reward.txt",
+        "trajectory.json",
+    }
+)
 #: Agents that call no model.
 NO_MODEL_AGENTS = frozenset({"oracle", "nop"})
 #: Why an agent is refused, for the ones whose way to a model has been read in
@@ -128,6 +140,24 @@ def _refused(component: str, kind: str, code: str, reason: str) -> Capability:
     """A component that stops a launch."""
     return Capability(
         component=component, kind=kind, status="unsupported", code=code, reason=reason
+    )
+
+
+def _custom_capability(name: str, agent: Mapping[str, Any]) -> Capability:
+    """A job's own agent: code of the source, run in the sandbox like its tasks.
+
+    Its one way to a model is the relay, so it can be run; a file the source
+    does not hold is something else's code, and cannot.
+    """
+    if agent.get("folder"):
+        return Capability(
+            component=f"agent:{name}", kind="agent", status="framework-run"
+        )
+    return _refused(
+        f"agent:{name}",
+        "agent",
+        "agent_not_in_source",
+        f"The agent {name} names {agent.get('import_path')}, and the source does not hold that file.",
     )
 
 
@@ -421,6 +451,7 @@ class HarborAdapter(ExternalAdapter):
                 "agents": agents,
                 "n_attempts": int(job.get("n_attempts") or 1),
                 "dataset": dataset,
+                "custom_agents": dict(found.get("custom_agents") or {}),
                 "remote": list(found.get("remote") or []),
                 "origin": dict(found.get("origin") or {}),
             },
@@ -436,6 +467,7 @@ class HarborAdapter(ExternalAdapter):
             configuration.get("tasks") or [],
             configuration.get("agents") or [],
             grant=grant,
+            custom=dict(configuration.get("custom_agents") or {}),
         )
 
     def _agent_on_task(
@@ -461,10 +493,17 @@ class HarborAdapter(ExternalAdapter):
         agents: list[str],
         *,
         grant: LaunchGrant | None,
+        custom: Mapping[str, Any] | None = None,
     ) -> list[Capability]:
         """What a launch would meet, under what it grants."""
+        custom = custom or {}
         capabilities = [item for task in tasks for item in _task_capabilities(task)]
-        capabilities += [_agent_capability(agent) for agent in agents]
+        capabilities += [
+            _custom_capability(agent, custom[agent])
+            if agent in custom
+            else _agent_capability(agent)
+            for agent in agents
+        ]
         capabilities += [
             item for agent in agents for item in self._agent_on_task(agent, tasks)
         ]
@@ -510,6 +549,11 @@ class HarborAdapter(ExternalAdapter):
                 raise ValueError(
                     f"{model} is not one of ai-inference's models: every model call goes through it"
                 )
+        custom = set(agents) & set(configuration.get("custom_agents") or {})
+        if custom and not selection.models:
+            raise ValueError(
+                f"the agent {sorted(custom)[0]} needs a model of the catalogue"
+            )
         if ANTHROPIC_AGENT in agents and not any(
             model.startswith("bedrock:") for model in selection.models
         ):
@@ -571,6 +615,7 @@ class HarborAdapter(ExternalAdapter):
                     ],
                     "agents": agents,
                     "dataset": dict(configuration.get("dataset") or {}),
+                    "custom_agents": dict(configuration.get("custom_agents") or {}),
                     "remote": list(configuration.get("remote") or []),
                     "origin": dict(configuration.get("origin") or {}),
                     "models": list(selection.models),
@@ -593,7 +638,8 @@ class HarborAdapter(ExternalAdapter):
         environments = {
             str(task["path"]): spec for task in tasks if (spec := _buildable(task))
         }
-        calls_models = ANTHROPIC_AGENT in agents
+        custom = dict(configuration.get("custom_agents") or {})
+        calls_models = ANTHROPIC_AGENT in agents or bool(set(agents) & set(custom))
         policy = replace(
             self.default_policy,
             network="inference" if calls_models or environments else "none",
@@ -606,14 +652,18 @@ class HarborAdapter(ExternalAdapter):
             policy=policy_to(policy),
             capabilities=_source_capabilities(configuration)
             + self._capabilities(
-                list(configuration.get("tasks") or []), agents, grant=grant
+                list(configuration.get("tasks") or []),
+                agents,
+                grant=grant,
+                custom=custom,
             ),
             resolved_configuration={
                 "attempts": attempts,
                 "aggregation": dict(configuration.get("aggregation") or {}),
                 "task_environments": environments,
                 "environment_only": not calls_models,
-                "anthropic": calls_models and _anthropic_route(),
+                "anthropic": ANTHROPIC_AGENT in agents and _anthropic_route(),
+                "custom_agents": custom,
             },
             reproduction=self._reproduction(
                 definition, agents=agents, attempts=attempts
@@ -650,6 +700,8 @@ class HarborAdapter(ExternalAdapter):
     ) -> RawResult:
         """Run one attempt of one task, and keep what the verifier left."""
         subject = dict(trial.configuration.get("subject") or {})
+        customs = dict(plan.resolved_configuration.get("custom_agents") or {})
+        custom = dict(customs.get(str(subject.get("agent") or "")) or {})
         outcome = self._run(
             {
                 "op": "execute",
@@ -657,7 +709,10 @@ class HarborAdapter(ExternalAdapter):
                 "entry_point": trial.entry_point,
                 "attempt": trial.attempt,
                 "agent": str(subject.get("agent") or ""),
-                "model": _agent_model(str(subject.get("model") or "")),
+                "model": str(subject.get("model") or "")
+                if custom
+                else _agent_model(str(subject.get("model") or "")),
+                "custom_agent": custom,
                 "task_environment": bool(
                     (plan.resolved_configuration.get("task_environments") or {}).get(
                         trial.entry_point
@@ -681,15 +736,10 @@ class HarborAdapter(ExternalAdapter):
                 )
                 for path in sorted((workdir / "trials").rglob("*"))
                 if path.is_file()
-                and path.name
-                in {
-                    "result.json",
-                    "trial.log",
-                    "test-stdout.txt",
-                    "test-stderr.txt",
-                    "reward.json",
-                    "reward.txt",
-                }
+                and (
+                    path.name in KEPT_TRIAL_FILES
+                    or "artifacts" in path.relative_to(workdir).parts
+                )
             ]
             if (workdir / "trials").exists()
             else []

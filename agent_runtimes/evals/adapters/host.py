@@ -348,7 +348,10 @@ class AdapterHost:
                     failure_mode=f"sandbox_{exceeded.bound}_exceeded",
                 )
             try:
-                return _redacted(chosen.normalize_result(trial, raw, plan=plan), hidden)
+                return _redacted(
+                    _with_usage(chosen.normalize_result(trial, raw, plan=plan), relay),
+                    hidden,
+                )
             except Exception as error:  # noqa: BLE001 - what a framework left is data; it may be anything
                 return NormalizedResult(
                     status="failed",
