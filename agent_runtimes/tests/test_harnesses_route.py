@@ -64,3 +64,16 @@ def test_one_harness_is_answered_and_an_unknown_one_refused_in_a_sentence(
     assert not_offered.json()["detail"].startswith(
         "The harness 'goose' (goose) is not offered: the catalogue offers four harnesses today"
     )
+
+
+def test_on_datalayer_only_what_goes_through_ai_inference_is_offered(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+    listed = {item["id"] for item in client.get("/api/v1/harnesses").json()["harnesses"]}
+    assert listed == {"claude-code", "opencode", "pi"}
+    refused = client.get("/api/v1/harnesses/codex")
+    assert refused.status_code == 404
+    assert "not offered on Datalayer" in refused.json()["detail"]
+    assert "Responses API" in refused.json()["detail"]

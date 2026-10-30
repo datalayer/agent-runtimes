@@ -212,20 +212,22 @@ def harness_environment(
     ``environment`` is a refusal in a sentence: the harness would start and
     fail at its first model call, after the session was opened.
 
-    On Datalayer, a harness whose model calls go through ai-inference
-    (``adapters.harness_inference``: Claude Code) is not given its key: it is
-    given ai-inference's Anthropic route as ``ANTHROPIC_BASE_URL`` and the
-    runtime's ai-inference token as ``ANTHROPIC_AUTH_TOKEN`` (set again when
-    the harness starts, :meth:`ACPAgent.initialize`, since a runtime is given
-    its token when it is assigned).
+    On Datalayer, a harness is given no key: its model calls go through
+    ai-inference (``adapters.harness_inference``), with the runtime's
+    ai-inference token (set again when the harness starts,
+    :meth:`ACPAgent.initialize`, since a runtime is given its token when it is
+    assigned), or it is refused in a sentence. Elsewhere it takes the person's
+    own key from the environment, as its spec declares.
     """
     from agent_runtimes.adapters import harness_inference
 
     source = os.environ if environment is None else environment
+    refused = harness_inference.refusal(harness, source)
+    if refused:
+        raise HarnessRefused(refused)
     given: dict[str, str] = dict(harness.acp.env) if harness.acp else {}
     route = harness_inference.route_of(harness.id, source)
-    routed = route.secret if route else None
-    required = [name for name in harness.requires.secrets if name != routed]
+    required = [] if route else [str(name) for name in harness.requires.secrets]
     missing = [name for name in required if not source.get(name)]
     if missing:
         raise HarnessRefused(
@@ -241,6 +243,7 @@ def harness_environment(
     if asking:
         given[asking[0]] = asking[1]
     if route:
+        given.update(harness_inference.fixed_environment(harness.id, route))
         given[route.base_url_variable] = harness_inference.base_url(route, source)
         token, _ = harness_inference.routed_token()
         if token:
@@ -1089,16 +1092,25 @@ class ACPAgent(BaseAgent, ShieldProxy):
             raise HarnessRefused(
                 f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}{after}"
             )
-        self.agent_env[route.token_variable] = token
-        if route.config_variable:
-            from agent_runtimes.models.models import app_instance_of, app_usage_headers
+        from agent_runtimes.models.models import app_instance_of, app_usage_headers
 
-            # Each call metered under the application and deployment served.
+        self.agent_env[route.token_variable] = token
+        # Each call metered under the application and deployment served.
+        headers = app_usage_headers(app_instance_of(self._agent_id))
+        base_url = self.agent_env[route.base_url_variable]
+        if route.config_variable:
             self.agent_env[route.config_variable] = harness_inference.inline_config(
-                route,
-                self.agent_env[route.base_url_variable],
-                token,
-                headers=app_usage_headers(app_instance_of(self._agent_id)),
+                route, base_url, token, headers=headers
+            )
+        if route.directory_variable:
+            self.agent_env[route.directory_variable] = str(
+                harness_inference.write_config_directory(
+                    route, self.workspace, base_url, headers=headers
+                )
+            )
+        if route.headers_variable and headers:
+            self.agent_env[route.headers_variable] = harness_inference.custom_headers(
+                headers
             )
 
     async def initialize(self) -> None:
@@ -1129,7 +1141,6 @@ class ACPAgent(BaseAgent, ShieldProxy):
             await self.stop_agent()
             raise HarnessRefused(" ".join(problems))
         self.advertised = answer
-        await self._authenticate_routed(channel, answer)
         agent = answer.agent_info
         logger.info(
             "Harness %s started: %s %s, shield %s, workspace %s",
@@ -1139,50 +1150,6 @@ class ACPAgent(BaseAgent, ShieldProxy):
             shield_version,
             self.workspace,
         )
-
-    async def _authenticate_routed(self, channel: Any, answer: Any) -> None:
-        """Authenticate a routed harness that needs it, with the routed credential.
-
-        Codex (codex-acp) opens no session before ``authenticate`` and does not
-        read ``OPENAI_BASE_URL``: routed through ai-inference it is
-        authenticated with codex-acp's ``gateway`` method — a custom provider
-        whose ``baseUrl`` is ai-inference's OpenAI route and whose
-        ``Authorization`` header carries the runtime's token (META_HARNESS
-        decision Y). Another method is asked only when the harness offers it.
-        """
-        from agent_runtimes.adapters import harness_inference
-
-        route = harness_inference.ROUTES.get(self.harness.id)
-        if (
-            route is None
-            or not route.auth_method
-            or route.base_url_variable not in self.agent_env
-        ):
-            return
-        params: dict[str, Any] = {"methodId": route.auth_method}
-        if route.auth_method == "gateway":
-            token = self.agent_env.get(route.token_variable, "")
-            params["_meta"] = {
-                "gateway": {
-                    "baseUrl": self.agent_env[route.base_url_variable],
-                    "headers": {"Authorization": f"Bearer {token}"},
-                    "providerName": "Datalayer",
-                }
-            }
-        else:
-            offered = {
-                str(getattr(method, "id", "") or "")
-                for method in (getattr(answer, "auth_methods", None) or [])
-            }
-            if route.auth_method not in offered:
-                return
-        try:
-            await channel.request("authenticate", params)
-        except Exception as exc:
-            await self.stop_agent()
-            raise HarnessRefused(
-                f"{self.harness.name} refused its {route.auth_method} authentication through ai-inference: {exc}"
-            ) from None
 
     async def cleanup(self) -> None:
         """Cancel every open turn and end the harness's process."""
@@ -2279,8 +2246,13 @@ def acp_harness_agent(
     """
     from agentspecs.harnesses import admission_id
 
+    from agent_runtimes.adapters import harness_inference
     from agent_runtimes.guardrails.organization_harnesses import admission_refusal
 
+    # Before anything is lent or cloned for it.
+    not_offered = harness_inference.refusal(harness, environment)
+    if not_offered:
+        raise HarnessRefused(not_offered)
     admitted_as = admission_id(harness) if organization_uid else ""
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
