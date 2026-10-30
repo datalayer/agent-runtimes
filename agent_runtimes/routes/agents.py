@@ -27,6 +27,7 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..apps.today import today_instruction
 from ..capabilities import (
     LLMContextUsageCapability,
     ToolApprovalConfig,
@@ -2700,7 +2701,8 @@ async def create_agent(
             usage_limits = apply_model_output_tokens_limit(usage_limits, request.model)
 
             agent_kwargs: dict[str, Any] = {
-                "instructions": final_system_prompt,
+                # The date per run: a kept runtime outlives the day it started.
+                "instructions": [final_system_prompt, today_instruction],
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             if capabilities:

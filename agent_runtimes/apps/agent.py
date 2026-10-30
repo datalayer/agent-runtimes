@@ -43,6 +43,7 @@ from agent_runtimes.apps.frames import (
 from agent_runtimes.apps.guards import AppChecks, AppChecksCapability
 from agent_runtimes.apps.guards import Ask as CheckAsk
 from agent_runtimes.apps.loading import AppNotRunnable
+from agent_runtimes.apps.today import today_instruction
 from agent_runtimes.apps.plugins import rules_for
 from agent_runtimes.apps.record import AppRecordCapability, AppRecorder
 from agent_runtimes.types import Agentspec, AppSpec
@@ -382,11 +383,11 @@ def _agent_from_spec(
     # Cog's, its Frames included), its contexts, then the application's.
     frames = frames_instructions(app.context, organization or NO_ORGANIZATION)
     parts = [spec.system_prompt if spec else "", frames, app.instructions or ""]
-    instructions = "\n\n".join(part for part in parts if part) or None
+    instructions = "\n\n".join(part for part in parts if part)
     provider = spec.inference_provider if spec is not None else None
     return Agent(
         resolve_model_for_inference_provider(model, provider),
-        instructions=instructions,
+        instructions=[instructions, today_instruction] if instructions else today_instruction,
     )
 
 
