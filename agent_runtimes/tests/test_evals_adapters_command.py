@@ -16,7 +16,12 @@ from typer.testing import CliRunner
 
 from agent_runtimes.__main__ import app
 from agent_runtimes.commands import evals as evals_commands
-from agent_runtimes.evals.adapters.base import AdapterPlan, ExternalDefinition
+from agent_runtimes.evals.adapters.base import (
+    AdapterPlan,
+    ExternalDefinition,
+    LaunchGrant,
+)
+from agent_runtimes.evals.adapters.registry import adapter
 from agent_runtimes.evals.adapters.source import (
     content_digest,
     pack_source,
@@ -206,6 +211,15 @@ def test_a_source_packs_to_the_same_bytes_every_time(tmp_path):
         path.name for path in (tmp_path / "out").rglob("*") if path.is_file()
     ) == ["a.py", "b.txt"]
     assert content_digest(tmp_path / "out")
+
+
+def test_the_golden_plan_is_what_the_adapter_plans_today(monkeypatch):
+    """A field a plan gains fails here, rather than in the service that reads it."""
+    monkeypatch.delenv("DATALAYER_INSPECT_AI_SANDBOXES", raising=False)
+    golden = json.loads(GOLDEN.read_text())
+    definition = ExternalDefinition(**golden["external_definition"])
+    plan = adapter("inspect-ai").plan(definition, grant=LaunchGrant(tools=["add"]))
+    assert plan.model_dump() == golden["external_plan"]
 
 
 def test_the_golden_record_is_the_contracts():

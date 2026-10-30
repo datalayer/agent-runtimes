@@ -101,6 +101,7 @@
       "max_files": 20000,
       "memory_bytes": 8589934592,
       "network": "inference",
+      "root_dirs": [],
       "secrets": [],
       "wall_seconds": 1800
     },
@@ -110,8 +111,10 @@
       "approved_tools": [
         "add"
       ],
+      "environment_only": false,
       "max_samples": 1,
-      "task_args": {}
+      "task_args": {},
+      "task_environments": {}
     }
   }
 }
