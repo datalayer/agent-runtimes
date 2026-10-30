@@ -419,6 +419,7 @@ def transcript_of_spans(
                     text=tool,
                     open=in_progress,
                     failed=failed,
+                    ended=None if in_progress else end,
                 )
             )
             continue
@@ -438,6 +439,7 @@ def transcript_of_spans(
                     kind=ASKED,
                     text=request,
                     open=in_progress,
+                    ended=None if in_progress else end,
                 )
             )
             # What came back: the answer, or the last words of its events.
