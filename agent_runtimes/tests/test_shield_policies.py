@@ -128,6 +128,7 @@ def managed() -> Iterator[FakeIam]:
 @pytest.fixture
 def unmanaged(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
+    monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     managed_policies.use_source(None)
     yield
     session_rules().clear()
@@ -263,8 +264,9 @@ class TestManagedFromIam:
         assert not [r for r in caplog.records if "unmanaged" in r.getMessage()]
         managed_policies.use_source(None)
 
-
-    def test_the_account_key_is_read_before_a_token_that_lapses(self, monkeypatch) -> None:
+    def test_the_account_key_is_read_before_a_token_that_lapses(
+        self, monkeypatch
+    ) -> None:
         """A kept runtime lives for days: a user's token lapsed within the hour, IAM
         answered 401, and the Shield refused every action."""
         policies = runtime_policies()

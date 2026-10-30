@@ -19,7 +19,7 @@ class _Clock(datetime):
     now_is = datetime(2026, 10, 30, tzinfo=timezone.utc)
 
     @classmethod
-    def now(cls, tz=None):  # type: ignore[no-untyped-def,override]
+    def now(cls, tz=None):
         return cls.now_is
 
 
@@ -31,7 +31,9 @@ def test_the_date_is_read_on_each_run(monkeypatch) -> None:
         said.append(info.instructions or "")
         return ModelResponse(parts=[TextPart("done")])
 
-    agent = Agent(FunctionModel(answer), instructions=["Read the books.", today_instruction])
+    agent = Agent(
+        FunctionModel(answer), instructions=["Read the books.", today_instruction]
+    )
     agent.run_sync("hello")
     monkeypatch.setattr(_Clock, "now_is", datetime(2026, 11, 2, tzinfo=timezone.utc))
     agent.run_sync("hello")

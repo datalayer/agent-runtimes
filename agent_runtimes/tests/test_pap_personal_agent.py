@@ -209,6 +209,7 @@ async def test_other_terms_come_back_to_the_person(tmp_path: Path) -> None:
 async def test_an_expired_revision_is_not_asked(tmp_path: Path) -> None:
     surface = Surface(True)
     capability, operation, _, _ = await _journey(surface, tmp_path)
+    assert capability._reactor is not None
     clock = capability._reactor.get_contributions(CLOCKS)[0].value
     clock.advance(24 * 3600)
     expired = await capability.confirm(
@@ -221,7 +222,9 @@ async def test_an_expired_revision_is_not_asked(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_a_session_is_named_one_way_from_its_sid(tmp_path: Path) -> None:
     capability, _, _, _ = await _journey(Surface(True), tmp_path)
-    sid = capability._links[("ada", DOMAIN)].session.sid
+    session = capability._links[("ada", DOMAIN)].session
+    assert session is not None
+    sid = session.sid
     shown = capability.session_of(DOMAIN, user_id="ada")
     assert shown == {
         "ref": hashlib.sha256(sid.encode()).hexdigest()[:12],

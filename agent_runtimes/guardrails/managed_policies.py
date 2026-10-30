@@ -166,7 +166,10 @@ class RuntimePolicies:
         if self._source_override is not None:
             return self._source_override
         credential = (
-            os.environ.get(API_KEY_VARIABLE) or token or os.environ.get(TOKEN_VARIABLE) or ""
+            os.environ.get(API_KEY_VARIABLE)
+            or token
+            or os.environ.get(TOKEN_VARIABLE)
+            or ""
         ).strip()
         if not credential:
             return None

@@ -103,7 +103,7 @@ dependencies = [
     # the environments client is typed with (D-14), in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
-    "code-sandboxes>=1.10.0",
+    "code-sandboxes>=1.11.0",
     "croniter",
     # Web Bot Auth's signature bases (PR-20): RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.

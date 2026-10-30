@@ -259,9 +259,9 @@ def test_the_blank_agent_is_built_here_and_says_only_the_applications_words() ->
         instructions="You are Echo Desk. You repeat what you are told.",
     )
     agent = local_agent(app.spec)
-    assert [i.instruction for i in agent._instructions] == [
-        "You are Echo Desk. You repeat what you are told."
-    ]
+    assert [
+        i.instruction for i in agent._instructions if isinstance(i.instruction, str)
+    ] == ["You are Echo Desk. You repeat what you are told."]
 
 
 async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a_step() -> (

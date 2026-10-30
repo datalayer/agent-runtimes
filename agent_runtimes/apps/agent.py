@@ -43,9 +43,9 @@ from agent_runtimes.apps.frames import (
 from agent_runtimes.apps.guards import AppChecks, AppChecksCapability
 from agent_runtimes.apps.guards import Ask as CheckAsk
 from agent_runtimes.apps.loading import AppNotRunnable
-from agent_runtimes.apps.today import today_instruction
 from agent_runtimes.apps.plugins import rules_for
 from agent_runtimes.apps.record import AppRecordCapability, AppRecorder
+from agent_runtimes.apps.today import today_instruction
 from agent_runtimes.types import Agentspec, AppSpec
 
 #: How a host builds the agent an application runs, from its spec.
@@ -387,7 +387,9 @@ def _agent_from_spec(
     provider = spec.inference_provider if spec is not None else None
     return Agent(
         resolve_model_for_inference_provider(model, provider),
-        instructions=[instructions, today_instruction] if instructions else today_instruction,
+        instructions=[instructions, today_instruction]
+        if instructions
+        else today_instruction,
     )
 
 

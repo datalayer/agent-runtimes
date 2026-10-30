@@ -149,7 +149,11 @@ def test_the_loader_leaves_an_own_context_to_where_its_organization_is_known():
 def test_the_local_agent_is_told_its_contexts_between_its_prompt_and_the_application_s():
     app = load_app(APP)
     agent = local_agent(app, ACME)
-    written = "".join(part.instruction for part in agent._instructions)
+    written = "".join(
+        part.instruction
+        for part in agent._instructions
+        if isinstance(part.instruction, str)
+    )
     assert written.startswith("You are a concise writing specialist")
     assert "## Frames" in written and "Sign every answer Acme." in written
     assert written.endswith("\n\nWrite short.")

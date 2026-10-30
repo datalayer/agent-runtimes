@@ -1673,7 +1673,9 @@ class TestResolvingACatalogueHarness:
         assert config["web_search"] == "disabled"
         assert config["model_context_window"] > 0
         provider = config["model_providers"]["datalayer"]
-        assert provider["base_url"] == "https://r1.example/api/ai-inference/v1/openai/v1"
+        assert (
+            provider["base_url"] == "https://r1.example/api/ai-inference/v1/openai/v1"
+        )
         assert provider["env_key"] == "DATALAYER_AI_INFERENCE_TOKEN"
         assert provider["wire_api"] == "responses"
         assert provider["requires_openai_auth"] is False
@@ -1703,7 +1705,9 @@ class TestResolvingACatalogueHarness:
         agent._give_routed_token()
         assert list(tmp_path.iterdir()) == []
 
-    @pytest.mark.parametrize("harness_id", ["goose", "gemini-cli", "openhands", "fast-agent"])
+    @pytest.mark.parametrize(
+        "harness_id", ["goose", "gemini-cli", "openhands", "fast-agent"]
+    )
     def test_on_datalayer_a_harness_with_no_route_is_refused(
         self, harness_id: str
     ) -> None:

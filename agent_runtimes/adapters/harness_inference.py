@@ -459,9 +459,7 @@ def on_datalayer(environment: Mapping[str, str] | None = None) -> bool:
     )
 
 
-def refusal(
-    harness: Any, environment: Mapping[str, str] | None = None
-) -> str | None:
+def refusal(harness: Any, environment: Mapping[str, str] | None = None) -> str | None:
     """Why a harness is not offered here, in a sentence, or ``None`` when it is.
 
     On Datalayer a harness is served only when its model calls go through
