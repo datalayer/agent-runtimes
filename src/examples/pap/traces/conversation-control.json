@@ -3,7 +3,7 @@
   "title": "Conversation control",
   "description": "A Direct Conversation under an open one, a handoff to a person at Manzanita, and closing, through the real ConversationClient.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.27.0",
+  "sdk": "personal-agent-protocol 0.28.0",
   "parties": [
     {
       "id": "user",

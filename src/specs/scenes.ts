@@ -225,7 +225,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
         line: 'I search the imagery and tell you how the fields are doing.',
       },
       brief:
-        'Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person.',
+        'Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person. Do not question the audience: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that names a place and a period is enough: when it names no dataset, take the vegetation indices (MOD13Q1) and say that you did. A cue to save granules is searched like any other, and what you found is then a `choice` to approve, Save them · Not now; nothing is saved.',
     },
   ],
   setting: {
@@ -1220,7 +1220,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
         ],
         mustSay: ['accrual'],
         mustNotSay: ['I posted'],
-        within: '180s',
+        within: '300s',
       },
       {
         beat: 'expenses-by-month',
@@ -1741,7 +1741,7 @@ export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
     {
       from: 'agent',
       to: 'ada',
-      says: 'Its rule says Ask me first: it waits for Ada.',
+      says: 'Every operation is Ada’s to approve: it waits for her.',
       card: {
         kind: 'approval',
         title: 'Manzanita Outfitters asks you to confirm',

@@ -3,7 +3,7 @@
   "title": "Refresh tokens",
   "description": "Refresh, rotation, narrowing, re-consent, and revocation of the refresh token Atlas holds for Ada at Manzanita, which never leaves the host's vault.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.27.0",
+  "sdk": "personal-agent-protocol 0.28.0",
   "parties": [
     {
       "id": "user",

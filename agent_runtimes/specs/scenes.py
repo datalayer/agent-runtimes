@@ -212,7 +212,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "face": "🌾",
                     "line": "I search the imagery and tell you how the fields are doing.",
                 },
-                "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person.",
+                "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person. Do not question the audience: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that names a place and a period is enough: when it names no dataset, take the vegetation indices (MOD13Q1) and say that you did. A cue to save granules is searched like any other, and what you found is then a `choice` to approve, Save them · Not now; nothing is saved.",
             }
         ],
         "setting": {
@@ -1141,7 +1141,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                     ],
                     "must_say": ["accrual"],
                     "must_not_say": ["I posted"],
-                    "within": "180s",
+                    "within": "300s",
                 },
                 {
                     "beat": "expenses-by-month",
@@ -1583,7 +1583,7 @@ PAP_APPROVE_ONCE_SCENE_0_0_1 = SceneSpec.model_validate(
             {
                 "from": "agent",
                 "to": "ada",
-                "says": "Its rule says Ask me first: it waits for Ada.",
+                "says": "Every operation is Ada’s to approve: it waits for her.",
                 "card": {
                     "kind": "approval",
                     "title": "Manzanita Outfitters asks you to confirm",

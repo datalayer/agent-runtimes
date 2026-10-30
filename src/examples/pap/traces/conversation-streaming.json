@@ -3,7 +3,7 @@
   "title": "Conversation streaming",
   "description": "Atlas reads a Manzanita conversation over Server-Sent Events: display-only text deltas, complete message events, and a resume from Last-Event-ID.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.27.0",
+  "sdk": "personal-agent-protocol 0.28.0",
   "parties": [
     {
       "id": "user",

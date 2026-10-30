@@ -3,7 +3,7 @@
   "title": "A user with a company",
   "description": "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. Both sides are the PAP Python SDK's demo world: real keys and Session JWTs over in-process HTTP, recorded and redacted.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.27.0",
+  "sdk": "personal-agent-protocol 0.28.0",
   "parties": [
     {
       "id": "user",
