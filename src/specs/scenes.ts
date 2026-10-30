@@ -150,6 +150,11 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
       },
     ],
     within: '10m',
+    recording: {
+      path: 'coding-agent-behind-the-shield/recording.json',
+      taken: '2026-10-30',
+      note: 'Rehearsed on Datalayer on 30 October 2026: OpenCode read README.md and explained the repository; asked to edit it, the Shield refused the edit under the rule Change a file, and README.md was unchanged.',
+    },
     verified: {
       live: [],
       recorded: [],
@@ -170,6 +175,27 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
   lines: [],
   live: '',
   setup: ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+  played: {
+    at: '2026-10-30T06:00:14+00:00',
+    where: 'on Datalayer',
+    passed: true,
+    says: 'Rehearsal: 2 of 2 beats passed. The scene is Live.',
+    beats: [
+      {
+        beat: 'explain-a-file',
+        state: 'passed',
+        says: '',
+        seconds: 18.51475361300072,
+      },
+      {
+        beat: 'try-an-edit',
+        state: 'passed',
+        says: '',
+        seconds: 6.578561589999481,
+      },
+    ],
+    runtime: '1.5.80',
+  },
 };
 
 export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {

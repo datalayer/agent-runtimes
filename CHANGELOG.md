@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.95
+
+30 October 2026. Colours by palette name: a member, an agent or a team names a colour of primer-addons' palette (a role or one of its twenty hues) and it is drawn in the theme's own value, light or dark; a hex still works. Scenes: two more backdrops, `minimal` (glowing circles in each member's colour, no name, a dark ground) and `orb` (Datalayer's orb in each member's colour); on every backdrop a member's details open on hover and stay open on a click. The coding agent behind the Shield's recording. Needs agentspecs 0.0.140 and primer-addons 1.0.46.
+
 ## 1.5.94
 
 30 October 2026. OpenCode asks the Shield for every step: its configuration sets every tool to ask, by wildcard and by name, globally and on each of its own agents, on Datalayer and off it. OpenCode allows every tool by default, and a tool it allows never asks, so an edit the Shield refused could go through; now each read, edit and command is a permission request the Shield answers by the application's Rules. A scene's rehearsal over A2A names a harness's steps by their kind and title (*Read README.md*), matches their start and end by the call's id, and draws them on its workspace.

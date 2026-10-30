@@ -73,7 +73,7 @@ export const SCENE_SCHEMA: JsonSchema = {
     Backdrop: {
       description:
         'How a stage is drawn, wherever the scene plays: the same cast, systems and links, in another look.',
-      enum: ['studio', 'hero', 'plain', 'space'],
+      enum: ['studio', 'hero', 'plain', 'space', 'minimal', 'orb'],
       title: 'Backdrop',
       type: 'string',
     },
@@ -799,7 +799,7 @@ export const SCENE_SCHEMA: JsonSchema = {
           $ref: '#/$defs/Backdrop',
           default: 'studio',
           description:
-            "How the stage is drawn, here and wherever the scene plays: `studio`, characters with speech balloons and each message flowing along its line; `hero`, round faces on a deep tint, thin lines and a dot that flies with each message; `plain`, boxes and arrows that do not move, for a printout or a slide; `space`, glowing marks on a dotted, meshed ground, luminous lines and a light that flows with each message, as the site's hero drawings",
+            "How the stage is drawn, here and wherever the scene plays: `studio`, characters with speech balloons and each message flowing along its line; `hero`, round faces on a deep tint, thin lines and a dot that flies with each message; `plain`, boxes and arrows that do not move, for a printout or a slide; `space`, glowing marks on a dotted, meshed ground, luminous lines and a light that flows with each message, as the site's hero drawings; `minimal`, glowing circles in each member's colour on a dark ground, nothing more; `orb`, each member Datalayer's orb in its own colour, swirling as it works, with luminous lines and a light that flows with each message",
         },
       },
       title: 'SceneStage',
