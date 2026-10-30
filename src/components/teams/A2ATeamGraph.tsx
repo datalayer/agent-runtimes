@@ -159,6 +159,12 @@ export type A2ATeamGraphProps = {
    */
   backdrop?: SceneBackdropId;
   /**
+   * The least height the graph takes, in pixels: a board it fills (the
+   * scene editor's Preview). The room beyond its own is shared above and
+   * below the members, so they stand in its middle. Unsaid, its own height.
+   */
+  minHeight?: number;
+  /**
    * The exchange selected in the transcript, as the edge it is on
    * (`selectedEdgeOf`, SCENES S3-02): drawn with a halo on every backdrop —
    * the edge by its id, or by its ends either way, since an answer travels
@@ -424,6 +430,7 @@ export function A2ATeamGraph({
   calls = [],
   balloonRoom,
   backdrop,
+  minHeight,
   selected,
   onSelectEdge,
 }: A2ATeamGraphProps): JSX.Element {
@@ -517,14 +524,21 @@ export function A2ATeamGraph({
     ),
   );
   const rowHeight = Math.max(memberHeight, reach);
-  const total = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
+  const own = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
+  // A board to fill: its extra room shared above and below the members.
+  const extra =
+    minHeight && minHeight > own * viewport.zoom
+      ? minHeight / viewport.zoom - own
+      : 0;
+  const top = room + extra / 2;
+  const total = own + extra;
   const height = Math.ceil(total * viewport.zoom);
   // Where each member is laid out, before it is moved.
   const layoutOf = (id: string): { x: number; y: number } => {
     const place = placing.places[id] ?? { column: 0, row: 0 };
     return {
       x: place.column * (NODE_WIDTH + GAP),
-      y: room + place.row * (rowHeight + ROW_GAP),
+      y: top + place.row * (rowHeight + ROW_GAP),
     };
   };
 
