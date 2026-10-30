@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.94
+
+30 October 2026. OpenCode asks the Shield for every step: its configuration sets every tool to ask, by wildcard and by name, globally and on each of its own agents, on Datalayer and off it. OpenCode allows every tool by default, and a tool it allows never asks, so an edit the Shield refused could go through; now each read, edit and command is a permission request the Shield answers by the application's Rules. A scene's rehearsal over A2A names a harness's steps by their kind and title (*Read README.md*), matches their start and end by the call's id, and draws them on its workspace.
+
 ## 1.5.93
 
 29 October 2026. OpenCode on Datalayer calls ai-inference's own chat completions: a `datalayer` provider on `@ai-sdk/openai-compatible` at ai-inference's v1 root, the catalogue's default model, the runtime's token, each call metered under the application and deployment it serves and paid in credits; no Anthropic key of the account's is read. An application may be lent one repository (`permissions.computer.repository`), checked out at a pinned commit as its harness's workspace, its commands decided by its Rules. A fourth scene backdrop, `space`. Needs agentspecs 0.0.138.
