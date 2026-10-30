@@ -6,7 +6,8 @@
 /**
  * The transcript as a table (SCENES S2-01), Primer's `DataTable`: time,
  * from → to, over A2A or MCP, kind, text, how long, state. Sortable by time
- * (an open call last among its ties), a failed row marked, a click on a row
+ * (an open call last among its ties) unless *Failed first* orders it, a
+ * failed row marked, a click on a row
  * or the button on its time selects its line.
  *
  * @module components/teams/transcript/TranscriptTable
@@ -38,6 +39,11 @@ export type TranscriptTableProps = TranscriptRowsLines & {
   emptyText?: string;
   /** How tall it grows before it scrolls, in pixels. */
   maxHeight?: number;
+  /**
+   * The lines come with what failed first ({@link filterLines}): the table
+   * keeps their order, and offers no sort by time until the option is off.
+   */
+  failedFirst?: boolean;
 };
 
 /** The state, as a label: failed in red, running in the accent, done quiet. */
@@ -89,7 +95,7 @@ function RowTime({ row }: { row: TranscriptRow }): JSX.Element {
   );
 }
 
-const COLUMNS: Column<TranscriptRow>[] = [
+const SORTED_COLUMNS: Column<TranscriptRow>[] = [
   {
     id: 'at',
     header: 'Time',
@@ -170,6 +176,11 @@ const COLUMNS: Column<TranscriptRow>[] = [
   },
 ];
 
+/** The columns while the rows keep the order they came in: no sort for the table to redo. */
+const GIVEN_ORDER_COLUMNS: Column<TranscriptRow>[] = SORTED_COLUMNS.map(
+  ({ sortBy: _sortBy, ...column }) => column,
+);
+
 /** The transcript as a table, with a click on a row or its button selecting its line. */
 export function TranscriptTable({
   lines,
@@ -177,6 +188,7 @@ export function TranscriptTable({
   onSelect,
   emptyText = 'What the scene says and does shows here, row by row.',
   maxHeight,
+  failedFirst = false,
 }: TranscriptTableProps): JSX.Element {
   const title = useId();
   const rows = useMemo(() => transcriptRows(lines), [lines]);
@@ -230,13 +242,19 @@ export function TranscriptTable({
           Transcript
         </Table.Title>
         <RowSelection.Provider value={selection}>
+          {/* Keyed: a table's sort is its own state, from when it is mounted. */}
           <DataTable
+            key={failedFirst ? 'given-order' : 'by-time'}
             aria-labelledby={title}
             data={rows}
-            columns={COLUMNS}
+            columns={failedFirst ? GIVEN_ORDER_COLUMNS : SORTED_COLUMNS}
             cellPadding="condensed"
-            initialSortColumn="at"
-            initialSortDirection="ASC"
+            {...(failedFirst
+              ? {}
+              : {
+                  initialSortColumn: 'at',
+                  initialSortDirection: 'ASC' as const,
+                })}
           />
         </RowSelection.Provider>
       </Table.Container>

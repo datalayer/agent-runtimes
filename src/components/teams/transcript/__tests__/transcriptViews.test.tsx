@@ -257,6 +257,28 @@ describe('TranscriptViews', () => {
     ).toHaveLength(1);
   });
 
+  it('keeps what failed first in the table, and in time order again without it', () => {
+    const { lines } = recorded(OPEN_AND_FAILED);
+    const { container } = draw(
+      <TranscriptViews lines={lines} members={MEMBERS} defaultView="table" />,
+    );
+    const order = () =>
+      [...container.querySelectorAll<HTMLElement>('[data-transcript-row]')].map(
+        row => row.dataset.transcriptRow,
+      );
+    const inTime = lines.map(line => line.key);
+    expect(order()).toEqual(inTime);
+    const first = container.querySelector('[data-transcript-failed-first]')!;
+    fireEvent.click(first);
+    expect(order()).toEqual([
+      'f2:asked',
+      'f2:said',
+      ...inTime.filter(key => !key.startsWith('f2:')),
+    ]);
+    fireEvent.click(first);
+    expect(order()).toEqual(inTime);
+  });
+
   it('opens a harness step refused by the Shield with its rule', () => {
     const { lines, spans } = recorded(HARNESS_STEPS);
     const { container } = draw(

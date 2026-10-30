@@ -390,6 +390,7 @@ export function TranscriptViews({
               maxHeight={maxHeight}
               selected={selectedKey}
               onSelect={select}
+              failedFirst={Boolean(filter.failedFirst)}
             />
           )}
           {shown === 'sequence' && (
