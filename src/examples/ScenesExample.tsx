@@ -440,7 +440,7 @@ function Scene({
             // Room for the balloons: suggestions, *more* and a notebook.
             balloonRoom={320}
             // Drawn as chosen above the tabs, else as the scene says:
-            // studio, hero, plain, space or minimal.
+            // studio, hero, plain, space, minimal or orb.
             backdrop={backdrop ?? stageBackdropOf(scene)}
             selected={selectedEdge}
             onSelectEdge={edge => {

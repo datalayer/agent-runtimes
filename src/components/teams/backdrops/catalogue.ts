@@ -18,13 +18,13 @@ import type { SceneBackdropId } from '../../../types/scenes';
 /** A backdrop as a chooser offers it. */
 export interface SceneBackdropChoice {
   id: SceneBackdropId;
-  /** `Studio`, `Hero`, `Plain`, `Space`, `Minimal`. */
+  /** `Studio`, `Hero`, `Plain`, `Space`, `Minimal`, `Orb`. */
   name: string;
   /** One line of what the stage looks like. */
   description: string;
 }
 
-/** The five backdrops, in a chooser's order: the drawing every scene had first. */
+/** The six backdrops, in a chooser's order: the drawing every scene had first. */
 export const SCENE_BACKDROP_CHOICES: readonly SceneBackdropChoice[] = [
   {
     id: 'studio',
@@ -54,6 +54,12 @@ export const SCENE_BACKDROP_CHOICES: readonly SceneBackdropChoice[] = [
     name: 'Minimal',
     description:
       'Glowing circles in each member’s colour on a dark ground, nothing more; hover or click one for its details.',
+  },
+  {
+    id: 'orb',
+    name: 'Orb',
+    description:
+      'Each member Datalayer’s orb in its own colour, swirling as it works; luminous lines, a light flowing with each message.',
   },
 ];
 

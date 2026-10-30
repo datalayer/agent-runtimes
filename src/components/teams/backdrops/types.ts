@@ -16,7 +16,8 @@
  * faces on a deep tint with a dot that flies with each message; `plain`,
  * boxes and arrows that do not move; `space`, glowing marks on a ground
  * of dots, grid, mesh and rings, as the site's hero drawings; `minimal`,
- * glowing circles in each member's colour on a dark ground.
+ * glowing circles in each member's colour on a dark ground; `orb`, each
+ * member Datalayer's orb in its own colour.
  *
  * @module components/teams/backdrops/types
  */
@@ -220,7 +221,7 @@ export interface SceneBackdropLayout {
 /** A backdrop: how a scene's stage is drawn. */
 export interface SceneBackdrop {
   id: SceneBackdropId;
-  /** `Studio`, `Hero`, `Plain`, `Space`, `Minimal`. */
+  /** `Studio`, `Hero`, `Plain`, `Space`, `Minimal`, `Orb`. */
   name: string;
   /** One line of what the stage looks like, for a chooser. */
   description: string;
@@ -246,8 +247,8 @@ export interface SceneBackdrop {
   figure: (member: SceneBackdropFace) => AssistantStageProps['character'];
 }
 
-/** What a face is made from: the member's id, name, emoji and character. */
+/** What a face is made from: the member's id, name, emoji and character, and its colour (`orb` tints its sphere with it). */
 export type SceneBackdropFace = Pick<
   A2ATeamGraphMember,
-  'id' | 'name' | 'emoji' | 'character'
+  'id' | 'name' | 'emoji' | 'character' | 'color'
 >;

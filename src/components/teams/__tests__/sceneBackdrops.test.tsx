@@ -38,12 +38,24 @@ import {
   SPACE_BACKDROP,
 } from '../backdrops/space';
 import { MINIMAL_BACKDROP } from '../backdrops/minimal';
+import { ORB_BACKDROP, mixHex } from '../backdrops/orb';
 import { edgeSelected } from '../A2ATeamGraph';
 import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
 import { getColorPalette, useThemeStore } from '@datalayer/primer-addons';
 import { appColorOf } from '../sceneStage';
 import { resolvePaletteColor } from '@datalayer/primer-addons';
+
+// The design library's orb, as a plain mark: the backdrop's own drawing is what is tested.
+vi.mock('@datalayer/design/lib/avatar/SvgAvatarOrb', () => ({
+  SvgAvatarOrb: ({
+    state,
+    palette,
+  }: {
+    state: string;
+    palette?: { spark: string };
+  }) => <svg data-avatar-orb-state={state} data-orb-spark={palette?.spark} />,
+}));
 
 beforeAll(() => {
   class Observer {
@@ -135,13 +147,14 @@ function Scene({
 }
 
 describe('the backdrops', () => {
-  it('are studio, hero, plain, space and minimal, studio first, with a name and a line each', () => {
+  it('are studio, hero, plain, space, minimal and orb, studio first, with a name and a line each', () => {
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.id)).toEqual([
       'studio',
       'hero',
       'plain',
       'space',
       'minimal',
+      'orb',
     ]);
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.name)).toEqual([
       'Studio',
@@ -149,6 +162,7 @@ describe('the backdrops', () => {
       'Plain',
       'Space',
       'Minimal',
+      'Orb',
     ]);
     for (const backdrop of SCENE_BACKDROPS) {
       expect(backdrop.description).toMatch(/\S/);
@@ -218,7 +232,7 @@ describe('the backdrops', () => {
     warn.mockRestore();
   });
 
-  it.each(['studio', 'hero', 'plain', 'space', 'minimal'] as const)(
+  it.each(['studio', 'hero', 'plain', 'space', 'minimal', 'orb'] as const)(
     'draw the same scene on %s: every member, its connection, and the links',
     backdrop => {
       const { container } = render(<Scene backdrop={backdrop} />);
@@ -264,6 +278,7 @@ describe('the backdrops', () => {
       'plain',
       'space',
       'minimal',
+      'orb',
     ] as const) {
       const { container, unmount } = render(
         <Scene backdrop={backdrop} flows={{ accounting: 'asking' }} />,
@@ -633,7 +648,7 @@ describe('a member’s details, on every backdrop', () => {
       fireEvent.keyDown(element, { key: 'Escape' });
     });
 
-  it.each(['studio', 'hero', 'plain', 'space'] as const)(
+  it.each(['studio', 'hero', 'plain', 'space', 'orb'] as const)(
     'on %s: the look at rest kept, the card peeking on hover of the figure or the name, kept by a click on the name, closed by Escape; the figure’s click still its balloon',
     backdrop => {
       const { container } = render(<Scene backdrop={backdrop} />);
@@ -723,6 +738,42 @@ describe('a member’s details, on every backdrop', () => {
       expect(told.hasAttribute('hidden'), backdrop).toBe(false);
       unmount();
     }
+  });
+});
+
+describe('the orb', () => {
+  it('draws each member as the design library’s orb, tinted by its own colour, loaded when first drawn', async () => {
+    const { container, findAllByText } = render(
+      <A2ATeamGraph
+        entry={member('sales', 'Sales', { color: '#0F766E' })}
+        peers={[member('accounting', 'Accounting')]}
+        links={[{ from: 'sales', to: 'accounting' }]}
+        connected
+        backdrop="orb"
+      />,
+    );
+    await findAllByText('Accounting');
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    const sales = container.querySelector(
+      '[data-team-member="sales"] [data-scene-orb]',
+    );
+    expect(sales?.getAttribute('data-scene-orb')).toBe('#0F766E');
+    expect(
+      sales?.querySelector('[data-orb-spark]')?.getAttribute('data-orb-spark'),
+    ).toBe('#0F766E');
+    // A member with no colour: the theme's orb.
+    expect(
+      container
+        .querySelector('[data-team-member="accounting"] [data-scene-orb]')
+        ?.getAttribute('data-scene-orb'),
+    ).toBe('theme');
+    expect(ORB_BACKDROP.figure(member('sales', 'Sales'))).toBe(
+      ORB_BACKDROP.figure(member('sales', 'Sales')),
+    );
+    expect(mixHex('#000000', '#ffffff', 0.5)).toBe('#808080');
+    expect(mixHex('rgb(1, 2, 3)', '#ffffff', 0.5)).toBe('rgb(1, 2, 3)');
   });
 });
 
@@ -883,7 +934,14 @@ describe('a member’s colour', () => {
   }
 
   it('is the theme’s value of its name, a hex as it is, nothing else', () => {
-    for (const backdrop of ['studio', 'hero', 'plain', 'space', 'minimal']) {
+    for (const backdrop of [
+      'studio',
+      'hero',
+      'plain',
+      'space',
+      'minimal',
+      'orb',
+    ]) {
       const { container, unmount } = render(<Colored backdrop={backdrop} />);
       const tone = (id: string) =>
         (

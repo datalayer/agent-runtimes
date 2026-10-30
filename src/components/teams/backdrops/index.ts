@@ -5,7 +5,7 @@
 
 /**
  * The backdrops a scene's stage is drawn with: `studio`, `hero`, `plain`,
- * `space`, `minimal` ({@link SCENE_BACKDROPS}, in a chooser's order), and the one an id
+ * `space`, `minimal`, `orb` ({@link SCENE_BACKDROPS}, in a chooser's order), and the one an id
  * names ({@link sceneBackdrop}: `studio` for none, and for an id the
  * graph does not know, said once in the console).
  *
@@ -18,6 +18,7 @@ import { HERO_BACKDROP } from './hero';
 import { PLAIN_BACKDROP } from './plain';
 import { SPACE_BACKDROP } from './space';
 import { MINIMAL_BACKDROP } from './minimal';
+import { ORB_BACKDROP } from './orb';
 
 export type {
   SceneBackdrop,
@@ -30,13 +31,14 @@ export type {
 export * from './catalogue';
 export { sceneStageSx } from './theme';
 
-/** The five backdrops, in a chooser's order: the drawing every scene had first. */
+/** The six backdrops, in a chooser's order: the drawing every scene had first. */
 export const SCENE_BACKDROPS: readonly SceneBackdrop[] = [
   STUDIO_BACKDROP,
   HERO_BACKDROP,
   PLAIN_BACKDROP,
   SPACE_BACKDROP,
   MINIMAL_BACKDROP,
+  ORB_BACKDROP,
 ];
 
 /** The backdrop of a scene that says none: every scene written before draws as before. */

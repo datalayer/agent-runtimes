@@ -177,13 +177,15 @@ export interface SceneStageSpec {
    * flies with each message; `plain`, boxes and arrows that do not move;
    * `space`, glowing marks on a dotted, meshed ground, as the site's hero
    * drawings, a light flowing along each line; `minimal`, glowing circles
-   * in each member's colour on a dark ground. `studio` when unsaid, so every scene written before draws as before.
+   * in each member's colour on a dark ground; `orb`, each member
+   * Datalayer's orb in its own colour. `studio` when unsaid, so every scene written before draws as before.
    */
   backdrop?: SceneBackdropId;
 }
 
 /** A backdrop, by its id (agentspecs `Backdrop`). */
-export type SceneBackdropId = 'studio' | 'hero' | 'plain' | 'space' | 'minimal';
+export type SceneBackdropId =
+  'studio' | 'hero' | 'plain' | 'space' | 'minimal' | 'orb';
 
 /** Who may watch and ask, and what an ask may cost. */
 export interface SceneAudienceSpec {
