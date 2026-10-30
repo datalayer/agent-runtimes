@@ -171,6 +171,8 @@ class LaunchGrant(_Record):
 
     network: Literal["none", "boundary"] = "none"
     secrets: list[str] = Field(default_factory=list)
+    #: The tools the launch approves, by name. Any other a framework calls is refused.
+    tools: list[str] = Field(default_factory=list)
 
 
 class Trial(_Record):
