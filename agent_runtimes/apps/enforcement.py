@@ -765,8 +765,8 @@ class AppRulesCapability(AbstractCapability[Any]):
         # asked, so that the person approves what goes out, as it goes out.
         args = self.signed(call.tool_name, args, decision)
         if decision.behaviour == IF_ASKED and self.granted is not None:
-            # *Do it if I asked* rests on what the person approved in advance
-            # , never on a reading of the conversation.
+            # *Do it if I asked* rests on what the person approved in advance,
+            # never on a reading of the conversation.
             approved = await self.granted(call.tool_name, args, decision)
             if approved is not None:
                 enforced = replace(enforced, approved=approved)

@@ -1660,8 +1660,7 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
 }
 
 /**
- * What is wrong with the protocols an application says it speaks
- *, as agentspecs says it: an id the catalogue does not
+ * What is wrong with the protocols an application says it speaks, as agentspecs says it: an id the catalogue does not
  * know or said twice, a planned protocol while it is offered, and a `pap`,
  * `pact`, `a2a` or `signed_fetch` block configuring a protocol it does not list.
  */

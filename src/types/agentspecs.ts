@@ -851,8 +851,7 @@ export interface AppPapExcludedTaskSpec {
 }
 
 /**
- * A company the application works with as a personal agent
- *: named by its domain, nothing else; what discovery
+ * A company the application works with as a personal agent: named by its domain, nothing else; what discovery
  * verifies is the deployment's, never the spec's.
  */
 export interface AppPapConnectionSpec {
@@ -924,8 +923,7 @@ export interface AppPapSpec {
 }
 
 /**
- * A business the application asks for each person over PACT 1.0
- *: its domain, and the audience its Provider
+ * A business the application asks for each person over PACT 1.0: its domain, and the audience its Provider
  * assigned. Always in each person's own name; never a credential.
  */
 export interface AppPactConnectionSpec {

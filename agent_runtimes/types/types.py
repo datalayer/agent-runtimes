@@ -3918,7 +3918,7 @@ class TeamSpec(BaseModel):
     #: How the team is meant to be coordinated once teams execute.
     #:
     #: Every value here names a protocol for which no adapter is registered
-    #: yet: `datalayer` is the durable control plane
+    #: yet: `datalayer` is the durable control plane,
     #: and `a2a` and `acp` its two adapters. The field is an intention until one of them lands, and the
     #: literal type is what keeps it from naming a protocol nobody is
     #: building — it used to be a free string defaulting to `datalayer`,
