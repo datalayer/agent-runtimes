@@ -40,6 +40,8 @@ import {
 import { edgeSelected } from '../A2ATeamGraph';
 import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
+import { getColorPalette, useThemeStore } from '@datalayer/primer-addons';
+import { appColorOf } from '../sceneStage';
 
 beforeAll(() => {
   class Observer {
@@ -728,5 +730,99 @@ describe('the selected exchange on the stage (S3-02)', () => {
       expect(halo?.getAttribute('d'), name).toBe('M 0,50 L 200,50');
       drawn.unmount();
     }
+  });
+});
+
+describe('a member’s colour', () => {
+  const palette = () => {
+    const { theme, colorMode } = useThemeStore.getState();
+    return getColorPalette(theme, colorMode);
+  };
+
+  function Colored({ backdrop }: { backdrop: string }) {
+    return (
+      <A2ATeamGraph
+        entry={member('sales', 'Sales', { emoji: '🤝', color: 'indigo' })}
+        peers={[
+          member('accounting', 'Accounting', {
+            emoji: '📒',
+            color: '#0F766E',
+            connections: [ODOO],
+          }),
+          member('shipping', 'Shipping', { color: 'navy' }),
+        ]}
+        links={[
+          { from: 'sales', to: 'accounting' },
+          { from: 'sales', to: 'shipping' },
+        ]}
+        connected
+        backdrop={backdrop as 'studio'}
+      />
+    );
+  }
+
+  it('is the theme’s value of its name, a hex as it is, nothing else', () => {
+    for (const backdrop of ['studio', 'hero', 'plain', 'space']) {
+      const { container, unmount } = render(<Colored backdrop={backdrop} />);
+      const tone = (id: string) =>
+        (
+          container.querySelector(`[data-team-member="${id}"]`) as HTMLElement
+        ).style.getPropertyValue('--scene-member');
+      expect(tone('sales'), backdrop).toBe(palette().indigo);
+      expect(tone('accounting'), backdrop).toBe('#0F766E');
+      expect(tone('shipping'), backdrop).toBe('');
+      unmount();
+    }
+  });
+
+  it('follows the mode', () => {
+    const before = useThemeStore.getState().colorMode;
+    try {
+      act(() => useThemeStore.setState({ colorMode: 'light' }));
+      const { container, unmount } = render(<Colored backdrop="space" />);
+      const sales = container.querySelector(
+        '[data-team-member="sales"]',
+      ) as HTMLElement;
+      expect(sales.style.getPropertyValue('--scene-member')).toBe(
+        getColorPalette(useThemeStore.getState().theme, 'light').indigo,
+      );
+      act(() => useThemeStore.setState({ colorMode: 'dark' }));
+      expect(sales.style.getPropertyValue('--scene-member')).toBe(
+        getColorPalette(useThemeStore.getState().theme, 'dark').indigo,
+      );
+      unmount();
+    } finally {
+      useThemeStore.setState({ colorMode: before });
+    }
+  });
+
+  it('draws the space’s line to a member in its colour', () => {
+    const drawn = render(
+      <ReactFlowProvider>
+        <LabelLayer />
+        <svg>
+          <SpaceLinkEdge
+            {...({
+              ...EDGE,
+              data: {
+                flow: 'still',
+                connected: true,
+                label: 'A2A',
+                selected: false,
+                color: '#0F766E',
+              },
+            } as unknown as React.ComponentProps<typeof SpaceLinkEdge>)}
+          />
+        </svg>
+      </ReactFlowProvider>,
+    );
+    expect(drawn.container.innerHTML).toContain('#0F766E');
+    expect(drawn.container.innerHTML).not.toContain('--scene-space-glow');
+  });
+
+  it('of an application is its agent’s', () => {
+    expect(appColorOf({ agent: '' })).toBeUndefined();
+    expect(appColorOf(undefined)).toBeUndefined();
+    expect(appColorOf({ agent: 'no-such-agent:0.0.1' })).toBeUndefined();
   });
 });

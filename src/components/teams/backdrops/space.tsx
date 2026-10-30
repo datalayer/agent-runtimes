@@ -70,9 +70,16 @@ const CONNECTION_WIDTH = 96;
 /** The mark's share of the figure: the rest is its halo and its orbit. */
 const MARK_SCALE = 0.46;
 
+/** A colour: a CSS variable's name (`--scene-space-glow`), or a colour as it is. */
+const tone = (color: string): string =>
+  color.startsWith('--') ? `var(${color})` : color;
+
 /** `color-mix` of a colour with transparency: `mix('--scene-space-glow', 40)`. */
-const mix = (variable: string, percent: number): string =>
-  `color-mix(in srgb, var(${variable}) ${percent}%, transparent)`;
+const mix = (color: string, percent: number): string =>
+  `color-mix(in srgb, ${tone(color)} ${percent}%, transparent)`;
+
+/** A member's colour: its own (`--scene-member`, from its spec), else the stage's glow. */
+const MEMBER = 'var(--scene-member, var(--scene-space-glow))';
 
 /** The space's layout: marks with room round them, the names beside. */
 export const SPACE_LAYOUT: SceneBackdropLayout = {
@@ -103,16 +110,16 @@ function spaceMark(member: SceneBackdropFace): AssistantCharacter {
       id: `space-mark-${member.id}`,
       scale: MARK_SCALE,
       ring: {
-        background: `radial-gradient(circle at 50% 42%, ${mix('--scene-space-glow', 55)}, ${mix('--scene-space-glow', 16)} 72%)`,
+        background: `radial-gradient(circle at 50% 42%, ${mix(MEMBER, 55)}, ${mix(MEMBER, 16)} 72%)`,
         boxShadow: [
-          `0 0 0 1.5px ${mix('--scene-space-glow', 80)}`,
-          `0 0 0 9px ${mix('--scene-space-glow', 12)}`,
-          `0 0 30px 8px ${mix('--scene-space-glow', 34)}`,
+          `0 0 0 1.5px ${mix(MEMBER, 80)}`,
+          `0 0 0 9px ${mix(MEMBER, 12)}`,
+          `0 0 30px 8px ${mix(MEMBER, 34)}`,
         ].join(', '),
         color: 'var(--scene-stage-fg)',
       },
       orbit: {
-        border: `1px dashed ${mix('--scene-space-glow', 45)}`,
+        border: `1px dashed ${mix(MEMBER, 45)}`,
       },
     });
     MARKS.set(key, mark);
@@ -130,7 +137,7 @@ const card = (color: string) => ({
   borderRadius: 2,
   border: '1px solid',
   borderColor: mix(color, 55),
-  background: `color-mix(in srgb, var(--scene-stage-bg) 88%, var(${color}))`,
+  background: `color-mix(in srgb, var(--scene-stage-bg) 88%, ${tone(color)})`,
   boxShadow: `0 0 18px ${mix(color, 28)}`,
   fontFamily: 'mono',
   fontSize: '11px',
@@ -141,7 +148,7 @@ const card = (color: string) => ({
   minWidth: 160,
   maxWidth: 240,
   '&[data-member-details="kept"], &[data-connection-details="kept"]': {
-    borderColor: `var(${color})`,
+    borderColor: tone(color),
   },
 });
 
@@ -156,11 +163,11 @@ const MEMBER_LOOK: MemberLook = {
     fontSize: '13px',
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    color: 'var(--scene-space-glow)',
+    color: MEMBER,
   },
   // Where it runs is in its details: the node is its mark and its name.
   where: false,
-  details: card('--scene-space-glow'),
+  details: card(MEMBER),
 };
 
 const CONNECTION_LOOK: ConnectionLook = {
@@ -226,12 +233,12 @@ function FlowingLight({
   source: Point;
   target: Point;
   forward: boolean;
-  /** The light's colour, a CSS variable's name: `--scene-space-glow`. */
+  /** The light's colour: a CSS variable's name (`--scene-space-glow`), or a colour. */
   color: string;
 }): JSX.Element {
   const from = forward ? source : target;
   const to = forward ? target : source;
-  const fill = `var(${color})`;
+  const fill = tone(color);
   if (prefersReducedMotion()) {
     return (
       <g data-scene-light="still">
@@ -338,7 +345,7 @@ function LuminousLine({
 }): JSX.Element {
   return (
     <>
-      {selected && <EdgeHalo path={path} color={`var(${color})`} />}
+      {selected && <EdgeHalo path={path} color={tone(color)} />}
       <path
         d={path}
         fill="none"
@@ -351,7 +358,7 @@ function LuminousLine({
         id={id}
         path={path}
         style={{
-          stroke: selected ? `var(${color})` : mix(color, 75),
+          stroke: selected ? tone(color) : mix(color, 75),
           strokeWidth: selected ? 1.6 : 1.1,
           strokeDasharray: dashed,
           opacity: faint ? 0.55 : 1,
@@ -379,7 +386,7 @@ export const SpaceLinkEdge = memo(function SpaceLinkEdge({
       <LuminousLine
         id={id}
         path={straightPath(source, target)}
-        color="--scene-space-glow"
+        color={data?.color ?? '--scene-space-glow'}
         selected={Boolean(data?.selected)}
         dashed={data?.connected ? undefined : '2 7'}
         faint={!data?.connected}
@@ -390,7 +397,7 @@ export const SpaceLinkEdge = memo(function SpaceLinkEdge({
             source={source}
             target={target}
             forward={flow === 'asking'}
-            color="--scene-space-glow"
+            color={data?.color ?? '--scene-space-glow'}
           />
         </g>
       )}
@@ -418,7 +425,7 @@ export const SpaceCallEdge = memo(function SpaceCallEdge({
       <LuminousLine
         id={id}
         path={straightPath(source, target)}
-        color="--scene-space-pop"
+        color={data?.color ?? '--scene-space-pop'}
         selected={Boolean(data?.selected)}
         dashed="4 4"
       />
@@ -428,7 +435,7 @@ export const SpaceCallEdge = memo(function SpaceCallEdge({
             source={source}
             target={target}
             forward={flow === 'asking'}
-            color="--scene-space-pop"
+            color={data?.color ?? '--scene-space-pop'}
           />
         </g>
       )}

@@ -81,7 +81,8 @@ function plainFace(member: SceneBackdropFace): AssistantCharacter {
       id: `plain-face-${member.id}`,
       ring: {
         borderRadius: 6,
-        border: '1px solid var(--borderColor-default)',
+        // The box in the member's colour (`--scene-member`), else a hairline.
+        border: '1px solid var(--scene-member, var(--borderColor-default))',
         background: 'var(--bgColor-default)',
         color: 'var(--fgColor-default)',
       },

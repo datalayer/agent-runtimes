@@ -1806,7 +1806,7 @@ export interface Agentspec {
   icon?: string;
   /** Emoji identifier for the agent */
   emoji?: string;
-  /** Theme color for the agent (hex code) */
+  /** Its colour: a name of the palette (`teal`, `indigo`…), drawn in the theme's value for it, or a hex where no name fits (`resolvePaletteColor`, primer-addons) */
   color?: string;
   /** Chat suggestions to show users what this agent can do */
   suggestions?: AgentSuggestion[];

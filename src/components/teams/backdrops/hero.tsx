@@ -86,8 +86,9 @@ function heroFace(member: SceneBackdropFace): AssistantCharacter {
       id: `hero-face-${member.id}`,
       ring: {
         background: 'var(--scene-stage-node)',
+        // The ring in the member's colour (`--scene-member`), else the stage's.
         boxShadow:
-          '0 0 0 2px var(--scene-stage-ring), 0 0 28px var(--scene-stage-glow)',
+          '0 0 0 2px var(--scene-member, var(--scene-stage-ring)), 0 0 28px var(--scene-stage-glow)',
         color: 'var(--scene-stage-fg)',
       },
     });
@@ -236,6 +237,12 @@ function EdgeWords({
   );
 }
 
+/** A line at rest: in the colour of the member it reaches, softened, else the stage's. */
+const lineTone = (color: string | undefined): string =>
+  color
+    ? `color-mix(in srgb, ${color} 70%, transparent)`
+    : 'var(--scene-stage-line)';
+
 /** The A2A link: a thin line, and the dot that flies along it. */
 export const HeroLinkEdge = memo(function HeroLinkEdge({
   id,
@@ -262,7 +269,7 @@ export const HeroLinkEdge = memo(function HeroLinkEdge({
         style={{
           stroke: data?.selected
             ? 'var(--scene-stage-dot)'
-            : 'var(--scene-stage-line)',
+            : lineTone(data?.color),
           strokeWidth: data?.selected ? 1.5 : 1,
           strokeDasharray: data?.connected ? undefined : '4 6',
           opacity: data?.connected ? 1 : 0.6,
@@ -310,7 +317,7 @@ export const HeroCallEdge = memo(function HeroCallEdge({
         style={{
           stroke: data?.selected
             ? 'var(--scene-stage-dot)'
-            : 'var(--scene-stage-line)',
+            : lineTone(data?.color),
           strokeWidth: data?.selected ? 1.5 : 1,
         }}
       />

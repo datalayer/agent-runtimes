@@ -54,7 +54,7 @@ import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlow, type Edge, type Node, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
-import { Box } from '@datalayer/primer-addons';
+import { Box, usePaletteColor } from '@datalayer/primer-addons';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { teamNotebookKernel } from './teamNotebookKernel';
 import {
@@ -716,9 +716,15 @@ export function A2ATeamGraph({
     }
     return { byNode, edgeByNode, said: [...new Set(said)] };
   }, [calls, members]);
+  // A link in the colour of the member it reaches, a call in its caller's:
+  // their spec's colour, as the current theme and mode draw it.
+  const paletteColor = usePaletteColor();
+  const colorOf = (id: string): string | undefined =>
+    paletteColor(memberOf(id)?.color);
   const linkKey = JSON.stringify(
     edgesWanted.map(link => ({
       ...link,
+      color: colorOf(link.to),
       flow: link.from === entry.id ? flowOf(link.to) : 'still',
       connected: connectedOf(link.to),
       label: wordsOf(link)
@@ -727,6 +733,13 @@ export function A2ATeamGraph({
       selected: edgeSelected(selected, link.from, link.to),
       ...handlesBetween(layoutOf(link.from), layoutOf(link.to)),
     })),
+  );
+  const callerTonesKey = JSON.stringify(
+    Object.fromEntries(members.map(member => [member.id, colorOf(member.id)])),
+  );
+  const callerTones = useMemo(
+    () => JSON.parse(callerTonesKey) as Record<string, string | undefined>,
+    [callerTonesKey],
   );
   const edges = useMemo<Edge<LinkData | CallData>[]>(
     () => [
@@ -741,6 +754,7 @@ export function A2ATeamGraph({
           connected: reached,
           label: said,
           selected: chosen,
+          color: tone,
           sourceHandle,
           targetHandle,
         }) => ({
@@ -757,6 +771,7 @@ export function A2ATeamGraph({
             connected: reached,
             label: said,
             selected: chosen,
+            ...(tone ? { color: tone } : {}),
           },
         }),
       ),
@@ -779,12 +794,13 @@ export function A2ATeamGraph({
                 calling,
                 label: carried?.label ?? MCP_LABEL,
                 selected: edgeSelected(selected, member, node),
+                ...(callerTones[member] ? { color: callerTones[member] } : {}),
               },
             };
           }),
       ),
     ],
-    [linkKey, placedKey, busy, selected],
+    [linkKey, placedKey, busy, selected, callerTones],
   );
   const heard = [...words, ...busy.said].filter(Boolean).join('. ');
   const flowNow = flowOfAll(peers.map(one => flowOf(one.id)));

@@ -50,6 +50,7 @@ import { useAnonymousSessionStore } from '../runtimes/browser/anonymousToken';
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
+  appColorOf,
   NOTEBOOK_AND_WORDS,
   PERSON,
   SceneView,
@@ -370,6 +371,7 @@ function Scene({
               name: entry.app.name,
               emoji: entry.cast.persona.face || entry.app.emoji,
               character: avatarShown(entry.app.interface.avatar, 'paperclip'),
+              color: appColorOf(entry.app),
               where: whereOf(entry),
               persona: team.entryPersona,
               onToggle: () => composer.current?.focus(),
@@ -396,6 +398,7 @@ function Scene({
                   peer.cast.persona.face ||
                   peer.app.emoji,
                 character: avatarShown(peer.app.interface.avatar, 'wizard'),
+                color: appColorOf(peer.app),
                 where: whereOf(peer),
                 persona: kept?.persona ?? team.peerPersona,
                 onAway: kept?.setAway,

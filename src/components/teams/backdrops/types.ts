@@ -53,6 +53,13 @@ export type A2ATeamGraphMember = {
   character: string | AssistantModel3D;
   /** Where it runs, in a few words: "in your browser", "on a runtime". */
   where: string;
+  /**
+   * Its colour, as its spec names it: a name of the palette (`teal`,
+   * `indigo`…) or a hex. Drawn in the value the current theme and mode
+   * give it (`usePaletteColor`): its face, and the lines that reach it.
+   * The backdrop's own colours, unsaid.
+   */
+  color?: string;
   persona: A2ATeamPersona;
   /** A click on the character. */
   onToggle?: () => void;
@@ -149,6 +156,8 @@ export type LinkData = {
   label: string;
   /** The exchange selected in the transcript is on it: drawn with a halo (S3-02). */
   selected: boolean;
+  /** The colour of the member it reaches, as the theme draws it; the backdrop's own, unsaid. */
+  color?: string;
 };
 
 /** What a member's link to a connection is given. */
@@ -161,6 +170,8 @@ export type CallData = {
   label: string;
   /** The call selected in the transcript is on it: drawn with a halo (S3-02). */
   selected: boolean;
+  /** The colour of the member that calls, as the theme draws it; the backdrop's own, unsaid. */
+  color?: string;
 };
 
 /**
