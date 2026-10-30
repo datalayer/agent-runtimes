@@ -15,7 +15,8 @@
  * `Backdrop`): `studio`, the drawing every scene had first; `hero`, round
  * faces on a deep tint with a dot that flies with each message; `plain`,
  * boxes and arrows that do not move; `space`, glowing marks on a ground
- * of dots, grid, mesh and rings, as the site's hero drawings.
+ * of dots, grid, mesh and rings, as the site's hero drawings; `minimal`,
+ * glowing circles in each member's colour on a dark ground.
  *
  * @module components/teams/backdrops/types
  */
@@ -219,7 +220,7 @@ export interface SceneBackdropLayout {
 /** A backdrop: how a scene's stage is drawn. */
 export interface SceneBackdrop {
   id: SceneBackdropId;
-  /** `Studio`, `Hero`, `Plain`, `Space`. */
+  /** `Studio`, `Hero`, `Plain`, `Space`, `Minimal`. */
   name: string;
   /** One line of what the stage looks like, for a chooser. */
   description: string;

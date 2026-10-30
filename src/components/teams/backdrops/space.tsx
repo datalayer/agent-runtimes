@@ -369,86 +369,104 @@ function LuminousLine({
   );
 }
 
-/** The A2A link: a luminous line, and the light that flows along it. */
-export const SpaceLinkEdge = memo(function SpaceLinkEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}: EdgeProps<Edge<LinkData>>): JSX.Element {
-  const flow = data?.flow ?? 'still';
-  const source = { x: sourceX, y: sourceY };
-  const target = { x: targetX, y: targetY };
-  return (
-    <>
-      <LuminousLine
-        id={id}
-        path={straightPath(source, target)}
-        color={data?.color ?? '--scene-space-glow'}
-        selected={Boolean(data?.selected)}
-        dashed={data?.connected ? undefined : '2 7'}
-        faint={!data?.connected}
-      />
-      {flow !== 'still' && (
-        <g data-a2a-edge-flow={flow}>
-          <FlowingLight
-            source={source}
-            target={target}
-            forward={flow === 'asking'}
-            color={data?.color ?? '--scene-space-glow'}
-          />
-        </g>
-      )}
-      <EdgeWords at={midpoint(source, target)} flowing={flow !== 'still'}>
-        {data?.label}
-      </EdgeWords>
-    </>
-  );
-});
+/**
+ * The luminous edges, with their words (`space`) or without (`minimal`):
+ * an A2A link and a member's link to a system, each a thin luminous line
+ * with the light that flows along it.
+ */
+export function luminousEdges({ words }: { words: boolean }) {
+  /** The A2A link: a luminous line, and the light that flows along it. */
+  const LinkEdge = memo(function LuminousLinkEdge({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    data,
+  }: EdgeProps<Edge<LinkData>>): JSX.Element {
+    const flow = data?.flow ?? 'still';
+    const source = { x: sourceX, y: sourceY };
+    const target = { x: targetX, y: targetY };
+    return (
+      <>
+        <LuminousLine
+          id={id}
+          path={straightPath(source, target)}
+          color={data?.color ?? '--scene-space-glow'}
+          selected={Boolean(data?.selected)}
+          dashed={data?.connected ? undefined : '2 7'}
+          faint={!data?.connected}
+        />
+        {flow !== 'still' && (
+          <g data-a2a-edge-flow={flow}>
+            <FlowingLight
+              source={source}
+              target={target}
+              forward={flow === 'asking'}
+              color={data?.color ?? '--scene-space-glow'}
+            />
+          </g>
+        )}
+        {words && (
+          <EdgeWords at={midpoint(source, target)} flowing={flow !== 'still'}>
+            {data?.label}
+          </EdgeWords>
+        )}
+      </>
+    );
+  });
 
-/** A member's link to a system: a dashed luminous line, the light out with the call and back with its result. */
-export const SpaceCallEdge = memo(function SpaceCallEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}: EdgeProps<Edge<CallData>>): JSX.Element {
-  const flow = data?.flow ?? 'still';
-  const source = { x: sourceX, y: sourceY };
-  const target = { x: targetX, y: targetY };
-  return (
-    <>
-      <LuminousLine
-        id={id}
-        path={straightPath(source, target)}
-        color={data?.color ?? '--scene-space-pop'}
-        selected={Boolean(data?.selected)}
-        dashed="4 4"
-      />
-      {flow !== 'still' && (
-        <g data-mcp-edge-call={data?.calling} data-mcp-edge-flow={flow}>
-          <FlowingLight
-            source={source}
-            target={target}
-            forward={flow === 'asking'}
-            color={data?.color ?? '--scene-space-pop'}
-          />
-        </g>
-      )}
-      <EdgeWords
-        at={midpoint(source, target)}
-        flowing={flow !== 'still'}
-        data-mcp-edge-label=""
-      >
-        {data?.label}
-      </EdgeWords>
-    </>
-  );
-});
+  /** A member's link to a system: a dashed luminous line, the light out with the call and back with its result. */
+  const CallEdge = memo(function LuminousCallEdge({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    data,
+  }: EdgeProps<Edge<CallData>>): JSX.Element {
+    const flow = data?.flow ?? 'still';
+    const source = { x: sourceX, y: sourceY };
+    const target = { x: targetX, y: targetY };
+    return (
+      <>
+        <LuminousLine
+          id={id}
+          path={straightPath(source, target)}
+          color={data?.color ?? '--scene-space-pop'}
+          selected={Boolean(data?.selected)}
+          dashed="4 4"
+        />
+        {flow !== 'still' && (
+          <g data-mcp-edge-call={data?.calling} data-mcp-edge-flow={flow}>
+            <FlowingLight
+              source={source}
+              target={target}
+              forward={flow === 'asking'}
+              color={data?.color ?? '--scene-space-pop'}
+            />
+          </g>
+        )}
+        {words && (
+          <EdgeWords
+            at={midpoint(source, target)}
+            flowing={flow !== 'still'}
+            data-mcp-edge-label=""
+          >
+            {data?.label}
+          </EdgeWords>
+        )}
+      </>
+    );
+  });
+  return { LinkEdge, CallEdge };
+}
+
+const SPACE_EDGES = luminousEdges({ words: true });
+/** The A2A link: a luminous line, its words, and the light that flows along it. */
+export const SpaceLinkEdge = SPACE_EDGES.LinkEdge;
+/** A member's link to a system, with its words. */
+export const SpaceCallEdge = SPACE_EDGES.CallEdge;
 
 /**
  * The ground behind the flow, as the hero drawings lay theirs: fine dots,
@@ -752,13 +770,6 @@ export const SPACE_BACKDROP: SceneBackdrop = {
         { animation: 'sceneSpaceOrbit 12s linear infinite' },
       '@media (prefers-reduced-motion: reduce)': {
         '& [data-scene-orbit]': { animation: 'none' },
-      },
-      // A node whose card is open stands over the others; the one hovered
-      // or focused over every one, so its card is read whole.
-      '& .react-flow__node:has([data-member-details]:not([hidden])), & .react-flow__node:has([data-connection-details]:not([hidden]))':
-        { zIndex: '10 !important' },
-      '& .react-flow__node:hover, & .react-flow__node:focus-within': {
-        zIndex: '11 !important',
       },
     },
   },

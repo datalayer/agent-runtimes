@@ -37,6 +37,7 @@ import {
   SpaceLinkEdge,
   SPACE_BACKDROP,
 } from '../backdrops/space';
+import { MINIMAL_BACKDROP } from '../backdrops/minimal';
 import { edgeSelected } from '../A2ATeamGraph';
 import { faceCharacter } from '../backdrops/faces';
 import { AT_REST } from '../useA2ATeam';
@@ -134,18 +135,20 @@ function Scene({
 }
 
 describe('the backdrops', () => {
-  it('are studio, hero, plain and space, studio first, with a name and a line each', () => {
+  it('are studio, hero, plain, space and minimal, studio first, with a name and a line each', () => {
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.id)).toEqual([
       'studio',
       'hero',
       'plain',
       'space',
+      'minimal',
     ]);
     expect(SCENE_BACKDROPS.map(backdrop => backdrop.name)).toEqual([
       'Studio',
       'Hero',
       'Plain',
       'Space',
+      'Minimal',
     ]);
     for (const backdrop of SCENE_BACKDROPS) {
       expect(backdrop.description).toMatch(/\S/);
@@ -215,7 +218,7 @@ describe('the backdrops', () => {
     warn.mockRestore();
   });
 
-  it.each(['studio', 'hero', 'plain', 'space'] as const)(
+  it.each(['studio', 'hero', 'plain', 'space', 'minimal'] as const)(
     'draw the same scene on %s: every member, its connection, and the links',
     backdrop => {
       const { container } = render(<Scene backdrop={backdrop} />);
@@ -255,7 +258,13 @@ describe('the backdrops', () => {
   );
 
   it('say the same flow to a screen reader on every backdrop', () => {
-    for (const backdrop of ['studio', 'hero', 'plain', 'space'] as const) {
+    for (const backdrop of [
+      'studio',
+      'hero',
+      'plain',
+      'space',
+      'minimal',
+    ] as const) {
       const { container, unmount } = render(
         <Scene backdrop={backdrop} flows={{ accounting: 'asking' }} />,
       );
@@ -606,6 +615,117 @@ describe('the space', () => {
   });
 });
 
+describe('a member’s details, on every backdrop', () => {
+  const hover = (element: Element) =>
+    act(() => {
+      fireEvent.mouseEnter(element);
+    });
+  const leave = (element: Element) =>
+    act(() => {
+      fireEvent.mouseLeave(element);
+    });
+  const click = (element: Element) =>
+    act(() => {
+      fireEvent.click(element);
+    });
+  const escape = (element: Element) =>
+    act(() => {
+      fireEvent.keyDown(element, { key: 'Escape' });
+    });
+
+  it.each(['studio', 'hero', 'plain', 'space'] as const)(
+    'on %s: the look at rest kept, the card peeking on hover of the figure or the name, kept by a click on the name, closed by Escape; the figure’s click still its balloon',
+    backdrop => {
+      const { container } = render(<Scene backdrop={backdrop} />);
+      const node = container.querySelector('[data-team-member="accounting"]')!;
+      const card = node.querySelector('[data-member-details]')!;
+      const name = node.querySelector('button[data-member-name]')!;
+      const figure = node.querySelector('[data-assistant-figure]')!;
+      expect(card.hasAttribute('hidden')).toBe(true);
+      expect(card.textContent).toContain('Reaches Odoo over MCP.');
+      // At rest, each backdrop's own words: where it runs under the name, but on space.
+      expect(Boolean(node.querySelector('[data-member-where]'))).toBe(
+        backdrop !== 'space',
+      );
+      hover(figure.parentElement!.parentElement!);
+      expect(card.hasAttribute('hidden')).toBe(false);
+      leave(figure.parentElement!.parentElement!);
+      expect(card.hasAttribute('hidden')).toBe(true);
+      click(name);
+      expect(name.getAttribute('aria-expanded')).toBe('true');
+      expect(card.getAttribute('data-member-details')).toBe('kept');
+      escape(name);
+      expect(card.hasAttribute('hidden')).toBe(true);
+      // The figure's click is its balloon's, as before: the card stays closed.
+      click(figure);
+      expect(card.hasAttribute('hidden')).toBe(true);
+      expect(figure.getAttribute('aria-expanded')).toBe('false');
+    },
+  );
+
+  it('on minimal: a circle and nothing else; its card names it, and a click on the circle keeps it', () => {
+    const { container } = render(<Scene backdrop="minimal" />);
+    const node = container.querySelector('[data-team-member="accounting"]')!;
+    expect(node.querySelector('[data-member-name]')).toBeNull();
+    expect(node.querySelector('[data-member-where]')).toBeNull();
+    expect(node.querySelector('[data-scene-circle-light]')).not.toBeNull();
+    // No emoji drawn, no label under a system's circle.
+    expect(node.querySelector('[data-scene-face]')).toBeNull();
+    const odoo = container.querySelector(
+      '[data-team-connection="odoo-accounting"]',
+    )!;
+    expect(
+      odoo.querySelector('[data-connection-details]')?.hasAttribute('hidden'),
+    ).toBe(true);
+    expect(
+      Array.from(odoo.childNodes)
+        .filter(child => !(child as Element).hasAttribute?.('hidden'))
+        .map(child => child.textContent)
+        .join(''),
+    ).toBe('');
+    // No words on the links.
+    expect(container.querySelector('[data-mcp-edge-label]')).toBeNull();
+    const card = node.querySelector('[data-member-details]')!;
+    expect(card.querySelector('[data-member-details-name]')?.textContent).toBe(
+      'Accounting',
+    );
+    const figure = node.querySelector('[data-assistant-figure]')!;
+    click(figure);
+    expect(figure.getAttribute('aria-expanded')).toBe('true');
+    expect(card.getAttribute('data-member-details')).toBe('kept');
+    escape(figure);
+    expect(figure.getAttribute('aria-expanded')).toBe('false');
+    expect(card.hasAttribute('hidden')).toBe(true);
+    click(figure);
+    click(figure);
+    expect(card.hasAttribute('hidden')).toBe(true);
+    // Dark in both modes.
+    const themed = sceneStageSx(MINIMAL_BACKDROP.theme) as Record<
+      string,
+      unknown
+    >;
+    expect(themed['--scene-stage-bg']).toBe(
+      (themed['[data-color-mode="dark"] &'] as Record<string, string>)[
+        '--scene-stage-bg'
+      ],
+    );
+  });
+
+  it('peeks a system’s details on hover on every backdrop', () => {
+    for (const backdrop of ['studio', 'hero', 'plain'] as const) {
+      const { container, unmount } = render(<Scene backdrop={backdrop} />);
+      const odoo = container.querySelector(
+        '[data-team-connection="odoo-accounting"]',
+      )!;
+      const told = odoo.querySelector('[data-connection-details]')!;
+      expect(told.hasAttribute('hidden'), backdrop).toBe(true);
+      hover(odoo.querySelector('button[data-connection-figure]')!);
+      expect(told.hasAttribute('hidden'), backdrop).toBe(false);
+      unmount();
+    }
+  });
+});
+
 describe('the plain edge', () => {
   it('does not move: an arrow toward the end the message goes to, the state in words', () => {
     const draw = (flow: A2ATeamFlow) => (
@@ -763,7 +883,7 @@ describe('a member’s colour', () => {
   }
 
   it('is the theme’s value of its name, a hex as it is, nothing else', () => {
-    for (const backdrop of ['studio', 'hero', 'plain', 'space']) {
+    for (const backdrop of ['studio', 'hero', 'plain', 'space', 'minimal']) {
       const { container, unmount } = render(<Colored backdrop={backdrop} />);
       const tone = (id: string) =>
         (

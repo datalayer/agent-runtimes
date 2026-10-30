@@ -180,9 +180,9 @@ export interface MemberLook {
    * for the same member, so that the figure is not drawn anew.
    */
   figure: (member: SceneBackdropFace) => AssistantStageProps['character'];
-  /** The name under the figure. */
-  name: StageSx;
-  /** Where it runs, under the name; `false` leaves it to the figure's label alone. */
+  /** The name under the figure; `false`: none (`minimal`, the figure alone). */
+  name: StageSx | false;
+  /** Where it runs, under the name; `false` leaves it to its details. */
   where: StageSx | false;
   /**
    * The name and where it runs beside the figure rather than under it:
@@ -192,14 +192,39 @@ export interface MemberLook {
    */
   beside?: number;
   /**
-   * A compact node (`space`): the figure and its name alone, the rest —
-   * where it runs, what it is doing, the systems it reaches — in a card
-   * shown while the figure or the name is hovered or focused, and kept
-   * open by a click on the name (a second click, or Escape, closes it).
-   * The card's look; unsaid, the words are always shown.
+   * The card a member's details open in, on every backdrop — where it
+   * runs, what it is doing, the systems it reaches: shown while its figure
+   * or its name is hovered or focused, kept open by a click on its name (a
+   * second click, or Escape, closes it). Unsaid, a card of Primer's
+   * overlay ({@link MEMBER_CARD}).
    */
   details?: StageSx;
+  /**
+   * A click on the figure keeps the card open, rather than showing its
+   * balloon (`minimal`, which has no name to click): the figure says so
+   * (`aria-expanded`), and Escape closes it. Its balloon still opens when
+   * it speaks, and from its menu.
+   */
+  figureKeeps?: boolean;
 }
+
+/** A member's details card, unless a backdrop draws its own: Primer's overlay. */
+export const MEMBER_CARD: StageSx = {
+  px: 2,
+  py: 1,
+  borderRadius: 2,
+  border: '1px solid',
+  borderColor: 'border.default',
+  bg: 'canvas.overlay',
+  boxShadow: 'shadow.large',
+  fontSize: '12px',
+  lineHeight: 1.5,
+  color: 'fg.default',
+  textAlign: 'left',
+  whiteSpace: 'normal',
+  minWidth: 160,
+  maxWidth: 240,
+};
 
 /**
  * A node's details, shown on hover or focus and kept by a click: whether
@@ -265,7 +290,7 @@ export function MemberNodeBase({
   const stageRef = useRef<HTMLDivElement>(null);
   // Its balloon's display, as its menu changes it.
   const [display, setDisplay] = useState<BalloonDisplay | undefined>();
-  // Its details, on a compact node (`look.details`): peeked at, or kept.
+  // Its details: peeked at on hover or focus, kept by a click.
   const details = useNodeDetails();
   // Its balloon as a click on it left it: shown, hidden, or as the team
   // says (`auto`: what it is doing, and on hover).
@@ -394,14 +419,11 @@ export function MemberNodeBase({
         width={size}
         height={size}
         position="relative"
-        {...(look.details
-          ? {
-              onMouseEnter: details.peekOn,
-              onMouseLeave: details.peekOff,
-              onFocus: details.peekOn,
-              onBlur: details.peekOff,
-            }
-          : {})}
+        // Hovered or focused, its details peek (its card, under its words).
+        onMouseEnter={details.peekOn}
+        onMouseLeave={details.peekOff}
+        onFocus={details.peekOn}
+        onBlur={details.peekOff}
       >
         {persona.away ? (
           <Button
@@ -456,6 +478,8 @@ export function MemberNodeBase({
               window.addEventListener('pointercancel', onUp);
             }}
             onCharacterKeyDown={event => {
+              // Escape closes its details, kept or peeking.
+              details.onKeyDown(event);
               const step = event.shiftKey ? NUDGE_FAR : NUDGE;
               const by: Record<string, MemberOffset> = {
                 ArrowLeft: { dx: -step, dy: 0 },
@@ -475,18 +499,24 @@ export function MemberNodeBase({
             onResetPosition={
               offset.dx || offset.dy ? () => moving.reset(id) : undefined
             }
-            open={false}
+            // Where the figure keeps the details (`figureKeeps`), it says
+            // whether they are open; elsewhere it opens nothing of its own.
+            open={look.figureKeeps ? details.kept : false}
             onToggle={member.onToggle ?? (() => undefined)}
-            // A click shows and hides its balloon; the menu's *Ask Sales*
-            // still takes the reader to the composer.
-            onCharacterClick={() =>
-              setShown(current =>
-                current === 'shown' ||
-                (current === 'auto' &&
-                  (persona.insist || display === 'history'))
-                  ? 'hidden'
-                  : 'shown',
-              )
+            // A click shows and hides its balloon — or keeps its details,
+            // on a backdrop whose figure does (`figureKeeps`); the menu's
+            // *Ask Sales* still takes the reader to the composer.
+            onCharacterClick={
+              look.figureKeeps
+                ? details.toggle
+                : () =>
+                    setShown(current =>
+                      current === 'shown' ||
+                      (current === 'auto' &&
+                        (persona.insist || display === 'history'))
+                        ? 'hidden'
+                        : 'shown',
+                    )
             }
             balloonDisplay={shownDisplay}
             onBalloonDisplayChange={next => {
@@ -534,107 +564,106 @@ export function MemberNodeBase({
           />
         )}
       </Box>
-      {look.beside === undefined ? (
-        <>
-          <Text sx={look.name} data-member-name="">
-            {member.emoji ? `${member.emoji} ` : ''}
+      {/*
+        Its words — its name, where it runs — under the figure or beside it,
+        and the card its details open in under them. The name is a button:
+        hovered or focused, the card peeks; clicked, it is kept (a second
+        click, or Escape, closes it). Without a name (`minimal`), the card
+        hangs under the figure, and says the name itself.
+      */}
+      <Box
+        {...(look.beside === undefined
+          ? {
+              position: 'relative',
+              alignItems: 'center',
+            }
+          : {
+              position: 'absolute',
+              top:
+                side === 'right' && member.connections?.length
+                  ? size / 2 + 6
+                  : size / 2,
+              ...(side === 'right'
+                ? { left: look.width / 2 + size * look.beside }
+                : { right: look.width / 2 + size * look.beside }),
+              transform:
+                side === 'right' && member.connections?.length
+                  ? undefined
+                  : 'translateY(-50%)',
+              alignItems: side === 'right' ? 'flex-start' : 'flex-end',
+              whiteSpace: 'nowrap',
+              'data-member-beside': side,
+            })}
+        display="flex"
+        flexDirection="column"
+        pointerEvents="all"
+      >
+        {look.name !== false && (
+          <Box
+            as="button"
+            type="button"
+            className="nodrag nopan"
+            aria-expanded={details.kept}
+            aria-controls={details.id}
+            aria-label={`${member.name}: details`}
+            data-member-name=""
+            onClick={details.toggle}
+            onKeyDown={details.onKeyDown}
+            onMouseEnter={details.peekOn}
+            onMouseLeave={details.peekOff}
+            onFocus={details.peekOn}
+            onBlur={details.peekOff}
+            sx={{
+              p: 0,
+              border: 0,
+              background: 'transparent',
+              cursor: 'pointer',
+              font: 'inherit',
+              ...(look.name as Record<string, unknown>),
+            }}
+            focusVisible={{
+              outline: '2px solid',
+              outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+              outlineOffset: 2,
+            }}
+          >
+            {look.beside === undefined && member.emoji
+              ? `${member.emoji} `
+              : ''}
             {member.name}
+          </Box>
+        )}
+        {look.where !== false && (
+          <Text sx={look.where} data-member-where="">
+            {member.where}
           </Text>
-          {look.where !== false && (
-            <Text sx={look.where} data-member-where="">
-              {member.where}
-            </Text>
-          )}
-        </>
-      ) : (
-        // Beside the figure, away from the middle; under the line to its
-        // connections, which leaves it rightward at its middle.
+        )}
         <Box
+          id={details.id}
+          role="note"
+          hidden={!details.shown}
+          data-member-details={details.kept ? 'kept' : 'peek'}
           position="absolute"
-          top={
-            side === 'right' && member.connections?.length
-              ? size / 2 + 6
-              : size / 2
-          }
-          {...(side === 'right'
-            ? { left: look.width / 2 + size * look.beside }
-            : { right: look.width / 2 + size * look.beside })}
-          transform={
-            side === 'right' && member.connections?.length
-              ? undefined
-              : 'translateY(-50%)'
-          }
-          display="flex"
-          flexDirection="column"
-          alignItems={side === 'right' ? 'flex-start' : 'flex-end'}
-          whiteSpace="nowrap"
-          pointerEvents={look.details ? 'all' : 'none'}
-          data-member-beside={side}
+          top="100%"
+          mt={1}
+          zIndex={2}
+          {...(look.beside === undefined
+            ? { left: '50%', transform: 'translateX(-50%)' }
+            : side === 'right'
+              ? { left: 0 }
+              : { right: 0 })}
+          sx={look.details ?? MEMBER_CARD}
         >
-          {look.details ? (
-            <>
-              {/* The name opens the card: hovered or focused, a peek; clicked, kept. */}
-              <Box
-                as="button"
-                type="button"
-                className="nodrag nopan"
-                aria-expanded={details.kept}
-                aria-controls={details.id}
-                aria-label={`${member.name}: details`}
-                data-member-name=""
-                onClick={details.toggle}
-                onKeyDown={details.onKeyDown}
-                onMouseEnter={details.peekOn}
-                onMouseLeave={details.peekOff}
-                onFocus={details.peekOn}
-                onBlur={details.peekOff}
-                sx={{
-                  p: 0,
-                  border: 0,
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  ...(look.name as Record<string, unknown>),
-                }}
-                focusVisible={{
-                  outline: '2px solid',
-                  outlineColor:
-                    'var(--focus-outlineColor, var(--fgColor-accent))',
-                  outlineOffset: 2,
-                }}
-              >
-                {member.name}
-              </Box>
-              <Box
-                id={details.id}
-                role="note"
-                hidden={!details.shown}
-                data-member-details={details.kept ? 'kept' : 'peek'}
-                position="absolute"
-                top="100%"
-                mt={1}
-                {...(side === 'right' ? { left: 0 } : { right: 0 })}
-                zIndex={2}
-                sx={look.details}
-              >
-                {memberDetails(member, persona.state).map(line => (
-                  <Box key={line}>{line}</Box>
-                ))}
-              </Box>
-            </>
-          ) : (
-            <>
-              <Text sx={look.name} data-member-name="">
-                {member.name}
-              </Text>
-              {look.where !== false && (
-                <Text sx={look.where} data-member-where="">
-                  {member.where}
-                </Text>
-              )}
-            </>
+          {look.name === false && (
+            <Box fontWeight="bold" data-member-details-name="">
+              {member.name}
+            </Box>
           )}
+          {memberDetails(member, persona.state).map(line => (
+            <Box key={line}>{line}</Box>
+          ))}
         </Box>
-      )}
+      </Box>
       <Handle
         id={MEMBER_HANDLES.outRight}
         type="source"
@@ -682,10 +711,10 @@ export interface ConnectionLook {
   width: number;
   /** The frame round the mark: a bordered square (studio), a ring (hero). */
   mark: (busy: boolean) => StageSx;
-  /** What the mark holds, as a fraction of the mark's size. */
+  /** What the mark holds, as a fraction of the mark's size; `0`, nothing. */
   markScale: number;
   /** The label under the mark. */
-  label: StageSx;
+  label: StageSx | false;
   /** How it is reached, under the label: `via MCP`. */
   via: StageSx;
   /** Its details, shown by a click on the mark. */
@@ -717,7 +746,7 @@ export function ConnectionNodeBase({
   // On a compact node, hovered or focused: its card peeks.
   const [peek, setPeek] = useState(false);
   const detailsId = useId();
-  const shown = told || (Boolean(look.compact) && peek);
+  const shown = told || peek;
   if (!connection) {
     return null;
   }
@@ -755,20 +784,17 @@ export function ConnectionNodeBase({
           setPeek(false);
         }}
         onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
-          if (event.key === 'Escape' && (told || (look.compact && peek))) {
+          if (event.key === 'Escape' && (told || peek)) {
             event.stopPropagation();
             setTold(false);
             setPeek(false);
           }
         }}
-        {...(look.compact
-          ? {
-              onMouseEnter: () => setPeek(true),
-              onMouseLeave: () => setPeek(false),
-              onFocus: () => setPeek(true),
-              onBlur: () => setPeek(false),
-            }
-          : {})}
+        // Hovered or focused, its details peek; clicked, they are kept.
+        onMouseEnter={() => setPeek(true)}
+        onMouseLeave={() => setPeek(false)}
+        onFocus={() => setPeek(true)}
+        onBlur={() => setPeek(false)}
         width={size}
         height={size}
         p={0}
@@ -783,13 +809,16 @@ export function ConnectionNodeBase({
           outlineOffset: 2,
         }}
       >
-        <SpecMark
-          icon={connection.icon}
-          emoji={connection.emoji}
-          size={Math.round(size * look.markScale)}
-        />
+        {/* A mark of no size holds nothing (`minimal`: the circle alone). */}
+        {look.markScale > 0 && (
+          <SpecMark
+            icon={connection.icon}
+            emoji={connection.emoji}
+            size={Math.round(size * look.markScale)}
+          />
+        )}
       </Box>
-      <Text sx={look.label}>{connection.label}</Text>
+      {look.label !== false && <Text sx={look.label}>{connection.label}</Text>}
       {connection.via && !look.compact && (
         <Text sx={look.via} data-connection-via="">
           {connection.via}
@@ -798,7 +827,7 @@ export function ConnectionNodeBase({
       <Box
         id={detailsId}
         hidden={!shown}
-        data-connection-details={look.compact ? (told ? 'kept' : 'peek') : ''}
+        data-connection-details={told ? 'kept' : 'peek'}
         textAlign="center"
         maxWidth={look.compact ? 220 : look.width + 40}
         {...(look.compact

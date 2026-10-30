@@ -111,6 +111,22 @@ const MEMBER_LOOK: MemberLook = {
     color: 'var(--scene-stage-muted)',
     textAlign: 'center',
   },
+  // Its details' card in the stage's own colours, on the deep tint.
+  details: {
+    px: 2,
+    py: 1,
+    borderRadius: 2,
+    border: '1px solid var(--scene-stage-ring)',
+    background: 'var(--scene-stage-node)',
+    boxShadow: '0 0 18px var(--scene-stage-glow)',
+    fontSize: '12px',
+    lineHeight: 1.5,
+    color: 'var(--scene-stage-fg)',
+    textAlign: 'left',
+    whiteSpace: 'normal',
+    minWidth: 160,
+    maxWidth: 240,
+  },
 };
 
 const CONNECTION_LOOK: ConnectionLook = {

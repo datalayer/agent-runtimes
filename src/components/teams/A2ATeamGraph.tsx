@@ -41,8 +41,10 @@
  * `stage.backdrop`; {@link SceneBackdrop}): `studio`, the drawing above —
  * characters, balloons, flowing edges — `hero`, faces on a deep tint with
  * a dot that flies with each message, `plain`, boxes and arrows that do
- * not move, or `space`, glowing marks on a ground of dots and mesh with a
- * light flowing along each line. The graph works out the same things for every backdrop — who
+ * not move, `space`, glowing marks on a ground of dots and mesh with a
+ * light flowing along each line, or `minimal`, glowing circles on a dark
+ * ground. On every one, a member's details open in a card on hover or
+ * focus, kept by a click. The graph works out the same things for every backdrop — who
  * stands where, which way each link carries a message, which connection
  * answers a call, the words a screen reader hears — and reads the node
  * types, the edge types, the colours and the layout from the backdrop.
@@ -405,6 +407,13 @@ function stageRules(theme: SceneBackdropTheme, clickable: boolean): StageSx {
       overflow: 'visible',
     },
     '& .react-flow__node': { cursor: 'default' },
+    // A node whose details' card is open stands over the others; the one
+    // hovered or focused over every one, so its card is read whole.
+    '& .react-flow__node:has([data-member-details]:not([hidden])), & .react-flow__node:has([data-connection-details]:not([hidden]))':
+      { zIndex: '10 !important' },
+    '& .react-flow__node:hover, & .react-flow__node:focus-within': {
+      zIndex: '11 !important',
+    },
     // A member is moved by dragging its figure.
     '& [data-team-member] [data-assistant-figure]': { cursor: 'grab' },
     '& [data-team-member] [data-assistant-figure]:active': {
