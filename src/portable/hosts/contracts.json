@@ -372,17 +372,20 @@
     "pap_confirm_keys": [
       "key",
       "company",
+      "company_name",
       "summary",
       "terms",
       "operation_ref",
       "revision",
+      "expires_at",
       "digest",
+      "differences",
       "class",
       "session",
-      "only_the_person",
+      "retry",
       "was"
     ],
-    "pap_confirm_about": "WHATSAPP WA-43 (decided 28 October 2026): a company's pap_confirm (any gateway prefix) is decided in a host, on its exact revision; every other non-mail action stays in Datalayer."
+    "pap_confirm_about": "Decided 28 October 2026: a company's pap_confirm (any gateway prefix) is decided in a host, on its exact revision; every other non-mail action stays in Datalayer."
   },
   "decision": {
     "request": {

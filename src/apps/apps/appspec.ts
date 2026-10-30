@@ -46,7 +46,6 @@ import type {
   AppPapCompanyScopeSpec,
   AppPapExcludedTaskSpec,
   AppPapSpec,
-  AppPapStandingSpec,
   PapProfile,
   AppPactSpec,
   AppCommerceSpec,
@@ -88,7 +87,7 @@ import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 /** The version of the spec itself. */
 export const APP_SCHEMA = 'loop.app/v1';
 
-/** The language an application's own words are in, unless it says (P-26). */
+/** The language an application's own words are in, unless it says. */
 export const DEFAULT_LANGUAGE = 'en';
 
 /** The face of an application that has not chosen one. */
@@ -106,7 +105,7 @@ export const APP_ACCENTS: AppAccent[] = [
 ];
 
 /**
- * The themes an application may run in (T-30): Appearance's, as
+ * The themes an application may run in: Appearance's, as
  * primer-addons lists them (`themeVariants`), in its order.
  */
 export const APP_THEME_VARIANTS: AppThemeVariant[] = [
@@ -125,7 +124,7 @@ export const APP_THEME_VARIANTS: AppThemeVariant[] = [
 /** The colour modes a theme is worn in. */
 export const APP_THEME_MODES: AppThemeMode[] = ['light', 'dark', 'auto'];
 
-/** The four ways an application sits in another product's page (D-07). */
+/** The four ways an application sits in another product's page. */
 export const APP_EMBED_MODES: AppEmbedMode[] = [
   'inline',
   'bubble',
@@ -134,7 +133,7 @@ export const APP_EMBED_MODES: AppEmbedMode[] = [
 ];
 
 /**
- * How an Appspec names the avatar of its floating assistant (T-24): the
+ * How an Appspec names the avatar of its floating assistant: the
  * id a plugin contributes it under, `paperclip` or `acme-owl` — as
  * agentspecs' `ASSISTANT_AVATAR_ID`. Which ids exist is what the enabled
  * plugins contribute (`assistantCharacterNamed`), not the spec's to say.
@@ -334,7 +333,7 @@ const uiShapeProblems = (value: unknown): string[] =>
     : [];
 
 /**
- * One turn of a test's conversation as its document says it (E-01):
+ * One turn of a test's conversation as its document says it:
  * what it says, chooses or presses, with a press's payload; nothing it does
  * not say.
  */
@@ -484,10 +483,10 @@ const KNOWN_KEYS = [
   'banner',
 ] as const;
 
-/** Where a check of its code runs (P-06). */
+/** Where a check of its code runs. */
 const CHECK_STAGES = ['answer', 'tool_call'] as const;
 
-/** A tool of its own, written in its code (P-06); a wrong one is said by the checks. */
+/** A tool of its own, written in its code; a wrong one is said by the checks. */
 function parseTool(data: Data): AppToolSpec {
   return {
     name: text(data.name),
@@ -508,7 +507,7 @@ function parseConnection(data: Data): AppConnectionSpec {
   };
 }
 
-/** The Personal Agent Protocol profiles Datalayer speaks, as agentspecs' `PAP_PROFILES` (S-03). */
+/** The Personal Agent Protocol profiles Datalayer speaks, as agentspecs' `PAP_PROFILES`. */
 export const PAP_PROFILES: readonly PapProfile[] = ['draft-01'];
 
 /** The profile a `pap` block is written for when the Studio or a builder starts one. */
@@ -544,7 +543,7 @@ const enumsOf = <T extends string>(
 };
 
 /**
- * Personal Agent Protocol (S-01): the companies the
+ * Personal Agent Protocol: the companies the
  * application works with, and whether it is one. Defaults are agentspecs'.
  */
 function parsePap(data: Data): AppPapSpec {
@@ -590,11 +589,7 @@ function parsePap(data: Data): AppPapSpec {
       operations: records(company.operations).map(operation => ({
         action: text(operation.action),
         tool: text(operation.tool),
-        ...(isData(operation.allows)
-          ? { allows: parsePapStanding(operation.allows) }
-          : {}),
         summary: text(operation.summary),
-        userApprovalRequired: flag(operation.user_approval_required, true),
       })),
     },
   };
@@ -676,40 +671,6 @@ function dumpPapExcludedTask(task: AppPapExcludedTaskSpec): Data {
   };
 }
 
-/** A standing permission an operation gives (R-07), as agentspecs reads it. */
-function parsePapStanding(data: Data): AppPapStandingSpec {
-  return {
-    connection: text(data.connection),
-    action: oneOf(data.action, ['write', 'buy'] as const, 'buy'),
-    limits: records(data.limits).map(limit => ({
-      path: text(limit.path),
-      ...(typeof limit.maximum === 'string'
-        ? { maximum: text(limit.maximum) }
-        : {}),
-      ...(typeof limit.allowed === 'string'
-        ? { allowed: text(limit.allowed) }
-        : {}),
-    })),
-    uses: text(data.uses),
-    days: text(data.days),
-  };
-}
-
-/** A standing permission as its document says it: every field, none has a default. */
-function dumpPapStanding(standing: AppPapStandingSpec): Data {
-  return {
-    connection: standing.connection,
-    action: standing.action,
-    limits: standing.limits.map(limit => ({
-      path: limit.path,
-      ...(limit.maximum !== undefined ? { maximum: limit.maximum } : {}),
-      ...(limit.allowed !== undefined ? { allowed: limit.allowed } : {}),
-    })),
-    uses: standing.uses,
-    days: standing.days,
-  };
-}
-
 /** Personal Agent Protocol as its document says it, nothing at its default. */
 function dumpPap(pap: AppPapSpec | undefined): Data {
   if (!pap) return {};
@@ -752,26 +713,14 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
             operation =>
               new Writer()
                 .text('action', operation.action, '\u0000')
-                // An operation that allows a standing permission calls no tool (R-07).
-                .text('tool', operation.tool, operation.allows ? '' : '\u0000')
-                .present(
-                  'allows',
-                  operation.allows
-                    ? dumpPapStanding(operation.allows)
-                    : undefined,
-                )
-                .text('summary', operation.summary, '\u0000')
-                .value(
-                  'user_approval_required',
-                  operation.userApprovalRequired,
-                  true,
-                ).data,
+                .text('tool', operation.tool, '\u0000')
+                .text('summary', operation.summary, '\u0000').data,
           ),
         ).data,
     ).data;
 }
 
-/** PACT (PI-01): the businesses it asks for each person, and as one (PR-13). */
+/** PACT: the businesses it asks for each person, and as one. */
 function parsePact(data: Data): AppPactSpec {
   const business: Data = isData(data.business) ? data.business : {};
   const scopes: Record<string, string> = {};
@@ -800,7 +749,7 @@ function parsePact(data: Data): AppPactSpec {
   };
 }
 
-/** Commerce (PI-01): the merchants it shops at for each person. */
+/** Commerce: the merchants it shops at for each person. */
 function parseCommerce(data: Data): AppCommerceSpec {
   return {
     merchants: records(data.merchants).map(merchant => ({
@@ -845,7 +794,7 @@ function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
   ).data;
 }
 
-/** Signed fetch (EX-11): the exact sites it reads pages of, each request signed. */
+/** Signed fetch: the exact sites it reads pages of, each request signed. */
 function parseSignedFetch(data: Data): AppSignedFetchSpec {
   return {
     sites: records(data.sites).map(site => ({
@@ -869,7 +818,7 @@ function dumpSignedFetch(signedFetch: AppSignedFetchSpec | undefined): Data {
   ).data;
 }
 
-/** One of a pair of examples (PR-13): its id and its side, or a problem. */
+/** One of a pair of examples: its id and its side, or a problem. */
 function parsePair(data: Data): AppPairSpec | string {
   const id = text(data.id);
   const role = text(data.role);
@@ -922,7 +871,7 @@ function dumpPact(pact: AppPactSpec | undefined): Data {
     ).data;
 }
 
-/** A2A (PR-02): the extensions its Agent Card advertises. */
+/** A2A: the extensions its Agent Card advertises. */
 function parseA2A(data: Data): AppA2ASpec {
   return {
     extensions: records(data.extensions).map(extension => ({
@@ -961,8 +910,8 @@ function parseRule(data: Data): AppRuleSpec {
   };
 }
 
-/** A slash command (P-19); a wrong one is said by the checks. */
-/** An action of its code, typed (RU-5): its payload's schema kept as written. */
+/** A slash command; a wrong one is said by the checks. */
+/** An action of its code, typed: its payload's schema kept as written. */
 function parseAction(data: Data): AppActionSpec {
   const action: AppActionSpec = { name: text(data.name) };
   if (text(data.description)) {
@@ -996,7 +945,7 @@ function parseModeOption(data: Data): AppModeOptionSpec {
   return option;
 }
 
-/** A mode switch (P-19). */
+/** A mode switch. */
 function parseMode(data: Data): AppModeSpec {
   const mode: AppModeSpec = {
     id: text(data.id),
@@ -1009,7 +958,7 @@ function parseMode(data: Data): AppModeSpec {
   return mode;
 }
 
-/** A starter, its category said only when it has one (P-20). */
+/** A starter, its category said only when it has one. */
 function parseStarter(data: Data): AppStarterSpec {
   const starter: AppStarterSpec = {
     label: text(data.label),
@@ -1021,7 +970,7 @@ function parseStarter(data: Data): AppStarterSpec {
   return starter;
 }
 
-/** One of several assistants in one application (P-20). */
+/** One of several assistants in one application. */
 function parseProfile(data: Data): AppProfileSpec {
   return {
     id: text(data.id),
@@ -1059,7 +1008,7 @@ const mapValues = <T, U>(
     Object.entries(value).map(([key, item]) => [key, map(item)]),
   );
 
-/** An application's words in one other language (P-26), every key present. */
+/** An application's words in one other language, every key present. */
 function parseTranslation(data: Data): AppTranslationSpec {
   return {
     name: text(data.name),
@@ -1103,7 +1052,7 @@ function parseSurface(data: Data): AppSurfaceSpec {
   };
 }
 
-/** An application's voice (VO-41): off unless said. */
+/** An application's voice: off unless said. */
 export const DEFAULT_VOICE: AppVoiceSpec = {
   enabled: false,
   input: 'push_to_talk',
@@ -1137,7 +1086,7 @@ function parseVoice(data: unknown): AppVoiceSpec {
   };
 }
 
-/** What a person may send without being asked (P-21), as the spec says it. */
+/** What a person may send without being asked, as the spec says it. */
 function parseUploads(data: Data): AppUploadsSpec {
   return {
     kinds: records(data.kinds).map(kind => ({
@@ -1148,7 +1097,7 @@ function parseUploads(data: Data): AppUploadsSpec {
   };
 }
 
-/** What a page's output may be drawn with (P-05), and the property of each that shows its value. */
+/** What a page's output may be drawn with, and the property of each that shows its value. */
 export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
   Text: 'text',
   Image: 'url',
@@ -1156,11 +1105,11 @@ export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
   Chart: 'points',
 };
 
-/** The height of a component its developer wrote (P-17), unless it says. */
+/** The height of a component its developer wrote, unless it says. */
 export const DEFAULT_CUSTOM_HEIGHT = 240;
 
 /**
- * A component its developer wrote (P-17), as written: its schema and
+ * A component its developer wrote, as written: its schema and
  * example kept whole, so that the checks say what is wrong with them.
  */
 function parseCustomComponent(data: Data): AppCustomComponentSpec {
@@ -1200,9 +1149,9 @@ function dumpCustomComponent(component: AppCustomComponentSpec): Data {
 }
 
 /**
- * The property a page's output fills with its value (P-05): a catalog
+ * The property a page's output fills with its value: a catalog
  * component's (`PAGE_OUTPUT_SHOWS`), or what a component of the
- * application's own shows first (P-17). Undefined for any other.
+ * application's own shows first. Undefined for any other.
  */
 export function pageOutputShows(
   component: string,
@@ -1215,7 +1164,7 @@ export function pageOutputShows(
 }
 
 /**
- * A widget's page written in its code (P-05), as written: its inputs a form
+ * A widget's page written in its code, as written: its inputs a form
  * kept whole, an output drawn with another component kept as written so that
  * the checks say it.
  */
@@ -1285,7 +1234,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     voice: parseVoice(data.voice),
     outputs: texts(data.outputs),
   };
-  // Its settings are the JSON Schema of a form (C-16), kept as written: what
+  // Its settings are the JSON Schema of a form, kept as written: what
   // is not one — the list of settings of earlier versions among it — is not
   // read, and is said by the checks.
   if (isData(data.settings)) {
@@ -1293,7 +1242,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
       JSON.stringify(data.settings),
     ) as AppFormSchema;
   }
-  // How its settings' fields are drawn (P-20), kept as written: a wrong
+  // How its settings' fields are drawn, kept as written: a wrong
   // widget is said by the checks.
   if (isData(data.settings_ui)) {
     parsed.settingsUi = JSON.parse(JSON.stringify(data.settings_ui)) as Data;
@@ -1301,7 +1250,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   if (isData(data.uploads)) {
     parsed.uploads = parseUploads(data.uploads);
   }
-  // Components its developer wrote (P-17): absent when it has none.
+  // Components its developer wrote: absent when it has none.
   if (Array.isArray(data.custom_components)) {
     parsed.customComponents = records(data.custom_components).map(
       parseCustomComponent,
@@ -1374,7 +1323,7 @@ function parseDecision(data: Data): AppDecisionSpec {
   };
 }
 
-/** What it is tried on before it is anybody's (E-06, E-11): read only. */
+/** What it is tried on before it is anybody's: read only. */
 function parseSamples(data: Data): AppSamplesSpec {
   return {
     documents: records(data.documents).map(document => ({
@@ -1418,7 +1367,7 @@ function parseDeployment(data: Data): AppDeploymentSpec {
             host: {
               context: texts(data.embedded.host.context),
               // Kept as written when said: a value that is none is refused
-              // by the checks, never read as `claimed` (D-21).
+              // by the checks, never read as `claimed`.
               ...(data.embedded.host.user !== undefined
                 ? { user: text(data.embedded.host.user) as AppHostUser }
                 : {}),
@@ -1499,7 +1448,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   const verified = isData(tests.verified) ? tests.verified : {};
   const record = isData(data.record) ? data.record : {};
   const checks = isData(data.checks) ? data.checks : {};
-  // A check of its code runs on an answer or a tool call (P-06).
+  // A check of its code runs on an answer or a tool call.
   for (const check of records(checks.code)) {
     if (!(CHECK_STAGES as readonly unknown[]).includes(check.on)) {
       problems.push(
@@ -1567,12 +1516,12 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       evalset: text(tests.evalset),
       cases: records(tests.cases).map(testCase => ({
         ask: text(testCase.ask),
-        // A conversation, turn by turn, when it is one (E-01).
+        // A conversation, turn by turn, when it is one.
         ...(records(testCase.turns).length
           ? { turns: records(testCase.turns).map(parseTestTurn) }
           : {}),
         expect: text(testCase.expect),
-        // Decided by its code (P-06), when it names the function.
+        // Decided by its code, when it names the function.
         ...(text(testCase.code) ? { code: text(testCase.code) } : {}),
         // Given files with what it is asked, when it is.
         ...(records(testCase.files).length
@@ -1626,7 +1575,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     app.decision = parseDecision(data.decision);
   }
   // A `pap` block names a profile Datalayer speaks, or it is refused and not
-  // read (S-03); a block saying nothing is no block.
+  // read; a block saying nothing is no block.
   if (isData(data.pap) && Object.keys(data.pap).length > 0) {
     const problem = papProfileProblem(data.pap.profile);
     if (problem) {
@@ -1712,7 +1661,7 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
 
 /**
  * What is wrong with the protocols an application says it speaks
- * (PS-02), as agentspecs says it: an id the catalogue does not
+ *, as agentspecs says it: an id the catalogue does not
  * know or said twice, a planned protocol while it is offered, and a `pap`,
  * `pact`, `a2a` or `signed_fetch` block configuring a protocol it does not list.
  */
@@ -1868,7 +1817,7 @@ function dumpStarter(starter: AppStarterSpec): Data {
 const saidWords = (words: Record<string, string>): Data =>
   Object.fromEntries(Object.entries(words).filter(([, said]) => said !== ''));
 
-/** One translation as it is written (P-26): only what it says. */
+/** One translation as it is written: only what it says. */
 function dumpTranslation(words: AppTranslationSpec): Data {
   const parts = <T>(value: Record<string, T>, dump: (item: T) => Data): Data =>
     Object.fromEntries(
@@ -1995,14 +1944,14 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
       ),
     )
     .part('settings', spec.settings ? { ...spec.settings } : {});
-  // How its settings' fields are drawn (P-20): written when said.
+  // How its settings' fields are drawn: written when said.
   if (spec.settingsUi) {
     writer.data.settings_ui = { ...spec.settingsUi };
   }
   writer
     .text('language', spec.language ?? DEFAULT_LANGUAGE, DEFAULT_LANGUAGE)
     .part('translations', mapValues(spec.translations ?? {}, dumpTranslation));
-  // What a person may send without being asked (P-21): written when said.
+  // What a person may send without being asked: written when said.
   if (spec.uploads) {
     writer.data.uploads = new Writer()
       .list(
@@ -2039,7 +1988,7 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
       ? { variant: spec.theme.variant, mode: spec.theme.mode }
       : { variant: spec.theme.variant };
   }
-  // Its voice, when it says one (VO-41): a spec made before voice has none.
+  // Its voice, when it says one: a spec made before voice has none.
   if (spec.voice) {
     writer.part(
       'voice',
@@ -2228,7 +2177,7 @@ export function dumpAppspec(app: AppSpec): Data {
         .list(
           'cases',
           app.tests.cases.map(testCase => ({
-            // One message, or a conversation in its place (E-01).
+            // One message, or a conversation in its place.
             ...(testCase.turns?.length
               ? {
                   turns: testCase.turns.map(turn => parseTestTurn({ ...turn })),

@@ -46,7 +46,7 @@ describe('reading an Appspec', () => {
     }
   });
 
-  it('reads the actions its code declares, typed (RU-5)', () => {
+  it('reads the actions its code declares, typed', () => {
     const { app } = parseAppspec(APP_SOURCES['customer-interview']);
     const [save, finish] = app.interface.actions ?? [];
     expect(save.name).toBe('save');
@@ -237,7 +237,7 @@ describe('writing an Appspec', () => {
     ).toEqual({ layout: 'chat' });
   });
 
-  it('writes why it is not offered only when it says so (E-01)', () => {
+  it('writes why it is not offered only when it says so', () => {
     const off = APP_CATALOGUE['pipeline-report'];
     expect(off.enabled).toBe(false);
     expect(off.unavailable_because).toMatch(/\.$/);
@@ -252,7 +252,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(on)).not.toHaveProperty('unavailable_because');
   });
 
-  it('reads and writes a test that is a conversation, and refuses one that does not hold (E-01)', () => {
+  it('reads and writes a test that is a conversation, and refuses one that does not hold', () => {
     const interview = APP_CATALOGUE['customer-interview'];
     const [declined, , , finished] = interview.tests.cases;
     expect(declined.ask).toBe('');
@@ -289,7 +289,7 @@ describe('writing an Appspec', () => {
     ).toEqual(['tests.cases.0.turns.0.payload: goes with an action pressed.']);
   });
 
-  it('writes the files a test gives, and none for a test in words alone (E-01)', () => {
+  it('writes the files a test gives, and none for a test in words alone', () => {
     const report = APP_CATALOGUE['report-from-a-file'];
     const [orders, , pdf] = report.tests.cases;
     expect(orders.files?.map(file => file.name)).toEqual(['orders.csv']);
@@ -304,7 +304,7 @@ describe('writing an Appspec', () => {
     expect(parseAppspec(written).app.tests.cases).toEqual(report.tests.cases);
   });
 
-  it('writes that its conversations may suggest tests only when they may (V-16)', () => {
+  it('writes that its conversations may suggest tests only when they may', () => {
     const chat = emptyAppspec('chat');
     expect(chat.record.suggestTests).toBe(false);
     expect(parseAppspec({ kind: 'chat' }).app.record.suggestTests).toBe(false);
@@ -334,7 +334,7 @@ describe('writing an Appspec', () => {
     );
   });
 
-  it('shows only its avatar at its address when said, off unless said (T-21)', () => {
+  it('shows only its avatar at its address when said, off unless said', () => {
     const alone = parseAppspec({
       kind: 'chat',
       deployment: { hosted: { slug: 'desk', avatar_alone: true } },
@@ -363,7 +363,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app)).not.toHaveProperty('setup');
     expect(dumpAppspec(app).record).toBeUndefined();
   });
-  it('reads and writes the protocols it speaks, refusing what agentspecs refuses (PS-02)', () => {
+  it('reads and writes the protocols it speaks, refusing what agentspecs refuses', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['mcp', 'a2a'],
@@ -457,7 +457,7 @@ describe('writing an Appspec', () => {
       }),
     ).toEqual([]);
   });
-  it('reads and writes the personal agents a company accepts (U-04)', () => {
+  it('reads and writes the personal agents a company accepts', () => {
     const agent = 'https://agents.example/agent.json';
     const company = {
       enabled: true,
@@ -476,7 +476,7 @@ describe('writing an Appspec', () => {
     expect(app.pap?.company.interfaces).toEqual(['agent', 'mcp']);
     expect(dumpAppspec(app).pap).toEqual({ profile: 'draft-01', company });
   });
-  it('reads and writes Personal Agent Protocol (S-01)', () => {
+  it('reads and writes Personal Agent Protocol', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['pap'],
@@ -617,7 +617,7 @@ describe('writing an Appspec', () => {
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
   });
-  it('refuses a Personal Agent Protocol profile it does not speak, in a sentence (S-03)', () => {
+  it('refuses a Personal Agent Protocol profile it does not speak, in a sentence', () => {
     const connections = [{ id: 'orders', company: 'manzanita.example' }];
     const read = (pap: Record<string, unknown>) =>
       parseAppspec({ kind: 'chat', protocols: ['pap'], pap });
@@ -635,7 +635,7 @@ describe('writing an Appspec', () => {
     expect(read({}).problems).toEqual([]);
     expect(read({}).app.pap).toBeUndefined();
   });
-  it('reads and writes PACT businesses and A2A card extensions (PI-01, PR-02)', () => {
+  it('reads and writes PACT businesses and A2A card extensions', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact', 'a2a'],
@@ -666,7 +666,7 @@ describe('writing an Appspec', () => {
       ...document.pact.connections[0],
       access: 'read',
     });
-    // No business said: none (PR-13).
+    // No business said: none.
     expect(app.pact?.business?.enabled).toBe(false);
     expect(app.a2a?.extensions).toEqual([
       { ...document.a2a.extensions[0], required: false },
@@ -686,7 +686,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('a2a');
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pact');
   });
-  it('reads and writes the application as a PACT business (PR-13, PI-32)', () => {
+  it('reads and writes the application as a PACT business', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact'],
@@ -730,7 +730,7 @@ describe('writing an Appspec', () => {
     // An application without the block is no business.
     expect(parseAppspec({ kind: 'chat' }).app.pact).toBeUndefined();
   });
-  it('reads and writes the merchants it shops at, each listed protocol (PI-01)', () => {
+  it('reads and writes the merchants it shops at, each listed protocol', () => {
     const document = {
       kind: 'chat',
       protocols: ['ucp', 'acp'],
@@ -761,7 +761,7 @@ describe('writing an Appspec', () => {
       "Its `commerce` block shops over ACP, which it does not list: add 'acp' to `protocols`.",
     ]);
   });
-  it('reads and writes the sites it reads signed, its protocol listed (EX-11)', () => {
+  it('reads and writes the sites it reads signed, its protocol listed', () => {
     const document = {
       kind: 'chat',
       protocols: ['web-bot-auth'],
@@ -782,7 +782,7 @@ describe('writing an Appspec', () => {
       "Its `signed_fetch` block configures Web Bot Auth, which it does not list: add 'web-bot-auth' to `protocols`.",
     ]);
   });
-  it('reads and writes one of a pair of examples (PR-13)', () => {
+  it('reads and writes one of a pair of examples', () => {
     const document = {
       kind: 'chat',
       protocols: ['pact'],
@@ -802,7 +802,7 @@ describe('writing an Appspec', () => {
       'One of a pair is its business or its personal_agent, not "company".',
     ]);
   });
-  it('reads and writes what a company does once the person confirms (B-04)', () => {
+  it('reads and writes what a company does once the person confirms', () => {
     const operations = [
       {
         action: 'orders.exchange',
@@ -813,7 +813,6 @@ describe('writing an Appspec', () => {
         action: 'orders.cancel',
         tool: 'cancel_order',
         summary: 'Cancel order {order_id}',
-        user_approval_required: false,
       },
     ];
     const source = {
@@ -831,68 +830,13 @@ describe('writing an Appspec', () => {
         action: 'orders.exchange',
         tool: 'exchange_order',
         summary: 'Exchange order {order_id} for size {size}',
-        userApprovalRequired: true,
       },
       {
         action: 'orders.cancel',
         tool: 'cancel_order',
         summary: 'Cancel order {order_id}',
-        userApprovalRequired: false,
       },
     ]);
-    // Only the person confirming is the default, and is not written.
-    expect(dumpAppspec(app).pap).toEqual(source.pap);
-    expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
-  });
-  it('reads and writes an operation that gives a standing permission (R-07)', () => {
-    const allows = {
-      connection: 'bank',
-      action: 'buy',
-      limits: [
-        { path: 'payee', allowed: 'payee' },
-        { path: 'amount.amount', maximum: 'maximum' },
-      ],
-      uses: 'uses',
-      days: 'days',
-    };
-    const source = {
-      kind: 'chat',
-      protocols: ['pap'],
-      pap: {
-        profile: 'draft-01',
-        connections: [
-          {
-            id: 'bank',
-            company: 'northwind.example',
-            access: 'write',
-            scopes: ['payments:write'],
-          },
-        ],
-        company: {
-          enabled: true,
-          extensions: ['operations'],
-          operations: [
-            {
-              action: 'payments.allow',
-              allows,
-              summary:
-                'Let it pay {payee} up to {maximum}, {uses} times, for {days} days',
-            },
-          ],
-        },
-      },
-    };
-    const { app, problems } = parseAppspec(source);
-    expect(problems).toEqual([]);
-    expect(app.pap?.company.operations[0]).toEqual({
-      action: 'payments.allow',
-      tool: '',
-      allows,
-      summary:
-        'Let it pay {payee} up to {maximum}, {uses} times, for {days} days',
-      userApprovalRequired: true,
-    });
-    // Written back as read: no tool, the permission whole.
     expect(dumpAppspec(app).pap).toEqual(source.pap);
     expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
   });

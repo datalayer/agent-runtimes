@@ -88,9 +88,9 @@ export interface AgentCapability {
 }
 
 /**
- * A visual component a UI plugin renders (C-13), named as a surface names
+ * A visual component a UI plugin renders, named as a surface names
  * it. A standard one's properties are its protocol's own; Datalayer's own
- * carry theirs as a JSON Schema, from which its properties form is drawn (C-14).
+ * carry theirs as a JSON Schema, from which its properties form is drawn.
  */
 export interface ComponentSpec {
   /** The name a surface gives it (e.g. 'Table'). */
@@ -106,7 +106,7 @@ export interface ComponentSpec {
   version: string;
   /** Named and drawn as its protocol says (A2UI's basic catalog). */
   standard: boolean;
-  /** Its properties as a JSON Schema: what a builder sets (C-13). */
+  /** Its properties as a JSON Schema: what a builder sets. */
   properties: Record<string, unknown>;
   /** What it can be bound to: what it shows, what it sends. */
   bindings?: { shows: string[]; sends: string[] };
@@ -157,7 +157,7 @@ export interface UISpec {
   renderers: string[];
   /** The catalog its components are written in. */
   catalog: string;
-  /** The visual components it renders (C-13). */
+  /** The visual components it renders. */
   components: ComponentSpec[];
 }
 
@@ -190,8 +190,8 @@ export type ProtocolLayer =
   'transport' | 'consent' | 'identity' | 'commerce' | 'ui';
 
 /**
- * An agent protocol Datalayer targets (`agentspecs/protocols`,
- * PS-01). An agent spec's or an application's `protocols` names the ones it speaks.
+ * An agent protocol Datalayer targets (`agentspecs/protocols`).
+ * An agent spec's or an application's `protocols` names the ones it speaks.
  */
 export interface ProtocolSpec {
   /** What `protocols` lists (e.g. 'pap'). */
@@ -239,12 +239,12 @@ export interface HarnessAcpSpec {
 
 /**
  * An agent program driven over the Agent Client Protocol
- * (`agentspecs/harnesses`, SH-01). An agent spec's `harness:` names
+ * (`agentspecs/harnesses`). An agent spec's `harness:` names
  * one beside `pydantic-ai` and `vercel-ai`; the Datalayer runtime serves it
- * through its ACP adapter, `ACPAgent` (SH-10), never the browser.
+ * through its ACP adapter, `ACPAgent`, never the browser.
  */
 /**
- * A Shield policy document the platform ships or shows (`agentspecs/policies`, SH-50):
+ * A Shield policy document the platform ships or shows (`agentspecs/policies`):
  * the catalogue's fields around a document of
  * `@datalayer/agent-shield`'s `Policy`, whose schema agentspecs carries verbatim.
  */
@@ -333,7 +333,7 @@ export interface StandardControl {
 }
 
 /**
- * A standard a conformance report answers (`agentspecs/standards`, SH-60):
+ * A standard a conformance report answers (`agentspecs/standards`):
  * its version, domains and controls, carried whole.
  */
 export interface StandardSpec {
@@ -359,7 +359,7 @@ export interface StandardSpec {
 }
 
 /**
- * A harness of the register's *listed* tier (SH-57): known to speak ACP,
+ * A harness of the register's *listed* tier: known to speak ACP,
  * its documented command, licence, terms and credential read and cited; not
  * drilled, so offered by nothing — naming one is refused *listed, not drilled yet*.
  */
@@ -428,7 +428,7 @@ export interface HarnessSpec {
   /** What of an agent spec it can honour; the rest is refused at load. */
   honours: { model: boolean; subagents: boolean };
   /**
-   * What a session may rely on of it (MH-20): read by swap, clone and
+   * What a session may rely on of it: read by swap, clone and
    * resume instead of branching on the harness's id.
    */
   capabilities: HarnessCapabilitiesSpec;
@@ -705,7 +705,7 @@ export interface ServerActionsSpec {
   tools: Record<string, ActionClass[]>;
   /** What an argument makes a tool do besides, by tool. */
   conditions: Record<string, ActionConditionSpec[]>;
-  /** The argument carrying what a tool sends, signed with the application's byline (I-10), by tool. */
+  /** The argument carrying what a tool sends, signed with the application's byline, by tool. */
   signs?: Record<string, string>;
 }
 
@@ -727,7 +727,7 @@ export type AppLayout = 'chat' | 'page' | 'split';
 /** The one colour of an application; everything else is neutral. */
 export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
 
-/** A theme of Appearance's, which an application may run in (T-30). */
+/** A theme of Appearance's, which an application may run in. */
 export type AppThemeVariant =
   | 'datalayer'
   | 'spatial'
@@ -744,7 +744,7 @@ export type AppThemeVariant =
 export type AppThemeMode = 'light' | 'dark' | 'auto';
 
 /**
- * The theme an application runs in by default (T-30): at its address,
+ * The theme an application runs in by default: at its address,
  * embedded, in the Studio's Preview and as an example. The person's own
  * when unsaid; the mode, when unsaid, is the person's.
  */
@@ -754,7 +754,7 @@ export interface AppThemeSpec {
 }
 
 /**
- * An avatar named by id (T-24): the id an enabled plugin contributes it
+ * An avatar named by id: the id an enabled plugin contributes it
  * under to `loop.assistant.character` — Datalayer's orb is `orb`, in the
  * theme's colours, acting out each of the assistant's states; its own drawings are
  * `paperclip`, `wizard`, `cat` and `eyes`; the characters clippy.js
@@ -781,10 +781,10 @@ export interface AppAvatarModel3D {
  */
 export type AppAvatar = AppAvatarId | AppAvatarModel3D;
 
-/** How a floating assistant's balloon shows the conversation (T-23). */
+/** How a floating assistant's balloon shows the conversation. */
 export type AppBalloonDisplay = 'history' | 'current';
 
-/** How an application sits in another product's page (D-07). */
+/** How an application sits in another product's page. */
 export type AppEmbedMode = 'inline' | 'bubble' | 'panel' | 'assistant';
 
 /** Something an application reaches. */
@@ -852,7 +852,7 @@ export interface AppPapExcludedTaskSpec {
 
 /**
  * A company the application works with as a personal agent
- * (S-01): named by its domain, nothing else; what discovery
+ *: named by its domain, nothing else; what discovery
  * verifies is the deployment's, never the spec's.
  */
 export interface AppPapConnectionSpec {
@@ -871,7 +871,7 @@ export interface AppPapConnectionSpec {
   extensions: string[];
 }
 
-/** The application as a company personal agents work with (U-04). */
+/** The application as a company personal agents work with. */
 export interface AppPapCompanySpec {
   /** Whether it publishes itself as a company at Ship. */
   enabled: boolean;
@@ -888,64 +888,28 @@ export interface AppPapCompanySpec {
   /** The personal agents it accepts when `registered` only, by `client_id` URL. */
   registeredAgents: string[];
   /**
-   * What it does for the person once they confirm (B-04, the
+   * What it does for the person once they confirm (the
    * `operations` extension): each action and each tool once.
    */
   operations: AppPapOperationSpec[];
 }
 
 /**
- * One bound of a standing permission (R-07): a term of the other
- * company's operations, by its dotted path, bounded by a term of this one —
- * its maximum, or the one value allowed (one of the two).
- */
-export interface AppPapStandingLimitSpec {
-  path: string;
-  maximum?: string;
-  allowed?: string;
-}
-
-/**
- * What an operation gives instead of calling a tool (R-07, the
- * Ledgerly pattern): once the person confirms it, the application may confirm,
- * at one of its own company connections and in their account there, what stays
- * within these bounds — recorded as the approval in advance they would give in
- * Datalayer.
- */
-export interface AppPapStandingSpec {
-  /** The id of one of its own company connections (`as: user`, `write`). */
-  connection: string;
-  /** What confirming there does. */
-  action: 'write' | 'buy';
-  /** Every term bounded, 1 to 20. */
-  limits: AppPapStandingLimitSpec[];
-  /** The term of this operation giving how many times, at most. */
-  uses: string;
-  /** The term of this operation giving for how many days, at most 90. */
-  days: string;
-}
-
-/**
  * Something a personal agent may ask the application to do for the person,
- * done only once they confirm its exact terms (B-04): the call
- * of `tool` is proposed instead of made, its arguments the terms — or, for one
- * that `allows`, a standing permission given (R-07).
+ * done only once they approve its exact terms: the call of `tool` is proposed
+ * instead of made, its arguments the terms.
  */
 export interface AppPapOperationSpec {
   /** The action's name at this company: `orders.exchange`. */
   action: string;
-  /** The application's tool that does it, called with the terms; `''` for one that `allows`. */
+  /** The application's tool that does it, called with the terms. */
   tool: string;
-  /** Instead of a tool: the standing permission confirming it gives (R-07). */
-  allows?: AppPapStandingSpec;
   /** What the person is shown, `{term}` for each term; never the model's. */
   summary: string;
-  /** Whether only the person may confirm it, never an approval in advance. */
-  userApprovalRequired: boolean;
 }
 
 /**
- * A Personal Agent Protocol profile Datalayer speaks (S-03): `draft-01` names
+ * A Personal Agent Protocol profile Datalayer speaks: `draft-01` names
  * the profile the Appspec has said since the first draft; the SDK it is read
  * with implements draft 0.3.
  */
@@ -961,7 +925,7 @@ export interface AppPapSpec {
 
 /**
  * A business the application asks for each person over PACT 1.0
- * (PI-01): its domain, and the audience its Provider
+ *: its domain, and the audience its Provider
  * assigned. Always in each person's own name; never a credential.
  */
 export interface AppPactConnectionSpec {
@@ -986,7 +950,7 @@ export interface AppPactRegisteredAgentSpec {
 }
 
 /**
- * The application as a PACT business (PR-13, PI-32): its card
+ * The application as a PACT business: its card
  * names Datalayer as the Provider and its owner as the Brand; it accepts the
  * personal agents its Maker registered, and a person delegates the scopes it
  * offers through their Datalayer sign-in.
@@ -1004,11 +968,11 @@ export interface AppPactBusinessSpec {
 /** PACT: the businesses it asks for each person, and whether it answers as one. */
 export interface AppPactSpec {
   connections: AppPactConnectionSpec[];
-  /** As a business (PR-13): absent or not `enabled`, it is none. Read, it is always said. */
+  /** As a business: absent or not `enabled`, it is none. Read, it is always said. */
   business?: AppPactBusinessSpec;
 }
 
-/** The most one purchase may cost at a merchant (PI-22). */
+/** The most one purchase may cost at a merchant. */
 export interface AppSpendLimitSpec {
   /** As written: `50`, `12.50`. */
   amount: string;
@@ -1018,7 +982,7 @@ export interface AppSpendLimitSpec {
 
 /**
  * A merchant the application shops at for each person, over UCP or ACP
- * (PI-01). Test merchants only, every purchase asked of the
+ *. Test merchants only, every purchase asked of the
  * person (decided 2026-10-13). Never a credential.
  */
 export interface AppCommerceMerchantSpec {
@@ -1040,7 +1004,7 @@ export interface AppCommerceSpec {
 
 /**
  * A website the application reads pages of, each request signed with its
- * own Web Bot Auth key (EX-11, decided 2026-10-13): the
+ * own Web Bot Auth key (decided 2026-10-13): the
  * gateway's `signed-fetch` toolset reads there with GET only. Never a
  * credential.
  */
@@ -1058,7 +1022,7 @@ export interface AppSignedFetchSpec {
 
 /**
  * One of a pair of examples, a PACT business and the personal agent that
- * asks it (PR-13; decided 2026-10-13): when a person has
+ * asks it (decided 2026-10-13): when a person has
  * copied both, the Studio registers the personal agent's copy with the
  * business's copy and points the personal agent there.
  */
@@ -1071,7 +1035,7 @@ export interface AppPairSpec {
 
 /**
  * An A2A extension the application's Agent Card advertises, beside the
- * runtime's own (PR-02). Its params are public: never a
+ * runtime's own. Its params are public: never a
  * credential.
  */
 export interface AppA2AExtensionSpec {
@@ -1125,14 +1089,14 @@ export interface AppStarterSpec {
   label: string;
   message: string;
   /**
-   * The heading it is offered under (P-20): the starters of one
+   * The heading it is offered under: the starters of one
    * category together, those without one first. Absent when unsaid.
    */
   category?: string;
 }
 
 /**
- * One of several assistants in one application (P-20): picked before
+ * One of several assistants in one application: picked before
  * the conversation starts — the first unless another is — and kept to its
  * end. Its instructions are told in every run, its model run in place of the
  * application's (a mode's wins over it), its starters offered in place of
@@ -1148,7 +1112,7 @@ export interface AppProfileSpec {
 }
 
 /**
- * What a person reads of an application in another language (P-26):
+ * What a person reads of an application in another language:
  * each part keyed by what names it in the spec — a starter by its label, a
  * category by its words, a setting by its field, a command by its name, a
  * mode and a profile by their ids. Every key present; empty is untranslated.
@@ -1174,7 +1138,7 @@ export interface AppTranslationSpec {
   profiles: Record<string, { label: string; description: string }>;
 }
 
-/** A slash command the user picks in the composer (P-19). */
+/** A slash command the user picks in the composer. */
 export interface AppCommandSpec {
   /** What follows the slash: lower-case letters, digits and hyphens. */
   name: string;
@@ -1185,7 +1149,7 @@ export interface AppCommandSpec {
 }
 
 /**
- * An action of its code a person presses (RU-5): `@app.action`,
+ * An action of its code a person presses: `@app.action`,
  * typed — the JSON Schema of its payload, written from the pydantic model its
  * code declares; none when it takes nothing. The runtime offers it with a
  * token and refuses a press of anything else, or with anything else.
@@ -1198,7 +1162,7 @@ export interface AppActionSpec {
   payload?: Record<string, unknown>;
 }
 
-/** One position of a mode switch (P-19). */
+/** One position of a mode switch. */
 export interface AppModeOptionSpec {
   id: string;
   label: string;
@@ -1209,7 +1173,7 @@ export interface AppModeOptionSpec {
   model?: string | null;
 }
 
-/** A mode switch in the composer (P-19). */
+/** A mode switch in the composer. */
 export interface AppModeSpec {
   id: string;
   label: string;
@@ -1220,7 +1184,7 @@ export interface AppModeSpec {
 }
 
 /**
- * What a run in the modes chosen is told, and the model it runs on (P-19): agentspecs' `ModeEffect`.
+ * What a run in the modes chosen is told, and the model it runs on: agentspecs' `ModeEffect`.
  */
 export interface AppModeEffect {
   /** The instructions of the options chosen, in the order of the modes. */
@@ -1230,7 +1194,7 @@ export interface AppModeEffect {
 }
 
 /**
- * One field of a form (C-16): its JSON Schema — a `type`, the `title` a
+ * One field of a form: its JSON Schema — a `type`, the `title` a
  * person reads, its `default`, and what it takes (`enum`, `minimum`,
  * `maximum`…).
  */
@@ -1246,7 +1210,7 @@ export type AppFormField = {
 };
 
 /**
- * The JSON Schema of a form (C-16): an object of named fields, drawn with
+ * The JSON Schema of a form: an object of named fields, drawn with
  * `@datalayer/primer-rjsf` and checked by the runtime against the same schema.
  * An application's settings are one (`interface.settings`), as a Form block's
  * schema is.
@@ -1270,11 +1234,11 @@ export interface AppSurfaceSpec {
   composedAt: string;
 }
 
-/** What a page's output is drawn with of the catalog (P-05). */
+/** What a page's output is drawn with of the catalog. */
 export type AppPageOutputComponent = 'Text' | 'Image' | 'Table' | 'Chart';
 
 /**
- * A component its developer wrote (P-17), of one application only: the
+ * A component its developer wrote, of one application only: the
  * catalog grows for it, it does not open. Reviewed as the catalog's own — its
  * properties a JSON Schema, what it shows and sends bindings — and drawn in a
  * sandboxed frame of no origin from the built ES module at `source`.
@@ -1300,7 +1264,7 @@ export interface AppCustomComponentSpec {
   example?: Record<string, unknown>;
 }
 
-/** One thing a widget's page shows for its inputs (P-05), at `/outputs/<name>`. */
+/** One thing a widget's page shows for its inputs, at `/outputs/<name>`. */
 export interface AppPageOutputSpec {
   name: string;
   /** What a person reads above it; none when empty. */
@@ -1308,7 +1272,7 @@ export interface AppPageOutputSpec {
   /**
    * `Text` (words) unless said, `Image` (an address), `Table` (rows), `Chart`
    * (points) — an `AppPageOutputComponent` — or a component of the
-   * application's own (P-17), its value what it shows first.
+   * application's own, its value what it shows first.
    */
   component: string;
   /** The component's other properties: a Table's `columns`, a Chart's `kind`, `x`, `y`. */
@@ -1316,7 +1280,7 @@ export interface AppPageOutputSpec {
 }
 
 /**
- * A widget's page written in its code (P-05, `@app.page`): its inputs a
+ * A widget's page written in its code (`@app.page`): its inputs a
  * form, drawn at `/inputs/<name>`; its outputs values, shown at
  * `/outputs/<name>`. As an input changes, the function its code names runs
  * again on all of them, and the outputs change in place.
@@ -1333,14 +1297,14 @@ export interface AppPageSpec {
 }
 
 /**
- * An application's voice (VO-41), off unless said: whether a person
+ * An application's voice, off unless said: whether a person
  * may talk to it, whether its answers are heard, with which voice of the
  * catalogue (`specs/voices`), in which language (BCP 47) and where its
  * speech runs.
  */
 export interface AppVoiceSpec {
   enabled: boolean;
-  /** `hands_free` (VO-12) is refused until it is built. */
+  /** `hands_free` is refused until it is built. */
   input: 'off' | 'push_to_talk' | 'hands_free';
   output: 'off' | 'on_request' | 'always';
   voice: string;
@@ -1349,7 +1313,7 @@ export interface AppVoiceSpec {
 }
 
 /**
- * A kind of file a person may send, and how large (P-21): a media type
+ * A kind of file a person may send, and how large: a media type
  * (`application/pdf`), a family (`image/*`, `audio/*`) or an extension
  * (`.csv`), lowercase.
  */
@@ -1360,7 +1324,7 @@ export interface AppUploadKindSpec {
 }
 
 /**
- * What a person may send in the composer without being asked (P-21):
+ * What a person may send in the composer without being asked:
  * the kinds it takes, each with its largest size, and how many at once.
  */
 export interface AppUploadsSpec {
@@ -1377,52 +1341,52 @@ export interface AppInterfaceSpec {
    * theme's own colours (decided 2026-10-07).
    */
   accent?: AppAccent;
-  /** The theme it runs in by default; the person's own when unsaid (T-30). */
+  /** The theme it runs in by default; the person's own when unsaid. */
   theme?: AppThemeSpec;
   welcome: string;
   starters: AppStarterSpec[];
-  /** Slash commands picked in the composer: typing `/` lists them (P-19). */
+  /** Slash commands picked in the composer: typing `/` lists them. */
   commands: AppCommandSpec[];
-  /** Mode switches in the composer, the option picked going with every run (P-19). */
+  /** Mode switches in the composer, the option picked going with every run. */
   modes: AppModeSpec[];
   /**
-   * The actions of its code a person presses, typed (RU-5):
+   * The actions of its code a person presses, typed:
    * written by its code (`@app.action`); absent from a spec without code.
    */
   actions?: AppActionSpec[];
   /**
-   * Several assistants in one application (P-20): two at least, or none.
+   * Several assistants in one application: two at least, or none.
    * Absent from a spec made before profiles.
    */
   profiles?: AppProfileSpec[];
   /**
-   * What a person may set: the JSON Schema of a form (C-16), drawn beside the
+   * What a person may set: the JSON Schema of a form, drawn beside the
    * conversation and on a deployment's Ship card; none when unsaid.
    */
   settings?: AppFormSchema;
   /**
-   * How the settings' fields are drawn (P-20): a uiSchema as
+   * How the settings' fields are drawn: a uiSchema as
    * `@datalayer/primer-rjsf` reads it, by field name — `ui:widget` one of
    * `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`,
    * `textarea`, `date`, `checkboxes`, `tags`. Each field's own when unsaid.
    */
   settingsUi?: Record<string, unknown>;
-  /** The language its own words are in, BCP 47 (P-26); `en` when absent. */
+  /** The language its own words are in, BCP 47; `en` when absent. */
   language?: string;
-  /** Its words in other languages, by BCP 47 tag (P-26). */
+  /** Its words in other languages, by BCP 47 tag. */
   translations?: Record<string, AppTranslationSpec>;
   /**
-   * What a person may send in the composer without being asked (P-21): none
+   * What a person may send in the composer without being asked: none
    * when unsaid — the composer offers no attachment, and the runtime refuses
    * a file sent with a message.
    */
   uploads?: AppUploadsSpec;
   /** The components of the catalog the surface may use. */
   components: string[];
-  /** Components its developer wrote (P-17); absent from a spec made before them. */
+  /** Components its developer wrote; absent from a spec made before them. */
   customComponents?: AppCustomComponentSpec[];
   surface?: AppSurfaceSpec;
-  /** A widget's page written in its code (P-05); none when unsaid. */
+  /** A widget's page written in its code; none when unsaid. */
   page?: AppPageSpec;
   /**
    * The avatar its floating assistant shows; the paper clip when unsaid.
@@ -1435,7 +1399,7 @@ export interface AppInterfaceSpec {
    * does now). The page's own when unsaid.
    */
   balloon?: AppBalloonDisplay;
-  /** Its voice: off unless said (VO-41); absent from a spec made before voice. */
+  /** Its voice: off unless said; absent from a spec made before voice. */
   voice?: AppVoiceSpec;
   /**
    * The formats its answers come in, by media type, words first:
@@ -1479,8 +1443,8 @@ export interface AppTestCaseSpec {
   turns?: AppTestTurnSpec[];
   expect: string;
   /**
-   * The function of its code that decides the case, by name (P-06:
-   * `@app.test`); `expect` still says it in words, and decides it without
+   * The function of its code that decides the case, by name
+   * (`@app.test`); `expect` still says it in words, and decides it without
    * the file. Empty, or absent, for a case in words alone.
    */
   code?: string;
@@ -1492,7 +1456,7 @@ export interface AppTestCaseSpec {
 }
 
 /**
- * What was verified, and how, each in a sentence a person reads (E-14):
+ * What was verified, and how, each in a sentence a person reads:
  * what was tried live, what runs on recorded data, what is not verified yet.
  */
 export interface AppVerifiedSpec {
@@ -1518,16 +1482,16 @@ export interface AppRecordSpec {
   retentionDays: number;
   include: string[];
   /**
-   * Whether its conversations may be used to suggest tests (V-16): off
+   * Whether its conversations may be used to suggest tests: off
    * unless said, and only those kept while it is on are sampled.
    */
   suggestTests: boolean;
 }
 
-/** Where a check of an application's code runs (P-06). */
+/** Where a check of an application's code runs. */
 export type AppCheckStage = 'answer' | 'tool_call';
 
-/** A check written in an application's code (P-06: `@app.check`). */
+/** A check written in an application's code (`@app.check`). */
 export interface AppCodeCheckSpec {
   /** The function of its code that checks. */
   name: string;
@@ -1542,13 +1506,13 @@ export interface AppChecksSpec {
   guards: string[];
   gates: string[];
   track: string;
-  /** Checks written in its code (P-06); absent when it has none. */
+  /** Checks written in its code; absent when it has none. */
   code?: AppCodeCheckSpec[];
 }
 
 /**
- * A tool of an application's own, written in its code (P-06:
- * `@app.tool`): its agent calls it, and the rules decide each call by what
+ * A tool of an application's own, written in its code
+ * (`@app.tool`): its agent calls it, and the rules decide each call by what
  * it `does`, or by a rule that names it by its name alone.
  */
 export interface AppToolSpec {
@@ -1561,7 +1525,7 @@ export interface AppToolSpec {
   does: string[];
 }
 
-/** A function of the host page the application's agent may call (D-10). */
+/** A function of the host page the application's agent may call. */
 export interface AppHostFunctionSpec {
   /** Lower-case words joined by `_`: called as the tool `host_<name>`. */
   name: string;
@@ -1572,7 +1536,7 @@ export interface AppHostFunctionSpec {
 }
 
 /**
- * What the host page and an embedded application say to each other (D-10): the host's values it reads (`user`, `page`, or the host's own),
+ * What the host page and an embedded application say to each other: the host's values it reads (`user`, `page`, or the host's own),
  * through the tool `host_context`, and the host's functions it may call,
  * each through `host_<name>` — every one of them decided by a rule that
  * names it.
@@ -1581,14 +1545,14 @@ export interface AppHostBridgeSpec {
   context: string[];
   functions: AppHostFunctionSpec[];
   /**
-   * Who its user is (D-21): `claimed`, what the page says (unless
+   * Who its user is: `claimed`, what the page says (unless
    * said); `signed`, only a token the host's server signed with the
    * deployment's secret — the unsigned one refused.
    */
   user?: AppHostUser;
 }
 
-/** What the host page's word on its visitor is worth (D-21). */
+/** What the host page's word on its visitor is worth. */
 export type AppHostUser = 'claimed' | 'signed';
 
 export interface AppDeploymentSpec {
@@ -1596,7 +1560,7 @@ export interface AppDeploymentSpec {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
     slug: string;
     /**
-     * At its address, only its avatar (T-21): the conversation
+     * At its address, only its avatar: the conversation
      * opens in its balloon, as when it is shipped as `assistant`. Off
      * unless said.
      */
@@ -1605,7 +1569,7 @@ export interface AppDeploymentSpec {
   embedded?: {
     mode: AppEmbedMode;
     origins: string[];
-    /** What the host page passes it and the functions of the host it may call (D-10). */
+    /** What the host page passes it and the functions of the host it may call. */
     host?: AppHostBridgeSpec;
   };
 }
@@ -1665,7 +1629,7 @@ export interface AppSampleAlternativeSpec {
 }
 
 /**
- * What it is tried on before it is anybody's (E-06, E-11): published
+ * What it is tried on before it is anybody's: published
  * with it by Datalayer, read only — what a visitor without an account
  * computes from, or decides on, in the browser.
  */
@@ -1698,7 +1662,7 @@ export interface AppSpec {
   skills: string[];
   /** Backend tools (agentspecs/backend-tools) it adds to its agent's. */
   backendTools: string[];
-  /** Tools of its own, written in its code (P-06); absent when it has none. */
+  /** Tools of its own, written in its code; absent when it has none. */
   tools?: AppToolSpec[];
   /** The Frames it works under. */
   context: string[];
@@ -1706,7 +1670,7 @@ export interface AppSpec {
   contents: string[];
   connections: AppConnectionSpec[];
   /**
-   * The agent protocols it speaks, ids of `agentspecs/protocols` (PS-02): its `pap`, `pact` and `a2a` blocks are refused unless their protocol
+   * The agent protocols it speaks, ids of `agentspecs/protocols`: its `pap`, `pact` and `a2a` blocks are refused unless their protocol
    * is listed, and a planned one only while it is not offered.
    */
   protocols: string[];
@@ -1714,15 +1678,15 @@ export interface AppSpec {
   ui: UiChoice[];
   /** Personal Agent Protocol; absent, the application has none. */
   pap?: AppPapSpec;
-  /** PACT: the businesses it asks for each person (PI-01). */
+  /** PACT: the businesses it asks for each person. */
   pact?: AppPactSpec;
-  /** UCP and ACP: the merchants it shops at for each person (PI-01). */
+  /** UCP and ACP: the merchants it shops at for each person. */
   commerce?: AppCommerceSpec;
-  /** Signed fetch: the sites it reads pages of, each request signed (EX-11). */
+  /** Signed fetch: the sites it reads pages of, each request signed. */
   signed_fetch?: AppSignedFetchSpec;
-  /** One of a pair of examples: a PACT business, or the personal agent that asks it (PR-13). */
+  /** One of a pair of examples: a PACT business, or the personal agent that asks it. */
   pair?: AppPairSpec;
-  /** A2A: the extensions its Agent Card advertises (PR-02). */
+  /** A2A: the extensions its Agent Card advertises. */
   a2a?: AppA2ASpec;
   rules: AppRuleSpec[];
   permissions: AppPermissionsSpec;
@@ -1830,7 +1794,7 @@ export interface Agentspec {
   /** User-facing objective for the agent */
   goal?: string;
   /**
-   * What work this agent can be delegated (O2-07).
+   * What work this agent can be delegated.
    *
    * `protocol` below says how a client and an agent talk; this says what it
    * is worth handing the agent. Ids come from a closed vocabulary, because
@@ -1846,7 +1810,7 @@ export interface Agentspec {
   /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
   protocol?: string;
   /**
-   * The agent protocols it speaks, ids of `agentspecs/protocols` (PS-02). `protocol` says how a page reaches it; this, what it speaks to the world.
+   * The agent protocols it speaks, ids of `agentspecs/protocols`. `protocol` says how a page reaches it; this, what it speaks to the world.
    */
   protocols?: string[];
   /** Its UI plugins, each with the renderer it is exposed through, when it is (R8). */
@@ -1891,7 +1855,7 @@ export interface Agentspec {
   /** Subagent delegation configuration. */
   subagents?: SubAgentsConfig;
   /**
-   * Its voice, for an agent that is not an application (VO-41):
+   * Its voice, for an agent that is not an application:
    * the fields an Appspec says under `interface.voice`; absent when unsaid.
    */
   voice?: AppVoiceSpec;
