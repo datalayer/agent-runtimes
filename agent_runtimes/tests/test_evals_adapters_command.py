@@ -169,6 +169,7 @@ def test_a_launch_approves_tools_by_name_and_stops_on_a_refusal(client):
     assert not [call for call in client.calls if call[0] == "launch"]
     client.plan = {"ok": True}
     assert _invoke("launch", "e1", "--tool", "add", "--concurrency", "3").exit_code == 0
+    assert "application" not in client.calls[-1][1]["config"]
     assert client.calls[-1] == (
         "launch",
         {"experiment_ids": ["x1"], "config": {"concurrency": 3, "tools": ["add"]}},
@@ -220,3 +221,20 @@ def test_the_golden_record_is_the_contracts():
     assert "secret" not in golden["external_plan"]["reproduction"].lower().replace(
         "secrets", ""
     )
+
+
+def test_a_launch_names_its_budget_application_and_deployment(client):
+    arguments = (
+        "launch",
+        "e1",
+        "--budget",
+        "5",
+        "--app-uid",
+        "a1",
+        "--deployment-uid",
+        "d1",
+    )
+    assert _invoke(*arguments).exit_code == 0
+    config = client.calls[-1][1]["config"]
+    assert config["budget"] == 5
+    assert config["application"] == {"app_uid": "a1", "deployment_uid": "d1"}
