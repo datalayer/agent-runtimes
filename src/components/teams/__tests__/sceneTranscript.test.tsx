@@ -386,6 +386,19 @@ describe('SceneTranscript and SceneView', () => {
     expect(copy.textContent).toBe('Copied');
   });
 
+  it('offers no selection when nothing listens for it', () => {
+    const { container } = render(
+      <ThemeProvider>
+        <SceneTranscript
+          lines={[
+            { key: 'a:said', at: 0, from: 'Sales', kind: 'said', text: 'Hi.' },
+          ]}
+        />
+      </ThemeProvider>,
+    );
+    expect(container.querySelector('[data-transcript-select]')).toBeNull();
+  });
+
   it('shows the graph, then the transcript read live from the tracer', async () => {
     const { tracer } = scriptedScene();
     const { container } = render(

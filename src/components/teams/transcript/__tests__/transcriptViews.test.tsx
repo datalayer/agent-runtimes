@@ -188,10 +188,37 @@ describe('TranscriptViews', () => {
     expect(
       detail.querySelector('[data-transcript-detail-inspector]'),
     ).toBeNull();
-    expect(refusal.getAttribute('aria-selected')).toBe('true');
+    expect(refusal.getAttribute('aria-current')).toBe('true');
     fireEvent.click(detail.querySelector('[data-transcript-detail-close]')!);
     expect(container.querySelector('[data-transcript-detail]')).toBeNull();
     expect(onSelect).toHaveBeenLastCalledWith(null);
+  });
+
+  it('selects a line from the keyboard, through a native button of its own', () => {
+    const { lines } = recorded(OPEN_AND_FAILED);
+    const onSelect = vi.fn();
+    const { container } = draw(
+      <TranscriptViews lines={lines} members={MEMBERS} onSelect={onSelect} />,
+    );
+    const refusal = container.querySelectorAll<HTMLElement>(
+      '[data-transcript-line]',
+    )[3];
+    const button = refusal.querySelector<HTMLButtonElement>(
+      'button[data-transcript-select]',
+    )!;
+    expect(button.type).toBe('button');
+    expect(button.getAttribute('aria-label')).toContain('Accounting');
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    // Enter and Space on a native button are its click.
+    fireEvent.click(button);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenLastCalledWith(
+      expect.objectContaining({ key: 'f2:said' }),
+    );
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(refusal.getAttribute('aria-selected')).toBeNull();
   });
 
   it('opens a harness step refused by the Shield with its rule', () => {

@@ -20,6 +20,7 @@ import { Box } from '@datalayer/primer-addons';
 import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import { useOtelLiveSpans } from '@datalayer/core/lib/otel/live';
 import { ChatMarkdown } from '../../chat/messages/ChatMarkdown';
+import { LineSelect } from './transcript/LineSelect';
 import {
   lineHeading,
   timeText,
@@ -51,12 +52,31 @@ export type SceneTranscriptProps = {
   writeText?: (text: string) => Promise<void>;
   /** The selected line's key: drawn marked (SCENES S2-03). */
   selected?: string | null;
-  /** A line was clicked: its key. */
+  /** A line was clicked, or its time's button pressed: its key. */
   onSelect?: (key: string) => void;
 };
 
 /** How long *Copied* stays, in milliseconds. */
 const COPIED_MS = 1500;
+
+/** A line's time, as a clock reads it. */
+function LineTime({ at }: { at: number }): JSX.Element {
+  return (
+    <Text
+      as="time"
+      sx={{
+        color: 'fg.muted',
+        fontFamily: 'mono',
+        fontSize: 0,
+        pt: '2px',
+        whiteSpace: 'nowrap',
+      }}
+      dateTime={new Date(at).toISOString()}
+    >
+      {timeText(at)}
+    </Text>
+  );
+}
 
 /** The transcript as a list of lines, newest last, with *Copy as text*. */
 export function SceneTranscript({
@@ -106,7 +126,7 @@ export function SceneTranscript({
               data-transcript-from={line.from}
               data-transcript-to={line.to}
               aria-busy={line.open ? 'true' : undefined}
-              aria-selected={onSelect ? selected === line.key : undefined}
+              aria-current={selected === line.key ? 'true' : undefined}
               onClick={onSelect ? () => onSelect(line.key) : undefined}
               bg={selected === line.key ? 'accent.subtle' : undefined}
               display="grid"
@@ -118,19 +138,16 @@ export function SceneTranscript({
               opacity={line.open ? 0.75 : 1}
               sx={onSelect ? { cursor: 'pointer' } : undefined}
             >
-              <Text
-                as="time"
-                sx={{
-                  color: 'fg.muted',
-                  fontFamily: 'mono',
-                  fontSize: 0,
-                  pt: '2px',
-                  whiteSpace: 'nowrap',
-                }}
-                dateTime={new Date(line.at).toISOString()}
-              >
-                {timeText(line.at)}
-              </Text>
+              {onSelect ? (
+                <LineSelect
+                  label={`Select ${lineHeading(line)} at ${timeText(line.at)}`}
+                  selected={selected === line.key}
+                >
+                  <LineTime at={line.at} />
+                </LineSelect>
+              ) : (
+                <LineTime at={line.at} />
+              )}
               {line.kind === 'called' ? (
                 <Box minWidth={0} overflowWrap="anywhere">
                   <Text sx={{ fontWeight: 600 }}>{lineHeading(line)}: </Text>
