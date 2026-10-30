@@ -427,7 +427,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played."
                 ],
             },
         },
@@ -838,7 +838,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Rehearsed on Datalayer on 2026-10-09: three beats of four pass — wildfire 121 s, storm 58 s, alert 98 s — and flood took 256 s against the 240 s it allows, a bound measured when Event response still asked both specialists at once (A-14)."
+                    "Rehearsed on Datalayer on 2026-10-09: three beats of four pass — wildfire 121 s, storm 58 s, alert 98 s — and flood took 256 s against the 240 s it allows, a bound measured when Event response still asked both specialists at once."
                 ],
             },
         },
@@ -1149,7 +1149,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played."
                 ],
             },
         },
@@ -2233,7 +2233,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
                 ],
                 "recorded": [],
                 "unverified": [
-                    "The rehearsal has not been played as a set (A-14): the scene is not Live yet."
+                    "The rehearsal has not been played as a set: the scene is not Live yet."
                 ],
             },
         },

@@ -260,7 +260,7 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
     "Google's coding agent, which speaks ACP itself when started with --experimental-acp.",
   enabled: false,
   unavailable_because:
-    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it stays unfunded and unoffered there (the user's decision, 28 October 2026).",
+    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it is not offered there.",
   tags: ['harness'],
   docs: 'https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/cli-reference.md',
   acp: {
@@ -381,7 +381,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
   version: '0.0.1',
   name: 'OpenCode',
   description:
-    "Anomaly's open coding agent, which speaks ACP itself with opencode acp; any model provider it is configured with.",
+    "Anomaly's open coding agent, which speaks ACP itself with opencode acp; any model provider it is configured with. On Datalayer its model calls go through Datalayer's ai-inference, on the platform's models and paid in credits, with no key of the account's.",
   enabled: true,
   unavailable_because: '',
   tags: ['harness'],

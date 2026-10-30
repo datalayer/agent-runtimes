@@ -335,7 +335,7 @@ BOOKKEEPING_DESK_APP_0_0_2 = AppSpec.model_validate(
                     "The journey is the Personal Agent Protocol SDK's recorded journey two-companies (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
+                    "It has not run in the Studio against a company: the test company Manzanita answers on Datalayer, and no conversation with it has been tried from this application yet."
                 ],
             },
         },
@@ -538,7 +538,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "example-harness-opencode:0.0.1",
         "team": "",
-        "instructions": "You explain code. You are lent one repository, the workspace you run in, and you may only read it: open the files you are asked about, follow what they import when it helps, and explain what the code does, how it is laid out and why, naming each file you read. You change nothing: you never edit, create, move or delete a file, and you never run a command that would. Asked to change a file, try nothing behind the person's back: say that this repository is lent to you to read, that the Shield refuses an edit here, and describe the change in words for a person to make. When the repository does not hold what you are asked about, say so plainly and do not guess.",
+        "instructions": "You explain code. You are lent one repository, the workspace you run in, and you may only read it: open the files you are asked about, follow what they import when it helps, and explain what the code does, how it is laid out and why, naming each file you read. Asked to change a file, try the edit once with your edit tool, as you would anywhere: the Shield in front of you decides it, and here it refuses it under the rule *Change a file*. Then say that this repository is lent to you to read, that the Shield refused the edit, and describe the change in words for a person to make. Never work around a refusal, and never run a command that would change a file. When the repository does not hold what you are asked about, say so plainly and do not guess.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -1624,7 +1624,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled as a pair on r1 on 13 October 2026, its clone and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt."
+                    "Tried live on Datalayer as a pair on 13 October 2026, its copy and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt."
                 ],
                 "recorded": [
                     "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests."
@@ -1945,13 +1945,13 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 14 October 2026, once its last fix was out: shipped at its own domain, asked by a person's own agent signed in through Datalayer with orders:read and orders:write, asked to exchange order ord_7Hk2 for size L, it proposed the exchange (Exchange order ord_7Hk2 for size L., awaiting the person's approval) and went on to tell them in its own words that nothing was done yet."
+                    "Tried live on Datalayer on 14 October 2026, once its last fix was out: shipped at its own domain, asked by a person's own agent signed in through Datalayer with orders:read and orders:write, asked to exchange order ord_7Hk2 for size L, it proposed the exchange (Exchange order ord_7Hk2 for size L., awaiting the person's approval) and went on to tell them in its own words that nothing was done yet."
                 ],
                 "recorded": [
                     "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Drilled a third time the same evening: signed in, asked to exchange, it said it could not — asked by a person's own agent, it was not given its exchange_order (fixed). Drilled a fourth time the same night, given it: proposing the exchange ended its answer, and the personal agent was told it could not answer just now (fixed, and the fix released on 14 October)."
+                    "Tried live on Datalayer on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Tried a third time the same evening: signed in, asked to exchange, it said it could not — asked by a person's own agent, it was not given its exchange_order (fixed). Tried a fourth time the same night, given it: proposing the exchange ended its answer, and the personal agent was told it could not answer just now (fixed, and the fix released on 14 October)."
                 ],
             },
         },
@@ -2085,10 +2085,10 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's clone as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
+                    "Tried live on Datalayer as a pair on 13 October 2026: two copies joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's copy as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
                 ],
                 "recorded": [
-                    "A shipped business at its own domain was drilled on r1 on 13 October 2026 (PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused."
+                    "A shipped business at its own domain was tried on Datalayer on 13 October 2026: its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused."
                 ],
                 "unverified": [],
             },
@@ -2276,7 +2276,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
                     "Run end to end in Datalayer's own tests on a test mailbox of example mail, a scripted model in place of its agent's (2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing."
                 ],
                 "unverified": [
-                    "No real mail has been read, drafted or sent yet: the drill on a Datalayer mailbox comes first.",
+                    "No real mail has been read, drafted or sent yet: a trial on a Datalayer mailbox comes first.",
                     "Its tests have not been run against its own model.",
                 ],
             },
@@ -2464,7 +2464,7 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
                     "The journey is the Personal Agent Protocol SDK's recorded journey conversation-streaming (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In, the person's order answered, and the conversation picked up from a new session with nothing said twice; but Datalayer reads the shop's replies a page at a time, each once it is written whole, so none was seen arriving as it was written."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In, the person's order answered, and the conversation picked up from a new session with nothing said twice; but Datalayer reads the shop's replies a page at a time, each once it is written whole, so none was seen arriving as it was written."
                 ],
             },
         },
@@ -3051,14 +3051,14 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company."
                 ],
                 "recorded": [
                     "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
                     "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill, and no exchange or return was confirmed live."
+                    "A model's turns in the Studio's Preview were not watched in that trial, and no exchange or return was confirmed live."
                 ],
             },
         },
@@ -3218,13 +3218,13 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the clone (Can read cannot disconnect)."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect)."
                 ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill."
+                    "A model's turns in the Studio's Preview were not watched in that trial."
                 ],
             },
         },
@@ -4146,13 +4146,13 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway's pap toolset (gateway 0.0.81): signed in by Device Sign-In with orders:read and orders:write; a return asked through the shop's API with pap_propose came back as the shop's operation (Return the Ridge Jacket (M) from order ord_7Hk2 for a refund of USD 180.00), approved by the person on Waiting for you, done once — the test shop's return fails as written, its label emailed and no money moved, which it said — and already confirmed the second time; a repair proposed the same way (a zip repair, free)."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway's pap toolset: signed in by Device Sign-In with orders:read and orders:write; a return asked through the shop's API with pap_propose came back as the shop's operation (Return the Ridge Jacket (M) from order ord_7Hk2 for a refund of USD 180.00), approved by the person on Waiting for you, done once — the test shop's return fails as written, its label emailed and no money moved, which it said — and already confirmed the second time; a repair proposed the same way (a zip repair, free)."
                 ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey operations (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill."
+                    "A model's turns in the Studio's Preview were not watched in that trial."
                 ],
             },
         },
@@ -4678,13 +4678,13 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita (counterparts 0.0.6), as its Preview reaches the gateway's pap toolset: asked signed out, signed in by Device Sign-In with orders:read, the person's latest order answered; asked for one of the shop's people, the conversation went to Marta, of Manzanita's staff (responder human), who answered in it."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway's pap toolset: asked signed out, signed in by Device Sign-In with orders:read, the person's latest order answered; asked for one of the shop's people, the conversation went to Marta, of Manzanita's staff (responder human), who answered in it."
                 ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey conversation-control (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill; Marta is a scripted member of the test shop's staff."
+                    "A model's turns in the Studio's Preview were not watched in that trial; Marta is a scripted member of the test shop's staff."
                 ],
             },
         },
@@ -4838,14 +4838,14 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted test merchants, as its Preview reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument."
                 ],
                 "recorded": [
                     "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
                     "The checkout at Example Outfitters is the developers' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests.",
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill (no dev server ran)."
+                    "A model's turns in the Studio's Preview were not watched in that trial."
                 ],
             },
         },
@@ -5005,13 +5005,13 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: Mediated Sign-In opened Datalayer's protected page, where the person typed the email and password the company asks, then the one-time code it sent; signed in with orders:read, nothing typed reaching the conversation, and their Ridge Jacket order answered for them."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: Mediated Sign-In opened Datalayer's protected page, where the person typed the email and password the company asks, then the one-time code it sent; signed in with orders:read, nothing typed reaching the conversation, and their Ridge Jacket order answered for them."
                 ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey mediated-sign-in (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill."
+                    "A model's turns in the Studio's Preview were not watched in that trial."
                 ],
             },
         },
@@ -5144,13 +5144,13 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused."
                 ],
                 "recorded": [
                     "Example Verifier's checks are the counterparts service's own tests (a request signed with Datalayer's open-source signer verified, an unsigned or tampered one answered the page anyone gets)."
                 ],
                 "unverified": [
-                    "A model's turns in the Studio's Preview were not watched in that drill."
+                    "A model's turns in the Studio's Preview were not watched in that trial."
                 ],
             },
         },
@@ -5793,14 +5793,14 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified)."
+                    "Tried live on Datalayer on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified)."
                 ],
                 "recorded": [
                     "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112)."
                 ],
                 "unverified": [
                     "The hosted Example Air keeps registrations in memory: an application is registered there (POST /example/register, its issuer and keys) again after each restart.",
-                    "A model's turns in the Studio's Preview were not watched in that drill (no dev server ran); the step-up to bookings:change was not drilled live.",
+                    "A model's turns in the Studio's Preview were not watched in that trial; the step-up to bookings:change was not tried live.",
                 ],
             },
         },
@@ -5938,7 +5938,7 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Answered live on r1, in the Studio's Preview and from the terminal (2026-10-03), on Tavily.",
+                    "Answered live on Datalayer, in the Studio's Preview and from the terminal (2026-10-03), on Tavily.",
                     "Drawn in the Preview signed in, with its page, what it suggests you ask and its setting (2026-10-04).",
                 ],
                 "recorded": [],
