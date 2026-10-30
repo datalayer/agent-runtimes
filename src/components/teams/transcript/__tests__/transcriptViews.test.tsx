@@ -221,6 +221,42 @@ describe('TranscriptViews', () => {
     expect(refusal.getAttribute('aria-selected')).toBeNull();
   });
 
+  it('selects a row from the keyboard, through a native button of its own', () => {
+    const { lines } = recorded(OPEN_AND_FAILED);
+    const onSelect = vi.fn();
+    const { container } = draw(
+      <TranscriptViews
+        lines={lines}
+        members={MEMBERS}
+        defaultView="table"
+        onSelect={onSelect}
+      />,
+    );
+    const rows = container.querySelectorAll<HTMLElement>('tbody tr');
+    const button = rows[3].querySelector<HTMLButtonElement>(
+      'button[data-transcript-select]',
+    )!;
+    expect(button.type).toBe('button');
+    expect(button.getAttribute('aria-label')).toContain('Accounting');
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    // Enter and Space on a native button are its click: one selection.
+    fireEvent.click(button);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenLastCalledWith(
+      expect.objectContaining({ key: 'f2:said' }),
+    );
+    expect(
+      container
+        .querySelector('[data-transcript-detail]')!
+        .getAttribute('data-transcript-detail'),
+    ).toBe('f2:said');
+    expect(
+      container.querySelectorAll(
+        'tbody button[data-transcript-select][aria-pressed="true"]',
+      ),
+    ).toHaveLength(1);
+  });
+
   it('opens a harness step refused by the Shield with its rule', () => {
     const { lines, spans } = recorded(HARNESS_STEPS);
     const { container } = draw(

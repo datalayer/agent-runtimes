@@ -7,17 +7,18 @@
  * The transcript as a table (SCENES S2-01), Primer's `DataTable`: time,
  * from → to, over A2A or MCP, kind, text, how long, state. Sortable by time
  * (an open call last among its ties), a failed row marked, a click on a row
- * selects its line.
+ * or the button on its time selects its line.
  *
  * @module components/teams/transcript/TranscriptTable
  */
 
 import type { JSX, MouseEvent } from 'react';
-import { useId, useMemo } from 'react';
+import { createContext, useContext, useId, useMemo } from 'react';
 import { Label, Text } from '@primer/react';
 import { DataTable, Table, type Column } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
-import { timeText } from '../sceneTranscriptRules';
+import { lineHeading, timeText } from '../sceneTranscriptRules';
+import { LineSelect } from './LineSelect';
 import {
   compareByTime,
   durationText,
@@ -31,7 +32,7 @@ import type { TranscriptRowsLines } from './TranscriptViewsTypes';
 export type TranscriptTableProps = TranscriptRowsLines & {
   /** The selected line's key. */
   selected?: string | null;
-  /** A row was clicked: its line's key. */
+  /** A row was clicked, or its time's button pressed: its line's key. */
   onSelect?: (key: string) => void;
   /** What is said while there is no line. */
   emptyText?: string;
@@ -58,6 +59,36 @@ function StateLabel({ row }: { row: TranscriptRow }): JSX.Element {
   );
 }
 
+/** What a row's cells read of the selection: a column is fixed, the selection changes. */
+const RowSelection = createContext<{
+  selectable: boolean;
+  selected?: string | null;
+}>({ selectable: false });
+
+/** A row's time, with what selects the row from the keyboard when it can be selected. */
+function RowTime({ row }: { row: TranscriptRow }): JSX.Element {
+  const { selectable, selected } = useContext(RowSelection);
+  const time = (
+    <Text
+      as="time"
+      sx={{ fontFamily: 'mono', fontSize: 0, whiteSpace: 'nowrap' }}
+      dateTime={new Date(row.at).toISOString()}
+    >
+      {timeText(row.at)}
+    </Text>
+  );
+  return selectable ? (
+    <LineSelect
+      label={`Select ${lineHeading(row)} at ${timeText(row.at)}`}
+      selected={selected === row.id}
+    >
+      {time}
+    </LineSelect>
+  ) : (
+    time
+  );
+}
+
 const COLUMNS: Column<TranscriptRow>[] = [
   {
     id: 'at',
@@ -65,15 +96,7 @@ const COLUMNS: Column<TranscriptRow>[] = [
     field: 'at',
     sortBy: compareByTime,
     width: 'auto',
-    renderCell: row => (
-      <Text
-        as="time"
-        sx={{ fontFamily: 'mono', fontSize: 0, whiteSpace: 'nowrap' }}
-        dateTime={new Date(row.at).toISOString()}
-      >
-        {timeText(row.at)}
-      </Text>
-    ),
+    renderCell: row => <RowTime row={row} />,
   },
   {
     id: 'who',
@@ -147,7 +170,7 @@ const COLUMNS: Column<TranscriptRow>[] = [
   },
 ];
 
-/** The transcript as a table, with a click on a row selecting its line. */
+/** The transcript as a table, with a click on a row or its button selecting its line. */
 export function TranscriptTable({
   lines,
   selected,
@@ -157,6 +180,10 @@ export function TranscriptTable({
 }: TranscriptTableProps): JSX.Element {
   const title = useId();
   const rows = useMemo(() => transcriptRows(lines), [lines]);
+  const selection = useMemo(
+    () => ({ selectable: Boolean(onSelect), selected }),
+    [onSelect, selected],
+  );
   // A click anywhere on a row: the row's line, found from the text cell's mark.
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!onSelect) {
@@ -202,14 +229,16 @@ export function TranscriptTable({
         <Table.Title as="h3" id={title}>
           Transcript
         </Table.Title>
-        <DataTable
-          aria-labelledby={title}
-          data={rows}
-          columns={COLUMNS}
-          cellPadding="condensed"
-          initialSortColumn="at"
-          initialSortDirection="ASC"
-        />
+        <RowSelection.Provider value={selection}>
+          <DataTable
+            aria-labelledby={title}
+            data={rows}
+            columns={COLUMNS}
+            cellPadding="condensed"
+            initialSortColumn="at"
+            initialSortDirection="ASC"
+          />
+        </RowSelection.Provider>
       </Table.Container>
     </Box>
   );
