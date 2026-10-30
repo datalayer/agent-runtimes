@@ -113,18 +113,18 @@ def unpack_archive(data: bytes, destination: Path) -> None:
                 raise SourceRefused(f"the archive holds more than {MAX_FILES} entries")
             for member in members:
                 if member.isdir():
-                    _inside(entry.name)
+                    _inside(member.name)
                     continue
-                if not entry.isfile():
+                if not member.isfile():
                     raise SourceRefused(
-                        f"the archive holds something other than a file: {entry.name}"
+                        f"the archive holds something other than a file: {member.name}"
                     )
-                stream = archive.extractfile(entry)
+                stream = tar.extractfile(member)
                 if stream is None:
                     raise SourceRefused(
-                        f"the archive's entry cannot be read: {entry.name}"
+                        f"the archive's entry cannot be read: {member.name}"
                     )
-                _write(destination, entry.name, stream, spent=spent)
+                _write(destination, member.name, stream, spent=spent)
     for root, directories, names in os.walk(destination):
         for name in names:
             os.chmod(os.path.join(root, name), 0o444)
