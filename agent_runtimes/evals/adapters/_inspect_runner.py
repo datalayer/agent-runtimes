@@ -100,6 +100,36 @@ def _sandbox_of(value: Any) -> dict[str, Any] | None:
     return {"type": str(value.type), "config": _plain(value.config)}
 
 
+def _environment_source(sandbox: dict[str, Any] | None, source: Path) -> dict[str, Any]:
+    """What a `docker` sandbox runs: `{image}`, `{dockerfile}`, or why it cannot be
+    a single environment. Read from its Compose file or Dockerfile, never run.
+    """
+    if not sandbox or sandbox["type"] != "docker":
+        return {}
+    config = sandbox.get("config")
+    path = Path(str(config)) if config else None
+    if path is None:
+        return {
+            "refused": "It uses Inspect's default Docker image, which names nothing to build."
+        }
+    path = path if path.is_absolute() else source / path
+    if path.name == "Dockerfile":
+        return {"dockerfile": path.read_text()}
+    import yaml
+
+    services = dict(yaml.safe_load(path.read_text()).get("services") or {})
+    if len(services) != 1:
+        return {
+            "refused": f"It defines {len(services)} services, and a task environment is one."
+        }
+    service = next(iter(services.values()))
+    if service.get("image") and not service.get("build"):
+        return {"image": str(service["image"])}
+    return {
+        "refused": "Its one service is built, which a Compose file cannot hand to an Environment yet."
+    }
+
+
 def _sample(sample: Any, index: int) -> dict[str, Any]:
     """One sample, with the id Inspect runs it under."""
     return {
@@ -191,6 +221,9 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
                     name: str(model) for name, model in (task.model_roles or {}).items()
                 },
                 "sandbox": _sandbox_of(task.sandbox),
+                "environment_source": _environment_source(
+                    _sandbox_of(task.sandbox), source
+                ),
                 "approval": bool(task.approval),
                 "epochs": task.epochs or 1,
                 "limits": {
@@ -231,9 +264,18 @@ def execute(request: dict[str, Any]) -> dict[str, Any]:
         # Inspect leaves without a word when its OpenAI client is missing.
         import openai  # noqa: F401
 
+    # Its Docker sandbox becomes the task's Environment, run through Inspect's
+    # own extension point; the framework's Compose never starts.
+    environment: dict[str, Any] = {}
+    if request.get("task_environment"):
+        sys.path.insert(0, str(Path(__file__).parent / "_providers"))
+        import _inspect_sandbox  # noqa: F401
+
+        environment = {"sandbox": "datalayer"}
     logs = run_eval(
         str(source / request["entry_point"]),
         model=request.get("model") or None,
+        **environment,
         task_args=request.get("task_args") or {},
         sample_id=[native],
         log_dir="logs",

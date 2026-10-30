@@ -47,6 +47,10 @@ IFF_UP = 0x1
 libc = ctypes.CDLL(None, use_errno=True)
 
 
+#: Where the relay's socket stands in a sandbox's own root.
+RELAY_INSIDE = "/.relay.sock"
+
+
 def refuse(what: str) -> None:
     """Stop here, saying what could not be isolated."""
     os.write(2, f"sandbox-refused: {what}\n".encode())
@@ -162,6 +166,10 @@ def own_root(config: dict) -> None:
         bind(inside, new + path, read_only=False)
     bind("/dev", new + "/dev", read_only=False)
     bind("/proc", new + "/proc", read_only=False)
+    if config["relay"]:
+        # The socket's own directory is left behind with the old root.
+        bind(config["relay"], new + RELAY_INSIDE, read_only=False)
+        config["relay"] = RELAY_INSIDE
     os.chdir(new)
     os.makedirs("old-root", exist_ok=True)
     checked(libc.syscall(PIVOT_ROOT, b".", b"old-root"), "pivot_root")

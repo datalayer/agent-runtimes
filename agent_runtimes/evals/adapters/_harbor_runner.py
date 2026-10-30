@@ -41,6 +41,14 @@ def _task_record(path: Path, source: Path) -> dict[str, Any]:
         "metadata": dict(task.config.metadata or {}),
         "docker_image": environment.docker_image or "",
         "dockerfile": (directory / "Dockerfile").exists(),
+        "dockerfile_content": (directory / "Dockerfile").read_text()
+        if (directory / "Dockerfile").exists()
+        else "",
+        "build_context": sorted(
+            item.name for item in directory.iterdir() if item.name != "Dockerfile"
+        )
+        if directory.is_dir()
+        else [],
         "compose": any(
             (directory / name).exists()
             for name in ("compose.yaml", "docker-compose.yaml")
@@ -75,6 +83,19 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def agent_arguments(request: dict[str, Any]) -> dict[str, Any]:
+    """What an agent is told of its model. Its key is a placeholder: the relay holds the token."""
+    arguments: dict[str, Any] = (
+        {"model_name": request["model"]} if request.get("model") else {}
+    )
+    if request.get("anthropic_url"):
+        arguments["env"] = {
+            "ANTHROPIC_BASE_URL": request["anthropic_url"],
+            "ANTHROPIC_AUTH_TOKEN": "held-by-the-relay",
+        }
+    return arguments
+
+
 async def _trial(request: dict[str, Any]) -> dict[str, Any]:
     """One attempt of one task, through Harbor's own trial."""
     from harbor.models.trial.config import (
@@ -90,12 +111,9 @@ async def _trial(request: dict[str, Any]) -> dict[str, Any]:
         task=TaskConfig(path=source / request["entry_point"]),
         trial_name=f"attempt-{request['attempt']}",
         trials_dir=Path("trials").resolve(),
-        agent=AgentConfig(
-            name=request["agent"],
-            **({"model_name": request["model"]} if request.get("model") else {}),
-        ),
+        agent=AgentConfig(name=request["agent"], **agent_arguments(request)),
         environment=EnvironmentConfig(
-            import_path="_harbor_environment:SandboxEnvironment"
+            import_path=f"_harbor_environment:{'TaskEnvironment' if request.get('task_environment') else 'SandboxEnvironment'}"
         ),
     )
     result = await (await Trial.create(config)).run()
@@ -109,7 +127,7 @@ def main() -> None:
     """Answer one request in `answer.json`."""
     request = json.loads(sys.stdin.read())
     # Its own folder: this one holds a `harbor.py` that would hide Harbor.
-    sys.path.insert(0, str(Path(__file__).parent / "_harbor_provider"))
+    sys.path.insert(0, str(Path(__file__).parent / "_providers"))
     answer = (
         inspect_source(request)
         if request["op"] == "inspect"

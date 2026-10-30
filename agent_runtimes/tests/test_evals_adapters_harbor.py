@@ -33,11 +33,13 @@ from agent_runtimes.evals.adapters.base import (
     blocking,
 )
 from agent_runtimes.evals.adapters.harbor import (
+    ANTHROPIC_ROUTE_VARIABLE,
     ENVIRONMENTS_VARIABLE,
     HARBOR_VERSION,
     PYTHON_VARIABLE,
     HarborAdapter,
     _agent_capability,
+    _agent_model,
     _task_capabilities,
 )
 from agent_runtimes.evals.adapters.host import AdapterHost
@@ -87,7 +89,14 @@ class TestWhatATaskNeeds:
 
     def test_a_deployment_says_what_it_provides(self, monkeypatch):
         monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image,compose")
-        assert blocking(_task_capabilities(_task(dockerfile=True, compose=True))) == []
+        assert (
+            blocking(
+                _task_capabilities(
+                    _task(dockerfile=True, dockerfile_content="FROM a\n", compose=True)
+                )
+            )
+            == []
+        )
 
     def test_a_lint_error_is_named(self):
         finding = {"severity": "error", "rule": "missing-tests", "message": "no tests"}
@@ -103,7 +112,6 @@ class TestAgents:
     @pytest.mark.parametrize(
         "agent",
         [
-            "claude-code",
             "codex",
             "gemini-cli",
             "aider",
@@ -122,7 +130,99 @@ class TestAgents:
         assert capability.reason
 
     def test_a_provider_speaking_agent_names_what_it_speaks(self):
-        assert "Messages API" in _agent_capability("claude-code").reason
+        assert "Responses API" in _agent_capability("codex").reason
+        assert "no route" in _agent_capability("gemini-cli").reason
+
+
+class TestClaudeCode:
+    """It runs where the deployment says ai-inference has the Bedrock route."""
+
+    def test_without_the_route_it_is_refused_in_a_sentence(self, monkeypatch):
+        monkeypatch.delenv(ANTHROPIC_ROUTE_VARIABLE, raising=False)
+        capability = _agent_capability("claude-code")
+        assert (capability.status, capability.code) == (
+            "unsupported",
+            "anthropic_route_absent",
+        )
+        assert "does not answer it from Bedrock" in capability.reason
+
+    @pytest.mark.parametrize("value", ["", "0", "false", "no", "maybe"])
+    def test_only_a_plain_yes_opens_it(self, monkeypatch, value):
+        monkeypatch.setenv(ANTHROPIC_ROUTE_VARIABLE, value)
+        assert _agent_capability("claude-code").status == "unsupported"
+
+    def test_with_the_route_it_runs(self, monkeypatch):
+        monkeypatch.setenv(ANTHROPIC_ROUTE_VARIABLE, "1")
+        assert _agent_capability("claude-code").status == "framework-run"
+
+    def test_the_route_opens_only_that_agent(self, monkeypatch):
+        monkeypatch.setenv(ANTHROPIC_ROUTE_VARIABLE, "1")
+        assert {_agent_capability(agent).code for agent in ("codex", "gemini-cli")} == {
+            "agent_not_on_inference"
+        }
+
+    def test_it_plans_on_the_relay_and_keeps_no_token(self, monkeypatch):
+        monkeypatch.setenv(ANTHROPIC_ROUTE_VARIABLE, "1")
+        plan = HarborAdapter().plan(
+            _definition(tasks=[_task()], agents=["claude-code"], n_attempts=1),
+            grant=LaunchGrant(),
+        )
+        assert blocking(plan.capabilities) == []
+        assert plan.policy["network"] == "inference"
+        assert plan.resolved_configuration["anthropic"] is True
+        assert plan.resolved_configuration["environment_only"] is False
+
+    def test_on_a_task_with_its_own_environment_it_is_out_of_the_relays_reach(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv(ANTHROPIC_ROUTE_VARIABLE, "1")
+        monkeypatch.setenv(ENVIRONMENTS_VARIABLE, "image")
+        task = _task(dockerfile=True, dockerfile_content="FROM a\n")
+        plan = HarborAdapter().plan(
+            _definition(tasks=[task], agents=["claude-code"], n_attempts=1),
+            grant=LaunchGrant(),
+        )
+        assert [item.code for item in blocking(plan.capabilities)] == [
+            "agent_needs_the_relay"
+        ]
+
+    def test_it_needs_a_catalogue_bedrock_model(self):
+        with pytest.raises(ValueError, match="bedrock"):
+            _import_for_agents(["claude-code"], models=[])
+        with pytest.raises(ValueError, match="ai-inference"):
+            _import_for_agents(["claude-code"], models=["anthropic/claude-opus"])
+
+    def test_each_model_is_an_experiment_with_the_harbor_name_at_run_time(self):
+        imported = _import_for_agents(
+            ["claude-code", "oracle"], models=["bedrock:us.anthropic.claude-sonnet-5"]
+        )
+        assert [item["subject"].get("model") for item in imported.experiments] == [
+            "bedrock:us.anthropic.claude-sonnet-5",
+            None,
+        ]
+        assert (
+            _agent_model("bedrock:us.anthropic.claude-sonnet-5")
+            == "anthropic/us.anthropic.claude-sonnet-5"
+        )
+
+
+def _import_for_agents(agents, *, models):
+    task = _task()
+    inspection = Inspection(
+        framework="harbor",
+        adapter_version="1",
+        framework_version=HARBOR_VERSION,
+        archive_digest="sha256:" + "0" * 64,
+        name="n",
+        entry_points=[task["path"]],
+        configuration={"tasks": [task], "agents": agents, "n_attempts": 1},
+        content_digest="sha256:" + "0" * 64,
+    )
+    return HarborAdapter().import_definition(
+        inspection,
+        selection=Selection(models=models),
+        source=SourceRef(kind="archive", reference="sha256:" + "0" * 64),
+    )
 
 
 def _definition(**configuration):

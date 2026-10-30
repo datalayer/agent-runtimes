@@ -23,6 +23,7 @@ from agent_runtimes.evals.adapters.host import AdapterHost, SourceMissing
 from agent_runtimes.evals.adapters.registry import UnknownAdapter
 from agent_runtimes.evals.adapters.sandbox import SandboxCancelled, SandboxUnavailable
 from agent_runtimes.evals.adapters.source import MAX_ARCHIVE_BYTES, SourceRefused
+from agent_runtimes.evals.adapters.task_environments import TaskEnvironmentRef
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,8 @@ class ExecuteRequest(BaseModel):
     key: str = ""
     #: How this execution reaches ai-inference: held by the relay here.
     inference: InferenceRoute | None = None
+    #: The sandbox of this trial, when its task has an environment of its own.
+    environment: TaskEnvironmentRef | None = None
 
 
 def _refusal(error: Exception) -> HTTPException:
@@ -133,6 +136,7 @@ async def execute(framework: str, body: ExecuteRequest) -> dict[str, Any]:
             secrets=body.secrets,
             key=body.key,
             inference=body.inference,
+            environment=body.environment,
         )
     except (
         UnknownAdapter,

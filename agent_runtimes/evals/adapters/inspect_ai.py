@@ -65,6 +65,7 @@ from agent_runtimes.evals.adapters.base import (
     stable_case_id,
 )
 from agent_runtimes.evals.adapters.sandbox import SandboxPolicy
+from agent_runtimes.evals.adapters.task_environments import environment_of
 
 __all__ = ["InspectAdapter", "score_as_float"]
 
@@ -130,6 +131,28 @@ def _command_capability(
     return Capability(
         component=component, kind=kind, status="unsupported", reason=reason, code=code
     )
+
+
+def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The Environment a task's Docker sandbox becomes, when this deployment builds them."""
+    source = dict(task.get("environment_source") or {})
+    if "datalayer" not in _sandboxes() or not (
+        source.get("image") or source.get("dockerfile")
+    ):
+        return None
+    return environment_of(
+        image=str(source.get("image") or ""),
+        dockerfile=str(source.get("dockerfile") or ""),
+    )
+
+
+def _unmapped(task: Mapping[str, Any], kind: str) -> str:
+    """Why a Docker sandbox cannot be a task environment; `""` when it can, or need not."""
+    if kind != "docker" or "datalayer" not in _sandboxes():
+        return ""
+    if kind in (task.get("sample_sandboxes") or []):
+        return "Its samples name their Docker sandboxes one by one, and a task runs in one environment."
+    return str(dict(task.get("environment_source") or {}).get("refused") or "")
 
 
 def _sandboxes() -> set[str]:
@@ -312,7 +335,19 @@ class InspectAdapter(ExternalAdapter):
                     *(task.get("sample_sandboxes") or []),
                 }
             ):
-                if kind in _sandboxes():
+                refused = _unmapped(task, kind)
+                if refused:
+                    capabilities.append(
+                        _command_capability(
+                            component=f"{entry}:sandbox:{kind}",
+                            kind="sandbox",
+                            code="environment_refused",
+                            reason=refused,
+                        )
+                    )
+                elif kind in _sandboxes() or (
+                    kind == "docker" and "datalayer" in _sandboxes()
+                ):
                     capabilities.append(
                         Capability(
                             component=f"{entry}:sandbox:{kind}",
@@ -574,10 +609,14 @@ class InspectAdapter(ExternalAdapter):
             missing=list(configuration.get("missing") or []),
         )
         capabilities += self._granted(tools=tools, models=models, grant=grant)
+        environments = {
+            str(task["entry_point"]): spec
+            for task in configuration.get("tasks") or []
+            if (spec := _task_environment(task))
+        }
+        calls_models = any(is_inference_model(model) for model in models)
         policy = SandboxPolicy(
-            network="inference"
-            if any(is_inference_model(model) for model in models)
-            else "none",
+            network="inference" if calls_models or environments else "none",
             wall_seconds=self.default_policy.wall_seconds,
             cpu_seconds=self.default_policy.cpu_seconds,
             memory_bytes=self.default_policy.memory_bytes,
@@ -597,6 +636,8 @@ class InspectAdapter(ExternalAdapter):
                 "approved_tools": sorted(set(tools) & set(grant.tools)),
                 "aggregation": dict(configuration.get("aggregation") or {}),
                 "max_samples": 1,
+                "task_environments": environments,
+                "environment_only": not calls_models,
             },
             reproduction=self._reproduction(
                 definition, task_args=task_args, models=models
@@ -650,6 +691,11 @@ class InspectAdapter(ExternalAdapter):
                 "entry_point": trial.entry_point,
                 "native_id": trial.native_id,
                 "model": inspect_model(str(subject.get("model") or "")),
+                "task_environment": bool(
+                    (plan.resolved_configuration.get("task_environments") or {}).get(
+                        trial.entry_point
+                    )
+                ),
                 "task_args": dict(plan.resolved_configuration.get("task_args") or {}),
                 "approved_tools": list(
                     plan.resolved_configuration.get("approved_tools") or []

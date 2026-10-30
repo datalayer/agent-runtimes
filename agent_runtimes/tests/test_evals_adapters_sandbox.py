@@ -14,6 +14,7 @@ import socket
 import sys
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -156,6 +157,17 @@ class TestTheInferenceNetwork:
             listener.close()
             server.close()
         assert b"0" not in outcome.stdout.split(), outcome.stderr
+
+    def test_it_reaches_the_relay_from_a_root_of_its_own(self, tmp_path):
+        """The socket's directory is left behind by `pivot_root`; the socket is not."""
+        relay = tmp_path / "relay.sock"
+        server = _echo_server(relay)
+        policy = replace(self.POLICY, root_dirs=("/logs",))
+        try:
+            outcome = _run(tmp_path, self.PROBE, policy=policy, relay=relay)
+        finally:
+            server.close()
+        assert outcome.stdout.strip() == b"HELLO", outcome.stderr
 
     def test_it_needs_a_relay(self, tmp_path):
         with pytest.raises(ValueError):

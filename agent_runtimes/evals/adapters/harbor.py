@@ -30,6 +30,7 @@ import json
 import os
 import shlex
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -51,12 +52,21 @@ from agent_runtimes.evals.adapters.base import (
     SourceRef,
     SourceTree,
     Trial,
+    is_inference_model,
     is_provider_key,
     policy_to,
     stable_case_id,
 )
 from agent_runtimes.evals.adapters.inspect_ai import _with_headline
-from agent_runtimes.evals.adapters.sandbox import SandboxOutcome, SandboxPolicy
+from agent_runtimes.evals.adapters.sandbox import (
+    INFERENCE_PORT,
+    SandboxOutcome,
+    SandboxPolicy,
+)
+from agent_runtimes.evals.adapters.task_environments import (
+    EnvironmentRefused,
+    environment_of,
+)
 
 __all__ = ["HarborAdapter"]
 
@@ -73,19 +83,36 @@ _RUNNER = Path(__file__).with_name("_harbor_runner.py")
 #: The paths a task names, in the sandbox's own root.
 ROOT_DIRS = ("/logs", "/tests", "/solution", "/workspace", "/app")
 
+#: Set by a deployment whose ai-inference answers Anthropic's Messages API from
+#: Bedrock, on no account's key. A probe cannot say so: the route it replaced
+#: answered the same paths, on the account's own key.
+ANTHROPIC_ROUTE_VARIABLE = "DATALAYER_INFERENCE_ANTHROPIC_ROUTE"
+#: An agent that speaks Anthropic's Messages API, through that route.
+ANTHROPIC_AGENT = "claude-code"
+#: Where it finds the route, from the adapter's sandbox: the relay.
+ANTHROPIC_URL = f"http://127.0.0.1:{INFERENCE_PORT}/anthropic"
+
 #: Agents that call no model.
 NO_MODEL_AGENTS = frozenset({"oracle", "nop"})
 #: Why an agent is refused, for the ones whose way to a model has been read in
 #: the pinned source. Any agent not named here is refused for not having been.
 AGENT_REASONS: dict[str, str] = {
-    "claude-code": "speaks Anthropic's Messages API to the provider, not chat completions.",
-    "codex": "speaks OpenAI's Responses API to the provider, not chat completions.",
-    "gemini-cli": "speaks Google's API to the provider, not chat completions.",
+    "codex": "speaks OpenAI's Responses API, and ai-inference has no route for it.",
+    "gemini-cli": "speaks Google's API, and ai-inference has no route for it.",
     "aider": "installs itself over the network, which a sandbox does not have; it could reach ai-inference from an image that holds it.",
     "goose": "installs itself over the network, which a sandbox does not have; it could reach ai-inference from an image that holds it.",
     "opencode": "installs itself over the network, which a sandbox does not have; it could reach ai-inference from an image that holds it.",
     "mini-swe-agent": "installs itself over the network, which a sandbox does not have; it could reach ai-inference from an image that holds it.",
 }
+
+
+def _anthropic_route() -> bool:
+    """Whether this deployment says its ai-inference has the Bedrock-backed route."""
+    return os.environ.get(ANTHROPIC_ROUTE_VARIABLE, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
 
 def _provided() -> set[str]:
@@ -106,9 +133,16 @@ def _refused(component: str, kind: str, code: str, reason: str) -> Capability:
 
 def _agent_capability(agent: str) -> Capability:
     """How one agent reaches its model: not at all, or refused."""
-    if agent in NO_MODEL_AGENTS:
+    if agent in NO_MODEL_AGENTS or (agent == ANTHROPIC_AGENT and _anthropic_route()):
         return Capability(
             component=f"agent:{agent}", kind="agent", status="framework-run"
+        )
+    if agent == ANTHROPIC_AGENT:
+        return _refused(
+            f"agent:{agent}",
+            "agent",
+            "anthropic_route_absent",
+            f"The agent {agent} speaks Anthropic's Messages API, and this deployment's ai-inference does not answer it from Bedrock.",
         )
     reason = AGENT_REASONS.get(
         agent,
@@ -119,6 +153,26 @@ def _agent_capability(agent: str) -> Capability:
         "agent",
         "agent_not_on_inference",
         f"The agent {agent} {reason}",
+    )
+
+
+def _agent_model(model: str) -> str:
+    """A catalogue model as Harbor names it: `anthropic/us.anthropic.…`, which the route takes."""
+    return f"anthropic/{model.removeprefix('bedrock:')}" if model else ""
+
+
+def _task_environment(task: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The Environment a task's image becomes, when this deployment builds them."""
+    if (
+        not (task.get("docker_image") or task.get("dockerfile"))
+        or "image" not in _provided()
+    ):
+        return None
+    extra = list(task.get("build_context") or [])
+    return environment_of(
+        image=str(task.get("docker_image") or ""),
+        dockerfile=str(task.get("dockerfile_content") or ""),
+        extra_files=extra,
     )
 
 
@@ -163,6 +217,17 @@ def _task_capabilities(task: Mapping[str, Any]) -> list[Capability]:
         for needed, feature, code, reason in needs
         if needed and feature not in provided
     ]
+    try:
+        _task_environment(task)
+    except EnvironmentRefused as refused:
+        capabilities.append(
+            _refused(
+                f"{name}:environment:build",
+                "environment",
+                "environment_refused",
+                str(refused),
+            )
+        )
     if str(task.get("os") or "linux") != "linux":
         capabilities.append(
             _refused(
@@ -308,6 +373,23 @@ class HarborAdapter(ExternalAdapter):
             grant=grant,
         )
 
+    def _agent_on_task(
+        self, agent: str, tasks: list[dict[str, Any]]
+    ) -> list[Capability]:
+        """An agent that reaches its model through the relay stays in the adapter's sandbox."""
+        if agent != ANTHROPIC_AGENT or not _anthropic_route():
+            return []
+        return [
+            _refused(
+                f"{task['name']}:agent:{agent}",
+                "agent",
+                "agent_needs_the_relay",
+                f"The agent {agent} reaches ai-inference through the relay, and a task with an environment of its own runs it out of the relay's reach.",
+            )
+            for task in tasks
+            if _task_environment(task)
+        ]
+
     def _capabilities(
         self,
         tasks: list[dict[str, Any]],
@@ -318,6 +400,9 @@ class HarborAdapter(ExternalAdapter):
         """What a launch would meet, under what it grants."""
         capabilities = [item for task in tasks for item in _task_capabilities(task)]
         capabilities += [_agent_capability(agent) for agent in agents]
+        capabilities += [
+            item for agent in agents for item in self._agent_on_task(agent, tasks)
+        ]
         if grant is not None and grant.network == "boundary":
             capabilities.append(
                 _refused(
@@ -355,6 +440,17 @@ class HarborAdapter(ExternalAdapter):
             raise ValueError(
                 "the source names no agent: a job configuration lists them"
             )
+        for model in selection.models:
+            if not is_inference_model(model):
+                raise ValueError(
+                    f"{model} is not one of ai-inference's models: every model call goes through it"
+                )
+        if ANTHROPIC_AGENT in agents and not any(
+            model.startswith("bedrock:") for model in selection.models
+        ):
+            raise ValueError(
+                f"the agent {ANTHROPIC_AGENT} needs a bedrock: model of the catalogue"
+            )
         cases = [case for case in inspection.cases if case.entry_point in chosen]
         cases = cases[: selection.limit] if selection.limit else cases
         aggregation = dict(selection.aggregation)
@@ -383,14 +479,18 @@ class HarborAdapter(ExternalAdapter):
             ],
             experiments=[
                 {
-                    "name": agent,
+                    "name": f"{agent} {model}".strip(),
                     "subject": {
                         "kind": "external",
                         "ref": self.framework,
                         "agent": agent,
+                        **({"model": model} if model else {}),
                     },
                 }
                 for agent in agents
+                for model in (
+                    selection.models if agent not in NO_MODEL_AGENTS else [""]
+                )
             ],
             external_definition=ExternalDefinition(
                 framework=self.framework,
@@ -405,6 +505,7 @@ class HarborAdapter(ExternalAdapter):
                         if task["path"] in chosen
                     ],
                     "agents": agents,
+                    "models": list(selection.models),
                     "n_attempts": int(configuration.get("n_attempts") or 1),
                     "aggregation": aggregation,
                 },
@@ -420,18 +521,32 @@ class HarborAdapter(ExternalAdapter):
         configuration = definition.configuration
         agents = [str(agent) for agent in configuration.get("agents") or []]
         attempts = int(configuration.get("n_attempts") or 1)
+        tasks = list(configuration.get("tasks") or [])
+        environments = {
+            str(task["path"]): spec
+            for task in tasks
+            if (spec := _task_environment(task))
+        }
+        calls_models = ANTHROPIC_AGENT in agents
+        policy = replace(
+            self.default_policy,
+            network="inference" if calls_models or environments else "none",
+        )
         return AdapterPlan(
             framework=self.framework,
             adapter_version=self.adapter_version,
             framework_version=self.framework_version,
             environment=self.environment,
-            policy=policy_to(self.default_policy),
+            policy=policy_to(policy),
             capabilities=self._capabilities(
                 list(configuration.get("tasks") or []), agents, grant=grant
             ),
             resolved_configuration={
                 "attempts": attempts,
                 "aggregation": dict(configuration.get("aggregation") or {}),
+                "task_environments": environments,
+                "environment_only": not calls_models,
+                "anthropic": calls_models and _anthropic_route(),
             },
             reproduction=self._reproduction(
                 definition, agents=agents, attempts=attempts
@@ -468,7 +583,15 @@ class HarborAdapter(ExternalAdapter):
                 "entry_point": trial.entry_point,
                 "attempt": trial.attempt,
                 "agent": str(subject.get("agent") or ""),
-                "model": str(subject.get("model") or ""),
+                "model": _agent_model(str(subject.get("model") or "")),
+                "task_environment": bool(
+                    (plan.resolved_configuration.get("task_environments") or {}).get(
+                        trial.entry_point
+                    )
+                ),
+                "anthropic_url": ANTHROPIC_URL
+                if plan.resolved_configuration.get("anthropic")
+                else "",
             },
             sandbox=sandbox,
             env=env,

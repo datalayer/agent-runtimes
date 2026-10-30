@@ -20,7 +20,7 @@ import tempfile
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from agent_runtimes.evals.adapters.base import (
     AdapterPlan,
@@ -49,6 +49,11 @@ from agent_runtimes.evals.adapters.source import (
     require_digest,
     unpack_archive,
 )
+from agent_runtimes.evals.adapters.task_environments import (
+    RuntimeBackend,
+    TaskEnvironmentBackend,
+    TaskEnvironmentRef,
+)
 
 __all__ = ["AdapterHost", "SourceMissing", "redact"]
 
@@ -59,6 +64,37 @@ SANDBOX_INFERENCE_ENV = {
     "DATALAYER_BASE_URL": f"http://127.0.0.1:{INFERENCE_PORT}/v1",
     "DATALAYER_API_KEY": "held-by-the-relay",
 }
+#: Where a sandbox finds its task's environment: its loopback too.
+SANDBOX_ENVIRONMENT_ENV = {
+    "DATALAYER_ENVIRONMENT_URL": f"http://127.0.0.1:{INFERENCE_PORT}/environment"
+}
+
+
+def trial_needs_models(plan: AdapterPlan) -> bool:
+    """Whether a plan's sandboxes call models, rather than only reach an environment."""
+    return plan.policy.get(
+        "network"
+    ) == "inference" and not plan.resolved_configuration.get("environment_only")
+
+
+def _with_usage(
+    result: NormalizedResult, relay: InferenceRelay | None
+) -> NormalizedResult:
+    """A result with what the relay counted, which is what was really spent."""
+    if relay is None or not relay.usage.calls and not relay.usage.budget_exhausted:
+        return result
+    counted = relay.usage.counted()
+    update: dict[str, Any] = {"usage": {**result.usage, **counted}}
+    if counted["budget_exhausted"]:
+        update.update(
+            status="failed",
+            score=None,
+            passed=None,
+            failure_stage="budget",
+            failure_mode="budget_reached",
+            explanation="The launch's budget was spent during this task, so its model calls stopped.",
+        )
+    return result.model_copy(update=update)
 
 
 class SourceMissing(LookupError):
@@ -146,8 +182,16 @@ class _BoundSandbox:
 class AdapterHost:
     """One runtime's adapter work, under `root`."""
 
-    def __init__(self, root: Path | None = None) -> None:
-        """Keep the sources under `root`."""
+    def __init__(
+        self,
+        root: Path | None = None,
+        *,
+        backend_for: Callable[
+            [TaskEnvironmentRef], TaskEnvironmentBackend
+        ] = RuntimeBackend,
+    ) -> None:
+        """Keep the sources under `root`; `backend_for` reaches a task's environment."""
+        self.backend_for = backend_for
         self.root = Path(root or tempfile.mkdtemp(prefix="evals-adapters-"))
         self._running: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
@@ -220,6 +264,7 @@ class AdapterHost:
         secrets: Mapping[str, str],
         key: str = "",
         inference: InferenceRoute | None = None,
+        environment: TaskEnvironmentRef | None = None,
     ) -> NormalizedResult:
         """Run one trial and normalize what it left. A bound overrun is the
         trial's own failure, in a sentence, with nothing of it kept. An
@@ -233,9 +278,19 @@ class AdapterHost:
             raise ValueError(
                 f"secrets the plan does not name: {', '.join(sorted(unnamed))}"
             )
-        if policy.network == "inference" and inference is None:
+        wants_models = bool(trial_needs_models(plan))
+        if wants_models and inference is None:
             raise ValueError(
                 "this plan calls models and was given no route to ai-inference"
+            )
+        wants_environment = bool(
+            (plan.resolved_configuration.get("task_environments") or {}).get(
+                trial.entry_point
+            )
+        )
+        if wants_environment and environment is None:
+            raise ValueError(
+                "this task runs in an environment of its own and was given none"
             )
         cancel = threading.Event()
         key = key or uuid.uuid4().hex
@@ -249,9 +304,10 @@ class AdapterHost:
             socket_path = (
                 Path(tempfile.gettempdir()) / f"evals-relay-{workdir.name[:16]}.sock"
             )
+            backend = self.backend_for(environment) if environment else None
             relay = (
-                InferenceRelay(socket_path, route=inference)
-                if inference and policy.network == "inference"
+                InferenceRelay(socket_path, route=inference, environment=backend)
+                if policy.network == "inference"
                 else None
             )
             sandbox = _BoundSandbox(
@@ -264,6 +320,7 @@ class AdapterHost:
             hidden = {
                 **secrets,
                 **({"ai-inference token": inference.token} if inference else {}),
+                **({"environment token": environment.token} if environment else {}),
             }
             try:
                 if relay is None:
@@ -277,7 +334,11 @@ class AdapterHost:
                             plan=plan,
                             source=source,
                             sandbox=sandbox,
-                            env={**secrets, **SANDBOX_INFERENCE_ENV},
+                            env={
+                                **secrets,
+                                **SANDBOX_INFERENCE_ENV,
+                                **(SANDBOX_ENVIRONMENT_ENV if backend else {}),
+                            },
                         )
             except SandboxExceeded as exceeded:
                 return NormalizedResult(

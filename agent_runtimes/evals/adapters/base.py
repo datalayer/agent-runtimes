@@ -197,6 +197,13 @@ class InferenceRoute(_Record):
     token: str
     #: The application and deployment the calls are metered under.
     headers: dict[str, str] = Field(default_factory=dict)
+    #: Whether ai-inference answers Anthropic's Messages API on this deployment.
+    anthropic: bool = False
+    #: Dollars per million input and output tokens, by catalogue id.
+    prices: dict[str, list[float]] = Field(default_factory=dict)
+    credits_per_usd: float = 0.0
+    #: What the run may still spend, in credits; `None` when it has no budget.
+    credit_limit: float | None = None
 
 
 class LaunchGrant(_Record):
