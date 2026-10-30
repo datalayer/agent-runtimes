@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/** PAP signed-out Session lifecycle mounted as a Reactor workspace plugin. */
+/** PAP Session lifecycle mounted as a Reactor workspace plugin. */
 
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
@@ -16,7 +16,8 @@ setupPrimerPortals();
 const PapSessionPlugin = definePapExamplePlugin({
   key: 'session-lifecycle',
   title: 'PAP Session Lifecycle',
-  description: 'Start, nonce retry, and renewal with credentials host-owned.',
+  description:
+    'A random sid, invalid_session and one restart, credentials host-owned.',
   load: () => import('./pap/PapSessionLifecycleView'),
 });
 

@@ -143,7 +143,7 @@ const ANONYMOUS_EXAMPLES = new Set([
   'PapCompanyDiscoveryExample',
   'PapAgentIdentityExample',
   'PapAuthorizationBoundaryExample',
-  'PapDpopProofExample',
+  'PapSessionJwtExample',
   'PapSessionLifecycleExample',
   'PapGuidedJourneyExample',
   // Replays of redacted traces the PAP Python demo worlds generate: static

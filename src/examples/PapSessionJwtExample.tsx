@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/** PAP DPoP proof creation mounted as a Reactor workspace plugin. */
+/** PAP Session JWT creation mounted as a Reactor workspace plugin. */
 
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
@@ -13,15 +13,16 @@ import { ThemedProvider } from './utils/themedProvider';
 
 setupPrimerPortals();
 
-const PapDpopPlugin = definePapExamplePlugin({
-  key: 'dpop-proof',
-  title: 'PAP DPoP Proof',
-  description: 'Fresh request-bound proofs kept outside model and UI state.',
-  load: () => import('./pap/PapDpopProofView'),
+const PapSessionJwtPlugin = definePapExamplePlugin({
+  key: 'session-jwt',
+  title: 'PAP Session JWT',
+  description:
+    'Fresh request-bound Session JWTs kept outside model and UI state.',
+  load: () => import('./pap/PapSessionJwtView'),
 });
 
-const PapDpopProofExample: React.FC = () => {
-  const plugins = useMemo(() => [PapDpopPlugin], []);
+const PapSessionJwtExample: React.FC = () => {
+  const plugins = useMemo(() => [PapSessionJwtPlugin], []);
   return (
     <ThemedProvider>
       <Box height="100vh" minHeight={0}>
@@ -37,4 +38,4 @@ const PapDpopProofExample: React.FC = () => {
   );
 };
 
-export default PapDpopProofExample;
+export default PapSessionJwtExample;

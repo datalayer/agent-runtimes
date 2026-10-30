@@ -7,7 +7,7 @@
  * Replay a redacted PAP trace, step by step.
  *
  * The traces are generated from the PAP Python SDK's demo worlds by
- * `examples/personal-agent-protocol/traces/generate.py`: real keys, proofs
+ * `examples/personal-agent-protocol/traces/generate.py`: real keys, Session JWTs
  * and HTTP between the parties, recorded and redacted. This view calls no
  * SDK function: it shows what the user sees, what each party holds, and the sequence of
  * exchanges between them, all synchronized on one step.

@@ -386,9 +386,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Generate real Session and Direct Sign-In security material while showing only safe policy status.',
   ),
   makeEntry(
-    'PapDpopProofExample',
-    () => import('./PapDpopProofExample'),
-    'Create fresh request-bound DPoP proofs while withholding proof, token, nonce, identifiers, and key material.',
+    'PapSessionJwtExample',
+    () => import('./PapSessionJwtExample'),
+    'Create fresh request-bound Session JWTs while withholding the JWT, token, identifiers, and key material.',
   ),
   makeEntry(
     'PapSessionLifecycleExample',
@@ -413,7 +413,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'PapAccountTokensExample',
     () => import('./PapAccountTokensExample'),
-    'Replay Account Token refresh, rotation, narrowing, re-consent and revocation, with the token kept behind a host reference.',
+    'Replay refresh, rotation, narrowing, re-consent and revocation, with the token kept behind a host reference.',
   ),
   makeEntry(
     'PapMediatedSignInExample',

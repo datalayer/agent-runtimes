@@ -4,7 +4,7 @@
  */
 
 /**
- * The PAP examples of K-01 to K-07 (K-09), drawn: each view
+ * The PAP trace examples, drawn: each view
  * replays its redacted trace, every step reachable with *Next step*, each
  * step's title, summary and channel shown in turn, and the parties named.
  */
@@ -30,21 +30,17 @@ import twoCompanies from '../pap/traces/two-companies.json';
 import userWithACompany from '../pap/traces/user-with-a-company.json';
 
 const VIEWS: Array<[string, React.FC, unknown]> = [
-  ['K-01 Account Tokens', PapAccountTokensView, accountTokens],
-  ['K-02 Mediated Sign-In', PapMediatedSignInView, mediatedSignIn],
+  ['Refresh tokens', PapAccountTokensView, accountTokens],
+  ['Mediated Sign-In', PapMediatedSignInView, mediatedSignIn],
   [
-    'K-03 Conversation streaming',
+    'Conversation streaming',
     PapConversationStreamingView,
     conversationStreaming,
   ],
-  [
-    'K-03 Conversation control',
-    PapConversationControlView,
-    conversationControl,
-  ],
-  ['K-04 Operations', PapOperationsView, operations],
-  ['K-06 A user with a company', PapUserWithACompanyView, userWithACompany],
-  ['K-07 Two companies', PapTwoCompaniesView, twoCompanies],
+  ['Conversation control', PapConversationControlView, conversationControl],
+  ['Operations', PapOperationsView, operations],
+  ['A user with a company', PapUserWithACompanyView, userWithACompany],
+  ['Two companies', PapTwoCompaniesView, twoCompanies],
 ];
 
 afterEach(() => cleanup());
@@ -65,7 +61,7 @@ describe('the PAP trace examples', () => {
     const view = render(<View />);
     const page = view.container;
     expect(page.textContent).toContain(trace.title);
-    // Said as recorded, with the released SDK that recorded it (E-14, PR-05).
+    // Said as recorded, with the released SDK that recorded it.
     expect(page.textContent).toContain(
       `Recorded data, not live: replayed from a trace the PAP Python SDK's demo world generated with ${trace.sdk}`,
     );
