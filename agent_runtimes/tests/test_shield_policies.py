@@ -405,9 +405,21 @@ class TestAdmittedHarnesses:
         ):
             harness_agent("a", "fake", workspace=tmp_path)
 
-    def test_the_platforms_credentials_rule_refuses_on_a_runtime_that_lends_the_accounts_own(
-        self,
+    def test_the_platforms_credentials_rule_holds_on_datalayer(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A harness there calls through ai-inference, on the platform's credentials."""
+        monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+        monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+        platform = Policy(
+            scope="organization", harnesses=Harnesses(credentials="platform")
+        )
+        assert harness_refusal([platform, default_policy()], "claude-code") is None
+
+    def test_the_platforms_credentials_rule_refuses_on_a_runtime_that_lends_the_accounts_own(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", raising=False)
         platform = Policy(
             scope="organization", harnesses=Harnesses(credentials="platform")
         )

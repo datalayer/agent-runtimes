@@ -134,7 +134,7 @@ unknown is not in the catalogue. The entries, in short:
 | Harness | Offered | Adapter, pinned | Credential | Third parties | Why |
 | --- | --- | --- | --- | --- | --- |
 | Claude Code | yes | `@agentclientprotocol/claude-agent-acp` 0.91.0, Apache-2.0, Node 22 | `ANTHROPIC_API_KEY` | API key only | Anthropic's [legal page](https://code.claude.com/docs/en/legal-and-compliance): each end user authenticates with their own key; developers may not route requests through Free, Pro or Max plan credentials for their users |
-| Codex | yes | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser |
+| Codex | locally | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser. Not offered on Datalayer (below) |
 | OpenCode | yes | `opencode-ai` 1.19.0 `acp`, MIT | `ANTHROPIC_API_KEY` (the provider it is configured with) | permitted | Open source |
 | pi | yes | `pi-acp` 0.0.34, MIT, spawning `@earendil-works/pi-coding-agent` 1.4.0 (MIT) as published — chosen over `@automatalabs/pi-acp`, which embeds an older pi in process | `ANTHROPIC_API_KEY` (the provider pi is configured with) | permitted | Open source on both sides; pi speaks no ACP itself, the adapter does |
 | Gemini CLI | no | `@google/gemini-cli` 0.64.0 `--experimental-acp`, Apache-2.0, Node 20+ | `GEMINI_API_KEY`, or a Google login on Code Assist Standard or Enterprise | API key only | The individuals tier [stopped being served on 18 June 2026](https://developers.google.com/gemini-code-assist/resources/privacy-notice-gemini-code-assist-individuals). Not offered: its API host is outside a runtime pod's boundary, not routed through ai-inference, unfunded (the user's decision, 28 October 2026) |
@@ -265,63 +265,68 @@ Code's first live turn through the adapter waits on a funded key.
 
 ## What each harness needs, and how it gets it
 
-Each harness runs on **the vendor's own credential — the person's, never
-Datalayer's**: an API key (Claude Code and Codex refuse a subscription login
-in their terms; OpenCode and pi take the key of the provider they are
-configured with). Where that credential lives and how the harness's process
-gets it depends on the harness and on where it runs:
+On a Datalayer runtime, every model call goes through ai-inference, which routes it to
+AWS Bedrock or Alibaba and meters it in credits: **no key of the account's is
+read, and the pod reaches no model provider**. Run locally, a harness takes the
+person's own key from the environment, as its spec declares (`requires.secrets`
+is what a local run needs; a runtime reads none of it). So a subscription login
+is never offered (a browser flow no pod has, and Claude Code's and Codex's
+terms), nor is a key of Datalayer's own lent to a harness.
 
-| Harness | Credential | On Datalayer (a runtime pod) | On your machine (`loop --harness`, Desktop, VS Code) |
-| --- | --- | --- | --- |
-| Claude Code | `ANTHROPIC_API_KEY` | the key stays in the account's secrets; the harness calls ai-inference's Anthropic route with the runtime's own token, and ai-inference uses the key (below) | from the environment, or set once for the Shield |
-| Codex | `OPENAI_API_KEY` | the key stays in the account's secrets; codex-acp's `gateway` authentication onto ai-inference's OpenAI route with the runtime's token (1.5.80) | from the environment |
-| OpenCode | `ANTHROPIC_API_KEY` (the provider it is configured with) | the key stays in the account's secrets; OpenCode is given its configuration inline (`OPENCODE_CONFIG_CONTENT`): an `anthropic` provider on `@ai-sdk/anthropic` whose `baseURL` is ai-inference's Anthropic route and whose key and `Authorization` header are the runtime's token, every other provider off — the user's decision of 28 October 2026 (1.5.88); before it, the account's secret was given to its process by name | from the environment |
-| pi | `ANTHROPIC_API_KEY` (the provider pi is configured with) | the account's secret, declared by the harness and given to its process by name (the key, from IAM — below); the pod's boundary allows `api.anthropic.com`. pi-acp spawns `pi` from the PATH: installed beside it in the Shield's prefix, which the runtime puts first on the process's PATH | from the environment; `pi` on your PATH (`npm install -g @earendil-works/pi-coding-agent`) |
+| Harness | On Datalayer (a runtime pod) | On your machine (`loop --harness`, Desktop, VS Code) |
+| --- | --- | --- |
+| Claude Code | ai-inference's Anthropic-shaped route, answered from Bedrock, with the runtime's own token (below) | `ANTHROPIC_API_KEY` from the environment, or set once for the Shield |
+| OpenCode | ai-inference's chat completions: its configuration given inline (`OPENCODE_CONFIG_CONTENT`), one `datalayer` provider on `@ai-sdk/openai-compatible`, every other provider off | `ANTHROPIC_API_KEY` (the provider it is configured with) from the environment |
+| pi | ai-inference's Anthropic-shaped route: a configuration directory (`PI_CODING_AGENT_DIR`, under the workspace's `.datalayer/`) with one `datalayer` provider, which reads the runtime's token from the environment and holds none; `PI_OFFLINE=1`, so it fetches nothing from pi.dev. pi-acp spawns `pi` from the PATH: install `pi` beside it | `ANTHROPIC_API_KEY` (the provider pi is configured with) from the environment |
+| Codex | **not offered**: it speaks OpenAI's Responses API, which ai-inference does not serve from Bedrock or Alibaba. A runtime refuses it in a sentence and `GET /api/v1/harnesses` leaves it out | `OPENAI_API_KEY` from the environment |
 
-What is **not** offered: a subscription login of any vendor (a browser flow
-no pod has; and Claude Code's and Codex's terms), a key of Datalayer's own,
-and a harness the catalogue describes and does not offer.
+Any other harness is refused on a runtime the same way, an organization's own
+included: a harness is served there only when its calls are known to go through
+ai-inference.
 
-## The key, from IAM (built: the declared secrets, 1.5.32, 15 October 2026)
+## The key, off Datalayer
 
-An agent on a catalogue harness declares the harness spec's `requires.secrets`
-(Claude Code's `ANTHROPIC_API_KEY`) as the runtime's own
-(`guardrails/declared_secrets.py`, *the harness claude-code* a consumer): the
-companion fetches them from IAM for `configure-from-spec`, the runtime's process
-holds them, and the harness's process is given them by name and nothing else
-of the runtime's (`harness_environment`); an account without them is refused
-in a sentence before the agent is made — *… is not set up: the harness
-claude-code needs ANTHROPIC_API_KEY* — never fetched from anywhere else.
+A runtime that does not route its inference through ai-inference (one started by
+hand) declares the harness spec's `requires.secrets` (Claude Code's
+`ANTHROPIC_API_KEY`) as its own (`guardrails/declared_secrets.py`, *the harness
+claude-code* a consumer): the runtime's process holds them, and the harness's
+process is given them by name and nothing else of the runtime's
+(`harness_environment`); one without them is refused in a sentence before the
+agent is made — *… is not set up: the harness claude-code needs
+ANTHROPIC_API_KEY* — never fetched from anywhere else.
 
-## On Datalayer, Claude Code's calls go through ai-inference (1.5.65, 20 October 2026)
+## On Datalayer, Claude Code answers from Bedrock
 
 A runtime that routes its inference through ai-inference
 (`AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer`, as every Datalayer
-runtime does) is **never given the Anthropic key**. Claude Code is started with:
+runtime does) gives no harness a key. Claude Code is started with:
 
 | Variable | Value |
 |---|---|
 | `ANTHROPIC_BASE_URL` | ai-inference's Anthropic Messages route, `<DATALAYER_AI_INFERENCE_URL>/api/ai-inference/v1/anthropic` |
 | `ANTHROPIC_AUTH_TOKEN` | the runtime's own ai-inference token (the person's token narrowed to ai-inference), set again as the harness starts |
+| `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` | the catalogue's Bedrock model, `us.anthropic.claude-sonnet-4-6`: Claude Code asks for a model by tier, and a name the catalogue does not offer is refused |
+| `ANTHROPIC_CUSTOM_HEADERS` | the application and deployment the call is metered under, when it serves one |
+| `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `1`: no beta Bedrock would refuse, and nothing else of Anthropic's, which the pod's boundary refuses |
 
-ai-inference relays `POST /v1/messages` (streamed or not) and
-`/v1/messages/count_tokens` to Anthropic on the **account's own**
-`ANTHROPIC_API_KEY`, read from the account's secrets (`datalayer secrets`), and
-records each call's tokens on the account's usage. An account with no key is
-answered *403: This account keeps no ANTHROPIC_API_KEY in its Datalayer
-secrets…*, which Claude Code shows as the turn's error.
+ai-inference answers `POST /v1/messages` (streamed or not) and
+`/v1/messages/count_tokens` from Bedrock's Anthropic `invoke` API, so tools,
+thinking and prompt caching keep their wire shape, on the platform's credentials.
+It takes Claude Code's names (`claude-sonnet-4-6`, with a date or `[1m]`) and
+Bedrock's, and refuses any other in a sentence, which Claude Code shows as the
+turn's error. Each call is metered in credits at the catalogue's price, with the
+prompt cache at Bedrock's rates, under the account, the application and the
+deployment.
 
-A routed harness (Claude Code, Codex, OpenCode) **waits for the runtime's
-ai-inference token** before it starts (1.5.90): a kept deployment's first keep
+A routed harness (Claude Code, OpenCode, pi) **waits for the runtime's
+ai-inference token** before it starts: a kept deployment's first keep
 on a fresh runtime can start its harness while the platform is still giving
 the runtime its token. It waits up to 30 seconds
 (`AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT`, in seconds); with still no token it is
 refused in a sentence that says how long it waited, and a token that has
-already expired is refused at once. The key
-is not declared for Claude Code there, so the platform does not copy it into
-the runtime (`adapters/harness_inference.py`). Elsewhere — a runtime started by
+already expired is refused at once. Elsewhere — a runtime started by
 hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
-environment, as above.
+environment, as above. The route is `adapters/harness_inference.py`.
 
 ## In the runtime image (built: SH-05; the four since image 0.0.66, 28 October 2026)
 

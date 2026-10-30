@@ -351,16 +351,19 @@ def harness_refusal(policies: Sequence[Policy], harness_id: str) -> Optional[str
     """Why the policies in force refuse ``harness_id`` on this runtime, or ``None``.
 
     The ``harnesses`` section of the strictest scope that says anything: a
-    harness not admitted, or a credentials rule this runtime cannot keep —
-    a runtime lends a harness the account's own declared secret (decision
-    3), never the platform's key, so ``platform`` refuses every harness
-    here until that path exists.
+    harness not admitted, or a credentials rule this runtime cannot keep. On
+    Datalayer a harness's calls go through ai-inference, on the platform's
+    credentials and the account's credits, so ``platform`` is what happens
+    there; a runtime elsewhere lends the account's own declared secret, so
+    ``platform`` refuses every harness on it.
     """
+    from agent_runtimes.adapters.harness_inference import on_datalayer
+
     refused = admits(policies, harness_id)
     if refused is not None:
         return f"The harness {harness_id!r} is refused: {refused}."
     rule = credentials_rule(policies)
-    if rule == "platform":
+    if rule == "platform" and not on_datalayer():
         return (
             f"The harness {harness_id!r} is refused: the policy runs harnesses on the "
             "platform's credentials, and this runtime lends only the account's own "
