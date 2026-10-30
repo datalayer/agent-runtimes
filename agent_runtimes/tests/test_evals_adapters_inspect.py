@@ -48,7 +48,10 @@ from agent_runtimes.evals.adapters.inspect_ai import (
 from agent_runtimes.evals.adapters.sandbox import isolation_available
 from agent_runtimes.evals.adapters.source import archive_digest
 
-FIXTURE = (
+#: The fixture, kept here so this suite needs no other checkout. The examples
+#: repository holds the same files, for people to run.
+FIXTURE = Path(__file__).parent / "fixtures" / "inspect"
+EXAMPLES = (
     Path(__file__).resolve().parents[3]
     / ".."
     / "tech"
@@ -60,9 +63,20 @@ FIXTURE = (
 PYTHON = os.environ.get(PYTHON_VARIABLE, "")
 
 needs_inspect = pytest.mark.skipif(
-    not (PYTHON and FIXTURE.exists() and isolation_available()),
-    reason=f"{PYTHON_VARIABLE} names no Inspect, the fixture is absent, or no namespaces here",
+    not (PYTHON and isolation_available()),
+    reason=f"{PYTHON_VARIABLE} names no Inspect, or this kernel gives no namespaces",
 )
+
+
+@pytest.mark.skipif(
+    not EXAMPLES.exists(), reason="the examples checkout is not beside this one"
+)
+def test_the_fixture_is_the_examples_fixture():
+    for path in FIXTURE.rglob("*"):
+        if path.is_file() and "__pycache__" not in path.parts:
+            assert (
+                path.read_bytes() == (EXAMPLES / path.relative_to(FIXTURE)).read_bytes()
+            ), path.name
 
 
 def archive_of(root: Path) -> bytes:

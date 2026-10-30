@@ -159,6 +159,50 @@ class EvalsMixin:
             account_uid=account_uid,
         )
 
+    def evals_list_adapters(self, *, billing_entity_uid: Optional[str] = None, account_uid: Optional[str] = None) -> dict[str, Any]:
+        """The external frameworks this deployment offers, with their versions."""
+        return self._evals_request("/adapters", method="GET", billing_entity_uid=billing_entity_uid, account_uid=account_uid)
+
+    def evals_inspect_source(
+        self,
+        *,
+        framework: str,
+        filename: str,
+        content_base64: str,
+        options: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Keep a framework's archive by its digest and inspect it in a sandbox."""
+        return self._evals_request(
+            f"/adapters/{framework}/inspect",
+            method="POST",
+            json_body={"filename": filename, "content_base64": content_base64, "options": options or {}},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_get_inspection(self, inspection_id: str, *, billing_entity_uid: Optional[str] = None, account_uid: Optional[str] = None) -> dict[str, Any]:
+        """An inspection under way, or what it found."""
+        return self._evals_request(f"/adapters/inspections/{inspection_id}", method="GET", billing_entity_uid=billing_entity_uid, account_uid=account_uid)
+
+    def evals_import_external(
+        self,
+        *,
+        inspection_id: str,
+        selection: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """A benchmark and its experiments, from what an inspection found."""
+        return self._evals_request(
+            "/evalsets/import",
+            method="POST",
+            json_body={"external": {"inspection_id": inspection_id, "selection": selection or {}}},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
     def evals_export_eval(
         self,
         evalset_id: str,

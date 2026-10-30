@@ -13,6 +13,7 @@ anything that is not a plain file or directory inside the destination.
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import io
 import os
@@ -27,6 +28,7 @@ __all__ = [
     "SourceRefused",
     "archive_digest",
     "content_digest",
+    "pack_source",
     "require_digest",
     "unpack_archive",
 ]
@@ -131,6 +133,28 @@ def unpack_archive(data: bytes, destination: Path) -> None:
         for name in directories:
             os.chmod(os.path.join(root, name), 0o555)
     os.chmod(destination, 0o555)
+
+
+def pack_source(root: Path) -> bytes:
+    """A directory as an archive: the same bytes for the same files, so the
+    same source has the same digest wherever it is packed from."""
+    buffer = io.BytesIO()
+    with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode="w") as tar:
+            for path in sorted(root.rglob("*")):
+                relative = path.relative_to(root)
+                if (
+                    not path.is_file()
+                    or path.is_symlink()
+                    or "__pycache__" in relative.parts
+                ):
+                    continue
+                info = tarfile.TarInfo(relative.as_posix())
+                info.size = path.stat().st_size
+                info.mode = 0o644
+                with open(path, "rb") as handle:
+                    tar.addfile(info, handle)
+    return buffer.getvalue()
 
 
 def content_digest(root: Path) -> str:
