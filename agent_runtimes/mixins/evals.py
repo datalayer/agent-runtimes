@@ -159,9 +159,19 @@ class EvalsMixin:
             account_uid=account_uid,
         )
 
-    def evals_list_adapters(self, *, billing_entity_uid: Optional[str] = None, account_uid: Optional[str] = None) -> dict[str, Any]:
+    def evals_list_adapters(
+        self,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
         """The external frameworks this deployment offers, with their versions."""
-        return self._evals_request("/adapters", method="GET", billing_entity_uid=billing_entity_uid, account_uid=account_uid)
+        return self._evals_request(
+            "/adapters",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
 
     def evals_inspect_source(
         self,
@@ -177,14 +187,29 @@ class EvalsMixin:
         return self._evals_request(
             f"/adapters/{framework}/inspect",
             method="POST",
-            json_body={"filename": filename, "content_base64": content_base64, "options": options or {}},
+            json_body={
+                "filename": filename,
+                "content_base64": content_base64,
+                "options": options or {},
+            },
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
 
-    def evals_get_inspection(self, inspection_id: str, *, billing_entity_uid: Optional[str] = None, account_uid: Optional[str] = None) -> dict[str, Any]:
+    def evals_get_inspection(
+        self,
+        inspection_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
         """An inspection under way, or what it found."""
-        return self._evals_request(f"/adapters/inspections/{inspection_id}", method="GET", billing_entity_uid=billing_entity_uid, account_uid=account_uid)
+        return self._evals_request(
+            f"/adapters/inspections/{inspection_id}",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
 
     def evals_import_external(
         self,
@@ -198,7 +223,12 @@ class EvalsMixin:
         return self._evals_request(
             "/evalsets/import",
             method="POST",
-            json_body={"external": {"inspection_id": inspection_id, "selection": selection or {}}},
+            json_body={
+                "external": {
+                    "inspection_id": inspection_id,
+                    "selection": selection or {},
+                }
+            },
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
