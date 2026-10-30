@@ -25,6 +25,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping
 
+import yaml
+
 from agent_runtimes.loop.scenes.transcript import lines_of_json
 
 
@@ -106,36 +108,59 @@ def _quoted(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)
 
 
-_TOP_KEY = re.compile(r"^[A-Za-z_][\w-]*:")
-_REHEARSAL_KEY = re.compile(r"^  [A-Za-z_][\w-]*:")
+_REHEARSAL_LINE = re.compile(r"^rehearsal\s*:\s*(#.*)?$")
 
 
-def with_recording(text: str, path: str, *, taken: str, note: str = "") -> str:
-    """The scene's YAML with ``rehearsal.recording`` naming the recording; the rest kept as written.
+def _spec_of(text: str) -> Mapping[Any, Any]:
+    """The scene's YAML, read; a sentence when it does not read as a mapping."""
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as error:
+        raise RecordingRefused(f"The scene's YAML does not read: {error}") from None
+    if data is None:
+        return {}
+    if not isinstance(data, Mapping):
+        raise RecordingRefused("The scene's YAML is not a mapping.")
+    return data
 
-    The recording's block replaces the one there, or goes before
-    ``verified`` (else at the end of ``rehearsal``); the file's comments and
-    order stay as they are. A YAML with no ``rehearsal`` gains one.
-    """
-    block = [
-        "  recording:",
-        f"    path: {path}",
-        f"    taken: {_quoted(taken)}",
-        *([f"    note: {_quoted(note)}"] if note else []),
+
+def _rest_of(spec: Mapping[Any, Any]) -> Dict[Any, Any]:
+    """The spec but for its recording: what naming the recording leaves as it was."""
+    rehearsal = dict(spec.get("rehearsal") or {})
+    rehearsal.pop("recording", None)
+    return {**spec, "rehearsal": rehearsal}
+
+
+def _block(indent: int, path: str, *, taken: str, note: str) -> List[str]:
+    """The recording's lines, at the rehearsal's indent."""
+    pad = " " * indent
+    return [
+        f"{pad}recording:",
+        f"{pad * 2}path: {path}",
+        f"{pad * 2}taken: {_quoted(taken)}",
+        *([f"{pad * 2}note: {_quoted(note)}"] if note else []),
     ]
-    lines = text.splitlines()
+
+
+def _edited(text: str, path: str, *, taken: str, note: str) -> str:
+    """The text with the recording's block written in, or none when the rehearsal is not a block."""
+    lines = text.removesuffix("\n").split("\n")
     start = next(
-        (index for index, line in enumerate(lines) if line.rstrip() == "rehearsal:"),
+        (
+            index
+            for index, line in enumerate(lines)
+            if _REHEARSAL_LINE.match(line.rstrip())
+        ),
         None,
     )
     if start is None:
-        kept = text.rstrip("\n")
-        return kept + "\n\nrehearsal:\n" + "\n".join(block) + "\n"
+        return ""
+    # Where the block ends: at the next line at the left margin that is no comment.
     end = next(
         (
             index
             for index in range(start + 1, len(lines))
-            if _TOP_KEY.match(lines[index])
+            if lines[index].strip() and lines[index][0] not in " \t#"
         ),
         len(lines),
     )
@@ -144,20 +169,73 @@ def with_recording(text: str, path: str, *, taken: str, note: str = "") -> str:
         not lines[end - 1].strip() or lines[end - 1].startswith("#")
     ):
         end -= 1
+    first = next(
+        (
+            line
+            for line in lines[start + 1 : end]
+            if line.strip() and not line.lstrip().startswith("#")
+        ),
+        None,
+    )
+    indent = len(first) - len(first.lstrip(" ")) if first else 2
+    key_line = re.compile(rf"^ {{{indent}}}[\"']?([A-Za-z_][\w-]*)[\"']?\s*:")
     keys = [
-        index for index in range(start + 1, end) if _REHEARSAL_KEY.match(lines[index])
+        (index, found.group(1))
+        for index in range(start + 1, end)
+        if (found := key_line.match(lines[index]))
     ]
-    found = next(
-        (index for index in keys if lines[index].startswith("  recording:")), None
+    written = _block(indent, path, taken=taken, note=note)
+    recording = next((index for index, key in keys if key == "recording"), None)
+    if recording is not None:
+        after = next((index for index, _ in keys if index > recording), end)
+        # What is written above the next key is that key's.
+        while after > recording + 1 and (
+            not lines[after - 1].strip() or lines[after - 1].lstrip().startswith("#")
+        ):
+            after -= 1
+        return "\n".join(lines[:recording] + written + lines[after:]) + "\n"
+    at = next((index for index, key in keys if key == "verified"), end)
+    return "\n".join(lines[:at] + written + lines[at:]) + "\n"
+
+
+def with_recording(text: str, path: str, *, taken: str, note: str = "") -> str:
+    """The scene's YAML with ``rehearsal.recording`` naming the recording; the rest kept as written.
+
+    The recording's block replaces the one there, or goes before
+    ``verified`` (else at the end of ``rehearsal``), at the rehearsal's own
+    indent; the file's comments and order stay as they are. A YAML with no
+    ``rehearsal`` gains one.
+
+    The edit is of the text, to keep what a YAML writer would lose, and it is
+    checked: what it writes must read as the same spec with this recording.
+    A form it cannot edit that way (a ``rehearsal`` in flow style, or under
+    an anchor) is refused, nothing written.
+    """
+    spec = _spec_of(text)
+    said = spec.get("rehearsal")
+    if said is not None and not isinstance(said, Mapping):
+        raise RecordingRefused("The scene's rehearsal is not a mapping.")
+    if "rehearsal" in spec:
+        edited = _edited(text, path, taken=taken, note=note)
+    else:
+        block = _block(2, path, taken=taken, note=note)
+        edited = text.rstrip("\n") + "\n\nrehearsal:\n" + "\n".join(block) + "\n"
+    wanted = {"path": path, "taken": taken, **({"note": note} if note else {})}
+    if edited:
+        try:
+            reread = _spec_of(edited)
+        except RecordingRefused:
+            reread = {}
+        if (
+            isinstance(reread.get("rehearsal"), Mapping)
+            and reread["rehearsal"].get("recording") == wanted
+            and _rest_of(reread) == _rest_of(spec)
+        ):
+            return edited
+    raise RecordingRefused(
+        "The scene's rehearsal cannot be edited where it is written: write it as "
+        "a block of keys, one to a line, and record again."
     )
-    if found is not None:
-        after = next((index for index in keys if index > found), end)
-        return "\n".join(lines[:found] + block + lines[after:]) + "\n"
-    verified = next(
-        (index for index in keys if lines[index].startswith("  verified:")), None
-    )
-    at = verified if verified is not None else end
-    return "\n".join(lines[:at] + block + lines[at:]) + "\n"
 
 
 def recorded_lines(document: Mapping[str, Any]) -> List[Any]:

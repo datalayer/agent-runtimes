@@ -212,6 +212,88 @@ def test_the_spec_names_its_recording_and_keeps_its_comments() -> None:
     }
 
 
+def test_the_recording_follows_the_rehearsal_s_own_indent() -> None:
+    text = "rehearsal:\n    within: 1m\n    verified:\n        live: []\n"
+    written = with_recording(text, "s/r.json", taken="d")
+    assert yaml.safe_load(written) == {
+        "rehearsal": {
+            "within": "1m",
+            "recording": {"path": "s/r.json", "taken": "d"},
+            "verified": {"live": []},
+        }
+    }
+    assert "\n    recording:\n        path: s/r.json\n" in written
+    # Again: replaced in the same place, at the same indent.
+    assert with_recording(written, "s/r.json", taken="d") == written
+
+
+def test_a_comment_on_the_rehearsal_s_line_keeps_it_one_rehearsal() -> None:
+    text = "id: s\nrehearsal: # Measured on r1.\n  within: 1m\naudience:\n  who: a\n"
+    written = with_recording(text, "s/r.json", taken="d")
+    assert "rehearsal: # Measured on r1.\n" in written
+    assert written.count("rehearsal:") == 1
+    assert yaml.safe_load(written)["rehearsal"] == {
+        "within": "1m",
+        "recording": {"path": "s/r.json", "taken": "d"},
+    }
+
+
+def test_a_comment_before_the_next_key_outlives_a_new_recording() -> None:
+    text = (
+        "rehearsal:\n  within: 1m\n  recording:\n    path: s/r.json\n"
+        '    taken: "a"\n  # Who verified it.\n  verified:\n    live: []\n'
+    )
+    written = with_recording(text, "s/r.json", taken="b")
+    assert "  # Who verified it.\n  verified:\n" in written
+    assert yaml.safe_load(written)["rehearsal"]["recording"]["taken"] == "b"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "rehearsal: {within: 1m, beats: []}\naudience:\n  who: a\n",
+        '"rehearsal":\n  within: 1m\n',
+        "rehearsal: &kept\n  within: 1m\nagain: *kept\n",
+        "rehearsal:\n- within: 1m\n",
+        "rehearsal: 1m\n",
+        "id: s\n...\n",
+        "- not\n- a mapping\n",
+        "id: [unclosed\n",
+    ],
+)
+def test_a_form_it_cannot_edit_is_refused_not_rewritten(text: str) -> None:
+    with pytest.raises(RecordingRefused):
+        with_recording(text, "s/r.json", taken="d")
+
+
+def test_a_spec_it_cannot_edit_leaves_both_files_as_they_were(
+    scene: Any, specs: Path, tmp_path: Path
+) -> None:
+    file = specs / "sales-and-accounting.yaml"
+    data = yaml.safe_load(file.read_text())
+    rehearsal = data.pop("rehearsal")
+    file.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+        + "rehearsal: "
+        + json.dumps(rehearsal, default=str)
+        + "\n"
+    )
+    before = file.read_text()
+    assert scenes.load_scene(file).rehearsal.beats
+    run = tmp_path / "run.json"
+    run.write_text(
+        json.dumps(
+            transcript_of_rehearsal(_verdict(scene), at="2026-10-30T02:00:00+00:00")
+        )
+    )
+    result = runner.invoke(
+        scenes_command.app, ["record", str(file), "--from", str(run)]
+    )
+    assert result.exit_code == 1, result.output
+    assert file.read_text() == before
+    assert not (specs / "sales-and-accounting" / "recording.json").exists()
+
+
 def test_record_keeps_the_recording_beside_the_specs_and_names_it(
     scene: Any, specs: Path, tmp_path: Path
 ) -> None:

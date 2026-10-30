@@ -710,11 +710,14 @@ def scenes_record(
             highlight=False,
         )
         raise typer.Exit(1)
-    kept = write_recording(document, folder)
     relative = f"{scene.id}/recording.json"
-    spec_file.write_text(
-        with_recording(spec_file.read_text(), relative, taken=day, note=note)
-    )
+    try:
+        updated = with_recording(spec_file.read_text(), relative, taken=day, note=note)
+    except RecordingRefused as refused:
+        console.print(f"[red]✗[/red] {spec_file}: {refused}", highlight=False)
+        raise typer.Exit(1)
+    kept = write_recording(document, folder)
+    spec_file.write_text(updated)
     console.print(
         f"[green]✓[/green] {scene.name}: its recording, taken {day}, is kept in {kept} "
         f"and named in {spec_file.name} (rehearsal.recording).",
