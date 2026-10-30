@@ -37,6 +37,7 @@ def _task_record(path: Path, source: Path) -> dict[str, Any]:
     return {
         "name": path.name,
         "path": path.relative_to(source).as_posix(),
+        "package": task.config.task.name if task.config.task else "",
         "instruction": task.instruction,
         "metadata": dict(task.config.metadata or {}),
         "docker_image": environment.docker_image or "",
@@ -76,11 +77,67 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
         None,
     )
     job = yaml.safe_load(job_file.read_text()) if job_file else {}
+    tasks = [_task_record(path, source) for path in _tasks(source)]
+    origin = source / "harbor-origin.json"
     return {
         "version": importlib.metadata.version("harbor"),
-        "tasks": [_task_record(path, source) for path in _tasks(source)],
+        "tasks": tasks,
         "job": job or {},
+        "dataset": _dataset(source, tasks),
+        "remote": _remote(job or {}),
+        "origin": json.loads(origin.read_text()) if origin.exists() else {},
     }
+
+
+def _dataset(source: Path, tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    """A `dataset.toml`, each task matched by its name and proved by its digest.
+
+    Nothing is fetched.
+    """
+    path = source / "dataset.toml"
+    if not path.exists():
+        return {}
+    from harbor.models.dataset.manifest import DatasetManifest
+    from harbor.publisher.packager import Packager
+
+    manifest = DatasetManifest.from_toml(path.read_text())
+    packages = {task["package"]: task for task in tasks if task["package"]}
+    refs = []
+    for ref in manifest.tasks:
+        task = packages.get(ref.name)
+        held = ""
+        if task:
+            held = f"sha256:{Packager.compute_content_hash(source / task['path'])[0]}"
+        refs.append(
+            {
+                "name": ref.name,
+                "digest": ref.digest,
+                "path": task["path"] if task else "",
+                "held_digest": held,
+            }
+        )
+    return {
+        "name": manifest.dataset.name,
+        "version": manifest.dataset.version or "",
+        "description": manifest.dataset.description or "",
+        "tasks": refs,
+    }
+
+
+def _remote(job: dict[str, Any]) -> list[str]:
+    """What a job names outside the source, which a sandbox cannot fetch."""
+    named = []
+    for item in job.get("tasks") or []:
+        if item.get("git_url"):
+            commit = item.get("git_commit_id") or "<commit>"
+            named.append(f"--git {item['git_url']} --commit {commit}")
+        elif item.get("name"):
+            named.append(f"--registry {item['name']}@{item.get('ref') or '<version>'}")
+    for item in job.get("datasets") or []:
+        if item.get("name"):
+            ref = item.get("ref") or item.get("version") or "<version>"
+            named.append(f"--registry {item['name']}@{ref}")
+    return named
 
 
 def agent_arguments(request: dict[str, Any]) -> dict[str, Any]:

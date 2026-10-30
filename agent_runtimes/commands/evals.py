@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import json
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -160,13 +161,51 @@ def _print_inspection(record: dict[str, Any]) -> None:
     console.print(table)
 
 
+def _source_bytes(
+    source: Optional[Path], *, git: str, commit: str, subfolder: str, registry: str
+) -> tuple[bytes, str]:
+    """A source as the archive it is kept as: fetched here if it is remote."""
+    from agent_runtimes.evals.adapters.harbor_sources import (
+        SourceNotFetched,
+        fetch_git,
+        fetch_registry,
+    )
+    from agent_runtimes.evals.adapters.source import pack_source
+
+    if sum([source is not None, bool(git), bool(registry)]) != 1:
+        console.print("[red]Name one source: a path, --git, or --registry.[/red]")
+        raise typer.Exit(1)
+    if source is not None:
+        if source.is_dir():
+            return pack_source(source), f"{source.name}.tar.gz"
+        return source.read_bytes(), source.name
+    with tempfile.TemporaryDirectory() as directory:
+        into = Path(directory) / "source"
+        try:
+            root = (
+                fetch_git(git, commit, into, path=subfolder)
+                if git
+                else fetch_registry(registry, into)
+            )
+        except SourceNotFetched as error:
+            console.print(f"[red]{error}[/red]")
+            raise typer.Exit(1) from None
+        return pack_source(root), "fetched.tar.gz"
+
+
 @adapters_app.command(name="inspect")
 def adapters_inspect(
     framework: str = typer.Argument(
         ..., help="The framework, as `evals adapters ls` names it."
     ),
-    source: Path = typer.Argument(
-        ..., exists=True, help="An archive, or a directory to pack."
+    source: Optional[Path] = typer.Argument(
+        None, exists=True, help="An archive, or a directory to pack."
+    ),
+    git: str = typer.Option("", "--git", help="A Harbor repository, fetched here."),
+    commit: str = typer.Option("", "--commit", help="The full commit of `--git`."),
+    subfolder: str = typer.Option("", "--path", help="The folder of `--git` to read."),
+    registry: str = typer.Option(
+        "", "--registry", help="A Harbor registry reference, pinned, fetched here."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     task_arg: list[str] = typer.Option(
@@ -178,11 +217,10 @@ def adapters_inspect(
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
     """Keep a source by its digest and inspect it in a sandbox."""
-    from agent_runtimes.evals.adapters.source import pack_source
-
     client = _make_client(token=token)
-    data = pack_source(source) if source.is_dir() else source.read_bytes()
-    filename = f"{source.name}.tar.gz" if source.is_dir() else source.name
+    data, filename = _source_bytes(
+        source, git=git, commit=commit, subfolder=subfolder, registry=registry
+    )
     task_args = {
         name: json.loads(value)
         for name, _, value in (item.partition("=") for item in task_arg)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -179,6 +180,43 @@ def test_a_launch_approves_tools_by_name_and_stops_on_a_refusal(client):
         "launch",
         {"experiment_ids": ["x1"], "config": {"concurrency": 3, "tools": ["add"]}},
     )
+
+
+def test_one_source_is_named(client):
+    assert _invoke("inspect", "harbor").exit_code == 1
+    answered = _invoke("inspect", "harbor", "--registry", "harbor/hello@latest")
+    assert answered.exit_code == 1
+    assert "not pinned" in answered.output
+
+
+def test_a_git_source_is_fetched_here_and_kept_as_an_archive(client, tmp_path):
+    def git(*arguments):
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *arguments],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+    git("init", "-q")
+    (tmp_path / "task.toml").write_text("")
+    git("add", ".")
+    git("commit", "-qm", "one")
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True
+    ).stdout.strip()
+    answered = _invoke(
+        "inspect",
+        "harbor",
+        "--git",
+        f"file://{tmp_path}",
+        "--commit",
+        commit,
+        "--no-wait",
+    )
+    assert answered.exit_code == 0, answered.output
+    kept = [call[1] for call in client.calls if call[0] == "inspect"]
+    assert kept and kept[0]["filename"] == "fetched.tar.gz"
 
 
 def test_the_reproduction_is_the_plans(client):

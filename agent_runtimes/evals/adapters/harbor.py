@@ -197,6 +197,40 @@ def _buildable(task: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
 
 
+def _source_capabilities(configuration: Mapping[str, Any]) -> list[Capability]:
+    """What the source names but does not hold. Nothing here fetches it."""
+    capabilities = [
+        _refused(
+            f"source:{item}",
+            "source",
+            "remote_source_not_fetched",
+            f"The job names a remote source, which a sandbox cannot fetch: inspect it with `evals adapters inspect harbor {item}`.",
+        )
+        for item in configuration.get("remote") or []
+    ]
+    for ref in dict(configuration.get("dataset") or {}).get("tasks") or []:
+        name, digest = str(ref["name"]), str(ref["digest"])
+        if not ref.get("path"):
+            capabilities.append(
+                _refused(
+                    f"dataset:{name}",
+                    "source",
+                    "dataset_task_not_held",
+                    f"The dataset names {name}, which the source does not hold: fetch it with `evals adapters inspect harbor --registry {name}@{digest}`.",
+                )
+            )
+        elif ref.get("held_digest") != digest:
+            capabilities.append(
+                _refused(
+                    f"dataset:{name}",
+                    "source",
+                    "dataset_digest_differs",
+                    f"The dataset pins {name} at {digest}, and the source holds {ref.get('held_digest')}.",
+                )
+            )
+    return capabilities
+
+
 def _task_capabilities(task: Mapping[str, Any]) -> list[Capability]:
     """What one task's environment needs, against what is provided."""
     name = str(task["name"])
@@ -347,6 +381,10 @@ class HarborAdapter(ExternalAdapter):
         tasks = list(found["tasks"])
         if not tasks:
             raise ValueError("the source holds no Harbor task (no task.toml)")
+        dataset = dict(found.get("dataset") or {})
+        named = {str(item["path"]) for item in dataset.get("tasks") or []} - {""}
+        # A dataset says which of the packages it is.
+        tasks = [task for task in tasks if task["path"] in named] if dataset else tasks
         job = dict(found.get("job") or {})
         agents = [
             str(item.get("name") or "")
@@ -359,9 +397,12 @@ class HarborAdapter(ExternalAdapter):
             framework_version=self.framework_version,
             archive_digest=source.archive_digest,
             content_digest=source.content_digest,
-            name=str(tasks[0]["name"])
-            if len(tasks) == 1
-            else f"{len(tasks)} Harbor tasks",
+            name=str(dataset.get("name") or "")
+            or (
+                str(tasks[0]["name"])
+                if len(tasks) == 1
+                else f"{len(tasks)} Harbor tasks"
+            ),
             entry_points=[str(task["path"]) for task in tasks],
             cases=[
                 InspectedCase(
@@ -379,6 +420,9 @@ class HarborAdapter(ExternalAdapter):
                 "job": job,
                 "agents": agents,
                 "n_attempts": int(job.get("n_attempts") or 1),
+                "dataset": dataset,
+                "remote": list(found.get("remote") or []),
+                "origin": dict(found.get("origin") or {}),
             },
         )
         return inspection.model_copy(update={"capabilities": self.validate(inspection)})
@@ -388,7 +432,7 @@ class HarborAdapter(ExternalAdapter):
     ) -> list[Capability]:
         """Every task and agent, classified."""
         configuration = inspection.configuration
-        return self._capabilities(
+        return _source_capabilities(configuration) + self._capabilities(
             configuration.get("tasks") or [],
             configuration.get("agents") or [],
             grant=grant,
@@ -526,6 +570,9 @@ class HarborAdapter(ExternalAdapter):
                         if task["path"] in chosen
                     ],
                     "agents": agents,
+                    "dataset": dict(configuration.get("dataset") or {}),
+                    "remote": list(configuration.get("remote") or []),
+                    "origin": dict(configuration.get("origin") or {}),
                     "models": list(selection.models),
                     "n_attempts": int(configuration.get("n_attempts") or 1),
                     "aggregation": aggregation,
@@ -557,7 +604,8 @@ class HarborAdapter(ExternalAdapter):
             framework_version=self.framework_version,
             environment=self.environment,
             policy=policy_to(policy),
-            capabilities=self._capabilities(
+            capabilities=_source_capabilities(configuration)
+            + self._capabilities(
                 list(configuration.get("tasks") or []), agents, grant=grant
             ),
             resolved_configuration={
@@ -577,6 +625,13 @@ class HarborAdapter(ExternalAdapter):
     ) -> str:
         """The pinned command, with no secret in it."""
         lines = [f"pip install harbor=={self.framework_version}"]
+        origin = dict(definition.configuration.get("origin") or {})
+        if origin.get("kind") == "git":
+            lines.append(
+                f"git clone {shlex.quote(str(origin['url']))} source && git -C source checkout {shlex.quote(str(origin['commit']))}"
+            )
+        elif origin.get("kind") == "registry":
+            lines.append(f"harbor download {shlex.quote(str(origin['reference']))}")
         for entry in definition.entry_point.split(","):
             for agent in agents:
                 lines.append(
