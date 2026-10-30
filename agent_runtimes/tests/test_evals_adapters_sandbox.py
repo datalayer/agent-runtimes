@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from agent_runtimes.evals.adapters.sandbox import (
+    INFERENCE_PORT,
     SandboxCancelled,
     SandboxExceeded,
     SandboxPolicy,
@@ -93,6 +94,72 @@ def test_the_boundary_network_is_only_what_a_policy_grants(tmp_path):
     finally:
         listener.close()
     assert outcome.stdout.strip() == b"0", outcome.stderr
+
+
+def _echo_server(path: Path) -> socket.socket:
+    """A unix socket that answers each connection with what it was sent, upper-cased."""
+    server = socket.socket(socket.AF_UNIX)
+    server.bind(str(path))
+    server.listen(4)
+
+    def serve() -> None:
+        while True:
+            try:
+                connection, _ = server.accept()
+            except OSError:
+                return
+            connection.sendall(connection.recv(1024).upper())
+            connection.close()
+
+    threading.Thread(target=serve, daemon=True).start()
+    return server
+
+
+class TestTheInferenceNetwork:
+    """A sandbox that reaches one thing: the relay on the host, through its loopback."""
+
+    POLICY = SandboxPolicy(network="inference", wall_seconds=30, cpu_seconds=30)
+    PROBE = (
+        "import socket\n"
+        f"s = socket.create_connection(('127.0.0.1', {INFERENCE_PORT}), timeout=5)\n"
+        "s.sendall(b'hello')\n"
+        "print(s.recv(64).decode())\n"
+    )
+
+    def test_it_reaches_the_relay_through_its_loopback(self, tmp_path):
+        tmp_path.mkdir(exist_ok=True)
+        relay = tmp_path / "relay.sock"
+        server = _echo_server(relay)
+        try:
+            outcome = _run(tmp_path, self.PROBE, policy=self.POLICY, relay=relay)
+        finally:
+            server.close()
+        assert outcome.stdout.strip() == b"HELLO", outcome.stderr
+
+    def test_it_reaches_nothing_else(self, tmp_path):
+        relay = tmp_path / "relay.sock"
+        server = _echo_server(relay)
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        port = listener.getsockname()[1]
+        code = (
+            "import socket\n"
+            "s = socket.socket()\n"
+            "s.settimeout(3)\n"
+            f"print(s.connect_ex(('127.0.0.1', {port})))\n"
+            "print(s.connect_ex(('1.1.1.1', 443)))\n"
+        )
+        try:
+            outcome = _run(tmp_path, code, policy=self.POLICY, relay=relay)
+        finally:
+            listener.close()
+            server.close()
+        assert b"0" not in outcome.stdout.split(), outcome.stderr
+
+    def test_it_needs_a_relay(self, tmp_path):
+        with pytest.raises(ValueError):
+            _run(tmp_path, "pass", policy=self.POLICY)
 
 
 def test_the_environment_is_only_what_was_handed_in(tmp_path, monkeypatch):

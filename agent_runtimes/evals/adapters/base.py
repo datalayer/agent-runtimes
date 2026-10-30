@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Literal, Mapping, Protocol, Sequence
@@ -42,6 +43,7 @@ __all__ = [
     "ExternalAdapter",
     "ExternalDefinition",
     "ImportedDefinition",
+    "InferenceRoute",
     "InspectedCase",
     "Inspection",
     "LaunchGrant",
@@ -55,6 +57,8 @@ __all__ = [
     "SourceTree",
     "Trial",
     "blocking",
+    "is_inference_model",
+    "is_provider_key",
     "policy_from",
     "policy_to",
     "stable_case_id",
@@ -136,7 +140,7 @@ class Inspection(_Record):
     models: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     secrets: list[str] = Field(default_factory=list)
-    network: Literal["none", "boundary"] = "none"
+    network: Literal["none", "inference", "boundary"] = "none"
     environment: dict[str, Any] = Field(default_factory=dict)
     capabilities: list[Capability] = Field(default_factory=list)
     configuration: dict[str, Any] = Field(default_factory=dict)
@@ -178,10 +182,20 @@ class ImportedDefinition(_Record):
     external_definition: ExternalDefinition
 
 
+class InferenceRoute(_Record):
+    """How one execution reaches ai-inference. Held by the relay, on the
+    runtime, for that execution; never in the sandbox, a plan or a result."""
+
+    url: str
+    token: str
+    #: The application and deployment the calls are metered under.
+    headers: dict[str, str] = Field(default_factory=dict)
+
+
 class LaunchGrant(_Record):
     """What a launch allows. A framework may ask for less, never for more."""
 
-    network: Literal["none", "boundary"] = "none"
+    network: Literal["none", "inference", "boundary"] = "none"
     secrets: list[str] = Field(default_factory=list)
     #: The tools the launch approves, by name. Any other a framework calls is refused.
     tools: list[str] = Field(default_factory=list)
@@ -264,6 +278,29 @@ class NormalizedResult(_Record):
     artifacts: list[ResultArtifact] = Field(default_factory=list)
 
 
+#: The model ids ai-inference serves: its catalogue's, each routed to Bedrock
+#: or Alibaba. A model call goes to one of these or is refused.
+INFERENCE_PREFIXES = ("bedrock:", "alibaba:")
+
+_PROVIDER_KEY = re.compile(
+    r"(_API_KEY|_AUTH_TOKEN|_ACCESS_KEY(_ID)?|_SECRET_ACCESS_KEY|_SESSION_TOKEN)$"
+)
+
+
+def is_inference_model(model: str) -> bool:
+    """Whether `model` is a catalogue id of ai-inference's."""
+    return any(
+        model.startswith(prefix) and len(model) > len(prefix)
+        for prefix in INFERENCE_PREFIXES
+    )
+
+
+def is_provider_key(name: str) -> bool:
+    """Whether a secret's name is a credential for a model provider. No such
+    key reaches a sandbox: every model call goes through ai-inference."""
+    return bool(_PROVIDER_KEY.search(name.upper()))
+
+
 def stable_case_id(*, framework: str, native_id: str, content_digest: str) -> str:
     """A case's id: its native id under its source. A retried attempt keeps it,
     and the same native id in another source is another case."""
@@ -305,6 +342,13 @@ def policy_from(values: Mapping[str, Any]) -> SandboxPolicy:
     extra = set(values) - known
     if extra:
         raise ValueError(f"unknown sandbox policy keys: {', '.join(sorted(extra))}")
+    keys = [
+        str(name) for name in values.get("secrets") or () if is_provider_key(str(name))
+    ]
+    if keys:
+        raise ValueError(
+            f"a provider key does not reach a sandbox: {', '.join(keys)}; model calls go through ai-inference"
+        )
     return SandboxPolicy(**{**values, "secrets": tuple(values.get("secrets") or ())})
 
 

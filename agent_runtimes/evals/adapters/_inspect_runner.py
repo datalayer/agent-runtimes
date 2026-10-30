@@ -179,6 +179,9 @@ def inspect_source(request: dict[str, Any]) -> dict[str, Any]:
                 "tools": _tool_names(solvers),
                 "scorers": _scorers(task),
                 "model": str(task.model) if task.model is not None else "",
+                "model_roles": {
+                    name: str(model) for name, model in (task.model_roles or {}).items()
+                },
                 "sandbox": _sandbox_of(task.sandbox),
                 "approval": bool(task.approval),
                 "epochs": task.epochs or 1,
@@ -215,6 +218,10 @@ def execute(request: dict[str, Any]) -> dict[str, Any]:
     policies = (
         [ApprovalPolicy(auto_approver("approve"), approved)] if approved else []
     ) + [ApprovalPolicy(auto_approver("reject"), "*")]
+    if str(request.get("model") or "").startswith("openai-api/"):
+        # Inspect leaves without a word when its OpenAI client is missing.
+        import openai  # noqa: F401
+
     logs = run_eval(
         str(source / request["entry_point"]),
         model=request.get("model") or None,

@@ -18,8 +18,10 @@ The mapping:
 - a tool is `framework-run` once the launch approves it by name, `unsupported`
   until then; at run time an Inspect approval policy approves exactly those
   and rejects any other call;
-- a model's provider needs the network and its key: both are for the launch to
-  grant, by name, or the model is `unsupported`;
+- every model call goes through ai-inference: a model is a catalogue id
+  (`bedrock:…`, `alibaba:…`), reached from the sandbox through the relay on the
+  run's token, with no key and no network of its own. Any other model, a
+  provider key, or a launch asking for the pod's network is `unsupported`;
 - a sandbox type the deployment does not provide, an epoch count above one, a
   requirement the image lacks, an approval policy of the definition's own and
   a dataset whose implicit ids are not stable are each `unsupported`, by name.
@@ -57,6 +59,8 @@ from agent_runtimes.evals.adapters.base import (
     SourceRef,
     SourceTree,
     Trial,
+    is_inference_model,
+    is_provider_key,
     policy_to,
     stable_case_id,
 )
@@ -80,23 +84,16 @@ SANDBOXES_VARIABLE = "DATALAYER_INSPECT_AI_SANDBOXES"
 _RUNNER = Path(__file__).with_name("_inspect_runner.py")
 LOG_MEDIA_TYPE = "application/json"
 
-#: The environment variable each provider reads its key from, per Inspect's
-#: model providers. `mockllm` and `none` call nothing. A provider not here is
-#: not one this adapter can grant a key to, and is refused.
-PROVIDER_KEYS: dict[str, str | None] = {
-    "mockllm": None,
-    "none": None,
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google": "GOOGLE_API_KEY",
-    "mistral": "MISTRAL_API_KEY",
-    "grok": "XAI_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "deepseek": "DEEPSEEK_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-    "perplexity": "PERPLEXITY_API_KEY",
-    "fireworks": "FIREWORKS_API_KEY",
-}
+#: Inspect's own mock calls nothing, so it needs no route. Every other model is
+#: ai-inference's, as Inspect's OpenAI-compatible provider names it.
+MOCK_PREFIX = "mockllm/"
+INSPECT_INFERENCE_PREFIX = "openai-api/datalayer/"
+
+
+def inspect_model(model: str) -> str:
+    """A model as Inspect is told it: the mock as it is, a catalogue id through
+    ai-inference's OpenAI-compatible chat completions."""
+    return f"{INSPECT_INFERENCE_PREFIX}{model}" if is_inference_model(model) else model
 
 
 def score_as_float(value: Any) -> float | None:
@@ -122,10 +119,6 @@ def score_as_float(value: Any) -> float | None:
         except ValueError:
             return None
     return None
-
-
-def _provider(model: str) -> str:
-    return model.split("/", 1)[0]
 
 
 def _command_capability(
@@ -203,7 +196,17 @@ class InspectAdapter(ExternalAdapter):
         tasks = list(found["tasks"])
         if not tasks:
             raise ValueError("the source defines no Inspect task")
-        models = sorted({str(task["model"]) for task in tasks if task.get("model")})
+        models = sorted(
+            {
+                str(model)
+                for task in tasks
+                for model in [
+                    task.get("model"),
+                    *(task.get("model_roles") or {}).values(),
+                ]
+                if model
+            }
+        )
         inspection = Inspection(
             framework=self.framework,
             adapter_version=self.adapter_version,
@@ -383,47 +386,38 @@ class InspectAdapter(ExternalAdapter):
                 )
             )
         for model in models:
-            provider = _provider(model)
-            if provider not in PROVIDER_KEYS:
-                capabilities.append(
-                    _command_capability(
-                        component=f"model:{model}",
-                        kind="model",
-                        code="provider_unknown",
-                        reason=f"The provider {provider} has no key this adapter can hand over.",
-                    )
-                )
-                continue
-            key = PROVIDER_KEYS[provider]
-            if key is None:
+            if model.startswith(MOCK_PREFIX) or is_inference_model(model):
                 capabilities.append(
                     Capability(
                         component=f"model:{model}", kind="model", status="framework-run"
-                    )
-                )
-                continue
-            if grant is not None and grant.network == "none":
-                capabilities.append(
-                    _command_capability(
-                        component=f"model:{model}",
-                        kind="model",
-                        code="network_not_granted",
-                        reason=f"The model {model} is called over the network and the launch grants none.",
-                    )
-                )
-            elif grant is not None and key not in grant.secrets:
-                capabilities.append(
-                    _command_capability(
-                        component=f"model:{model}",
-                        kind="model",
-                        code="secret_not_granted",
-                        reason=f"The model {model} needs the secret {key} and the launch does not name it.",
                     )
                 )
             else:
                 capabilities.append(
-                    Capability(
-                        component=f"model:{model}", kind="model", status="framework-run"
+                    _command_capability(
+                        component=f"model:{model}",
+                        kind="model",
+                        code="model_not_on_inference",
+                        reason=f"Every model call goes through ai-inference, so a model is one of its catalogue's (bedrock:… or alibaba:…), not {model}.",
+                    )
+                )
+        if grant is not None and grant.network == "boundary":
+            capabilities.append(
+                _command_capability(
+                    component="network:boundary",
+                    kind="network",
+                    code="direct_network_refused",
+                    reason="A framework reaches nothing but ai-inference: the pod's network would be a direct path to a provider.",
+                )
+            )
+        for name in grant.secrets if grant is not None else []:
+            if is_provider_key(name):
+                capabilities.append(
+                    _command_capability(
+                        component=f"secret:{name}",
+                        kind="secret",
+                        code="provider_key_refused",
+                        reason=f"{name} is a provider's key, and no such key reaches a sandbox: model calls go through ai-inference.",
                     )
                 )
         return capabilities
@@ -458,9 +452,9 @@ class InspectAdapter(ExternalAdapter):
                 "choose at least one model: a task of this source names none"
             )
         for model in selection.models:
-            if _provider(model) not in PROVIDER_KEYS:
+            if not is_inference_model(model):
                 raise ValueError(
-                    f"the provider of {model} has no key this adapter can hand over"
+                    f"{model} is not one of ai-inference's models: every model call goes through it"
                 )
         aggregation = dict(selection.aggregation)
         scorers = sorted(
@@ -566,17 +560,15 @@ class InspectAdapter(ExternalAdapter):
             missing=list(configuration.get("missing") or []),
         )
         capabilities += self._granted(tools=tools, models=models, grant=grant)
-        keys = sorted(
-            {key for model in models if (key := PROVIDER_KEYS.get(_provider(model)))}
-        )
         policy = SandboxPolicy(
-            network=grant.network,
+            network="inference"
+            if any(is_inference_model(model) for model in models)
+            else "none",
             wall_seconds=self.default_policy.wall_seconds,
             cpu_seconds=self.default_policy.cpu_seconds,
             memory_bytes=self.default_policy.memory_bytes,
             max_files=self.default_policy.max_files,
             max_bytes=self.default_policy.max_bytes,
-            secrets=tuple(keys),
         )
         task_args = dict(configuration.get("task_args") or {})
         return AdapterPlan(
@@ -593,7 +585,7 @@ class InspectAdapter(ExternalAdapter):
                 "max_samples": 1,
             },
             reproduction=self._reproduction(
-                definition, task_args=task_args, models=models, keys=keys
+                definition, task_args=task_args, models=models
             ),
         )
 
@@ -603,19 +595,23 @@ class InspectAdapter(ExternalAdapter):
         *,
         task_args: dict[str, Any],
         models: list[str],
-        keys: list[str],
     ) -> str:
         arguments = " ".join(
             f"-T {shlex.quote(f'{name}={json.dumps(value)}')}"
             for name, value in task_args.items()
         )
-        environment = " ".join(f"{key}=<secret:{key}>" for key in keys)
+        routed = any(is_inference_model(model) for model in models)
+        environment = (
+            "DATALAYER_BASE_URL=<ai-inference>/api/ai-inference/v1 DATALAYER_API_KEY=<your Datalayer token> "
+            if routed
+            else ""
+        )
         lines = [f"pip install inspect-ai=={self.framework_version}"]
         for entry in definition.entry_point.split(","):
             for model in models or [""]:
-                command = f"{environment} inspect eval {shlex.quote(entry)}".strip()
+                command = f"{environment}inspect eval {shlex.quote(entry)}"
                 if model:
-                    command += f" --model {shlex.quote(model)}"
+                    command += f" --model {shlex.quote(inspect_model(model))}"
                 if arguments:
                     command += f" {arguments}"
                 lines.append(f"{command} --log-format json")
@@ -637,7 +633,7 @@ class InspectAdapter(ExternalAdapter):
                 "source": source.root,
                 "entry_point": trial.entry_point,
                 "native_id": trial.native_id,
-                "model": str(subject.get("model") or ""),
+                "model": inspect_model(str(subject.get("model") or "")),
                 "task_args": dict(plan.resolved_configuration.get("task_args") or {}),
                 "approved_tools": list(
                     plan.resolved_configuration.get("approved_tools") or []
@@ -684,8 +680,14 @@ class InspectAdapter(ExternalAdapter):
                 status="failed",
                 failure_stage="infrastructure",
                 failure_mode="no_eval_log",
-                explanation=(raw.stderr[-500:] or "Inspect left no log."),
-                framework={"returncode": raw.returncode, "stderr": raw.stderr[-4000:]},
+                explanation=(
+                    raw.stderr[-500:] or raw.stdout[-500:] or "Inspect left no log."
+                ),
+                framework={
+                    "returncode": raw.returncode,
+                    "stderr": raw.stderr[-4000:],
+                    "stdout": raw.stdout[-4000:],
+                },
                 artifacts=raw.artifacts,
             )
         self._pinned(

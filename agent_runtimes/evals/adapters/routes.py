@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
-from agent_runtimes.evals.adapters.base import AdapterPlan, Trial
+from agent_runtimes.evals.adapters.base import AdapterPlan, InferenceRoute, Trial
 from agent_runtimes.evals.adapters.host import AdapterHost, SourceMissing
 from agent_runtimes.evals.adapters.registry import UnknownAdapter
 from agent_runtimes.evals.adapters.sandbox import SandboxCancelled, SandboxUnavailable
@@ -60,6 +60,8 @@ class ExecuteRequest(BaseModel):
     #: Values for the names the plan's policy holds, for this execution only.
     secrets: dict[str, str] = Field(default_factory=dict)
     key: str = ""
+    #: How this execution reaches ai-inference: held by the relay here.
+    inference: InferenceRoute | None = None
 
 
 def _refusal(error: Exception) -> HTTPException:
@@ -121,6 +123,7 @@ async def execute(framework: str, body: ExecuteRequest) -> dict[str, Any]:
             trial=body.trial,
             secrets=body.secrets,
             key=body.key,
+            inference=body.inference,
         )
     except (
         UnknownAdapter,

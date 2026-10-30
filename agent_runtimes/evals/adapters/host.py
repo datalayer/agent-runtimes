@@ -24,6 +24,7 @@ from typing import Any, Mapping, Sequence
 
 from agent_runtimes.evals.adapters.base import (
     AdapterPlan,
+    InferenceRoute,
     Inspection,
     NormalizedResult,
     ResultArtifact,
@@ -32,7 +33,9 @@ from agent_runtimes.evals.adapters.base import (
     policy_from,
 )
 from agent_runtimes.evals.adapters.registry import adapter
+from agent_runtimes.evals.adapters.relay import InferenceRelay
 from agent_runtimes.evals.adapters.sandbox import (
+    INFERENCE_PORT,
     SandboxCancelled,
     SandboxExceeded,
     SandboxOutcome,
@@ -48,6 +51,14 @@ from agent_runtimes.evals.adapters.source import (
 )
 
 __all__ = ["AdapterHost", "SourceMissing", "redact"]
+
+
+#: What a sandbox is told of ai-inference: its own loopback, and a key that
+#: opens nothing. The relay holds the real one.
+SANDBOX_INFERENCE_ENV = {
+    "DATALAYER_BASE_URL": f"http://127.0.0.1:{INFERENCE_PORT}/v1",
+    "DATALAYER_API_KEY": "held-by-the-relay",
+}
 
 
 class SourceMissing(LookupError):
@@ -101,7 +112,9 @@ class _BoundSandbox:
         policy: SandboxPolicy,
         workdir: Path,
         cancel: threading.Event | None = None,
+        relay: Path | None = None,
     ) -> None:
+        self.relay = relay
         self.source = source
         self.policy = policy
         self.workdir = workdir
@@ -122,6 +135,7 @@ class _BoundSandbox:
             env=env,
             read_only=[Path(self.source.root)],
             cancel=self.cancel,
+            relay=self.relay,
         )
 
 
@@ -197,9 +211,11 @@ class AdapterHost:
         trial: Trial,
         secrets: Mapping[str, str],
         key: str = "",
+        inference: InferenceRoute | None = None,
     ) -> NormalizedResult:
         """Run one trial and normalize what it left. A bound overrun is the
-        trial's own failure, in a sentence, with nothing of it kept."""
+        trial's own failure, in a sentence, with nothing of it kept. An
+        `inference` policy needs its route, which stays in the relay here."""
         chosen = adapter(framework)
         source = self.source(digest)
         policy = policy_from(plan.policy)
@@ -208,19 +224,52 @@ class AdapterHost:
             raise ValueError(
                 f"secrets the plan does not name: {', '.join(sorted(unnamed))}"
             )
+        if policy.network == "inference" and inference is None:
+            raise ValueError(
+                "this plan calls models and was given no route to ai-inference"
+            )
         cancel = threading.Event()
         key = key or uuid.uuid4().hex
         with self._lock:
             self._running[key] = cancel
         workdir = self._workdir()
         try:
-            sandbox = _BoundSandbox(
-                source=source, policy=policy, workdir=workdir, cancel=cancel
+            # Outside the working directory: the sandbox reaches the relay
+            # through its loopback and needs no path to it.
+            # And under the temporary directory: a socket's path is short.
+            socket_path = (
+                Path(tempfile.gettempdir()) / f"evals-relay-{workdir.name[:16]}.sock"
             )
+            relay = (
+                InferenceRelay(socket_path, route=inference)
+                if inference and policy.network == "inference"
+                else None
+            )
+            sandbox = _BoundSandbox(
+                source=source,
+                policy=policy,
+                workdir=workdir,
+                cancel=cancel,
+                relay=socket_path if relay else None,
+            )
+            hidden = {
+                **secrets,
+                **({"ai-inference token": inference.token} if inference else {}),
+            }
             try:
-                raw = chosen.execute(
-                    trial, plan=plan, source=source, sandbox=sandbox, env=secrets
-                )
+                if relay is None:
+                    raw = chosen.execute(
+                        trial, plan=plan, source=source, sandbox=sandbox, env=secrets
+                    )
+                else:
+                    with relay:
+                        raw = chosen.execute(
+                            trial,
+                            plan=plan,
+                            source=source,
+                            sandbox=sandbox,
+                            env={**secrets, **SANDBOX_INFERENCE_ENV},
+                        )
             except SandboxExceeded as exceeded:
                 return NormalizedResult(
                     status="failed",
@@ -229,14 +278,12 @@ class AdapterHost:
                     failure_mode=f"sandbox_{exceeded.bound}_exceeded",
                 )
             try:
-                return _redacted(
-                    chosen.normalize_result(trial, raw, plan=plan), secrets
-                )
+                return _redacted(chosen.normalize_result(trial, raw, plan=plan), hidden)
             except Exception as error:  # noqa: BLE001 - what a framework left is data; it may be anything
                 return NormalizedResult(
                     status="failed",
                     explanation=redact(
-                        f"What the framework left could not be read: {error}", secrets
+                        f"What the framework left could not be read: {error}", hidden
                     ),
                     failure_stage="infrastructure",
                     failure_mode="result_unreadable",

@@ -13,8 +13,11 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import subprocess
 import tarfile
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -22,6 +25,8 @@ import pytest
 from agent_runtimes.evals.adapters.base import (
     AdapterPlan,
     ExternalDefinition,
+    InferenceRoute,
+    Inspection,
     LaunchGrant,
     NormalizedScore,
     RawResult,
@@ -67,6 +72,142 @@ def archive_of(root: Path) -> bytes:
             if path.is_file() and "__pycache__" not in path.parts:
                 tar.add(path, arcname=path.relative_to(root).as_posix())
     return buffer.getvalue()
+
+
+class _Inference:
+    """ai-inference as far as a chat completion goes, answering as it really
+    does: the `DataResponse` envelope flattened over `ChatResponseData`, with
+    `choices` and no OpenAI `id` or `object`. It calls the tool, then answers."""
+
+    def __enter__(self) -> "_Inference":
+        calls = self.calls = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *_args):
+                pass
+
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                calls.append(
+                    {
+                        "path": self.path,
+                        "authorization": self.headers.get("Authorization"),
+                        "model": body["model"],
+                        "app": self.headers.get("X-Datalayer-App-Uid"),
+                        "deployment": self.headers.get("X-Datalayer-Deployment-Uid"),
+                    }
+                )
+                told = [item for item in body["messages"] if item["role"] == "tool"]
+                if told:
+                    message = {
+                        "role": "assistant",
+                        "content": f"The answer is {told[-1]['content']}",
+                    }
+                    reason = "stop"
+                else:
+                    asked = next(
+                        item["content"]
+                        for item in body["messages"]
+                        if item["role"] == "user"
+                    )
+                    text = asked if isinstance(asked, str) else asked[0]["text"]
+                    first, second = re.findall(r"\d+", text)[:2]
+                    message = {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": "add",
+                                    "arguments": json.dumps(
+                                        {"x": int(first), "y": int(second)}
+                                    ),
+                                },
+                            }
+                        ],
+                    }
+                    reason = "tool_calls"
+                answer = json.dumps(
+                    {
+                        "success": True,
+                        "message": "Chat completion successful",
+                        "response": message["content"],
+                        "assistant_message": message,
+                        "choices": [
+                            {"index": 0, "finish_reason": reason, "message": message}
+                        ],
+                        "model": body["model"],
+                        "usage": {
+                            "prompt_tokens": 10,
+                            "completion_tokens": 5,
+                            "total_tokens": 15,
+                        },
+                    }
+                ).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(answer)))
+                self.end_headers()
+                self.wfile.write(answer)
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.server.server_port}/api/ai-inference/v1"
+        return self
+
+    def __exit__(self, *_):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+#: A task whose own code tries the ways around the relay.
+_PROBE_TASK = """
+import json, os, socket, urllib.request, urllib.error
+from inspect_ai import Task, task
+from inspect_ai.dataset import Sample
+from inspect_ai.scorer import Score, Target, accuracy, scorer
+from inspect_ai.solver import Generate, TaskState, solver
+
+
+def _status(path, body):
+    request = urllib.request.Request("http://127.0.0.1:8317" + path, data=json.dumps(body).encode(), method="POST")
+    try:
+        return urllib.request.urlopen(request, timeout=5).status
+    except urllib.error.HTTPError as error:
+        return error.code
+
+
+@solver
+def nothing():
+    async def solve(state: TaskState, generate: Generate) -> TaskState:
+        return state
+    return solve
+
+
+@scorer(metrics=[accuracy()])
+def probe():
+    async def score(state: TaskState, target: Target) -> Score:
+        try:
+            socket.create_connection(("1.1.1.1", 443), timeout=3).close()
+            direct = "reached"
+        except OSError:
+            direct = "refused"
+        seen = {
+            "key": os.environ.get("DATALAYER_API_KEY"),
+            "direct": direct,
+            "other_model": _status("/v1/chat/completions", {"model": "openai/gpt-4o", "messages": []}),
+            "other_path": _status("/v1/responses", {"model": "bedrock:x"}),
+        }
+        return Score(value=1, explanation=json.dumps(seen))
+    return score
+
+
+@task
+def around():
+    return Task(dataset=[Sample(id="s", input="x", target="y")], solver=[nothing()], scorer=probe())
+"""
 
 
 @pytest.mark.parametrize(
@@ -182,48 +323,88 @@ def _definition(**configuration):
     )
 
 
+def _inspection():
+    return Inspection(
+        framework="inspect-ai",
+        adapter_version="1",
+        framework_version=INSPECT_VERSION,
+        archive_digest="a" * 64,
+        content_digest="b" * 64,
+        entry_points=["tasks.py@t"],
+        configuration={
+            "tasks": [{"entry_point": "tasks.py@t", "solvers": [], "scorers": []}]
+        },
+    )
+
+
 class TestThePlan:
-    def test_a_real_provider_needs_the_network_and_its_key(self):
-        adapter = InspectAdapter()
-        definition = _definition(models=["anthropic/claude-haiku-4-5"])
-        codes = {
-            item.code
-            for item in blocking(
-                adapter.plan(definition, grant=LaunchGrant()).capabilities
-            )
-        }
-        assert codes == {"network_not_granted"}
-        codes = {
-            item.code
-            for item in blocking(
-                adapter.plan(
-                    definition, grant=LaunchGrant(network="boundary")
-                ).capabilities
-            )
-        }
-        assert codes == {"secret_not_granted"}
-        plan = adapter.plan(
-            definition,
-            grant=LaunchGrant(network="boundary", secrets=["ANTHROPIC_API_KEY"]),
+    MODELS = ["bedrock:us.anthropic.claude-haiku-4-5", "alibaba:qwen-max"]
+
+    def test_a_catalogue_model_goes_through_ai_inference_with_no_key_and_no_network_of_its_own(
+        self,
+    ):
+        plan = InspectAdapter().plan(
+            _definition(models=self.MODELS), grant=LaunchGrant()
         )
         assert blocking(plan.capabilities) == []
-        assert plan.policy["secrets"] == ["ANTHROPIC_API_KEY"]
-        assert plan.policy["network"] == "boundary"
+        assert plan.policy["network"] == "inference"
+        assert plan.policy["secrets"] == []
 
-    def test_the_mock_model_needs_neither(self):
+    def test_the_mock_model_needs_no_route(self):
         plan = InspectAdapter().plan(
             _definition(models=["mockllm/model"]), grant=LaunchGrant()
         )
         assert blocking(plan.capabilities) == []
         assert plan.policy["network"] == "none"
 
-    def test_a_provider_it_cannot_hand_a_key_to_is_unsupported(self):
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "anthropic/claude-haiku-4-5",
+            "openai/gpt-4o",
+            "somewhere/model",
+            "openai-api/x/y",
+        ],
+    )
+    def test_a_model_ai_inference_does_not_serve_is_unsupported(self, model):
+        plan = InspectAdapter().plan(_definition(models=[model]), grant=LaunchGrant())
+        assert [item.code for item in blocking(plan.capabilities)] == [
+            "model_not_on_inference"
+        ]
+
+    def test_a_provider_key_is_refused_by_name(self):
         plan = InspectAdapter().plan(
-            _definition(models=["somewhere/model"]), grant=LaunchGrant()
+            _definition(models=self.MODELS),
+            grant=LaunchGrant(secrets=["ANTHROPIC_API_KEY"]),
+        )
+        assert [
+            (item.code, item.component) for item in blocking(plan.capabilities)
+        ] == [("provider_key_refused", "secret:ANTHROPIC_API_KEY")]
+
+    def test_the_pods_network_is_refused(self):
+        plan = InspectAdapter().plan(
+            _definition(models=self.MODELS), grant=LaunchGrant(network="boundary")
         )
         assert [item.code for item in blocking(plan.capabilities)] == [
-            "provider_unknown"
+            "direct_network_refused"
         ]
+
+    def test_an_import_takes_only_catalogue_models(self):
+        inspection = _inspection()
+        with pytest.raises(ValueError, match="ai-inference"):
+            InspectAdapter().import_definition(
+                inspection,
+                selection=Selection(models=["openai/gpt-4o"]),
+                source=SourceRef(kind="archive", reference="a" * 64),
+            )
+        imported = InspectAdapter().import_definition(
+            inspection,
+            selection=Selection(models=self.MODELS),
+            source=SourceRef(kind="archive", reference="a" * 64),
+        )
+        assert [
+            item["subject"]["model"] for item in imported.experiments
+        ] == self.MODELS
 
     def test_a_tool_runs_once_the_launch_approves_it(self):
         adapter = InspectAdapter()
@@ -238,18 +419,22 @@ class TestThePlan:
         assert blocking(plan.capabilities) == []
         assert plan.resolved_configuration["approved_tools"] == ["add"]
 
-    def test_the_reproduction_is_pinned_and_holds_no_secret(self):
+    def test_the_reproduction_is_pinned_goes_through_ai_inference_and_holds_no_secret(
+        self,
+    ):
         plan = InspectAdapter().plan(
             _definition(
-                models=["anthropic/claude-haiku-4-5"], task_args={"mock": False}
+                models=["bedrock:us.anthropic.claude-haiku-4-5"],
+                task_args={"mock": False},
             ),
-            grant=LaunchGrant(network="boundary", secrets=["ANTHROPIC_API_KEY"]),
+            grant=LaunchGrant(),
         )
         assert f"pip install inspect-ai=={INSPECT_VERSION}" in plan.reproduction
         assert (
-            "ANTHROPIC_API_KEY=<secret:ANTHROPIC_API_KEY> inspect eval tasks.py@t --model anthropic/claude-haiku-4-5"
+            "--model openai-api/datalayer/bedrock:us.anthropic.claude-haiku-4-5"
             in plan.reproduction
         )
+        assert "DATALAYER_API_KEY=<your Datalayer token>" in plan.reproduction
         assert "mock=false" in plan.reproduction
 
     @pytest.mark.parametrize(
@@ -551,6 +736,108 @@ class TestTheRealInspect:
         )
         tool = next(step for step in result.trajectory if step["role"] == "tool")
         assert tool.get("error")
+
+    @pytest.mark.parametrize(
+        "model", ["bedrock:us.anthropic.claude-haiku-4-5", "alibaba:qwen-max"]
+    )
+    def test_a_catalogue_model_is_called_through_the_relay_as_ai_inference_answers(
+        self, world, model
+    ):
+        """Real Inspect in the real sandbox, through the real relay, to a server
+        answering as ai-inference does: `DataResponse` flattened over `choices`."""
+        with _Inference() as inference:
+            imported = InspectAdapter().import_definition(
+                world["inspection"].model_copy(
+                    update={
+                        "configuration": {
+                            **world["inspection"].configuration,
+                            "task_args": {"mock": False},
+                        }
+                    }
+                ),
+                selection=Selection(
+                    entry_points=["tasks.py@arithmetic"],
+                    models=[model],
+                    aggregation={"scorer": "includes"},
+                ),
+                source=SourceRef(kind="archive", reference=world["digest"]),
+            )
+            plan = InspectAdapter().plan(
+                imported.external_definition, grant=LaunchGrant(tools=["add"])
+            )
+            assert blocking(plan.capabilities) == []
+            marks = next(
+                case["metadata"]["external"]
+                for case in imported.cases
+                if case["name"] == "sum-large"
+            )
+            trial = Trial(
+                case_id="c",
+                native_id=marks["native_id"],
+                entry_point=marks["entry_point"],
+                configuration={"subject": {"model": model}},
+            )
+            result = world["host"].execute(
+                "inspect-ai",
+                world["digest"],
+                plan=plan,
+                trial=trial,
+                secrets={},
+                inference=InferenceRoute(
+                    url=inference.url,
+                    token="narrowed-token",
+                    headers={
+                        "X-Datalayer-App-Uid": "app-1",
+                        "X-Datalayer-Deployment-Uid": "dep-1",
+                    },
+                ),
+            )
+        assert result.status == "passed", (result.explanation, result.framework)
+        assert result.output == "The answer is 42"
+        assert result.usage["total_tokens"] > 0
+        assert inference.calls, "ai-inference was never reached"
+        for call in inference.calls:
+            assert call["authorization"] == "Bearer narrowed-token"
+            assert call["model"] == model
+            assert call["app"] == "app-1"
+            assert call["deployment"] == "dep-1"
+        assert "narrowed-token" not in result.model_dump_json()
+        assert b"narrowed-token" not in result.artifacts[0].content
+
+    def test_the_sandbox_holds_no_token_and_reaches_no_provider(self, tmp_path):
+        (tmp_path / "probe.py").write_text(_PROBE_TASK)
+        host = AdapterHost(tmp_path / "host")
+        data = archive_of(tmp_path)
+        digest = archive_digest(data)
+        host.put_source(digest, data)
+        with _Inference() as inference:
+            adapter = InspectAdapter()
+            imported = adapter.import_definition(
+                host.inspect("inspect-ai", digest),
+                selection=Selection(models=["bedrock:x"]),
+                source=SourceRef(kind="archive", reference=digest),
+            )
+            plan = adapter.plan(imported.external_definition, grant=LaunchGrant())
+            marks = imported.cases[0]["metadata"]["external"]
+            trial = Trial(
+                case_id="c",
+                native_id=marks["native_id"],
+                entry_point=marks["entry_point"],
+                configuration={"subject": {"model": "bedrock:x"}},
+            )
+            result = host.execute(
+                "inspect-ai",
+                digest,
+                plan=plan,
+                trial=trial,
+                secrets={},
+                inference=InferenceRoute(url=inference.url, token="narrowed-token"),
+            )
+        seen = json.loads(result.scores[0].explanation)
+        assert seen["key"] == "held-by-the-relay"
+        assert seen["direct"] == "refused"
+        assert seen["other_model"] == 403
+        assert seen["other_path"] == 404
 
     def test_a_project_of_its_own_runs_without_the_adapter_knowing_it(self, world):
         """The custom solver, tool, scorer and metric are the fixture's: their

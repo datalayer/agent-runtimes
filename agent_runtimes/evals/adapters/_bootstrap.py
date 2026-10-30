@@ -13,10 +13,14 @@ its sandbox.
 from __future__ import annotations
 
 import ctypes
+import fcntl
 import json
 import os
 import resource
+import selectors
 import signal
+import socket
+import struct
 import sys
 
 REFUSED = 125
@@ -35,6 +39,9 @@ MS_REC = 16384
 MS_PRIVATE = 1 << 18
 PR_SET_PDEATHSIG = 1
 PR_SET_NO_NEW_PRIVS = 38
+SIOCGIFFLAGS = 0x8913
+SIOCSIFFLAGS = 0x8914
+IFF_UP = 0x1
 
 libc = ctypes.CDLL(None, use_errno=True)
 
@@ -72,7 +79,7 @@ def write(path: str, text: str) -> None:
 def isolate(config: dict) -> None:
     uid, gid = os.getuid(), os.getgid()
     flags = CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWIPC | CLONE_NEWPID
-    if config["network"] == "none":
+    if config["network"] in ("none", "inference"):
         flags |= CLONE_NEWNET
     if config.get("refuse"):
         refuse("isolation refused for a test")
@@ -90,6 +97,67 @@ def isolate(config: dict) -> None:
     for path in config["read_only"]:
         mount(path, path, None, MS_BIND | MS_REC)
         mount(path, path, None, MS_BIND | MS_REMOUNT | MS_RDONLY | MS_NOSUID | MS_NODEV)
+
+
+def loopback_up() -> None:
+    """A new network namespace's loopback is down; this is all it will ever have."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as handle:
+        request = struct.pack("16sH14x", b"lo", 0)
+        flags = struct.unpack("16sH14x", fcntl.ioctl(handle, SIOCGIFFLAGS, request))[1]
+        fcntl.ioctl(handle, SIOCSIFFLAGS, struct.pack("16sH14x", b"lo", flags | IFF_UP))
+
+
+def relay_listener(port: int) -> socket.socket:
+    """The one way out of an `inference` sandbox, bound before the limits hold."""
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(64)
+    return listener
+
+
+def relay_until_exit(listener: socket.socket, path: str, child: int) -> int:
+    """Carry the sandbox's loopback to the relay's socket on the host until the
+    child ends; its wait status. In this process's main thread: after
+    `unshare(CLONE_NEWPID)` no thread can be made, and this process stands
+    outside that namespace, so nothing the sandbox runs can signal it."""
+    selector = selectors.DefaultSelector()
+    selector.register(listener, selectors.EVENT_READ, None)
+
+    def drop(one: socket.socket, other: socket.socket) -> None:
+        for side in (one, other):
+            try:
+                selector.unregister(side)
+            except (KeyError, ValueError):
+                pass
+            side.close()
+
+    while True:
+        ended, status = os.waitpid(child, os.WNOHANG)
+        if ended:
+            return status
+        for key, _ in selector.select(timeout=0.05):
+            if key.data is None:
+                inner, _address = listener.accept()
+                outer = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                try:
+                    outer.connect(path)
+                except OSError:
+                    inner.close()
+                    outer.close()
+                    continue
+                selector.register(inner, selectors.EVENT_READ, outer)
+                selector.register(outer, selectors.EVENT_READ, inner)
+                continue
+            source, target = key.fileobj, key.data
+            try:
+                chunk = source.recv(65536)
+                if chunk:
+                    target.sendall(chunk)
+                else:
+                    drop(source, target)
+            except OSError:
+                drop(source, target)
 
 
 def limit(config: dict) -> None:
@@ -117,6 +185,13 @@ def main() -> None:
     config = json.loads(sys.argv[1])
     checked(libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0), "no_new_privs")
     isolate(config)
+    listener = None
+    if config["network"] == "inference":
+        try:
+            loopback_up()
+            listener = relay_listener(config["inference_port"])
+        except OSError as error:
+            refuse(f"the inference loopback: {error}")
     limit(config)
     # A new PID namespace takes effect on the next fork: that child is its
     # pid 1, and every process under it dies with it, whatever it detached.
@@ -126,12 +201,10 @@ def main() -> None:
         os.chdir(config["workdir"])
         os.umask(0o077)
         os.execve(config["argv"][0], config["argv"], config["env"])
-    while True:
-        try:
-            _, status = os.waitpid(child, 0)
-        except InterruptedError:
-            continue
-        break
+    if listener is not None:
+        status = relay_until_exit(listener, config["relay"], child)
+    else:
+        _, status = os.waitpid(child, 0)
     if os.WIFSIGNALED(status):
         used = resource.getrusage(resource.RUSAGE_CHILDREN)
         if used.ru_utime + used.ru_stime >= config["cpu_seconds"]:

@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Literal, Mapping, Sequence
 
 __all__ = [
+    "INFERENCE_PORT",
     "SandboxCancelled",
     "SandboxExceeded",
     "SandboxOutcome",
@@ -49,6 +50,8 @@ _WATCH_SECONDS = 0.1
 _COUNT_EVERY = 5
 #: What is kept of stdout and of stderr; the files themselves are bounded too.
 _MAX_CAPTURE_BYTES = 64 * 1024 * 1024
+#: Where an `inference` sandbox finds the relay, on its own loopback.
+INFERENCE_PORT = 8317
 #: Set by a test to make the first process refuse, as a kernel would.
 _BOOTSTRAP_FLAGS_FOR_TEST = ""
 
@@ -83,12 +86,13 @@ class SandboxExceeded(RuntimeError):
 class SandboxPolicy:
     """What a sandbox may do. The defaults are the policy a launch starts from.
 
-    `network`: `none`, or `boundary`, the runtime pod's own egress boundary.
+    `network`: `none`; `inference`, nothing but the relay to ai-inference, on
+    the sandbox's own loopback; or `boundary`, the runtime pod's egress boundary.
     `secrets` holds names only; their values are resolved for one execution
     and are never part of a policy.
     """
 
-    network: Literal["none", "boundary"] = "none"
+    network: Literal["none", "inference", "boundary"] = "none"
     wall_seconds: float = 300.0
     cpu_seconds: int = 300
     memory_bytes: int = 4 * 1024 * 1024 * 1024
@@ -100,7 +104,7 @@ class SandboxPolicy:
     hidden_paths: tuple[str, ...] = DEFAULT_HIDDEN_PATHS
 
     def __post_init__(self) -> None:
-        if self.network not in ("none", "boundary"):
+        if self.network not in ("none", "inference", "boundary"):
             raise ValueError(f"no such network policy: {self.network}")
         for name in (
             "wall_seconds",
@@ -183,12 +187,16 @@ def run_sandboxed(
     env: Mapping[str, str] | None = None,
     read_only: Sequence[Path] = (),
     cancel: threading.Event | None = None,
+    relay: Path | None = None,
 ) -> SandboxOutcome:
     """Run one command in a new sandbox, to its end or to a bound.
 
     `workdir` is created and is the one place it may write. `env` is the
     whole environment. `cancel`, set from any thread, ends it within a tick.
+    `relay` is the unix socket an `inference` sandbox's loopback reaches.
     """
+    if policy.network == "inference" and relay is None:
+        raise ValueError("an inference sandbox needs its relay")
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     workdir.chmod(0o700)
@@ -200,6 +208,8 @@ def run_sandboxed(
     }
     config = {
         "network": policy.network,
+        "relay": str(relay) if relay else "",
+        "inference_port": INFERENCE_PORT,
         "cpu_seconds": int(policy.cpu_seconds),
         "memory_bytes": int(policy.memory_bytes),
         "max_bytes": int(policy.max_bytes),
