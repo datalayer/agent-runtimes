@@ -686,7 +686,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
 
 /**
  * What each agent protocol's tools do, by protocol id: the prefix its
- * connections take (`pap:<domain>`) and each tool's classes (PR-54).
+ * connections take (`pap:<domain>`) and each tool's classes.
  */
 export const PROTOCOL_TOOL_CLASSES: Record<
   string,

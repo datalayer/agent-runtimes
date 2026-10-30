@@ -433,7 +433,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'PapOperationsExample',
     () => import('./PapOperationsExample'),
-    'Replay PAP Operations v1: exact approval of one revision, terms changed, at-most-once confirmation, and cancellation.',
+    'Replay PAP Operations version 2: the person asked about every revision, new terms asked again, performed at most once.',
   ),
   makeEntry(
     'PapSignInDisplayExample',

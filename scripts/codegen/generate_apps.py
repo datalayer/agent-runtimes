@@ -61,7 +61,6 @@ CAMEL = {
     "signed_out": "signedOut",
     "personal_agents": "personalAgents",
     "registered_agents": "registeredAgents",
-    "user_approval_required": "userApprovalRequired",
     # Its company scopes' hints and excluded tasks (PAP draft 0.3).
     "personal_data": "personalData",
     "excluded_tasks": "excludedTasks",
@@ -176,7 +175,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             mode="json", by_alias=True
         ):
             spec.pop("pap")
-        # PACT, commerce, signed fetch and A2A's extensions the same way (PI-01, PR-02, EX-11).
+        # PACT, commerce, signed fetch and A2A's extensions the same way.
         for block in ("pact", "commerce", "signed_fetch", "a2a"):
             if block in spec and spec[block] == type(getattr(app, block))().model_dump(
                 mode="json", by_alias=True
@@ -219,14 +218,14 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             },
             # What an argument makes it do besides.
             "conditions": {name: found for name, found in conditions.items() if found},
-            # The argument carrying what it sends, signed with the byline (I-10).
+            # The argument carrying what it sends, signed with the byline.
             "signs": {
                 name: signs
                 for name in names
                 if (signs := actions_module.server_tool_signs(server, name))
             },
         }
-    # The agent protocols' tools (PR-54): by protocol, the
+    # The agent protocols' tools: by protocol, the
     # connection prefix its connections take and what each tool can do.
     protocols = {
         identity: {
@@ -476,7 +475,7 @@ def generate_actions_python_code(actions: dict[str, Any]) -> str:
             "}",
             "",
             "#: What each agent protocol's tools do, by protocol id: the prefix its",
-            "#: connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+            "#: connections take (`pap:<domain>`) and each tool's classes.",
             f"PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {actions['protocols']!r}",
             "",
             "#: What each application of the catalogue does about each classed tool of the",
@@ -532,7 +531,7 @@ def generate_actions_typescript_code(actions: dict[str, Any]) -> str:
         "",
         "/**",
         " * What each agent protocol's tools do, by protocol id: the prefix its",
-        " * connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+        " * connections take (`pap:<domain>`) and each tool's classes.",
         " */",
         "export const PROTOCOL_TOOL_CLASSES: Record<",
         "  string,",
@@ -573,7 +572,7 @@ def _drop_nulls(value: Any) -> Any:
 
 
 def generate_schema_typescript_code() -> str:
-    """The Appspec's JSON Schema, for the editors of the page (S-01, S-02).
+    """The Appspec's JSON Schema, for the editors of the page.
 
     Taken from the agentspecs the catalogue is generated from, so that what
     an editor completes and explains is what the spec accepts.

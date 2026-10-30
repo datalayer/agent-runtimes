@@ -598,7 +598,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
 }
 
 #: What each agent protocol's tools do, by protocol id: the prefix its
-#: connections take (`pap:<domain>`) and each tool's classes (PR-54).
+#: connections take (`pap:<domain>`) and each tool's classes.
 PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
     "agentic-commerce": {
         "connection": "acp",
