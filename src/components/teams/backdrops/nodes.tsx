@@ -39,6 +39,7 @@ import {
 } from '../../../chat/assistant/AssistantStage';
 import { SpecMark } from '../../../chat/marks/SpecMark';
 import type { A2ATeamConnection } from '../a2aTeamFlow';
+import { HarnessIcon } from '../HarnessIcon';
 import { NotebookPreview } from '../NotebookPreview';
 import { notebookBalloonVisual } from '../TeamNotebook';
 import { toolLineText } from '../../../chat/assistant/toolLine';
@@ -222,8 +223,8 @@ export const MEMBER_CARD: StageSx = {
   color: 'fg.default',
   textAlign: 'left',
   whiteSpace: 'normal',
-  minWidth: 160,
-  maxWidth: 240,
+  minWidth: 200,
+  maxWidth: 280,
 };
 
 /**
@@ -659,6 +660,23 @@ export function MemberNodeBase({
               {member.name}
             </Box>
           )}
+          {member.description && (
+            <Box mb={1} data-member-description="">
+              {member.description}
+            </Box>
+          )}
+          {member.harness && (
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              data-member-harness={member.harness.id}
+            >
+              <HarnessIcon id={member.harness.id} />
+              {member.harness.name}
+            </Box>
+          )}
+          {member.model && <Box data-member-model="">{member.model}</Box>}
           {memberDetails(member, persona.state).map(line => (
             <Box key={line}>{line}</Box>
           ))}

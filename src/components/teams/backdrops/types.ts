@@ -63,6 +63,12 @@ export type A2ATeamGraphMember = {
    */
   color?: string;
   persona: A2ATeamPersona;
+  /** What its application does, in its details. */
+  description?: string;
+  /** The harness it runs on, in its details with its mark (`memberAppDetails`). */
+  harness?: { id: string; name: string };
+  /** The model it answers with, in its details. */
+  model?: string;
   /** A click on the character. */
   onToggle?: () => void;
   /** It was sent away, or called back. */

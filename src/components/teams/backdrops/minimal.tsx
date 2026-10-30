@@ -135,7 +135,7 @@ const MEMBER_LOOK: MemberLook = {
     textAlign: 'left',
     whiteSpace: 'normal',
     minWidth: 160,
-    maxWidth: 240,
+    maxWidth: 280,
   },
 };
 

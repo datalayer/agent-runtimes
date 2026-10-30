@@ -71,6 +71,7 @@ import {
   type A2ATeamPeerOptions,
   type SceneStage,
   type SceneStageMember,
+  memberAppDetails,
   type SelectedEdge,
 } from '../components/teams';
 import { listSceneSpecs } from '../specs/scenes';
@@ -373,6 +374,7 @@ function Scene({
               character: avatarShown(entry.app.interface.avatar, 'paperclip'),
               color: appColorOf(entry.app),
               where: whereOf(entry),
+              ...memberAppDetails(entry.app, entry.runsIn),
               persona: team.entryPersona,
               onToggle: () => composer.current?.focus(),
               conversationLabel: `Ask ${entry.app.name}`,
@@ -400,6 +402,7 @@ function Scene({
                 character: avatarShown(peer.app.interface.avatar, 'wizard'),
                 color: appColorOf(peer.app),
                 where: whereOf(peer),
+                ...memberAppDetails(peer.app, peer.runsIn),
                 persona: kept?.persona ?? team.peerPersona,
                 onAway: kept?.setAway,
                 history: kept?.history,

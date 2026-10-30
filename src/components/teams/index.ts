@@ -25,5 +25,7 @@ export * from './SceneTranscript';
 export * from './SceneView';
 export * from './transcript';
 export * from './useBalloonRoom';
+export * from './HarnessIcon';
+export * from './memberHarness';
 export * from './sceneStage';
 export * from './AnswerSurfaces';

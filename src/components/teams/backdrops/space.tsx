@@ -146,7 +146,7 @@ const card = (color: string) => ({
   textAlign: 'left',
   whiteSpace: 'normal',
   minWidth: 160,
-  maxWidth: 240,
+  maxWidth: 280,
   '&[data-member-details="kept"], &[data-connection-details="kept"]': {
     borderColor: tone(color),
   },

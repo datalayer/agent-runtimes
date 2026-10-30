@@ -115,6 +115,9 @@ function Scene({
       entry={member('sales', 'Sales', { emoji: '🤝' })}
       peers={[
         member('accounting', 'Accounting', {
+          description: 'Reads the books.',
+          harness: { id: 'opencode', name: 'OpenCode' },
+          model: 'claude-sonnet-4-6',
           emoji: '📒',
           connections: [ODOO],
           persona: { ...AT_REST, state: 'working' },
@@ -658,6 +661,12 @@ describe('a member’s details, on every backdrop', () => {
       const figure = node.querySelector('[data-assistant-figure]')!;
       expect(card.hasAttribute('hidden')).toBe(true);
       expect(card.textContent).toContain('Reaches Odoo over MCP.');
+      // What it is: its application, its harness with its mark, its model.
+      expect(card.textContent).toContain('Reads the books.');
+      const harness = card.querySelector('[data-member-harness="opencode"]')!;
+      expect(harness.textContent).toContain('OpenCode');
+      expect(harness.querySelector('svg')).not.toBeNull();
+      expect(card.textContent).toContain('claude-sonnet-4-6');
       // At rest, each backdrop's own words: where it runs under the name, but on space.
       expect(Boolean(node.querySelector('[data-member-where]'))).toBe(
         backdrop !== 'space',
