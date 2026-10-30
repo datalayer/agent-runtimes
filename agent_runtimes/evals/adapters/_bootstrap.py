@@ -22,6 +22,7 @@ import signal
 import socket
 import struct
 import sys
+from typing import cast
 
 REFUSED = 125
 
@@ -149,7 +150,7 @@ def relay_until_exit(listener: socket.socket, path: str, child: int) -> int:
                 selector.register(inner, selectors.EVENT_READ, outer)
                 selector.register(outer, selectors.EVENT_READ, inner)
                 continue
-            source, target = key.fileobj, key.data
+            source, target = cast(socket.socket, key.fileobj), key.data
             try:
                 chunk = source.recv(65536)
                 if chunk:

@@ -119,12 +119,12 @@ def unpack_archive(data: bytes, destination: Path) -> None:
                     raise SourceRefused(
                         f"the archive holds something other than a file: {member.name}"
                     )
-                stream = tar.extractfile(member)
-                if stream is None:
+                extracted = tar.extractfile(member)
+                if extracted is None:
                     raise SourceRefused(
                         f"the archive's entry cannot be read: {member.name}"
                     )
-                _write(destination, member.name, stream, spent=spent)
+                _write(destination, member.name, extracted, spent=spent)
     for root, directories, names in os.walk(destination):
         for name in names:
             os.chmod(os.path.join(root, name), 0o444)

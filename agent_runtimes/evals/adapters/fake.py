@@ -169,10 +169,11 @@ class FakeAdapter(ExternalAdapter):
     ) -> AdapterPlan:
         configuration = definition.configuration
         secrets = [str(item) for item in configuration.get("secrets") or []]
-        network: Literal["none", "boundary"] = (
-            "boundary" if configuration.get("network") == "boundary" else "none"
+        declared = configuration.get("network")
+        network: Literal["none", "inference", "boundary"] = (
+            declared if declared in ("inference", "boundary") else "none"
         )
-        declared = [
+        components = [
             item
             for item in definition.capabilities
             if item.kind not in {"network", "secret"}
@@ -190,7 +191,7 @@ class FakeAdapter(ExternalAdapter):
             framework_version=self.framework_version,
             environment=self.environment,
             policy=policy_to(policy),
-            capabilities=declared
+            capabilities=components
             + _grant_capabilities(network=network, secrets=secrets, grant=grant),
             resolved_configuration={"entry_point": definition.entry_point},
             reproduction=f"python _fake_runner.py  # {definition.entry_point}",
