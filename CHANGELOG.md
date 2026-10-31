@@ -7,7 +7,7 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## Unreleased
+## 1.5.102
 
 A runtime launched for a deployment runs what the deployment runs, as ai-agents says it. It reads the version from `GET /apps/deployments/{uid}/code`, over its proof, when it is given the proof (`PUT /api/v1/apps/runtime-proof`, with the launcher's token) and again as the agent is made. `POST /api/v1/agents` makes the agent from that answer as a kept deployment's is made (`kept_payload`), and of what the caller sends reads only `woken_by`, `purpose`, `launch_uid` and a version number ai-agents decides on. `declared-secrets` and `mcp-servers/start` declare from it and read no spec sent to them; `configure-from-spec` is refused. Nothing is made when ai-agents says no spec. Needs an ai-agents that answers `spec` with `/code`.
 
