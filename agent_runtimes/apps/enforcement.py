@@ -48,6 +48,14 @@ byline before the call is made — or shown to the person who approves it —
 recorder). Through `call_tool` too; code that calls a tool shows no
 arguments, and is not signed. What only reads is never touched.
 
+**What code calls is decided again as it calls it.** The tools code names are
+only what it says: code may name nothing, and post to the MCP proxy itself. The
+sandbox's calls hold no secret and say nobody's name, so on a runtime held to the
+application's routes the proxy answers only while code the agent was let run is
+running (`code_is_running`), and each of its calls takes the path of a tool call
+of the agent, in that run: every capability's hooks, on the context of the turn,
+with its arguments, which code did not show (`through_the_code_run`).
+
 Pure enough to test: the person is asked through `ask`, an awaitable the
 runtime gives (by default the tool-approval path that exists), and every
 decision is handed to `record` before it is acted on.
@@ -55,6 +63,8 @@ decision is handed to `record` before it is acted on.
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
 from dataclasses import dataclass, field, replace
 from typing import (
     Any,
@@ -154,6 +164,25 @@ CODE_TOOLS: frozenset[str] = SHELL_TOOLS
 
 #: Why a call was decided as it was, beside the reasons of `rules`.
 NO_SHELL = "no_shell"
+
+#: A call of the MCP proxy with no code of the agent running.
+NO_CODE_RUNNING = "no_code_running"
+
+#: A call of the MCP proxy that could be the code of more than one run.
+SEVERAL_RUNS = "several_runs"
+
+#: What it says of a call that reached the proxy as the code that made it ended.
+NO_CODE_RUNNING_SENTENCE = (
+    "`{tool}` was not called: tools are reached from the sandbox only while "
+    "code the agent was let run is running."
+)
+
+#: What it says when two runs' code is running, and either may have called.
+SEVERAL_RUNS_SENTENCE = (
+    "`{tool}` was not called: code of several runs is running, and which one "
+    "called cannot be told, so from the sandbox only what reads and asks "
+    "nobody is done now. Try again."
+)
 
 #: A visitor without an account's turn, which only reads.
 SIGNED_OUT = "signed_out"
@@ -269,6 +298,126 @@ def _catalogue_ids_by_name() -> Dict[str, Set[str]]:
         if isinstance(method, str) and method:
             names.setdefault(method, set()).add(identity)
     return names
+
+
+@dataclass(eq=False)
+class CodeRun:
+    """Code the agent was let run, running: the turn its sandbox's calls are decided in."""
+
+    rules: "AppRulesCapability"
+    """The rules that let it run."""
+
+    ctx: RunContext[Any]
+    """The run's context, as `execute_code` is called."""
+
+    context: contextvars.Context
+    """The turn's: its session, whether a visitor's, whether anybody is there."""
+
+    passed: Mapping[str, Tuple[str, ...]]
+    """The tools the code names that somebody approved as it was let run, by
+    `server.tool`, with what they were shown it does."""
+
+    async def call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        forward: Callable[[Dict[str, Any]], Awaitable[Any]],
+    ) -> Any:
+        """A tool call of this run, as the agent's are made (`ToolManager`)."""
+        capability = self.ctx.root_capability
+        if capability is None:
+            raise RuntimeError("This run has no capabilities to decide a tool call.")
+        call = ToolCallPart(tool_name, arguments)
+        ctx = replace(self.ctx, tool_name=tool_name, tool_call_id=call.tool_call_id)
+        definition = ToolDefinition(name=tool_name)
+        _PASSED_WITH_ITS_CODE.set(self.passed)
+        args = await capability.before_tool_execute(
+            ctx, call=call, tool_def=definition, args=arguments
+        )
+        if self not in _CODE_RUNNING:
+            # A person may take minutes to answer: the code is gone by then.
+            raise _no_code_running(tool_name)
+        result = await capability.wrap_tool_execute(
+            ctx, call=call, tool_def=definition, args=args, handler=forward
+        )
+        return await capability.after_tool_execute(
+            ctx, call=call, tool_def=definition, args=args, result=result
+        )
+
+
+#: The code running on this runtime, the agent's, of every session.
+_CODE_RUNNING: List[CodeRun] = []
+
+#: What was approved of the code that makes the call under way.
+_PASSED_WITH_ITS_CODE: contextvars.ContextVar[Mapping[str, Tuple[str, ...]]] = (
+    contextvars.ContextVar("app_passed_with_its_code", default={})
+)
+
+
+def code_is_running() -> bool:
+    """Whether code the agent was let run is running on this runtime."""
+    return bool(_CODE_RUNNING)
+
+
+def _no_code_running(tool_name: str) -> "AppRuleBlockedError":
+    return AppRuleBlockedError(
+        Decision(LEAVE_TO_ME, tool_name, ("write",), NO_CODE_RUNNING),
+        NO_CODE_RUNNING_SENTENCE.format(tool=tool_name),
+    )
+
+
+async def through_the_code_run(
+    tool_name: str,
+    arguments: Mapping[str, Any],
+    forward: Callable[[Dict[str, Any]], Awaitable[Any]],
+) -> Any:
+    """
+    Make a call of the sandbox as a tool call of the run whose code it is.
+
+    Nothing the sandbox sends says who it is, so the run is the one whose code
+    is running. With several, it could be any of them, and what one was
+    approved or may do is not taken for another's: only what reads, and that
+    each of them does without asking, is made.
+
+    Parameters
+    ----------
+    tool_name : str
+        The tool as the agent would call it: `server__tool`.
+    arguments : Mapping[str, Any]
+        What the code sends it.
+    forward : Callable[[dict], Awaitable[Any]]
+        What makes the call, with the arguments as the hooks leave them.
+
+    Returns
+    -------
+    Any
+        What the hooks leave of the result.
+
+    Raises
+    ------
+    AppRuleBlockedError
+        With no code running, or what the rules say. Any other hook refuses
+        as it does the agent's call: nothing is made then.
+    """
+    runs = list(_CODE_RUNNING)
+    if not runs:
+        raise _no_code_running(tool_name)
+    if len(runs) > 1:
+        for run in runs:
+            decision = (
+                run.context.copy().run(run.rules.decide, tool_name, arguments).decision
+            )
+            if decision.behaviour != DO_IT or not is_read_only(decision.classes):
+                raise AppRuleBlockedError(
+                    replace(decision, behaviour=LEAVE_TO_ME, because=SEVERAL_RUNS),
+                    SEVERAL_RUNS_SENTENCE.format(tool=tool_name),
+                )
+    run = runs[0]
+    # Its own copy: a hook's variable of one call is not another's.
+    return await asyncio.get_running_loop().create_task(
+        run.call(tool_name, dict(arguments), forward),
+        context=run.context.copy(),
+    )
 
 
 @dataclass
@@ -772,7 +921,11 @@ class AppRulesCapability(AbstractCapability[Any]):
                 enforced = replace(enforced, approved=approved)
         if self.record is not None:
             self.record(enforced)
-        if decision.behaviour == DO_IT or enforced.approved is not None:
+        if (
+            decision.behaviour == DO_IT
+            or enforced.approved is not None
+            or _approved_with_its_code(decision)
+        ):
             await self._computer_free(call.tool_name)
             return args
         if decision.behaviour in (ASK_FIRST, IF_ASKED):
@@ -788,10 +941,45 @@ class AppRulesCapability(AbstractCapability[Any]):
             return args
         raise AppRuleBlockedError(decision)
 
+    async def wrap_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+        handler: Callable[[dict[str, Any]], Awaitable[Any]],
+    ) -> Any:
+        """While code it was let run runs, its sandbox's calls are of this turn."""
+        if call.tool_name not in CODE_TOOLS:
+            return await handler(args)
+        running = CodeRun(
+            self,
+            ctx,
+            contextvars.copy_context(),
+            {
+                part.tool: part.classes
+                for part in self.decide(call.tool_name, args).parts
+                if part.behaviour in (ASK_FIRST, IF_ASKED)
+            },
+        )
+        _CODE_RUNNING.append(running)
+        try:
+            return await handler(args)
+        finally:
+            _CODE_RUNNING.remove(running)
+
     async def _computer_free(self, tool_name: str) -> None:
         """A call to a tool of its computer waits while a person has it."""
         if part_of(tool_name) is not None:
             await wait_until_handed_back(self.agent_id)
+
+
+def _approved_with_its_code(decision: Decision) -> bool:
+    """Whether the person approved this tool, for no more than it does here, as
+    they were shown the code that calls it."""
+    classes = _PASSED_WITH_ITS_CODE.get().get(decision.tool)
+    return classes is not None and set(decision.classes) <= set(classes)
 
 
 def _acts(decision: Decision) -> bool:
@@ -867,5 +1055,7 @@ __all__ = [
     "AppRuleBlockedError",
     "AppRulesCapability",
     "Enforced",
+    "code_is_running",
     "sentence_of",
+    "through_the_code_run",
 ]

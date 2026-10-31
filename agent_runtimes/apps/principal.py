@@ -53,6 +53,8 @@ do not share processes, so the sandbox cannot read this process; a harness here
 runs as the same user, so the process is first made undumpable
 (`_keep_from_this_user`): no process of that user reads its memory or its
 `/proc` entries, which holds for the proof and the principal's token as well.
+The sandbox reaches the MCP proxy without it, and only as a tool call of the run
+whose code is running (`enforcement.through_the_code_run`).
 
 **A Preview is held to the same grants** (R-25, decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its

@@ -287,8 +287,16 @@ def test_the_companion_is_answered_by_its_secret_from_the_pod_alone(
     assert outside.get("/api/v1/agents").status_code == 404
 
 
-def test_the_sandbox_keeps_its_tool_calls(app: FastAPI) -> None:
+def test_the_sandbox_reaches_its_tools_only_while_code_runs(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What such a call is then is `test_apps_sandbox_tool_calls`."""
+    from agent_runtimes.apps import enforcement
+
     give_runtime_proof(_proof(), SECRET)
+    idle = TestClient(app, client=POD).get("/api/v1/mcp/proxy/servers")
+    assert idle.status_code == 404, idle.text
+    monkeypatch.setattr(enforcement, "code_is_running", lambda: True)
     sandbox = TestClient(app, client=POD).get("/api/v1/mcp/proxy/servers")
     assert sandbox.status_code == 200, sandbox.text
     outside = TestClient(app, client=OUTSIDE).get("/api/v1/mcp/proxy/servers")

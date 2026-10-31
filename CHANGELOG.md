@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+On a runtime held to an application's routes, what the sandbox sends the MCP proxy is a tool call of the run whose code is running. The tools code names were decided, and code that named none ran and could post to `/api/v1/mcp/proxy/<server>/tools/<tool>` itself: rules, approvals and connections never saw it. The route now answers only while `execute_code` or `run_skill_script` runs (404 otherwise, `/servers` and `/health` included), and each call goes through every capability's `before_tool_execute`, `wrap_tool_execute` and `after_tool_execute` on the turn's context, with its real arguments. What the person approved of the code is not asked again, for no more than they were shown. With code of several runs at once, only what reads and asks nobody is made. A refusal is the call's own error.
+
 ## 1.5.102
 
 A runtime launched for a deployment runs what the deployment runs, as ai-agents says it. It reads the version from `GET /apps/deployments/{uid}/code`, over its proof, when it is given the proof (`PUT /api/v1/apps/runtime-proof`, with the launcher's token) and again as the agent is made. `POST /api/v1/agents` makes the agent from that answer as a kept deployment's is made (`kept_payload`), and of what the caller sends reads only `woken_by`, `purpose`, `launch_uid` and a version number ai-agents decides on. `declared-secrets` and `mcp-servers/start` declare from it and read no spec sent to them; `configure-from-spec` is refused. Nothing is made when ai-agents says no spec. Needs an ai-agents that answers `spec` with `/code`.

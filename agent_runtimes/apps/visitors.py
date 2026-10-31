@@ -72,6 +72,7 @@ __all__ = [
     "OTHER_APPLICATION",
     "agent_of",
     "forget_turns",
+    "held_to_own_routes",
     "is_anonymous_audience",
     "kept_examples",
     "or_visitors_key",
@@ -358,8 +359,8 @@ _NOT_THE_APPLICATIONS = (
 #: Where an agent is served over A2A: its own when it runs an application.
 _A2A_AGENTS = "/api/v1/a2a/agents/"
 
-#: What the sandbox reaches on the pod's loopback, with no secret: the tool calls
-#: of the code it runs, through the servers its application starts.
+#: What the sandbox reaches on the pod's loopback, with no secret, while code the
+#: agent was let run is running: the tool calls of that code.
 _SANDBOX_TOOLS = "/api/v1/mcp/proxy/"
 
 
@@ -390,6 +391,13 @@ def path_answered(method: str, path: str) -> bool:
 VISITORS_OWN = "This route of the visitors' runtime is its own."
 
 
+def held_to_own_routes() -> bool:
+    """Whether this runtime answers only the application's own routes (:class:`OwnRoutesOnly`)."""
+    from agent_runtimes.apps.principal import a_deployment_is_served, launched_for
+
+    return visitors_runtime() or a_deployment_is_served() or bool(launched_for())
+
+
 class OwnRoutesOnly:
     """The one gate: a runtime held to the application's own routes (:func:`path_answered`).
 
@@ -401,7 +409,9 @@ class OwnRoutesOnly:
     deleting agents, MCP servers, skills, history, the monitoring stream —
     answers 404 in a sentence, over HTTP and on a websocket's handshake alike.
     The pod itself (`callers.is_the_pod`) is answered everywhere, and the
-    sandbox's tool calls through the MCP proxy from its loopback.
+    sandbox's tool calls through the MCP proxy from its loopback only while
+    code the agent was let run is running (`enforcement.code_is_running`),
+    each decided as a tool call of that run.
 
     A runtime launched for a deployment is held to this from its launch, as
     soon as it holds its proof, not from its first agent: until then it
@@ -424,6 +434,7 @@ class OwnRoutesOnly:
             is_loopback,
             is_the_pod,
         )
+        from agent_runtimes.apps.enforcement import code_is_running
         from agent_runtimes.apps.principal import (
             OWN_ROUTES_ONLY,
             a_deployment_is_served,
@@ -447,7 +458,11 @@ class OwnRoutesOnly:
             not (visitors or served or launched)
             or path_answered(method, scope["path"])
             or is_the_pod(host, secret)
-            or (is_loopback(host) and scope["path"].startswith(_SANDBOX_TOOLS))
+            or (
+                is_loopback(host)
+                and scope["path"].startswith(_SANDBOX_TOOLS)
+                and code_is_running()
+            )
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).
