@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+A runtime launched for a deployment runs what the deployment runs, as ai-agents says it. It reads the version from `GET /apps/deployments/{uid}/code`, over its proof, when it is given the proof (`PUT /api/v1/apps/runtime-proof`, with the launcher's token) and again as the agent is made. `POST /api/v1/agents` makes the agent from that answer as a kept deployment's is made (`kept_payload`), and of what the caller sends reads only `woken_by`, `purpose`, `launch_uid` and a version number ai-agents decides on. `declared-secrets` and `mcp-servers/start` declare from it and read no spec sent to them; `configure-from-spec` is refused. Nothing is made when ai-agents says no spec. Needs an ai-agents that answers `spec` with `/code`.
+
 ## 1.5.101
 
 31 October 2026. A deployment's principal goes to its runtime, not to a person. A runtime launched for a deployment holds a proof the platform minted at its launch, given by its companion (`PUT /api/v1/apps/runtime-proof`, the pod alone), and sends it to ai-agents beside the caller's token when it asks for the principal's token and the version's code; ai-agents answers anybody but the owner only with it. The proof stays in this process's memory: no environment variable, no route reads it back, no kernel or harness is given it, and it goes to the one ai-agents the runtime knew when it was given. Such a runtime answers outside callers on the application's own routes from its launch, not from its first agent: until then it makes that deployment's agent and nothing else. It never configures a sandbox inside this process, asked from the pod or not. A refusal of a call that carried no proof waits up to fifteen seconds for the proof still on its way. Needs ai-agents 0.0.105 to be enforced, the runtimes companion 0.0.23 to be given.

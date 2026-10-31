@@ -35,6 +35,14 @@ ai-agents this runtime knew as it was given it, whatever the environment says
 since. The same proof puts the runtime behind the application's own routes from
 its launch rather than from its first agent (`launched_for`).
 
+**What it runs is not the launcher's to say.** A proof is minted for whoever
+launches a runtime naming a deployment, and the principal's token follows from
+it, so what such a runtime runs as the principal comes from ai-agents, over
+that proof: the Appspec, the version and the instance of the version the
+deployment runs (`read_deployment`), read as the companion gives the proof
+(`read_launched_app`) and again as the agent is made. What the launcher sends,
+with the launch, with the agent or to the start hooks, is not read.
+
 **A Preview is held to the same grants** (R-25, decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its
 application is granted, and the companies it works with (P-01). As its session opens, and on each of its requests, the runtime asks
@@ -71,6 +79,7 @@ __all__ = [
     "api_key_for",
     "deployment_of",
     "DeploymentCodeUnread",
+    "DEPLOYMENT_RUNS_ITS_OWN",
     "deployments_served",
     "ensure_preview_token",
     "ensure_principal_token",
@@ -80,6 +89,7 @@ __all__ = [
     "give_runtime_proof",
     "holds_principal_token",
     "is_held_principal",
+    "launched_app",
     "launched_for",
     "owner_of",
     "preview_grants",
@@ -89,7 +99,9 @@ __all__ = [
     "principal_token",
     "principal_token_refusal",
     "principal_uid_of",
+    "read_deployment",
     "read_deployment_code",
+    "read_launched_app",
     "renew_principal_token",
     "use_code_reader",
     "use_memberships_asker",
@@ -115,6 +127,10 @@ RUNTIME_PROOF_WAIT = 15.0
 #: given. Process memory only: never `os.environ`, which a harness or a kernel
 #: could read, and never answered by a route.
 _PROOF: dict[str, str] = {}
+
+#: What the deployment this runtime was launched for runs, as ai-agents said it:
+#: {"spec", "instance"}. Empty when it was not said.
+_LAUNCHED_APP: dict[str, dict[str, Any]] = {}
 
 
 class PrincipalTokenMissing(RuntimeError):
@@ -198,8 +214,9 @@ def give_runtime_proof(proof: str) -> str:
 
 
 def forget_runtime_proof() -> None:
-    """Forget this runtime's proof (a test)."""
+    """Forget this runtime's proof and what it read with it (a test)."""
     _PROOF.clear()
+    _LAUNCHED_APP.clear()
 
 
 def launched_for() -> str:
@@ -213,10 +230,19 @@ def launched_for() -> str:
     return _PROOF.get("deployment_uid", "")
 
 
+def launched_app() -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
+    """The Appspec and the instance of the deployment this runtime was launched
+    for, as ai-agents said them (`read_launched_app`); ``(None, None)`` when it
+    has not."""
+    if not _LAUNCHED_APP:
+        return None, None
+    return _LAUNCHED_APP["spec"], _LAUNCHED_APP["instance"]
+
+
 def agent_refused_here(
     deployment_uid: str, sandbox_variant: Optional[str]
 ) -> Optional[str]:
-    """Why a caller from outside may not make this agent here, or ``None`` when they may.
+    """Why this agent may not be made here, or ``None`` when it may.
 
     A runtime launched for a deployment makes that deployment's agent and no
     other, and never with a sandbox inside this process, which holds what acts
@@ -230,6 +256,13 @@ def agent_refused_here(
     if sandbox_variant == "eval":
         return NO_SANDBOX_IN_THIS_PROCESS
     return None
+
+
+#: Why a runtime launched for a deployment takes no spec of anybody's.
+DEPLOYMENT_RUNS_ITS_OWN = (
+    "This runtime was launched for a deployment: it runs that deployment's version, "
+    "as ai-agents says it, and no spec it is sent."
+)
 
 
 #: Why a runtime launched for a deployment runs no code in its own process.
@@ -529,8 +562,10 @@ class DeploymentCodeUnread(RuntimeError):
 
 
 async def _read_from_ai_agents(
-    deployment_uid: str, version: int, bearer: Optional[str]
-) -> Optional[dict[str, Any]]:
+    deployment_uid: str, version: Optional[int], bearer: Optional[str]
+) -> dict[str, Any]:
+    """What ai-agents answers of a deployment's version: the one named, or with
+    ``None`` the one it runs. Its ``code`` read; the rest is `read_deployment`'s."""
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -548,7 +583,7 @@ async def _read_from_ai_agents(
                 url,
                 lambda proved: client.get(
                     f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
-                    params={"version": int(version)},
+                    params={} if version is None else {"version": int(version)},
                     # An embed's page, checked as for the principal's token (D-12).
                     # With no token, asked as nobody: answered only for a deployment
                     # somebody without an account may talk to (R-30), and only
@@ -589,13 +624,20 @@ async def _read_from_ai_agents(
         raise DeploymentCodeUnread(
             f"ai-agents answered the code of deployment {deployment_uid} in another shape."
         )
-    return code
+    return answer
+
+
+async def _code_from_ai_agents(
+    deployment_uid: str, version: int, bearer: Optional[str]
+) -> Optional[dict[str, Any]]:
+    answer = await _read_from_ai_agents(deployment_uid, version, bearer)
+    return answer["code"]
 
 
 #: Who answers a deployment's code; replaced by a test.
 _code_reader: dict[
     str, Callable[[str, int, Optional[str]], Awaitable[Optional[dict[str, Any]]]]
-] = {"read": _read_from_ai_agents}
+] = {"read": _code_from_ai_agents}
 
 
 def use_code_reader(
@@ -604,7 +646,7 @@ def use_code_reader(
     ],
 ) -> None:
     """Who answers a deployment's code: ai-agents, or a test; ``None`` for ai-agents."""
-    _code_reader["read"] = reader or _read_from_ai_agents
+    _code_reader["read"] = reader or _code_from_ai_agents
 
 
 async def read_deployment_code(
@@ -642,6 +684,88 @@ async def read_deployment_code(
         When it could not be read: the agent is not made.
     """
     return await _code_reader["read"](deployment_uid, int(version), bearer)
+
+
+async def read_deployment(
+    deployment_uid: str, version: Optional[int], bearer: Optional[str]
+) -> dict[str, Any]:
+    """
+    What a deployment's version is, as ai-agents says it: what makes its agent
+    on a runtime launched for it, in place of anything the caller sent.
+
+    Asked as `read_deployment_code` is, and refused to the same people.
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment.
+    version : int | None
+        A version its owner moves it to, which ai-agents answers them alone;
+        ``None`` for the one it runs.
+    bearer : str | None
+        The token of whoever opened the session; ``None`` to ask as nobody.
+
+    Returns
+    -------
+    dict
+        ``spec``, ``code``, ``version``, ``app_uid``, ``organization_uid`` and
+        ``spend_limit``.
+
+    Raises
+    ------
+    DeploymentCodeUnread
+        When ai-agents refused it, or did not say all of it: nothing is made
+        from a part of it, and nothing the caller sent takes its place.
+    """
+    answer = await _read_from_ai_agents(deployment_uid, version, bearer)
+    said = answer.get("version")
+    if (
+        not isinstance(answer.get("spec"), dict)
+        or not isinstance(said, int)
+        or said < 1
+        or not answer.get("app_uid")
+    ):
+        raise DeploymentCodeUnread(
+            f"ai-agents did not say what deployment {deployment_uid} runs."
+        )
+    return answer
+
+
+async def read_launched_app(
+    bearer: Optional[str], version: Optional[int] = None
+) -> Optional[str]:
+    """
+    Read what the deployment this runtime was launched for runs, as it is given
+    its proof, before any agent is made: what its start hooks declare from.
+
+    Parameters
+    ----------
+    bearer : str | None
+        The token of whoever launched it, which ai-agents answers as it would
+        a session of theirs.
+    version : int | None
+        The version its launch names (`read_deployment`).
+
+    Returns
+    -------
+    str | None
+        Why it was not read, or ``None``. Not read, the start hooks declare
+        nothing, and the agent is refused in the same sentence as it is made.
+    """
+    deployment = launched_for()
+    try:
+        answer = await read_deployment(deployment, version, bearer)
+    except DeploymentCodeUnread as unread:
+        return str(unread)
+    _LAUNCHED_APP.update(
+        spec=answer["spec"],
+        instance={
+            "app_uid": str(answer["app_uid"]),
+            "deployment_uid": deployment,
+            "version": int(answer["version"]),
+        },
+    )
+    return None
 
 
 async def _ensure_held(

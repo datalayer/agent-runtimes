@@ -472,6 +472,7 @@ def kept_payload(
     version: int,
     organization_uid: str = "",
     spend_limit: float = 0.0,
+    runs: str = "kept on its runtime",
 ) -> dict[str, Any]:
     """What creates a deployment's agent on the runtime it is kept on
     (R-33): the payload the hosted page sends (`AppRenderer`'s
@@ -483,6 +484,9 @@ def kept_payload(
     `spend_limit` is the deployment's, in credits a day (the keeper's
     `limit_of`): above zero, it travels in the instance, and the runtime
     holds each session to it as a `team` document's `limits.spend` (SH-32) while the keeper holds the day.
+
+    `runs` is how its description says where it runs: a runtime launched for
+    the deployment makes its agent from this too, whoever launched it.
 
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which is not kept yet.
@@ -499,7 +503,7 @@ def kept_payload(
         )
     return {
         "name": app.id,
-        "description": f"{app.name or app.id}, version {version}, kept on its runtime",
+        "description": f"{app.name or app.id}, version {version}, {runs}",
         "transport": "ag-ui",
         "agent_spec_id": agent_id_of(app),
         "app_spec": dict(spec),

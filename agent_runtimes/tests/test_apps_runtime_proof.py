@@ -57,6 +57,11 @@ def _proof(deployment: str = DEPLOYMENT) -> str:
 @pytest.fixture(autouse=True)
 def clean(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", AI_AGENTS)
+
+    async def nothing_read(*_: Any) -> None:
+        return None
+
+    monkeypatch.setattr(principal, "read_launched_app", nothing_read)
     forget_runtime_proof()
     yield
     forget_runtime_proof()
