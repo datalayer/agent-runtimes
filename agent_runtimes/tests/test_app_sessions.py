@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple
 
+import jwt
 import pytest
 import yaml
 from fastapi.testclient import TestClient
@@ -273,6 +274,15 @@ def remote(runtime: Runtime) -> Iterator[TestClient]:
 
 def as_(person: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {person}"}
+
+
+def principal_token_of(owner: str) -> str:
+    """A deployment's principal's token as its owner's account: unsigned here."""
+    return jwt.encode(
+        {"sub": "principal-7", "agent_uid": "principal-7", "account_uid": owner},
+        "signed-by-iam-and-verified-by-the-services",
+        algorithm="HS256",
+    )
 
 
 def test_a_preview_session_starts_answers_and_is_recorded_as_the_person(

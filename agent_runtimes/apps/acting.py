@@ -109,7 +109,10 @@ def person_woken_for(woken_by: Optional[Mapping[str, Any]]) -> tuple[str, str]:
 
     An event's details are ids (`deployments.event_details`); a mail watch
     names the ``person`` whose mailbox the message arrived in and the
-    ``grant`` they gave the application (W-03).
+    ``grant`` they gave the application (W-03). Read only of what
+    `routes.apps._woken_by` let by, and what it names grants nothing here: the
+    token that comes with it does, which the scheduler mints only for a wake
+    its own watch sealed, and which :func:`given` holds to this deployment.
     """
     if not isinstance(woken_by, Mapping):
         return "", ""
@@ -185,6 +188,12 @@ def given(
     if grant and str(claims.get("task_grant_uid") or "") != grant:
         raise ValueError(
             "The token given naming the application was not minted from the grant the event names."
+        )
+    from agent_runtimes.apps.principal import principal_uid_of
+
+    if str(claims.get("agent_uid") or "") != principal_uid_of(deployment_uid):
+        raise ValueError(
+            "The token given names another application than this deployment's."
         )
     try:
         expires_at = float(claims.get("exp") or 0)

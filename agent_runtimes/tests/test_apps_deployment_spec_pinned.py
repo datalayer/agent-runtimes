@@ -196,12 +196,8 @@ def test_what_makes_its_record_is_the_deployments_too(
         "spend_limit": 0.0,
     }
     instance = _made(request)["app_instance"]
-    assert instance == {
-        "app_uid": "app-1",
-        "deployment_uid": DEPLOYMENT,
-        "version": 3,
-        "woken_by": {"kind": "schedule"},
-    }
+    # What woke it is said with a session, by who may: nothing of the agent's.
+    assert instance == {"app_uid": "app-1", "deployment_uid": DEPLOYMENT, "version": 3}
 
 
 def test_it_asks_for_the_version_it_is_sent_and_ai_agents_decides(

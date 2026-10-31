@@ -1421,6 +1421,9 @@ def _keep_app_recorder(
     from agent_runtimes.routes.apps import keep_running
 
     serving = request.app_instance or {}
+    # What woke a deployment's session is said with the session, by who may
+    # (`routes.apps._woken_by`): never of the agent every session of it runs on.
+    deployment = str(serving.get("deployment_uid") or "")
     # What it did, session by session, kept by ai-agents (R-07).
     recorder = AppRecorder(
         app=running_app,
@@ -1430,7 +1433,7 @@ def _keep_app_recorder(
         purpose=str(serving.get("purpose") or ""),
         launch_uid=str(serving.get("launch_uid") or ""),
         # What woke it, when nobody opened it (R-14).
-        woken_by=dict(serving.get("woken_by") or {}),
+        woken_by={} if deployment else dict(serving.get("woken_by") or {}),
         # Only visitors without an account talk to it (R-30).
         visitors=bool(serving.get("visitor_app")),
     )
@@ -1445,7 +1448,7 @@ def _keep_app_recorder(
 
 #: What of the instance a caller sends is theirs to say on a runtime launched
 #: for a deployment: what its record is kept under, and nothing it runs.
-_INSTANCE_THE_CALLER_SAYS = ("woken_by", "purpose", "launch_uid")
+_INSTANCE_THE_CALLER_SAYS = ("purpose", "launch_uid")
 
 
 async def _as_deployed(

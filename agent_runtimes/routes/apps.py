@@ -1399,8 +1399,46 @@ def _signed_user(
         raise HTTPException(status_code=refused.status, detail=refused.reason) from None
 
 
+#: Why a session of a deployment is not said to be woken by who opens it.
+NOT_WOKEN_BY_THEM = (
+    "Only a deployment's owner says what woke its session, as the scheduler does "
+    "with their key: this session is opened by somebody."
+)
+
+
+async def _woken_by(
+    body: StartSessionRequest,
+    authorized: Authorized,
+    instance: Dict[str, Any],
+    bearer: str,
+) -> Dict[str, Any]:
+    """What woke a session, from who may say so; else 403.
+
+    What it says opens the session without its host's signature (D-21), runs
+    the handler of the schedule it names and the person's token it names (W-03),
+    and is what the record shows in place of who opened it. So of a deployment it
+    is read from the authority `POST /deployments/{uid}/wake` answers, its owner,
+    whose key the scheduler holds. ai-agents refuses anybody else there, and here
+    a visitor, a host's person or a second account is refused, not ignored: they
+    said something false. A Preview is its owner's already.
+    """
+    deployment = str(instance.get("deployment_uid") or "")
+    if not body.woken_by or not deployment:
+        return body.woken_by
+    try:
+        await its_owner(authorized, [deployment], bearer)
+    except HTTPException as refused:
+        if refused.status_code != 403:
+            raise
+        raise HTTPException(status_code=403, detail=NOT_WOKEN_BY_THEM) from None
+    return body.woken_by
+
+
 def _given_in_their_name(
-    request: Request, body: StartSessionRequest, instance: Dict[str, Any], bearer: str
+    request: Request,
+    woken_by: Dict[str, Any],
+    instance: Dict[str, Any],
+    bearer: str,
 ) -> None:
     """A session woken for one person's own source — a message in their
     mailbox (W-03) — is given that person's token naming the
@@ -1420,7 +1458,7 @@ def _given_in_their_name(
     )
 
     token = str(request.headers.get(ACTING_TOKEN_HEADER) or "").strip()
-    person, grant = person_woken_for(body.woken_by)
+    person, grant = person_woken_for(woken_by)
     if not person:
         if token:
             raise HTTPException(
@@ -1609,11 +1647,13 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+    # What woke it, from who may say so: everything below reads this.
+    woken_by = await _woken_by(body, authorized, instance, bearer or "")
     # Woken for one person's own source, it is given their token naming the
     # application, held where its runs find it (W-03).
-    _given_in_their_name(request, body, instance, bearer or "")
+    _given_in_their_name(request, woken_by, instance, bearer or "")
     # Who its user is, embedded, when it takes only one its host signed (D-21).
-    user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
+    user = _signed_user(app, instance, body.user_token, woken=bool(woken_by))
     # A host's retry is answered the original session and turn.
     turn_key = _turn_key(authorized.caller, request, body.external_event_id)
     asked = body.model_dump(exclude={"user_token"})
@@ -1642,7 +1682,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
                 body.external_event_id,
                 lambda head: live.open(
                     opener=body.opener.strip(),
-                    woken_by=body.woken_by or None,
+                    woken_by=woken_by or None,
                     head=head,
                     bearer=bearer,
                 ),
@@ -1650,7 +1690,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
         return _stream(
             live.open(
                 opener=body.opener.strip(),
-                woken_by=body.woken_by or None,
+                woken_by=woken_by or None,
                 head=live.session_event(),
                 bearer=bearer,
             )
