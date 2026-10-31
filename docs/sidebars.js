@@ -67,7 +67,7 @@ const sidebars = {
         {
           type: 'doc',
           id: 'protocols/mcp-and-a2a',
-          label: 'MCP and A2A, implemented',
+          label: 'MCP and A2A',
         },
         { type: 'doc', id: 'protocols/a2ui', label: 'A2UI' },
         { type: 'doc', id: 'protocols/mcp-ui', label: 'MCP-UI' },
