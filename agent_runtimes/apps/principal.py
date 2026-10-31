@@ -12,8 +12,8 @@ token of the person who launched the runtime.
 
 How the token gets here: the agent of a deployment is made on a runtime by
 whoever opens its session — the scheduler on a tick, the hosted page — with
-`app_instance.deployment_uid` and their own token. With that token the
-runtime asks ai-agents for the principal's
+`app_instance.deployment_uid` and their own token. With that token and its
+own proof the runtime asks ai-agents for the principal's
 (`POST /apps/deployments/{uid}/principal-token`), keeps it in memory, by
 deployment, and asks again with the token of the latest request when less
 than :data:`REFRESH_MARGIN_SECONDS` are left. Without it the agent is not
@@ -22,6 +22,18 @@ made; once it has expired the agent calls nothing, and says so.
 What it is used for: model calls through ai-inference (metered on the owner,
 naming the principal), the Datalayer MCP gateway (as a run with an identity
 of its own), and the session's record in ai-agents.
+
+**It goes to the runtime, not to a person.** The token that asks says who
+opened the session; it does not say the call comes from a runtime. So a runtime
+launched for a deployment holds a proof of that, which the platform minted at
+its launch and its companion gave it (`give_runtime_proof`), and sends it to
+ai-agents beside that token (`_proved`). ai-agents answers anybody but the
+deployment's owner only with it. It is held in this process's memory alone: it
+is no variable of the environment, so no subprocess, harness or kernel inherits
+it; no route reads it back; it is written in no log, and it is sent to the one
+ai-agents this runtime knew as it was given it, whatever the environment says
+since. The same proof puts the runtime behind the application's own routes from
+its launch rather than from its first agent (`launched_for`).
 
 **A Preview is held to the same grants** (R-25, decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its
@@ -38,6 +50,7 @@ not change.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -54,6 +67,7 @@ __all__ = [
     "PrincipalTokenMissing",
     "a_deployment_is_served",
     "administers",
+    "agent_refused_here",
     "api_key_for",
     "deployment_of",
     "DeploymentCodeUnread",
@@ -63,8 +77,10 @@ __all__ = [
     "forget_principal_token",
     "gateway_toolsets_of_the_run",
     "give_principal_token",
+    "give_runtime_proof",
     "holds_principal_token",
     "is_held_principal",
+    "launched_for",
     "owner_of",
     "preview_grants",
     "preview_key",
@@ -86,6 +102,19 @@ REFRESH_MARGIN_SECONDS = 300
 
 #: deployment uid -> {"token", "expires_at", "principal_uid"}. Process memory only.
 _HELD: dict[str, dict[str, Any]] = {}
+
+#: The header a runtime's proof is sent in (`datalayer_common.authn.runtime_proof`).
+RUNTIME_PROOF_HEADER = "X-Datalayer-Runtime-Proof"
+
+#: How long ai-agents' refusal is held back for a proof not given yet, in
+#: seconds: a page's first call can reach a runtime it saw start before the
+#: platform has finished its start hooks.
+RUNTIME_PROOF_WAIT = 15.0
+
+#: This runtime's proof: {"token", "deployment_uid", "ai_agents_url"}, as it was
+#: given. Process memory only: never `os.environ`, which a harness or a kernel
+#: could read, and never answered by a route.
+_PROOF: dict[str, str] = {}
 
 
 class PrincipalTokenMissing(RuntimeError):
@@ -127,6 +156,120 @@ def serves_a_deployment(agent_id: Optional[str]) -> bool:
 OWN_ROUTES_ONLY = (
     "This runtime serves a deployment: it answers only the application's own routes."
 )
+
+
+def give_runtime_proof(proof: str) -> str:
+    """
+    Keep the proof that this runtime was launched for a deployment.
+
+    Parameters
+    ----------
+    proof : str
+        What the platform minted at its launch, given by its companion. Its
+        signature is ai-agents' to verify: here it is read for the deployment
+        it names, and a proof that names none is refused.
+
+    Returns
+    -------
+    str
+        The deployment it names.
+
+    Raises
+    ------
+    ValueError
+        When it names no deployment.
+    """
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    from agent_runtimes.apps.callers import _unverified_claims  # noqa: PLC0415
+
+    token = (proof or "").strip()
+    deployment = str(_unverified_claims(token).get("deployment_uid") or "").strip()
+    if not deployment:
+        raise ValueError("This proof names no deployment.")
+    _PROOF.update(
+        token=token,
+        deployment_uid=deployment,
+        ai_agents_url=(DatalayerURLs.from_environment().ai_agents_url or "").rstrip(
+            "/"
+        ),
+    )
+    return deployment
+
+
+def forget_runtime_proof() -> None:
+    """Forget this runtime's proof (a test)."""
+    _PROOF.clear()
+
+
+def launched_for() -> str:
+    """The deployment this runtime was launched for, or ``""`` for a runtime launched for none.
+
+    As its proof says, from the moment it holds one, before any agent is made
+    there: what `visitors.OwnRoutesOnly` holds it to, so that the time between
+    its launch and its first agent is not one in which its routes answer as a
+    person's own runtime's do.
+    """
+    return _PROOF.get("deployment_uid", "")
+
+
+def agent_refused_here(
+    deployment_uid: str, sandbox_variant: Optional[str]
+) -> Optional[str]:
+    """Why a caller from outside may not make this agent here, or ``None`` when they may.
+
+    A runtime launched for a deployment makes that deployment's agent and no
+    other, and never with a sandbox inside this process, which holds what acts
+    as it.
+    """
+    launched = launched_for()
+    if not launched:
+        return None
+    if deployment_uid != launched:
+        return "This runtime was launched for a deployment: it makes that deployment's agent, and no other."
+    if sandbox_variant == "eval":
+        return NO_SANDBOX_IN_THIS_PROCESS
+    return None
+
+
+#: Why a runtime launched for a deployment runs no code in its own process.
+NO_SANDBOX_IN_THIS_PROCESS = (
+    "This runtime was launched for a deployment: code runs in its sandbox, never "
+    "in the process that holds what acts as it."
+)
+
+
+def _proved(deployment_uid: str, url: str) -> dict[str, str]:
+    """The header proving this runtime to ai-agents, for that deployment and that
+    address alone: no header at all for any other."""
+    if _PROOF.get("deployment_uid") != deployment_uid or _PROOF.get(
+        "ai_agents_url"
+    ) != url.rstrip("/"):
+        return {}
+    return {RUNTIME_PROOF_HEADER: _PROOF["token"]}
+
+
+async def _asked_with_proof(
+    deployment_uid: str,
+    url: str,
+    ask: Callable[[dict[str, str]], Awaitable[Any]],
+) -> Any:
+    """An answer of ai-agents, asked with this runtime's proof.
+
+    A refusal (403) of a call that carried none is held back while the proof
+    may still be on its way (:data:`RUNTIME_PROOF_WAIT`), then asked once more.
+    """
+    headers = _proved(deployment_uid, url)
+    response = await ask(headers)
+    if response.status_code != 403 or headers:
+        return response
+    deadline = time.monotonic() + RUNTIME_PROOF_WAIT
+    while time.monotonic() < deadline:
+        await asyncio.sleep(0.2)
+        headers = _proved(deployment_uid, url)
+        if headers:
+            return await ask(headers)
+    return response
 
 
 def a_deployment_is_served() -> bool:
@@ -339,11 +482,19 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> dict[str, Any]:
         )
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post(
-                f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/principal-token",
-                # An embed's page, which ai-agents checks against the
-                # sites its owner allows it on (D-12).
-                headers={"Authorization": f"Bearer {bearer}", **page_origin_headers()},
+            response = await _asked_with_proof(
+                deployment_uid,
+                url,
+                lambda proved: client.post(
+                    f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/principal-token",
+                    # An embed's page, which ai-agents checks against the
+                    # sites its owner allows it on (D-12).
+                    headers={
+                        "Authorization": f"Bearer {bearer}",
+                        **page_origin_headers(),
+                        **proved,
+                    },
+                ),
             )
     except httpx.HTTPError as error:
         raise PrincipalTokenMissing(
@@ -392,16 +543,22 @@ async def _read_from_ai_agents(
         )
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get(
-                f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
-                params={"version": int(version)},
-                # An embed's page, checked as for the principal's token (D-12).
-                # With no token, asked as nobody: answered only for a deployment
-                # somebody without an account may talk to (R-30).
-                headers={
-                    **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
-                    **page_origin_headers(),
-                },
+            response = await _asked_with_proof(
+                deployment_uid,
+                url,
+                lambda proved: client.get(
+                    f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
+                    params={"version": int(version)},
+                    # An embed's page, checked as for the principal's token (D-12).
+                    # With no token, asked as nobody: answered only for a deployment
+                    # somebody without an account may talk to (R-30), and only
+                    # with this runtime's proof.
+                    headers={
+                        **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
+                        **page_origin_headers(),
+                        **proved,
+                    },
+                ),
             )
     except httpx.HTTPError as error:
         raise DeploymentCodeUnread(
@@ -458,11 +615,12 @@ async def read_deployment_code(
     ``None`` for a version written as a spec (R-14).
 
     Read from ai-agents (`GET /apps/deployments/{uid}/code`) with the token
-    of whoever opened the session, admitted as for the principal's token:
-    never taken from the request that makes the agent. With none — the
-    runtime a deployment is kept on, making the agent a visitor without an
-    account talks to — asked as nobody, which ai-agents answers only for a
-    deployment such a visitor may talk to (R-30).
+    of whoever opened the session and this runtime's proof, admitted as for
+    the principal's token: never taken from the request that makes the agent.
+    With none — the runtime a deployment is kept on, making the agent a
+    visitor without an account talks to — asked as nobody, which ai-agents
+    answers only for a deployment such a visitor may talk to (R-30), with
+    this runtime's proof.
 
     Parameters
     ----------

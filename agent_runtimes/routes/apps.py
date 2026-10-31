@@ -717,6 +717,34 @@ async def stop_serving_over_a2a(
     return {"success": True, "stopped": stopped}
 
 
+class RuntimeProofRequest(BaseModel):
+    """What the companion gives a runtime launched for a deployment."""
+
+    proof: str = Field(..., description="The proof the platform minted at its launch")
+
+
+@router.put("/runtime-proof")
+async def runtime_proof(body: RuntimeProofRequest, request: Request) -> Dict[str, Any]:
+    """Keep the proof that this runtime was launched for a deployment.
+
+    The companion gives it as the runtime is assigned. Only the pod itself
+    may, and nobody reads it back: this route answers which deployment it
+    names, not the proof. See `agent_runtimes.apps.principal`.
+    """
+    from agent_runtimes.apps.principal import give_runtime_proof
+
+    if not is_loopback(request.client.host if request.client else None):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its proof.",
+        )
+    try:
+        deployment = give_runtime_proof(body.proof)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    return {"success": True, "deployment": deployment}
+
+
 class RenewPrincipalRequest(BaseModel):
     """What ai-agents sends to renew a kept deployment's principal here."""
 

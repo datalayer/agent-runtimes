@@ -66,6 +66,7 @@ OWN = {
     ("PUT", "/api/v1/apps/a2a"),
     ("DELETE", "/api/v1/apps/a2a"),
     ("POST", "/api/v1/apps/principal"),
+    ("PUT", "/api/v1/apps/runtime-proof"),
     ("GET", "/api/v1/apps/agents/{agent}/deployment"),
     ("GET", "/api/v1/apps"),
     ("GET", "/api/v1/apps/current"),

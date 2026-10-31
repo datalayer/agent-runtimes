@@ -1502,6 +1502,19 @@ async def create_agent(
     # Generate agent ID from name (lowercase, replace spaces with hyphens)
     agent_id = request.name.lower().replace(" ", "-")
 
+    # A runtime launched for a deployment makes that deployment's agent, from
+    # outside, and nothing else (`principal.agent_refused_here`).
+    from agent_runtimes.apps.callers import is_loopback
+    from agent_runtimes.apps.principal import agent_refused_here, deployment_of
+
+    client = getattr(http_request, "client", None)
+    if not is_loopback(client.host if client else None):
+        refused = agent_refused_here(
+            deployment_of(request.app_instance), request.sandbox_variant
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+
     # Check if agent already exists
     if agent_id in _agents:
         raise HTTPException(
@@ -4076,6 +4089,15 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Raises:
         HTTPException: If configuration fails.
     """
+    from agent_runtimes.apps.principal import (
+        NO_SANDBOX_IN_THIS_PROCESS,
+        launched_for,
+    )
+
+    # Asked from the pod too: its sandbox shares its loopback, and code run
+    # in this process would read what acts as the deployment.
+    if launched_for() and (request.variant != "jupyter-server" or request.jupyter_url):
+        raise HTTPException(status_code=403, detail=NO_SANDBOX_IN_THIS_PROCESS)
     try:
         from ..services.code_sandbox_manager import get_code_sandbox_manager
 

@@ -663,6 +663,8 @@ granted — never with the token of the person who launched the runtime.
   before the agent is made, keeps it in memory by deployment
   (`agent_runtimes.apps.principal`), and asks again, with the latest
   request's token, when less than five minutes of its hour are left.
+  Anybody but its owner is answered only with the proof its runtime holds from
+  its launch; the version's code is read the same way.
 - **What it is used for**: the agent's model calls through ai-inference
   (metered on the application's owner, naming the deployment and the
   principal), the Datalayer MCP gateway, and the session's record. The
