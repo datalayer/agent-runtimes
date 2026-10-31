@@ -134,6 +134,32 @@ def is_loopback(host: Optional[str]) -> bool:
         return False
 
 
+#: The header the pod's companion is told by, on a runtime launched for a deployment.
+POD_SECRET_HEADER = "X-Datalayer-Pod-Secret"
+
+
+def is_the_pod(host: Optional[str], secret: Optional[str]) -> bool:
+    """Whether a call comes from the pod itself.
+
+    On a runtime launched for a deployment an address proves nothing: its
+    sandbox, and a harness in this container, share the pod's loopback. There
+    the pod is the companion, known by the secret it gave with the runtime's
+    proof (`principal.give_runtime_proof`), held by these two alone. On any
+    other runtime nothing here acts as anybody but the person whose it is, and
+    loopback is the machine itself.
+
+    Parameters
+    ----------
+    host : str | None
+        The client's address.
+    secret : str | None
+        What the call says in :data:`POD_SECRET_HEADER`.
+    """
+    from agent_runtimes.apps.principal import pod_secret_is
+
+    return is_loopback(host) and pod_secret_is(secret)
+
+
 def bearer_of(authorization: Optional[str]) -> str:
     """The token of an ``Authorization: Bearer …`` header, or nothing."""
     if not authorization:
@@ -186,11 +212,31 @@ def _platform_url(name: str) -> str:
 #: Asks the platform: (url, token) -> status code.
 Fetch = Callable[[str, str], Awaitable[int]]
 
+#: IAM's answer on a task grant's token: its status, and whether the grant stands.
+FetchLive = Callable[[str, str], Awaitable[Tuple[int, bool]]]
+
+#: Where a token exchanged from a task grant is verified. IAM's `whoami`
+#: refuses a narrowed token of that kind (decided 14 October 2026: a run's
+#: token reads no profile), and this route takes it, verifies it, and says
+#: whether its grant still stands.
+TASK_GRANT_LIVE = "/api/iam/v1/oauth/task-grants/live"
+
 
 async def _fetch(url: str, token: str) -> int:
     async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
         response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
         return response.status_code
+
+
+async def _fetch_live(url: str, token: str) -> Tuple[int, bool]:
+    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+        response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+        if response.status_code != 200:
+            return response.status_code, False
+        try:
+            return 200, response.json().get("live") is True
+        except ValueError:
+            return 200, False
 
 
 class CallerVerifier:
@@ -201,8 +247,10 @@ class CallerVerifier:
         fetch: Fetch = _fetch,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], float] = time.time,
+        fetch_live: FetchLive = _fetch_live,
     ):
         self._fetch = fetch
+        self._fetch_live = fetch_live
         self._clock = clock
         self._now = now
         self._verified: Dict[Tuple[str, str], Tuple[Caller, float]] = {}
@@ -274,7 +322,17 @@ class CallerVerifier:
                     503,
                     "This runtime does not know where IAM is, so it cannot verify a token.",
                 )
-            status = await self._ask(f"{iam}/api/iam/v1/whoami", token)
+            if str(claims.get("task_grant_uid") or "").strip():
+                # A run's key, a deployment's principal, a kept runtime's key:
+                # each exchanged from a task grant, verified where IAM takes
+                # them, and refused once the grant no longer stands.
+                status, live = await self._ask_live(f"{iam}{TASK_GRANT_LIVE}", token)
+                if status == 200 and not live:
+                    raise CallerRefused(
+                        401, "The task grant behind this token no longer stands."
+                    )
+            else:
+                status = await self._ask(f"{iam}/api/iam/v1/whoami", token)
             agent = str(claims.get("agent_uid") or "")
             if agent and agent == str(claims.get("sub") or ""):
                 # A principal's own token — an application's, as a deployment
@@ -440,6 +498,15 @@ class CallerVerifier:
         while len(self._verified) >= CACHE_SIZE:
             del self._verified[next(iter(self._verified))]
         self._verified[key] = (caller, until)
+
+    async def _ask_live(self, url: str, token: str) -> Tuple[int, bool]:
+        try:
+            return await self._fetch_live(url, token)
+        except httpx.HTTPError as error:
+            raise CallerRefused(
+                503,
+                f"The platform could not be reached to verify the token ({type(error).__name__}).",
+            ) from None
 
     async def _ask(self, url: str, token: str) -> int:
         try:

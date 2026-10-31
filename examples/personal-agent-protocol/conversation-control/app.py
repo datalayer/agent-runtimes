@@ -1,7 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Open a Direct Conversation, hand off to a person, and close a PAP conversation."""
+"""An application demonstrating PAP conversation control.
+
+Sign-in mid-conversation, Direct Conversations, handoff to a person, and closing.
+"""
 
 from __future__ import annotations
 
@@ -12,10 +15,11 @@ from personal_agent_protocol import (
     Author,
     ConversationClient,
     ConversationError,
+    DeviceSignInClient,
     DiscoveryClient,
-    DpopHttpClient,
     Message,
     SessionClient,
+    SessionHttpClient,
     generate_message_id,
 )
 from personal_agent_protocol.company import build_company, company_app
@@ -32,7 +36,7 @@ from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
 
-TENANT = "atlas-demo"
+TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
 
 app = Application(
@@ -44,21 +48,22 @@ app = Application(
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_conversation_control. Never expose a Session Token, proof, "
-        "or pairwise identifier."
+        "Use explain_conversation_control to explain how a PAP conversation is signed "
+        "in to, handed to the user directly or to a person at the company, and closed. "
+        "Never expose tokens, codes, or Session JWTs."
     ),
 )
 
 
 @app.tool(does="read")
 async def explain_conversation_control() -> dict[str, Any]:
-    """Drive conversation control against the demo company and return safe evidence."""
+    """Drive one Manzanita conversation through every control; return safe evidence."""
 
     clock = MutableClock()
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    # Manzanita, with people available to take a handed-off conversation.
+    # Manzanita, this time with a support desk staffed (`humans_available`).
     shop = build_company(
         replace(CONFIG, humans_available=True),
         http_client=network.client(),
@@ -69,89 +74,151 @@ async def explain_conversation_control() -> dict[str, Any]:
         ],
     )
     network.add(DOMAIN, company_app(shop))
-    async with network.client() as http:
-        reactor = personal_agent_reactor(
-            PersonalAgentHost(atlas, clock), network=network, http_client=http
-        )
-        company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-            DOMAIN
-        )
-        metadata = company.oauth_metadata
-        assert metadata is not None and company.document.agent is not None
-        session = await SessionClient(reactor=reactor, http_client=http).start(
-            client_id=atlas.client_id,
-            pairwise_user_id=PAIRWISE,
-            issuer=metadata.issuer,
-            token_endpoint=metadata.token_endpoint,
-            tenant_id=TENANT,
-        )
-        who = {
-            "tenant_id": TENANT,
-            "issuer": metadata.issuer,
-        }
-        endpoint = company.document.agent.protocols[0].endpoint
-        conversations = ConversationClient(
-            transport=DpopHttpClient(reactor=reactor, http_client=http)
+    http = network.client()
+    reactor = personal_agent_reactor(
+        PersonalAgentHost(atlas, clock), network=network, http_client=http
+    )
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
+    metadata = company.oauth_metadata
+    if not (
+        metadata is not None and metadata.device_authorization_endpoint is not None
+    ):
+        raise RuntimeError("the example world is incomplete")
+    session = await SessionClient(reactor=reactor, http_client=http).start(
+        client_id=atlas.client_id,
+        pairwise_user_id=PAIRWISE,
+        issuer=metadata.issuer,
+        tenant_id=TENANT,
+    )
+    conversations = ConversationClient(
+        transport=SessionHttpClient(reactor=reactor, http_client=http)
+    )
+    endpoint = company.document.agent.protocols[0].endpoint  # type: ignore[union-attr]
+
+    def say(text: str, author: str = "agent") -> Message:
+        return Message(
+            id=generate_message_id(reactor),
+            author=Author(type=author),  # type: ignore[arg-type]
+            text=text,
         )
 
-        def say(text: str, author: str = "agent") -> Message:
-            return Message(
-                id=generate_message_id(reactor),
-                author=Author(type=author),  # type: ignore[arg-type]
-                text=text,
-            )
+    # 1. Signed out, the company answers with an `authorization` event instead:
+    #    `insufficient_scope`, with the scope the request needs.
+    page = await conversations.start(
+        endpoint, say("Where is my jacket order?"), session=session, wait=0
+    )
+    parent = page.conversation_id
+    asked = [e for e in page.events if e.type != "state"][-1]
 
-        parent = await conversations.start(
-            endpoint, say("Hello, can someone help me?"), token=session, **who
-        )
-        direct = await conversations.start_direct(
-            endpoint,
-            parent.conversation_id,
-            say("I'll take it from here", author="human"),
-            token=session,
-            **who,
-        )
+    # 2. The host signs Ada in (Device Sign-In on Manzanita's page) for that scope; the
+    #    same Session and conversation continue signed in.
+    device = DeviceSignInClient(reactor=reactor, http_client=http)
+    started = await device.begin(
+        device_authorization_endpoint=metadata.device_authorization_endpoint,
+        token_endpoint=metadata.token_endpoint,
+        issuer=metadata.issuer,
+        client_id=atlas.client_id,
+        scopes=tuple((asked.scope or "").split()),
+        tenant_id=TENANT,
+        organization=company.document.organization,
+        protected_resources=metadata.protected_resources,
+    )
+    await shop.approve_device(started.user_code, account_id="acct_ada")
+    clock.advance(started.poll_interval)
+    token = (await device.poll(started.reference)).token
+    if not (token is not None):
+        raise RuntimeError("the example world is incomplete")
+    page = await conversations.send(
+        endpoint,
+        parent,
+        say("Where is my jacket order?"),
+        session=session,
+        token=token,
+        cursor=page.cursor,
+        wait=0,
+    )
+    answered = [e for e in page.events if e.type != "state"][-1].message
+
+    # 3. Ada wants to talk to Manzanita herself: a Direct Conversation under the parent.
+    direct = await conversations.start_direct(
+        endpoint,
+        parent,
+        say("I'd like to ask about sizing myself", "human"),
+        session=session,
+        token=token,
+    )
+    refusals: dict[str, object] = {}
+    for action in ("send", "handoff"):
         try:
-            await conversations.send(
-                endpoint,
-                parent.conversation_id,
-                say("Still there?"),
-                token=session,
-                **who,
-            )
-            refused_code, points_to_direct = None, False
+            if action == "send":
+                await conversations.send(
+                    endpoint, parent, say("Still there?"), session=session, token=token
+                )
+            else:
+                await conversations.handoff(
+                    endpoint, parent, session=session, token=token
+                )
         except ConversationError as error:
-            refused_code = error.code
-            points_to_direct = (error.details or {}).get("conversation_id") == (
-                direct.conversation_id
-            )
-        direct_closed = await conversations.close(
-            endpoint, direct.conversation_id, token=session, **who
+            refusals[action] = error.code
+            refusals[f"{action}_names_the_open_direct_conversation"] = (
+                error.details or {}
+            ).get("conversation_id") == direct.conversation_id
+    direct_closed = await conversations.close(
+        endpoint, direct.conversation_id, session=session, token=token
+    )
+
+    # 4. Handoff to a person at the company; their replies' author is `human`.
+    handed = await conversations.handoff(endpoint, parent, session=session, token=token)
+    page = await conversations.send(
+        endpoint,
+        parent,
+        say("Thank you"),
+        session=session,
+        token=token,
+        cursor=page.cursor,
+        wait=0,
+    )
+    after_handoff = [
+        f"{event.type}:{event.status}" if event.status else event.type
+        for event in page.events
+    ]
+    # A person at Manzanita answers; their message names its `author`: `human`, and who.
+    await shop.staff_reply(
+        parent,
+        after=page.events[-1].id,
+        text="Hi Ada, Sam here. Happy to help with the sizing.",
+        author_id="staff_sam",
+        author_name="Sam",
+    )
+    page = await conversations.read_events(
+        endpoint, parent, session=session, token=token, cursor=page.cursor, wait=0
+    )
+    replies = [event.message for event in page.events if event.message is not None]
+    person = replies[-1].author.model_dump(exclude_none=True) if replies else None
+
+    # 5. Closing ends the conversation; what it started is not cancelled.
+    closed = await conversations.close(endpoint, parent, session=session, token=token)
+    try:
+        await conversations.send(
+            endpoint, parent, say("One more thing"), session=session, token=token
         )
-        handed_off = await conversations.handoff(
-            endpoint, parent.conversation_id, token=session, **who
-        )
-        closed = await conversations.close(
-            endpoint, parent.conversation_id, token=session, **who
-        )
-        history = await conversations.read_events(
-            endpoint, parent.conversation_id, token=session, **who
-        )
+        after_close = "accepted"
+    except ConversationError as error:
+        after_close = error.code
+    await http.aclose()
 
     return {
-        "company": company.document.organization.name,
-        "direct_conversation_opened": direct.conversation_id != parent.conversation_id,
-        "parent_refused_while_direct_open": refused_code,
-        "refusal_names_the_direct_conversation": points_to_direct,
+        "signed_out_answer": f"{asked.type}: {asked.error} ({asked.scope})",
+        "signed_in_same_conversation": page.conversation_id == parent,
+        "signed_in_answer": answered.text if answered else None,
+        "direct_conversation_opened": direct.conversation_id != parent,
+        "parent_while_direct_is_open": refusals,
         "direct_conversation_closed": direct_closed.status,
-        "handoff_status": handed_off.status,
-        "handoff_responder": handed_off.responder,
-        "closed_status": closed.status,
-        "parent_event_types": [event.type for event in history.events],
-        "parent_states": [
-            f"{event.status}/{event.responder}"
-            for event in history.events
-            if event.type == "state"
-        ],
-        "session_token_and_proofs_withheld": True,
+        "handoff_status": handed.status,
+        "handoff_responder": handed.responder,
+        "events_after_handoff": after_handoff,
+        "person_reply_author": person,
+        "closed": closed.status,
+        "message_after_close": after_close,
+        "tokens_and_codes_withheld": True,
     }

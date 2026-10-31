@@ -114,7 +114,7 @@ from .base import (
     ToolResult,
 )
 from .harness_displays import display_meta_of
-from .harness_skills import LentFiles, kept_said, write_lent_files
+from .harness_skills import LentFiles, kept_said, lend_repository, write_lent_files
 
 logger = logging.getLogger(__name__)
 
@@ -212,20 +212,22 @@ def harness_environment(
     ``environment`` is a refusal in a sentence: the harness would start and
     fail at its first model call, after the session was opened.
 
-    On Datalayer, a harness whose model calls go through ai-inference
-    (``adapters.harness_inference``: Claude Code) is not given its key: it is
-    given ai-inference's Anthropic route as ``ANTHROPIC_BASE_URL`` and the
-    runtime's ai-inference token as ``ANTHROPIC_AUTH_TOKEN`` (set again when
-    the harness starts, :meth:`ACPAgent.initialize`, since a runtime is given
-    its token when it is assigned).
+    On Datalayer, a harness is given no key: its model calls go through
+    ai-inference (``adapters.harness_inference``), with the runtime's
+    ai-inference token (set again when the harness starts,
+    :meth:`ACPAgent.initialize`, since a runtime is given its token when it is
+    assigned), or it is refused in a sentence. Elsewhere it takes the person's
+    own key from the environment, as its spec declares.
     """
     from agent_runtimes.adapters import harness_inference
 
     source = os.environ if environment is None else environment
+    refused = harness_inference.refusal(harness, source)
+    if refused:
+        raise HarnessRefused(refused)
     given: dict[str, str] = dict(harness.acp.env) if harness.acp else {}
     route = harness_inference.route_of(harness.id, source)
-    routed = route.secret if route else None
-    required = [name for name in harness.requires.secrets if name != routed]
+    required = [] if route else [str(name) for name in harness.requires.secrets]
     missing = [name for name in required if not source.get(name)]
     if missing:
         raise HarnessRefused(
@@ -234,7 +236,14 @@ def harness_environment(
         )
     for name in required:
         given[name] = source[name]
+    # A harness that would act before asking is made to ask the Shield for
+    # every step (OpenCode allows its tools by default); a routed harness's
+    # configuration below carries the same asking.
+    asking = harness_inference.asking_config(harness.id)
+    if asking:
+        given[asking[0]] = asking[1]
     if route:
+        given.update(harness_inference.fixed_environment(harness.id, route))
         given[route.base_url_variable] = harness_inference.base_url(route, source)
         token, _ = harness_inference.routed_token()
         if token:
@@ -902,6 +911,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             tool_class=shield_authorizer.lent_tool_class,
             companies=self.companies,
         )
+        self._read_what_is_asked()
 
     @property
     def subject(self) -> Any:
@@ -1026,6 +1036,70 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """The face the inner client answers to: the runtime's, not an ACP client."""
         return self._face
 
+    async def new_session(self, cwd: str, mcp_servers: list, **kwargs: Any) -> Any:
+        """A session of the harness, held in the mode that makes it ask."""
+        answer = await ShieldProxy.new_session(self, cwd, mcp_servers, **kwargs)
+        await self._hold_asking_mode(answer.session_id)
+        return answer
+
+    async def load_session(
+        self, cwd: str, mcp_servers: list, session_id: str, **kwargs: Any
+    ) -> Any:
+        """A session loaded again, held in the mode that makes it ask."""
+        answer = await ShieldProxy.load_session(
+            self, cwd, mcp_servers, session_id, **kwargs
+        )
+        await self._hold_asking_mode(session_id)
+        return answer
+
+    async def set_session_mode(
+        self, mode_id: str, session_id: str, **kwargs: Any
+    ) -> Any:
+        """Change a session's mode; never out of the one that makes its harness ask."""
+        from agent_runtimes.adapters import harness_inference
+
+        asking = harness_inference.asking_mode(self.harness.id)
+        if asking is not None and mode_id != asking:
+            raise RequestError(
+                REFUSED,
+                f"{self.harness.name} stays in {asking}: in {mode_id} it would act "
+                "before the Shield has decided.",
+            )
+        return await ShieldProxy.set_session_mode(self, mode_id, session_id, **kwargs)
+
+    async def _hold_asking_mode(self, session_id: str) -> None:
+        """Put a session in the mode that makes its harness ask, or refuse it: fail closed."""
+        from agent_runtimes.adapters import harness_inference
+
+        asking = harness_inference.asking_mode(self.harness.id)
+        if asking is None:
+            return
+        try:
+            await ShieldProxy.set_session_mode(self, asking, session_id)
+        except Exception as exc:
+            raise HarnessRefused(
+                f"{self.harness.name} would not take the {asking} mode, so the Shield "
+                f"could not decide its steps: {exc}"
+            ) from None
+
+    def _read_what_is_asked(self) -> None:
+        """Permission requests read as the tool they are about, before the Shield decides."""
+        from agent_runtimes.adapters import harness_inference
+
+        asked = self.inner.request_permission
+
+        async def request_permission(
+            options: list[Any], session_id: str, tool_call: Any, **kwargs: Any
+        ) -> Any:
+            return await asked(
+                options,
+                session_id,
+                harness_inference.asked_tool_call(self.harness.id, tool_call),
+                **kwargs,
+            )
+
+        self.inner.request_permission = request_permission
+
     @property
     def started(self) -> bool:
         """Whether the harness's process is running."""
@@ -1083,10 +1157,25 @@ class ACPAgent(BaseAgent, ShieldProxy):
             raise HarnessRefused(
                 f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}{after}"
             )
+        from agent_runtimes.models.models import app_instance_of, app_usage_headers
+
         self.agent_env[route.token_variable] = token
+        # Each call metered under the application and deployment served.
+        headers = app_usage_headers(app_instance_of(self._agent_id))
+        base_url = self.agent_env[route.base_url_variable]
         if route.config_variable:
             self.agent_env[route.config_variable] = harness_inference.inline_config(
-                route, self.agent_env[route.base_url_variable], token
+                route, base_url, token, headers=headers
+            )
+        if route.directory_variable:
+            self.agent_env[route.directory_variable] = str(
+                harness_inference.write_config_directory(
+                    route, self.workspace, base_url, headers=headers
+                )
+            )
+        if route.headers_variable and headers:
+            self.agent_env[route.headers_variable] = harness_inference.custom_headers(
+                headers
             )
 
     async def initialize(self) -> None:
@@ -1117,7 +1206,6 @@ class ACPAgent(BaseAgent, ShieldProxy):
             await self.stop_agent()
             raise HarnessRefused(" ".join(problems))
         self.advertised = answer
-        await self._authenticate_routed(channel, answer)
         agent = answer.agent_info
         logger.info(
             "Harness %s started: %s %s, shield %s, workspace %s",
@@ -1127,50 +1215,6 @@ class ACPAgent(BaseAgent, ShieldProxy):
             shield_version,
             self.workspace,
         )
-
-    async def _authenticate_routed(self, channel: Any, answer: Any) -> None:
-        """Authenticate a routed harness that needs it, with the routed credential.
-
-        Codex (codex-acp) opens no session before ``authenticate`` and does not
-        read ``OPENAI_BASE_URL``: routed through ai-inference it is
-        authenticated with codex-acp's ``gateway`` method — a custom provider
-        whose ``baseUrl`` is ai-inference's OpenAI route and whose
-        ``Authorization`` header carries the runtime's token (META_HARNESS
-        decision Y). Another method is asked only when the harness offers it.
-        """
-        from agent_runtimes.adapters import harness_inference
-
-        route = harness_inference.ROUTES.get(self.harness.id)
-        if (
-            route is None
-            or not route.auth_method
-            or route.base_url_variable not in self.agent_env
-        ):
-            return
-        params: dict[str, Any] = {"methodId": route.auth_method}
-        if route.auth_method == "gateway":
-            token = self.agent_env.get(route.token_variable, "")
-            params["_meta"] = {
-                "gateway": {
-                    "baseUrl": self.agent_env[route.base_url_variable],
-                    "headers": {"Authorization": f"Bearer {token}"},
-                    "providerName": "Datalayer",
-                }
-            }
-        else:
-            offered = {
-                str(getattr(method, "id", "") or "")
-                for method in (getattr(answer, "auth_methods", None) or [])
-            }
-            if route.auth_method not in offered:
-                return
-        try:
-            await channel.request("authenticate", params)
-        except Exception as exc:
-            await self.stop_agent()
-            raise HarnessRefused(
-                f"{self.harness.name} refused its {route.auth_method} authentication through ai-inference: {exc}"
-            ) from None
 
     async def cleanup(self) -> None:
         """Cancel every open turn and end the harness's process."""
@@ -2267,8 +2311,13 @@ def acp_harness_agent(
     """
     from agentspecs.harnesses import admission_id
 
+    from agent_runtimes.adapters import harness_inference
     from agent_runtimes.guardrails.organization_harnesses import admission_refusal
 
+    # Before anything is lent or cloned for it.
+    not_offered = harness_inference.refusal(harness, environment)
+    if not_offered:
+        raise HarnessRefused(not_offered)
     admitted_as = admission_id(harness) if organization_uid else ""
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
@@ -2291,8 +2340,12 @@ def acp_harness_agent(
         refused = harness_refusal(policies, admitted_as)
     if refused is not None:
         raise HarnessRefused(refused)
-    # The application's skills and instructions, in the harness's format,
-    # before it starts (SH-21).
+    # The repository the application is lent, checked out as the workspace,
+    # then its skills and instructions, in the harness's format, before it
+    # starts (SH-21).
+    lent_repository = lend_repository(root, app)
+    if lent_repository:
+        logger.info("Harness %s lent %s", harness.id, lent_repository)
     lent_files = write_lent_files(root, harness, app, lent_names)
     # The sidecar bridge (SH-40): with the pod's `datalayer-harnesses`
     # container beside this one, the harness runs there, reached over the

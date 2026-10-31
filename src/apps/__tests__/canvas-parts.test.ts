@@ -135,6 +135,9 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
     expect(claude?.example).toBe('example-harness-claude-code');
+    expect(claude?.enabled).toBe(true);
+    const codex = parts.find(part => part.id === 'agent:codex');
+    expect(codex?.enabled).toBe(true);
     for (const harness of [
       'codex',
       'pi',

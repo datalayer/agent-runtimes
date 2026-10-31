@@ -97,11 +97,35 @@ function rpcOf(body: unknown): Json | null {
 }
 
 /** The step a status message carries: a tool call or its end. */
+/**
+ * A harness's step as a line says it: *Read README.md*, its kind then its
+ * title (the runtime's `{kind, title, status}` in the status message's
+ * metadata).
+ */
+export function harnessStepName(kind: string, title: string): string {
+  const word = kind.trim() && kind !== 'other' ? kind.trim() : '';
+  const named = title.trim();
+  const capital = (text: string) =>
+    text.charAt(0).toUpperCase() + text.slice(1);
+  if (!word) {
+    return named;
+  }
+  if (!named || named.toLowerCase() === word.toLowerCase()) {
+    return capital(word);
+  }
+  if (named.toLowerCase().startsWith(`${word.toLowerCase()} `)) {
+    return capital(named);
+  }
+  return `${capital(word)} ${named}`;
+}
+
 function stepOf(message: unknown):
   | {
       toolId?: string;
       name: string;
       ended: boolean;
+      /** A harness's kind of step (`read`, `edit`, `execute`…), when a harness told it. */
+      harness?: string;
       args?: Record<string, unknown>;
       result?: unknown;
       error?: string;
@@ -119,9 +143,15 @@ function stepOf(message: unknown):
     const done = isObject(data.tool_result) ? data.tool_result : undefined;
     const told = call ?? done;
     if (told && typeof told.name === 'string') {
+      // A harness says its kind and title in the message's metadata: the step
+      // is named by both, and drawn on its workspace.
+      const meta = isObject(message.metadata) ? message.metadata : undefined;
+      const kind = meta && typeof meta.kind === 'string' ? meta.kind : '';
+      const title = meta && typeof meta.title === 'string' ? meta.title : '';
       return {
         ...(typeof told.id === 'string' ? { toolId: told.id } : {}),
-        name: told.name,
+        name: kind ? harnessStepName(kind, title || told.name) : told.name,
+        ...(kind ? { harness: kind } : {}),
         ended: !call,
         ...(call && isObject(call.arguments)
           ? { args: call.arguments as Record<string, unknown> }
@@ -270,7 +300,9 @@ class ResponseRecorder {
           name: step.name,
           id: step.toolId,
           args: step.args ?? {},
-          tool: classifyTool?.(step.name, step.args) ?? { kind: 'runtime' },
+          tool: step.harness
+            ? { kind: 'harness' }
+            : (classifyTool?.(step.name, step.args) ?? { kind: 'runtime' }),
           parent: this.span.context,
           origin: 'a2a.status',
         }),
@@ -280,6 +312,10 @@ class ResponseRecorder {
     const call = this.calls.get(key);
     if (call) {
       this.calls.delete(key);
+      if (step.harness) {
+        // Its end names it as it was done: *Read README.md*, not *Read*.
+        call.setAttribute('gen_ai.tool.name', step.name);
+      }
       endToolCall(call, { result: step.result, error: step.error });
     }
   }

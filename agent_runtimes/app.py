@@ -60,6 +60,7 @@ from .routes import (
     apps_router,
     checkpoints_router,
     configure_router,
+    evals_adapters_router,
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
@@ -1615,6 +1616,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)
     app.include_router(evals_router, prefix=config.api_prefix)
+    app.include_router(evals_adapters_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)

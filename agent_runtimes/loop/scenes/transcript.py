@@ -26,6 +26,10 @@ One source, read two ways:
   A tool call under which an A2A request sits is the asking itself and is
   not a line of its own; the same words said twice are one line; an open
   span is a line still happening; a failed one says so.
+  A coding harness's turn is a ``shield.turn`` span, its steps the Shield's
+  decisions as the span's events (``shield.tool_call``, ``shield.permission``):
+  one line per step, *Code Explainer → its workspace: Read README.md*, failed
+  when the Shield refused it (:func:`shield_steps_of`).
 - **from a record**, a finished run's entries (``turn``, ``tool_call``, an
   ``output`` standing in for the answer when no conversation is kept).
 
@@ -48,7 +52,14 @@ TOOL_HOMES: Dict[str, str] = {
     "skill": "a skill",
     "codemode": "codemode",
     "runtime": "its runtime",
+    "harness": "its workspace",
 }
+
+#: Where a harness's steps go (agentspecs' ``WORKSPACE``): its files, its terminal.
+WORKSPACE = TOOL_HOMES["harness"]
+
+#: The Shield's events that decide a harness's step, each naming the step's call.
+SHIELD_STEP_EVENTS = ("shield.tool_call", "shield.permission")
 
 #: What a line is: words said, a question asked, a tool called.
 SAID = "said"
@@ -105,6 +116,8 @@ class TranscriptLine:
     """It failed: the span's status, the task's state."""
     shows: Tuple[str, ...] = ()
     """What the words come with, when known: ``table``, ``chart``, ``notebook``… (the rehearsal's *a table*)."""
+    ended: Optional[int] = None
+    """When a call or an ask that is over ended, in milliseconds since the epoch; none while open (the page's ``ended``)."""
 
 
 def connection_of_tool(
@@ -201,11 +214,16 @@ def once_each(lines: Sequence[TranscriptLine]) -> List[TranscriptLine]:
     """The same thing said twice is said once: an answer comes back as the A2A
     request's events and, when a runtime's own spans are read, as its turn
     too. The first one stands. Words said are the same words whoever they
-    were said to.
+    were said to. A harness's step is no words said twice: each is a call of
+    its own (``<span>/<call>:called``), and two that read the same are two,
+    one of which the Shield may have refused.
     """
     seen: set = set()
     kept: List[TranscriptLine] = []
     for line in lines:
+        if "/" in line.key:
+            kept.append(line)
+            continue
         said = (line.kind, line.who, "" if line.kind == SAID else line.to, line.text)
         if said in seen:
             continue
@@ -214,11 +232,110 @@ def once_each(lines: Sequence[TranscriptLine]) -> List[TranscriptLine]:
     return kept
 
 
+def _is_shield_turn(span: Mapping[str, Any], attributes: Mapping[str, Any]) -> bool:
+    return span.get("span_name") == "shield.turn" or "shield.harness" in attributes
+
+
+def step_call_of(event: Mapping[str, Any]) -> str:
+    """The call a Shield event decides, as a line's key carries it (no ``:``)."""
+    attributes = event.get("attributes") or {}
+    return str(attributes.get("tool_call_id") or "").replace(":", "_")
+
+
+def step_text(attributes: Mapping[str, Any]) -> str:
+    """A step in words: its title (*Read README.md*), else its path, command or kind."""
+    for name in ("title", "path", "command", "url", "kind"):
+        said = _text(attributes.get(name)).strip()
+        if said:
+            return said
+    return "a step"
+
+
+def shield_steps_of(
+    span: Mapping[str, Any], member: SceneMember
+) -> List[TranscriptLine]:
+    """A harness's steps in a ``shield.turn`` span: one line per call the Shield decided.
+
+    The line is at the call's first decision, says its title, ends when the
+    call completed or failed, and failed when the Shield refused it (any of
+    its decisions a ``deny``). Its key is the span's id and the call's,
+    ``<span>/<call>:called``, which the drill-down reads the rule from.
+    """
+    span_id = str(span.get("span_id") or "")
+    start = millis(span.get("start_time"))
+    steps: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for event in span.get("events") or []:
+        if event.get("name") not in SHIELD_STEP_EVENTS:
+            continue
+        call = step_call_of(event)
+        if not call:
+            continue
+        attributes = event.get("attributes") or {}
+        at = millis(event.get("timestamp"), start)
+        step = steps.get(call)
+        if step is None:
+            step = {"at": at, "text": "", "failed": False, "ended": None}
+            steps[call] = step
+            order.append(call)
+        if not step["text"] and any(
+            _text(attributes.get(name)).strip()
+            for name in ("title", "path", "command", "url")
+        ):
+            step["text"] = step_text(attributes)
+        if attributes.get("decision") == "deny":
+            step["failed"] = True
+            step["ended"] = at
+        if attributes.get("status") in ("completed", "failed"):
+            step["ended"] = at
+            step["failed"] = step["failed"] or attributes.get("status") == "failed"
+    running = bool(span.get("in_progress"))
+    lines: List[TranscriptLine] = []
+    for call in order:
+        step = steps[call]
+        # A step the Shield saw no end of ends with the turn, or is still going.
+        ended = step["ended"]
+        if ended is None and not running:
+            ended = millis(span.get("end_time"), step["at"])
+        lines.append(
+            TranscriptLine(
+                key=f"{span_id}/{call}:called",
+                at=step["at"],
+                who=member.name,
+                to=WORKSPACE,
+                kind=CALLED,
+                text=step["text"] or "a step",
+                open=ended is None,
+                failed=bool(step["failed"]),
+                ended=ended,
+            )
+        )
+    return lines
+
+
+def _turn_member(
+    span: Mapping[str, Any],
+    by_id: Mapping[str, Mapping[str, Any]],
+    members: Sequence[SceneMember],
+) -> SceneMember:
+    """Whose turn a ``shield.turn`` span is: the agent of the turn above it, else its service."""
+    parent = by_id.get(str(span.get("parent_span_id") or ""))
+    seen = 0
+    while parent is not None and seen < 32:
+        name = _text((parent.get("attributes") or {}).get("gen_ai.agent.name"))
+        if name:
+            return member_named(name, members)
+        parent = by_id.get(str(parent.get("parent_span_id") or ""))
+        seen += 1
+    return member_named(_text(span.get("service_name")), members)
+
+
 def transcript_of_spans(
     spans: Sequence[Mapping[str, Any]], members: Sequence[SceneMember]
 ) -> List[TranscriptLine]:
     """The transcript of a scene from the spans recorded while it works."""
     lines: List[TranscriptLine] = []
+    by_id = {str(span.get("span_id") or ""): span for span in spans}
     # A tool call under which an A2A request sits is the asking itself: the
     # request says it, with its words.
     asking = {
@@ -235,6 +352,9 @@ def transcript_of_spans(
         failed = span.get("status_code") == "ERROR"
         status_message = _text(span.get("status_message"))
         in_progress = bool(span.get("in_progress"))
+        if _is_shield_turn(span, attributes):
+            lines.extend(shield_steps_of(span, _turn_member(span, by_id, members)))
+            continue
         if operation == "invoke_agent":
             agent = member_named(
                 _text(attributes.get("gen_ai.agent.name"))
@@ -304,6 +424,7 @@ def transcript_of_spans(
                     text=tool,
                     open=in_progress,
                     failed=failed,
+                    ended=None if in_progress else end,
                 )
             )
             continue
@@ -323,6 +444,7 @@ def transcript_of_spans(
                     kind=ASKED,
                     text=request,
                     open=in_progress,
+                    ended=None if in_progress else end,
                 )
             )
             # What came back: the answer, or the last words of its events.
@@ -481,3 +603,121 @@ def transcript_text(lines: Sequence[TranscriptLine]) -> str:
 def with_shows(line: TranscriptLine, shows: Sequence[str]) -> TranscriptLine:
     """The line, saying what its words come with."""
     return replace(line, shows=tuple(shows))
+
+
+#: The version of the page's JSON export (``transcriptExport.ts``): another is refused.
+TRANSCRIPT_JSON_VERSION = 1
+
+_KINDS = frozenset({SAID, ASKED, CALLED})
+
+
+def line_json(line: TranscriptLine) -> Dict[str, Any]:
+    """A line as the page's export writes it (``SceneTranscriptLine``: ``who`` is ``from``)."""
+    data: Dict[str, Any] = {"key": line.key, "at": line.at, "from": line.who}
+    if line.to:
+        data["to"] = line.to
+    data["kind"] = line.kind
+    data["text"] = line.text
+    if line.open:
+        data["open"] = True
+    if line.failed:
+        data["failed"] = True
+    if line.ended is not None:
+        data["ended"] = line.ended
+    return data
+
+
+def transcript_json(
+    lines: Sequence[TranscriptLine],
+    *,
+    scene: str = "",
+    exported: Optional[str] = None,
+    **more: Any,
+) -> Dict[str, Any]:
+    """The lines as the page's *Export JSON* writes them (``transcriptJson``), version 1.
+
+    ``more`` is laid beside the lines (a recording's ``taken``, the
+    rehearsal it came from, its beats): a reader of version 1 reads the
+    lines and leaves the rest.
+    """
+    from datetime import timezone
+
+    data: Dict[str, Any] = {
+        "version": TRANSCRIPT_JSON_VERSION,
+        "exported": exported
+        or datetime.now(timezone.utc)
+        .isoformat(timespec="milliseconds")
+        .replace("+00:00", "Z"),
+    }
+    if scene:
+        data["scene"] = scene
+    data.update(more)
+    data["lines"] = [line_json(line) for line in lines]
+    return data
+
+
+def line_of_json(data: Mapping[str, Any], index: int = 0) -> TranscriptLine:
+    """One line of the page's export (its ``from`` is ``who``); a sentence when it is not one."""
+    key = data.get("key")
+    at = data.get("at")
+    who = data.get("from")
+    kind = data.get("kind")
+    text = data.get("text")
+    if (
+        not isinstance(key, str)
+        or not isinstance(at, int)
+        or isinstance(at, bool)
+        or not isinstance(who, str)
+        or kind not in _KINDS
+        or not isinstance(text, str)
+    ):
+        raise ValueError(f"Line {index + 1} of the transcript file is not a line.")
+    to = data.get("to")
+    ended = data.get("ended")
+    return TranscriptLine(
+        key=key,
+        at=at,
+        who=who,
+        kind=kind,
+        text=text,
+        to=to if isinstance(to, str) else "",
+        open=bool(data.get("open")),
+        failed=bool(data.get("failed")),
+        ended=ended if isinstance(ended, int) and not isinstance(ended, bool) else None,
+    )
+
+
+def lines_of_json(data: Any) -> List[TranscriptLine]:
+    """The lines of a file the page exported (*Export JSON*): its text, or the object it parses to.
+
+    The same lines the page showed, so that a problem seen on a stage is
+    replayed here; a file of another version, or that is not one, is refused
+    in a sentence.
+    """
+    if isinstance(data, (str, bytes)):
+        try:
+            data = json.loads(data)
+        except ValueError as error:
+            raise ValueError("The transcript file is not JSON.") from error
+    if not isinstance(data, Mapping):
+        raise ValueError("The transcript file is not an object.")
+    version = data.get("version")
+    if version != TRANSCRIPT_JSON_VERSION:
+        raise ValueError(
+            f"The transcript file is version {version!r}; this reads version {TRANSCRIPT_JSON_VERSION}."
+        )
+    lines = data.get("lines")
+    if not isinstance(lines, list):
+        raise ValueError("The transcript file has no lines.")
+    return [
+        line_of_json(line, index)
+        if isinstance(line, Mapping)
+        else line_of_json({}, index)
+        for index, line in enumerate(lines)
+    ]
+
+
+def read_transcript_json(path: Any) -> List[TranscriptLine]:
+    """The lines of an exported transcript file, by path."""
+    with open(path, "r", encoding="utf-8") as handle:
+        return lines_of_json(handle.read())

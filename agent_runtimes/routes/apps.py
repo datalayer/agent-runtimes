@@ -60,11 +60,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_runtimes.apps.callers import (
     LOCAL,
+    POD_SECRET_HEADER,
     VERIFIER,
     Caller,
     CallerRefused,
     bearer_of,
-    is_loopback,
+    is_the_pod,
     origin_allowed,
     platform_origins,
 )
@@ -255,7 +256,10 @@ async def _authorize(
         raise HTTPException(
             status_code=403, detail=f"This application does not answer {origin}."
         )
-    if is_loopback(request.client.host if request.client else None):
+    if is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
         return Authorized(LOCAL, app)
     if token is None:
         token = bearer_of(request.headers.get("authorization"))
@@ -715,6 +719,65 @@ async def stop_serving_over_a2a(
     stopped = served_apps()
     stop_serving_apps()
     return {"success": True, "stopped": stopped}
+
+
+class RuntimeProofRequest(BaseModel):
+    """What the companion gives a runtime launched for a deployment."""
+
+    proof: str = Field(..., description="The proof the platform minted at its launch")
+    pod_secret: str = Field(
+        ...,
+        description="What the companion holds, and is told by from now on: "
+        "on such a runtime an address proves nothing",
+    )
+    user_token: Optional[str] = Field(
+        default=None,
+        description="The token of whoever launched it: what ai-agents answers "
+        "the deployment's version to, with the proof",
+    )
+    version: Optional[int] = Field(
+        default=None,
+        description="The version its launch names, for a deployment moved to "
+        "it; none for the one the deployment runs",
+    )
+
+
+@router.put("/runtime-proof")
+async def runtime_proof(body: RuntimeProofRequest, request: Request) -> Dict[str, Any]:
+    """Keep the proof that this runtime was launched for a deployment, and read
+    from ai-agents what that deployment runs.
+
+    The companion gives it as the runtime is assigned, before anything is
+    declared or configured. Only the pod itself may, and nobody reads it back:
+    this route answers which deployment it names, not the proof, and `unread`,
+    why what it runs was not read, when it was not. See
+    `agent_runtimes.apps.principal`.
+    """
+    from agent_runtimes.apps.principal import (
+        give_runtime_proof,
+        launched_app,
+        read_launched_app,
+    )
+    from agent_runtimes.routes.agents import _note_launched_app
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its proof.",
+        )
+    try:
+        deployment = give_runtime_proof(body.proof, body.pod_secret)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    unread = await read_launched_app(body.user_token, body.version)
+    if unread:
+        logger.warning("Launched for deployment %s: %s", deployment, unread)
+        return {"success": True, "deployment": deployment, "unread": unread}
+    _note_launched_app(*launched_app())
+    return {"success": True, "deployment": deployment}
 
 
 class RenewPrincipalRequest(BaseModel):

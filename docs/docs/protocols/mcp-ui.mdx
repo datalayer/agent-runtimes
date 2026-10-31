@@ -1,0 +1,77 @@
+---
+sidebar_position: 17
+title: MCP-UI
+---
+
+# MCP-UI: interfaces over MCP
+
+[MCP-UI](https://mcpui.dev) carries interface resources (`ui://`) inside an
+agent's answers. Agent Runtimes builds such resources and has a chat transport for
+them, and its page draws only what cannot run. [MCP Apps](./mcp-apps), a different
+extension, is not implemented.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.transports.MCPUITransport`, `agent_runtimes.routes.mcp_ui` | `createMCPUIRenderer` in `src/ui-plugins`, the chat's `mcp-ui` activity |
+| SDK | `mcp-ui-server>=1.0.0,<1.1.0` (the `ui` extra) | `@mcp-ui/client` `^5.17.1` is declared; the renderer does not import it |
+
+`GET /api/v1/mcp-ui/` says version `5.2.0`: a literal in the route, not read from a
+package.
+
+## Enable it
+
+Nothing to name: every agent the runtime makes is registered here too, whatever its
+transport. In a host of your own:
+
+```python
+from agent_runtimes.routes.mcp_ui import register_mcp_ui_agent
+from agent_runtimes.transports import MCPUITransport
+
+adapter = MCPUITransport(agent)
+register_mcp_ui_agent("demo", adapter)
+```
+
+The adapter builds resources for a tool to return, each URI starting with `ui://`:
+`create_html_resource`, `create_external_url_resource` and
+`create_remote_dom_resource`.
+
+## Routes
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/v1/mcp-ui/` | The protocol's description |
+| `GET /api/v1/mcp-ui/agents` | The agents served, with their endpoints |
+| `POST /api/v1/mcp-ui/chat/{agent_id}` | One answer: `{"message": …, "session_id": …}` in, a `role` and `content` out |
+| `POST /api/v1/mcp-ui/stream/{agent_id}` | The same as JSON lines (`application/x-ndjson`) |
+
+## Example
+
+```bash
+curl -X POST http://localhost:8765/api/v1/mcp-ui/chat/demo \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "Hello"}'
+```
+
+```json
+{"role": "assistant", "content": [{"type": "text", "text": "hello there"}], "session_id": null}
+```
+
+A tool result that is a `UIResource`, or a dict of `type` `resource`, is added to
+`content` as it is.
+
+## What the page draws
+
+The chat refuses, in a sentence in place, the markup of a resource (`text/html`) and
+a UI element built from a tool's props: either is markup a server or a model
+supplies, and the chat may sit on an origin where people are signed in. There is no
+fallback. A host that holds an origin of its own for such pages registers its own
+renderer for the type.
+
+## Limits
+
+- An unknown agent is a 500: the fallback these routes reach for, a demo agent, is
+  not in the package.
+- `/stream` over a Pydantic AI agent sends `start` and `complete` with no `delta`
+  between them. Use `/chat`, or another transport, for the words.
+- `ui_options` is accepted and not read.
+- A `session_id` that is not sent stays `null` in the answer of `/chat`.

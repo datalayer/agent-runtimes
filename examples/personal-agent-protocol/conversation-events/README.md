@@ -1,12 +1,9 @@
-# PAP Conversation Events
+# Conversation events
 
-This Loop application follows a deterministic local PAP conversation through
-the real `ConversationClient.events()` iterator. The trusted host owns the
-Session Token, proof, pairwise identity, cursor, and duplicate-event set. The
-tool exposes only ordered event evidence and terminal status.
+This local Agent Runtimes tool uses the PAP `ConversationClient.events()` async
+iterator. The trusted host long polls with the Session header, drains a
+backlog immediately, suppresses repeated event IDs, and stops when the
+conversation closes. Only safe event types and company text enter the tool
+result.
 
-The iterator long polls when caught up, drains `has_more` pages immediately,
-suppresses replayed event IDs, and provides an explicit host callback when a
-saved cursor has expired.
-
-Read the [conversation events flow](https://personal-agent-protocol.datalayer.tech/examples/conversation-events/).
+Read the [conversation events flow](https://personalagentprotocol.org/examples/conversation-events/).

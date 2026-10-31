@@ -19,8 +19,11 @@ from agent_runtimes.loop.scenes.transcript import (
     SceneConnection,
     SceneMember,
     connection_of_tool,
+    line_json,
     line_text,
+    lines_of_json,
     millis,
+    read_transcript_json,
     time_text,
     transcript_of_record,
     transcript_of_spans,
@@ -130,3 +133,94 @@ def test_a_tool_is_its_connection_s_by_name_then_by_prefix() -> None:
     assert connection_of_tool("gateway.odoo_accounting_aged_balance", [odoo]) is odoo
     assert connection_of_tool("odoo_accounting_list_journals", [odoo]) is odoo
     assert connection_of_tool("write_notebook", [odoo]) is None
+
+
+EXPORTED = Path(__file__).parent / "fixtures" / "scene_transcript_export.json"
+
+
+def test_reads_back_the_pages_export(fixture: Dict[str, Any]) -> None:
+    """The Sales & Accounting transcript with one refused call, exported by the
+    page (`transcriptExport.ts`, SCENES S3-03), reads back as the lines the
+    spans gave: the same words, the open call open, the refusal failed."""
+    lines = read_transcript_json(EXPORTED)
+    case = fixture["cases"][1]
+    assert [line_text(line) for line in lines] == case["lines"]
+    assert [line.open for line in lines] == case["open"]
+    assert [line.failed for line in lines] == case["failed"]
+    assert [line.kind for line in lines] == ["asked", "asked", "called", "said"]
+    # The same lines the Python twin reads from the spans, `ended` with them.
+    members = members_of(fixture["members"])
+    assert lines == transcript_of_spans(case["spans"], members)
+    assert lines[1].ended == lines[1].at + 1000
+    assert lines[2].ended is None
+    assert transcript_text(lines) == transcript_text(
+        transcript_of_spans(case["spans"], members)
+    )
+
+
+def test_a_finished_call_and_ask_say_when_they_ended(fixture: Dict[str, Any]) -> None:
+    """Without `ended` a recording plays a finished call as running for ever."""
+    spans: List[Dict[str, Any]] = [
+        {
+            "span_id": "call",
+            "span_name": "execute_tool odoo_read",
+            "service_name": "Accounting",
+            "start_time": "2026-10-30T10:00:00Z",
+            "end_time": "2026-10-30T10:00:02Z",
+            "attributes": {
+                "gen_ai.operation.name": "execute_tool",
+                "gen_ai.tool.name": "odoo_read",
+            },
+        },
+        {
+            "span_id": "running",
+            "span_name": "execute_tool odoo_write",
+            "service_name": "Accounting",
+            "start_time": "2026-10-30T10:00:03Z",
+            "in_progress": True,
+            "attributes": {
+                "gen_ai.operation.name": "execute_tool",
+                "gen_ai.tool.name": "odoo_write",
+            },
+        },
+        {
+            "span_id": "ask",
+            "span_name": "a2a message/send",
+            "service_name": "Sales",
+            "start_time": "2026-10-30T10:00:04Z",
+            "end_time": "2026-10-30T10:00:09Z",
+            "attributes": {
+                "rpc.service": "a2a",
+                "peer.service": "Accounting",
+                "a2a.message.text": "Which invoices are open?",
+            },
+        },
+    ]
+    members = members_of(fixture["members"])
+    by_key = {line.key: line for line in transcript_of_spans(spans, members)}
+    assert by_key["call:called"].ended == by_key["call:called"].at + 2000
+    assert by_key["running:called"].ended is None
+    assert by_key["running:called"].open
+    assert by_key["ask:asked"].ended == by_key["ask:asked"].at + 5000
+    # And the file a rehearsal writes says it.
+    assert line_json(by_key["call:called"])["ended"] == by_key["call:called"].ended
+
+
+def test_refuses_what_is_not_an_export() -> None:
+    with pytest.raises(ValueError, match="not JSON"):
+        lines_of_json("nope")
+    with pytest.raises(ValueError, match="not an object"):
+        lines_of_json("[]")
+    with pytest.raises(ValueError, match="version 2; this reads version 1"):
+        lines_of_json({"version": 2, "lines": []})
+    with pytest.raises(ValueError, match="no lines"):
+        lines_of_json({"version": 1})
+    with pytest.raises(ValueError, match="Line 1"):
+        lines_of_json(
+            {
+                "version": 1,
+                "lines": [
+                    {"key": "a", "at": 0, "from": "You", "kind": "sang", "text": "la"}
+                ],
+            }
+        )

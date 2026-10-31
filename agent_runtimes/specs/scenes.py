@@ -18,6 +18,174 @@ from agent_runtimes.types import SceneSpec
 # Scene Definitions
 # ============================================================================
 
+CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "coding-agent-behind-the-shield",
+        "version": "0.0.1",
+        "name": "A Coding Agent Behind the Shield",
+        "description": "A coding agent lent one repository to read explains a file; the edit it is then asked for is refused by the Shield, which says the rule.",
+        "tags": ["example", "scene", "coding", "harness", "shield", "a2a"],
+        "icon": "code",
+        "emoji": "🔒",
+        "kind": "team",
+        "team": "",
+        "entry": "code-explainer",
+        "cast": [
+            {
+                "member": "code-explainer",
+                "app": "code-explainer:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "initiator",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Code Explainer",
+                    "face": "🔦",
+                    "line": "I read the repository I am lent and explain it; the Shield decides what I may do.",
+                },
+                "brief": "Read only what the cue asks about and explain it, naming each file you read. A cue that asks for a change is still a cue to you: do not ask the audience first, nobody is standing there to answer you back.",
+            }
+        ],
+        "setting": {
+            "systems": [],
+            "contents": ["The repository it is lent, read only"],
+            "period": "",
+            "language": "en",
+            "assumes": "One coding agent, OpenCode, on Datalayer, lent one repository to read; the Shield in front of it decides every file it opens and every edit it tries, by the application's Rules.",
+        },
+        "script": [
+            {
+                "id": "explain-a-file",
+                "cue": {
+                    "say": "Explain what README.md says about this project, and how the repository is laid out.",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The agent reads the file through the Shield, step by step, and explains it.",
+                "moves": [
+                    {
+                        "who": "code-explainer",
+                        "asks": "",
+                        "what": "what README.md says, and how the repository is laid out",
+                        "tool": "",
+                        "answers": "words",
+                    }
+                ],
+                "expect": "Each file it reads is a line of the transcript, allowed by the rule *Read the repository*; it explains the README and the layout, naming the files it read, and changes nothing.",
+                "shows": ["words"],
+                "pace": "steady",
+            },
+            {
+                "id": "try-an-edit",
+                "cue": {
+                    "say": "Add a line at the end of README.md that says who explained it.",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "A write, refused by the Shield — the drill-down names the rule.",
+                "moves": [
+                    {
+                        "who": "code-explainer",
+                        "asks": "",
+                        "what": "that the edit was refused, and the change it would make, in words",
+                        "tool": "",
+                        "answers": "words",
+                    }
+                ],
+                "expect": "The edit it tries is a line of the transcript marked refused; its drill-down shows the Shield's decision, *leave it to me*, and the rule *Change a file*. README.md is unchanged.",
+                "shows": ["words"],
+                "pace": "slow",
+            },
+        ],
+        "stage": {
+            "positions": {"code-explainer": {"x": 0.5, "y": 0.5}},
+            "opens_first": "code-explainer",
+            "transcript": {
+                "tools": True,
+                "narration": True,
+                "withhold": ["credentials"],
+            },
+            "inspectors": ["agent", "tools"],
+            "rests_after": "10m",
+            "pace": "steady",
+            "backdrop": "hero",
+        },
+        "audience": {"who": "visitors", "ceiling_per_ask": 0.1, "asks_a_day": 3},
+        "rehearsal": {
+            "beats": [
+                {
+                    "beat": "explain-a-file",
+                    "lines": [
+                        "You → Code Explainer",
+                        "Code Explainer → its workspace: *README*",
+                        "Code Explainer: words",
+                    ],
+                    "must_say": ["README"],
+                    "must_not_say": ["I edited", "I changed"],
+                    "within": "180s",
+                },
+                {
+                    "beat": "try-an-edit",
+                    "lines": [
+                        "You → Code Explainer",
+                        "Code Explainer → its workspace: *README*",
+                        "Code Explainer: words",
+                    ],
+                    "must_say": ["Change a file"],
+                    "must_not_say": ["I added", "I have added"],
+                    "within": "180s",
+                },
+            ],
+            "within": "10m",
+            "recording": {
+                "path": "coding-agent-behind-the-shield/recording.json",
+                "taken": "2026-10-30",
+                "note": "Rehearsed on Datalayer on 30 October 2026: OpenCode read README.md and explained the repository; asked to edit it, the Shield refused the edit under the rule Change a file, and README.md was unchanged.",
+            },
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Not played yet: the repository it is lent (Jupyter Kernel Client, checked out as its workspace) and its commands decided by its Rules need the runtime that carries them."
+                ],
+            },
+        },
+        "deployment": {
+            "account": "demo",
+            "page": "/",
+            "addresses": {
+                "code-explainer": "DATALAYER_DEMO_SCENE_CODING_AGENT_BEHIND_THE_SHIELD_CODE_EXPLAINER_A2A_URL"
+            },
+        },
+        "actors": [],
+        "lines": [],
+        "live": "",
+        "setup": ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+        "played": {
+            "at": "2026-10-30T06:00:14+00:00",
+            "where": "on Datalayer",
+            "passed": True,
+            "says": "Rehearsal: 2 of 2 beats passed. The scene is Live.",
+            "beats": [
+                {
+                    "beat": "explain-a-file",
+                    "state": "passed",
+                    "says": "",
+                    "seconds": 18.51475361300072,
+                },
+                {
+                    "beat": "try-an-edit",
+                    "state": "passed",
+                    "says": "",
+                    "seconds": 6.578561589999481,
+                },
+            ],
+            "runtime": "1.5.80",
+        },
+    }
+)
+
 CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
     {
         "schema": "loop.scene/v1",
@@ -44,7 +212,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "face": "🌾",
                     "line": "I search the imagery and tell you how the fields are doing.",
                 },
-                "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person.",
+                "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person. Do not question the audience: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that names a place and a period is enough: when it names no dataset, take the vegetation indices (MOD13Q1) and say that you did. A cue to save granules is searched like any other, and what you found is then a `choice` to approve, Save them · Not now; nothing is saved.",
             }
         ],
         "setting": {
@@ -212,7 +380,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -276,11 +444,16 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                 },
             ],
             "within": "10m",
+            "recording": {
+                "path": "crop-monitoring/recording.json",
+                "taken": "2026-10-29",
+                "note": "Rehearsed on Datalayer, under the demo account.",
+            },
             "verified": {
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played."
                 ],
             },
         },
@@ -296,7 +469,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
         "live": "",
         "setup": ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
         "played": {
-            "at": "2026-10-09T17:40:33+00:00",
+            "at": "2026-10-29T14:24:34+00:00",
             "where": "on Datalayer",
             "passed": True,
             "says": "Rehearsal: 4 of 4 beats passed. The scene is Live.",
@@ -305,28 +478,28 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "beat": "vigour-this-season",
                     "state": "passed",
                     "says": "",
-                    "seconds": 55.53831131900006,
+                    "seconds": 67.73760564999975,
                 },
                 {
                     "beat": "fields-to-watch",
                     "state": "passed",
                     "says": "",
-                    "seconds": 57.56524624400117,
+                    "seconds": 48.32110785199984,
                 },
                 {
                     "beat": "imagery-available",
                     "state": "passed",
                     "says": "",
-                    "seconds": 58.75493016499968,
+                    "seconds": 78.49201327000264,
                 },
                 {
                     "beat": "save-granules",
                     "state": "passed",
                     "says": "",
-                    "seconds": 49.41034528199998,
+                    "seconds": 37.01923025799988,
                 },
             ],
-            "runtime": "1.3.93",
+            "runtime": "1.5.80",
         },
     }
 )
@@ -618,7 +791,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "slow",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.1, "asks_a_day": 3},
         "rehearsal": {
@@ -682,11 +855,16 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                 },
             ],
             "within": "20m",
+            "recording": {
+                "path": "disaster-assessment/recording.json",
+                "taken": "2026-10-29",
+                "note": "Rehearsed on Datalayer, under the demo account.",
+            },
             "verified": {
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Rehearsed on Datalayer on 2026-10-09: three beats of four pass — wildfire 121 s, storm 58 s, alert 98 s — and flood took 256 s against the 240 s it allows, a bound measured when Event response still asked both specialists at once (A-14)."
+                    "Rehearsed on Datalayer on 2026-10-09: three beats of four pass — wildfire 121 s, storm 58 s, alert 98 s — and flood took 256 s against the 240 s it allows, a bound measured when Event response still asked both specialists at once."
                 ],
             },
         },
@@ -707,37 +885,37 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             "The agent 'worker-change-detection:0.0.1' is not enabled.",
         ],
         "played": {
-            "at": "2026-10-10T02:57:36+00:00",
+            "at": "2026-10-29T14:31:19+00:00",
             "where": "on Datalayer",
-            "passed": False,
-            "says": "Rehearsal: 3 of 4 beats passed. 1 failed. The scene is not Live.",
+            "passed": True,
+            "says": "Rehearsal: 4 of 4 beats passed. The scene is Live.",
             "beats": [
                 {
                     "beat": "flood",
                     "state": "passed",
                     "says": "",
-                    "seconds": 216.90267557599873,
+                    "seconds": 177.86574391100294,
                 },
                 {
                     "beat": "wildfire",
                     "state": "passed",
                     "says": "",
-                    "seconds": 110.26249580999865,
+                    "seconds": 88.12401191100071,
                 },
                 {
                     "beat": "storm",
                     "state": "passed",
                     "says": "",
-                    "seconds": 55.37315007500001,
+                    "seconds": 45.252418705997115,
                 },
                 {
                     "beat": "alert",
-                    "state": "failed",
-                    "says": 'Expected “Disaster Assessment: an approval” after “Disaster Assessment → Earthdata: search_earth_datagranules”; the transcript went on: “Disaster Assessment → its runtime: show_components”; “Disaster Assessment: I\'ll work through this step by step: find the right datasets, locate pre- and post-event granules for the Valencia flood (late October 2024), then compare what they show.\n\n**Step 1 — Find relevant datasets for flood/surface change over Valencia, Spain**The generic flood search didn\'t return Spain-relevant results. Let me try the CYGNSS watermask (which covers Valencia\'s latitude) and also search for MODIS/Landsat surface reflectance over Valencia.Good. I have MODIS Terra/Aqua surface reflectance (MOD09GA / MYD09GA at 500m) and the CYGNSS watermask. Now let me search for granules — pre-event (before 29 Oct 2024) and post-event (after 29 Oct 2024) — over Valencia.\n\n**Step 2 — Pre-event granules (MOD09GA, ~Oct 20–28 2024)**Good — pre-event granules confirmed on tile h18v05 (covers Valencia, ~29.9°N–40°N, 0°–13°E) for 20–21 Oct 2024. Now post-event granules.\n\n**Step 3 — Post-event granules (MOD09GA, Nov 1–10 2024)**Excellent. Now let me also check the CYGNSS daily watermask for the same period, which directly classifies surface water.\n\n**Step 4 — CYGNSS watermask granules post-event**I now have all the evidence I need. Let me compile the full assessment and show the components.---\n\n## Valencia Flood Disaster Assessment\n**Event:** DANA (Depresión Aislada en Niveles Altos) flash flood\n**Location:** Valencia region, eastern Spain (~39.5°N, 0.4°W) — municipalities of Paiporta, Sedaví, Benetússer, Alfafar, Catarroja, and the Turia/Júcar river plain\n**Flood onset:** 29 October 2024 (afternoon/evening)\n**Assessment basis:** NASA Earthdata granule inventory; pixel-level analysis requires download (script below)\n\n---\n\n### What Earthdata holds\n\n**Primary instrument — MODIS/Terra MOD09GA V061 (500 m surface reflectance)**\nTwo SINUSOIDAL tiles bracket Valencia:\n- **h18v05** (0°–13°E, 29.9°–40°N) — contains the city and the coastal plain east of it\n- **h17v05** (13°W–0°, 29.9°–40°N) — contains the western hinterland\n\n| Role | Granule | Date |\n|---|---|---|\n| **Pre-event** | MOD09GA.A2024294.h18v05 + h17v05 | **20 Oct 2024** |\n| **Post-event** | MOD09GA.A2024304.h18v05 + h17v05 | **30 Oct 2024** |\n\nThe 30 Oct 2024 granule is the **earliest post-event acquisition** in the archive — one day after the flood peak. This is the most recent imagery that captures the acute inundation phase.\n\n**Secondary instrument — CYGNSS Daily Watermask V3.2 (1 km)**\nGranules exist for 29, 30, and 31 Oct 2024 — but **Valencia (39.5°N) lies outside the CYGNSS orbital coverage ceiling of 37.4°N**. These granules cannot observe the affected area and must be excluded.\n\n---\n\n### What the comparison would show (analysis script)\n\nBecause I do not download data, the pixel-level NDWI/NDVI change map must be run by a person. Here is the exact script:\n\n```python\nimport earthaccess, xarray as xr, numpy as np, matplotlib.pyplot as plt\n\nearthaccess.login()\n\n# --- Granule IDs ---\npre_id  = "MOD09GA.A2024294.h18v05.061.2024298001757"\npost_id = "MOD09GA.A2024304.h18v05.061.2024306200636"\n\n# Download both tiles (h18v05 covers Valencia city + coastal plain)\nresults_pre  = earthaccess.search_data(short_name="MOD09GA", granule_ur=pre_id)\nresults_post = earthaccess.search_data(short_name="MOD09GA", granule_ur=post_id)\nfiles_pre  = earthaccess.download(results_pre,  "./pre")\nfiles_post = earthaccess.download(results_post, "./post")\n\n# Open with xarray (pyhdf or rioxarray for HDF-EOS2)\nimport rioxarray as rxr\npre  = rxr.open_rasterio(files_pre[0],  masked=True)\npost = rxr.open_rasterio(files_post[0], masked=True)\n\n# NDWI = (Green - NIR) / (Green + NIR)  [Band 4 = Green, Band 2 = NIR in MOD09GA]\n# Bands are 1-indexed in the SDS; adjust for 0-indexed array slicing\ngreen_pre  = pre.sel(band=4)  / 10000.0\nnir_pre    = pre.sel(band=2)  / 10000.0\ngreen_post = post.sel(band=4) / 10000.0\nnir_post   = post.sel(band=2) / 10000.0\n\nndwi_pre  = (green_pre  - nir_pre)  / (green_pre  + nir_pre)\nndwi_post = (green_post - nir_post) / (green_post + nir_post)\n\n# Flood mask: pixels where NDWI flipped from <0.0 to >0.3\nflood_mask = (ndwi_pre < 0.0) & (ndwi_post > 0.3)\n\n# Clip to Valencia bounding box\nbbox = dict(x=slice(-0.8, 0.2), y=slice(40.0, 38.8))\nflood_clip = flood_mask.rio.clip_box(**bbox)\n\n# Area estimate: each 500m pixel = 0.25 km²\nn_flooded = int(flood_clip.sum())\narea_km2  = n_flooded * 0.25\nprint(f"Estimated inundated area: {area_km2:.1f} km²  ({n_flooded} pixels @ 500 m)")\n\n# Plot\nfig, axes = plt.subplots(1, 3, figsize=(15, 5))\nndwi_pre.rio.clip_box(**bbox).plot(ax=axes[0], vmin=-0.5, vmax=0.5, cmap="RdBu", title="NDWI Pre (20 Oct)")\nndwi_post.rio.clip_box(**bbox).plot(ax=axes[1], vmin=-0.5, vmax=0.5, cmap="RdBu", title="NDWI Post (30 Oct)")\nflood_clip.plot(ax=axes[2], cmap="Blues", title=f"Flood extent (~{area_km2:.0f} km²)")\nplt.tight_layout(); plt.savefig("valencia_flood_extent.png", dpi=150)\n```\n\n---\n\n### Damage extent — what the record supports\n\nBased on the granule geometry and the known event characteristics:\n\n| Dimension | Value | Basis |\n|---|---|---|\n| **Affected bounding box** | 38.8°–39.7°N, 0.8°W–0.2°E | Municipalities confirmed flooded (Paiporta, Sedaví, Catarroja, Alfafar, Benetússer, Massanassa) |\n| **Estimated inundated area** | **~200–400 km²** | Consistent with Copernicus EMS activation maps and MODIS 500 m pixel count estimates from comparable DANA events; **not pixel-counted here** |\n| **Primary land cover affected** | Huerta (irrigated farmland), urban periphery, L\'Albufera wetland buffer | Tile h18v05 land cover |\n| **Pre-event baseline date** | 20 Oct 2024 | MOD09GA.A2024294.h18v05 |\n| **Most recent post-event date** | **30 Oct 2024** | MOD09GA.A2024304.h18v05 — earliest available post-flood granule |\n\n---\n\n### Confidence and caveats\n\n| Caveat | Impact |\n|---|---|\n| **Cloud cover** | October DANA events bring heavy cloud. The 30 Oct granule may be partially or fully cloud-masked over the flood zone. The QA band must be checked before any pixel count is trusted. |\n| **MODIS 500 m resolution** | Sub-pixel inundation in narrow streets and drainage channels is invisible. Urban flood extent is likely **underestimated**. |\n| **CYGNSS excluded** | The only dedicated daily watermask product in the archive (CYGNSS) does not cover Valencia\'s latitude (39.5°N > 37.4°N ceiling). No direct water-classification product is available. |\n| **No pixel analysis performed** | The area figure above (200–400 km²) is an order-of-magnitude estimate from event reports, not a pixel count from these granules. The script above produces the actual figure. |\n| **Single overpass** | MODIS Terra passes once per day; if the 30 Oct overpass was cloudy, the next clear-sky granule may be several days later, by which time some water will have receded. |\n| **Overall confidence** | **Low–Medium** for the area figure until the script is run and cloud cover is assessed. **High** for the granule inventory: the correct tiles and dates are confirmed in the archive. |\n\nThe table beside this answer lists all six granules found, with their roles, tiles, dates, resolutions, and access paths.”; “Event response: I will ask Disaster Assessment about the Valencia flood before anything is sent. No date was given, so I am assuming the most recent date the imagery holds.Here is what Disaster Assessment returned. I have not sent anything, and I will not do so unless you explicitly approve it after reading the assessment below.\n\n---\n\n## Valencia Flood — Disaster Assessment\n\n**Event:** DANA flash flood, Valencia region, eastern Spain\n**Flood onset:** 29 October 2024\n**Most recent post-event imagery assumed:** 30 October 2024 (MOD09GA, the earliest post-flood granule in the archive — one day after the flood peak)\n\n---\n\n### Archive holdings\n\nThe assessor found the following confirmed granules in the NASA Earthdata archive:\n\n| Role | Dataset | Tile | Date |\n|---|---|---|---|\n| Pre-event | MOD09GA (MODIS Terra, 500 m) | h18v05 + h17v05 | 20 October 2024 |\n| Post-event | MOD09GA (MODIS Terra, 500 m) | h18v05 + h17v05 | 30 October 2024 |\n\nA CYGNSS daily watermask (1 km) exists for 29–31 October 2024 but **cannot be used**: Valencia at 39.5°N lies outside CYGNSS\'s orbital coverage ceiling of 37.4°N. The assessor excluded it.\n\n---\n\n### Area affected\n\n| Dimension | Value |\n|---|---|\n| Affected bounding box | 38.8°–39.7°N, 0.8°W–0.2°E |\n| Municipalities confirmed flooded | Paiporta, Sedaví, Catarroja, Alfafar, Benetússer, Massanassa |\n| Primary land cover affected | Irrigated farmland (huerta), urban periphery, L\'Albufera wetland buffer |\n\n---\n\n### Damage extent\n\nThe assessor states the estimated inundated area is **approximately 200–400 km²**. They flag explicitly that **this figure has not been pixel-counted from these granules** — it is an order-of-magnitude estimate consistent with Copernicus EMS activation maps and comparable DANA events. An analysis script is ready to produce the actual figure from the confirmed granules.\n\n---\n\n### Confidence and caveats (as reported by Disaster Assessment)\n\n| Caveat | Impact |\n|---|---|\n| **Cloud cover** | October DANA events bring heavy cloud; the 30 Oct granule may be partially or fully cloud-masked over the flood zone. The QA band must be checked before any pixel count is trusted. |\n| **MODIS 500 m resolution** | Sub-pixel inundation in narrow streets and drainage channels is invisible; urban flood extent is likely underestimated. |\n| **CYGNSS excluded** | No direct water-classification product covers Valencia\'s latitude. |\n| **No pixel analysis performed** | The 200–400 km² figure is not a pixel count from these granules. |\n| **Single overpass** | If the 30 Oct pass was cloudy, the next clear-sky granule may be several days later, by which time water will have receded. |\n| **Overall confidence** | **Low–Medium** for the area figure. **High** for the granule inventory. |\n\n---\n\n### Action requested: send to emergency services\n\n⚠️ **I have not sent anything.** Before I could proceed, I need your explicit approval, and I must flag the following:\n\n1. **The area figure is unconfirmed.** Disaster Assessment states it is an estimate, not a pixel-counted result, and assigns it only Low–Medium confidence. Sending an unverified figure to emergency services carries operational risk.\n2. **Cloud cover is unverified.** The post-event granule may be cloud-masked over the flood zone; the true extent could differ materially.\n3. **No send action has been confirmed by the assessor.** I can only report that the assessment exists; I cannot confirm it has been sent.\n\nPlease confirm explicitly that you wish this assessment — including its stated uncertainties and caveats — to be sent to emergency services, and I will proceed.”.',
-                    "seconds": 104.22239985500346,
+                    "state": "passed",
+                    "says": "",
+                    "seconds": 68.9234332269989,
                 },
             ],
-            "runtime": "1.3.93",
+            "runtime": "1.5.80",
         },
     }
 )
@@ -937,7 +1115,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -963,7 +1141,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                     ],
                     "must_say": ["accrual"],
                     "must_not_say": ["I posted"],
-                    "within": "180s",
+                    "within": "300s",
                 },
                 {
                     "beat": "expenses-by-month",
@@ -988,11 +1166,16 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                 },
             ],
             "within": "15m",
+            "recording": {
+                "path": "month-end-close/recording.json",
+                "taken": "2026-10-29",
+                "note": "Rehearsed on Datalayer, under the demo account.",
+            },
             "verified": {
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played."
                 ],
             },
         },
@@ -1011,7 +1194,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
             "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
         ],
         "played": {
-            "at": "2026-10-10T02:37:17+00:00",
+            "at": "2026-10-29T14:17:04+00:00",
             "where": "on Datalayer",
             "passed": True,
             "says": "Rehearsal: 4 of 4 beats passed. The scene is Live.",
@@ -1020,28 +1203,28 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                     "beat": "close-checklist",
                     "state": "passed",
                     "says": "",
-                    "seconds": 97.45903585400083,
+                    "seconds": 115.16930352199779,
                 },
                 {
                     "beat": "accruals",
                     "state": "passed",
                     "says": "",
-                    "seconds": 126.1125528449993,
+                    "seconds": 81.98463336400164,
                 },
                 {
                     "beat": "expenses-by-month",
                     "state": "passed",
                     "says": "",
-                    "seconds": 68.2978395099999,
+                    "seconds": 58.18933799399747,
                 },
                 {
                     "beat": "post-accruals",
                     "state": "passed",
                     "says": "",
-                    "seconds": 94.95879093399708,
+                    "seconds": 71.78365175200088,
                 },
             ],
-            "runtime": "1.3.93",
+            "runtime": "1.5.80",
         },
     }
 )
@@ -1400,7 +1583,7 @@ PAP_APPROVE_ONCE_SCENE_0_0_1 = SceneSpec.model_validate(
             {
                 "from": "agent",
                 "to": "ada",
-                "says": "Its rule says Ask me first: it waits for Ada.",
+                "says": "Every operation is Ada’s to approve: it waits for her.",
                 "card": {
                     "kind": "approval",
                     "title": "Manzanita Outfitters asks you to confirm",
@@ -1572,49 +1755,26 @@ PAP_TWO_COMPANIES_SCENE_0_0_1 = SceneSpec.model_validate(
             {
                 "from": "ada",
                 "to": "atlas",
-                "says": "“Allow Ledgerly to pay Acme without asking, within limits.”",
+                "says": "“Pay Acme without asking me each time.”",
                 "how": "",
             },
             {
                 "from": "ledgerly",
                 "to": "ada",
-                "says": "Even a permission given in advance is something Ada approves.",
-                "card": {
-                    "kind": "approval",
-                    "title": "Ledgerly asks you to confirm",
-                    "rows": [
-                        ["Up to", "EUR 2000.00 each"],
-                        ["At most", "5 payments"],
-                        ["For", "30 days"],
-                    ],
-                    "lines": [
-                        "Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days."
-                    ],
-                },
-                "how": "",
-                "turn": {
-                    "yes": "Approve",
-                    "no": "Decline",
-                    "declined": "Ada declined: Ledgerly asks her again for every payment.",
-                },
+                "says": "Not that: every payment the bank returns is Ada’s to approve, this one and the next.",
+                "how": "The bank’s operation goes to Ada each time; nothing approves one in her name.",
             },
             {
                 "from": "ledgerly",
                 "to": "ada",
-                "says": "INV-0043, EUR 980.00, is within the limits: Ledgerly pays it and tells Ada what was done.",
-                "how": "Approved in advance: the bank is told it was, never that Ada approved this one.",
-            },
-            {
-                "from": "ledgerly",
-                "to": "ada",
-                "says": "INV-0044, EUR 3400.00, is beyond them: Ledgerly asks Ada again.",
+                "says": "INV-0043, EUR 980.00, is the next bill: Ledgerly asks Ada again.",
                 "card": {
                     "kind": "done",
-                    "title": "Within limits, done; beyond them, asked",
+                    "title": "Every payment, asked",
                     "rows": [],
                     "lines": [
-                        "INV-0043 paid under your permission (1 of 5 used).",
-                        "INV-0044 waits for your approval.",
+                        "INV-0042 paid with your approval.",
+                        "INV-0043 waits for your approval.",
                     ],
                 },
                 "how": "",
@@ -2008,7 +2168,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
             "inspectors": ["agent", "a2a", "tools"],
             "rests_after": "10m",
             "pace": "steady",
-            "backdrop": "studio",
+            "backdrop": "hero",
         },
         "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
         "rehearsal": {
@@ -2065,13 +2225,18 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
                 },
             ],
             "within": "10m",
+            "recording": {
+                "path": "sales-and-accounting/recording.json",
+                "taken": "2026-10-29",
+                "note": "Rehearsed on Datalayer, under the demo account.",
+            },
             "verified": {
                 "live": [
                     "Sales asked Accounting live over A2A on a developer's machine (2026-10-06) for the open customer invoices: Accounting read the aged receivables and said the list of invoices had failed; one column total was wrong."
                 ],
                 "recorded": [],
                 "unverified": [
-                    "The rehearsal has not been played as a set (A-14): the scene is not Live yet."
+                    "The rehearsal has not been played as a set: the scene is not Live yet."
                 ],
             },
         },
@@ -2089,7 +2254,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
             "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
         ],
         "played": {
-            "at": "2026-10-09T15:18:40+00:00",
+            "at": "2026-10-29T14:00:28+00:00",
             "where": "on Datalayer",
             "passed": True,
             "says": "Rehearsal: 4 of 4 beats passed. The scene is Live.",
@@ -2098,28 +2263,28 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "beat": "open-invoices",
                     "state": "passed",
                     "says": "",
-                    "seconds": 31.686379444999602,
+                    "seconds": 22.688269627997215,
                 },
                 {
                     "beat": "aged-receivables",
                     "state": "passed",
                     "says": "",
-                    "seconds": 27.275244929999644,
+                    "seconds": 21.642744607997884,
                 },
                 {
                     "beat": "largest-balance",
                     "state": "passed",
                     "says": "",
-                    "seconds": 41.62880667699983,
+                    "seconds": 26.706618044998322,
                 },
                 {
                     "beat": "payment-reminders",
                     "state": "passed",
                     "says": "",
-                    "seconds": 25.168268976000036,
+                    "seconds": 19.099125767999794,
                 },
             ],
-            "runtime": "1.3.93",
+            "runtime": "1.5.80",
         },
     }
 )
@@ -2277,6 +2442,7 @@ UCP_A_PURCHASE_APPROVED_SCENE_0_0_1 = SceneSpec.model_validate(
 # ============================================================================
 
 SCENE_CATALOGUE: Dict[str, SceneSpec] = {
+    "coding-agent-behind-the-shield": CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1,
     "crop-monitoring": CROP_MONITORING_SCENE_0_0_1,
     "disaster-assessment": DISASTER_ASSESSMENT_SCENE_0_0_1,
     "month-end-close": MONTH_END_CLOSE_SCENE_0_0_1,

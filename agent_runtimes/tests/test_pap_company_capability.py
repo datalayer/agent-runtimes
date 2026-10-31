@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company (PR-04).
+"""A Loop application as a PAP company.
 
 ``PapCompanyCapability`` publishes an application's ``pap.company`` through the
 SDK's reference company, ``pap.company.agent`` being the application over its
@@ -9,7 +9,7 @@ A2A route. The application here answers as the runtime does in a company turn
 (``agent_runtimes.apps.pap_company``): a declared tool's call proposed as
 ``pap_operation``, and, in a perform turn, the ticket redeemed through the
 runtime's ``pap.company.operationTickets`` before the one call is made. A
-local personal agent (``PapPersonalAgentCapability``, PR-03) reaches it.
+local personal agent (``PapPersonalAgentCapability``) reaches it.
 """
 
 from __future__ import annotations
@@ -123,7 +123,7 @@ class Application:
                         "pap_operation": {
                             "action": "orders.exchange",
                             "summary": "ignored: the Maker's words are used",
-                            "terms": {"order_id": "o-17", "size": "L"},
+                            "terms": {"order_id": "o-17", "size": text.split()[-1]},
                         }
                     },
                 },
@@ -198,7 +198,7 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             summary = await pap.discover_company(DOMAIN)
             assert summary.organization == "Order Desk"
             assert summary.sign_in == ("device",)
-            assert summary.extensions == {"operations": "1"}
+            assert summary.extensions == {"operations": "2"}
             # Its own scopes, what each allows and the Maker's hints (draft 0.3 §4.4).
             assert summary.scopes == {
                 "orders:read": "Read your orders",
@@ -236,8 +236,12 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             [operation] = proposed.operations
             assert operation.summary == "Exchange order o-17 for size L"
             assert operation.terms == {"order_id": "o-17", "size": "L"}
-            assert operation.user_approval_required is True
             assert application.performed == []
+            # Other terms are another operation, never a revision of this one.
+            [other] = (
+                await pap.ask(DOMAIN, "Exchange it for an M", user_id="ada")
+            ).operations
+            assert other.operation_ref != operation.operation_ref
 
             confirmed = await pap.confirm(
                 DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
@@ -247,7 +251,8 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             assert application.performed == [
                 ("exchange_order", {"order_id": "o-17", "size": "L"})
             ]
-            assert host.asked[0].summary == "Order Desk: Exchange order o-17 for size L"
+            assert host.asked[0].summary == "Exchange order o-17 for size L"
+            assert host.asked[0].company_name == "Order Desk"
             # The application was told who asks, never a credential.
             for meta in application.asked:
                 assert set(meta) <= {"account", "client_id", "perform"}
@@ -294,38 +299,6 @@ def test_a_local_company_offers_its_agent_only() -> None:
             name="X",
             domain=DOMAIN,
             company=AppPapCompany(),
-            application=A2AApplication(
-                "https://runtime.local/a2a", http_client=httpx.AsyncClient()
-            ),
-            accounts=Accounts(),
-            http_client=httpx.AsyncClient(),
-        )
-
-
-def test_a_local_company_gives_no_standing_permission() -> None:
-    """R-07: a standing permission is the person's approval in advance, which only
-    Datalayer keeps; a company in this process refuses an Appspec that would give one."""
-    from agentspecs.apps import AppPapStanding
-
-    allows = AppPapStanding(
-        connection="bank",
-        action="buy",
-        limits=[{"path": "amount.amount", "maximum": "maximum"}],
-        uses="uses",
-        days="days",
-    )
-    giving = AppPapOperation(
-        action="payments.allow",
-        allows=allows,
-        summary="Pay up to {maximum}, {uses} times, for {days} days",
-    )
-    with pytest.raises(
-        ValueError, match="gives no standing permission: payments.allow"
-    ):
-        PapCompanyCapability(
-            name="X",
-            domain=DOMAIN,
-            company=COMPANY.model_copy(update={"operations": [giving]}),
             application=A2AApplication(
                 "https://runtime.local/a2a", http_client=httpx.AsyncClient()
             ),

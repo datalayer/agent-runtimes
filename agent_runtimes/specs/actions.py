@@ -598,7 +598,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
 }
 
 #: What each agent protocol's tools do, by protocol id: the prefix its
-#: connections take (`pap:<domain>`) and each tool's classes (PR-54).
+#: connections take (`pap:<domain>`) and each tool's classes.
 PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
     "agentic-commerce": {
         "connection": "acp",
@@ -630,7 +630,7 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
             "pap_sign_in": ["read"],
             "pap_sign_in_status": ["read"],
             "pap_read": ["read"],
-            "pap_propose": ["send"],
+            "pap_propose": ["write"],
             "pap_mcp_tools": ["read"],
             "pap_mcp_call": ["write"],
             "pap_confirm": ["write", "buy"],
@@ -714,6 +714,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "earthdata.search_earth_datagranules": "do_it",
         "earthdata.search_earth_datasets": "do_it",
     },
+    "code-explainer": {},
     "crop-monitoring": {
         "earthdata.download_earth_data_granules": "leave_to_me",
         "earthdata.search_earth_datagranules": "do_it",
@@ -936,6 +937,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "accounting": {},
     "bookkeeping-desk": {},
     "change-detection": {},
+    "code-explainer": {},
     "crop-monitoring": {},
     "customer-interview": {},
     "data-quality": {},

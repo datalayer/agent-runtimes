@@ -7,6 +7,55 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.102
+
+A runtime launched for a deployment runs what the deployment runs, as ai-agents says it. It reads the version from `GET /apps/deployments/{uid}/code`, over its proof, when it is given the proof (`PUT /api/v1/apps/runtime-proof`, with the launcher's token) and again as the agent is made. `POST /api/v1/agents` makes the agent from that answer as a kept deployment's is made (`kept_payload`), and of what the caller sends reads only `woken_by`, `purpose`, `launch_uid` and a version number ai-agents decides on. `declared-secrets` and `mcp-servers/start` declare from it and read no spec sent to them; `configure-from-spec` is refused. Nothing is made when ai-agents says no spec. Needs an ai-agents that answers `spec` with `/code`.
+
+On a runtime launched for a deployment, loopback is no longer the pod. The companion gives a secret with the proof (`PUT /api/v1/apps/runtime-proof` now requires `pod_secret`), and from then on the pod is who sends it in `X-Datalayer-Pod-Secret`: `OwnRoutesOnly`, the application routes' local caller, the proof, the inference token and the A2A gate ask for it. The sandbox's code keeps `/api/v1/mcp/proxy/*` on its loopback, and nothing else. The secret is in this process's memory alone, and the process is made undumpable as it is given it, so a harness's command, in this container and as this user, reads neither its memory nor its `/proc` entries. A runtime launched for no deployment, and a developer's localhost, keep loopback. Needs the companion that gives the secret: an older one has its proof refused.
+
+## 1.5.101
+
+31 October 2026. A deployment's principal goes to its runtime, not to a person. A runtime launched for a deployment holds a proof the platform minted at its launch, given by its companion (`PUT /api/v1/apps/runtime-proof`, the pod alone), and sends it to ai-agents beside the caller's token when it asks for the principal's token and the version's code; ai-agents answers anybody but the owner only with it. The proof stays in this process's memory: no environment variable, no route reads it back, no kernel or harness is given it, and it goes to the one ai-agents the runtime knew when it was given. Such a runtime answers outside callers on the application's own routes from its launch, not from its first agent: until then it makes that deployment's agent and nothing else. It never configures a sandbox inside this process, asked from the pod or not. A refusal of a call that carried no proof waits up to fifteen seconds for the proof still on its way. Needs ai-agents 0.0.105 to be enforced, the runtimes companion 0.0.23 to be given.
+
+## 1.5.100
+
+- A process that sets `AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE` routes every model through it, whatever an agentspec names, so a member played by the CLI goes through ai-inference.
+
+## 1.5.99
+
+31 October 2026. Personal Agent Protocol at `personal-agent-protocol` 0.29.0 and `@datalayer/personal-agent-protocol` ^0.29.0, draft 0.3 as of its revision 2026-10-30. The local personal agent passes the issuer's `dpop_signing_alg_values_supported` to Device Sign-In, so a company that binds its tokens gets a DPoP proof with every token and resource request, by the SDK's in-memory key, which lives as long as the token it binds; one transport keeps each origin's latest nonce. A company with no issuer is reached signed out: its identifier, `https://{domain}`, is the Session JWT's `aud` and what the pairwise ID is scoped by, `no_sign_in` is gone, and `sign_in` says it offers none. A company that stops or starts having an issuer is `issuer_changed`, even with the same identifier. The PAP examples and traces at 0.29.0.
+
+## 1.5.96
+
+30 October 2026. A lent repository's state, read by its owner: `GET /api/v1/apps/agents/{agent}/computer/repository` answers its URL, its pinned revision, the workspace's HEAD and its `git status` lines, never a file's content — what a nightly rehearsal checks after a coding agent was asked to change a file. Over A2A, a harness's steps are named by their kind and title (*Edit README.md*) and drawn on its workspace, on the page as in a rehearsal.
+
+## 1.5.95
+
+30 October 2026. Colours by palette name: a member, an agent or a team names a colour of primer-addons' palette (a role or one of its twenty hues) and it is drawn in the theme's own value, light or dark; a hex still works. Scenes: two more backdrops, `minimal` (glowing circles in each member's colour, no name, a dark ground) and `orb` (Datalayer's orb in each member's colour); on every backdrop a member's details open on hover and stay open on a click. The coding agent behind the Shield's recording. Needs agentspecs 0.0.140 and primer-addons 1.0.46.
+
+## 1.5.94
+
+30 October 2026. OpenCode asks the Shield for every step: its configuration sets every tool to ask, by wildcard and by name, globally and on each of its own agents, on Datalayer and off it. OpenCode allows every tool by default, and a tool it allows never asks, so an edit the Shield refused could go through; now each read, edit and command is a permission request the Shield answers by the application's Rules. A scene's rehearsal over A2A names a harness's steps by their kind and title (*Read README.md*), matches their start and end by the call's id, and draws them on its workspace.
+
+## 1.5.93
+
+29 October 2026. OpenCode on Datalayer calls ai-inference's own chat completions: a `datalayer` provider on `@ai-sdk/openai-compatible` at ai-inference's v1 root, the catalogue's default model, the runtime's token, each call metered under the application and deployment it serves and paid in credits; no Anthropic key of the account's is read. An application may be lent one repository (`permissions.computer.repository`), checked out at a pinned commit as its harness's workspace, its commands decided by its Rules. A fourth scene backdrop, `space`. Needs agentspecs 0.0.138.
+
+## 1.5.92
+
+29 October 2026. A key granted to an application's A2A route is answered again: a token exchanged from a task grant (a run's key, a deployment's principal, a kept runtime's key) is verified at IAM's task-grant route, which takes it and says whether its grant still stands, instead of `whoami`, which refuses narrowed tokens since 14 October 2026; a grant revoked is refused. Spreadsheets in the Loop: a spreadsheet editor beside the notebook and the document, and an agent's XLSX output drawn read-only in Datalayer Cells in the chat.
+
+## 1.5.91
+
+29 October 2026. Scenes drawn on a backdrop, read three ways and drilled into; stages that rehearse, record and play their recording; a coding agent behind the Shield on a stage of its own. Needs agentspecs 0.0.137 for the sixth demo scene and the recordings' place; the [Scenes](https://agent-runtimes.datalayer.tech/docs/scenes) and [Stages](https://agent-runtimes.datalayer.tech/docs/scenes/stages) pages say it all for a person using them.
+
+- **Backdrops** (`components/teams/backdrops`): a scene is drawn on `studio` (characters with speech balloons, the drawing every scene had), `hero` (round faces on a deep tint, a dot that flies with each message, still under reduced motion) or `plain` (boxes and arrows that do not move, for a printout). `A2ATeamGraph` takes `backdrop`; `stageBackdropOf(scene)` reads a scene's `stage.backdrop`, `studio` when it says none or one no backdrop has, and every stage — the Scenes example, a card, a page — reads it there; `SCENE_BACKDROP_CHOICES` lists the three for a chooser. The Python `SceneStageSpec` carries `backdrop`. The demo scenes say `hero`, the others `studio`, held by a test on both sides.
+- **The message views and the drill-down** (`components/teams/transcript`): `TranscriptViews` shows a scene's transcript as Lines, a Table (durations, failed rows) and a mermaid Sequence diagram (loaded only when the view opens), under one filter, with *Copy* and *Export JSON*; `TranscriptDetail` opens a line's span — words, tool arguments and result, times, status, error, ids, *Open in the Inspector*; the selected exchange is highlighted on the stage, on every backdrop, and a click on an edge selects its latest exchange.
+- **A coding harness's steps are lines** (`sceneTranscriptRules.ts`, `loop/scenes/transcript.py`): a `shield.turn` span's Shield events (`shield.tool_call`, `shield.permission`) become one line per step, *Code Explainer → its workspace: Read README.md*, failed when the Shield refused it; the drill-down shows the Shield's decision (*do it*, *ask me first*, *leave it to me*), the rule it decided by and its scope (`shieldStepOf`). Both sides held to the shared transcript fixture.
+- **Recordings** (`loop scenes record`): `loop scenes rehearse … --transcript run.json` writes what a rehearsal played as the transcript JSON a stage exports (version 1), with its beats and verdict; `loop scenes record <scene> --from run.json` keeps it, only when the rehearsal passed every beat of that scene, as `<id>/recording.json` beside the spec and names it in the spec's `rehearsal.recording` (`--taken`, `--note`, `--specs-dir`), keeping the YAML's comments. `make specs` writes the recordings to `specs/sceneRecordings.ts` (`SCENE_RECORDINGS`, `getSceneRecording`), apart from the catalogue. `useSceneRecording` plays one at its recorded pace — the lines said so far for `TranscriptViews`, the `flows` and `calls` for `A2ATeamGraph`, one beat or all, faster, with long pauses cut, looping — and `RecordingLabel` says *Recording, taken <date>*.
+- **The nightly rehearsal** (`.github/workflows/nightly-rehearsal.yaml`): every night each demo stage is rehearsed with `loop scenes rehearse --cloud` at the address it is kept at, its `rehearsal.json` and transcript kept as artifacts (and committed to agentspecs with a token that may push there); it does nothing, saying why, until the demo account's key is set, and skips a stage whose address or key is not.
+- **A sixth demo stage**, *A Coding Agent Behind the Shield* (agentspecs 0.0.137): Code Explainer, OpenCode behind the Shield, lent one repository to read; the edit it is asked for is refused under the rule *Change a file*. Generated into the catalogue with `make specs`.
+
 ## 1.5.90
 
 28 October 2026. Three runtime fixes found on r1 the same day, a host's visitors and `pap_confirm` decided in a host.

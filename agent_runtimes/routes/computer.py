@@ -12,6 +12,9 @@ made for an application:
 - ``GET …/files?path=``: a directory of its working directory, read-only;
 - ``GET …/file?path=``: one of its files, to download — always a download
   (`download_headers`): never a page a browser draws, whatever it holds;
+- ``GET …/repository``: the repository it is lent, as the harness's
+  workspace holds it now — its URL and pinned revision, HEAD, and the lines
+  of ``git status --porcelain``, never a file's contents;
 - ``POST …/take-over``: the person takes it: what runs on it is interrupted,
   and its agent's calls to it wait;
 - ``POST …/run``: code the person who took it over runs on it;
@@ -33,6 +36,7 @@ ai-agents decides, asked with the caller's own token
 
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any, Dict, Tuple
 from urllib.parse import quote
@@ -58,6 +62,7 @@ from agent_runtimes.apps.computer import (
     list_files,
     parts_on,
     read_file,
+    repository_state,
     run_as_person,
     started,
     take_over,
@@ -268,6 +273,22 @@ async def download(agent: str, request: Request, path: str) -> Response:
         media_type="application/octet-stream",
         headers=download_headers(path),
     )
+
+
+@router.get("/repository")
+async def repository(agent: str, request: Request) -> Dict[str, Any]:
+    """The repository it is lent, as its workspace holds it: what changed, by path."""
+    from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_workspace
+
+    app, _ = await _computer(agent, request)
+    try:
+        workspace = harness_workspace()
+    except HarnessRefused as refused:
+        raise HTTPException(status_code=409, detail=str(refused)) from None
+    try:
+        return await asyncio.to_thread(repository_state, app, workspace)
+    except ComputerRefused as refused:
+        raise _refused(refused) from None
 
 
 @router.post("/take-over")

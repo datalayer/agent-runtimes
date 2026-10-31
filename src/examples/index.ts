@@ -43,7 +43,7 @@ export { default as ProtocolUcpCheckoutExample } from './ProtocolUcpCheckoutExam
 export { default as PapCompanyDiscoveryExample } from './PapCompanyDiscoveryExample';
 export { default as PapAgentIdentityExample } from './PapAgentIdentityExample';
 export { default as PapAuthorizationBoundaryExample } from './PapAuthorizationBoundaryExample';
-export { default as PapDpopProofExample } from './PapDpopProofExample';
+export { default as PapSessionJwtExample } from './PapSessionJwtExample';
 export { default as PapSessionLifecycleExample } from './PapSessionLifecycleExample';
 export { default as PapGuidedJourneyExample } from './PapGuidedJourneyExample';
 export { default as PapUserWithACompanyExample } from './PapUserWithACompanyExample';

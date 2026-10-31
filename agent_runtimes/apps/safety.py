@@ -361,8 +361,12 @@ def held_back_action(spec: AppSpec) -> Optional[Dict[str, str]]:
 
 
 def reads_content(spec: AppSpec) -> bool:
-    """Whether it reads anything an instruction can hide in: documents, or a connection's results."""
-    return any(source.strip() for source in spec.contents) or bool(spec.connections)
+    """Whether it reads anything an instruction can hide in: documents, a lent repository, or a connection's results."""
+    return (
+        any(source.strip() for source in spec.contents)
+        or spec.permissions.computer.repository is not None
+        or bool(spec.connections)
+    )
 
 
 def _hidden(spec: AppSpec) -> SafetyCase:

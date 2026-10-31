@@ -73,6 +73,7 @@ import {
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
+  appColorOf,
   SceneView,
   NOTEBOOK_AND_WORDS,
   teamConnectionsOf,
@@ -302,6 +303,7 @@ function AgentA2ATeam(): JSX.Element {
               name: SALES.name,
               emoji: SALES.emoji,
               character: avatarShown(SALES.interface.avatar, 'paperclip'),
+              color: appColorOf(SALES),
               where:
                 salesMember.runsIn === 'browser'
                   ? 'in your browser'
@@ -331,6 +333,7 @@ function AgentA2ATeam(): JSX.Element {
               // Its face as its card says it, once it is reached.
               emoji: peer?.face?.emoji ?? ACCOUNTING.emoji,
               character: avatarShown(ACCOUNTING.interface.avatar, 'wizard'),
+              color: appColorOf(ACCOUNTING),
               where: accountingWhere,
               persona: team.peerPersona,
               onAway: team.setPeerAway,

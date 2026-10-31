@@ -257,11 +257,11 @@ class ComponentBindingsSpec(BaseModel):
 
 
 class ComponentSpec(BaseModel):
-    """A visual component a UI plugin renders (C-13), named as a surface
+    """A visual component a UI plugin renders, named as a surface
     names it, with its version. Every one carries its properties as a JSON
     Schema of the catalog's own — a standard one's named as its protocol names
-    them — from which its properties form is drawn (C-14) and its Python call
-    typed (C-15).
+    them — from which its properties form is drawn and its Python call
+    typed.
     """
 
     id: str = Field(..., description="The name a surface gives it (e.g. 'Table')")
@@ -338,7 +338,7 @@ class UISpec(BaseModel):
         default="", description="The catalog its components are written in"
     )
     components: List[ComponentSpec] = Field(
-        default_factory=list, description="The visual components it renders (C-13)"
+        default_factory=list, description="The visual components it renders"
     )
 
 
@@ -391,8 +391,8 @@ class ProtocolPackagesSpec(BaseModel):
 
 
 class ProtocolSpec(BaseModel):
-    """An agent protocol Datalayer targets (`agentspecs/protocols`,
-    PS-01). An agent spec's or an application's `protocols`
+    """An agent protocol Datalayer targets (`agentspecs/protocols`).
+    An agent spec's or an application's `protocols`
     names the ones it speaks.
     """
 
@@ -448,7 +448,7 @@ class HarnessAcpSpec(BaseModel):
 
 
 class HarnessCapabilitiesSpec(BaseModel):
-    """What a session may rely on of a harness (MH-20): declared by the spec,
+    """What a session may rely on of a harness: declared by the spec,
     read by swap, clone and resume instead of branching on the harness's id.
     """
 
@@ -519,7 +519,7 @@ class HarnessHonoursSpec(BaseModel):
 
 
 class PolicySpec(BaseModel):
-    """A Shield policy document the platform ships or shows (`agentspecs/policies`, SH-50):
+    """A Shield policy document the platform ships or shows (`agentspecs/policies`):
     the catalogue's fields around a document of
     `agent_shield.policy`, whose schema agentspecs carries verbatim.
     """
@@ -537,7 +537,7 @@ class PolicySpec(BaseModel):
 
 
 class StandardSpec(BaseModel):
-    """A standard a conformance report answers (`agentspecs/standards`, SH-60):
+    """A standard a conformance report answers (`agentspecs/standards`):
     its version, domains and controls, each control
     carried whole — id, title, application, cadence, evidence items,
     crosswalks — so a screen names nothing by hand.
@@ -591,7 +591,7 @@ class HarnessRegisterEntry(BaseModel):
 
 
 class HarnessSpec(BaseModel):
-    """An agent program driven over the Agent Client Protocol (`agentspecs/harnesses`, SH-01).
+    """An agent program driven over the Agent Client Protocol (`agentspecs/harnesses`).
     An agent spec's `harness:` names one beside `pydantic-ai`
     and `vercel-ai`.
     """
@@ -639,7 +639,7 @@ def harness_problems(
     Nothing for a builtin harness. Otherwise: a harness the catalogue does not
     know, `custom` in the shared catalogue, a `model:` the harness does not
     take, `subagents:` when it has its own, `skills:` when it reads none
-    (SH-01: refused at load, in a sentence).
+    (refused at load, in a sentence).
 
     Parameters
     ----------
@@ -1619,7 +1619,7 @@ class MCPServer(BaseModel):
         default=None,
         description=(
             "The headers a remote server is sent with every request, "
-            "`${VAR}` expanded as it starts: the bearer among them (R-19)"
+            "`${VAR}` expanded as it starts: the bearer among them"
         ),
     )
     enabled: bool = Field(default=True, description="Whether the server is enabled")
@@ -1649,7 +1649,7 @@ class MCPServer(BaseModel):
         description=(
             "Environment variables the code its tools write reads in the code "
             "sandbox (a download's script): given to the sandbox when the "
-            "account has them, never to the server, never required (R-19)"
+            "account has them, never to the server, never required"
         ),
         alias="sandboxEnvVars",
     )
@@ -1878,7 +1878,7 @@ class SubAgentsConfig(BaseModel):
     )
 
 
-#: The closed vocabulary of delegable work (O2-07).
+#: The closed vocabulary of delegable work.
 #:
 #: `agents.discover --capability notebook.validate` has to match something,
 #: and free text does not match: two specs saying "analysis" and "analyse"
@@ -1999,7 +1999,7 @@ class AgentCapability(BaseModel):
 
 
 class AppVoiceSpec(BaseModel):
-    """An application's voice (VO-41): off unless said.
+    """An application's voice: off unless said.
 
     What is said becomes a message and what is heard is the answer the
     conversation shows; `voice` is an id of the voice catalogue
@@ -2009,7 +2009,7 @@ class AppVoiceSpec(BaseModel):
     enabled: bool = False
     input: str = Field(
         default="push_to_talk",
-        description="`off` or `push_to_talk`; `hands_free` (VO-12) is refused until built",
+        description="`off` or `push_to_talk`; `hands_free` is refused until built",
     )
     output: str = Field(
         default="on_request", description="`off`, `on_request` or `always`"
@@ -2077,7 +2077,7 @@ class Agentspec(BaseModel):
                 "an agent spec says `backend_tools`, not `tools`: the tools that run "
                 "on the runtime, as `frontend_tools` are those that run on the page"
             )
-        # `ui_plugin` is `ui` (PS-03): an old spec is refused, not read.
+        # `ui_plugin` is `ui`: an old spec is refused, not read.
         old = [
             key
             for key in ("ui_plugin", "uiPlugin", "ui_extension", "uiExtension")
@@ -2113,7 +2113,7 @@ class Agentspec(BaseModel):
 
     @model_validator(mode="after")
     def _harness_honours_the_spec(self) -> "Agentspec":
-        """A harness the catalogue does not know, or what it cannot honour, is refused (SH-01)."""
+        """A harness the catalogue does not know, or what it cannot honour, is refused."""
         problems = harness_problems(
             self.harness,
             model=self.model,
@@ -2238,7 +2238,7 @@ class Agentspec(BaseModel):
     delegable: List[AgentCapability] = Field(
         default_factory=list,
         description=(
-            "What work this agent can be delegated (O2-07). "
+            "What work this agent can be delegated. "
             "`protocol` below says how it is reached; this says what it is "
             "worth reaching it for. Empty means the spec has not said, and "
             "discovery reports that rather than guessing from tags. "
@@ -2262,7 +2262,7 @@ class Agentspec(BaseModel):
     protocols: List[str] = Field(
         default_factory=list,
         description=(
-            "The agent protocols it speaks, ids of `agentspecs/protocols` (PS-02). "
+            "The agent protocols it speaks, ids of `agentspecs/protocols`. "
             "`protocol` above says how a page reaches it; this, what it speaks to the world."
         ),
     )
@@ -2372,7 +2372,7 @@ class Agentspec(BaseModel):
         default=None,
         description=(
             "Its voice, for an agent that is not an application "
-            "(VO-41): the fields an Appspec says under `interface.voice`."
+            ": the fields an Appspec says under `interface.voice`."
         ),
     )
 
@@ -2628,7 +2628,7 @@ class ServerActionsSpec(BaseModel):
         default_factory=dict,
         description=(
             "The argument carrying what a tool sends, signed with the "
-            "application's byline (I-10), by tool"
+            "application's byline, by tool"
         ),
     )
 
@@ -2652,26 +2652,17 @@ class AppConnectionSpec(BaseModel):
 
 
 class AppPapOperationSpec(BaseModel):
-    """What a company application does for the person once they confirm (B-04)."""
+    """What a company application does for the person once they confirm."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     action: str = Field(..., description="The action's name at this company")
-    tool: Optional[str] = Field(
-        default=None,
-        description="The application's tool that does it, called with the terms",
-    )
-    allows: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description=(
-            "Instead of a tool: the standing permission confirming it gives "
-            "(R-07), as agentspecs checks it"
-        ),
+    tool: str = Field(
+        ..., description="The application's tool that does it, called with the terms"
     )
     summary: str = Field(
         ..., description="What the person is shown, `{term}` for each term"
     )
-    user_approval_required: bool = Field(default=True)
 
 
 class AppPapCompanyScopeSpec(BaseModel):
@@ -2726,7 +2717,7 @@ class AppPapSpec(BaseModel):
 
     profile: Optional[str] = Field(
         default=None,
-        description="The Personal Agent Protocol profile it is written for: `draft-01` (S-03)",
+        description="The Personal Agent Protocol profile it is written for: `draft-01`",
     )
     connections: List[Dict[str, Any]] = Field(default_factory=list)
     company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
@@ -2742,7 +2733,7 @@ class AppPactRegisteredAgentSpec(BaseModel):
 
 
 class AppPactBusinessSpec(BaseModel):
-    """The application as a PACT business (PR-13, PI-32): Datalayer
+    """The application as a PACT business: Datalayer
     the Provider, its owner the Brand (`brand` when said), the scopes a person
     may delegate and the personal agents its Maker registered.
     """
@@ -2756,8 +2747,8 @@ class AppPactBusinessSpec(BaseModel):
 
 
 class AppPactSpec(BaseModel):
-    """PACT 1.0: the businesses it works with as a person's agent (PI-01, PI-20),
-    and whether it answers as one (PR-13).
+    """PACT 1.0: the businesses it works with as a person's agent,
+    and whether it answers as one.
 
     Each connection names a Brand's domain (`brand`), the audience its Provider
     assigned, a level and the scopes it may ask each person for; never a
@@ -2771,7 +2762,7 @@ class AppPactSpec(BaseModel):
 
 
 class AppCommerceSpec(BaseModel):
-    """UCP and ACP: the merchants it shops at for each person (PI-01, PI-20).
+    """UCP and ACP: the merchants it shops at for each person.
 
     Each merchant names its protocol (`ucp` or `acp`), its domain
     (`merchant`), a level and, to buy, the most one purchase may cost
@@ -2786,7 +2777,7 @@ class AppCommerceSpec(BaseModel):
 
 
 class AppSignedFetchSpec(BaseModel):
-    """Signed fetch: the sites it reads pages of (EX-11, decided 2026-10-13).
+    """Signed fetch: the sites it reads pages of (decided 2026-10-13).
 
     Each site names an `id` and its exact domain (`site`); never a
     credential. The gateway's `signed-fetch` toolset reads a page there with
@@ -2800,7 +2791,7 @@ class AppSignedFetchSpec(BaseModel):
 
 class AppPairSpec(BaseModel):
     """One of a pair of examples, a PACT business and the personal agent that asks it
-    (PR-13; decided 2026-10-13): when a person has copied both, the
+    (decided 2026-10-13): when a person has copied both, the
     Studio registers the personal agent's copy with the business's copy.
     """
 
@@ -2815,7 +2806,7 @@ class AppPairSpec(BaseModel):
 
 
 class AppA2AExtensionSpec(BaseModel):
-    """An A2A extension the application's Agent Card advertises (PR-02)."""
+    """An A2A extension the application's Agent Card advertises."""
 
     uri: str = Field(..., description="The extension's URI")
     description: str = Field(default="")
@@ -2849,12 +2840,20 @@ class AppSpaceGrantSpec(BaseModel):
     access: str = Field(default="read", description="`read` or `write`")
 
 
+class AppRepositorySpec(BaseModel):
+    """A repository lent to an application's computer, checked out at one commit as its workspace."""
+
+    url: str = Field(..., description="The repository, an https:// git URL")
+    revision: str = Field(..., description="The full commit sha it is checked out at")
+
+
 class AppComputerSpec(BaseModel):
     """What an application may do on its own computer; each off until turned on."""
 
     browse: bool = False
     files: bool = False
     shell: bool = False
+    repository: Optional[AppRepositorySpec] = None
 
 
 class AppPermissionsSpec(BaseModel):
@@ -2869,13 +2868,11 @@ class AppStarterSpec(BaseModel):
 
     label: str
     message: str
-    category: str = Field(
-        default="", description="The heading it is offered under (P-20)"
-    )
+    category: str = Field(default="", description="The heading it is offered under")
 
 
 class AppCommandSpec(BaseModel):
-    """A slash command the user picks in the composer (P-19)."""
+    """A slash command the user picks in the composer."""
 
     name: str = Field(..., description="What follows the slash")
     description: str
@@ -2885,7 +2882,7 @@ class AppCommandSpec(BaseModel):
 
 
 class AppModeOptionSpec(BaseModel):
-    """One position of a mode switch (P-19)."""
+    """One position of a mode switch."""
 
     id: str
     label: str
@@ -2899,7 +2896,7 @@ class AppModeOptionSpec(BaseModel):
 
 
 class AppModeSpec(BaseModel):
-    """A mode switch in the composer (P-19)."""
+    """A mode switch in the composer."""
 
     id: str
     label: str
@@ -2910,7 +2907,7 @@ class AppModeSpec(BaseModel):
 
 
 class AppProfileSpec(BaseModel):
-    """One of several assistants in one application (P-20)."""
+    """One of several assistants in one application."""
 
     id: str
     label: str
@@ -2929,14 +2926,14 @@ class AppProfileSpec(BaseModel):
 
 
 class AppStarterTranslationSpec(BaseModel):
-    """A starter in another language (P-26)."""
+    """A starter in another language."""
 
     label: str = ""
     message: str = ""
 
 
 class AppFieldTranslationSpec(BaseModel):
-    """A field of the settings in another language (P-26)."""
+    """A field of the settings in another language."""
 
     title: str = ""
     description: str = ""
@@ -2946,28 +2943,28 @@ class AppFieldTranslationSpec(BaseModel):
 
 
 class AppOptionTranslationSpec(BaseModel):
-    """An option of a mode in another language (P-26)."""
+    """An option of a mode in another language."""
 
     label: str = ""
     description: str = ""
 
 
 class AppModeTranslationSpec(BaseModel):
-    """A mode in another language (P-26)."""
+    """A mode in another language."""
 
     label: str = ""
     options: Dict[str, AppOptionTranslationSpec] = Field(default_factory=dict)
 
 
 class AppProfileTranslationSpec(BaseModel):
-    """A profile in another language (P-26)."""
+    """A profile in another language."""
 
     label: str = ""
     description: str = ""
 
 
 class AppTranslationSpec(BaseModel):
-    """What a person reads of an application in another language (P-26)."""
+    """What a person reads of an application in another language."""
 
     name: str = ""
     description: str = ""
@@ -2992,7 +2989,7 @@ class AppSurfaceSpec(BaseModel):
 
 
 class AppUploadKindSpec(BaseModel):
-    """A kind of file a person may send, and how large (P-21)."""
+    """A kind of file a person may send, and how large."""
 
     type: str = Field(
         ...,
@@ -3004,7 +3001,7 @@ class AppUploadKindSpec(BaseModel):
 
 
 class AppUploadsSpec(BaseModel):
-    """What a person may send in the composer without being asked (P-21)."""
+    """What a person may send in the composer without being asked."""
 
     kinds: List[AppUploadKindSpec] = Field(default_factory=list)
     max_files: int = Field(
@@ -3013,7 +3010,7 @@ class AppUploadsSpec(BaseModel):
 
 
 class AppCustomComponentSpec(BaseModel):
-    """A component its developer wrote (P-17), of one application only.
+    """A component its developer wrote, of one application only.
 
     Reviewed as the catalog's own — its properties a JSON Schema, what it
     shows and sends bindings — and drawn in a sandboxed frame of no origin
@@ -3036,7 +3033,7 @@ class AppCustomComponentSpec(BaseModel):
         ...,
         description=(
             "Its built ES module: an address, or a file of the application's "
-            "folder served from its package (P-29)"
+            "folder served from its package"
         ),
     )
     integrity: str = Field(
@@ -3048,7 +3045,7 @@ class AppCustomComponentSpec(BaseModel):
     )
 
     def catalog_entry(self, version: str) -> ComponentSpec:
-        """It as the catalog lists a component (C-13)."""
+        """It as the catalog lists a component."""
         return ComponentSpec(
             id=self.name,
             name=self.name,
@@ -3065,7 +3062,7 @@ class AppCustomComponentSpec(BaseModel):
 
 
 class AppPageOutputSpec(BaseModel):
-    """One thing a widget's page shows for its inputs (P-05)."""
+    """One thing a widget's page shows for its inputs."""
 
     name: str = Field(..., description="Where the page shows it: `/outputs/<name>`")
     title: str = Field(default="", description="What a person reads above it")
@@ -3073,7 +3070,7 @@ class AppPageOutputSpec(BaseModel):
         default="Text",
         description=(
             "`Text`, `Image`, `Table` or `Chart`, or a component of the "
-            "application's own (P-17)"
+            "application's own"
         ),
     )
     props: Dict[str, Any] = Field(
@@ -3082,7 +3079,7 @@ class AppPageOutputSpec(BaseModel):
 
 
 class AppPageSpec(BaseModel):
-    """A widget's page written in its code (P-05): `@app.page`."""
+    """A widget's page written in its code: `@app.page`."""
 
     function: str = Field(..., description="The function of its code that runs it")
     inputs: Dict[str, Any] = Field(
@@ -3101,8 +3098,8 @@ class AppPageSpec(BaseModel):
 
 
 class AppActionSpec(BaseModel):
-    """An action of an application's code a person presses (`@app.action`,
-    RU-5): its name, and the JSON Schema of its payload.
+    """An action of an application's code a person presses (`@app.action`):
+    its name, and the JSON Schema of its payload.
     """
 
     name: str = Field(..., description="Its name, as its button presses it")
@@ -3135,36 +3132,36 @@ class AppInterfaceSpec(BaseModel):
     )
     actions: List[AppActionSpec] = Field(
         default_factory=list,
-        description="The actions of its code a person presses, typed (RU-5)",
+        description="The actions of its code a person presses, typed",
     )
     profiles: List[AppProfileSpec] = Field(
         default_factory=list,
-        description="Several assistants in one application, picked before the conversation (P-20)",
+        description="Several assistants in one application, picked before the conversation",
     )
     settings: Optional[Dict[str, Any]] = Field(
         default=None,
         description=(
             "What the user may set: the JSON Schema of a form, an object of "
-            "named fields (C-16); none when unsaid"
+            "named fields; none when unsaid"
         ),
     )
     settings_ui: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="How the settings' fields are drawn: a uiSchema by field name (P-20)",
+        description="How the settings' fields are drawn: a uiSchema by field name",
     )
     language: str = Field(
         default="en",
-        description="The language its own words are in, BCP 47 (P-26)",
+        description="The language its own words are in, BCP 47",
     )
     translations: Dict[str, AppTranslationSpec] = Field(
         default_factory=dict,
-        description="Its words in other languages, by BCP 47 tag (P-26)",
+        description="Its words in other languages, by BCP 47 tag",
     )
     uploads: Optional[AppUploadsSpec] = Field(
         default=None,
         description=(
             "What a person may send in the composer without being asked, by "
-            "kind and size (P-21); none when unsaid: no file with a message"
+            "kind and size; none when unsaid: no file with a message"
         ),
     )
     components: List[str] = Field(
@@ -3173,13 +3170,13 @@ class AppInterfaceSpec(BaseModel):
     )
     custom_components: List[AppCustomComponentSpec] = Field(
         default_factory=list,
-        description="Components its developer wrote (P-17), of it alone",
+        description="Components its developer wrote, of it alone",
     )
     surface: Optional[AppSurfaceSpec] = None
     page: Optional[AppPageSpec] = Field(
         default=None,
         description=(
-            "A widget's page written in its code (P-05): its inputs a form, "
+            "A widget's page written in its code: its inputs a form, "
             "its outputs values, run again as an input changes"
         ),
     )
@@ -3205,7 +3202,7 @@ class AppInterfaceSpec(BaseModel):
     )
     voice: AppVoiceSpec = Field(
         default_factory=AppVoiceSpec,
-        description="Its voice: whether it listens and speaks, with which voice (VO-41)",
+        description="Its voice: whether it listens and speaks, with which voice",
     )
     outputs: List[str] = Field(
         default_factory=list,
@@ -3263,7 +3260,7 @@ class AppTestCaseSpec(BaseModel):
     code: str = Field(
         default="",
         description=(
-            "The function of its code that decides the case, by name (P-06); "
+            "The function of its code that decides the case, by name; "
             "`expect` says it in words"
         ),
     )
@@ -3280,7 +3277,7 @@ class AppTestCaseSpec(BaseModel):
 
 
 class AppVerifiedSpec(BaseModel):
-    """What was verified, and how, each in a sentence (E-14)."""
+    """What was verified, and how, each in a sentence."""
 
     live: List[str] = Field(default_factory=list, description="What was tried live")
     recorded: List[str] = Field(
@@ -3310,12 +3307,12 @@ class AppRecordSpec(BaseModel):
     include: List[str] = Field(default_factory=list)
     suggest_tests: bool = Field(
         default=False,
-        description="Whether its conversations may be used to suggest tests (V-16)",
+        description="Whether its conversations may be used to suggest tests",
     )
 
 
 class AppCodeCheckSpec(BaseModel):
-    """A check written in an application's code (P-06): `@app.check`."""
+    """A check written in an application's code: `@app.check`."""
 
     name: str = Field(..., description="The function of its code that checks")
     on: str = Field(..., description="`answer` or `tool_call`: where it runs")
@@ -3329,12 +3326,12 @@ class AppChecksSpec(BaseModel):
     gates: List[str] = Field(default_factory=list)
     track: str = Field(default="")
     code: List[AppCodeCheckSpec] = Field(
-        default_factory=list, description="Checks written in its code (P-06)"
+        default_factory=list, description="Checks written in its code"
     )
 
 
 class AppToolSpec(BaseModel):
-    """A tool of an application's own, written in its code (P-06): `@app.tool`."""
+    """A tool of an application's own, written in its code: `@app.tool`."""
 
     name: str = Field(..., description="What the agent calls, and a rule names")
     description: str = Field(..., description="What it does, for the agent")
@@ -3355,7 +3352,7 @@ class AppHostedSpec(BaseModel):
 
 
 class AppHostFunctionSpec(BaseModel):
-    """A function of the host page the application's agent may call (D-10)."""
+    """A function of the host page the application's agent may call."""
 
     name: str = Field(..., description="Called as the tool `host_<name>`")
     description: str = Field(..., description="What it does, for the agent")
@@ -3366,7 +3363,7 @@ class AppHostFunctionSpec(BaseModel):
 
 
 class AppHostBridgeSpec(BaseModel):
-    """What the host page and an embedded application say to each other (D-10, D-21)."""
+    """What the host page and an embedded application say to each other."""
 
     context: List[str] = Field(
         default_factory=list,
@@ -3377,13 +3374,13 @@ class AppHostBridgeSpec(BaseModel):
         default="claimed",
         description=(
             "Who its user is: `claimed`, what the page says; `signed`, only a token the "
-            "host's server signed with the deployment's secret (D-21)"
+            "host's server signed with the deployment's secret"
         ),
     )
 
     @property
     def signed_user(self) -> bool:
-        """Whether a session is opened only for a user the host's server signed (D-21)."""
+        """Whether a session is opened only for a user the host's server signed."""
         return self.user == "signed"
 
 
@@ -3465,7 +3462,7 @@ class AppSampleAlternativeSpec(BaseModel):
 
 
 class AppSamplesSpec(BaseModel):
-    """What it is tried on before it is anybody's (E-06, E-11): read only."""
+    """What it is tried on before it is anybody's: read only."""
 
     documents: List[AppSampleDocumentSpec] = Field(default_factory=list)
     alternatives: List[AppSampleAlternativeSpec] = Field(default_factory=list)
@@ -3499,7 +3496,7 @@ class AppSpec(BaseModel):
     backend_tools: List[str] = Field(default_factory=list)
     tools: List[AppToolSpec] = Field(
         default_factory=list,
-        description="Tools of its own, written in its code (P-06)",
+        description="Tools of its own, written in its code",
     )
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
@@ -3510,7 +3507,7 @@ class AppSpec(BaseModel):
     connections: List[AppConnectionSpec] = Field(default_factory=list)
     protocols: List[str] = Field(
         default_factory=list,
-        description="The agent protocols it speaks, ids of `agentspecs/protocols` (PS-02)",
+        description="The agent protocols it speaks, ids of `agentspecs/protocols`",
     )
     ui: List[UiChoiceSpec] = Field(
         default_factory=list,
@@ -3566,7 +3563,7 @@ class AppSpec(BaseModel):
     )
 
     def tool(self, name: str) -> Optional[AppToolSpec]:
-        """Find its own tool of that name (P-06), or None."""
+        """Find its own tool of that name, or None."""
         for tool in self.tools:
             if tool.name == name:
                 return tool
@@ -3629,7 +3626,7 @@ class TeamAgentspec(BaseModel):
         description=(
             "MCP server catalogue reference, in place of `ref` and `app`: the "
             "member is that server, a system of the scene the others reach over "
-            "MCP (A-04)"
+            "MCP"
         ),
     )
     harness: str = Field(
@@ -3637,7 +3634,7 @@ class TeamAgentspec(BaseModel):
         description=(
             "Harness catalogue id, in place of `ref`, `app` and `server`: the member "
             "is that agent program over ACP behind the Shield, asked over A2A or ACP "
-            "with a budget, a deadline and a manifest (SH-45)"
+            "with a budget, a deadline and a manifest"
         ),
     )
     runs_in: Optional[Literal["browser", "runtime"]] = Field(
@@ -3745,7 +3742,7 @@ class TeamContextSpec(BaseModel):
         default_factory=list,
         description=(
             "The Frames every member works under, in order, `id` or `id:version` "
-            "(A-04): the team's shared context"
+            ": the team's shared context"
         ),
     )
 
@@ -3921,12 +3918,11 @@ class TeamSpec(BaseModel):
     #: How the team is meant to be coordinated once teams execute.
     #:
     #: Every value here names a protocol for which no adapter is registered
-    #: yet: `datalayer` is the durable control plane of
-    #: O1-01, `a2a` and `acp` its two adapters (O0-06,
-    #: O0-07). The field is an intention until one of them lands, and the
+    #: yet: `datalayer` is the durable control plane,
+    #: and `a2a` and `acp` its two adapters. The field is an intention until one of them lands, and the
     #: literal type is what keeps it from naming a protocol nobody is
     #: building — it used to be a free string defaulting to `datalayer`,
-    #: which read as a protocol that exists (O0-15).
+    #: which read as a protocol that exists.
     orchestration_protocol: Literal["datalayer", "a2a", "acp"] = Field(
         default="datalayer",
         description=(
@@ -3999,7 +3995,7 @@ class TeamSpec(BaseModel):
 
 
 # ============================================================================
-# Scenes (agentspecs `scenes`, `schema: loop.scene/v1`, A-11)
+# Scenes (agentspecs `scenes`, `schema: loop.scene/v1`)
 # ============================================================================
 
 
@@ -4155,6 +4151,13 @@ class SceneStageSpec(BaseModel):
         description="How long the scene plays before it rests",
     )
     pace: Literal["quick", "steady", "slow"] = Field(default="steady")
+    backdrop: Literal["studio", "hero", "plain"] = Field(
+        default="studio",
+        description=(
+            "How the stage is drawn wherever the scene plays: `studio`, `hero` "
+            "or `plain`; `studio` when the scene says none"
+        ),
+    )
 
 
 class SceneAudienceSpec(BaseModel):
@@ -4182,7 +4185,7 @@ class SceneRehearsalBeatSpec(BaseModel):
 
 
 class SceneRecordingSpec(BaseModel):
-    """A transcript recorded once, played when the scene cannot play live (H-08)."""
+    """A transcript recorded once, played when the scene cannot play live."""
 
     path: str = Field(...)
     taken: str = Field(default="")
@@ -4208,7 +4211,7 @@ class ScenePlayedBeatSpec(BaseModel):
 
 
 class ScenePlayedSpec(BaseModel):
-    """What came of the last rehearsal `loop scenes rehearse --cloud` played (A-14).
+    """What came of the last rehearsal `loop scenes rehearse --cloud` played.
 
     Kept beside the specs in ``<id>/rehearsal.json``, written by the command
     and never by hand. A scene is *Live* when it ``passed``; one that did not
@@ -4235,7 +4238,7 @@ class SceneDeploymentSpec(BaseModel):
 
 
 class SceneActorSpec(BaseModel):
-    """Somebody on a scripted scene (X-02): a name, a face, what it is."""
+    """Somebody on a scripted scene: a name, a face, what it is."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -4300,7 +4303,7 @@ class SceneSpec(BaseModel):
     )
     kind: str = Field(
         default="team",
-        description="`team`: a team staged; `scripted`: actors and lines written out (X-02)",
+        description="`team`: a team staged; `scripted`: actors and lines written out",
     )
     team: str = Field(default="", description="The team it stages, `id:version`")
     entry: str = Field(default="", description="The member the audience talks to")

@@ -35,7 +35,7 @@ export const ANTHROPIC_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   version: '0.0.1',
   name: 'Anthropic API Key',
   description:
-    "API key for Anthropic's Claude API. Required by the Claude Code harness, and by any harness configured with Anthropic as its model provider; the person's own, never a Claude.ai subscription login.",
+    "API key for Anthropic's Claude API. Required by the Claude Code harness run locally, and by any harness configured with Anthropic as its model provider there; the person's own, never a Claude.ai subscription login. A Datalayer runtime takes no key: its model calls go through ai-inference.",
   registrationUrl: 'https://platform.claude.com/settings/keys',
   tags: ['authentication', 'api-key', 'anthropic', 'harness'],
   icon: 'key',
@@ -163,7 +163,7 @@ export const OPENAI_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   version: '0.0.1',
   name: 'OpenAI API Key',
   description:
-    "API key for OpenAI's API. Required by the Codex harness, which takes it in place of a ChatGPT login; the person's own.",
+    "API key for OpenAI's API. Required by the Codex harness run locally, which takes it in place of a ChatGPT login; the person's own. A Datalayer runtime takes no key: its model calls go through ai-inference.",
   registrationUrl: 'https://platform.openai.com/api-keys',
   tags: ['authentication', 'api-key', 'openai', 'harness'],
   icon: 'key',

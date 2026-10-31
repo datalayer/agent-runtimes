@@ -16,18 +16,18 @@ import { Button, Heading, IconButton, Label, Text } from '@primer/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@primer/octicons-react';
 import {
   ConversationClient,
-  DpopFetchClient,
-  DpopProofProviders,
-  InMemorySessionKeys,
-  JoseDpopProofProvider,
+  DelegatedSessionSigner,
+  InMemoryDelegatedKeys,
   SecretValue,
+  SessionClient,
+  SessionFetchClient,
+  SessionSigners,
   buildPapReactor,
   buildDirectSignInRequest,
-  buildSessionAssertionClaims,
   parseDiscoveryDocument,
   parseOAuthServerMetadata,
+  type AccessToken,
   type ConversationResponse,
-  type SessionToken,
 } from '@datalayer/personal-agent-protocol';
 import { ChatMessageList } from '../../chat/messages/ChatMessageList';
 import type { DisplayItem } from '../../types/chat';
@@ -98,7 +98,7 @@ const STEPS: readonly JourneyStep[] = [
   {
     title: 'Starting signed out',
     summary:
-      'Atlas opens a Session under a key of its own, the Session Key, and can ask about the return before knowing who the user is. Northstar answers insufficient_scope: order access needs sign-in.',
+      'Atlas chooses a random Session ID, with no request, and can ask about the return before knowing who the user is. Northstar answers insufficient_scope: order access needs sign-in.',
     channel: 'Session + conversation',
     messages: [
       ...conversationStart,
@@ -109,25 +109,33 @@ const STEPS: readonly JourneyStep[] = [
     ],
     facts: [
       { label: 'Personal agent', value: 'Atlas' },
-      { label: 'Session', value: 'Signed out · its own key' },
+      { label: 'Session', value: 'Signed out · a Session JWT per request' },
       { label: 'Conversation', value: 'Waiting for sign-in' },
     ],
     method: 'POST',
-    target: 'https://auth.northstar.example/oauth/token',
-    detailLabel: 'Atlas → authorization server',
-    request: `Content-Type: application/x-www-form-urlencoded
-DPoP: [fresh proof, signed with the new Session Key]
+    target: 'https://api.northstar.example/poppy/conversations',
+    detailLabel: 'Atlas → company agent',
+    request: `Poppy-Session: [fresh JWT, naming the sid, signed with a delegated key]
+Content-Type: application/json
 
-grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
-assertion=[host-only session assertion]
-client_assertion=[host-only client assertion]`,
-    response: `200 OK
 {
-  "access_token": "[stored by host]",
-  "token_type": "DPoP",
-  "expires_in": 300
-}
-(the Session is named by its key's thumbprint; the grant says signed out)`,
+  "message": {
+    "id": "msg_return",
+    "author": { "type": "agent" },
+    "text": "The user wants to return a jacket."
+  }
+}`,
+    response: `201 Created
+{
+  "conversation_id": "cnv_return",
+  "events": [{
+    "type": "authorization",
+    "error": "insufficient_scope",
+    "scope": "orders:read orders:return"
+  }],
+  "status": "idle",
+  "responder": "agent"
+}`,
   },
   {
     title: 'The user signs in',
@@ -149,8 +157,7 @@ client_id=https://atlas.example/agent.json
 redirect_uri=https://atlas.example/oauth/callback
 scope=orders:read orders:return
 state=[single-use, host-only]
-code_challenge=[S256, host-only verifier]
-dpop_jkt=[the Session Key's thumbprint]`,
+code_challenge=[S256, host-only verifier]`,
     response: `302 Found
 Location: https://atlas.example/oauth/callback
   ?code=[single-use authorization code]
@@ -180,8 +187,8 @@ Location: https://atlas.example/oauth/callback
     target:
       'https://api.northstar.example/poppy/conversations/cnv_return/messages',
     detailLabel: 'Atlas ↔ company agent',
-    request: `Authorization: DPoP [host-only Session Token]
-DPoP: [fresh proof]
+    request: `Authorization: Bearer [host-only access token]
+Poppy-Session: [fresh JWT]
 Content-Type: application/json
 
 {
@@ -233,8 +240,8 @@ Content-Type: application/json
     target:
       'https://api.northstar.example/poppy/conversations/cnv_return/messages',
     detailLabel: 'Atlas ↔ company agent',
-    request: `Authorization: DPoP [host-only Session Token]
-DPoP: [fresh proof]
+    request: `Authorization: Bearer [host-only access token]
+Poppy-Session: [fresh JWT]
 Content-Type: application/json
 
 {
@@ -283,7 +290,7 @@ const companyReply = (response: ConversationResponse): string => {
  *
  * The company side is deliberately an in-page deterministic simulator: this
  * makes the example runnable without an account while ensuring that requests,
- * proof-bound transport, response parsing, and messages all use the real SDK.
+ * the Session header, response parsing, and messages all use the real SDK.
  */
 const runJourney = async (): Promise<
   readonly (readonly JourneyMessage[])[]
@@ -313,24 +320,9 @@ const runJourney = async (): Promise<
     token_endpoint: 'https://auth.northstar.example/oauth/token',
     revocation_endpoint: 'https://auth.northstar.example/oauth/revoke',
     authorization_endpoint: 'https://auth.northstar.example/oauth/authorize',
-    grant_types_supported: [
-      'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      'refresh_token',
-      'authorization_code',
-    ],
+    grant_types_supported: ['refresh_token', 'authorization_code'],
     protected_resources: ['https://northstar.example'],
     scopes_supported: ['orders:read', 'orders:return'],
-  });
-  // The Session's own DPoP key, its thumbprint the Session's name (§4.3).
-  const proofs = new JoseDpopProofProvider({ keys: new InMemorySessionKeys() });
-  const sessionKey = await proofs.newSessionKey({
-    tenantId: 'guided-example',
-    issuer: 'https://auth.northstar.example',
-  });
-  buildSessionAssertionClaims({
-    clientId: 'https://atlas.example/agent.json',
-    pairwiseUserId: 'usr_host_only_journey',
-    issuer: 'https://auth.northstar.example',
   });
   await buildDirectSignInRequest({
     authorizationEndpoint: 'https://auth.northstar.example/oauth/authorize',
@@ -338,7 +330,6 @@ const runJourney = async (): Promise<
     clientId: 'https://atlas.example/agent.json',
     redirectUri: 'https://atlas.example/oauth/callback',
     scopes: ['orders:read', 'orders:return'],
-    sessionKey,
   });
 
   const replies = [
@@ -391,13 +382,17 @@ const runJourney = async (): Promise<
     name: '@datalayer/loop-example-pap-guided-security',
     contributes: [
       contribution(
-        DpopProofProviders,
-        {
-          newSessionKey: options => proofs.newSessionKey(options),
-          discardSessionKey: options => proofs.discardSessionKey(options),
-          create: request => proofs.create(request),
-        },
-        { id: 'guided-example-dpop' },
+        SessionSigners,
+        // A real delegated key; the delegation's signature is a stand-in for a
+        // key in the agent's `jwks_uri`.
+        new DelegatedSessionSigner({
+          custody: new InMemoryDelegatedKeys(),
+          signer: {
+            sign: async (_claims, options) =>
+              new SecretValue(`host-only-${options.purpose}`),
+          },
+        }),
+        { id: 'guided-example-session-signer' },
       ),
     ],
   });
@@ -405,25 +400,29 @@ const runJourney = async (): Promise<
     securityPlugin,
   ]);
   try {
-    const transport = new DpopFetchClient({
+    const transport = new SessionFetchClient({
       reactor,
       fetch: localCompanyFetch,
     });
     const conversations = new ConversationClient({ reactor, transport });
-    const session = (signedIn: boolean): SessionToken => ({
-      accessToken: new SecretValue(
-        signedIn ? 'host-only-signed-in-token' : 'host-only-session-token',
-      ),
-      tokenType: 'DPoP',
-      expiresIn: 300,
-      scopes: signedIn ? ['orders:read', 'orders:return'] : [],
-      sessionKey,
-      signedIn,
-    });
-    const requestOptions = (token: SessionToken) => ({
-      token,
-      tenantId: 'guided-example',
+    const session = await new SessionClient({
+      reactor,
+      fetch: localCompanyFetch,
+    }).start({
+      clientId: 'https://atlas.example/agent.json',
+      pairwiseUserId: 'usr_host_only_journey',
       issuer: 'https://auth.northstar.example',
+      tenantId: 'guided-example',
+    });
+    const token: AccessToken = {
+      accessToken: new SecretValue('host-only-access-token'),
+      tokenType: 'Bearer',
+      expiresIn: 300,
+      scopes: ['orders:read', 'orders:return'],
+    };
+    const requestOptions = (signedIn: boolean) => ({
+      session,
+      ...(signedIn ? { token } : {}),
       wait: 0,
     });
     const endpoint = 'https://api.northstar.example/poppy/conversations';
@@ -435,7 +434,7 @@ const runJourney = async (): Promise<
         author: { type: 'agent' },
         text: conversationStart[0]?.text,
       },
-      requestOptions(session(false)),
+      requestOptions(false),
     );
     const signInReply = companyReply(started);
     const offer = companyReply(
@@ -447,7 +446,7 @@ const runJourney = async (): Promise<
           author: { type: 'agent' },
           text: 'The user has signed in. Continue the return request.',
         },
-        requestOptions(session(true)),
+        requestOptions(true),
       ),
     );
     const confirmation = companyReply(
@@ -459,7 +458,7 @@ const runJourney = async (): Promise<
           author: { type: 'agent' },
           text: 'The user chose the even exchange.',
         },
-        requestOptions(session(true)),
+        requestOptions(true),
       ),
     );
     const signedInMessages: readonly JourneyMessage[] = [

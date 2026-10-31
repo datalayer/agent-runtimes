@@ -213,13 +213,18 @@ def check_example_folder(folder: Path) -> list[str]:
         return ["no README.md"]
     named = set(README_RUNS.findall(readme.read_text(encoding="utf8")))
     scripts = {p.name for p in folder.glob("*.py")}
-    problems = [f"README runs {name}, which is not here" for name in sorted(named - scripts)]
+    problems = [
+        f"README runs {name}, which is not here" for name in sorted(named - scripts)
+    ]
     # A module the scripts import (no `if __name__` of its own) is not an example.
     for name in sorted(scripts - named):
         if "__main__" in (folder / name).read_text(encoding="utf8"):
             problems.append(f"{name} is not named in the README")
     for name in sorted(scripts):
-        problems += [f"{name}: {p}" for p in python_import_problems((folder / name).read_text(encoding="utf8"))]
+        problems += [
+            f"{name}: {p}"
+            for p in python_import_problems((folder / name).read_text(encoding="utf8"))
+        ]
     return problems
 
 

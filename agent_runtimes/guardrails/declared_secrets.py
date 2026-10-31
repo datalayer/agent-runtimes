@@ -16,8 +16,8 @@ given is what the specs it is configured from **declare**, read off them:
   harness spec's ``requires.secrets`` (Claude Code's ``ANTHROPIC_API_KEY``),
   given to the harness's process by name and to nothing else of the runtime's
   (``adapters.acp_agent.harness_environment``), never to the sandbox — but
-  on Datalayer, Claude Code's key is not declared at all: its model calls go
-  through ai-inference, which reads the account's key itself
+  on Datalayer, no harness's key is declared at all: its model calls go
+  through ai-inference, to Bedrock or Alibaba, or it is not offered there
   (``adapters.harness_inference``);
 - a deployment that takes a signed user (D-21) — its user secret,
   ``DATALAYER_APP_USER_SECRET_<UID>``;
@@ -134,21 +134,17 @@ def _catalog_server(server_id: str) -> Any:
 def _harness_env_names(harness_id: str) -> FrozenSet[str]:
     """The secrets a catalogue harness requires, by name; none for a builtin or unknown one.
 
-    On Datalayer, the key of a harness whose model calls go through
-    ai-inference (Claude Code's ``ANTHROPIC_API_KEY``) is not declared: the
-    runtime is never given it; ai-inference reads it from the account's
-    secrets (``adapters.harness_inference``).
+    On Datalayer, none: a harness's model calls go through ai-inference, or
+    it is not offered there (``adapters.harness_inference``), so the runtime
+    is never given a key.
     """
-    from agent_runtimes.adapters.harness_inference import routed_secret
+    from agent_runtimes.adapters.harness_inference import on_datalayer
     from agent_runtimes.specs.harnesses import get_harness
 
     harness = get_harness(harness_id)
-    if harness is None:
+    if harness is None or on_datalayer():
         return frozenset()
-    routed = routed_secret(harness_id)
-    return frozenset(
-        str(name) for name in harness.requires.secrets if str(name) != routed
-    )
+    return frozenset(str(name) for name in harness.requires.secrets)
 
 
 def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:

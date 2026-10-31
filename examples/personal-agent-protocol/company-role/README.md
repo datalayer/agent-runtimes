@@ -19,7 +19,6 @@ pap:
       - action: orders.exchange
         tool: exchange_order
         summary: Exchange order {order_id} for size {size}
-        user_approval_required: true
 ```
 
 Datalayer's company service publishes the application, admits the personal
@@ -30,9 +29,9 @@ The runtime (`agent_runtimes.apps.pap_company`) then:
    the model's call of `exchange_order` does not run; its arguments become the
    terms, the Maker's `summary` is filled with them, and the proposal rides
    the answer as a `pap_operation` data artifact;
-2. leaves the **confirmation** to the person, at the exact revision they were
-   shown: here, the SDK's `approve()` and `terms_digest()` show that an
-   approval of revision 1 does not confirm revision 2;
+2. leaves the **approval** to the person, every time and at the exact revision
+   they were shown: a revision is opaque, and here an `Approval` of one
+   revision does not approve the other;
 3. **performs** it in the turn whose one-use ticket was redeemed for that
    revision: the declared tool, with exactly the confirmed terms, once. Other
    terms and a retry are refused, and the turn reports `pap_performed`.

@@ -1,18 +1,22 @@
-# PAP Account Tokens
+# Refresh tokens
 
-This Agent Runtimes `Application` signs Ada in to Manzanita Outfitters, the
-SDK's demo company, then uses the real `AccountTokenClient` on the Account
-Token the sign-in returned. It refreshes the Session (and the company rotates
-the token), narrows a refresh to fewer scopes, asks for a wider one (the
-company answers `invalid_scope`, reported as `re_consent_required`),
-revokes the token, and shows the Session continues signed out.
+This example keeps Ada signed in to Manzanita Outfitters with the real Python
+SDK `RefreshTokenClient`, against the reference company from
+`personal_agent_protocol.demo` (real keys, real HTTP over ASGI, no network). A
+refresh names no Session: it gets a new access token for the account, which any
+of the User's Sessions uses. It shows rotation, races two refreshes through the
+Reactor `pap.refreshTokenLock`, narrows scopes, asks for wider scopes
+(`re_consent_required`), lets the token expire (`invalid_grant`, signed out), and
+revokes it. After revocation the company answers the Session with an
+`authorization` event: `insufficient_scope`.
 
-The Account Token stays behind an opaque reference in the host's Reactor
-`TokenStore`. The tool returns lifecycle evidence only: no Account Token,
-Session Token, assertion, proof, or token reference reaches the Loop model.
+The Agent Runtimes tool receives only statuses and scope names. Refresh tokens,
+access tokens, client assertions, and Session JWTs stay in the host's Reactor
+stores.
 
 ```bash
 loop apps run examples/personal-agent-protocol/account-tokens/app.py
 ```
 
-See the [PAP Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).
+Read the [refresh tokens guide](https://personalagentprotocol.org/docs/guides/account-tokens)
+and the [example flow](https://personalagentprotocol.org/docs/examples/account-tokens).

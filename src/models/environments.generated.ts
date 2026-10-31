@@ -11,7 +11,7 @@ export const ENVIRONMENT_SCHEMA_ID =
 
 /** The sha256 of the schema text these types are generated from. */
 export const ENVIRONMENT_SCHEMA_SHA256 =
-  '3aa1a84206afd2d5d04d3a2eab28abca1d60e1a6a6ab8c14a94ace62b39e6015';
+  '09cce136da97122a653c3b91b14b830ec1d4a1c8b7de9221284e37088039110e';
 
 /** The `apiVersion` an Environment document carries. */
 export const ENVIRONMENT_API_VERSION = 'environments.datalayer.io/v1alpha1';
@@ -45,7 +45,12 @@ export interface BuildSpec {
   dockerfile?: DockerfileSpec | null;
   image?: ImageSourceSpec | null;
   /** Default: `"packages"`. */
-  source?: 'packages' | 'dependencyFile' | 'dockerfile' | 'image';
+  source?:
+    | 'packages'
+    | 'dependencyFile'
+    | 'dockerfile'
+    | 'image'
+    | 'foreignDockerfile';
 }
 
 export interface Commands {

@@ -43,7 +43,8 @@ dependencies = [
     # 0.27.0: PAP draft 0.3 (a DPoP key per Session, its thumbprint the
     # Session Key; insufficient_scope; protected_resources; the issuer's
     # grant_types_supported; author); a 0.3 personal agent uses only 0.3 companies.
-    "personal-agent-protocol[ui]>=0.27.0,<0.28",
+    # 0.29.0: DPoP proofs, a Company with no issuer (`DiscoveredCompany.identifier`).
+    "personal-agent-protocol[ui]>=0.29.0,<0.30",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
@@ -67,7 +68,11 @@ dependencies = [
     # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
     # catalogue's Python applications import agent_runtimes.apps.
-    "agentspecs>=0.0.132",
+    # agentspecs 0.0.137: the coding-agent-behind-the-shield scene and code-explainer, scene recordings, stage.backdrop.
+    # agentspecs 0.0.138: permissions.computer.repository (a repository lent to an application), the space backdrop.
+    # agentspecs 0.0.139: colours by palette name.
+    # agentspecs 0.0.140: the minimal and orb backdrops.
+    "agentspecs>=0.0.141",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -99,7 +104,7 @@ dependencies = [
     # the environments client is typed with (D-14), in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
-    "code-sandboxes>=1.10.0",
+    "code-sandboxes>=1.11.0",
     "croniter",
     # Web Bot Auth's signature bases (PR-20): RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.

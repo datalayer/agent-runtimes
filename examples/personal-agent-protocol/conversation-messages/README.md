@@ -1,11 +1,8 @@
-# PAP Conversation Messages
+# Conversation messages
 
-This Loop application starts and continues a local PAP conversation with
-user-global random message IDs. Credentials and pairwise identity remain in the
-trusted host; the tool returns only safe conversation state.
+This local Agent Runtimes tool starts and continues a PAP conversation while the
+host retains the Session, its Session JWTs, the delegated key, and message IDs. Each message names its `author` (`agent` when the
+personal agent writes it, `human` when it relays the user's words). Retry a
+message with the same `Message` object so its ID and content remain identical.
 
-The Python and TypeScript PAP clients enforce the same message-ID, retry,
-response-validation, and DPoP transport boundaries. This Python Loop example
-keeps the interaction compact while the linked guide documents both SDKs.
-
-Read the [conversation flow](https://personal-agent-protocol.datalayer.tech/examples/conversation-messages/).
+Read the [conversation messages flow](https://personalagentprotocol.org/examples/conversation-messages/).

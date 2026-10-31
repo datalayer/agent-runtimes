@@ -220,21 +220,23 @@ def test_an_agent_on_a_harness_declares_the_key_its_harness_requires(
     assert declared_secrets(Agentspec(id="r19-plain", name="plain")).consumers == {}
 
 
-def test_on_datalayer_claude_codes_key_is_not_declared(monkeypatch) -> None:
-    # On Datalayer, Claude Code calls Anthropic through ai-inference, which
-    # reads the account's key itself: the runtime is never given it.
+def test_on_datalayer_no_harness_declares_a_key(monkeypatch) -> None:
+    # On Datalayer, a harness's model calls go through ai-inference, to Bedrock
+    # or Alibaba, or it is not offered: the runtime is never given a key.
     monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
-    declared = declared_secrets(
-        Agentspec(id="r19-coder-dl", name="coder", harness="claude-code")
-    )
-    assert "ANTHROPIC_API_KEY" not in declared.runtime
-    assert declared.missing(lambda name: False, "Coder") == []
-    # Another harness still declares what it requires.
-    goose = declared_secrets(
-        Agentspec(id="r19-goose-dl", name="goose", harness="goose")
-    )
-    assert "ANTHROPIC_API_KEY" in goose.runtime
+    for harness, key in (
+        ("claude-code", "ANTHROPIC_API_KEY"),
+        ("opencode", "ANTHROPIC_API_KEY"),
+        ("pi", "ANTHROPIC_API_KEY"),
+        ("codex", "OPENAI_API_KEY"),
+        ("goose", "ANTHROPIC_API_KEY"),
+    ):
+        declared = declared_secrets(
+            Agentspec(id=f"r19-{harness}-dl", name="coder", harness=harness)
+        )
+        assert key not in declared.runtime
+        assert declared.missing(lambda name: False, "Coder") == []
 
 
 def test_a_missing_secret_is_said_in_a_sentence() -> None:

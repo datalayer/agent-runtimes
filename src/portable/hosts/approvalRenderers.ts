@@ -6,7 +6,7 @@
 import type { ApprovalPresentation } from './contracts';
 
 /**
- * Typed approval renderers (S-302).
+ * Typed approval renderers.
  * A host offers Approve and Reject only when a renderer that knows the
  * tool proves that every material argument is shown: each argument the server
  * presented is named by the renderer, or the card fails closed. An unknown
@@ -14,10 +14,10 @@ import type { ApprovalPresentation } from './contracts';
  * action that is not mail (reads, writes, other sends, destructive, financial,
  * publishing, executing) are reviewed in Datalayer (decided by the user on 16 October 2026: mail only),
  * but for a company's `pap_confirm`, decided in a host with the operation's
- * exact revision since 28 October 2026 (the user, WHATSAPP WA-43).
+ * exact revision since 28 October 2026 (the user's decision).
  * They render ai-agents' presentation v1, a different input
  * from `../approvals.ts` and `../approvalCard.ts`. Moved from the Slack
- * service (DC-004).
+ * service.
  *
  * @module portable/hosts/approvalRenderers
  */
@@ -176,23 +176,28 @@ export const isPapConfirm = (toolName: string): boolean =>
 export const PAP_CONFIRM_KEYS = [
   'key',
   'company',
+  'company_name',
   'summary',
   'terms',
   'operation_ref',
   'revision',
+  'expires_at',
   'digest',
+  'differences',
   'class',
   'session',
-  'only_the_person',
+  'retry',
   'was',
 ] as const;
 
 /**
- * A company's operation the person confirms (WHATSAPP WA-43, decided by the
- * user 28 October 2026): the company, its own summary, every term, the
- * operation and its **exact revision** — a decision is on that revision and
- * no other; a changed revision is another approval. A missing company,
- * summary, operation, revision or digest fails the card closed.
+ * A company's operation the person approves (decided by the user 28 October
+ * 2026): the company by its name and domain, its own summary, every term and
+ * what the terms check found, the operation and its **exact revision**, opaque
+ * — a decision is on that revision and no other; a changed revision is another
+ * approval. A missing company, summary, operation, revision, expiry or digest
+ * fails the card closed. `retry` holds the request the company answered, its
+ * body included: known, and never shown.
  */
 const papConfirm: Renderer = {
   name: 'pap-confirm',
@@ -203,14 +208,18 @@ const papConfirm: Renderer = {
     const missing: string[] = [];
     const extra: string[] = [];
     const company = typeof args.company === 'string' ? args.company : '';
+    const companyName =
+      typeof args.company_name === 'string' ? args.company_name : '';
     const summary = typeof args.summary === 'string' ? args.summary : '';
     const operation =
       typeof args.operation_ref === 'string' ? args.operation_ref : '';
-    const revision = Number.isInteger(args.revision)
-      ? (args.revision as number)
-      : undefined;
-    if (!company) missing.push('the company');
-    else fields.push({ label: 'Company', value: company });
+    const revision = typeof args.revision === 'string' ? args.revision : '';
+    if (!company || !companyName) missing.push('the company');
+    else
+      fields.push(
+        { label: 'Company', value: companyName },
+        { label: 'Domain', value: company },
+      );
     if (!summary) missing.push('what it does, in its words');
     else fields.push({ label: 'Summary', value: summary });
     const termsAreFields =
@@ -224,10 +233,17 @@ const papConfirm: Renderer = {
         (args.terms ?? {}) as Record<string, unknown>,
       ))
         fields.push({ label: name, value: text(value) });
+    if (Array.isArray(args.differences))
+      for (const difference of args.differences)
+        fields.push({ label: 'Not in its words', value: text(difference) });
+    else missing.push('what the terms check found');
     if (!operation) missing.push('the operation');
     else fields.push({ label: 'Operation', value: operation });
-    if (revision === undefined) missing.push('its exact revision');
-    else fields.push({ label: 'Revision', value: String(revision) });
+    if (!revision) missing.push('its exact revision');
+    else fields.push({ label: 'Revision', value: revision });
+    if (typeof args.expires_at !== 'string' || !args.expires_at)
+      missing.push('until when it holds');
+    else fields.push({ label: 'Holds until', value: args.expires_at });
     if (typeof args.digest !== 'string' || !args.digest)
       missing.push('the digest of its terms');
     if (typeof args.class === 'string' && args.class)

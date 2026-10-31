@@ -19,6 +19,8 @@ Python and TypeScript, and a local Provider for tests and examples.
 | JWTs | PyJWT (verification); the JWT is signed by the host's signer | `jose` (receipts); same signer |
 | Plugin | `agent-runtimes.protocols.pact` | `PactPlugin` |
 
+A case, as a deck: [A Personal Agent at a Business](./pact-a-personal-agent-at-a-business).
+
 ## The two profiles
 
 - **Identity** (§2–4): every request but the card carries a
@@ -150,7 +152,7 @@ no model.
 python examples/protocols/pact/personal_agent.py
 ```
 
-(example EX-06) prints the card (*Example Air Support: PACT delegated*, its
+prints the card (*Example Air Support: PACT delegated*, its
 two scopes with their action classes), an answer under the personal-agent
 JWT alone, the Brand's sign-in link and code, the one scope of two the
 person granted, an answer within it, a step-up for the other scope
@@ -177,7 +179,7 @@ change, and verifies the two receipts the Python Brand signed.
 python examples/protocols/pap_and_pact/app.py
 ```
 
-(example EX-07) asks a PAP company and a PACT Brand one question and keeps
+asks a PAP company and a PACT Brand one question and keeps
 one record: see [PAP and PACT](./pap-and-pact).
 
 ## Conformance

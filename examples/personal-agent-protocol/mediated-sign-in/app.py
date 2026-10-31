@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Relay a user's credentials once through PAP Mediated Sign-In, never through a model."""
+"""An application demonstrating PAP Mediated Sign-In with protected input."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from personal_agent_protocol import DiscoveryClient, SessionClient
+from personal_agent_protocol import AuthorizationError, DiscoveryClient
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
     InProcessNetwork,
@@ -17,12 +17,16 @@ from personal_agent_protocol.demo.kit import (
     personal_agent_reactor,
 )
 from personal_agent_protocol.demo.manzanita import ADA, ADA_CODE, manzanita
-from personal_agent_protocol.mediated import MediatedSignInClient
+from personal_agent_protocol.mediated import (
+    MEDIATED_EXTENSION,
+    MediatedSignInClient,
+    mediated_sign_in,
+)
+from personal_agent_protocol.models import ExtensionDescriptor
 
 from agent_runtimes.apps import Application
 
 TENANT = "atlas-demo"
-PAIRWISE = "usr_ada_at_manzanita_000000"
 
 app = Application(
     id="pap-mediated-sign-in",
@@ -33,72 +37,98 @@ app = Application(
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_mediated_sign_in. Never ask the user for a password or a "
-        "one-time code in chat, and never expose credentials, codes, or tokens."
+        "Use explain_mediated_sign_in to explain PAP Mediated Sign-In. Never ask the "
+        "user for a password or one-time code in chat: the host's own protected input "
+        "collects them. Never expose credentials, codes, or tokens."
     ),
 )
 
 
 @app.tool(does="read")
 async def explain_mediated_sign_in() -> dict[str, Any]:
-    """Run the real Mediated Sign-In client and return only non-secret evidence."""
+    """Sign in with the Mediated Sign-In grant at Manzanita's token endpoint: safe evidence."""
 
     clock = MutableClock()
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
     manzanita(network, clock)
-    # `pap.protectedInput`: the host's trusted surface. In a demo it is a script:
-    # the credentials, a mistyped code, then the right one.
-    surface = ScriptedInput(dict(ADA), {"code": "000000"}, {"code": ADA_CODE})
-    host = PersonalAgentHost(atlas, clock, protected_input=surface)
-    async with network.client() as http:
-        reactor = personal_agent_reactor(host, network=network, http_client=http)
-        company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-            "manzanita.example"
-        )
-        auth = company.document.auth
-        assert auth is not None and auth.mediated is not None
-        session = await SessionClient(reactor=reactor, http_client=http).start(
+    http = network.client()
+    # The host's trusted input surface (`pap.protectedInput`). In a real host the user
+    # types into it; here a script answers: her credentials, a wrong code, the right one.
+    typed = ScriptedInput(dict(ADA), {"code": "000000"}, {"code": ADA_CODE})
+    host = PersonalAgentHost(atlas, clock, protected_input=typed)
+    reactor = personal_agent_reactor(host, network=network, http_client=http)
+
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
+        "manzanita.example"
+    )
+    offered = mediated_sign_in(company)
+    if offered is None or company.oauth_metadata is None:
+        raise RuntimeError("the example world is incomplete")
+    mediated = MediatedSignInClient(reactor=reactor, http_client=http)
+
+    # A field named like a parameter of the grant is refused before the user is asked anything.
+    hostile = company.document.model_copy(
+        update={
+            "extensions": {
+                MEDIATED_EXTENSION: ExtensionDescriptor.model_validate(
+                    {
+                        "version": "1",
+                        "fields": [
+                            {"name": "client_id", "label": "Client", "secret": False}
+                        ],
+                        "scopes": ["orders:read"],
+                    }
+                )
+            }
+        }
+    )
+    try:
+        await mediated.sign_in(
+            company=company.model_copy(update={"document": hostile}),
             client_id=atlas.client_id,
-            pairwise_user_id=PAIRWISE,
-            issuer=auth.issuer,
-            token_endpoint=company.oauth_metadata.token_endpoint,  # type: ignore[union-attr]
+            scopes=("orders:read",),
             tenant_id=TENANT,
         )
-        who = {"tenant_id": TENANT, "issuer": auth.issuer}
-        mediated = MediatedSignInClient(reactor=reactor, http_client=http)
-        started = await mediated.sign_in(
-            mediated=auth.mediated,
-            organization=company.document.organization,
-            scopes=("orders:read",),
-            token=session,
-            **who,
-        )
-        assert started.reference is not None
-        wrong = await mediated.submit_code(started.reference, token=session, **who)
-        done = await mediated.submit_code(started.reference, token=session, **who)
+        reserved_field_refused = "not refused"
+    except AuthorizationError as error:
+        reserved_field_refused = error.code
+    asked_before_refusal = len(typed.asked)
 
-    evidence = (
-        done.model_dump_json() + started.model_dump_json() + wrong.model_dump_json()
+    # The declared fields, collected by the host, sent once to the issuer's token endpoint.
+    started = await mediated.sign_in(
+        company=company,
+        client_id=atlas.client_id,
+        scopes=("orders:read", "orders:write"),
+        tenant_id=TENANT,
     )
+    if not (started.reference is not None):
+        raise RuntimeError("the example world is incomplete")
+
+    wrong = await mediated.submit_code(started.reference)
+    done = await mediated.submit_code(started.reference)
+    await http.aclose()
+
     return {
-        "company": company.document.organization.name,
-        "declared_fields": [field.name for field in auth.mediated.fields],
-        "secret_fields": [field.name for field in auth.mediated.fields if field.secret],
-        "endpoint_host": auth.mediated.endpoint.split("/")[2],
-        "asked_on_protected_input": [request.purpose for request in surface.asked],
+        "token_endpoint": company.oauth_metadata.token_endpoint,
+        "reserved_field": reserved_field_refused,
+        "user_asked_before_refusal": asked_before_refusal,
+        "fields_asked_for": [field.label for field in typed.asked[0].fields],
+        "secret_fields": [
+            field.name for field in typed.asked[0].fields if field.secret
+        ],
+        "asked_on_behalf_of": typed.asked[0].company_domain,
         "first_answer": started.status,
         "code_sent_to": started.sent_to,
-        "mistyped_code_answer": wrong.status,
+        "wrong_code": wrong.status,
+        "same_reference_after_wrong_code": wrong.reference == started.reference,
         "final_status": done.status,
-        "same_session_signed_in": done.token is not None
-        and done.token.signed_in
-        and done.token.session_key == session.session_key,
+        "signed_in": done.token is not None,
         "granted_scopes": done.granted_scopes,
-        "account_token_stored_by_reference": done.account_token_reference
+        "refresh_token_stored_by_reference": done.refresh_token_reference
         in host.vault.values,
-        "password_absent_from_every_result": ADA["password"] not in evidence,
+        "protected_input_purposes": [request.purpose for request in typed.asked],
         "credentials_and_codes_withheld": True,
-        "session_and_account_tokens_withheld": True,
+        "tokens_withheld": True,
     }

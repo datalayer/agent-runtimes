@@ -23,7 +23,7 @@ What a call is, before it is decided:
 - a few tools of the runtime itself that only look (`search_tools`,
   `load_skill`…), which are reading;
 - proposing a skill and reading the approved ones (`propose_skill`,
-  `use_learned_skill`, R-26), which its owner decides, and are reading;
+  `use_learned_skill`), which its owner decides, and are reading;
 - the tools that compose an output besides words (`write_notebook`), which
   touch nothing outside the run and are reading too — offered only in a run
   whose caller accepts their format (`agent_runtimes.output.formats`).
@@ -35,12 +35,12 @@ Before that, the agent is given only the tools of its servers that the
 application's connections give, at their level (`prepare_tools`,
 `rules.gives`): a connection that only reads carries no tool that writes. And
 only the tools of the parts of its computer its permissions turn on — browse,
-files, shell, each off until it is turned on (`computer.computer_gives`, R-23): its shell off, it is shown no tool that runs code; its files off, none
+files, shell, each off until it is turned on (`computer.computer_gives`): its shell off, it is shown no tool that runs code; its files off, none
 of its files; there is no browser tool at all yet. The tools of its files are
 given here (`get_toolset`), and while a person has taken its computer over,
 each call to a tool of its computer waits until they hand it back.
 
-**What it sends says who wrote it** (I-10). A tool of a server whose
+**What it sends says who wrote it**. A tool of a server whose
 spec names the argument carrying what it sends (`rules.signs_of`: a mail's
 body, a message's text) has that argument closed with the application's
 byline before the call is made — or shown to the person who approves it —
@@ -155,10 +155,10 @@ CODE_TOOLS: frozenset[str] = SHELL_TOOLS
 #: Why a call was decided as it was, beside the reasons of `rules`.
 NO_SHELL = "no_shell"
 
-#: A visitor without an account's turn, which only reads (R-30).
+#: A visitor without an account's turn, which only reads.
 SIGNED_OUT = "signed_out"
 
-#: Background work with nobody present, which only reads unless a rule says otherwise (R-16).
+#: Background work with nobody present, which only reads unless a rule says otherwise.
 UNATTENDED = "unattended"
 
 #: What it says when background work would act on the world unasked.
@@ -177,11 +177,9 @@ Notify = Callable[[str, str], Awaitable[None]]
 Record = Callable[["Enforced"], None]
 
 
-#: Why a company's confirmation is not asked here: the gateway asks it (PAP R-04),
-#: the person always (*Ask me first*), or unless an approval in advance covers
-#: its terms (*Do it if I asked*).
+#: Why a company's operation is not asked here: the gateway asks the person,
+#: on *Waiting for you*, about every one, whatever the Rule says.
 GATEWAY_ASKS = "the_gateway_asks_the_person"
-GATEWAY_ASKS_UNLESS_APPROVED = "the_gateway_asks_unless_approved_in_advance"
 #: Why a company's confirmation is refused: the Maker left it to the person, at the company.
 LEFT_AT_THE_COMPANY = "left_to_the_person_at_the_company"
 
@@ -240,15 +238,15 @@ class Enforced:
     """For code, `call_tool` and the like: what each tool it reaches was decided."""
 
     approved: Optional[Approval] = None
-    """For *Do it if I asked*: the approval given in advance that covers it (U-25)."""
+    """For *Do it if I asked*: the approval given in advance that covers it."""
 
     refused: str = ""
     """Why the call is refused though nobody is asked — the tool runs only to
-    say so in its own sentence, writing nothing (a Space not granted, R-25);
+    say so in its own sentence, writing nothing (a Space not granted);
     the record says *refused*, never the behaviour that let the tool run."""
 
     inputs: Mapping[str, Any] = field(default_factory=dict)
-    """For a company's tool, what the decision was taken on (R-01): the company and its protocol, the connection's level and in whose
+    """For a company's tool, what the decision was taken on: the company and its protocol, the connection's level and in whose
     account it acts, whether that level and its named tools give the tool;
     with `decision`, what the call does, the Rule and the narrowest reason.
     The gateway records the rest — the interface, the company's grant, the
@@ -284,7 +282,7 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     app_uid: str = ""
     """The application as the platform knows it, when it does: what its
-    approvals are asked under, beside its id (U-19)."""
+    approvals are asked under, beside its id."""
 
     ask: Optional[Ask] = None
     """How the person is asked; the tool-approval path when unsaid."""
@@ -294,11 +292,11 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     notify: Optional[Notify] = None
     """Told when the person is asked through the tool-approval path: the
-    application's channels (R-37)."""
+    application's channels."""
 
     granted: Optional[Granted] = None
     """What the person approved in advance, read before *Do it if I asked*
-    asks them (U-25); with none, it asks."""
+    asks them; with none, it asks."""
 
     extra_classes: Dict[str, List[str]] = field(default_factory=dict)
     """What tools the catalogue does not know do, by runtime name."""
@@ -307,15 +305,14 @@ class AppRulesCapability(AbstractCapability[Any]):
     """The MCP tool names the runtime knows (`server__tool` among them)."""
 
     answered: Optional[Answered] = None
-    """Told what came of asking the person: the record's approval (R-07)."""
+    """Told what came of asking the person: the record's approval."""
 
     unattended: Optional[Callable[[], bool]] = None
     """Whether the current run has nobody present — a session woken by a
-    schedule (R-14): then it only reads, unless a rule says otherwise
-    (R-16)."""
+    schedule: then it only reads, unless a rule says otherwise."""
 
     signature: Optional[Callable[[], str]] = None
-    """Who wrote what the current run sends, in a sentence (I-10): the
+    """Who wrote what the current run sends, in a sentence: the
     application and the person it acts for, by name (`saving.signature`);
     its name alone, or *on its own* when nobody is present, when unsaid."""
 
@@ -392,7 +389,7 @@ class AppRulesCapability(AbstractCapability[Any]):
         tool `call_tool` calls, the tools code names — so that nothing the
         session says of a tool (`extra_classes`) can grant a connection the
         application does not have. Last, the rules a person added to the
-        running session tighten it (SH-54): the strictest of the
+        running session tighten it: the strictest of the
         application's behaviour and theirs on the call's classes.
         """
         return self._tightened(self._decide_app(tool_name, args))
@@ -430,29 +427,19 @@ class AppRulesCapability(AbstractCapability[Any]):
         company = company_classes(tool_name)
         if company is not None:
             # A company's tool, through the gateway's `pap` toolset: what it
-            # does is the gateway's own table (R-02).
+            # does is the gateway's own table.
             decided = decision_for(self.app, tool_name, classes=list(company))
-            if _company_confirm(tool_name) is not None and decided.behaviour in (
-                ASK_FIRST,
-                IF_ASKED,
-            ):
-                # The gateway asks the person itself, with the company's own
-                # terms (R-04): asked here too, they would be asked twice, the
-                # first time without the terms. *Ask me first* always, *Do it if
-                # I asked* unless an approval in advance covers the terms
-                # (`ask_the_person`, set in `before_tool_execute`).
-                because = (
-                    GATEWAY_ASKS
-                    if decided.behaviour == ASK_FIRST
-                    else GATEWAY_ASKS_UNLESS_APPROVED
+            if _company_confirm(tool_name) is not None:
+                # The Rule decides only whether the call is made at all: *Leave it
+                # to me* never confirms, and the person is pointed to the company.
+                # Any other Rule lets it through, and the gateway asks the person
+                # itself with the company's own terms: no Rule approves an
+                # operation, and asked here too, they would be asked twice.
+                decided = (
+                    replace(decided, because=LEFT_AT_THE_COMPANY)
+                    if decided.behaviour == LEAVE_TO_ME
+                    else replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
                 )
-                decided = replace(decided, behaviour=DO_IT, because=because)
-            elif (
-                _company_confirm(tool_name) is not None
-                and decided.behaviour == LEAVE_TO_ME
-            ):
-                # *Leave it to me* never confirms: the person is pointed to the company.
-                decided = replace(decided, because=LEFT_AT_THE_COMPANY)
             elif is_purchase(tool_name) and decided.behaviour != LEAVE_TO_ME:
                 # A purchase at a merchant is always asked of the person, by the
                 # gateway with the exact checkout (decided 2026-10-13): asked here
@@ -472,7 +459,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=classes)
             )
-        # A tool of its own, written in its code (P-06): decided by
+        # A tool of its own, written in its code: decided by
         # what it says it does, or by a rule that names it. After an MCP
         # tool, so that no name of its own decides a server's tool.
         if self.app.tool(tool_name) is not None:
@@ -486,7 +473,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, _strictest(parts), parts if len(parts) > 1 else ()
             )
-        # A result saved is shown first (R-24): asked whatever the rules
+        # A result saved is shown first: asked whatever the rules
         # say of writing, and never passed by an approval given in advance;
         # only *Leave it to me* stands, and refuses it.
         if tool_name == SAVE_TOOL and tool_name in self.extra_classes:
@@ -494,7 +481,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             if decided.behaviour != LEAVE_TO_ME and not_granted(
                 self.app, args.get("space")
             ):
-                # A Space it is not granted to write (R-25): nobody is
+                # A Space it is not granted to write: nobody is
                 # asked to approve what cannot be written; the tool runs and
                 # refuses it in its own sentence, writing nothing.
                 return Enforced(
@@ -517,7 +504,7 @@ class AppRulesCapability(AbstractCapability[Any]):
         return Enforced(tool_name, _unclassed(tool_name))
 
     def _decide_host(self, tool_name: str) -> Decision:
-        """A tool of the host page (D-10): run by the page, never here.
+        """A tool of the host page: run by the page, never here.
 
         What the page passes (`host_context`) is reading. A function it
         offers is decided by the rule that names its tool, as the page
@@ -568,7 +555,7 @@ class AppRulesCapability(AbstractCapability[Any]):
     # --- what it is given --------------------------------------------------------
 
     def _company_inputs(self, tool_name: str) -> Dict[str, Any]:
-        """What a company's tool is decided on, of what the runtime holds (R-01)."""
+        """What a company's tool is decided on, of what the runtime holds."""
         found = pap_tool(tool_name)
         if found is None:
             return {}
@@ -589,12 +576,12 @@ class AppRulesCapability(AbstractCapability[Any]):
         }
 
     def given(self, tool_name: str) -> bool:
-        """Whether the agent is given a tool, by its runtime name (U-15).
+        """Whether the agent is given a tool, by its runtime name.
 
         A tool of an MCP server is given by a connection, at its level: one
         that only reads gives only what only reads (`rules.gives`). A tool
         whose server cannot be told is not given: it could never run. A tool
-        of its computer is given only when its part is on (R-23). The
+        of its computer is given only when its part is on. The
         runtime's own tools and the catalogue's are given, and decided when
         they are called.
         """
@@ -658,7 +645,7 @@ class AppRulesCapability(AbstractCapability[Any]):
         self, tool_name: str, args: Dict[str, Any], decision: Decision
     ) -> Dict[str, Any]:
         """The arguments of a call as they are sent: what a server's tool sends
-        closed with the application's byline (I-10), when its spec names
+        closed with the application's byline, when its spec names
         the argument carrying it (`signs_of`); untouched otherwise, and always
         for a call that only reads.
         """
@@ -704,8 +691,8 @@ class AppRulesCapability(AbstractCapability[Any]):
         config = ToolApprovalConfig.from_env()
         config.agent_id = self.agent_id or config.agent_id
         manager = ToolApprovalManager(config)
-        # What is saved is shown whole before it is (R-24), and so is
-        # what is sent — the draft in full before *Approve* (W-05); any
+        # What is saved is shown whole before it is, and so is
+        # what is sent — the draft in full before *Approve*; any
         # other call's arguments, cut.
         whole = tool_name == SAVE_TOOL or "send" in decision.classes
         limit = DRAFT_LIMIT if whole else 500
@@ -727,11 +714,7 @@ class AppRulesCapability(AbstractCapability[Any]):
     ) -> dict[str, Any]:
         enforced = self.decide(call.tool_name, args)
         decision = enforced.decision
-        if _company_confirm(call.tool_name) is not None:
-            # The Rule's *Ask me first* reaches the gateway, whatever the model
-            # sent (R-04): there, no approval in advance stands in for the person.
-            args = {**args, "ask_the_person": decision.because == GATEWAY_ASKS}
-        # Asked by a personal agent through the company service (B-04): a declared operation is proposed rather than made, and made
+        # Asked by a personal agent through the company service: a declared operation is proposed rather than made, and made
         # only in the turn its confirmation was redeemed for, with the confirmed
         # terms, once. What the Maker leaves to the person stays theirs.
         if decision.behaviour != LEAVE_TO_ME:
@@ -758,7 +741,7 @@ class AppRulesCapability(AbstractCapability[Any]):
                 # turn, so nothing proposed reached the person).
                 raise SkipToolExecution(proposed)
         # A visitor without an account only reads, and nobody is asked for
-        # them: whatever the rules say, anything else is not done (R-30).
+        # them: whatever the rules say, anything else is not done.
         refusal = visitor_refusal(call.tool_name, decision.classes, decision.behaviour)
         for part in enforced.parts:
             refusal = refusal or visitor_refusal(
@@ -768,7 +751,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             raise AppRuleBlockedError(
                 replace(decision, behaviour=LEAVE_TO_ME, because=SIGNED_OUT), refusal
             )
-        # Nobody present (R-16): what acts on the world is done, or asked
+        # Nobody present: what acts on the world is done, or asked
         # of its maker, only when a rule of its own says so; its own computer
         # is its own.
         if self.unattended is not None and self.unattended():
@@ -778,12 +761,12 @@ class AppRulesCapability(AbstractCapability[Any]):
                 if self.record is not None:
                     self.record(replace(enforced, decision=stopped))
                 raise AppRuleBlockedError(stopped, unattended_sentence(unruled))
-        # What it sends says who wrote it (I-10): signed before it is
+        # What it sends says who wrote it: signed before it is
         # asked, so that the person approves what goes out, as it goes out.
         args = self.signed(call.tool_name, args, decision)
         if decision.behaviour == IF_ASKED and self.granted is not None:
-            # *Do it if I asked* rests on what the person approved in advance
-            # (U-25), never on a reading of the conversation.
+            # *Do it if I asked* rests on what the person approved in advance,
+            # never on a reading of the conversation.
             approved = await self.granted(call.tool_name, args, decision)
             if approved is not None:
                 enforced = replace(enforced, approved=approved)
@@ -794,7 +777,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             return args
         if decision.behaviour in (ASK_FIRST, IF_ASKED):
             # Not approved in advance: the person is asked, and what they
-            # answered is an entry of the record of its own (R-07).
+            # answered is an entry of the record of its own.
             await asked_and_answered(
                 self._ask(call.tool_name, args, decision),
                 call.tool_name,
@@ -818,7 +801,7 @@ def _acts(decision: Decision) -> bool:
 
 def _unruled(enforced: "Enforced", tool_name: str) -> Optional[Decision]:
     """The first part of a call that acts and that no rule of its own covers,
-    or None: what background work does not do (R-16). Its own computer —
+    or None: what background work does not do. Its own computer —
     its shell, its files — is its own, and code is decided by the tools it
     names.
     """
@@ -842,7 +825,7 @@ def approval_marks(app_id: str, app_uid: str, sentence: str) -> Dict[str, str]:
 
     The rule or Gate it was asked under, and the application, by its id and,
     when the platform knows it, its uid — so its own page, the Tool Approvals
-    page and its channels say whose it is (U-19).
+    page and its channels say whose it is.
     """
     marks = {"_rule": sentence, "_app": app_id}
     if app_uid:

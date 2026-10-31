@@ -163,7 +163,7 @@ fails the draft's vectors. The signature base is written here over
 
 ## Example
 
-Runs locally, in one process with no network (examples EX-01 and EX-02):
+Runs locally, in one process with no network:
 
 ```bash
 python examples/protocols/web_bot_auth/signed_agent.py
@@ -180,8 +180,7 @@ in-flight requests finish. The same key signs in TypeScript: `vectors.json`'s
 
 ### In the browser
 
-The examples gallery's **Signed requests** (*Agent protocols* group, example
-EX-10) does the same in a page, with no server: a fresh Ed25519 key made with
+The examples gallery's **Signed requests** (*Agent protocols* group) does the same in a page, with no server: a fresh Ed25519 key made with
 WebCrypto signs `GET https://shop.example/products?q=tea` through
 `signRequest`; the page shows the three headers, the signature base exactly
 as the signer was handed it, and the public key the directory lists (the
@@ -204,35 +203,9 @@ TAP's draft profile (below) has its own vectors, `web_bot_auth/fixtures/tap.json
 
 ## TAP, a draft profile
 
-**TAP**, Visa's Trusted Agent Protocol, is an agent-recognition profile over these signatures. It is built as a **draft** from Visa's public documentation, read on 2026-10-13 — the [Merchant Specifications](https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications), the [overview](https://developer.visa.com/capabilities/trusted-agent-protocol/overview) and the [reference repository](https://github.com/visa/trusted-agent-protocol) — and not confirmed by Visa; Datalayer's Studio says it *arriving* until it is.
+**TAP**, Visa's Trusted Agent Protocol, is an agent-recognition profile over these
+signatures, built as a draft from Visa's public documentation: see [TAP](./tap).
 
-| | TAP (draft) | Web Bot Auth |
-| --- | --- | --- |
-| Headers | `Signature-Input`, `Signature` | the same, and `Signature-Agent` |
-| Covered | at least `@authority` and `@path` | `@authority` (or `@target-uri`) and the `Signature-Agent` member |
-| Parameters | `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag`, all required | `created`, `expires`, `keyid`, `tag`; `nonce` advised |
-| Tag | `agent-browser-auth` to browse, `agent-payer-auth` to pay | `web-bot-auth` |
-| Life | at most 8 minutes; a nonce seen in the last 8 minutes is a replay | 24 hours at most, advised |
-| Keys | by `keyid`, from Visa's directory (`https://mcp.visa.com/.well-known/jwks`) or a registry | found from the `Signature-Agent` member |
-
-```python
-from agent_runtimes.protocols.web_bot_auth.tap import sign_tap_request, verify_tap_request
-
-signed = await sign_tap_request(method="GET", url=url, signer=signer, intent="browse")
-found = await verify_tap_request(
-    method="GET", url=url, headers=signed.as_dict(), keys=keys, nonce_store=nonces
-)
-found.intent  # "browse" or "pay"
-```
-
-```ts
-import { signTapRequest, verifyTapRequest } from '@datalayer/agent-runtimes/lib/protocols/web-bot-auth/tap';
-
-const headers = await signTapRequest({ method: 'GET', url }, signer, { intent: 'pay' });
-const found = await verifyTapRequest(request, keys, { nonceStore });
-```
-
-Found reading Visa's page: its own sample's `expires` is an hour after `created`, against its 8-minute rule (the rule is followed); it names no `Signature-Agent`; it publishes no test vector. The Consumer Recognition Object and the Payment Container a TAP agent may send in a body are not implemented.
 All protocols side by side: [Conformance](./agent-protocols#conformance).
 
 ## What never leaves the host

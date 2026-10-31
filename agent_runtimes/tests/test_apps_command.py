@@ -147,6 +147,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "sign-in-desk",
         "returns-desk",
         "bookkeeping-desk",
+        # A coding agent behind the Shield, lent one repository to read (agentspecs 0.0.137).
+        "code-explainer",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []

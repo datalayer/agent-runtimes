@@ -9,6 +9,7 @@ header:
 
   paths-ignore:
     - '**/*.toml'
+    - '**/*.mmd'
     - '**/*.apt'
     - '**/*.cedar'
     - '**/*.csv'
@@ -17,6 +18,7 @@ header:
     - '**/*.ipynb'
     - '**/*.j2'
     - '**/*.json'
+    - '**/*.jsonl'
     - '**/*.mamba'
     - '**/*.md'
     - '**/*.mdx'

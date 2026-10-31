@@ -19,6 +19,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import type { SceneCastMemberSpec, SceneSpec } from '../../types/scenes';
 import type { TeamSpec } from '../../types/teams';
 import { APP_CATALOGUE } from '../../specs/apps';
+import { getAgentspecs } from '../../specs/agents';
 import { listSceneSpecs } from '../../specs/scenes';
 
 /** Who talks to whom over A2A: an edge of the team's graph. */
@@ -43,6 +44,17 @@ export function appOfMember(
   return id && Object.prototype.hasOwnProperty.call(APP_CATALOGUE, id)
     ? APP_CATALOGUE[id]
     : undefined;
+}
+
+/**
+ * An application's colour on a stage: its agent's, as its spec names it — a
+ * name of the palette or a hex, drawn in the current theme by
+ * `usePaletteColor` — or none, when it has no agent or its agent no colour.
+ */
+export function appColorOf(
+  app: Pick<AppSpec, 'agent'> | undefined,
+): string | undefined {
+  return (app?.agent && getAgentspecs(app.agent)?.color) || undefined;
 }
 
 /**

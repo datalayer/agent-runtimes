@@ -1,0 +1,32 @@
+---
+sidebar_position: 18
+title: MCP Apps
+---
+
+# MCP Apps: not implemented
+
+[MCP Apps](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps) is an
+extension of the [Model Context Protocol](./mcp) for servers that provide
+application interfaces. Agent Runtimes does not speak it, and this page says what
+is there.
+
+| | |
+| --- | --- |
+| Version | none spoken |
+| Package | `@modelcontextprotocol/ext-apps` `^0.2.2` is declared in `package.json`, and nothing imports it |
+| Routes | none |
+| Plugin | none: it would be an `mcp.extension.*` point of the [MCP](./mcp) plugin |
+
+## Enable it
+
+It cannot be enabled. In an Appspec, `mcp-apps` is a renderer name that validation
+answers with *is not enabled*:
+
+```yaml
+ui:
+  - plugin: app-page
+    renderer: mcp-apps
+```
+
+For an interface in an agent's answer today, use [A2UI](./a2ui), or
+[MCP-UI](./mcp-ui) resources.

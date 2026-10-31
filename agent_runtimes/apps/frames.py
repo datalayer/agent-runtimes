@@ -16,22 +16,34 @@ nothing reads the catalogue's. What cannot be read — no token, IAM
 unreachable or refusing, an answer of the wrong shape — is said and stops the
 application: an agent never works under the catalogue's version in place of
 its organization's without anybody knowing.
+
+An organization's owners may disable a context of the catalogue, one by one:
+IAM answers those beside the Frames, as ``disabled``, and an IAM that does not
+yet answers none. An application naming a disabled context is not refused: it
+runs without it, without what a context it names inherits from it, and that
+is said (`frames_left_out`): logged here, kept in the record of each session
+(`guards.AppChecks.preflight`), and reported by `loop apps validate`.
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence
 
 from agentspecs.frames import (
     FrameError,
     compose_frames,
+    frame_lineage,
     frames_with_organization,
     is_organization_frame,
+    load_raw_frames,
     render_frames,
 )
 
 from agent_runtimes.apps.loading import AppNotRunnable, frame_id_of
+
+logger = logging.getLogger(__name__)
 
 #: Who manages an organization's own context, as the agent is told.
 ORGANIZATION_OWNER = "your organization"
@@ -50,6 +62,9 @@ class OrganizationFrames:
 
     versions: Dict[str, Any] = field(default_factory=dict)
     """Its versions of the catalogue's contexts, and its own, by id."""
+
+    disabled: FrozenSet[str] = frozenset()
+    """The ids of the catalogue's contexts it disabled."""
 
     @property
     def own(self) -> List[str]:
@@ -86,7 +101,8 @@ def read_organization_frames(
     Returns
     -------
     OrganizationFrames
-        Its versions and its own contexts; none for no organization.
+        Its versions, its own contexts and the ones it disabled; none for
+        no organization.
 
     Raises
     ------
@@ -113,10 +129,64 @@ def read_organization_frames(
         ) from None
     if response.status_code != 200:
         raise FramesUnread(f"{unread}: IAM answered {response.status_code}.")
-    frames = response.json().get("frames")
-    if not isinstance(frames, dict):
+    answer = response.json()
+    frames = answer.get("frames")
+    disabled = answer.get("disabled", {})
+    if not isinstance(frames, dict) or not isinstance(disabled, dict):
         raise FramesUnread(f"{unread}: IAM answered no contexts.")
-    return OrganizationFrames(organization_uid, frames)
+    return OrganizationFrames(organization_uid, frames, frozenset(disabled))
+
+
+def frames_left_out(
+    context: Sequence[str], organization: OrganizationFrames
+) -> List[str]:
+    """What an application runs without because its organization disabled it, in sentences.
+
+    Parameters
+    ----------
+    context : sequence of str
+        The application's ``context``.
+    organization : OrganizationFrames
+        The contexts of the organization it belongs to.
+
+    Returns
+    -------
+    list of str
+        One sentence for each context it names that is disabled, and for each
+        disabled one that a context it names builds on; none when there is none.
+    """
+    said: List[str] = []
+    for ref in context:
+        identity = frame_id_of(ref)
+        if identity in organization.disabled:
+            said.append(
+                f"Its organization disabled the context {ref!r}: "
+                "the application runs without it."
+            )
+            continue
+        said.extend(
+            f"Its organization disabled the context {parent!r}, which {ref!r} "
+            "builds on: the application runs without what that one brings."
+            for parent in frame_lineage(identity)
+            if parent in organization.disabled
+        )
+    return said
+
+
+def _catalogue_without(disabled: FrozenSet[str]) -> Dict[str, Dict[str, Any]]:
+    """The catalogue with no context building on a disabled one: each builds on the nearest that is not."""
+    catalogue = load_raw_frames()
+
+    def builds_on(frame: Dict[str, Any]) -> Any:
+        ref = frame.get("extends")
+        while ref and frame_id_of(str(ref)) in disabled:
+            ref = catalogue[frame_id_of(str(ref))].get("extends")
+        return ref
+
+    return {
+        identity: {**frame, "extends": builds_on(frame)}
+        for identity, frame in catalogue.items()
+    }
 
 
 def frames_problems(
@@ -152,7 +222,8 @@ def frames_instructions(
     Returns
     -------
     str
-        The contexts as the organization reads them, in Markdown.
+        The contexts as the organization reads them, in Markdown, without
+        the ones it disabled.
 
     Raises
     ------
@@ -160,15 +231,22 @@ def frames_instructions(
         When it names a context its organization does not have, or one of
         the organization's contexts cannot be read.
     """
-    if not context:
+    for sentence in frames_left_out(context, organization):
+        logger.warning("Organization %s: %s", organization.organization_uid, sentence)
+    kept = [ref for ref in context if frame_id_of(ref) not in organization.disabled]
+    if not kept:
         return ""
-    problems = frames_problems(context, organization)
+    problems = frames_problems(kept, organization)
     if problems:
         raise AppNotRunnable(problems)
     try:
         frames = frames_with_organization(
-            organization.versions, owner=ORGANIZATION_OWNER
+            organization.versions,
+            owner=ORGANIZATION_OWNER,
+            frames=_catalogue_without(organization.disabled)
+            if organization.disabled
+            else None,
         )
-        return render_frames(compose_frames(list(context), frames))
+        return render_frames(compose_frames(kept, frames))
     except FrameError as error:
         raise AppNotRunnable([str(error)]) from None

@@ -835,7 +835,8 @@ class A2AWorker(_FastA2AWorker):
                 self.agent.name,
                 redact("".join(traceback.format_exception(exc))),
             )
-            from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
+            from ..context.delegation import refusal_meta
+            from ..guardrails.model_budget import ModelBudgetExceeded
 
             await self.storage.update_task(task_id, state="failed")
             message = _agent_message(
@@ -928,6 +929,7 @@ class A2AWorker(_FastA2AWorker):
             CredentialLost,
             checkpoint_of,
             close_steering,
+            delegated_budget,
             enter_execution,
             execution_of,
             forget_pause,
@@ -940,7 +942,6 @@ class A2AWorker(_FastA2AWorker):
             was_delegated,
         )
         from ..context.identities import set_request_user_jwt
-        from ..guardrails.model_budget import delegated_budget
 
         meta = incoming.get("metadata")
         # A message said and heard (its audio by `HearA2AAudio`, or by the

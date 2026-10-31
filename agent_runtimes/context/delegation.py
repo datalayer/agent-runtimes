@@ -38,6 +38,7 @@ from typing import Any
 from agent_teams.a2a.orchestration_extension import (
     CHECKPOINT_FIELD,
     CREDENTIAL_FIELD,
+    ENVELOPE_KEY,
     EXECUTION_FIELD,
     ORCHESTRATION_EXTENSION_URI,
     PAUSE_FIELD,
@@ -50,11 +51,12 @@ from pydantic import ValidationError
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 
-from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+from agent_runtimes.guardrails.model_budget import ModelBudgetReached
 
 __all__ = [
     "CHECKPOINT_FIELD",
     "CREDENTIAL_FIELD",
+    "DELEGATION_META_KEY",
     "EXECUTION_FIELD",
     "EXTENSION_URI",
     "PAUSED_FIELD",
@@ -69,6 +71,7 @@ __all__ = [
     "SteerCapability",
     "checkpoint_of",
     "close_steering",
+    "delegated_budget",
     "seat_of",
     "session_meta",
     "session_of_meta",
@@ -84,6 +87,7 @@ __all__ = [
     "pause_requested",
     "paused_at",
     "paused_meta",
+    "refusal_meta",
     "release",
     "request_pause",
     "run_execution",
@@ -96,16 +100,24 @@ __all__ = [
 
 # The Datalayer orchestration extension this runtime's workers speak: on the
 # A2A agent card, and in the ACP agent's capabilities. `EXTENSION_URI`,
-# `CREDENTIAL_FIELD`, `EXECUTION_FIELD`, `CHECKPOINT_FIELD`, `PAUSED_FIELD`,
-# `PAUSE_FIELD` and `STEER_METHOD` are imported above, from the standalone
-# package this runtime's own delegation metadata is checked against
-# (O3-02), rather than declared here — a rename on either
-# side is now a real import error, not a silent drift between two
+# `DELEGATION_META_KEY`, `CREDENTIAL_FIELD`, `EXECUTION_FIELD`,
+# `CHECKPOINT_FIELD`, `PAUSED_FIELD`, `PAUSE_FIELD` and `STEER_METHOD` are
+# imported above, from the standalone package this runtime's own delegation
+# metadata is checked against (O3-02), rather than declared here — a rename
+# on either side is now a real import error, not a silent drift between two
 # hand-maintained copies of the same strings. What has no equivalent in that
 # package — held credentials, the current run's `ContextVar`,
 # `SteerCapability`'s pydantic-ai integration — stays here, since it is this
-# runtime's own state, not part of the wire protocol.
+# runtime's own state, not part of the wire protocol. This module is the one
+# place the runtime imports that package at module level: importing
+# `agent_teams` registers this runtime's reactor extension, whose built-in
+# plugin imports the applications and the adapters, so nothing they import
+# at module level may import this module (`guardrails.model_budget` is a
+# leaf for that reason; `tests/test_sessions_plugin_import_order.py` holds it).
 EXTENSION_URI = ORCHESTRATION_EXTENSION_URI
+#: Where a delegation carries Datalayer's own fields beside a protocol's, in
+#: the A2A message's ``metadata`` and the ACP prompt's ``_meta``.
+DELEGATION_META_KEY = ENVELOPE_KEY
 #: What a worker answers a turn with about what the turn spent: ``{inputTokens, outputTokens, cost, currency}``.
 SPENT_FIELD = USAGE_FIELD
 
@@ -404,6 +416,52 @@ def paused_at(meta: Any) -> str | None:
     paused = ours.get(PAUSED_FIELD) if ours is not None else None
     checkpoint_id = paused.get("checkpointId") if isinstance(paused, Mapping) else None
     return checkpoint_id if isinstance(checkpoint_id, str) and checkpoint_id else None
+
+
+def delegated_budget(meta: Any) -> dict[str, Any] | None:
+    """
+    The model budget a delegation carries, when it carries one (O1-07).
+
+    Parameters
+    ----------
+    meta : Any
+        The A2A message's ``metadata`` or the ACP prompt's ``_meta``.
+
+    Returns
+    -------
+    dict[str, Any] | None
+        The budget, camel case as the canonical record spells it;
+        `guardrails.model_budget.usage_limits_for` turns it into the run's limits.
+    """
+    ours = _ours(meta)
+    budget = ours.get("budget") if ours is not None else None
+    return dict(budget) if isinstance(budget, Mapping) and budget else None
+
+
+def refusal_meta(budget_reached: ModelBudgetReached) -> dict[str, Any]:
+    """
+    What a worker says back, in the delegation's own place, when its budget stopped it.
+
+    Parameters
+    ----------
+    budget_reached : ModelBudgetReached
+        The limit reached, as `guardrails.model_budget.reached` named it.
+
+    Returns
+    -------
+    dict[str, Any]
+        The A2A status message's ``metadata``, or the ACP response's ``_meta``;
+        the adapters read it into ``budget_exhausted`` with ``details.budget = model``.
+    """
+    return {
+        DELEGATION_META_KEY: {
+            "error": {
+                "code": "budget_exhausted",
+                "message": str(budget_reached),
+                "details": {"budget": "model", "limit": budget_reached.limit},
+            }
+        }
+    }
 
 
 def spent_meta(usage: Usage | None) -> dict[str, Any] | None:

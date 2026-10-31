@@ -1,0 +1,14 @@
+sequenceDiagram
+  actor p0 as You
+  participant p1 as Sales
+  participant p2 as Accounting
+  participant p3 as Odoo
+  p0->>p1: Open invoices?
+  rect rgba(248, 81, 73, 0.14)
+    p1->>p2: Open invoices.
+    activate p2
+    p2->>p3: odoo_accounting_list_invoices…
+    activate p3
+    p2-->>p1: could not answer: TASK_STATE_FAILED (failed)
+    deactivate p2
+  end

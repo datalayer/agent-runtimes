@@ -29,7 +29,7 @@ with its rules, checks and record on. It is tested (see the end of the
 page).
 
 **A Python application of your own runs on a deployment's runtime** (since
-1.3.9x, R-14 and P-24): pushed with `loop apps push app.py --app <id>`, the
+1.3.9x): pushed with `loop apps push app.py --app <id>`, the
 file is kept with the version, and the runtime of a deployment — its
 scheduled ticks, its always-on runtime, the hosted page's sessions — is
 handed the code when its agent is made, and runs its `start`, `message` and
@@ -50,7 +50,7 @@ What does **not** exist yet:
 
 ## Where its code runs
 
-**On a runtime, never in a service** (R-21). On the platform,
+**On a runtime, never in a service**. On the platform,
 application code runs on a runtime only — the sandbox a person's agent runs
 in, through the [Session API](./session-api) — never inside ai-agents or
 durable. An `app.py` of your own is built on your machine into the spec it
@@ -68,7 +68,7 @@ code that cannot be read stops its agent from being made, in a sentence. A
 deployment whose record does not say whether its version has code — one
 deployed before the file was kept — is refused (409): deploy it again.
 
-**Signed out, on the runtime it is kept on** (R-30, decided 14 October 2026:
+**Signed out, on the runtime it is kept on** (decided 14 October 2026:
 *kept runtime + refusal*). A visitor without an account never talks to a
 Python application on the shared visitors' runtime, whose plain agent would
 answer in your code's place. ai-agents points them at the runtime the
@@ -271,26 +271,26 @@ What an application declares is its Appspec. Each call adds to it:
 
 | Call | Declares |
 | --- | --- |
-| `app.starter(label, message, *, category="", profile=None)` | A first message offered to the person, under its `category` when it has one (P-20): the starters of a category together, under its name, those without one first. With `profile`, it is that profile's, offered in place of the application's. |
-| `app.profile(id, label, *, description="", instructions="", model=None)` | One of several assistants in one application (P-20): two at least, or none. The person picks one before the conversation starts — the first unless they pick another — and keeps it to the end: its `instructions` are told to the agent in every run, its `model` is run in place of the application's (a mode's model wins over it), its starters offered. `session.profile` says it. |
-| `app.setting(name, field, *, required=False, widget=None)` | A setting of the session: a field of the settings' form (C-16), `interface.settings`, the JSON Schema of an object of named fields. `field` is the field's own schema — a `type`, the `title` the person reads, a `default`, and what it takes (`enum`, `minimum`, `maximum`…). `widget` is the input it is drawn with when not its field's own (`interface.settings_ui`, P-20) — see [The nine inputs](#the-nine-inputs). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card. A field that is not a schema raises `TypeError`; the old `app.setting(id, type, label, …)` is gone. |
-| `app.translation(language, words)` | What a person reads of it in another language (P-26), by BCP 47 tag: `words` keyed as `interface.translations` are — `name`, `description`, `welcome`, `starters` by label, `categories`, `settings` by field, `commands` by name, `modes` and `profiles` by id. The page shows the person's language when it has it, else its own words. |
+| `app.starter(label, message, *, category="", profile=None)` | A first message offered to the person, under its `category` when it has one: the starters of a category together, under its name, those without one first. With `profile`, it is that profile's, offered in place of the application's. |
+| `app.profile(id, label, *, description="", instructions="", model=None)` | One of several assistants in one application: two at least, or none. The person picks one before the conversation starts — the first unless they pick another — and keeps it to the end: its `instructions` are told to the agent in every run, its `model` is run in place of the application's (a mode's model wins over it), its starters offered. `session.profile` says it. |
+| `app.setting(name, field, *, required=False, widget=None)` | A setting of the session: a field of the settings' form, `interface.settings`, the JSON Schema of an object of named fields. `field` is the field's own schema — a `type`, the `title` the person reads, a `default`, and what it takes (`enum`, `minimum`, `maximum`…). `widget` is the input it is drawn with when not its field's own (`interface.settings_ui`) — see [The nine inputs](#the-nine-inputs). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card. A field that is not a schema raises `TypeError`; the old `app.setting(id, type, label, …)` is gone. |
+| `app.translation(language, words)` | What a person reads of it in another language, by BCP 47 tag: `words` keyed as `interface.translations` are — `name`, `description`, `welcome`, `starters` by label, `categories`, `settings` by field, `commands` by name, `modes` and `profiles` by id. The page shows the person's language when it has it, else its own words. |
 | `app.rule(says, *, applies_to, behaviour)` | When it acts alone and when it asks: `says` is the rule in the words a person reads (the Appspec's `action`); `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
 | `app.record(include, *, keep_for=None)` | What the record keeps of each session (`record.include`, the Appspec's words: `conversations`, `actions`, `decisions`, `checks`, `approvals`, `outputs`, `feedback`, `diffs`, `terminals`, `audio`) and for how long (`keep_for`, `1_years`, `90_days`…). Nothing is kept unless said — see [The record](#the-record) for which entry goes under which word. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
 | `app.company_connection(id, company, *, access="read", acts_as="user", scopes=(), interfaces=("agent",), sign_in=("direct", "device"), extensions=())` | A company it works with as each person's agent, over the Personal Agent Protocol (`pap.connections`): reached through Datalayer's gateway, its tools named with the company. `company` is a domain, never a URL; a credential or an unknown field is refused at the call. See [Both PAP roles](#both-personal-agent-protocol-roles). |
 | `app.as_company(*, scopes=(), excluded_tasks=(), signed_out=True, interfaces=("agent",), extensions=(), personal_agents="any", registered_agents=())` | The application is itself a company personal agents work with (`pap.company`): each scope `{name, description}`, with its hints `changes` and `personal_data` when you give them; each excluded task `{task, alternative}`. |
-| `@app.company_operation(action, *, summary, user_approval_required=True)` | Over an `@app.tool`: what a personal agent may ask the company to do, proposed with its terms and done by that tool once the person confirms them (`pap.company.operations`). |
+| `@app.company_operation(action, *, summary)` | Over an `@app.tool`: what a personal agent may ask the company to do, proposed with its terms and done by that tool once the person approves them (`pap.company.operations`, Operations version 2). Every operation is the person's: no Rule and no approval in advance stands in for them. |
 | `app.business_connection(id, brand, *, audience, access="read", scopes=())` | A business's own agent it asks for each person, over PACT 1.0 (`pact.connections`): `brand` its domain, `audience` what its Provider assigned the application, `read` asking as the application alone and `write` also for each person who signed in there, `scopes` the business's permissions it may ask a person for. Lists `pact` among its protocols. See [A business over PACT](#a-business-over-pact). |
 | `app.as_business(*, registered_agents, scopes=None, brand="")` | The application answers people's personal agents as a PACT 1.0 business (`pact.business`): the personal agents it accepts, each `{issuer, jwks_uri}`; the scopes a person may delegate, `{scope: what they read}`; the Brand on its card. Lists `pact` among its protocols. |
-| `app.command(name, description, *, prompt="")` | A slash command in the composer (P-19): typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
+| `app.command(name, description, *, prompt="")` | A slash command in the composer: typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
 | `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer: `options` are two at least, each `{id, label, description?, instructions?, model?}`. The option the person picks goes with every run: `session.modes[id]` says it, and `session.agent` is told its `instructions` and runs on its `model`. |
 | `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui#typed-calls-from-python). |
 
 #### Both Personal Agent Protocol roles
 
 An application works with companies for each person, is a company itself,
-or both — the way two companies work together (S-04). The
+or both — the way two companies work together. The
 calls write the `pap` block the Spec and the Canvas write, checked by
 agentspecs' own models; `loop apps build` writes the same Appspec:
 
@@ -320,8 +320,8 @@ def close_month(month: str, company: str) -> dict:
 ```
 
 The handlers are the application's agent and its own tools; no protocol
-secret reaches them — Sessions, tokens and proofs are Datalayer's gateway's
-and company service's. The examples `personal-agent-protocol/company-connection`
+secret reaches them — Sessions, delegated keys and tokens are Datalayer's
+gateway's and company service's. The examples `personal-agent-protocol/company-connection`
 and `personal-agent-protocol/company-role` are written with these calls.
 
 #### A business over PACT
@@ -366,7 +366,7 @@ app.as_business(
 
 #### The nine inputs
 
-A setting is drawn with one of nine inputs (P-20), each a JSON Schema
+A setting is drawn with one of nine inputs, each a JSON Schema
 field and, where needed, the `widget` that draws it — the setting's
 `ui:widget` in the Appspec's `interface.settings_ui`:
 
@@ -426,28 +426,27 @@ session always first:
 | --- | --- | --- |
 | `@app.start` | `(session)` | A session starts. |
 | `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
-| `@app.action(name, payload=Model)` | `(session, payload)`, or `(session)` without a model | The person presses the button of that name (RU-5). **Typed**: `payload` is the pydantic model of what it is pressed with, its JSON Schema written in the Appspec (`interface.actions`); what a press carries — a `Form`'s values, a row — is checked against it first, a field it does not name refused too: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). The handler is given the model; an action declaring none takes nothing. Only a button its code showed, or the session it runs in, offers it, with a token; a press of an action it does not declare is refused, and what a press carries is never said to the model. `description=` says what it does (its docstring's first paragraph otherwise). |
-| `@app.file` | `(session, files, text)` | The person sends files with a message without being asked (P-21): the `UploadedFile`s, and the words sent with them. Which kinds and sizes may be sent is the Appspec's `interface.uploads`; the runtime refuses the rest before this runs. Without a handler, the words go to `message` and the files wait for what the code asks. See [What a person sends](#what-a-person-sends). |
-| `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. A change made on the page goes with the next message, and this runs before that message's handler (P-20). |
-| `@app.window` | `(session, data)` | The page the application sits in posts a message (P-25): `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
+| `@app.action(name, payload=Model)` | `(session, payload)`, or `(session)` without a model | The person presses the button of that name. **Typed**: `payload` is the pydantic model of what it is pressed with, its JSON Schema written in the Appspec (`interface.actions`); what a press carries — a `Form`'s values, a row — is checked against it first, a field it does not name refused too: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). The handler is given the model; an action declaring none takes nothing. Only a button its code showed, or the session it runs in, offers it, with a token; a press of an action it does not declare is refused, and what a press carries is never said to the model. `description=` says what it does (its docstring's first paragraph otherwise). |
+| `@app.file` | `(session, files, text)` | The person sends files with a message without being asked: the `UploadedFile`s, and the words sent with them. Which kinds and sizes may be sent is the Appspec's `interface.uploads`; the runtime refuses the rest before this runs. Without a handler, the words go to `message` and the files wait for what the code asks. See [What a person sends](#what-a-person-sends). |
+| `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. A change made on the page goes with the next message, and this runs before that message's handler. |
+| `@app.window` | `(session, data)` | The page the application sits in posts a message: `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.feedback` | `(session, feedback)` | A person gave a thumb up or down on an answer, with a comment or not, and it is kept in the record (only when the Appspec's `record.include` names `feedback`). `feedback` is a `Feedback`: `liked`, `comment`, `message` (the answer it is about, `answer-<n>`) and `by`. See [Threads and feedback](#threads-and-feedback). |
-| `@app.audio` | `(session, heard)` | The person spoke (P-22): the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `loop --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
+| `@app.audio` | `(session, heard)` | The person spoke: the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `loop --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
 | `@app.interrupted` | `(session)` | The person spoke over the agent: what was running is cancelled, the page told to stop the voice, then this runs. The conversation stays open for what they say next. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
 | `@app.schedule(cron, *, name="", description="", prompt="")` | `(session)` | On a schedule, in a session of its own, known by `name` (the handler's when unsaid): `host.tick(name)`. Also adds the schedule to the Appspec's triggers. Refused at the call on anything but a `worker` — a chat starts when somebody opens it. |
-| `@app.page` / `@app.page(live=False)` | `([session], **inputs)` | A widget's page (P-05): its inputs changed on the page, or Run pressed with `live=False`. Returns its outputs. See [A widget's page](#a-widgets-page). |
+| `@app.page` / `@app.page(live=False)` | `([session], **inputs)` | A widget's page: its inputs changed on the page, or Run pressed with `live=False`. Returns its outputs. See [A widget's page](#a-widgets-page). |
 
 A second handler for the same moment, action or schedule raises
 `ValueError`.
 
 ### A widget's page
 
-A widget can be a function of its inputs, like a notebook cell with sliders
-(P-05): its page draws the inputs as a form and the outputs below them,
+A widget can be a function of its inputs, like a notebook cell with sliders: its page draws the inputs as a form and the outputs below them,
 and as an input changes, the function runs again on all of them and the
 outputs change in place — no message, no conversation, on the same page and
 renderer as a chat application.
@@ -477,7 +476,7 @@ annotation — `int`, `float`, `bool`, `str`, a `Literal` or an `Enum` of them,
 a `list` of them — its default its default, one without a default required.
 `app.input(name, field, required=False)` says one more precisely (a title, a
 minimum, a maximum), as `app.setting` does; the field it says wins. Together
-they are a form (C-16), drawn on the page at `/inputs/<name>`. The
+they are a form, drawn on the page at `/inputs/<name>`. The
 function takes the session first when it wants it (`session.agent`,
 `session.state`), and `**inputs` to take inputs it does not name.
 
@@ -511,7 +510,7 @@ from the start).
 ### Code where plain words are not enough
 
 A rule, a test in words, a catalogue check say most of what an application
-needs. Where they cannot, its code says it (P-06) — and declares it in
+needs. Where they cannot, its code says it — and declares it in
 its Appspec, so that the Canvas shows it (*What its code decides*: its tool,
 its check, its test, each with the line that decides it) and validation runs
 it:
@@ -664,6 +663,8 @@ granted — never with the token of the person who launched the runtime.
   before the agent is made, keeps it in memory by deployment
   (`agent_runtimes.apps.principal`), and asks again, with the latest
   request's token, when less than five minutes of its hour are left.
+  Anybody but its owner is answered only with the proof its runtime holds from
+  its launch; the version's code is read the same way.
 - **What it is used for**: the agent's model calls through ai-inference
   (metered on the application's owner, naming the deployment and the
   principal), the Datalayer MCP gateway, and the session's record. The
@@ -682,7 +683,7 @@ A Preview, a test run and an agent no application runs keep the runtime's
 own inference token: they are a person trying something, not a deployment
 acting alone.
 
-**A Preview is held to the same Space grants** (R-25): though it runs as
+**A Preview is held to the same Space grants**: though it runs as
 the person trying it, the tools of its session reach only the Spaces its
 Appspec grants (`permissions.spaces`), each as far as it says — what is tried
 is what ships. The runtime asks ai-agents, with the person's token, for a
@@ -912,10 +913,10 @@ made by that code.
 | | |
 | --- | --- |
 | `session.uid` | The session's uid — the one word for it, in Python, on the wire and in the record: its conversation and its record. |
-| `session.opened_by` | Who opened it, when the host knows: the person the application talks to; embedded with `user: signed`, the `sub` the host's server signed (D-21). |
+| `session.opened_by` | Who opened it, when the host knows: the person the application talks to; embedded with `user: signed`, the `sub` the host's server signed. |
 | `session.state` | A dict the application keeps across the turns of this session; each session has its own. |
 | `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
-| `session.profile` | The id of the profile the conversation is with (P-20): the first unless another was picked; `None` for an application without profiles. |
+| `session.profile` | The id of the profile the conversation is with: the first unless another was picked; `None` for an application without profiles. |
 | `session.app` | The application, as its Appspec says it. |
 
 ### Voice
@@ -994,7 +995,7 @@ await session.send(
 - A Button's action (`action={"event": {"name": "again"}}`) is offered with
   a token and sent to the application when it is pressed, with what it read
   — checked against the model its `@app.action("again")` declares, which
-  reacts (RU-5). A form's
+  reacts. A form's
   submission on any other surface stays the agent's next message.
 - `send`, `stream` and `update` take both; `update` keeps what the message
   showed unless told, and `show=[]` takes it away.
@@ -1043,7 +1044,7 @@ the data itself.
 ### Where an element shows
 
 An element — components of the catalog, as an answer shows them — shows
-where it belongs (P-18): in the conversation, in a side panel beside
+where it belongs: in the conversation, in a side panel beside
 it, or on a page of its own over it. Its code opens it, changes it and
 closes it:
 
@@ -1090,7 +1091,7 @@ side panel*) and its components.
 ### Components of your own
 
 When the catalog has no component for what you want to show — a gauge, a
-map, a diagram — write one (P-17). It is a component of this
+map, a diagram — write one. It is a component of this
 application only: its Canvas places it, its page draws it, its code shows it
 inline, in a panel or on a page, and a widget's page draws an output with it.
 No other application sees it.
@@ -1325,8 +1326,8 @@ goes on with their answer:
 An answer that does not answer the question raises `InvalidAnswer`, in a
 sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
-On a page, the question is drawn under its words as a display (RU-4): a choice as buttons, text as a field, a form as its fields, a file
-as a file to choose — uploaded first, its ref the answer (RU-6); the
+On a page, the question is drawn under its words as a display: a choice as buttons, text as a field, a form as its fields, a file
+as a file to choose — uploaded first, its ref the answer; the
 person's press is the answer, checked against the question before your code
 has it. Your code has the `UploadedFile` whichever way it came: a file's
 bytes never ride in a run or a press. In the terminal it is asked as it
@@ -1336,7 +1337,7 @@ always was.
 
 A person sends a file two ways: when the application asks
 (`FileQuestion`, or a File upload block of its page), and **without being
-asked**, attached in the composer to a message (P-21). What it takes
+asked**, attached in the composer to a message. What it takes
 then is said in its Appspec — the kinds, each with its largest size, and how
 many at once — and nothing else is sent:
 
@@ -1417,7 +1418,7 @@ suggested test.
 A session is a **thread** in the history of the person who had it: listed
 newest first, found by its title or by what was asked, renamed and tagged
 by that person (at the application's address, *Your conversations*). Its
-code can name it too (P-24):
+code can name it too:
 
 ```python
 @app.message
@@ -1527,7 +1528,7 @@ refused before anything is asked, saying so.
 ## An agent of your own: other frameworks
 
 `app.agent(...)` gives the application an agent written in your code, in
-place of its agent's (P-23): a plain function, a LangGraph graph or a
+place of its agent's: a plain function, a LangGraph graph or a
 LangChain runnable, a LlamaIndex agent or workflow. `session.agent` is then
 that agent, with the same `run` and `stream`, so an application with no
 `@app.message` is answered by it, and code that calls `session.agent` does
@@ -1596,8 +1597,7 @@ shape is said with `input=`:
 
 **Its rules decide every tool it calls through LangChain's tools.** A
 callback handler given to each run decides each call in `on_tool_start`,
-before the tool runs: the rules, then the built-in checks and the Gates
-(R-06), then the checks of its code (`@app.check("tool_call")`). A call the
+before the tool runs: the rules, then the built-in checks and the Gates, then the checks of its code (`@app.check("tool_call")`). A call the
 rules ask about asks the person of the session; refused, the tool does not
 run and the turn stops with `AppRuleBlockedError`, its sentence the rule's.
 
@@ -1658,8 +1658,7 @@ not run — its model is its own.
 
 ## Mounted into your own FastAPI
 
-An application runs inside a FastAPI of your own, under a path of its own
-(P-25):
+An application runs inside a FastAPI of your own, under a path of its own:
 
 ```python
 from fastapi import FastAPI

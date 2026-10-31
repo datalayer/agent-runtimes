@@ -41,6 +41,7 @@ from agent_runtimes.loop.scenes.transcript import (
     SAID,
     TranscriptLine,
     line_text,
+    transcript_json,
 )
 
 #: The three states, as a verdict says them.
@@ -201,6 +202,8 @@ class BeatVerdict:
     says: str = ""
     lines: List[str] = field(default_factory=list)
     seconds: float = 0.0
+    transcript: List[TranscriptLine] = field(default_factory=list, repr=False)
+    """The lines as they were played, for a recording (`transcript_of_rehearsal`)."""
 
     @property
     def word(self) -> str:
@@ -214,18 +217,25 @@ def verdict_of(
 ) -> BeatVerdict:
     """A played beat compared to what its rehearsal expects."""
     lines = [line_text(line) for line in played.lines]
+    kept = list(played.lines)
     if played.error:
         return BeatVerdict(
-            beat.beat, played.cue, NOT_RUN, played.error, lines, played.seconds
+            beat.beat, played.cue, NOT_RUN, played.error, lines, played.seconds, kept
         )
     differences = shape_differences(expected_of(beat.lines), played.lines, names)
     differences += answer_differences(played.answer, beat.must_say, beat.must_not_say)
     differences += time_difference(played.seconds, beat.within)
     if differences:
         return BeatVerdict(
-            beat.beat, played.cue, FAILED, " ".join(differences), lines, played.seconds
+            beat.beat,
+            played.cue,
+            FAILED,
+            " ".join(differences),
+            lines,
+            played.seconds,
+            kept,
         )
-    return BeatVerdict(beat.beat, played.cue, PASSED, "", lines, played.seconds)
+    return BeatVerdict(beat.beat, played.cue, PASSED, "", lines, played.seconds, kept)
 
 
 @dataclass
@@ -283,12 +293,60 @@ class RehearsalVerdict:
             "scene": self.scene,
             "name": self.name,
             "where": self.where,
-            "beats": [{**asdict(beat), "word": beat.word} for beat in self.beats],
+            "beats": [
+                {
+                    **{
+                        key: value
+                        for key, value in asdict(beat).items()
+                        if key != "transcript"
+                    },
+                    "word": beat.word,
+                }
+                for beat in self.beats
+            ],
             "notes": list(self.notes),
             "says": self.says,
             "live": self.live,
             "exit_code": self.exit_code,
         }
+
+
+def transcript_of_rehearsal(
+    verdict: RehearsalVerdict, *, at: str, exported: Optional[str] = None
+) -> Dict[str, Any]:
+    """What a rehearsal played, as the transcript JSON a stage exports (version 1).
+
+    Every beat's lines in the order they were played, the beats each
+    spanned (``first``, ``count``: where a page plays one beat's lines), and
+    the verdict they came from — when, where, whether it passed — so that
+    `loop scenes record` takes only a rehearsal that passed.
+    """
+    lines: List[TranscriptLine] = []
+    beats: List[Dict[str, Any]] = []
+    for beat in verdict.beats:
+        beats.append(
+            {
+                "beat": beat.beat,
+                "cue": beat.cue,
+                "state": beat.state,
+                "seconds": round(float(beat.seconds or 0.0), 3),
+                "first": len(lines),
+                "count": len(beat.transcript),
+            }
+        )
+        lines.extend(beat.transcript)
+    return transcript_json(
+        lines,
+        scene=verdict.scene,
+        exported=exported,
+        rehearsal={
+            "at": at,
+            "where": verdict.where,
+            "passed": verdict.live,
+            "says": verdict.says,
+        },
+        beats=beats,
+    )
 
 
 def members_needed(scene: Any, beat_id: str, entry: str) -> List[str]:
@@ -383,5 +441,6 @@ __all__ = [
     "seconds_of",
     "shape_differences",
     "time_difference",
+    "transcript_of_rehearsal",
     "verdict_of",
 ]

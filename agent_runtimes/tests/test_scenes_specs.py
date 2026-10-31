@@ -28,6 +28,9 @@ HOME_SCENES = {
 }
 
 
+#: The demo stages: the home page's four, and a coding agent behind the Shield.
+DEMO_SCENES = (*HOME_SCENES, "coding-agent-behind-the-shield")
+
 #: The Personal Agent Protocol's Stages, scripted (X-02).
 PAP_STAGES = (
     "pap-a-person-and-a-company",
@@ -40,7 +43,7 @@ PROTOCOL_STAGES = ("ucp-a-purchase-approved", "pact-a-personal-agent-at-a-busine
 
 
 def test_the_catalogue_holds_the_four_scenes_with_their_faces() -> None:
-    assert set(SCENE_CATALOGUE) == set(HOME_SCENES) | set(PAP_STAGES) | set(
+    assert set(SCENE_CATALOGUE) == set(DEMO_SCENES) | set(PAP_STAGES) | set(
         PROTOCOL_STAGES
     )
     faces = [scene.emoji for scene in SCENE_CATALOGUE.values()]
@@ -96,7 +99,8 @@ def test_the_pap_stages_arrive_scripted_with_their_actors_and_lines() -> None:
 
 def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
     for scene in (scene for scene in SCENE_CATALOGUE.values() if scene.kind == "team"):
-        assert len(scene.script) == 4, scene.id
+        # The home page's scenes play four beats; the coding agent two.
+        assert len(scene.script) == (4 if scene.id in HOME_SCENES else 2), scene.id
         for beat in scene.script:
             assert beat.cue.say and beat.moves and beat.expect and beat.shows, (
                 scene.id,
@@ -109,6 +113,12 @@ def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
         assert (
             scene.audience.who == "visitors" and scene.stage.opens_first == scene.entry
         )
+
+
+def test_the_demo_stages_say_the_hero_backdrop_and_the_others_the_studio() -> None:
+    for scene in SCENE_CATALOGUE.values():
+        wanted = "hero" if scene.id in DEMO_SCENES else "studio"
+        assert scene.stage.backdrop == wanted, scene.id
 
 
 def test_what_a_scene_needs_arrives_as_setup() -> None:

@@ -5,182 +5,101 @@ title: Protocols
 
 # Protocols
 
-Agent Runtimes supports multiple runtime and extension protocols. This page
-covers protocol selection, protocol capabilities, and extension-layer
-protocols for rich UI experiences.
+Agent Runtimes speaks the protocols an agent needs: to reach a person's page or
+editor, to ask other agents, to call tools, to say who it is, to act with a
+person's consent, and to buy. This page lists them all, compares the ones a client
+uses to reach an agent, and helps you choose.
+
+## Every protocol, at the version spoken
+
+| Protocol | Layer | Version spoken | What the runtime is | Page |
+| --- | --- | --- | --- | --- |
+| AG-UI | UI | `@ag-ui/core` 0.0.57, `ag-ui-protocol` below 1 | server, client | [AG-UI](./ag-ui) |
+| Vercel AI | UI | `ai` 7, through Pydantic AI | server, client | [Vercel AI](./vercel-ai) |
+| ACP, Agent Client Protocol | UI | 1 | server, client | [ACP](./acp) |
+| A2UI | UI | v0.9 | writes and renders surfaces | [A2UI](./a2ui) |
+| MCP-UI | UI | `mcp-ui-server` 1.0, `@mcp-ui/client` 5 | builds resources; a chat route | [MCP-UI](./mcp-ui) |
+| MCP Apps | UI | not implemented | — | [MCP Apps](./mcp-apps) |
+| A2A, Agent2Agent | Transport | 1.0 | server, client | [A2A](./a2a) |
+| MCP, Model Context Protocol | Transport | 2026-07-28 (Python), 2025-11-25 (TypeScript) | client | [MCP](./mcp) |
+| Web Bot Auth | Identity | `draft-ietf-webbotauth-httpsig-protocol-00` | signer, verifier, key directory | [Web Bot Auth](./web-bot-auth) |
+| TAP, Trusted Agent Protocol | Identity | draft profile, from Visa's public documentation | signer, verifier | [TAP](./tap) |
+| PAP, Personal Agent Protocol | Consent | draft 0.3 | personal agent, company | [Personal Agent Protocol](../integrations/personal-agent-protocol) |
+| PACT, Personal Agent Consent & Trust | Consent | 1.0 (partial) | personal agent, local provider | [PACT](./pact), [PAP and PACT](./pap-and-pact) |
+| UCP, Universal Commerce Protocol | Commerce | 2026-08-25 (partial) | shopper, test merchant | [UCP](./ucp) |
+| Agentic Commerce Protocol | Commerce | 2026-04-17 (partial) | buyer, test seller | [Agentic Commerce](./agentic-commerce) |
+
+A running runtime says this for itself: `loop apps protocols` and
+`GET /api/v1/protocols` list what its protocol plugins describe, each with its
+version, roles and state. That list has the seven plugins, from MCP down, without
+TAP, which is a profile of Web Bot Auth; the protocols of the UI layer are served
+by routes and have no plugin.
 
 ## Agent protocols
 
-The protocols an agent speaks with the world — MCP, A2A, Web Bot Auth,
-PAP, PACT, UCP and the Agentic Commerce Protocol, as
-[poppy.md/compare](https://poppy.md/compare) maps them — are Reactor
-plugins whose extensions are contribution points: see
-[Agent protocols as plugins](./agent-protocols), then a page per protocol:
-[MCP and A2A](./mcp-and-a2a),
-[Web Bot Auth](./web-bot-auth), [UCP](./ucp),
-[Agentic Commerce](./agentic-commerce), [PACT](./pact),
-[PAP and PACT side by side](./pap-and-pact), and the
-[Personal Agent Protocol](../integrations/personal-agent-protocol).
+The protocols an agent speaks with the world — MCP, A2A, Web Bot Auth, PAP, PACT,
+UCP and the Agentic Commerce Protocol, as
+[poppy.md/compare](https://poppy.md/compare) maps them — are Reactor plugins whose
+extensions are contribution points: see
+[Agent protocols as plugins](./agent-protocols).
+
+Two cases are told as decks here,
+[A Purchase, Approved](./ucp-a-purchase-approved) over UCP and
+[A Personal Agent at a Business](./pact-a-personal-agent-at-a-business) over
+PACT, beside the Personal Agent Protocol's
+[four cases](https://personal-agent-protocol.datalayer.tech/examples/cases/).
 
 ## Runtime Protocols
 
-Runtime protocols define how clients and agents communicate.
+Runtime protocols define how clients and agents communicate. Every agent is served
+over one of AG-UI, Vercel AI and A2A, chosen with `--protocol` or `transport`, and
+over ACP and the MCP-UI chat routes in any case.
 
 ## Protocol Comparison
 
 | Feature | AG-UI | Vercel AI | ACP | A2A |
 |---------|-------|-----------|-----|-----|
-| Transport | HTTP/SSE | HTTP/SSE | WebSocket | HTTP/SSE |
+| Transport | HTTP/SSE | HTTP/SSE | WebSocket | HTTP JSON-RPC, SSE to stream |
 | Streaming | ✅ | ✅ | ✅ | ✅ |
 | Tool Calling | ✅ | ✅ | ✅ | ✅ |
 | Per-Request Model Selection | ✅ | ✅ | ✅ | ❌ |
 | Bidirectional Communication | ❌ | ❌ | ✅ | ❌ |
-| Human-in-the-Loop | ✅ | ❌ | ✅ | ❌ |
-| Inter-Agent Communication | ❌ | ❌ | ❌ | ✅ |
+| Human-in-the-Loop | ✅ | ✅ | ✅ | a harness's permissions |
+| Serves a harness | ✅ | ❌ | ✅ | ✅ |
+| Delegation target | ❌ | ❌ | ✅ | ✅ |
 
 ## AG-UI (Agent UI Protocol)
 
-AG-UI is a lightweight protocol optimized for building interactive AI chat
-interfaces.
+A lightweight protocol for chat interfaces: events over SSE, tool approvals, and
+what the `loop` terminal uses. See [AG-UI](./ag-ui).
 
-**Features:**
-- Simple HTTP/SSE-based communication
-- Built-in support for streaming responses
-- Tool calling with human-in-the-loop approval
-- Native support for frontend components
-
-**Use Cases:**
-- Web chat applications
-- Interactive AI assistants
-- Applications requiring tool approval workflows
-
-**Endpoint:** `POST /api/v1/ag-ui/agents/{agent_id}/runs`
-
-```typescript
-// Frontend usage
-const adapter = new AGUIAdapter({
-  type: 'ag-ui',
-  baseUrl: 'http://localhost:8888/api/v1/ag-ui/agents/demo',
-});
-```
+**Endpoint:** `POST /api/v1/ag-ui/{agent_id}/`
 
 ## Vercel AI Protocol
 
-Compatible with Vercel's AI SDK, enabling seamless integration with Next.js
-and React applications.
+The AI SDK's data stream, and the default transport. See [Vercel AI](./vercel-ai).
 
-**Features:**
-- Vercel AI SDK compatibility
-- Server-Sent Events (SSE) streaming
-- Tool calling support
-- Easy integration with existing Vercel projects
-
-**Use Cases:**
-- Next.js applications
-- Projects already using Vercel AI SDK
-- Quick prototyping with familiar APIs
-
-**Endpoint:** `POST /api/v1/vercel-ai/agents/{agent_id}/chat`
-
-```typescript
-// Frontend usage
-const adapter = new VercelAIAdapter({
-  type: 'vercel-ai',
-  baseUrl: 'http://localhost:8888/api/v1/vercel-ai/agents/demo',
-});
-```
+**Endpoint:** `POST /api/v1/vercel-ai/{agent_id}`
 
 ## ACP (Agent Client Protocol)
 
-ACP is a WebSocket-based protocol providing rich bidirectional communication.
-
-**Features:**
-- Full-duplex WebSocket communication
-- Session management
-- Permission request/grant workflow
-- Real-time streaming updates
-- Cancellation support
-
-**Use Cases:**
-- Long-running agent tasks
-- Applications requiring bidirectional updates
-- Complex workflows with permission handling
-- Real-time collaborative experiences
+JSON-RPC over a WebSocket: sessions kept across restarts, cancellation, and a
+harness's permissions answered by the client. See [ACP](./acp).
 
 **Endpoint:** `WS /api/v1/acp/ws/{agent_id}`
 
-```typescript
-// Frontend usage
-const adapter = new ACPAdapter({
-  type: 'acp',
-  baseUrl: 'ws://localhost:8888/api/v1/acp/ws/demo',
-});
-```
-
 ## A2A (Agent-to-Agent Protocol)
 
-A2A enables communication between AI agents using the Google A2A standard via
-[fasta2a](https://pypi.org/project/fasta2a/).
-
-**Features:**
-- Inter-agent communication
-- Task delegation and result aggregation
-- Agent discovery via agent cards
-- Compatible with pydantic-ai agents
-
-**Use Cases:**
-- Multi-agent systems
-- Orchestrating multiple specialized agents
-- Agent collaboration workflows
+Agents asking agents: discovery by Agent Card, tasks kept across restarts,
+delegation. Served with [fasta2a](https://pypi.org/project/fasta2a/). See [A2A](./a2a).
 
 **Endpoint:** `POST /api/v1/a2a/agents/{agent_id}/`
 
-```typescript
-// Frontend usage
-const adapter = new A2AAdapter({
-  type: 'a2a',
-  baseUrl: 'http://localhost:8888/api/v1/a2a/agents/demo/',
-});
-```
-
 :::warning A2A Limitations
-**Per-request model selection is not supported with A2A.**
-
-The A2A protocol uses pydantic-ai's `to_a2a()` method which binds the model at
-agent creation time. The model cannot be changed per-request. If you need
-per-request model selection, use AG-UI, Vercel AI, or ACP protocols instead.
-
-See the [A2A Limitations](#a2a-limitations) section for more details.
+**Per-request model selection is not supported with A2A.** The worker runs the
+agent with its own model, and a request has no field that changes it. Serve one
+agent per model, or use AG-UI, Vercel AI or ACP.
 :::
-
-## A2A Limitations
-
-### Per-Request Model Selection
-
-The A2A protocol does not support changing the model on a per-request basis.
-This is due to:
-
-1. **Architecture**: A2A uses fasta2a which converts pydantic-ai agents via
-   `to_a2a()`. The model is fixed at agent creation.
-
-2. **Design Philosophy**: A2A treats agents as services with fixed
-   capabilities. The model is part of the agent's identity.
-
-**Workarounds:**
-
-1. **Multiple Agents**: Deploy separate A2A agents for each model:
-   ```python
-   # Create agent with GPT-4
-   gpt4_agent = Agent("openai:gpt-4o")
-   register_a2a_agent(PydanticAIAdapter(gpt4_agent), card_gpt4)
-
-   # Create agent with Claude
-   claude_agent = Agent("anthropic:claude-sonnet-4-5")
-   register_a2a_agent(PydanticAIAdapter(claude_agent), card_claude)
-   ```
-
-2. **Use Different Protocol**: Switch to AG-UI, Vercel AI, or ACP for
-   per-request model selection.
 
 ## Delegating Work Over A2A and ACP
 
@@ -256,183 +175,47 @@ agent-runtimes serve --orchestrator-root http://127.0.0.1:8765/api/v1/a2a/agents
 | Simple web chat | AG-UI or Vercel AI |
 | Next.js / Vercel project | Vercel AI |
 | Real-time bidirectional updates | ACP |
-| Human-in-the-loop workflows | ACP or AG-UI |
+| An editor | ACP |
+| Human-in-the-loop workflows | AG-UI, Vercel AI or ACP |
 | Multi-agent orchestration | A2A |
 | Per-request model switching | AG-UI, Vercel AI, or ACP |
 | Delegating to a worker on either protocol | `agent_runtimes.orchestration` |
 
 ## Extension Protocols
 
-Extension protocols enable rich user interfaces and inter-agent UX patterns.
+Extension protocols let an answer be an interface.
 
 ## A2UI (Agent-to-UI)
 
-A2UI enables agents to communicate with user interfaces through a standardized protocol, allowing for rich interactive experiences.
-
-### Features
-
-- **Bidirectional Communication** — Agents can send UI updates and receive user inputs
-- **Component Rendering** — Agents can request specific UI components to be rendered
-- **State Synchronization** — Keep UI state in sync with agent state
-- **Event Handling** — Process user interactions and form submissions
-
-### Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/v1/a2ui/restaurant/` | The restaurant-finder example agent: a `query`, or an `action` with its `context` |
-| `POST /api/v1/a2ui/support-assistant/` | The support-assistant example agent |
-| `GET /api/v1/a2ui/{agent}/health` | Whether the example agent is available |
-
-Each answers with A2A-style parts: a `text` part, then one `data` part per A2UI v0.9 message.
-
-### Usage
-
-The package has no A2UI client class (the `A2UIAdapter` an earlier version of this page showed is gone). A page posts to the endpoint and hands the A2UI messages to an A2UI v0.9 renderer (`@a2ui/react/v0_9`), as the A2UI examples in `src/examples/` do; in the LOOP workspace, the A2UI plugins render surfaces for you.
-
-```typescript
-import type { A2uiMessage } from '@a2ui/web_core/v0_9';
-
-const response = await fetch('http://localhost:8765/api/v1/a2ui/restaurant/', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ query: 'Top 5 Chinese restaurants in New York' }),
-});
-const parts: { kind: string; text?: string; data?: unknown }[] =
-  await response.json();
-const messages = parts
-  .filter(part => part.kind === 'data')
-  .map(part => part.data as A2uiMessage);
-// Pass `messages` to your A2UI message processor, and render its surfaces.
-// A button click comes back as { action, context } in the next POST.
-```
+An answer describes a surface as messages, and the page renders components from
+them. See [A2UI](./a2ui).
 
 ## MCP-UI
 
-MCP-UI provides a user interface layer for interacting with MCP (Model Context Protocol) servers and their tools.
-
-### Features
-
-- **Tool Browser** — Browse available tools from connected MCP servers
-- **Tool Execution** — Execute MCP tools with parameter input
-- **Result Display** — View tool execution results in formatted output
-- **Server Status** — Monitor MCP server connection status
-
-### Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `/api/v1/mcp-ui/` | MCP-UI protocol endpoint |
-| `/api/v1/mcp-ui/agents` | List MCP-UI enabled agents |
-
-### Integration
-
-MCP-UI is automatically registered for agents that have MCP toolsets enabled:
-
-```python
-from agent_runtimes.transports import MCPUITransport
-
-# Register an agent with MCP-UI
-mcp_ui_adapter = MCPUITransport(agent)
-register_mcp_ui_agent(agent_id, mcp_ui_adapter)
-```
+Interface resources (`ui://`) inside an answer, with chat routes under
+`/api/v1/mcp-ui`. The chat refuses what would run a server's or a model's markup.
+See [MCP-UI](./mcp-ui).
 
 ## MCP Apps
 
-[MCP Apps](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps) is an extension to the Model Context Protocol that enables MCP servers to provide full application experiences, not just tools.
-
-### What are MCP Apps?
-
-MCP Apps extend the traditional MCP model by allowing servers to:
-
-- **Serve Full Applications** — Complete UI experiences, not just API endpoints
-- **Maintain State** — Persistent application state across interactions
-- **Handle Navigation** — Multi-page application flows
-- **Render Rich Content** — HTML, forms, charts, and interactive elements
-
-### Integration with Agent Runtimes
-
-Agent Runtimes includes the `@mcp-ui/client` and `@modelcontextprotocol/ext-apps` packages for MCP Apps support:
-
-```typescript
-import { MCPAppsClient } from '@modelcontextprotocol/ext-apps';
-
-const client = new MCPAppsClient({
-  serverUrl: 'http://localhost:3000/mcp-app',
-});
-
-// Render app content
-const content = await client.getContent('/dashboard');
-```
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   Agent Runtimes UI                          │
-│                  (React Components)                          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ↓                     ↓                     ↓
-┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│     A2UI      │   │    MCP-UI     │   │   MCP Apps    │
-│   Protocol    │   │   Protocol    │   │   Protocol    │
-└───────────────┘   └───────────────┘   └───────────────┘
-        │                     │                     │
-        └─────────────────────┼─────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    MCP Servers                               │
-│              (Tools, Resources, Apps)                        │
-└─────────────────────────────────────────────────────────────┘
-```
+An extension of MCP for full application experiences. It is not implemented here:
+the package declares `@modelcontextprotocol/ext-apps` and nothing uses it. See
+[MCP Apps](./mcp-apps).
 
 ## Comparison
 
 | Feature | A2UI | MCP-UI | MCP Apps |
 |---------|------|--------|----------|
-| **Purpose** | Agent-to-UI communication | MCP tool interface | Full applications |
-| **Interaction** | Bidirectional events | Tool execution | App navigation |
-| **State** | Session-based | Stateless | Persistent |
-| **Content** | Structured events | Tool results | Rich HTML/UI |
-| **Best For** | Chat UIs | Tool browsers | Dashboards |
-
-## Getting Started
-
-### Enable A2UI
-
-```python
-from agent_runtimes.routes import a2ui_router
-
-app.include_router(a2ui_router, prefix="/api/v1")
-```
-
-### Enable MCP-UI
-
-```python
-from agent_runtimes.routes import mcp_ui_router
-
-app.include_router(mcp_ui_router, prefix="/api/v1")
-```
-
-### Enable MCP Apps
-
-```typescript
-// In your React application
-import { MCPAppsProvider } from '@mcp-ui/client';
-
-function App() {
-  return (
-    <MCPAppsProvider>
-      <YourComponent />
-    </MCPAppsProvider>
-  );
-}
-```
+| **State here** | Implemented | Implemented, HTML refused | Not implemented |
+| **Carried by** | another protocol's answer | a tool's result | — |
+| **Content** | Declarative components | `ui://` resources | — |
 
 ## Related Resources
 
-- [MCP Apps Blog Post](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps)
-- [MCP Specification](https://spec.modelcontextprotocol.io)
-- [A2A Protocol](https://google.github.io/A2A) — Agent-to-Agent communication
+- [Agent protocols as plugins](./agent-protocols)
+- [MCP specification](https://modelcontextprotocol.io/specification)
+- [A2A specification](https://a2a-protocol.org/latest/specification/)
+- [Agent Client Protocol](https://agentclientprotocol.com)
+- [AG-UI](https://docs.ag-ui.com)
+- [A2UI](https://a2ui.org)
+- [MCP Apps blog post](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps)

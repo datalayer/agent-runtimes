@@ -20,6 +20,10 @@
           "prefix": "odoo_accounting_"
         }
       ]
+    },
+    {
+      "id": "code-explainer",
+      "name": "Code Explainer"
     }
   ],
   "cases": [
@@ -310,6 +314,224 @@
       "lines": [
         "Sales → Accounting: Trial balance.",
         "Accounting: The trial balance balances."
+      ]
+    },
+    {
+      "name": "tells a coding harness's steps behind the Shield, and the one it refused",
+      "spans": [
+        {
+          "trace_id": "t9",
+          "span_id": "s90",
+          "span_name": "invoke_agent Code Explainer",
+          "service_name": "Code Explainer",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-29T13:00:00.000Z",
+          "end_time": "2026-10-29T13:00:20.000Z",
+          "duration_ms": 20000,
+          "attributes": {
+            "gen_ai.operation.name": "invoke_agent",
+            "gen_ai.agent.name": "Code Explainer",
+            "gen_ai.input.messages": "[{\"role\": \"user\", \"parts\": [{\"type\": \"text\", \"content\": \"Add a line at the end of README.md that says who explained it.\"}]}]",
+            "gen_ai.output.messages": "[{\"role\": \"assistant\", \"parts\": [{\"type\": \"text\", \"content\": \"Write README.md: leave it to me \\u2014 team rule 'Change a file'.\"}]}]"
+          },
+          "status_code": "OK"
+        },
+        {
+          "trace_id": "t9",
+          "span_id": "s91",
+          "span_name": "shield.turn",
+          "service_name": "agent-runtimes",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-29T13:00:01.000Z",
+          "end_time": "2026-10-29T13:00:19.000Z",
+          "duration_ms": 18000,
+          "attributes": {
+            "shield.session": "acp-1",
+            "shield.harness": "opencode",
+            "shield.agent": "code-explainer-1"
+          },
+          "parent_span_id": "s90",
+          "status_code": "OK",
+          "events": [
+            {
+              "name": "shield.turn",
+              "timestamp": "2026-10-29T13:00:01.000Z",
+              "attributes": {
+                "event": "turn",
+                "what": "prompt",
+                "by": "shield"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T13:00:02.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-a",
+                "kind": "read",
+                "class": "read",
+                "title": "Read README.md",
+                "path": "README.md",
+                "status": "in_progress",
+                "decision": "allow",
+                "rule": "Read the repository",
+                "scope": "team",
+                "decided_by": "policy",
+                "by": "policy"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T13:00:03.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-a",
+                "status": "completed",
+                "decision": "allow",
+                "title": "Read README.md",
+                "path": "README.md",
+                "by": "agent"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T13:00:05.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-b",
+                "kind": "edit",
+                "class": "write",
+                "title": "Edit README.md",
+                "path": "README.md",
+                "status": "pending",
+                "decision": "deny",
+                "rule": "Change a file",
+                "scope": "team",
+                "decided_by": "policy",
+                "by": "policy"
+              }
+            },
+            {
+              "name": "shield.refusal",
+              "timestamp": "2026-10-29T13:00:05.000Z",
+              "attributes": {
+                "event": "refusal",
+                "by": "shield"
+              }
+            }
+          ]
+        }
+      ],
+      "lines": [
+        "You → Code Explainer: Add a line at the end of README.md that says who explained it.",
+        "Code Explainer → its workspace: Read README.md",
+        "Code Explainer → its workspace: Edit README.md (failed)",
+        "Code Explainer: Write README.md: leave it to me — team rule 'Change a file'."
+      ],
+      "kinds": [
+        "asked",
+        "called",
+        "called",
+        "said"
+      ],
+      "offsets": [
+        0,
+        2000,
+        5000,
+        20000
+      ],
+      "open": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "failed": [
+        false,
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "keeps a harness's steps apart when they read the same, and the one it refused of them",
+      "spans": [
+        {
+          "trace_id": "t10",
+          "span_id": "s100",
+          "span_name": "shield.turn",
+          "service_name": "Code Explainer",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-29T14:00:00.000Z",
+          "end_time": "2026-10-29T14:00:09.000Z",
+          "duration_ms": 9000,
+          "attributes": {
+            "shield.session": "acp-2",
+            "shield.harness": "opencode",
+            "shield.agent": "code-explainer-2"
+          },
+          "status_code": "OK",
+          "events": [
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:01.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-a",
+                "title": "Read README.md",
+                "status": "completed",
+                "decision": "allow"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:03.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-b",
+                "title": "Read README.md",
+                "status": "completed",
+                "decision": "allow"
+              }
+            },
+            {
+              "name": "shield.tool_call",
+              "timestamp": "2026-10-29T14:00:05.000Z",
+              "attributes": {
+                "event": "tool_call",
+                "tool_call_id": "call-c",
+                "title": "Read README.md",
+                "status": "pending",
+                "decision": "deny"
+              }
+            }
+          ]
+        }
+      ],
+      "lines": [
+        "Code Explainer → its workspace: Read README.md",
+        "Code Explainer → its workspace: Read README.md",
+        "Code Explainer → its workspace: Read README.md (failed)"
+      ],
+      "kinds": [
+        "called",
+        "called",
+        "called"
+      ],
+      "offsets": [
+        0,
+        2000,
+        4000
+      ],
+      "open": [
+        false,
+        false,
+        false
+      ],
+      "failed": [
+        false,
+        false,
+        true
       ]
     }
   ],

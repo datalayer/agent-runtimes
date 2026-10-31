@@ -42,7 +42,17 @@ is not there or runs no application.
   agent holds the principal's token, asked of ai-agents with the caller's
   token, and asked again with the latest request's token when it runs out
   (see *In whose name it acts on the platform* in
-  [Applications in Python](./python-applications)).
+  [Applications in Python](./python-applications)). A
+  runtime launched for a deployment proves it beside that token: ai-agents answers
+  anybody but the owner only with the proof the platform gave the runtime at its
+  launch, so a person calling ai-agents directly is refused.
+  What such a runtime runs comes from ai-agents as well: the Appspec, the version
+  and the instance of what the deployment runs. Nothing a launcher sends with the
+  launch, with `POST /api/v1/agents` or to the start hooks is read, whichever
+  field it is in.
+  Code its model writes shares the runtime's loopback, so an address proves
+  nothing there: the runtime answers its own management routes to its companion
+  alone, by a secret they hold, and that code reaches only its tool calls.
 - **Its connections in the name of each person who uses it** (`as: user`) to
   the Datalayer MCP gateway are reached with **the person's** token, never
   the principal's: on each request the runtime asks IAM, with the token of

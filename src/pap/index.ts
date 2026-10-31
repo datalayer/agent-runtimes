@@ -6,6 +6,7 @@
 import {
   AgentIdentityClient,
   discoverCompany,
+  mediatedSignIn,
   offersDevice,
   offersDirect,
   type DiscoveredCompany,
@@ -23,7 +24,7 @@ export interface PapCompanySummary {
   readonly issuer: string | null;
   /**
    * Direct and Device as the issuer's `grant_types_supported` offers them,
-   * Mediated as `poppy.json` describes it (PAP draft 0.3 §3.2, §4.4).
+   * Mediated when the company offers that extension and its grant.
    */
   readonly signIn: readonly string[];
   /** The company's own scopes and what each allows (`auth.scopes`). */
@@ -107,7 +108,7 @@ export class PapPersonalAgentCapability {
     const signIn = [
       ...(oauthMetadata && offersDirect(oauthMetadata) ? ['direct'] : []),
       ...(oauthMetadata && offersDevice(oauthMetadata) ? ['device'] : []),
-      ...(auth?.mediated !== undefined ? ['mediated'] : []),
+      ...(mediatedSignIn(company) === undefined ? [] : ['mediated']),
     ];
     const interfaces = [
       ...(document.agent?.protocols.map(protocol => `agent:${protocol.type}`) ??
@@ -119,7 +120,7 @@ export class PapPersonalAgentCapability {
       organization: document.organization.name,
       domain: document.organization.domain,
       protocolVersion: document.protocol_version,
-      issuer: document.auth?.issuer ?? null,
+      issuer: oauthMetadata?.issuer ?? null,
       signIn: Object.freeze(signIn),
       scopes: Object.freeze({ ...(auth?.scopes ?? {}) }),
       scopeHints: Object.freeze(

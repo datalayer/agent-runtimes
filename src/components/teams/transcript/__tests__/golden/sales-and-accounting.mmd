@@ -1,0 +1,17 @@
+sequenceDiagram
+  actor p0 as You
+  participant p1 as Sales
+  participant p2 as Accounting
+  participant p3 as Odoo
+  p0->>p1: Give me the aged receivables as of today, by customer.
+  activate p1
+  p1->>p2: Aged receivables as of today, by customer.
+  activate p2
+  p2->>p3: odoo_accounting_aged_balance
+  activate p3
+  p3-->>p2: answered in 2 s
+  deactivate p3
+  p2-->>p1: Three customers owe 12,400 EUR#59; the oldest is 91 days.
+  deactivate p2
+  p1-->>p0: Accounting says three customers owe 12,400 EUR#59; the oldest is 91 days.
+  deactivate p1

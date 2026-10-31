@@ -174,14 +174,18 @@ export interface SceneStageSpec {
    * How the stage is drawn, here and wherever the scene plays: `studio`,
    * characters with speech balloons and each message flowing along its
    * line; `hero`, round faces on a deep tint, thin lines and a dot that
-   * flies with each message; `plain`, boxes and arrows that do not move.
-   * `studio` when unsaid, so every scene written before draws as before.
+   * flies with each message; `plain`, boxes and arrows that do not move;
+   * `space`, glowing marks on a dotted, meshed ground, as the site's hero
+   * drawings, a light flowing along each line; `minimal`, glowing circles
+   * in each member's colour on a dark ground; `orb`, each member
+   * Datalayer's orb in its own colour. `studio` when unsaid, so every scene written before draws as before.
    */
   backdrop?: SceneBackdropId;
 }
 
 /** A backdrop, by its id (agentspecs `Backdrop`). */
-export type SceneBackdropId = 'studio' | 'hero' | 'plain';
+export type SceneBackdropId =
+  'studio' | 'hero' | 'plain' | 'space' | 'minimal' | 'orb';
 
 /** Who may watch and ask, and what an ask may cost. */
 export interface SceneAudienceSpec {
@@ -207,6 +211,48 @@ export interface SceneRecordingSpec {
   path: string;
   taken: string;
   note: string;
+}
+
+/** A line of a recording: the transcript's line as a stage exports it (`SceneTranscriptLine`). */
+export interface SceneRecordedLine {
+  key: string;
+  /** When, in milliseconds since the epoch. */
+  at: number;
+  from: string;
+  to?: string;
+  kind: 'said' | 'asked' | 'called';
+  text: string;
+  open?: boolean;
+  failed?: boolean;
+  ended?: number;
+}
+
+/** A beat of a recording: which of its lines it played (`first`, `count`). */
+export interface SceneRecordedBeat {
+  beat: string;
+  cue: string;
+  state: string;
+  seconds: number;
+  first: number;
+  count: number;
+}
+
+/**
+ * A scene's recording, as `<id>/recording.json` holds it: the transcript of
+ * a passing rehearsal (version 1, the JSON a stage exports), when it was
+ * taken, the rehearsal it came from and the beats its lines belong to.
+ */
+export interface SceneRecordingFile {
+  version: 1;
+  scene: string;
+  /** When it was taken: the label says *Recording, taken <date>*. */
+  taken: string;
+  /** What the audience is told of it. */
+  note?: string;
+  exported?: string;
+  rehearsal?: { at: string; where: string; passed: boolean; says: string };
+  beats?: SceneRecordedBeat[];
+  lines: SceneRecordedLine[];
 }
 
 /** The scene's tests: a passing rehearsal is the gallery's *Live*. */

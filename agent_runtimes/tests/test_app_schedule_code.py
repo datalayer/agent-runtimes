@@ -556,25 +556,25 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     monkeypatch.setattr(httpx, "AsyncClient", client)
     monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://ai-agents.test")
     answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) == TICK_CODE
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, "person")) == TICK_CODE
     [request] = seen
     assert request.method == "GET"
     assert request.url.path == "/api/ai-agents/v1/apps/deployments/dep-14/code"
     assert request.url.params["version"] == "2"
     assert request.headers["authorization"] == "Bearer person"
     answers.append(httpx.Response(200, json={"success": True, "code": None}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) is None
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, "person")) is None
     # With no token, asked as nobody (R-30): ai-agents answers a deployment
     # somebody without an account may talk to, and refuses the rest.
     answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, None)) == TICK_CODE
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, None)) == TICK_CODE
     assert "authorization" not in seen[-1].headers
     answers.append(httpx.Response(409, json={"detail": "Deploy it again."}))
     with pytest.raises(DeploymentCodeUnread, match=r"\(409\): Deploy it again\."):
-        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
+        asyncio.run(module._code_from_ai_agents("dep-14", 2, "person"))
     answers.append(httpx.Response(200, json={"success": True}))
     with pytest.raises(DeploymentCodeUnread, match="without it"):
-        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
+        asyncio.run(module._code_from_ai_agents("dep-14", 2, "person"))
 
 
 def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(

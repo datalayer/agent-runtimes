@@ -35,7 +35,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, FrozenSet, List, Mapping, Optional
 
 from agent_runtimes.types import AppSpec
@@ -463,3 +463,66 @@ __all__ = [
     "take_over",
     "wait_until_handed_back",
 ]
+
+
+# --- the repository it is lent ------------------------------------------------------
+
+#: How long a `git` command asked about the workspace may take.
+GIT_TIMEOUT = 30.0
+
+
+def _git(root: Path, *args: str) -> str:
+    """A `git` command on the workspace, its output; refused when it fails."""
+    import subprocess
+
+    try:
+        done = subprocess.run(
+            ["git", "-c", f"safe.directory={root}", "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ComputerRefused(
+            503, f"git did not answer about {root}: {error}."
+        ) from None
+    if done.returncode != 0:
+        raise ComputerRefused(
+            409,
+            f"The workspace ({root}) is not a checkout of the repository it is lent: "
+            f"{(done.stderr or done.stdout).strip()[:200]}",
+        )
+    return done.stdout
+
+
+def repository_state(app: AppSpec, workspace: Path) -> Dict[str, Any]:
+    """The repository an application is lent, as its workspace holds it now.
+
+    Its URL and pinned revision, the workspace's HEAD, whether HEAD is that
+    revision, and the lines of ``git status --porcelain`` — what changed and
+    what is new, by path; never what a file holds.
+
+    Raises
+    ------
+    ComputerRefused
+        404 when it is lent no repository; 409 when the workspace is not a
+        checkout; 503 when git does not answer.
+    """
+    repository = app.permissions.computer.repository
+    if repository is None:
+        raise ComputerRefused(404, f"{app.name} is lent no repository.")
+    root = workspace.resolve()
+    if not (root / ".git").exists():
+        raise ComputerRefused(
+            409,
+            f"The workspace ({root}) is not a checkout of the repository it is lent.",
+        )
+    head = _git(root, "rev-parse", "HEAD").strip()
+    status = _git(root, "status", "--porcelain=v1")
+    return {
+        "url": repository.url,
+        "revision": repository.revision,
+        "head": head,
+        "atRevision": head == repository.revision,
+        "changes": [line for line in status.splitlines() if line.strip()],
+    }

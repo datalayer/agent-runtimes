@@ -34,6 +34,7 @@ import {
   Button,
   Flash,
   Heading,
+  SegmentedControl,
   Text,
   Textarea,
   UnderlineNav,
@@ -49,6 +50,7 @@ import { useAnonymousSessionStore } from '../runtimes/browser/anonymousToken';
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
+  appColorOf,
   NOTEBOOK_AND_WORDS,
   PERSON,
   SceneView,
@@ -59,13 +61,20 @@ import {
   teamConnectionsOf,
   teamToolClassifier,
   useA2ATeam,
+  useSceneTranscript,
+  latestLineOnEdge,
+  selectedEdgeOf,
+  selectionOfLine,
+  stageBackdropOf,
+  SCENE_BACKDROP_CHOICES,
   type A2ATeamConnection,
   type A2ATeamPeerOptions,
   type SceneStage,
   type SceneStageMember,
+  memberAppDetails,
 } from '../components/teams';
 import { listSceneSpecs } from '../specs/scenes';
-import type { SceneSpec } from '../types/scenes';
+import type { SceneBackdropId, SceneSpec } from '../types/scenes';
 import {
   classifyToolCall,
   traceA2AFetch,
@@ -173,7 +182,14 @@ function memberNeeds(member: RuntimeMember, error: string): string[] {
   ];
 }
 
-function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
+function Scene({
+  scene,
+  backdrop,
+}: {
+  scene: SceneSpec;
+  /** The backdrop chosen above the tabs; the scene's own when none is. */
+  backdrop?: SceneBackdropId;
+}): JSX.Element {
   const stage = useMemo(() => sceneStageOf(scene), [scene]);
   const entry = stage.entry;
   const entryInBrowser = entry.runsIn === 'browser';
@@ -246,6 +262,17 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
       })),
     [stage, runtimeMembers],
   );
+  // The line selected, held here for the transcript and the graph (S3-02):
+  // the transcript opens it, the graph draws its edge with a halo, and a
+  // click on an edge selects its latest exchange.
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  const lines = useSceneTranscript(inspector, transcriptMembers);
+  const selectedEdge = useMemo(() => {
+    const line = lines.find(one => one.key === selectedLine);
+    return line
+      ? (selectedEdgeOf(selectionOfLine(line), transcriptMembers) ?? null)
+      : null;
+  }, [lines, selectedLine, transcriptMembers]);
   const whereOf = (member: SceneStageMember): string =>
     member.runsIn === 'browser'
       ? 'in your browser'
@@ -337,6 +364,8 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
         <SceneView
           members={transcriptMembers}
           tracer={inspector}
+          selected={selectedLine}
+          onSelect={selection => setSelectedLine(selection?.key ?? null)}
           emptyText={`Nothing said yet: ask ${entry.app.name} with one of the suggestions.`}
         >
           <A2ATeamGraph
@@ -345,7 +374,9 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
               name: entry.app.name,
               emoji: entry.cast.persona.face || entry.app.emoji,
               character: avatarShown(entry.app.interface.avatar, 'paperclip'),
+              color: appColorOf(entry.app),
               where: whereOf(entry),
+              ...memberAppDetails(entry.app, entry.runsIn),
               persona: team.entryPersona,
               onToggle: () => composer.current?.focus(),
               conversationLabel: `Ask ${entry.app.name}`,
@@ -371,7 +402,9 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
                   peer.cast.persona.face ||
                   peer.app.emoji,
                 character: avatarShown(peer.app.interface.avatar, 'wizard'),
+                color: appColorOf(peer.app),
                 where: whereOf(peer),
+                ...memberAppDetails(peer.app, peer.runsIn),
                 persona: kept?.persona ?? team.peerPersona,
                 onAway: kept?.setAway,
                 history: kept?.history,
@@ -411,6 +444,15 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             )}
             // Room for the balloons: suggestions, *more* and a notebook.
             balloonRoom={320}
+            // Drawn as chosen above the tabs, else as the scene says:
+            // studio, hero, plain, space, minimal or orb.
+            backdrop={backdrop ?? stageBackdropOf(scene)}
+            selected={selectedEdge}
+            onSelectEdge={edge =>
+              setSelectedLine(
+                latestLineOnEdge(edge, lines, transcriptMembers)?.key ?? null,
+              )
+            }
           />
         </SceneView>
       </Box>
@@ -527,6 +569,9 @@ function Scenes(): JSX.Element {
   );
   const [selected, setSelected] = useState(scenes[0]?.id ?? '');
   const scene = scenes.find(one => one.id === selected) ?? scenes[0];
+  // The backdrop the stage is drawn with: the scene's own, or one chosen.
+  const [backdrop, setBackdrop] = useState<SceneBackdropId | undefined>();
+  const shown = backdrop ?? stageBackdropOf(scene);
   return (
     <Box p={4} maxWidth={1080} mx="auto">
       <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
@@ -553,8 +598,32 @@ function Scenes(): JSX.Element {
           </UnderlineNav.Item>
         ))}
       </UnderlineNav>
+      <Box display="flex" alignItems="center" gap={2} mb={3}>
+        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Backdrop</Text>
+        <SegmentedControl
+          aria-label="Backdrop"
+          size="small"
+          onChange={index => setBackdrop(SCENE_BACKDROP_CHOICES[index].id)}
+        >
+          {SCENE_BACKDROP_CHOICES.map(choice => (
+            <SegmentedControl.Button
+              key={choice.id}
+              selected={choice.id === shown}
+              data-scene-backdrop-choice={choice.id}
+            >
+              {choice.name}
+            </SegmentedControl.Button>
+          ))}
+        </SegmentedControl>
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          {
+            SCENE_BACKDROP_CHOICES.find(choice => choice.id === shown)
+              ?.description
+          }
+        </Text>
+      </Box>
       {/* Mounted by its id: a tab switch unmounts the scene that ran, which stops its requests. */}
-      {scene && <Scene key={scene.id} scene={scene} />}
+      {scene && <Scene key={scene.id} scene={scene} backdrop={backdrop} />}
     </Box>
   );
 }

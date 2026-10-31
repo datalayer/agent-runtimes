@@ -1263,7 +1263,7 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
   tags: ['sales', 'board', 'reporting'],
   icon: 'workflow',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   lineage: ['datalayer', 'sales-pipeline', 'board-reporting'],
   frameGuards: [
     {

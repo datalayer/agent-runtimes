@@ -41,7 +41,7 @@ or as an `AppSpec`; nothing is validated until the spec is read.
 | `app.rule(says, *, applies_to, behaviour)` | When it acts alone and when it asks: `says` in the words a person reads; `applies_to` classes (`send`, `write`…) or tools; `behaviour` one of `do_it`, `if_asked`, `ask_first`, `leave_to_me`. |
 | `app.record(include, *, keep_for=None)` | What the record keeps of each session, in the Appspec's words, and for how long. Nothing is kept unless said. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches. |
-| `app.company_connection(id, company, *, …)`, `app.as_company(*, …)`, `app.company_operation(action, *, summary, …)`, `app.company_standing_permission(…)` | The Personal Agent Protocol, both roles. |
+| `app.company_connection(id, company, *, …)`, `app.as_company(*, …)`, `app.company_operation(action, *, summary)` | The Personal Agent Protocol, both roles. |
 | `app.business_connection(id, brand, *, audience, …)`, `app.as_business(*, registered_agents, …)` | PACT 1.0, both roles. |
 | `app.command(name, description, *, prompt="", run="")` | A slash command; a decorator when its code answers it. |
 | `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer. |

@@ -1,0 +1,50 @@
+---
+sidebar_position: 31
+title: TAP
+---
+
+# TAP: a draft profile over Web Bot Auth
+
+**TAP**, Visa's Trusted Agent Protocol, is an agent-recognition profile over Web Bot Auth signatures. It is built as a **draft** from Visa's public documentation, read on 2026-10-13 — the [Merchant Specifications](https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications), the [overview](https://developer.visa.com/capabilities/trusted-agent-protocol/overview) and the [reference repository](https://github.com/visa/trusted-agent-protocol) — and not confirmed by Visa; Datalayer's Studio says it *arriving* until it is.
+
+Agent Runtimes implements it in `agent_runtimes.protocols.web_bot_auth.tap` and
+`@datalayer/agent-runtimes/lib/protocols/web-bot-auth/tap`, on
+[Web Bot Auth](./web-bot-auth). It has no plugin of its own and no route: `loop apps
+protocols` does not list it. Call the functions below.
+
+## How it differs
+
+| | TAP (draft) | Web Bot Auth |
+| --- | --- | --- |
+| Headers | `Signature-Input`, `Signature` | the same, and `Signature-Agent` |
+| Covered | at least `@authority` and `@path` | `@authority` (or `@target-uri`) and the `Signature-Agent` member |
+| Parameters | `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag`, all required | `created`, `expires`, `keyid`, `tag`; `nonce` advised |
+| Tag | `agent-browser-auth` to browse, `agent-payer-auth` to pay | `web-bot-auth` |
+| Life | at most 8 minutes; a nonce seen in the last 8 minutes is a replay | 24 hours at most, advised |
+| Keys | by `keyid`, from Visa's directory (`https://mcp.visa.com/.well-known/jwks`) or a registry | found from the `Signature-Agent` member |
+
+## Example
+
+```python
+from agent_runtimes.protocols.web_bot_auth.tap import sign_tap_request, verify_tap_request
+
+signed = await sign_tap_request(method="GET", url=url, signer=signer, intent="browse")
+found = await verify_tap_request(
+    method="GET", url=url, headers=signed.as_dict(), keys=keys, nonce_store=nonces
+)
+found.intent  # "browse" or "pay"
+```
+
+```ts
+import { signTapRequest, verifyTapRequest } from '@datalayer/agent-runtimes/lib/protocols/web-bot-auth/tap';
+
+const headers = await signTapRequest({ method: 'GET', url }, signer, { intent: 'pay' });
+const found = await verifyTapRequest(request, keys, { nonceStore });
+```
+
+The vectors are `web_bot_auth/fixtures/tap.json`, a browsing and a paying request
+under the RFC 9421 Ed25519 test key, computed here because Visa publishes none.
+
+## Limits
+
+Found reading Visa's page: its own sample's `expires` is an hour after `created`, against its 8-minute rule (the rule is followed); it names no `Signature-Agent`; it publishes no test vector. The Consumer Recognition Object and the Payment Container a TAP agent may send in a body are not implemented.

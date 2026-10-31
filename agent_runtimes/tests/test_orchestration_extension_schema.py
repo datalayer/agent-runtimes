@@ -20,11 +20,11 @@ import pytest
 from datalayer_core.orchestration import Usage
 
 from agent_runtimes.context.delegation import (
+    DELEGATION_META_KEY,
     EXTENSION_URI,
     paused_meta,
     spent_meta,
 )
-from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 from agent_runtimes.orchestration.budget import delegation_meta
 from agent_runtimes.orchestration.extension_schema import extension_schema
 from agent_runtimes.tests.orchestration_records import an_execution

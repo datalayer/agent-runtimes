@@ -31,6 +31,13 @@ and its rehearsal, the shape each beat's transcript must take.
   and no live run says its recording stands. What a rehearsal on Datalayer
   found is kept as the catalogue scene's last (`write_played`), which is what
   *Live* reads — never a local run's, never a scene file's.
+- ``loop scenes rehearse … --transcript run.json`` also writes what the
+  rehearsal played as the transcript JSON a stage exports (version 1), with
+  its beats and its verdict; ``loop scenes record <scene> --from run.json``
+  keeps such a transcript, of a rehearsal that passed every beat, as the
+  scene's recording beside the specs (``<id>/recording.json``) and names it
+  in the scene's YAML (``rehearsal.recording``): what a stage plays, at its
+  recorded pace, when the scene cannot play live.
 - ``loop scenes build scene.py`` writes the scene spec a scene written in
   Python amounts to (``loop.scene``, ``loop.stage``; P-30), and
   ``loop scenes push`` keeps a scene in the person's Space as the Studio keeps
@@ -500,6 +507,12 @@ def scenes_rehearse(
         help="Leave the cloud runtimes running when the rehearsal ends.",
     ),
     as_json: bool = typer.Option(False, "--json", help="Print the verdict as JSON."),
+    transcript: Path = typer.Option(
+        None,
+        "--transcript",
+        dir_okay=False,
+        help="Also write what was played as a transcript (JSON, version 1): what `loop scenes record` keeps.",
+    ),
 ) -> None:
     """Play each beat's cue through the scene and compare the transcript to what the rehearsal expects.
 
@@ -579,6 +592,15 @@ def scenes_rehearse(
             for launch in launches:
                 finish_cloud(launch, keep=keep, can_ask=False, say=aside)
     verdict.notes = notes + verdict.notes
+    if transcript is not None:
+        from agent_runtimes.loop.scenes.rehearsal import transcript_of_rehearsal
+
+        written = transcript_of_rehearsal(
+            verdict, at=datetime.now(timezone.utc).isoformat(timespec="seconds")
+        )
+        transcript.parent.mkdir(parents=True, exist_ok=True)
+        transcript.write_text(json.dumps(written, indent=2, ensure_ascii=False) + "\n")
+        aside(f"The transcript is written to {transcript}.")
     if cloud and not (beats or []) and module.get_scene(scene.id) is scene:
         # Every beat, on Datalayer, of a catalogue scene: kept as its last rehearsal (A-14).
         kept = keep_played(module, scene, verdict)
@@ -593,6 +615,114 @@ def scenes_rehearse(
         console.print(f"  [{colour}]{verdict.says}[/{colour}]", highlight=False)
     if verdict.exit_code:
         raise typer.Exit(verdict.exit_code)
+
+
+def specs_folder(module: Any, scene_name: str, given: Optional[Path]) -> Path:
+    """Where the scene's specs are: ``--specs-dir``, the folder of a scene file, else agentspecs' own."""
+    if given is not None:
+        return given
+    path = Path(scene_name)
+    if path.suffix in (".yaml", ".yml") and path.exists():
+        return path.parent
+    return Path(module.__file__).parent
+
+
+def spec_file_of(
+    module: Any, scene_name: str, scene_id: str, given: Optional[Path]
+) -> Path:
+    """The scene's YAML: the file named, else ``<id>.yaml`` in its folder of specs."""
+    path = Path(scene_name)
+    if given is None and path.suffix in (".yaml", ".yml") and path.is_file():
+        return path
+    return specs_folder(module, scene_name, given) / f"{scene_id}.yaml"
+
+
+@app.command(name="record")
+def scenes_record(
+    scene_name: str = typer.Argument(
+        ...,
+        metavar="SCENE",
+        help="A scene of the catalogue by id, or its YAML file.",
+    ),
+    source: Path = typer.Option(
+        ...,
+        "--from",
+        exists=True,
+        dir_okay=False,
+        help="The transcript of a rehearsal that passed: `loop scenes rehearse --cloud --transcript <file>`.",
+    ),
+    taken: str = typer.Option(
+        None,
+        "--taken",
+        help="When it was taken, as the label says it; the rehearsal's day when unsaid.",
+    ),
+    note: str = typer.Option(
+        "",
+        "--note",
+        help="What the audience is told of it, in a sentence.",
+    ),
+    specs_dir: Path = typer.Option(
+        None,
+        "--specs-dir",
+        file_okay=False,
+        help="The folder of scene specs to keep it in (agentspecs/scenes of a checkout); the scene file's, else the installed agentspecs'.",
+    ),
+) -> None:
+    """Keep a passing rehearsal's transcript as the scene's recording, and name it in its spec.
+
+    Writes `<id>/recording.json` beside the scene's YAML and sets
+    `rehearsal.recording` there (its path, when it was taken, its note). A
+    transcript that is not of this scene, not of a rehearsal that passed, or
+    that misses a beat is refused in a sentence: exit 1.
+    """
+    from agent_runtimes.loop.scenes.recording import (
+        RecordingRefused,
+        recording_of,
+        with_recording,
+        write_recording,
+    )
+
+    module = _require_scenes()
+    try:
+        scene = scene_of(scene_name)
+    except typer.BadParameter as refused:
+        console.print(f"[red]✗[/red] {refused.message}", highlight=False)
+        raise typer.Exit(1)
+    try:
+        data = json.loads(source.read_text())
+    except ValueError:
+        console.print(f"[red]✗[/red] {source} is not JSON.", highlight=False)
+        raise typer.Exit(1)
+    if not isinstance(data, dict):
+        console.print(f"[red]✗[/red] {source} is not a transcript.", highlight=False)
+        raise typer.Exit(1)
+    day = taken or str((data.get("rehearsal") or {}).get("at") or "")[:10]
+    try:
+        document = recording_of(data, scene, taken=day, note=note)
+    except RecordingRefused as refused:
+        console.print(f"[red]✗[/red] {refused}", highlight=False)
+        raise typer.Exit(1)
+    folder = specs_folder(module, scene_name, specs_dir)
+    spec_file = spec_file_of(module, scene_name, scene.id, specs_dir)
+    if not spec_file.is_file():
+        console.print(
+            f"[red]✗[/red] {spec_file} is not there: say the folder of the scene specs with --specs-dir.",
+            highlight=False,
+        )
+        raise typer.Exit(1)
+    relative = f"{scene.id}/recording.json"
+    try:
+        updated = with_recording(spec_file.read_text(), relative, taken=day, note=note)
+    except RecordingRefused as refused:
+        console.print(f"[red]✗[/red] {spec_file}: {refused}", highlight=False)
+        raise typer.Exit(1)
+    kept = write_recording(document, folder)
+    spec_file.write_text(updated)
+    console.print(
+        f"[green]✓[/green] {scene.name}: its recording, taken {day}, is kept in {kept} "
+        f"and named in {spec_file.name} (rehearsal.recording).",
+        highlight=False,
+    )
 
 
 @app.command(name="build")

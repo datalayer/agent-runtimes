@@ -162,7 +162,28 @@ vi.mock('@datalayer/jupyter-react', () => ({
   },
 }));
 
-vi.mock('@jupyter/web-components', () => ({}));
+// Its custom elements are never drawn in jsdom: every export a dependency
+// imports (provideJupyterDesignSystem, the jp* components…) is a stub that
+// registers nothing, so a newly imported one never fails a suite.
+vi.mock('@jupyter/web-components', () => {
+  const designSystem = { register: () => designSystem };
+  const stub = () => designSystem;
+  return new Proxy(
+    { provideJupyterDesignSystem: stub },
+    {
+      // Never a thenable (awaiting the module would wait on `then` for
+      // ever), and no symbol is a component.
+      has: (target, key) =>
+        key in target || (typeof key === 'string' && key !== 'then'),
+      get: (target, key) =>
+        key in target
+          ? target[key as keyof typeof target]
+          : typeof key === 'string' && key !== 'then'
+            ? stub
+            : undefined,
+    },
+  );
+});
 
 vi.mock('@jupyter/ydoc', () => ({
   YNotebook: class YNotebook {},

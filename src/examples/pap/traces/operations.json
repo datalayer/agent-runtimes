@@ -1,9 +1,9 @@
 {
   "slug": "operations",
   "title": "Operations",
-  "description": "Manzanita proposes an exchange; Atlas confirms only the exact revision Ada approved, at most once.",
+  "description": "Manzanita returns an exchange as an operation; Atlas asks Ada about every revision, and sends her approval of that exact revision, performed at most once.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.27.0",
+  "sdk": "personal-agent-protocol 0.29.0",
   "parties": [
     {
       "id": "user",
@@ -30,7 +30,7 @@
     {
       "title": "Atlas finds Manzanita",
       "channel": "Discovery + Session",
-      "summary": "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+      "summary": "Atlas reads Manzanita's protected resource metadata, public poppy.json and OAuth metadata. A Session is local: Atlas chooses a random sid for Ada's pairwise User ID, and no request is sent. Manzanita verifies Atlas's delegation at its first request.",
       "chat": [
         {
           "speaker": "user",
@@ -46,7 +46,7 @@
           },
           {
             "label": "Session",
-            "value": "signed out · DPoP-bound"
+            "value": "signed out · a Session JWT on every request"
           },
           {
             "label": "Vault (host only)",
@@ -60,15 +60,11 @@
         "manzanita": [
           {
             "label": "Verified client",
-            "value": "atlas.example/agent.json"
+            "value": "None yet"
           },
           {
             "label": "Sessions",
-            "value": "1 live · 0 signed in"
-          },
-          {
-            "label": "Who is it?",
-            "value": "A pairwise identifier only"
+            "value": "None"
           }
         ]
       },
@@ -95,24 +91,16 @@
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
               },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://manzanita.example/poppy/conversations"
+                  }
+                ]
+              },
               "auth": {
                 "issuer": "https://manzanita.example",
-                "mediated": {
-                  "endpoint": "https://manzanita.example/poppy/sign-in",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                },
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
                   "orders:write": "Exchange or return items in your orders"
@@ -127,14 +115,6 @@
                     "personal_data": true
                   }
                 }
-              },
-              "agent": {
-                "protocols": [
-                  {
-                    "type": "poppy",
-                    "endpoint": "https://manzanita.example/poppy/conversations"
-                  }
-                ]
               },
               "apis": [
                 {
@@ -159,10 +139,49 @@
               },
               "extensions": {
                 "operations": {
+                  "version": "2"
+                },
+                "mediated-sign-in": {
                   "version": "1",
-                  "endpoint": "https://manzanita.example/poppy/operations"
+                  "fields": [
+                    {
+                      "name": "email",
+                      "label": "Email",
+                      "secret": false
+                    },
+                    {
+                      "name": "password",
+                      "label": "Password",
+                      "secret": true
+                    }
+                  ],
+                  "scopes": ["orders:read", "orders:write"]
                 }
               }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/.well-known/oauth-protected-resource",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "resource": "https://manzanita.example",
+              "authorization_servers": ["https://manzanita.example"],
+              "scopes_supported": ["orders:read", "orders:write"],
+              "bearer_methods_supported": ["header"]
             }
           }
         },
@@ -187,124 +206,28 @@
               "token_endpoint": "https://manzanita.example/oauth/token",
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "grant_types_supported": [
-                "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 "refresh_token",
                 "authorization_code",
-                "urn:ietf:params:oauth:grant-type:device_code"
+                "urn:ietf:params:oauth:grant-type:device_code",
+                "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
               "scopes_supported": ["orders:read", "orders:write"],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
               ],
-              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
               "device_1": "https://manzanita.example/oauth/device"
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/oauth/token",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-              "assertion": "‹session assertion›",
-              "client_id": "https://atlas.example/agent.json",
-              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-              "client_assertion": "‹client assertion›"
-            },
-            "encoding": "form"
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json",
-              "cache-control": "no-store"
-            },
-            "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
-              "expires_in": 3600
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
             }
           }
         }
       ]
     },
     {
-      "title": "A proposal",
-      "channel": "Operations v1",
-      "summary": "Both sides list operations version 1. Signed in, Manzanita proposes the exchange. It requires Ada's own approval, so a standing permission is refused locally (user_approval_required).",
+      "title": "An operation",
+      "channel": "Operations version 2",
+      "summary": "Both sides list operations version 2 (negotiated: True). Signed in, Manzanita returns the exchange as an operation in its message: nothing is done, and only Ada can approve it.",
       "chat": [
         {
           "speaker": "manzanita",
@@ -320,7 +243,7 @@
         {
           "speaker": "manzanita",
           "kind": "approval",
-          "title": "Revision 1 · needs your approval",
+          "title": "Revision rev_1 · needs your approval",
           "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
         }
       ],
@@ -332,7 +255,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -340,7 +263,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -354,10 +277,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "1 live"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -365,7 +288,7 @@
             "value": "orders:read orders:write"
           },
           {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           },
           {
@@ -374,7 +297,7 @@
           },
           {
             "label": "Operation orders.exchange",
-            "value": "revision 1 · proposed"
+            "value": "revision rev_1 · open"
           }
         ]
       },
@@ -416,6 +339,67 @@
         },
         {
           "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "manzanita",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
@@ -424,8 +408,7 @@
           "request": {
             "headers": {
               "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
+              "accept": "application/json"
             },
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -462,8 +445,7 @@
           "request": {
             "headers": {
               "content-type": "application/x-www-form-urlencoded",
-              "accept": "application/json",
-              "dpop": "‹DPoP proof›"
+              "accept": "application/json"
             },
             "body": {
               "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -480,11 +462,10 @@
               "cache-control": "no-store"
             },
             "body": {
-              "access_token": "‹session token›",
-              "token_type": "DPoP",
+              "access_token": "‹access token›",
+              "token_type": "Bearer",
               "expires_in": 3600,
-              "refresh_token": "‹account token›",
-              "refresh_token_expires_in": 7776000
+              "refresh_token": "‹refresh token›"
             }
           }
         },
@@ -499,8 +480,8 @@
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
@@ -552,8 +533,7 @@
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "operation": {
                       "operation_id": "op_1",
-                      "revision": 1,
-                      "state": "proposed",
+                      "revision": "rev_1",
                       "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
                       "terms": {
                         "order_id": "ord_7Hk2",
@@ -562,11 +542,7 @@
                           "currency": "USD"
                         }
                       },
-                      "expires_at": "2026-10-11T09:15:10Z",
-                      "user_approval_required": true,
-                      "url": "https://manzanita.example/operations/op_1",
-                      "confirmation": null,
-                      "result": null
+                      "expires_at": "2026-10-11T09:15:10Z"
                     }
                   }
                 },
@@ -588,14 +564,89 @@
       ]
     },
     {
-      "title": "The terms changed",
-      "channel": "terms_changed",
-      "summary": "Before the confirmation arrives, Manzanita revises the proposal. The company refuses revision 1 and returns revision 2; Atlas shows what changed (summary, return_by). Ada's approval of revision 1 cannot confirm it.",
+      "title": "Ada says no",
+      "channel": "The approval surface",
+      "summary": "Atlas asks Ada in its own interface, and she says no (not_approved). Nothing is sent: no Rule, setting or earlier approval answers for her.",
       "chat": [
         {
           "speaker": "user",
           "kind": "approval",
-          "title": "Revision 1 · approved",
+          "title": "Revision rev_1 · declined",
+          "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · a Session JWT on every request"
+          },
+          {
+            "label": "Scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 refresh token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live"
+          },
+          {
+            "label": "Account behind the access token",
+            "value": "acct_ada"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Refresh tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 4 events"
+          },
+          {
+            "label": "Operation orders.exchange",
+            "value": "revision rev_1 · open"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Says no"
+        }
+      ]
+    },
+    {
+      "title": "The terms changed",
+      "channel": "A new revision",
+      "summary": "Before the approval arrives, Manzanita changes the terms. It performs nothing and answers with a new revision of the same operation; Atlas shows what changed (summary, return_by). Ada's approval covers one revision, so she is asked again.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "approval",
+          "title": "Revision rev_1 · approved",
           "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
         },
         {
@@ -606,7 +657,7 @@
         {
           "speaker": "manzanita",
           "kind": "approval",
-          "title": "Revision 2 · needs your approval",
+          "title": "Revision rev_2 · needs your approval",
           "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25."
         }
       ],
@@ -618,7 +669,7 @@
           },
           {
             "label": "Session",
-            "value": "signed in · DPoP-bound"
+            "value": "signed in · a Session JWT on every request"
           },
           {
             "label": "Scopes",
@@ -626,7 +677,7 @@
           },
           {
             "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
+            "value": "1 refresh token by reference"
           },
           {
             "label": "Model sees",
@@ -640,10 +691,10 @@
           },
           {
             "label": "Sessions",
-            "value": "1 live · 1 signed in"
+            "value": "1 live"
           },
           {
-            "label": "Account behind the Session",
+            "label": "Account behind the access token",
             "value": "acct_ada"
           },
           {
@@ -651,329 +702,7 @@
             "value": "orders:read orders:write"
           },
           {
-            "label": "Account Tokens issued",
-            "value": "1 · 1 not revoked"
-          },
-          {
-            "label": "Conversation",
-            "value": "idle · agent · 4 events"
-          },
-          {
-            "label": "Operation orders.exchange",
-            "value": "revision 2 · proposed"
-          }
-        ]
-      },
-      "sequence": [
-        {
-          "kind": "action",
-          "from": "user",
-          "to": "atlas",
-          "label": "Approves revision 1"
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/operations/op_1/confirm",
-          "status": 409,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "revision": 1,
-              "approved_by": "user"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json",
-              "cache-control": "no-store"
-            },
-            "body": {
-              "error": "terms_changed",
-              "operation": {
-                "operation_id": "op_1",
-                "revision": 2,
-                "state": "proposed",
-                "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-                "terms": {
-                  "order_id": "ord_7Hk2",
-                  "price_difference": {
-                    "amount": "70.00",
-                    "currency": "USD"
-                  },
-                  "return_by": "2026-10-25"
-                },
-                "expires_at": "2026-10-11T09:15:10Z",
-                "user_approval_required": true,
-                "url": "https://manzanita.example/operations/op_1",
-                "confirmation": null,
-                "result": null
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "title": "Confirmed once",
-      "channel": "confirm",
-      "summary": "Atlas confirms revision 2 with approved_by: user. A retried confirmation returns the same record: the exchange is performed once.",
-      "chat": [
-        {
-          "speaker": "user",
-          "kind": "approval",
-          "title": "Revision 2 · approved",
-          "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25."
-        },
-        {
-          "speaker": "manzanita",
-          "kind": "result",
-          "title": "Result",
-          "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed."
-        }
-      ],
-      "views": {
-        "atlas": [
-          {
-            "label": "Company",
-            "value": "Manzanita Outfitters · discovery verified"
-          },
-          {
-            "label": "Session",
-            "value": "signed in · DPoP-bound"
-          },
-          {
-            "label": "Scopes",
-            "value": "orders:read orders:write"
-          },
-          {
-            "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
-          },
-          {
-            "label": "Model sees",
-            "value": "Summaries and statuses, never a credential"
-          }
-        ],
-        "manzanita": [
-          {
-            "label": "Verified client",
-            "value": "atlas.example/agent.json"
-          },
-          {
-            "label": "Sessions",
-            "value": "1 live · 1 signed in"
-          },
-          {
-            "label": "Account behind the Session",
-            "value": "acct_ada"
-          },
-          {
-            "label": "Granted scopes",
-            "value": "orders:read orders:write"
-          },
-          {
-            "label": "Account Tokens issued",
-            "value": "1 · 1 not revoked"
-          },
-          {
-            "label": "Conversation",
-            "value": "idle · agent · 4 events"
-          },
-          {
-            "label": "Operation orders.exchange",
-            "value": "revision 2 · succeeded · approved by user"
-          }
-        ]
-      },
-      "sequence": [
-        {
-          "kind": "action",
-          "from": "user",
-          "to": "atlas",
-          "label": "Approves revision 2"
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/operations/op_1/confirm",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "revision": 2,
-              "approved_by": "user"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "operation_id": "op_1",
-              "revision": 2,
-              "state": "succeeded",
-              "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-              "terms": {
-                "order_id": "ord_7Hk2",
-                "price_difference": {
-                  "amount": "70.00",
-                  "currency": "USD"
-                },
-                "return_by": "2026-10-25"
-              },
-              "user_approval_required": true,
-              "url": "https://manzanita.example/operations/op_1",
-              "confirmation": {
-                "revision": 2,
-                "approved_by": "user",
-                "confirmed_at": "2026-10-11T09:00:10Z"
-              },
-              "result": {
-                "summary": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
-                "data": {
-                  "order_id": "ord_7Hk2",
-                  "charged": {
-                    "amount": "70.00",
-                    "currency": "USD"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/operations/op_1/confirm",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
-            },
-            "body": {
-              "revision": 2,
-              "approved_by": "user"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "operation_id": "op_1",
-              "revision": 2,
-              "state": "succeeded",
-              "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-              "terms": {
-                "order_id": "ord_7Hk2",
-                "price_difference": {
-                  "amount": "70.00",
-                  "currency": "USD"
-                },
-                "return_by": "2026-10-25"
-              },
-              "user_approval_required": true,
-              "url": "https://manzanita.example/operations/op_1",
-              "confirmation": {
-                "revision": 2,
-                "approved_by": "user",
-                "confirmed_at": "2026-10-11T09:00:10Z"
-              },
-              "result": {
-                "summary": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
-                "data": {
-                  "order_id": "ord_7Hk2",
-                  "charged": {
-                    "amount": "70.00",
-                    "currency": "USD"
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "title": "Cancelled",
-      "channel": "cancel",
-      "summary": "A second proposal Ada declines is cancelled: nothing was changed.",
-      "chat": [
-        {
-          "speaker": "manzanita",
-          "kind": "approval",
-          "title": "Revision 1 · declined",
-          "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more."
-        },
-        {
-          "speaker": "manzanita",
-          "kind": "result",
-          "title": "Result",
-          "text": "Nothing was changed."
-        }
-      ],
-      "views": {
-        "atlas": [
-          {
-            "label": "Company",
-            "value": "Manzanita Outfitters · discovery verified"
-          },
-          {
-            "label": "Session",
-            "value": "signed in · DPoP-bound"
-          },
-          {
-            "label": "Scopes",
-            "value": "orders:read orders:write"
-          },
-          {
-            "label": "Vault (host only)",
-            "value": "1 Account Token by reference"
-          },
-          {
-            "label": "Model sees",
-            "value": "Summaries and statuses, never a credential"
-          }
-        ],
-        "manzanita": [
-          {
-            "label": "Verified client",
-            "value": "atlas.example/agent.json"
-          },
-          {
-            "label": "Sessions",
-            "value": "1 live · 1 signed in"
-          },
-          {
-            "label": "Account behind the Session",
-            "value": "acct_ada"
-          },
-          {
-            "label": "Granted scopes",
-            "value": "orders:read orders:write"
-          },
-          {
-            "label": "Account Tokens issued",
+            "label": "Refresh tokens issued",
             "value": "1 · 1 not revoked"
           },
           {
@@ -982,36 +711,41 @@
           },
           {
             "label": "Operation orders.exchange",
-            "value": "revision 2 · succeeded · approved by user"
-          },
-          {
-            "label": "Operation orders.exchange",
-            "value": "revision 1 · cancelled"
+            "value": "revision rev_2 · open"
           }
         ]
       },
       "sequence": [
         {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Approves revision rev_1"
+        },
+        {
           "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?wait=0",
           "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
             },
             "body": {
               "message": {
                 "id": "msg_3",
                 "author": {
-                  "type": "human"
+                  "type": "agent"
                 },
-                "text": "Actually, exchange it for something warmer still"
+                "approval": {
+                  "operation_id": "op_1",
+                  "revision": "rev_1"
+                }
               }
             }
           },
@@ -1023,15 +757,71 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "author": {
+                      "type": "human"
+                    },
+                    "text": "Exchange my jacket for something warmer",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_2",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        }
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
                   "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
                     "id": "msg_3",
                     "author": {
-                      "type": "human"
+                      "type": "agent"
                     },
-                    "text": "Actually, exchange it for something warmer still",
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1"
+                    },
                     "role": "user"
                   }
                 },
@@ -1052,24 +842,20 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
+                    "text": "That approval doesn't cover these terms. Here they are to approve.",
                     "operation": {
-                      "operation_id": "op_2",
-                      "revision": 1,
-                      "state": "proposed",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                      "operation_id": "op_1",
+                      "revision": "rev_2",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
                       "terms": {
                         "order_id": "ord_7Hk2",
                         "price_difference": {
                           "amount": "70.00",
                           "currency": "USD"
-                        }
+                        },
+                        "return_by": "2026-10-25"
                       },
-                      "expires_at": "2026-10-11T09:15:10Z",
-                      "user_approval_required": true,
-                      "url": "https://manzanita.example/operations/op_2",
-                      "confirmation": null,
-                      "result": null
+                      "expires_at": "2026-10-11T09:15:10Z"
                     }
                   }
                 },
@@ -1092,48 +878,484 @@
           "kind": "action",
           "from": "user",
           "to": "atlas",
-          "label": "Declines the second proposal"
+          "label": "Approves revision rev_2"
+        }
+      ]
+    },
+    {
+      "title": "Approved, performed once",
+      "channel": "The approval as a message",
+      "summary": "Atlas sends Ada's approval of that revision. Sent again with the same message ID, it gets the same answer: the exchange is performed once.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "approval",
+          "title": "Revision rev_2 · approved",
+          "text": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25."
         },
+        {
+          "speaker": "manzanita",
+          "kind": "result",
+          "title": "Result",
+          "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · a Session JWT on every request"
+          },
+          {
+            "label": "Scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 refresh token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live"
+          },
+          {
+            "label": "Account behind the access token",
+            "value": "acct_ada"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "orders:read orders:write"
+          },
+          {
+            "label": "Refresh tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 12 events"
+          },
+          {
+            "label": "Operation orders.exchange",
+            "value": "revision rev_2 · performed"
+          }
+        ]
+      },
+      "sequence": [
         {
           "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/operations/op_2/cancel",
-          "status": 200,
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?wait=0",
+          "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
-              "accept": "application/json",
-              "authorization": "DPoP ‹session token›",
-              "dpop": "‹DPoP proof›"
+              "accept": "*/*",
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
             },
-            "body": {}
+            "body": {
+              "message": {
+                "id": "msg_5",
+                "author": {
+                  "type": "agent"
+                },
+                "approval": {
+                  "operation_id": "op_1",
+                  "revision": "rev_2"
+                }
+              }
+            }
           },
           "response": {
             "headers": {
               "content-type": "application/json"
             },
             "body": {
-              "operation_id": "op_2",
-              "revision": 1,
-              "state": "cancelled",
-              "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-              "terms": {
-                "order_id": "ord_7Hk2",
-                "price_difference": {
-                  "amount": "70.00",
-                  "currency": "USD"
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "author": {
+                      "type": "human"
+                    },
+                    "text": "Exchange my jacket for something warmer",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_2",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        }
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_5",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_3",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1"
+                    },
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_7",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_4",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "That approval doesn't cover these terms. Here they are to approve.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        },
+                        "return_by": "2026-10-25"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_9",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_5",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2"
+                    },
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_10",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_11",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_6",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
+                    "data": {
+                      "order_id": "ord_7Hk2",
+                      "charged": {
+                        "amount": "70.00",
+                        "currency": "USD"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "evt_12",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
-              },
-              "expires_at": "2026-10-11T09:15:10Z",
-              "user_approval_required": true,
-              "url": "https://manzanita.example/operations/op_2",
-              "confirmation": null,
-              "result": {
-                "summary": "Nothing was changed.",
-                "data": null
+              ],
+              "cursor": "evt_12",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?wait=0",
+          "status": 202,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "Bearer ‹access token›",
+              "poppy-session": "‹Session JWT›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_5",
+                "author": {
+                  "type": "agent"
+                },
+                "approval": {
+                  "operation_id": "op_1",
+                  "revision": "rev_2"
+                }
               }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "author": {
+                      "type": "human"
+                    },
+                    "text": "Exchange my jacket for something warmer",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_2",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        }
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_5",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_3",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1"
+                    },
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_7",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_4",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "That approval doesn't cover these terms. Here they are to approve.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2",
+                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
+                      "terms": {
+                        "order_id": "ord_7Hk2",
+                        "price_difference": {
+                          "amount": "70.00",
+                          "currency": "USD"
+                        },
+                        "return_by": "2026-10-25"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z"
+                    }
+                  }
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_9",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_5",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2"
+                    },
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_10",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_11",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_6",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
+                    "data": {
+                      "order_id": "ord_7Hk2",
+                      "charged": {
+                        "amount": "70.00",
+                        "currency": "USD"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "evt_12",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                }
+              ],
+              "cursor": "evt_12",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
             }
           }
         }

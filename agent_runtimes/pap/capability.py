@@ -8,23 +8,22 @@ Runtimes owns what may cross into a model, tool result, trace, or UI state.
 
 Without a host, the capability reads public metadata only (a company's
 discovery, a personal agent's identity). Given the host's PAP Reactor
-(``build_pap_reactor`` with its ``pap.signer``, ``pap.dpopProofProvider``,
+(``build_pap_reactor`` with its ``pap.signer``, ``pap.sessionSigner``,
 ``pap.tokenStore``, ``pap.authorizationStateStore`` and
 ``pap.pairwiseUserIdStore`` contributions), it is a local runtime's personal
-agent (PR-03): it opens a Session at a company under its own Session Key
-(a DPoP key per Session, PAP draft 0.3),
-talks in a conversation, signs the person in with Device Sign-In, and
-confirms an operation the person approved on the host's own approval surface
-(``pap.approvalSurface``). Every answer is a summary: no token, proof,
-assertion, device code or authorization URL with state crosses it. The
-hosted path (Datalayer) is the gateway's ``pap`` toolset, whose answers this
-one mirrors.
+agent: it keeps one Session at a company under a random ``sid``, sent
+as the ``Poppy-Session`` header on every request (PAP draft 0.3), talks in a
+conversation, signs the person in with Device Sign-In, and sends the approval
+of an operation the person gave on the host's own approval surface
+(``pap.approvalSurface``). Every answer is a summary: no token, Session JWT,
+assertion, device code or authorization URL with state crosses it. The hosted
+path (Datalayer) is the gateway's ``pap`` toolset, whose answers this one
+mirrors.
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
@@ -34,13 +33,15 @@ from personal_agent_protocol import (
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
-    DpopHttpClient,
     Message,
+    OperationError,
     OperationsClient,
+    PapSession,
     SessionClient,
-    approve,
+    SessionHttpClient,
     generate_message_id,
-    operations_endpoint,
+    mediated_sign_in,
+    operations_negotiated,
     resolve_pairwise_user_id,
 )
 from personal_agent_protocol.models import (
@@ -50,12 +51,7 @@ from personal_agent_protocol.models import (
     JsonWebKeySet,
     Operation,
 )
-from personal_agent_protocol.reactor import (
-    APPROVAL_SURFACES,
-    ApprovalRequest,
-    optional_contribution,
-)
-from personal_agent_protocol.sessions import SessionToken
+from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
 
@@ -79,7 +75,7 @@ class PapCompanySummary(BaseModel):
     protocol_version: str
     issuer: str | None
     #: Direct and Device as the issuer's ``grant_types_supported`` offers them,
-    #: Mediated as ``poppy.json`` describes it.
+    #: Mediated when the company offers that extension and its grant.
     sign_in: tuple[str, ...]
     #: The company's own scopes and what each allows (``auth.scopes``).
     scopes: dict[str, str]
@@ -120,13 +116,13 @@ def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
     document = company.document
     metadata = company.oauth_metadata
     auth = document.auth
-    # Direct and Device from the issuer's grants, Mediated from poppy.json (§3.2, §4.4).
+    # Direct and Device from the issuer's grants, Mediated from its extension and grant.
     sign_in = [
         name
         for name, offered in (
             ("direct", metadata is not None and metadata.offers_direct),
             ("device", metadata is not None and metadata.offers_device),
-            ("mediated", auth is not None and auth.mediated is not None),
+            ("mediated", mediated_sign_in(company) is not None),
         )
         if offered
     ]
@@ -142,7 +138,7 @@ def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
         organization=document.organization.name,
         domain=document.organization.domain,
         protocol_version=document.protocol_version,
-        issuer=document.auth.issuer if document.auth is not None else None,
+        issuer=metadata.issuer if metadata is not None else None,
         sign_in=tuple(sign_in),
         scopes=dict(auth.scopes) if auth is not None else {},
         scope_hints={
@@ -175,17 +171,16 @@ def _identity_summary(
 
 
 class PapOperationSummary(BaseModel):
-    """An operation a company proposed: what the person approves, never a credential."""
+    """An operation a company returned: what the person approves, never a credential."""
 
     model_config = ConfigDict(frozen=True)
 
     operation_ref: str
-    revision: int
+    #: Opaque, the company's: confirmed exactly as it was shown.
+    revision: str
     summary: str
     terms: dict[str, Any]
-    state: str
-    user_approval_required: bool
-    expires_at: str | None
+    expires_at: str
 
 
 class PapReplyLine(BaseModel):
@@ -237,20 +232,25 @@ class PapSignInSummary(BaseModel):
 
 
 class PapConfirmSummary(BaseModel):
-    """What confirming an operation came to."""
+    """What sending the person's approval came to, as the gateway's ``pap_confirm`` says it.
+
+    ``confirmed``: the company answered; ``new_revision``: it returned other
+    terms, ``operation``, which the person is asked about; ``in_progress``: it
+    has not said what came of it, and the same action is not asked again until
+    it has; ``not_approved``: the person said no, and nothing was sent;
+    ``not_decided``: the revision expired, and the company is asked again.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     status: Literal[
-        "confirmed",
-        "not_confirmed",
-        "not_approved",
-        "terms_changed",
-        "approval_required",
+        "confirmed", "new_revision", "in_progress", "not_approved", "not_decided"
     ]
     operation: PapOperationSummary
-    #: The terms whose values changed, for ``terms_changed`` (asked again).
-    changed: tuple[str, ...] = ()
+    #: For ``confirmed``: ``said`` when the company wrote how it went, else
+    #: ``not_said``; nothing in its words says done or failed, so neither is guessed.
+    state: Literal["said", "not_said"] | None = None
+    #: What the company wrote, in its own words.
     result: str | None = None
 
 
@@ -258,8 +258,8 @@ class PapCapabilityError(Exception):
     """A personal-agent call the capability refuses, before anything is sent.
 
     ``code``: ``no_host`` (no PAP Reactor was given), ``no_conversation``,
-    ``no_sign_in``, ``unknown_operation``, ``no_operations``,
-    ``no_approval_surface``.
+    ``unknown_operation``, ``no_operations``,
+    ``no_approval_surface``, ``approval_surface_ambiguous``, ``approval_failed``.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -268,21 +268,29 @@ class PapCapabilityError(Exception):
 
 
 def _operation_summary(operation: Operation) -> PapOperationSummary:
-    """A proposed operation as the person is shown it."""
+    """A returned operation as the person is shown it."""
     return PapOperationSummary(
         operation_ref=operation.operation_id,
         revision=operation.revision,
         summary=operation.summary,
         terms=dict(operation.terms or {}),
-        state=operation.state,
-        user_approval_required=operation.user_approval_required,
-        expires_at=operation.expires_at.isoformat() if operation.expires_at else None,
+        expires_at=operation.expires_at.isoformat(),
     )
 
 
-def session_ref(session_key: str) -> str:
-    """A Session named for a person: one-way, its Session Key's thumbprint is not recoverable from it."""
-    return hashlib.sha256(session_key.encode()).hexdigest()[:12]
+def session_ref(sid: str) -> str:
+    """A Session named for a person: one-way, its ``sid`` is not recoverable from it."""
+    return hashlib.sha256(sid.encode()).hexdigest()[:12]
+
+
+@dataclass
+class _Returned:
+    """An operation the person may approve, and where the company returned it."""
+
+    operation: Operation
+    conversation_id: str
+    #: The revision this one replaced, for what changed.
+    replaces: Operation | None = None
 
 
 @dataclass
@@ -290,13 +298,15 @@ class _Link:
     """What the personal agent holds at one company for one person, in the host's memory."""
 
     company: DiscoveredCompany
-    #: The person's pairwise User ID there, asserted when a Session starts.
+    #: The person's pairwise User ID there, the ``sub`` of its Session.
     pairwise_user_id: str
-    session: SessionToken | None = None
+    session: PapSession | None = None
+    #: The account's access token once the person signed in; signed out, none.
+    token: AccessToken | None = None
     conversation_id: str | None = None
     cursor: str | None = None
     device_reference: str | None = None
-    operations: dict[str, Operation] = field(default_factory=dict)
+    operations: dict[str, _Returned] = field(default_factory=dict)
 
 
 class PapPersonalAgentCapability:
@@ -326,6 +336,7 @@ class PapPersonalAgentCapability:
             )
         self._reactor = reactor
         self._http = http_client
+        self._session_http: SessionHttpClient | None = None
         self._client_id = client_id
         self._tenant_id = tenant_id
         self._links: dict[tuple[str, str], _Link] = {}
@@ -372,7 +383,7 @@ class PapPersonalAgentCapability:
         keys = await self._identity.fetch_jwks(client_id)
         return _identity_summary(metadata, keys)
 
-    # -- a local runtime's personal agent (PR-03) ---------------------------
+    # -- a local runtime's personal agent ---------------------------
 
     def _host(self) -> tuple[PluginPlatform, httpx.AsyncClient, str]:
         """The host's reactor, HTTP client and client_id, or ``no_host``."""
@@ -383,21 +394,27 @@ class PapPersonalAgentCapability:
             )
         return self._reactor, self._http, self._client_id
 
-    def _transport(self) -> DpopHttpClient:
-        """The DPoP transport, proving with each Session's own key."""
+    def _transport(self) -> SessionHttpClient:
+        """The one transport that puts the Session header on every request.
+
+        One, so that it keeps each origin's latest DPoP nonce (§4.5).
+        """
         reactor, http, _ = self._host()
-        return DpopHttpClient(reactor=reactor, http_client=http)
+        if self._session_http is None:
+            self._session_http = SessionHttpClient(reactor=reactor, http_client=http)
+        return self._session_http
 
     async def _link(self, user_id: str, domain: str) -> _Link:
         """What this person holds at the company, its verified issuer unchanged."""
         reactor, _, _ = self._host()
         company = await self._company.discover(domain)
-        if company.oauth_metadata is None:
-            raise PapCapabilityError("no_sign_in", f"{domain} offers no sign-in")
         link = self._links.get((user_id, domain))
         if link is not None:
-            if link.company.oauth_metadata is None or (
-                link.company.oauth_metadata.issuer != company.oauth_metadata.issuer
+            # A company that stops or starts having an issuer has changed too, even
+            # with the same identifier: its domain when it has none (§3.2).
+            if (link.company.issuer, link.company.identifier) != (
+                company.issuer,
+                company.identifier,
             ):
                 # Its pairwise identity, Session and tokens belong to the old issuer.
                 raise PapCapabilityError(
@@ -410,35 +427,43 @@ class PapPersonalAgentCapability:
             reactor,
             tenant_id=self._tenant_id,
             local_user_id=user_id,
-            company_issuer=company.oauth_metadata.issuer,
+            company_issuer=company.identifier,
         )
         link = _Link(company=company, pairwise_user_id=pairwise)
         self._links[(user_id, domain)] = link
         return link
 
-    def _who(self, link: _Link) -> dict[str, str]:
-        """Whose call it is: the tenant and the issuer (the Session Token's key says who)."""
-        assert link.company.oauth_metadata is not None
-        # The Session Token's key says who; a call names no User ID (draft 0.3).
-        return {
-            "tenant_id": self._tenant_id,
-            "issuer": link.company.oauth_metadata.issuer,
-        }
-
-    async def _session(self, link: _Link) -> SessionToken:
-        """The person's Session at the company, started under a new Session Key when there is none."""
+    async def _session(self, link: _Link) -> PapSession:
+        """The person's Session at the company, started with a new ``sid`` when there is none."""
         reactor, http, client_id = self._host()
         if link.session is None:
-            metadata = link.company.oauth_metadata
-            assert metadata is not None
             link.session = await SessionClient(reactor=reactor, http_client=http).start(
                 client_id=client_id,
                 pairwise_user_id=link.pairwise_user_id,
-                issuer=metadata.issuer,
-                token_endpoint=metadata.token_endpoint,
+                issuer=link.company.identifier,
                 tenant_id=self._tenant_id,
             )
         return link.session
+
+    def _keep(
+        self, link: _Link, page: Any, replaces: Operation | None = None
+    ) -> list[Operation]:
+        """Where a conversation stands, and the operations its page returned."""
+        link.conversation_id = page.conversation_id
+        link.cursor = getattr(page, "cursor", link.cursor)
+        returned = [
+            event.message.operation
+            for event in getattr(page, "events", [])
+            if event.type == "message"
+            and event.message
+            and event.message.role == "company"
+            and event.message.operation is not None
+        ]
+        for operation in returned:
+            link.operations[operation.operation_id] = _Returned(
+                operation, page.conversation_id, replaces
+            )
+        return returned
 
     async def ask(self, domain: str, text: str, *, user_id: str) -> PapAnswer:
         """Say ``text`` to the company for ``user_id``, in one conversation per company.
@@ -455,32 +480,30 @@ class PapPersonalAgentCapability:
                 "no_conversation", f"{domain} has no agent to talk to"
             )
         endpoint = link.company.document.agent.protocols[0].endpoint
-        token = await self._session(link)
+        session = await self._session(link)
         client = ConversationClient(transport=self._transport())
         # The agent's own words (PAP-7.8-01): what it is given to say is not
-        # known to be the person's, so it is never sent as theirs (P-08).
+        # known to be the person's, so it is never sent as theirs.
         message = Message(
             id=generate_message_id(reactor), author=Author(type="agent"), text=text
         )
         if link.conversation_id is None:
             page = await client.start(
-                endpoint, message, token=token, wait=10, **self._who(link)
+                endpoint, message, session=session, token=link.token, wait=10
             )
         else:
             page = await client.send(
                 endpoint,
                 link.conversation_id,
                 message,
-                token=token,
+                session=session,
+                token=link.token,
                 cursor=link.cursor,
                 wait=10,
-                **self._who(link),
             )
-        link.conversation_id = page.conversation_id
-        link.cursor = getattr(page, "cursor", link.cursor)
+        operations = self._keep(link, page)
         replies: list[PapReplyLine] = []
         authorization: dict[str, str] | None = None
-        operations: list[PapOperationSummary] = []
         for event in getattr(page, "events", []):
             if event.type == "authorization" and event.error:
                 authorization = {"error": event.error, "scope": event.scope or ""}
@@ -488,25 +511,20 @@ class PapPersonalAgentCapability:
                 event.type == "message"
                 and event.message
                 and event.message.role == "company"
+                and event.message.text
             ):
-                if event.message.text:
-                    replies.append(
-                        PapReplyLine(
-                            author=event.message.author.type,
-                            name=event.message.author.name,
-                            text=event.message.text,
-                        )
+                replies.append(
+                    PapReplyLine(
+                        author=event.message.author.type,
+                        name=event.message.author.name,
+                        text=event.message.text,
                     )
-                if event.message.operation is not None:
-                    link.operations[event.message.operation.operation_id] = (
-                        event.message.operation
-                    )
-                    operations.append(_operation_summary(event.message.operation))
+                )
         return PapAnswer(
             company=name,
             replies=tuple(replies),
             authorization=authorization,
-            operations=tuple(operations),
+            operations=tuple(_operation_summary(item) for item in operations),
             status=getattr(page, "status", None),
             responder=getattr(page, "responder", None),
         )
@@ -545,12 +563,14 @@ class PapPersonalAgentCapability:
                 company=name,
                 reason=f"Ask among the scopes {domain} offers: {', '.join(offered)}",
             )
-        if link.session is not None and link.session.signed_in:
+        if link.token is not None:
             # One account per Session: signing in again starts another one.
             link.session = None
+            link.token = None
             link.conversation_id = None
             link.cursor = None
-        session = await self._session(link)
+            link.operations.clear()
+        await self._session(link)
         started = await DeviceSignInClient(reactor=reactor, http_client=http).begin(
             device_authorization_endpoint=metadata.device_authorization_endpoint,
             token_endpoint=metadata.token_endpoint,
@@ -558,12 +578,11 @@ class PapPersonalAgentCapability:
             client_id=client_id,
             scopes=asked,
             tenant_id=self._tenant_id,
-            # The code is bound to this Session's own key (draft 0.3 §4.6).
-            session_key=session.session_key,
             # The SDK shows the link only on the company's issuer host or the host of
             # one of its protected_resources, and names the company with it (§4.6).
             organization=link.company.document.organization,
             protected_resources=metadata.protected_resources,
+            dpop_signing_algs=metadata.dpop_signing_alg_values_supported,
         )
         link.device_reference = started.reference
         return PapSignInSummary(
@@ -581,13 +600,10 @@ class PapPersonalAgentCapability:
         link = await self._link(user_id, domain)
         name = link.company.document.organization.name
         if link.device_reference is None:
-            signed_in = link.session is not None and link.session.signed_in
             return PapSignInSummary(
-                status="signed_in" if signed_in else "not_started",
+                status="signed_in" if link.token else "not_started",
                 company=name,
-                granted_scopes=link.session.scopes
-                if signed_in and link.session
-                else (),
+                granted_scopes=link.token.scopes if link.token else (),
             )
         polled = await DeviceSignInClient(reactor=reactor, http_client=http).poll(
             link.device_reference
@@ -598,7 +614,7 @@ class PapPersonalAgentCapability:
                 company=name,
                 expires_at=polled.retry_at.isoformat() if polled.retry_at else None,
             )
-        link.session, link.device_reference = polled.token, None
+        link.token, link.device_reference = polled.token, None
         return PapSignInSummary(
             status="signed_in",
             company=name,
@@ -614,69 +630,100 @@ class PapPersonalAgentCapability:
         return self._metadata
 
     async def confirm(
-        self, domain: str, operation_ref: str, revision: int, *, user_id: str
+        self, domain: str, operation_ref: str, revision: str, *, user_id: str
     ) -> PapConfirmSummary:
-        """Confirm a proposed operation once the person approved this exact revision.
+        """Send an operation to the person, and their approval of this exact revision.
 
-        The person, not the model, answers: the host's ``pap.approvalSurface``
-        is shown the company's summary and terms; only ``True`` approves.
-        Without a surface nothing is sent (``no_approval_surface``). A changed
-        revision comes back ``terms_changed`` to be asked again.
+        The person, not the model, answers, every time: the host's
+        ``pap.approvalSurface`` is shown the company's name, summary and terms;
+        only ``True`` approves. Without a surface nothing is sent
+        (``no_approval_surface``). The approval goes as a message in the
+        conversation that returned the operation, the same on every send, and
+        the action is done at most once. Another revision in answer is
+        ``new_revision``, for the person to be asked about.
         """
         reactor, _, _ = self._host()
         link = await self._link(user_id, domain)
-        operation = link.operations.get(operation_ref)
-        if operation is None or operation.revision != revision:
+        returned = link.operations.get(operation_ref)
+        if returned is None or returned.operation.revision != revision:
             raise PapCapabilityError(
                 "unknown_operation",
-                "Confirm an operation and revision the company proposed, as it was shown",
+                "Confirm an operation and revision the company returned, as it was shown",
             )
-        endpoint = operations_endpoint(
+        operation = returned.operation
+        if not operations_negotiated(
             link.company.document, await self._metadata_of_self()
-        )
-        if endpoint is None:
+        ):
             raise PapCapabilityError(
                 "no_operations", f"{domain} and this agent do not both offer Operations"
             )
-        surface = optional_contribution(reactor, APPROVAL_SURFACES, "approval surface")
-        if surface is None:
-            raise PapCapabilityError(
-                "no_approval_surface",
-                "Nothing can ask the person: no pap.approvalSurface is contributed",
-            )
-        name = link.company.document.organization.name
-        approved = await surface.approve(
-            ApprovalRequest(
-                action_id=operation.operation_id,
-                action_name="pap.operation.confirm",
-                summary=f"{name}: {operation.summary}",
-                arguments={
-                    "company": domain,
-                    "operation_id": operation.operation_id,
-                    "revision": str(operation.revision),
-                    "terms": json.dumps(operation.terms or {}, sort_keys=True),
-                },
+        client = OperationsClient(reactor=reactor)
+        try:
+            approval = await client.ask_user(
+                operation,
+                organization=link.company.document.organization,
                 tenant_id=self._tenant_id,
+                replaces=returned.replaces,
             )
+        except OperationError as error:
+            if error.code == "not_approved":
+                return PapConfirmSummary(
+                    status="not_approved", operation=_operation_summary(operation)
+                )
+            if error.code == "revision_expired":
+                return PapConfirmSummary(
+                    status="not_decided", operation=_operation_summary(operation)
+                )
+            raise PapCapabilityError(error.code, error.message) from error
+        conversations = ConversationClient(transport=self._transport())
+        document = link.company.document
+        assert (
+            document.agent is not None
+        )  # It returned the operation in a conversation.
+        session = await self._session(link)
+        message = Message(
+            id=generate_message_id(reactor),
+            author=Author(type="agent"),
+            text="The person approved this.",
+            approval=approval,
         )
-        if approved is not True:
+        sent = await client.send(
+            lambda approved: conversations.send(
+                document.agent.protocols[0].endpoint,
+                returned.conversation_id,
+                message.model_copy(update={"approval": approved}),
+                session=session,
+                token=link.token,
+                cursor=link.cursor
+                if returned.conversation_id == link.conversation_id
+                else None,
+                wait=10,
+            ),
+            approval,
+        )
+        if sent.status == "unknown":
             return PapConfirmSummary(
-                status="not_approved", operation=_operation_summary(operation)
+                status="in_progress", operation=_operation_summary(operation)
             )
-        outcome = await OperationsClient(transport=self._transport()).confirm(
-            endpoint,
-            operation,
-            approval=approve(operation),
-            token=await self._session(link),
-            **self._who(link),
+        revised = self._keep(link, sent.answer, operation)
+        if revised:
+            return PapConfirmSummary(
+                status="new_revision", operation=_operation_summary(revised[0])
+            )
+        link.operations.pop(operation_ref, None)
+        said = " ".join(
+            event.message.text
+            for event in getattr(sent.answer, "events", [])
+            if event.type == "message"
+            and event.message
+            and event.message.role == "company"
+            and event.message.text
         )
-        current = outcome.operation or operation
-        link.operations[current.operation_id] = current
         return PapConfirmSummary(
-            status=outcome.status,
-            operation=_operation_summary(current),
-            changed=tuple(outcome.changed),
-            result=current.result.summary if current.result else None,
+            status="confirmed",
+            operation=_operation_summary(operation),
+            state="said" if said else "not_said",
+            result=said or None,
         )
 
     def session_of(self, domain: str, *, user_id: str) -> dict[str, Any] | None:
@@ -685,6 +732,6 @@ class PapPersonalAgentCapability:
         if link is None or link.session is None:
             return None
         return {
-            "ref": session_ref(link.session.session_key),
-            "signed_in": link.session.signed_in,
+            "ref": session_ref(link.session.sid),
+            "signed_in": link.token is not None,
         }

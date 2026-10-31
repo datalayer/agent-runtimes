@@ -8,32 +8,27 @@ import { Box } from '@datalayer/primer-addons';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { Button, Text } from '@primer/react';
 import {
-  DpopProofProviders,
-  InMemorySessionKeys,
-  JoseDpopProofProvider,
+  DelegatedSessionSigner,
+  InMemoryDelegatedKeys,
   SecretValue,
   SessionClient,
-  Signers,
+  SessionFetchClient,
+  SessionSigners,
   buildPapReactor,
-  type DpopProofRequest,
 } from '@datalayer/personal-agent-protocol';
 import { PapExamplePage, PapResult } from './PapExamplePage';
 
 type SessionSummary = {
   startStatus: 'created';
-  renewStatus: 'renewed';
-  signedIn: false;
-  tokenType: 'DPoP';
-  scopes: readonly string[];
-  sameSession: boolean;
-  nonceRetry: boolean;
-  freshAssertions: boolean;
-  freshProofs: boolean;
-  /** Every proof signed with the Session's own key, the Session Key (PAP draft 0.3 §4.3). */
-  provedWithSessionKey: boolean;
-  /** Nothing names the Session on the wire but its key: no `session_id` (draft 0.3). */
-  noSessionIdOnTheWire: boolean;
-  sessionKeyWithheld: true;
+  requestsToStartASession: number;
+  /** A fresh Session JWT on every request, naming the `sid`. */
+  sessionHeaderOnEveryRequest: boolean;
+  freshJwtPerRequest: boolean;
+  /** `invalid_session` starts a new Session once, and the request is sent again. */
+  restartedOnce: boolean;
+  resentRequestStatus: number;
+  sameUserAfterRestart: boolean;
+  sidWithheld: true;
   credentialsWithheld: true;
 };
 
@@ -44,99 +39,65 @@ const PapSessionLifecycleView: React.FC = () => {
 
   const runLifecycle = async () => {
     setError(null);
+    const jwts: string[] = [];
     let calls = 0;
-    const forms: URLSearchParams[] = [];
-    const purposes: string[] = [];
-    const proofRequests: DpopProofRequest[] = [];
-    const proofs = new JoseDpopProofProvider({
-      keys: new InMemorySessionKeys(),
-    });
     const localFetch: typeof globalThis.fetch = async (_input, init) => {
       calls += 1;
-      forms.push(new URLSearchParams(String(init?.body ?? '')));
-      if (calls === 1) {
-        return new Response(JSON.stringify({ error: 'use_dpop_nonce' }), {
-          status: 400,
-          headers: {
-            'content-type': 'application/json',
-            'DPoP-Nonce': 'host-only-company-nonce',
-          },
-        });
-      }
-      return new Response(
-        JSON.stringify({
-          access_token: `host-only-session-token-${calls}`,
-          token_type: 'DPoP',
-          expires_in: 300,
-        }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      );
+      jwts.push(new Headers(init?.headers).get('Poppy-Session') ?? '');
+      return calls === 1
+        ? new Response(JSON.stringify({ error: 'invalid_session' }), {
+            status: 400,
+            headers: { 'content-type': 'application/json' },
+          })
+        : new Response('{}', {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
     };
     const securityPlugin = definePlugin({
       name: '@datalayer/loop-example-pap-session-security',
       contributes: [
         contribution(
-          Signers,
-          {
-            async sign(_claims, options) {
-              purposes.push(options.purpose);
-              return new SecretValue(
-                `host-only-${options.purpose}-${purposes.length}`,
-              );
+          SessionSigners,
+          // A real delegated P-256 key per User ID, its private half kept here;
+          // the delegation's signature is a stand-in for a key in `jwks_uri`.
+          new DelegatedSessionSigner({
+            custody: new InMemoryDelegatedKeys(),
+            signer: {
+              sign: async (_claims, options) =>
+                new SecretValue(`host-only-${options.purpose}`),
             },
-          },
-          { id: 'example-signer' },
-        ),
-        contribution(
-          DpopProofProviders,
-          {
-            // A real P-256 key per Session (the Session Key), its private half
-            // kept here; each proof is recorded for the evidence only.
-            newSessionKey: options => proofs.newSessionKey(options),
-            discardSessionKey: options => proofs.discardSessionKey(options),
-            async create(request) {
-              proofRequests.push(request);
-              return proofs.create(request);
-            },
-          },
-          { id: 'example-dpop' },
+          }),
+          { id: 'example-session-signer' },
         ),
       ],
     });
     const reactor = buildPapReactor({ fetch: localFetch }, [securityPlugin]);
     try {
-      const client = new SessionClient({ reactor, fetch: localFetch });
-      const options = {
+      const session = await new SessionClient({
+        reactor,
+        fetch: localFetch,
+      }).start({
         clientId: 'https://assistant.example/agent.json',
         pairwiseUserId: 'usr_host_only_example',
         issuer: 'https://company.example',
-        tokenEndpoint: 'https://company.example/oauth/token',
         tenantId: 'example-tenant',
-      } as const;
-      const started = await client.start(options);
-      const renewed = await client.renew({
-        ...options,
-        sessionKey: started.sessionKey,
       });
+      const requestsToStartASession = calls;
+      const sid = session.sid;
+      const answer = await new SessionFetchClient({
+        reactor,
+        fetch: localFetch,
+      }).request('GET', 'https://company.example/poppy/orders', { session });
       setSummary({
         startStatus: 'created',
-        renewStatus: 'renewed',
-        signedIn: false,
-        tokenType: 'DPoP',
-        scopes: renewed.scopes,
-        sameSession: started.sessionKey === renewed.sessionKey,
-        nonceRetry:
-          proofRequests.length === 3 &&
-          proofRequests[0]?.nonce === undefined &&
-          proofRequests[1]?.nonce === 'host-only-company-nonce' &&
-          proofRequests[2]?.nonce === undefined,
-        freshAssertions: purposes.length === 6,
-        freshProofs: proofRequests.length === 3,
-        provedWithSessionKey: proofRequests.every(
-          request => request.sessionKey === started.sessionKey,
-        ),
-        noSessionIdOnTheWire: forms.every(form => !form.has('session_id')),
-        sessionKeyWithheld: true,
+        requestsToStartASession,
+        sessionHeaderOnEveryRequest: jwts.every(jwt => jwt !== ''),
+        freshJwtPerRequest: new Set(jwts).size === jwts.length,
+        restartedOnce: calls === 2 && session.sid !== sid,
+        resentRequestStatus: answer.status,
+        sameUserAfterRestart: session.sub === 'usr_host_only_example',
+        sidWithheld: true,
         credentialsWithheld: true,
       });
     } catch (cause) {
@@ -149,9 +110,9 @@ const PapSessionLifecycleView: React.FC = () => {
 
   return (
     <PapExamplePage
-      eyebrow="PAP · Signed-out Session"
-      title="Start and renew without giving credentials to the agent"
-      description="This Reactor view drives the real PAP SessionClient (draft 0.3) against a deterministic company transport. The Session has its own DPoP key, the Session Key, whose thumbprint names it: no session_id is sent or read. It handles a DPoP nonce challenge, generates fresh assertions and proofs with that key, and renews the same Session. Only lifecycle evidence enters React state."
+      eyebrow="PAP · Session"
+      title="Start and restart a Session without giving credentials to the agent"
+      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (draft 0.3) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key. Answered invalid_session, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
     >
       <Box
         display="flex"
@@ -165,7 +126,8 @@ const PapSessionLifecycleView: React.FC = () => {
         bg="canvas.default"
       >
         <Text sx={{ color: 'fg.muted' }}>
-          Exercise start, nonce retry, and renewal entirely inside this host.
+          Exercise start, the Session header and a restart entirely inside this
+          host.
         </Text>
         <Button variant="primary" onClick={() => void runLifecycle()}>
           Run lifecycle
