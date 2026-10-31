@@ -340,6 +340,51 @@ def test_loopback_is_no_local_caller_of_the_applications_routes(app: FastAPI) ->
     assert answered.status_code == 401
 
 
+def test_the_sandbox_is_not_the_local_caller_and_the_companion_is() -> None:
+    from agent_runtimes.routes.apps import LOCAL, _authorize
+
+    def called(headers: dict[str, str]) -> Any:
+        request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"), headers=headers)
+        return asyncio.run(_authorize(request, person_only=False))
+
+    give_runtime_proof(_proof(), SECRET)
+    with pytest.raises(HTTPException) as refused:
+        called({})
+    assert refused.value.status_code == 401
+    assert called({POD_SECRET_HEADER: SECRET}).caller is LOCAL
+
+
+def test_the_sandbox_is_asked_who_it_is_on_a2a_as_anybody() -> None:
+    from agent_runtimes.apps.a2a import A2AGate
+
+    def through(headers: list[tuple[bytes, bytes]]) -> tuple[bool, list[Any]]:
+        reached: list[bool] = []
+        sent: list[Any] = []
+
+        async def inner(*_: Any) -> None:
+            reached.append(True)
+
+        async def send(message: Any) -> None:
+            sent.append(message)
+
+        async def receive() -> dict[str, Any]:
+            return {"type": "http.request", "body": b"{}", "more_body": False}
+
+        scope = {
+            "type": "http",
+            "method": "POST",
+            "client": POD,
+            "headers": headers,
+        }
+        asyncio.run(A2AGate(inner, "the-app")(scope, receive, send))
+        return bool(reached), sent
+
+    give_runtime_proof(_proof(), SECRET)
+    reached, sent = through([])
+    assert not reached and sent[0]["status"] == 401
+    assert through([(POD_SECRET_HEADER.lower().encode(), SECRET.encode())])[0]
+
+
 def test_a_proof_comes_with_a_secret(app: FastAPI) -> None:
     pod = TestClient(app, client=POD)
     missing = pod.put("/api/v1/apps/runtime-proof", json={"proof": _proof()})
