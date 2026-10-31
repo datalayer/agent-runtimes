@@ -358,6 +358,10 @@ _NOT_THE_APPLICATIONS = (
 #: Where an agent is served over A2A: its own when it runs an application.
 _A2A_AGENTS = "/api/v1/a2a/agents/"
 
+#: What the sandbox reaches on the pod's loopback, with no secret: the tool calls
+#: of the code it runs, through the servers its application starts.
+_SANDBOX_TOOLS = "/api/v1/mcp/proxy/"
+
 
 def path_answered(method: str, path: str) -> bool:
     """Whether a request from anybody but the runtime itself is the application's own.
@@ -396,8 +400,8 @@ class OwnRoutesOnly:
     codemode, its sandbox and its websocket, making, changing, listing or
     deleting agents, MCP servers, skills, history, the monitoring stream —
     answers 404 in a sentence, over HTTP and on a websocket's handshake alike.
-    The pod itself (the companion, the sandbox's tool calls through the MCP
-    proxy) is answered everywhere, as on the visitors' runtime.
+    The pod itself (`callers.is_the_pod`) is answered everywhere, and the
+    sandbox's tool calls through the MCP proxy from its loopback.
 
     A runtime launched for a deployment is held to this from its launch, as
     soon as it holds its proof, not from its first agent: until then it
@@ -415,7 +419,11 @@ class OwnRoutesOnly:
             return
         from starlette.responses import JSONResponse
 
-        from agent_runtimes.apps.callers import is_loopback
+        from agent_runtimes.apps.callers import (
+            POD_SECRET_HEADER,
+            is_loopback,
+            is_the_pod,
+        )
         from agent_runtimes.apps.principal import (
             OWN_ROUTES_ONLY,
             a_deployment_is_served,
@@ -426,11 +434,20 @@ class OwnRoutesOnly:
         served = a_deployment_is_served()
         launched = bool(launched_for())
         method = scope.get("method") or "GET"
-        client = scope.get("client")
+        host = (scope.get("client") or (None,))[0]
+        secret = next(
+            (
+                value.decode()
+                for key, value in scope.get("headers") or []
+                if key.decode().lower() == POD_SECRET_HEADER.lower()
+            ),
+            None,
+        )
         if (
             not (visitors or served or launched)
             or path_answered(method, scope["path"])
-            or is_loopback(client[0] if client else None)
+            or is_the_pod(host, secret)
+            or (is_loopback(host) and scope["path"].startswith(_SANDBOX_TOOLS))
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).

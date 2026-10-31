@@ -43,6 +43,17 @@ deployment runs (`read_deployment`), read as the companion gives the proof
 (`read_launched_app`) and again as the agent is made. What the launcher sends,
 with the launch, with the agent or to the start hooks, is not read.
 
+**The pod is not its loopback.** Code the model writes runs in the sandbox, and a
+harness's commands in this very container, and both reach this server on
+127.0.0.1. So a runtime launched for a deployment is given a secret with its
+proof, by the companion, and from then on the pod is who sends it
+(`callers.is_the_pod`). It is given before anything but the platform's images
+runs in the pod, is written nowhere, and is in no environment. Its containers
+do not share processes, so the sandbox cannot read this process; a harness here
+runs as the same user, so the process is first made undumpable
+(`_keep_from_this_user`): no process of that user reads its memory or its
+`/proc` entries, which holds for the proof and the principal's token as well.
+
 **A Preview is held to the same grants** (R-25, decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its
 application is granted, and the companies it works with (P-01). As its session opens, and on each of its requests, the runtime asks
@@ -59,9 +70,12 @@ not change.
 from __future__ import annotations
 
 import asyncio
+import ctypes
 import hashlib
+import hmac
 import json
 import logging
+import os
 import time
 from typing import Any, Awaitable, Callable, Mapping, Optional
 
@@ -88,6 +102,7 @@ __all__ = [
     "give_principal_token",
     "give_runtime_proof",
     "holds_principal_token",
+    "pod_secret_is",
     "is_held_principal",
     "launched_app",
     "launched_for",
@@ -123,7 +138,7 @@ RUNTIME_PROOF_HEADER = "X-Datalayer-Runtime-Proof"
 #: platform has finished its start hooks.
 RUNTIME_PROOF_WAIT = 15.0
 
-#: This runtime's proof: {"token", "deployment_uid", "ai_agents_url"}, as it was
+#: This runtime's proof: {"token", "pod_secret", "deployment_uid", "ai_agents_url"}, as it was
 #: given. Process memory only: never `os.environ`, which a harness or a kernel
 #: could read, and never answered by a route.
 _PROOF: dict[str, str] = {}
@@ -174,9 +189,50 @@ OWN_ROUTES_ONLY = (
 )
 
 
-def give_runtime_proof(proof: str) -> str:
+#: `prctl(2)`'s option for whether a process may be dumped or read by its own user.
+_PR_SET_DUMPABLE = 4
+
+
+def _keep_from_this_user() -> None:
+    """Make this process unreadable by every other process of its user.
+
+    What is held here is in memory alone, and a harness's commands run in this
+    container, as this user. Undumpable, a process's memory, its environment
+    and the rest of its `/proc` entries answer them `EACCES`, whatever the
+    node's Yama says. A child is itself again at its `exec`.
+
+    Raises
+    ------
+    ValueError
+        When the kernel refuses, or has no such call: nothing that acts as a
+        deployment is held then.
     """
-    Keep the proof that this runtime was launched for a deployment.
+    try:
+        refused = ctypes.CDLL(None, use_errno=True).prctl(_PR_SET_DUMPABLE, 0, 0, 0, 0)
+    except (OSError, AttributeError) as error:
+        raise ValueError(f"This process cannot be made private: {error}.") from None
+    if refused:
+        raise ValueError(
+            f"This process cannot be made private: {os.strerror(ctypes.get_errno())}."
+        )
+
+
+def pod_secret_is(given: Optional[str]) -> bool:
+    """Whether ``given`` is the pod's secret, on a runtime that holds one.
+
+    A runtime launched for no deployment holds none, and answers ``True``:
+    see `callers.is_the_pod`.
+    """
+    held = _PROOF.get("pod_secret")
+    if held is None:
+        return True
+    return hmac.compare_digest((given or "").encode("utf-8"), held.encode("utf-8"))
+
+
+def give_runtime_proof(proof: str, pod_secret: str) -> str:
+    """
+    Keep the proof that this runtime was launched for a deployment, and the
+    secret its companion is told by from now on.
 
     Parameters
     ----------
@@ -184,6 +240,8 @@ def give_runtime_proof(proof: str) -> str:
         What the platform minted at its launch, given by its companion. Its
         signature is ai-agents' to verify: here it is read for the deployment
         it names, and a proof that names none is refused.
+    pod_secret : str
+        What the companion holds, and from now on sends on every call.
 
     Returns
     -------
@@ -193,7 +251,8 @@ def give_runtime_proof(proof: str) -> str:
     Raises
     ------
     ValueError
-        When it names no deployment.
+        When it names no deployment, it comes with no secret, or this process
+        cannot be kept from its user.
     """
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -203,8 +262,13 @@ def give_runtime_proof(proof: str) -> str:
     deployment = str(_unverified_claims(token).get("deployment_uid") or "").strip()
     if not deployment:
         raise ValueError("This proof names no deployment.")
+    secret = (pod_secret or "").strip()
+    if not secret:
+        raise ValueError("A proof comes with the pod's secret.")
+    _keep_from_this_user()
     _PROOF.update(
         token=token,
+        pod_secret=secret,
         deployment_uid=deployment,
         ai_agents_url=(DatalayerURLs.from_environment().ai_agents_url or "").rstrip(
             "/"

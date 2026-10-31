@@ -60,11 +60,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_runtimes.apps.callers import (
     LOCAL,
+    POD_SECRET_HEADER,
     VERIFIER,
     Caller,
     CallerRefused,
     bearer_of,
-    is_loopback,
+    is_the_pod,
     origin_allowed,
     platform_origins,
 )
@@ -255,7 +256,10 @@ async def _authorize(
         raise HTTPException(
             status_code=403, detail=f"This application does not answer {origin}."
         )
-    if is_loopback(request.client.host if request.client else None):
+    if is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
         return Authorized(LOCAL, app)
     if token is None:
         token = bearer_of(request.headers.get("authorization"))
@@ -721,6 +725,11 @@ class RuntimeProofRequest(BaseModel):
     """What the companion gives a runtime launched for a deployment."""
 
     proof: str = Field(..., description="The proof the platform minted at its launch")
+    pod_secret: str = Field(
+        ...,
+        description="What the companion holds, and is told by from now on: "
+        "on such a runtime an address proves nothing",
+    )
     user_token: Optional[str] = Field(
         default=None,
         description="The token of whoever launched it: what ai-agents answers "
@@ -751,13 +760,16 @@ async def runtime_proof(body: RuntimeProofRequest, request: Request) -> Dict[str
     )
     from agent_runtimes.routes.agents import _note_launched_app
 
-    if not is_loopback(request.client.host if request.client else None):
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
         raise HTTPException(
             status_code=403,
             detail="Only the runtime's own pod gives it its proof.",
         )
     try:
-        deployment = give_runtime_proof(body.proof)
+        deployment = give_runtime_proof(body.proof, body.pod_secret)
     except ValueError as refused:
         raise HTTPException(status_code=422, detail=str(refused)) from None
     unread = await read_launched_app(body.user_token, body.version)

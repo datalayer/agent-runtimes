@@ -134,6 +134,32 @@ def is_loopback(host: Optional[str]) -> bool:
         return False
 
 
+#: The header the pod's companion is told by, on a runtime launched for a deployment.
+POD_SECRET_HEADER = "X-Datalayer-Pod-Secret"
+
+
+def is_the_pod(host: Optional[str], secret: Optional[str]) -> bool:
+    """Whether a call comes from the pod itself.
+
+    On a runtime launched for a deployment an address proves nothing: its
+    sandbox, and a harness in this container, share the pod's loopback. There
+    the pod is the companion, known by the secret it gave with the runtime's
+    proof (`principal.give_runtime_proof`), held by these two alone. On any
+    other runtime nothing here acts as anybody but the person whose it is, and
+    loopback is the machine itself.
+
+    Parameters
+    ----------
+    host : str | None
+        The client's address.
+    secret : str | None
+        What the call says in :data:`POD_SECRET_HEADER`.
+    """
+    from agent_runtimes.apps.principal import pod_secret_is
+
+    return is_loopback(host) and pod_secret_is(secret)
+
+
 def bearer_of(authorization: Optional[str]) -> str:
     """The token of an ``Authorization: Bearer …`` header, or nothing."""
     if not authorization:

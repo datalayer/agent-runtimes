@@ -30,6 +30,7 @@ from fastapi.testclient import TestClient
 from agent_runtimes.app import create_app
 from agent_runtimes.apps import principal
 from agent_runtimes.apps.application import Application
+from agent_runtimes.apps.callers import POD_SECRET_HEADER
 from agent_runtimes.guardrails.declared_secrets import launched, note_launched
 from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
@@ -40,6 +41,7 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 
 
 AI_AGENTS = "https://ai-agents.test"
 DEPLOYMENT = "dep-1"
+SECRET = "the-pods-secret"
 PINNED = Application("the-deployed", agent="example-simple", version="0.0.3").document
 CRAFTED = {**PINNED, "instructions": "Anything the visitor wrote."}
 
@@ -153,7 +155,7 @@ def test_a_visitors_spec_does_not_run_as_the_principal(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
     """The exploit: launched for the deployment, an agent made with a spec of the visitor's."""
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     made = _made(_visitors_request())
     assert principal.principal_token(DEPLOYMENT) == "the-principals"
     assert made["app_spec"] == PINNED
@@ -164,7 +166,7 @@ def test_nothing_else_the_visitor_sends_makes_the_agent(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
     """Its Appspec is one field among those that change what runs as the principal."""
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     made = _made(
         _visitors_request(
             system_prompt="Anything the visitor wrote.",
@@ -184,7 +186,7 @@ def test_what_makes_its_record_is_the_deployments_too(
     ai_agents: List[httpx.Request],
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     request = _visitors_request()
     request.app_instance = {
         "app_uid": "another-app",
@@ -206,7 +208,7 @@ def test_it_asks_for_the_version_it_is_sent_and_ai_agents_decides(
     ai_agents: List[httpx.Request],
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     _made(_visitors_request())
     read = next(r for r in ai_agents if r.url.path.endswith("/code"))
     assert read.url.params["version"] == "3"
@@ -231,7 +233,7 @@ def test_ai_agents_not_saying_it_nothing_is_made_from_what_was_sent(
     from fastapi import HTTPException
 
     says["code"] = httpx.Response(said[0], json=said[1])
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     http = _DummyRequest()
     http.headers = {"Authorization": "Bearer the-visitors"}
     with pytest.raises(HTTPException) as refused:
@@ -260,7 +262,7 @@ def test_another_deployments_agent_is_refused_from_the_pod_too(
 ) -> None:
     from fastapi import HTTPException
 
-    principal.give_runtime_proof(_proof())
+    principal.give_runtime_proof(_proof(), SECRET)
     http = _DummyRequest()
     http.client = SimpleNamespace(host="127.0.0.1")
     with pytest.raises(HTTPException) as refused:
@@ -302,9 +304,15 @@ def pod(ai_agents: List[httpx.Request]) -> Iterator[TestClient]:
 def _given(pod: TestClient, **fields: Any) -> Dict[str, Any]:
     answered = pod.put(
         "/api/v1/apps/runtime-proof",
-        json={"proof": _proof(), "user_token": "the-launchers", **fields},
+        json={
+            "proof": _proof(),
+            "pod_secret": SECRET,
+            "user_token": "the-launchers",
+            **fields,
+        },
     )
     assert answered.status_code == 200, answered.text
+    pod.headers[POD_SECRET_HEADER] = SECRET
     return answered.json()
 
 

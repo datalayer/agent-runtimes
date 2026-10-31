@@ -57,12 +57,13 @@ import os
 from typing import Any, Optional
 
 from agent_runtimes.apps.callers import (
+    POD_SECRET_HEADER,
     VERIFIER,
     CallerRefused,
     CallerVerifier,
     _unverified_claims,
     bearer_of,
-    is_loopback,
+    is_the_pod,
 )
 from agent_runtimes.apps.visitors import (
     OTHER_APPLICATION,
@@ -454,13 +455,15 @@ class A2AGate:
             await self.app(scope, receive, send)
             return
         client = scope.get("client")
-        if is_loopback(client[0] if client else None):
-            await self.app(scope, receive, send)
-            return
         headers = {
             key.decode().lower(): value.decode()
             for key, value in scope.get("headers") or []
         }
+        if is_the_pod(
+            client[0] if client else None, headers.get(POD_SECRET_HEADER.lower())
+        ):
+            await self.app(scope, receive, send)
+            return
         token = bearer_of(headers.get("authorization"))
         if token and is_anonymous_audience(_unverified_claims(token)):
             await self._visitor(token, scope, receive, send)
