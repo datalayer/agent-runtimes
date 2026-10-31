@@ -26,6 +26,8 @@ from personal_agent_protocol.models import ExtensionDescriptor
 
 from agent_runtimes.apps import Application
 
+TENANT = "atlas-demo"
+
 app = Application(
     id="pap-mediated-sign-in",
     name="PAP Mediated Sign-In",
@@ -87,6 +89,7 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
             company=company.model_copy(update={"document": hostile}),
             client_id=atlas.client_id,
             scopes=("orders:read",),
+            tenant_id=TENANT,
         )
         reserved_field_refused = "not refused"
     except AuthorizationError as error:
@@ -98,6 +101,7 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
         company=company,
         client_id=atlas.client_id,
         scopes=("orders:read", "orders:write"),
+        tenant_id=TENANT,
     )
     if not (started.reference is not None):
         raise RuntimeError("the example world is incomplete")

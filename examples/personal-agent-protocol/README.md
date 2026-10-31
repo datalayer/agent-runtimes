@@ -30,13 +30,13 @@ feature while keeping protocol secrets outside model context.
 | [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor      | Summaries only; tokens and device code withheld   |
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company      | What the person was shown; ticket used once       |
 
-Every example runs against the PAP Python SDK — Agent Runtimes pins 0.28.0 and
+Every example runs against the PAP Python SDK — Agent Runtimes pins 0.29.0 and
 later (`personal-agent-protocol[ui]`), which implements
 [PAP draft 0.3](https://personalagentprotocol.org/docs/0.3/spec), the
 specification published at [personalagentprotocol.org](https://personalagentprotocol.org)
 from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol);
-all of them ran on 30 October 2026 at the SDK as of draft 0.3's revision
-2026-10-28 (`python scripts/validate_pap_examples.py`). Most run
+all of them ran on 31 October 2026 at the SDK as of draft 0.3's revision
+2026-10-30 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.
 

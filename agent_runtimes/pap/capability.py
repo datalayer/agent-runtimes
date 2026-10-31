@@ -258,7 +258,7 @@ class PapCapabilityError(Exception):
     """A personal-agent call the capability refuses, before anything is sent.
 
     ``code``: ``no_host`` (no PAP Reactor was given), ``no_conversation``,
-    ``no_sign_in``, ``unknown_operation``, ``no_operations``,
+    ``unknown_operation``, ``no_operations``,
     ``no_approval_surface``, ``approval_surface_ambiguous``, ``approval_failed``.
     """
 
@@ -336,6 +336,7 @@ class PapPersonalAgentCapability:
             )
         self._reactor = reactor
         self._http = http_client
+        self._session_http: SessionHttpClient | None = None
         self._client_id = client_id
         self._tenant_id = tenant_id
         self._links: dict[tuple[str, str], _Link] = {}
@@ -394,20 +395,26 @@ class PapPersonalAgentCapability:
         return self._reactor, self._http, self._client_id
 
     def _transport(self) -> SessionHttpClient:
-        """The transport that puts the Session header on every request."""
+        """The one transport that puts the Session header on every request.
+
+        One, so that it keeps each origin's latest DPoP nonce (§4.5).
+        """
         reactor, http, _ = self._host()
-        return SessionHttpClient(reactor=reactor, http_client=http)
+        if self._session_http is None:
+            self._session_http = SessionHttpClient(reactor=reactor, http_client=http)
+        return self._session_http
 
     async def _link(self, user_id: str, domain: str) -> _Link:
         """What this person holds at the company, its verified issuer unchanged."""
         reactor, _, _ = self._host()
         company = await self._company.discover(domain)
-        if company.oauth_metadata is None:
-            raise PapCapabilityError("no_sign_in", f"{domain} offers no sign-in")
         link = self._links.get((user_id, domain))
         if link is not None:
-            if link.company.oauth_metadata is None or (
-                link.company.oauth_metadata.issuer != company.oauth_metadata.issuer
+            # A company that stops or starts having an issuer has changed too, even
+            # with the same identifier: its domain when it has none (§3.2).
+            if (link.company.issuer, link.company.identifier) != (
+                company.issuer,
+                company.identifier,
             ):
                 # Its pairwise identity, Session and tokens belong to the old issuer.
                 raise PapCapabilityError(
@@ -420,7 +427,7 @@ class PapPersonalAgentCapability:
             reactor,
             tenant_id=self._tenant_id,
             local_user_id=user_id,
-            company_issuer=company.oauth_metadata.issuer,
+            company_issuer=company.identifier,
         )
         link = _Link(company=company, pairwise_user_id=pairwise)
         self._links[(user_id, domain)] = link
@@ -430,12 +437,10 @@ class PapPersonalAgentCapability:
         """The person's Session at the company, started with a new ``sid`` when there is none."""
         reactor, http, client_id = self._host()
         if link.session is None:
-            metadata = link.company.oauth_metadata
-            assert metadata is not None
             link.session = await SessionClient(reactor=reactor, http_client=http).start(
                 client_id=client_id,
                 pairwise_user_id=link.pairwise_user_id,
-                issuer=metadata.issuer,
+                issuer=link.company.identifier,
                 tenant_id=self._tenant_id,
             )
         return link.session
@@ -577,6 +582,7 @@ class PapPersonalAgentCapability:
             # one of its protected_resources, and names the company with it (§4.6).
             organization=link.company.document.organization,
             protected_resources=metadata.protected_resources,
+            dpop_signing_algs=metadata.dpop_signing_alg_values_supported,
         )
         link.device_reference = started.reference
         return PapSignInSummary(

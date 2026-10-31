@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.99
+
+31 October 2026. Personal Agent Protocol at `personal-agent-protocol` 0.29.0 and `@datalayer/personal-agent-protocol` ^0.29.0, draft 0.3 as of its revision 2026-10-30. The local personal agent passes the issuer's `dpop_signing_alg_values_supported` to Device Sign-In, so a company that binds its tokens gets a DPoP proof with every token and resource request, by the SDK's in-memory key, which lives as long as the token it binds; one transport keeps each origin's latest nonce. A company with no issuer is reached signed out: its identifier, `https://{domain}`, is the Session JWT's `aud` and what the pairwise ID is scoped by, `no_sign_in` is gone, and `sign_in` says it offers none. A company that stops or starts having an issuer is `issuer_changed`, even with the same identifier. The PAP examples and traces at 0.29.0.
+
 ## 1.5.96
 
 30 October 2026. A lent repository's state, read by its owner: `GET /api/v1/apps/agents/{agent}/computer/repository` answers its URL, its pinned revision, the workspace's HEAD and its `git status` lines, never a file's content — what a nightly rehearsal checks after a coding agent was asked to change a file. Over A2A, a harness's steps are named by their kind and title (*Edit README.md*) and drawn on its workspace, on the page as in a rehearsal.

@@ -3,7 +3,7 @@
   "title": "Two companies working together",
   "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: draft 0.3 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.28.0",
+  "sdk": "personal-agent-protocol 0.29.0",
   "parties": [
     {
       "id": "user",
@@ -120,6 +120,14 @@
                 "name": "Ledgerly",
                 "domain": "ledgerly.example"
               },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://ledgerly.example/poppy/conversations"
+                  }
+                ]
+              },
               "auth": {
                 "issuer": "https://ledgerly.example",
                 "scopes": {
@@ -136,14 +144,6 @@
                     "personal_data": true
                   }
                 }
-              },
-              "agent": {
-                "protocols": [
-                  {
-                    "type": "poppy",
-                    "endpoint": "https://ledgerly.example/poppy/conversations"
-                  }
-                ]
               },
               "feedback": {
                 "endpoint": "https://ledgerly.example/poppy/feedback"
@@ -638,6 +638,14 @@
                 "name": "Northwind Bank",
                 "domain": "northwind.example"
               },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://northwind.example/poppy/conversations"
+                  }
+                ]
+              },
               "auth": {
                 "issuer": "https://northwind.example",
                 "scopes": {
@@ -654,14 +662,6 @@
                     "personal_data": true
                   }
                 }
-              },
-              "agent": {
-                "protocols": [
-                  {
-                    "type": "poppy",
-                    "endpoint": "https://northwind.example/poppy/conversations"
-                  }
-                ]
               },
               "feedback": {
                 "endpoint": "https://northwind.example/poppy/feedback"

@@ -926,6 +926,7 @@ async def mediated_sign_in() -> Trace:
         company=world.company,
         client_id=world.atlas.client_id,
         scopes=("orders:read",),
+        tenant_id=TENANT,
     )
     fields = ", ".join(
         f"{f.label}{' (secret)' if f.secret else ''}" for f in offered.fields

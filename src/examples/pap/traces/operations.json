@@ -3,7 +3,7 @@
   "title": "Operations",
   "description": "Manzanita returns an exchange as an operation; Atlas asks Ada about every revision, and sends her approval of that exact revision, performed at most once.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.28.0",
+  "sdk": "personal-agent-protocol 0.29.0",
   "parties": [
     {
       "id": "user",
@@ -91,6 +91,14 @@
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
               },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://manzanita.example/poppy/conversations"
+                  }
+                ]
+              },
               "auth": {
                 "issuer": "https://manzanita.example",
                 "scopes": {
@@ -107,14 +115,6 @@
                     "personal_data": true
                   }
                 }
-              },
-              "agent": {
-                "protocols": [
-                  {
-                    "type": "poppy",
-                    "endpoint": "https://manzanita.example/poppy/conversations"
-                  }
-                ]
               },
               "apis": [
                 {

@@ -13,6 +13,7 @@ host's approval surface. No token, Session JWT or device code in any answer.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,7 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 from reactor import PluginManifest
 
 from agent_runtimes.pap import PapCapabilityError, PapPersonalAgentCapability
@@ -77,14 +78,14 @@ class Surface:
         )
 
 
-async def _journey(
-    surface: Surface | None, folder: Path
-) -> tuple[PapPersonalAgentCapability, Any, Any, list[Any]]:
+def _capability(
+    surface: Surface | None, folder: Path, config: Any = None
+) -> tuple[PapPersonalAgentCapability, Any, MutableClock]:
     clock = MutableClock()
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, _ = manzanita(network, clock)
+    shop, _ = manzanita(network, clock, config=config)
     host = PersonalAgentHost(atlas, clock)
     http = network.client()
     reactor = personal_agent_reactor(
@@ -93,6 +94,13 @@ async def _journey(
     capability = PapPersonalAgentCapability(
         reactor=reactor, http_client=http, client_id=atlas.client_id, tenant_id="t1"
     )
+    return capability, shop, clock
+
+
+async def _journey(
+    surface: Surface | None, folder: Path, config: Any = None
+) -> tuple[PapPersonalAgentCapability, Any, Any, list[Any]]:
+    capability, shop, clock = _capability(surface, folder, config)
     said: list[Any] = []
 
     signed_out = await capability.ask(
@@ -286,6 +294,53 @@ async def test_scopes_beyond_the_offer_are_not_asked(tmp_path: Path) -> None:
     beyond = await capability.sign_in(DOMAIN, user_id="ada", scopes=("admin",))
     assert beyond.status == "unavailable"
     assert "orders:read" in (beyond.reason or "")
+
+
+@pytest.mark.asyncio
+async def test_a_company_that_binds_its_tokens_is_used_with_proofs(
+    tmp_path: Path,
+) -> None:
+    """Its issuer lists ES256: the sign-in proves, and each request after it (§4.5)."""
+    config = replace(CONFIG, dpop_binding="required", dpop_nonces=True)
+    capability, operation, _, said = await _journey(Surface(True), tmp_path, config)
+    link = capability._links[("ada", DOMAIN)]
+    assert link.token is not None and link.token.token_type == "DPoP"
+    assert operation.summary
+    _no_secret(said)
+
+
+@pytest.mark.asyncio
+async def test_a_company_with_no_issuer_is_reached_signed_out_under_its_domain(
+    tmp_path: Path,
+) -> None:
+    """Its identifier is its HTTPS domain (§3.2), and it offers no sign-in."""
+    config = replace(CONFIG, oauth=False, mediated_fields=(), operations=False)
+    capability, _, _ = _capability(None, tmp_path, config)
+
+    answer = await capability.ask(DOMAIN, "Do you sell jackets?", user_id="ada")
+    assert answer.replies
+    session = capability._links[("ada", DOMAIN)].session
+    assert session is not None and session.issuer == f"https://{DOMAIN}"
+    assert (await capability.discover_company(DOMAIN)).issuer is None
+    started = await capability.sign_in(DOMAIN, user_id="ada")
+    assert started.status == "unavailable"
+    assert "offers no Device Sign-In" in str(started.reason)
+
+
+@pytest.mark.asyncio
+async def test_a_company_that_changes_its_issuer_or_has_none_any_more_is_refused(
+    tmp_path: Path,
+) -> None:
+    """The same identifier with no issuer behind it is another company to its tokens."""
+    capability, _, _ = _capability(None, tmp_path)
+    await capability.ask(DOMAIN, "Where is my jacket order?", user_id="ada")
+    link = capability._links[("ada", DOMAIN)]
+    link.company = link.company.model_copy(update={"oauth_metadata": None})
+    assert link.company.identifier == f"https://{DOMAIN}"
+
+    with pytest.raises(PapCapabilityError) as refused:
+        await capability.ask(DOMAIN, "Where is my order?", user_id="ada")
+    assert refused.value.code == "issuer_changed"
 
 
 @pytest.mark.asyncio
