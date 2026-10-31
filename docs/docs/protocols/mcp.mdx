@@ -1,0 +1,104 @@
+---
+sidebar_position: 15
+title: MCP
+---
+
+# MCP: tools from servers
+
+The [Model Context Protocol](https://modelcontextprotocol.io/specification) is how
+an agent calls tools and reads resources. Agent Runtimes is an MCP **client**: it
+starts or reaches servers, and gives their tools to its agents. Its Python side
+speaks **2026-07-28**, its TypeScript side **2025-11-25**, and the two agree at the
+handshake. The feature by feature inventory is in
+[MCP and A2A](./mcp-and-a2a#mcp).
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.mcp`, `agent_runtimes.protocols.mcp` | `@datalayer/agent-runtimes/lib/protocols/mcp` |
+| SDK | `mcp>=2,<3`, `fastmcp-slim[client]`, `pydantic-ai-slim[mcp]` | `@modelcontextprotocol/sdk` `^1.32.1` |
+| Plugin | `agent-runtimes.protocols.mcp` | `McpPlugin` |
+
+## Enable it
+
+Two kinds of server can reach an agent.
+
+**Config servers** are yours, in `~/.datalayer/mcp.json`, and start with the
+runtime unless `--no-config-mcp-servers` is given. `${VAR}` reads the environment:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    }
+  }
+}
+```
+
+**Catalog servers** are predefined. Start some with the runtime, or enable one
+while it runs:
+
+```bash
+agent-runtimes serve --agent-id example-agentic-chat --mcp-servers tavily,github --port 8765
+curl -X POST http://localhost:8765/api/v1/mcp/servers/catalog/tavily/enable
+```
+
+An agentspec names its own, and `--no-catalog-mcp-servers` skips them. On
+Datalayer, an application reaches its servers through the MCP gateway, which holds
+the credentials and decides each call.
+
+## Routes
+
+These are the runtime's own REST routes: none of them is an MCP endpoint.
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/v1/mcp/servers` | The servers running |
+| `GET /api/v1/mcp/servers/catalog`, `/config`, `/available` | Those the catalog offers, those of `mcp.json`, and both |
+| `POST /api/v1/mcp/servers/catalog/{server_name}/enable` | Starts a catalog server |
+| `DELETE /api/v1/mcp/servers/catalog/{server_name}/disable` | Stops it |
+| `GET`, `PUT`, `DELETE /api/v1/mcp/servers/{server_id}`, `POST /api/v1/mcp/servers` | One server, by hand |
+| `POST /api/v1/mcp/proxy/{server_name}/tools/{tool_name}` | Calls a tool for code running in a sandbox: `{"arguments": {…}}` in, `success` and `result` or `error` out |
+| `GET /api/v1/mcp/proxy/servers`, `/health` | What the proxy reaches |
+| `GET`, `DELETE /api/v1/mcp/servers/{server_id}/auth` | A server's OAuth state; signing out |
+| `POST /api/v1/mcp/servers/{server_id}/auth/start`, `/refresh` | Starts or refreshes OAuth 2.1 |
+| `GET /api/v1/mcp/auth/callback`, `GET /api/v1/mcp/client` | The OAuth callback; this client's Client ID Metadata Document |
+
+[Endpoints](../endpoints#mcp-servers) gives each answer.
+
+## Example
+
+Call a tool of a running server through the proxy:
+
+```bash
+curl -X POST http://localhost:8765/api/v1/mcp/proxy/filesystem/tools/list_directory \
+  -H 'Content-Type: application/json' \
+  -d '{"arguments": {"path": "/tmp"}}'
+```
+
+From TypeScript, connect to any server over Streamable HTTP:
+
+```typescript
+import { McpClient } from '@datalayer/agent-runtimes/lib/protocols/mcp/client';
+
+const client = await McpClient.connect({ url: 'http://127.0.0.1:8813/mcp' });
+console.log(client.protocolVersion, await client.listTools());
+await client.close();
+```
+
+`python examples/protocols/mcp/fixture_server.py --port 8813` serves the
+conformance fixture at that address. `client.protocolVersion` is the version the
+two sides agreed.
+
+## Limits
+
+- The runtime serves no MCP server of its own: an agent is reached over A2A, AG-UI,
+  Vercel AI or ACP. A harness with no HTTP MCP is lent a stdio shim onto the
+  gateway, which only forwards `tools/list` and `tools/call`.
+- Only tools reach an agent. Resources and prompts can be read but are not wired;
+  sampling, elicitation, roots, logging, progress, completions and cancellation are
+  not implemented.
+- The OAuth flow stores a token, and connecting does not yet attach it.
+- More in [MCP and A2A](./mcp-and-a2a#gaps). For interfaces carried over MCP, see
+  [MCP-UI](./mcp-ui) and [MCP Apps](./mcp-apps).

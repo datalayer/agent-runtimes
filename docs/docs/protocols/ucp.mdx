@@ -122,7 +122,7 @@ validated by `ucp-sdk` before it is sent.
 ## Example
 
 Runs locally, against the test merchant above, in one process with no
-network and no model (example EX-04):
+network and no model:
 
 ```bash
 python examples/protocols/ucp/shopping.py --yes
@@ -148,8 +148,7 @@ UCP_MERCHANT=http://127.0.0.1:8812 npx vitest run --project=integration \
 
 ### In the browser
 
-The examples gallery's **UCP checkout** (*Agent protocols* group, example
-EX-10) buys from the same store, in TypeScript, in the page:
+The examples gallery's **UCP checkout** (*Agent protocols* group) buys from the same store, in TypeScript, in the page:
 `src/protocols/ucp/merchant.ts` is *Example Store* as a `fetch` (its
 catalogue, totals, email gate, idempotency and test payment; every answer
 read by the client's `@ucp-js/sdk` schema). *Propose* puts two Sencha teas in

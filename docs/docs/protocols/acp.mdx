@@ -1,0 +1,114 @@
+---
+sidebar_position: 13
+title: Agent Client Protocol
+---
+
+# ACP: the Agent Client Protocol
+
+The [Agent Client Protocol](https://agentclientprotocol.com) is how an editor
+talks to a coding agent: JSON-RPC 2.0, sessions, prompts and streamed updates.
+Agent Runtimes speaks **protocol version 1** over a WebSocket. In this
+repository `acp` always means this protocol; the
+[Agentic Commerce Protocol](./agentic-commerce) is `agentic_commerce`.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Server | `agent_runtimes.routes.acp`, `agent_runtimes.transports.ACPTransport` | — |
+| Client | `agent_runtimes.transports.clients.ACPClient` | `ACPAdapter` in `@datalayer/agent-runtimes/lib/protocols` |
+| SDK | `agent-client-protocol>=0.7.1` (the `acp` extra). `datalayer-agent-shield` caps it below 0.8 today | `@agentclientprotocol/sdk` `^0.8.0` |
+
+## Enable it
+
+There is nothing to name: every agent the runtime makes is registered here too,
+whatever its transport. `--protocol` has no `acp` value for that reason. The route
+needs the `acp` extra, and is left out when the SDK is not installed.
+
+## Routes
+
+| Route | What it does |
+| --- | --- |
+| `WS /api/v1/acp/ws/{agent_id}` | The protocol. An unknown agent gets an error message, then the socket closes |
+| `GET /api/v1/acp/agents` | The agents registered |
+| `GET /api/v1/acp/agents/{agent_id}` | One agent |
+| `GET /api/v1/acp/sessions` | The sessions |
+| `GET /api/v1/acp/sessions/{session_id}` | One session |
+| `DELETE /api/v1/acp/sessions/{session_id}` | Closes a session |
+
+On the socket:
+
+| Method | What it does |
+| --- | --- |
+| `initialize` | Answers `protocolVersion` 1 and the agent's capabilities |
+| `authenticate` | For a client with no header of its own: `methodId` `bearer`, the token in `_meta.token` |
+| `session/new` | Makes a session; answers `sessionId` |
+| `session/load` | Finds a kept session and replays its conversation as updates |
+| `session/prompt` | Runs a turn: `session/update` notifications, then `stopReason` |
+| `session/cancel` | A notification: stops the running turn, which answers `cancelled` |
+| `_datalayer/steer` | A notification: adds instructions to the running turn |
+| `shutdown` | Ends the connection |
+
+`acp.session.new`, `acp.session.run` and `acp.permission.respond` are older names
+the route still answers.
+
+A prompt may name its model in `params.metadata.model`, for that turn. The token
+of a connection comes from its `Authorization` or `X-External-Token` header, or
+from `authenticate`, never from its address. What a prompt's `_meta` may carry
+(a model budget, a delegated credential) and how sessions are kept are in
+[Endpoints](../endpoints#acp-protocol-websocket).
+
+## Example
+
+```python
+from agent_runtimes.transports.clients import ACPClient
+
+async with ACPClient("ws://localhost:8765/api/v1/acp/ws/demo") as client:
+    await client.create_session(cwd=".")
+    async for event in client.run("Hello!"):
+        print(event)
+```
+
+The same exchange on the wire, for a client of your own:
+
+```json
+{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": 1, "clientCapabilities": {}}}
+{"jsonrpc": "2.0", "id": 2, "method": "session/new", "params": {"cwd": ".", "mcpServers": []}}
+{"jsonrpc": "2.0", "id": 3, "method": "session/prompt", "params": {"sessionId": "…", "prompt": [{"type": "text", "text": "Hello"}]}}
+```
+
+```json
+{"jsonrpc": "2.0", "method": "session/update", "params": {"sessionId": "…", "update": {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "hello "}}}}
+{"jsonrpc": "2.0", "id": 3, "result": {"stopReason": "end_turn"}}
+```
+
+In TypeScript, `ACPAdapter` adds `agentId` to the route's base:
+
+```typescript
+import { ACPAdapter } from '@datalayer/agent-runtimes/lib/protocols';
+
+const adapter = new ACPAdapter({
+  protocol: 'acp',
+  baseUrl: 'ws://localhost:8765/api/v1/acp/ws',
+  agentId: 'demo',
+});
+await adapter.connect();
+```
+
+## An orchestrator, and harnesses
+
+Started with `--orchestrator-root`, the runtime registers one more ACP agent,
+`orchestrator`, which delegates each prompt to the agent the option names: see
+[Delegating Work Over A2A and ACP](./index.mdx#delegating-work-over-a2a-and-acp).
+
+The runtime is an ACP client as well: a [harness](../harnesses) is an ACP agent it
+drives, and an editor that connects here and names an application whose agent is
+a harness reaches that harness through the runtime
+([Harness transports](../harnesses/transports)). Such a session works in the
+runtime's workspace: the client's `cwd` and `mcpServers` are not what it gets.
+
+## Limits
+
+- The transport is the WebSocket: the stdio an editor launches a local agent over
+  is not served.
+- `initialize` declares `promptCapabilities.image` false, `mcpCapabilities.http`
+  and `.sse` false, and session `modes` false.
+- `authenticate` knows `bearer` only.

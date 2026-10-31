@@ -1,0 +1,87 @@
+---
+sidebar_position: 16
+title: A2UI
+---
+
+# A2UI: an answer that draws an interface
+
+[A2UI](https://a2ui.org) (Google) is how an agent's answer becomes an interface:
+it describes a surface as messages, and the host renders components from them.
+Agent Runtimes speaks **A2UI v0.9** (`createSurface`, `updateComponents`,
+`updateDataModel`).
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| What it does | `agent_runtimes.a2ui.executions` turns sandbox output into surfaces; `render_a2ui_surface` is a backend tool | `createA2UIRenderer` in `src/ui-plugins`, the chat's `a2ui` activity |
+| Packages | `a2ui-agent-sdk>=0.7.0`, for the examples only (the `a2ui` extra) | `@a2ui/react` 0.12.0, `@a2ui/web_core` 0.12.0 |
+
+A2UI is not a transport: its messages travel inside another protocol's answer.
+
+## Enable it
+
+Give an agent the backend tool `example-render-a2ui-surface`, as the agentspec
+`example-a2ui-agent` does: it turns a declarative field specification from the
+model into a validated surface, and its messages reach the page over
+[AG-UI](./ag-ui).
+
+```bash
+agent-runtimes serve --agent-id example-a2ui-agent --protocol ag-ui --port 8765
+```
+
+An Appspec's UI plugin says when it is exposed through A2UI (`ui`, `renderer: a2ui`).
+
+The `a2ui` extra needs care: `a2ui-agent-sdk` requires `google-adk`, which caps
+OpenTelemetry below what the runtime asks for, so the extra does not resolve as it
+stands. Install the SDK with `--no-deps` to run the examples below. The runtime
+itself works without it.
+
+## Routes
+
+These serve two example agents, and they need that SDK:
+
+| Route | What it does |
+| --- | --- |
+| `POST /api/v1/a2ui/restaurant` | The restaurant finder: a `query`, or an `action` with its `context` |
+| `POST /api/v1/a2ui/support-assistant` | The support assistant, likewise |
+| `GET /api/v1/a2ui/restaurant/health`, `GET /api/v1/a2ui/support-assistant/health` | `healthy`, or `unhealthy` with the reason |
+
+Each answers with A2A-style parts: a `text` part, then one `data` part per A2UI
+message. A request with neither `query` nor `action` and `context` is a 400.
+
+## Example
+
+```typescript
+import type { A2uiMessage } from '@a2ui/web_core/v0_9';
+
+const response = await fetch('http://localhost:8765/api/v1/a2ui/restaurant', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: 'Top 5 Chinese restaurants in New York' }),
+});
+const parts: { kind: string; text?: string; data?: unknown }[] =
+  await response.json();
+const messages = parts
+  .filter(part => part.kind === 'data')
+  .map(part => part.data as A2uiMessage);
+// Pass `messages` to your A2UI message processor, and render its surfaces.
+// A button click comes back as { action, context } in the next POST.
+```
+
+The package has no A2UI client class. A page posts to the endpoint and hands the
+messages to an A2UI v0.9 renderer (`@a2ui/react/v0_9`), as the gallery's `A2Ui*`
+examples under `src/examples/` do:
+
+```bash
+EXAMPLE=A2UiAgentExample npm run dev
+```
+
+## Limits
+
+- The `/api/v1/a2ui` routes are examples, not a general A2UI endpoint: there is no
+  route that lists agents, and an agent of yours is not reached through them.
+- They pass `http://localhost:8765` as their base URL to the examples, whatever
+  port the runtime is on.
+- `A2AAdapter` asks for A2UI (`enableA2UI`, on by default), and marks as `a2ui` only
+  the older message shapes (`beginRendering`, `surfaceUpdate`, `dataModelUpdate`).
+  A v0.9 message reaches it as a plain `data` activity.
+- A terminal draws a degraded version of a surface.

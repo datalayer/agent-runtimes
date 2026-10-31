@@ -1,0 +1,169 @@
+---
+sidebar_position: 14
+title: A2A
+---
+
+# A2A: agents talking to agents
+
+[Agent2Agent](https://a2a-protocol.org/latest/specification/) (Google, now the
+Linux Foundation) is how one agent asks another: an Agent Card says what it does,
+and a task carries the work. Agent Runtimes speaks **A2A 1.0** in JSON-RPC, as a
+server in Python and a client in both languages. The feature by feature inventory
+is in [MCP and A2A](./mcp-and-a2a#a2a).
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Server | `agent_runtimes.routes.a2a`, on `fasta2a` `>=2.1.1,<2.2` (the `a2a` extra) | — |
+| Client | `fasta2a.client.A2AClient`, `agent_runtimes.subagents.a2a` | `A2AAdapter` in `@datalayer/agent-runtimes/lib/protocols`, on `@a2a-js/sdk` `^1.3.0` |
+| Plugin | `agent-runtimes.protocols.a2a` | `A2APlugin` |
+
+## Enable it
+
+```bash
+agent-runtimes serve --agent-id example-a2a --protocol a2a --port 8765
+```
+
+```bash
+curl -X POST http://localhost:8765/api/v1/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "Demo", "transport": "a2a"}'
+```
+
+Or in a host of your own, inside its running event loop:
+
+```python
+from agent_runtimes.routes.a2a import A2AAgentCard, register_a2a_agent, set_a2a_app
+
+set_a2a_app(app, "/api/v1")
+register_a2a_agent(
+    agent,  # any BaseAgent
+    A2AAgentCard(
+        id="demo",
+        name="Demo",
+        description="Answers questions.",
+        url="http://localhost:8765/api/v1/a2a/agents/demo",
+    ),
+)
+```
+
+Any `BaseAgent` will do: a worker runs the agent adapter, with the same MCP
+servers, skills and guardrails it has on the other transports. An
+[application](../apps) declares the card extensions it publishes in its Appspec,
+under `a2a`: see [A2A card extensions](./agent-protocols#a2a-card-extensions), and
+[Teams over A2A](../apps/teams-over-a2a) for applications that ask each other.
+
+## Routes
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/v1/a2a/agents/{agent_id}/.well-known/agent-card.json` | The Agent Card |
+| `POST /api/v1/a2a/agents/{agent_id}/` | The JSON-RPC endpoint |
+| `GET /api/v1/a2a/agents` | The agents served, with their card and RPC paths |
+| `GET /api/v1/a2a/tasks` | The tasks running now |
+| `POST /api/v1/a2a/terminate` | Stops `task_id`; with none, every running task |
+| `POST /api/v1/a2a/pause` | Pauses `task_id` at a checkpoint |
+| `POST /api/v1/a2a/steer` | Adds `instructions` to the running `task_id` |
+
+`pause` and `steer` belong to the Datalayer orchestration extension, which each
+card declares and [Endpoints](../endpoints#acp-protocol-websocket) describes. Both
+answer `success: false` for a task that is not running. The JSON-RPC endpoint
+takes A2A 1.0's method names (`SendMessage`, `SendStreamingMessage`, answered with
+`TASK_STATE_*`) and the older `message/send`, `message/stream`, `tasks/get`,
+`tasks/cancel` (answered with `submitted`, `completed`…).
+
+## Example
+
+```bash
+curl http://localhost:8765/api/v1/a2a/agents/demo/.well-known/agent-card.json
+```
+
+```json
+{
+  "name": "Demo",
+  "version": "1.0.0",
+  "supportedInterfaces": [
+    {
+      "protocolBinding": "JSONRPC",
+      "url": "http://localhost:8765/api/v1/a2a/agents/demo",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "extensions": [
+      {
+        "uri": "https://datalayer.ai/extensions/orchestration/v1",
+        "required": false,
+        "params": {
+          "pause": "/api/v1/a2a/pause",
+          "steer": "/api/v1/a2a/steer"
+        }
+      }
+    ]
+  }
+}
+```
+
+Send a message, then read its task with the id it answers (`result.task.id`):
+
+```bash
+curl -X POST http://localhost:8765/api/v1/a2a/agents/demo/ \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "kind": "message",
+        "role": "user",
+        "messageId": "11111111-1111-1111-1111-111111111111",
+        "parts": [{"kind": "text", "text": "Hello"}]
+      }
+    }
+  }'
+
+curl -X POST http://localhost:8765/api/v1/a2a/agents/demo/ \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc": "2.0", "id": "2", "method": "tasks/get", "params": {"id": "<task id>"}}'
+```
+
+The first answers at `submitted`; the agent's words are in the task's `history`
+and in an artifact named `result` once it is `completed`.
+
+In TypeScript, the adapter reads the card at `connect`:
+
+```typescript
+import { A2AAdapter } from '@datalayer/agent-runtimes/lib/protocols';
+
+const adapter = new A2AAdapter({
+  protocol: 'a2a',
+  baseUrl: 'http://localhost:8765/api/v1/a2a/agents/demo/',
+});
+await adapter.connect();
+```
+
+`python examples/protocols/a2a/card_extensions.py` shows a card's extensions, and
+`examples/orchestration` an objective delegated over A2A and over ACP. A request
+signed with [Web Bot Auth](./web-bot-auth) is verified before the agent sees it;
+one whose signature does not hold is refused, and an unsigned one passes as
+unverified.
+
+## What a task keeps
+
+Tasks, contexts and owed runs live in the runtime's protocol state store, so
+`tasks/get` answers after a restart, and work left unfinished is run again when
+the runtime starts. Pass `broker` and `storage` to `register_a2a_agent` to replace
+them. A harness over A2A adds artifacts and approvals:
+[A harness over A2A](./mcp-and-a2a#a-harness-over-a2a).
+
+## Limits
+
+- The model is the agent's: a request cannot change it. To offer two models, serve
+  two agents.
+- JSON-RPC only: no HTTP+JSON binding (which [PACT](./pact) 1.0 asks of a Brand),
+  no gRPC.
+- `ListTasks` and push notifications answer *unsupported*, and there is no
+  authenticated extended card.
+- The other gaps are listed in [MCP and A2A](./mcp-and-a2a#gaps).
