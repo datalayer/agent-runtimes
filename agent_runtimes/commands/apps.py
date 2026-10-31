@@ -244,7 +244,8 @@ def validate_file(
         The plugins its organization has turned off; none when not given.
     frames : OrganizationFrames, FramesUnread or None
         Its organization's contexts, or why they were not read; with none, a
-        context of an organization's own is refused (U-32).
+        context of an organization's own is refused (U-32). One it disabled
+        needs attention, and is no problem: it runs without it.
 
     Returns
     -------
@@ -300,6 +301,10 @@ def validate_file(
         attention += code_notes(application)
     else:
         attention += code_agent_notes(path)
+    if frames is not None and not isinstance(frames, FramesUnread):
+        from agent_runtimes.apps.frames import frames_left_out
+
+        attention += frames_left_out(application.context, frames)
     return Report(
         str(path),
         NEEDS_ATTENTION if attention else PASSES,
