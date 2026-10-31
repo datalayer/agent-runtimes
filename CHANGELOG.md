@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.100
+
+- A process that sets `AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE` routes every model through it, whatever an agentspec names, so a member played by the CLI goes through ai-inference.
+
 ## 1.5.99
 
 31 October 2026. Personal Agent Protocol at `personal-agent-protocol` 0.29.0 and `@datalayer/personal-agent-protocol` ^0.29.0, draft 0.3 as of its revision 2026-10-30. The local personal agent passes the issuer's `dpop_signing_alg_values_supported` to Device Sign-In, so a company that binds its tokens gets a DPoP proof with every token and resource request, by the SDK's in-memory key, which lives as long as the token it binds; one transport keeps each origin's latest nonce. A company with no issuer is reached signed out: its identifier, `https://{domain}`, is the Session JWT's `aud` and what the pairwise ID is scoped by, `no_sign_in` is gone, and `sign_in` says it offers none. A company that stops or starts having an issuer is `issuer_changed`, even with the same identifier. The PAP examples and traces at 0.29.0.

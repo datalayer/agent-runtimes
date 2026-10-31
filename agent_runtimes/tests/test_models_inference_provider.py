@@ -24,8 +24,23 @@ def test_a_model_with_no_provider_follows_the_process(
     assert "/api/ai-inference/v1" in str(resolved.client.base_url)
 
 
-def test_a_provider_named_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_process_wins_over_a_spec_that_says_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+    monkeypatch.setenv("DATALAYER_API_KEY", "key")
+    resolved = models.resolve_model_for_inference_provider(
+        "bedrock:us.anthropic.claude-sonnet-4-6", "local"
+    )
+    assert not isinstance(resolved, str)
+    assert "/api/ai-inference/v1" in str(resolved.client.base_url)
+
+
+def test_with_no_setting_a_provider_named_holds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", raising=False)
     resolved = models.resolve_model_for_inference_provider(
         "bedrock:us.anthropic.claude-sonnet-4-6", "local"
     )

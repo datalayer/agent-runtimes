@@ -448,9 +448,22 @@ def resolve_model_for_inference_provider(
         if local_model is not None:
             return local_model
 
-    # Unsaid, this process's own setting: a member played in a job or a CLI has
-    # no agentspec to name it, and `local` would call the provider directly.
-    provider = (inference_provider or effective_inference_provider()).strip().lower()
+    # This process's setting wins over the agentspec: the specs say `local`, and
+    # on Datalayer every call goes through ai-inference, so a member played in a
+    # job or the CLI must not call the provider directly. Unsaid, the same.
+    from agent_runtimes.routes.configure import (  # noqa: PLC0415
+        configured_inference_provider_override,
+    )
+
+    provider = (
+        (
+            configured_inference_provider_override()
+            or inference_provider
+            or effective_inference_provider()
+        )
+        .strip()
+        .lower()
+    )
     if provider in {"", "local"}:
         logger.info(
             "Routing model '%s' with local inference provider (direct model backend; no datalayer-ai-inference endpoint).",
