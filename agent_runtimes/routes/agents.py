@@ -41,14 +41,20 @@ from ..events import create_event
 from ..guardrails.credentials import release
 from ..guardrails.declared_secrets import (
     DeclaredSecrets,
-    declared_secrets,
+    ReservedSecretName,
+    as_the_catalogue_wrote_it,
     forget_given,
     given_names,
     keep_declared,
     launched,
     note_given,
     note_launched,
+    refuse_reserved,
+    refuse_server_names,
     server_env_names,
+)
+from ..guardrails.declared_secrets import (
+    declared_secrets as read_declared_secrets,
 )
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
@@ -149,6 +155,27 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
         "SkillsGuardrailCapability",
     }
 )
+
+
+def declared_secrets(*specs: Any, **read: Any) -> DeclaredSecrets:
+    """What specs declare (`guardrails.declared_secrets`): 422 when one declares
+    a name of the runtime's own."""
+    try:
+        return read_declared_secrets(*specs, **read)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+
+
+def _nothing_reserved(names: Any, declared: DeclaredSecrets) -> None:
+    """422 before any of these is set, when one is a name of the runtime's own."""
+    try:
+        refuse_reserved(names, declared)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
 
 
 def get_library_agent_spec(agent_id: str) -> Any:
@@ -1610,6 +1637,16 @@ async def create_agent(
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
         # This accepts both camelCase and snake_case keys.
         forwarded_spec = request.agent_spec or {}
+        # What it declares is read before anything is made of it.
+        declared_secrets(
+            get_library_agent_spec(request.agent_spec_id)
+            if request.agent_spec_id
+            else None,
+            forwarded_spec=forwarded_spec,
+            app_spec=request.app_spec,
+            app_instance=request.app_instance,
+            resolve_agent=get_library_agent_spec,
+        )
 
         def _spec_value(*keys: str) -> Any:
             for key in keys:
@@ -4557,6 +4594,11 @@ async def _start_mcp_servers_for_agent(
             # os.environ was not populated (robust, order-independent).
             # Its own secrets alone: another server's are not its (R-19).
             own = server_env_names(config)
+            refuse_server_names(
+                server_id,
+                own,
+                from_catalogue=as_the_catalogue_wrote_it(server_id, config),
+            )
             extra_env = {ev.name: ev.value for ev in env_vars if ev.name in own} or None
             instance = await lifecycle_manager.start_server(
                 server_id, config, extra_env=extra_env
@@ -4658,6 +4700,7 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
     servers: dict[str, frozenset[str]] = {}
     kernel: set[str] = set()
     held: set[str] = set()
+    platform: set[str] = set()
     for name in agent_ids:
         record = _agentspecs.get(name)
         if not isinstance(record, dict):
@@ -4680,11 +4723,13 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
             servers[key] = servers.get(key, frozenset()) | value
         kernel |= found.kernel
         held |= found.held
+        platform |= found.platform
     return DeclaredSecrets(
         consumers=consumers,
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
+        platform=frozenset(platform),
     ).merged(launched())
 
 
@@ -4775,6 +4820,7 @@ async def _setup_env_and_sandbox(
             }
         )
     env_var_names = [ev.name for ev in body.env_vars]
+    _nothing_reserved(env_var_names, declared)
     for env_var in body.env_vars:
         # Names only: never any part of a value.
         logger.info("[%s] setting env var: %s", label, env_var.name)
@@ -5569,6 +5615,7 @@ async def configure_from_spec_endpoint(
         _SET_UP_REFUSED[target_agent_name] = " ".join(problems)
         raise HTTPException(status_code=422, detail={"problems": problems})
     _SET_UP_REFUSED.pop(target_agent_name, None)
+    _nothing_reserved(kept, declared)
     for name, value in kept.items():
         logger.info("[configure-from-spec] setting env var: %s", name)
         os.environ[name] = value

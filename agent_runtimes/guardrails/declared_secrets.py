@@ -41,6 +41,18 @@ sandbox — where the code the model writes runs — gets the skills' alone
 A spec whose server or skill needs a secret that is not there is refused, in
 a sentence (:meth:`DeclaredSecrets.missing`): no fallback to all the secrets.
 
+**A secret never sets what the runtime itself reads.** A name a spec declares is
+filled from a vault, and set in this process's environment and in its kernel's.
+So a name the runtime, its libraries or the programs it starts read to know where
+its platform is, who it is, or how to run (:func:`is_reserved`:
+``DATALAYER_AI_INFERENCE_URL`` would send the principal's token elsewhere) is
+refused, in a sentence, as the spec is read (:func:`declared_secrets`) and again
+as it is applied (:func:`refuse_reserved`). The list is checked against what the
+code reads (``test_every_variable_the_runtime_reads_is_reserved``). The platform's
+own catalogue is the exception, for what it says of its own servers
+(:data:`CATALOGUE_MAY_DECLARE`), as its harnesses' keys and a deployment's user
+secret are: nobody's spec writes those.
+
 Pure but for the catalogues it reads; :func:`declared_secrets` is what the
 companion asks (``POST /agents/declared-secrets``) before it gives a runtime
 anything, and what ``configure-from-spec`` keeps to when it receives them.
@@ -61,12 +73,163 @@ from typing import (
     Mapping,
     Optional,
     Set,
+    Tuple,
 )
 
 #: The secrets the runtime itself needs from the account, whatever its specs
 #: say. None: its model token and the person's token come in fields of their
 #: own (``user_token``, the ai-inference token), the sandbox's in its URL.
 PLATFORM_RUNTIME_SECRETS: FrozenSet[str] = frozenset()
+
+#: What the runtime reads of its environment, by what the names start with: the
+#: platform's and the runtime's own settings; the telemetry and the stores it is
+#: configured through; the model providers its libraries reach; the sandboxes it
+#: runs code in; and what steers the interpreters and tools it starts.
+RESERVED_PREFIXES: Tuple[str, ...] = (
+    "DATALAYER_",
+    "AGENT_",
+    "RUNTIME_",
+    "RUNTIMES_",
+    "LOOP_",
+    "AG_CHAT_",
+    "CODEAI_",
+    "OTEL_",
+    "LOGFIRE_",
+    "DBOS_",
+    "JUPYTER_",
+    "KUBERNETES_",
+    "PYDANTIC_AI_",
+    "CLOUDFLARE_SANDBOX_",
+    "CWSANDBOX_",
+    "ANTHROPIC_",
+    "OPENAI_",
+    "AZURE_OPENAI_",
+    "AZURE_VOICELIVE_",
+    "AWS_",
+    "BEDROCK_",
+    "GEMINI_",
+    "GOOGLE_GENAI_",
+    "GOOGLE_GEMINI_",
+    "GOOGLE_VERTEX_",
+    "GOOGLE_CLOUD_",
+    "ALIBABA_",
+    "DASHSCOPE_",
+    "OLLAMA_",
+    "OPENROUTER_",
+    "VERCEL_",
+    "CLAUDE_",
+    "CODEX_",
+    "OPENCODE_",
+    "PI_CODING_",
+    "INSPECT_",
+    "MODAL_",
+    "PYTHON",
+    "IPYTHON",
+    "LD_",
+    "DYLD_",
+    "NODE_",
+    "NPM_CONFIG_",
+    "GIT_",
+    "UV_",
+    "PIP_",
+    "CONDA_",
+    "DOCKER_",
+    "SSL_",
+    "XDG_",
+    "LC_",
+)
+
+#: Names of those, whole.
+RESERVED_NAMES: FrozenSet[str] = frozenset(
+    {
+        "ALL_PROXY",
+        "APPDATA",
+        "AI_AGENTS_URL",
+        "BASH_ENV",
+        "CLOUD_ML_REGION",
+        "CO_API_KEY",
+        "CUDA_VERSION",
+        "CURL_CA_BUNDLE",
+        "ENV",
+        "FTP_PROXY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "HOME",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "IFS",
+        "LANG",
+        "LLM_API_KEY",
+        "LOCALAPPDATA",
+        "LOCAL_MODEL_API_KEY",
+        "LOGNAME",
+        "NETRC",
+        "NO_COLOR",
+        "NO_PROXY",
+        "PATH",
+        "PROGRAMDATA",
+        "REQUESTS_CA_BUNDLE",
+        "SHELL",
+        "SKILL_ERROR",
+        "SOCKS_PROXY",
+        "TEMP",
+        "TERM",
+        "TMP",
+        "TMPDIR",
+        "TZ",
+        "USER",
+        "WSS_PROXY",
+        "WS_PROXY",
+    }
+)
+
+#: What names end with that says where a client calls.
+_RESERVED_SUFFIXES: Tuple[str, ...] = ("_BASE_URL",)
+
+#: The reserved names the catalogue's own servers declare, for themselves: the
+#: person's key to the platform, sent in their requests' header, and the directory
+#: of the filesystem server. Declared by no other server, and no spec's.
+CATALOGUE_MAY_DECLARE: FrozenSet[str] = frozenset({"DATALAYER_API_KEY", "TMPDIR"})
+
+
+class ReservedSecretName(ValueError):
+    """A spec declares a name the runtime reads of its own, in a sentence."""
+
+
+def is_reserved(name: str) -> bool:
+    """Whether a variable is the runtime's own, whatever its case (``http_proxy``)."""
+    upper = str(name).upper()
+    return (
+        upper in RESERVED_NAMES
+        or upper.startswith(RESERVED_PREFIXES)
+        or upper.endswith(_RESERVED_SUFFIXES)
+    )
+
+
+def _reserved_sentence(consumer: str, names: Iterable[str]) -> str:
+    return (
+        f"{consumer} declares {', '.join(sorted(names))}, which the runtime reads "
+        "of its own: a secret cannot set it, so nothing was given."
+    )
+
+
+def refuse_server_names(
+    server_id: str, names: Iterable[str], *, from_catalogue: bool
+) -> None:
+    """Refuse what an MCP server declares of the runtime's own.
+
+    Raises
+    ------
+    ReservedSecretName
+        For any reserved name, beyond what the catalogue says of its own server.
+    """
+    allowed = CATALOGUE_MAY_DECLARE if from_catalogue else frozenset()
+    refused = [name for name in names if is_reserved(name) and name not in allowed]
+    if refused:
+        raise ReservedSecretName(
+            _reserved_sentence(f"The MCP server {server_id}", refused)
+        )
+
 
 #: A placeholder a server's command line, environment or address names.
 _PLACEHOLDER = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -131,6 +294,16 @@ def _catalog_server(server_id: str) -> Any:
     return get_catalog_server(server_id)
 
 
+def as_the_catalogue_wrote_it(server_id: str, server: Any) -> bool:
+    """Whether a server is the catalogue's own: a spec carries its copy, and
+    a copy pointed elsewhere under its id is the spec's."""
+    catalogue = _catalog_server(server_id)
+    return catalogue is not None and all(
+        _get(server, key) == _get(catalogue, key)
+        for key in ("url", "command", "args", "env", "headers")
+    )
+
+
 def _harness_env_names(harness_id: str) -> FrozenSet[str]:
     """The secrets a catalogue harness requires, by name; none for a builtin or unknown one.
 
@@ -174,6 +347,9 @@ class DeclaredSecrets:
     #: Given when the account has them, never required: what an MCP server's
     #: scripts read in the sandbox (``sandbox_envvars``), also in ``kernel``.
     offered: FrozenSet[str] = frozenset()
+    #: Reserved names, of what the platform wrote and no spec does: what its
+    #: catalogue says of its own servers, its harnesses' keys, the user secret.
+    platform: FrozenSet[str] = frozenset()
 
     @property
     def runtime(self) -> FrozenSet[str]:
@@ -201,6 +377,7 @@ class DeclaredSecrets:
             kernel=self.kernel | other.kernel,
             held=self.held | other.held,
             offered=self.offered | other.offered,
+            platform=self.platform | other.platform,
         )
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
@@ -239,6 +416,9 @@ def declared_secrets(
 ) -> DeclaredSecrets:
     """The secrets the specs a runtime is configured from declare.
 
+    :class:`ReservedSecretName` when a spec declares what the runtime reads of
+    its own: what declares it is not configured.
+
     ``agent_spec`` is the library's (an ``Agentspec``, a Cog's spec, or a
     stored creation record); ``forwarded_spec`` the one the platform sent as
     it is; ``app_spec`` an Appspec (a model or its file's dict) and
@@ -251,6 +431,7 @@ def declared_secrets(
     kernel: Set[str] = set()
     held: Set[str] = set()
     offered: Set[str] = set()
+    platform: Set[str] = set()
     seen_agents: Set[str] = set()
 
     def add_server(server: Any) -> None:
@@ -282,10 +463,14 @@ def declared_secrets(
             if _get(server, "enabled") is False:
                 return
         names = server_env_names(server)
+        sandbox = sandbox_env_names(server)
+        from_catalogue = as_the_catalogue_wrote_it(server_id, server)
+        refuse_server_names(server_id, names | sandbox, from_catalogue=from_catalogue)
+        if from_catalogue:
+            platform.update((names | sandbox) & CATALOGUE_MAY_DECLARE)
         servers[server_id] = servers.get(server_id, frozenset()) | names
         if names:
             consumers.setdefault(f"the MCP server {server_id}", set()).update(names)
-        sandbox = sandbox_env_names(server)
         kernel.update(sandbox)
         offered.update(sandbox)
 
@@ -295,6 +480,11 @@ def declared_secrets(
             label = _ref_id(
                 skill if isinstance(skill, str) else _get(skill, "id", "name")
             )
+            reserved = [name for name in names if is_reserved(name)]
+            if reserved:
+                raise ReservedSecretName(
+                    _reserved_sentence(f"The skill {label}", reserved)
+                )
             consumers.setdefault(f"the skill {label}", set()).update(names)
             kernel.update(names)
 
@@ -321,6 +511,7 @@ def declared_secrets(
             names = _harness_env_names(harness_id)
             if names:
                 consumers.setdefault(f"the harness {harness_id}", set()).update(names)
+                platform.update(names)
         subagents = _get(spec, "subagents")
         for sub in (_get(subagents, "subagents") or []) if subagents else []:
             if _get(sub, "a2a"):
@@ -358,6 +549,7 @@ def declared_secrets(
             from agent_runtimes.apps.host_user import secret_variable
 
             held.add(secret_variable(deployment_uid))
+            platform.add(secret_variable(deployment_uid))
 
     return DeclaredSecrets(
         consumers={key: frozenset(value) for key, value in consumers.items()},
@@ -365,6 +557,7 @@ def declared_secrets(
         kernel=frozenset(kernel),
         held=frozenset(held),
         offered=frozenset(offered),
+        platform=frozenset(platform),
     )
 
 
@@ -421,6 +614,24 @@ def keep_declared(
     return kept, sorted(name for name in given if name not in declared)
 
 
+def refuse_reserved(names: Iterable[str], declared: DeclaredSecrets) -> None:
+    """Refuse to set a name of the runtime's own, as secrets are about to be set.
+
+    What was read off the specs was refused then: this is what stands between
+    a name and ``os.environ``, whatever brought it here.
+
+    Raises
+    ------
+    ReservedSecretName
+        For a reserved name the platform did not write itself.
+    """
+    refused = [
+        name for name in names if is_reserved(name) and name not in declared.platform
+    ]
+    if refused:
+        raise ReservedSecretName(_reserved_sentence("This runtime's specs", refused))
+
+
 def env_for_server(env: Mapping[str, str], server: Any) -> Dict[str, str]:
     """A server's environment: without the secrets a configure gave for others."""
     own = server_env_names(server)
@@ -429,17 +640,25 @@ def env_for_server(env: Mapping[str, str], server: Any) -> Dict[str, str]:
 
 
 __all__ = [
+    "CATALOGUE_MAY_DECLARE",
     "PLATFORM_RUNTIME_SECRETS",
+    "RESERVED_NAMES",
+    "RESERVED_PREFIXES",
     "DeclaredSecrets",
+    "ReservedSecretName",
+    "as_the_catalogue_wrote_it",
     "declared_secrets",
     "env_for_server",
     "env_name",
     "forget_given",
     "given_names",
+    "is_reserved",
     "keep_declared",
     "launched",
     "note_given",
     "note_launched",
+    "refuse_reserved",
+    "refuse_server_names",
     "sandbox_env_names",
     "server_env_names",
 ]
