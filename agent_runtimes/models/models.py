@@ -448,7 +448,9 @@ def resolve_model_for_inference_provider(
         if local_model is not None:
             return local_model
 
-    provider = (inference_provider or "local").strip().lower()
+    # Unsaid, this process's own setting: a member played in a job or a CLI has
+    # no agentspec to name it, and `local` would call the provider directly.
+    provider = (inference_provider or effective_inference_provider()).strip().lower()
     if provider in {"", "local"}:
         logger.info(
             "Routing model '%s' with local inference provider (direct model backend; no datalayer-ai-inference endpoint).",
