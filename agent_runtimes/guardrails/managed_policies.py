@@ -19,6 +19,15 @@ runtime whose socket is down. The engine is the package's; this module is
 the runtime's one place that knows IAM's URL and the account's token, and
 that fans a change out to every agent and every session's budget.
 
+**The credential is read at each read.** The account is decided once, by the
+credential the runtime first holds; what IAM is asked with is read every time
+(:meth:`RuntimePolicies.credential_now`): the principal's token of a deployment
+of that account served here, which its keeper renews for as long as it is kept
+on, else that first credential. A kept harness starts under a key minted for
+its owner, or the owner's own token, which outlive nothing: held for the
+runtime's life, IAM answered 401 and the Shield refused every step once the
+copy it held expired (found on r1, 31 October 2026).
+
 **Fail closed.** With a token and IAM's URL, a policy that cannot be read and
 no unexpired copy is :class:`agent_shield.saas.PolicyUnavailable`, a
 sentence naming IAM: the harness is refused with it at creation, and every
@@ -41,7 +50,8 @@ import binascii
 import json
 import logging
 import os
-from typing import Awaitable, Callable, List, Optional, Tuple, Union
+import time
+from typing import Any, Awaitable, Callable, List, Mapping, Optional, Tuple, Union
 
 from agent_shield.policy import Policy
 from agent_shield.saas import (
@@ -50,12 +60,14 @@ from agent_shield.saas import (
     ManagedPolicies,
     PolicySource,
     PolicyUnavailable,
+    ServedPolicies,
 )
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "SOCKET_EVENT",
+    "CurrentCredentialSource",
     "PolicyUnavailable",
     "RuntimePolicies",
     "account_of_token",
@@ -98,29 +110,67 @@ OnChange = Callable[[List[Policy]], Union[None, Awaitable[None]]]
 OnUnavailable = Callable[[str], Union[None, Awaitable[None]]]
 
 
-def account_of_token(token: str) -> str:
-    """The account a token is minted for, read unverified: IAM verifies it at the route.
-
-    The claims carry the person under ``user`` (the current layout), under a
-    ``sub`` mapping (the earlier one) or at the top (``uid``); a token
-    carrying none is no account, said as ``""``.
-    """
+def _claims_of(token: str) -> Mapping[str, Any]:
+    """A token's claims, read unverified; ``{}`` for what is not a JWT."""
     parts = token.split(".")
     if len(parts) != 3:
-        return ""
+        return {}
     try:
         claims = json.loads(
             base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
         )
     except (ValueError, binascii.Error):
-        return ""
-    if not isinstance(claims, dict):
-        return ""
+        return {}
+    return claims if isinstance(claims, dict) else {}
+
+
+def _expired(token: str) -> bool:
+    """Whether a token says it has run out; one that says nothing has not."""
+    expires = _claims_of(token).get("exp")
+    return isinstance(expires, (int, float)) and expires <= time.time()
+
+
+def account_of_token(token: str) -> str:
+    """The account a token is minted for, read unverified: IAM verifies it at the route.
+
+    An application's principal is somebody of its own, a member of nothing:
+    the account it acts for is its owner's (``account_uid``, beside its
+    ``agent_uid``), never its own uid. Otherwise the claims carry the person
+    under ``user`` (the current layout), under a ``sub`` mapping (the earlier
+    one) or at the top (``uid``); a token carrying none is no account, said
+    as ``""``.
+    """
+    claims = _claims_of(token)
+    owner = str(claims.get("account_uid") or "").strip()
+    if owner and str(claims.get("agent_uid") or "").strip():
+        return owner
     for holder in (claims.get("user"), claims.get("sub"), claims):
         if isinstance(holder, dict) and str(holder.get("uid") or "").strip():
             return str(holder["uid"]).strip()
     sub = claims.get("sub")
     return str(sub).strip() if isinstance(sub, str) else ""
+
+
+class CurrentCredentialSource:
+    """IAM over HTTP (:class:`agent_shield.saas.IamPolicySource`), asked for one account
+    with the credential held at each read: the first one's expiry ends nothing."""
+
+    def __init__(
+        self, iam_url: str, credential: Callable[[], str], account_uid: str
+    ) -> None:
+        self._credential = credential
+        # Refuses a URL, a credential or an account that cannot be asked with, now.
+        self._built = IamPolicySource(iam_url, credential(), account_uid)
+
+    @property
+    def where(self) -> str:
+        return self._built.where
+
+    def fetch(self) -> ServedPolicies:
+        built = self._built
+        return IamPolicySource(
+            built.iam_url, self._credential(), built.account_uid, timeout=built.timeout
+        ).fetch()
 
 
 class RuntimePolicies:
@@ -130,7 +180,9 @@ class RuntimePolicies:
         self._managed: Optional[ManagedPolicies] = None
         self._source_override: Optional[PolicySource] = None
         self._socket_url_override: Optional[str] = None
+        #: What the runtime first held, and the account it names (`credential_now`).
         self._credential: str = ""
+        self._account: str = ""
         self._said_unmanaged = False
         self._listeners: List[Tuple[OnChange, OnUnavailable]] = []
         self._watcher: Optional[asyncio.Task[None]] = None
@@ -145,6 +197,8 @@ class RuntimePolicies:
         """Use a source in IAM's place (a test's fake); ``None`` reads the environment again."""
         self._source_override = source
         self._managed = None
+        self._credential = ""
+        self._account = ""
         self._said_unmanaged = False
         self.stop_watching()
 
@@ -153,14 +207,50 @@ class RuntimePolicies:
         self._socket_url_override = url
         self.stop_watching()
 
+    def credential_now(self) -> str:
+        """What IAM is asked with now: read at each read, never kept.
+
+        The principal's token of a deployment served here, as
+        ``ACPAgent._decision_credential`` reads it: what the keeper renews
+        for as long as the deployment is kept on. Only one that acts for the
+        account these documents are read for: a person's runtime of somebody
+        else's deployment goes on reading that person's. Else what the
+        runtime first held, which IAM refuses once it has expired: nothing
+        valid held is the Shield's refusal, never a read in another's name.
+        """
+        if not self._account:
+            return self._credential
+        from agent_runtimes.apps.principal import (  # noqa: PLC0415
+            deployments_served,
+            principal_token,
+        )
+
+        for deployment in deployments_served():
+            held = principal_token(deployment)
+            if held and account_of_token(held) == self._account:
+                return held
+        return self._credential
+
     def socket_url(self) -> Optional[str]:
-        """Where the push is listened for, or ``None`` when ai-agents is not configured."""
+        """Where the push is listened for now, or ``None`` when ai-agents is not configured.
+
+        Read at each connection. The first credential while it lasts: only
+        the account's own token sits on the channel a change is told on, and
+        ai-agents' ``/ws`` takes no narrowed token. Once it has run out, the
+        one held now, never an expired one: until ai-agents takes it the
+        socket is not held, and the poll stands in.
+        """
         if self._socket_url_override is not None:
             return self._socket_url_override or None
         ai_agents_url = (os.environ.get(AI_AGENTS_URL_VARIABLE) or "").strip()
-        if not ai_agents_url or not self._credential:
+        credential = (
+            self._credential
+            if self._credential and not _expired(self._credential)
+            else self.credential_now()
+        )
+        if not ai_agents_url or not credential:
             return None
-        return ai_agents_socket_url(ai_agents_url, self._credential)
+        return ai_agents_socket_url(ai_agents_url, credential)
 
     def _source(self, token: Optional[str]) -> Optional[PolicySource]:
         if self._source_override is not None:
@@ -190,7 +280,8 @@ class RuntimePolicies:
                 "so IAM cannot be asked for its documents"
             )
         self._credential = credential
-        return IamPolicySource(iam_url, credential, account)
+        self._account = account
+        return CurrentCredentialSource(iam_url, self.credential_now, account)
 
     def managed(self, token: Optional[str] = None) -> Optional[ManagedPolicies]:
         """Build the managed documents once; ``None`` on an unmanaged runtime."""
@@ -252,12 +343,10 @@ class RuntimePolicies:
                 self._managed.watch(self._changed, on_unavailable=self._unavailable),
                 name="shield-policies",
             )
-        if self._socket is None or self._socket.done():
-            url = self.socket_url()
-            if url is not None:
-                self._socket = loop.create_task(
-                    self._hold_socket(url), name="shield-policies-socket"
-                )
+        if (self._socket is None or self._socket.done()) and self.socket_url():
+            self._socket = loop.create_task(
+                self._hold_socket(), name="shield-policies-socket"
+            )
 
     def stop_watching(self) -> None:
         for task in (self._watcher, self._socket):
@@ -285,18 +374,22 @@ class RuntimePolicies:
         if fingerprint(policies) != before:
             await self._changed(policies)
 
-    async def _hold_socket(self, url: str) -> None:
+    async def _hold_socket(self) -> None:
         """Hold ai-agents' ``/ws``; each ``shield_policy_changed`` pulls IAM at once.
 
-        A lost socket is opened again after a pause; the poll stands in
-        meanwhile. Never raises: a runtime whose ai-agents cannot be reached
-        is polled, and said so once.
+        A lost socket is opened again after a pause, with the credential
+        held by then (`socket_url`); the poll stands in meanwhile. Never
+        raises: a runtime whose ai-agents cannot be reached is polled, and
+        said so once.
         """
         from websockets.asyncio.client import connect
 
         said = False
         pause = 1.0
         while True:
+            url = self.socket_url()
+            if url is None:
+                return
             try:
                 async with connect(url, open_timeout=10.0) as socket:
                     logger.info(
