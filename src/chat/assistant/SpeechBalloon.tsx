@@ -386,7 +386,7 @@ export function SpeechBalloon({
           wide || listed || offered || whole || (current && attachment)
             ? 300
             : 'max-content',
-        bg: 'canvas.default',
+        bg: 'canvas.overlay',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',
         // The tail, toward what speaks.
@@ -397,7 +397,7 @@ export function SpeechBalloon({
           [align]: `${tailAt - 6}px`,
           width: 12,
           height: 12,
-          bg: 'canvas.default',
+          bg: 'canvas.overlay',
           borderRight: '1px solid',
           borderBottom: '1px solid',
           borderColor: current ? 'accent.muted' : 'border.default',
