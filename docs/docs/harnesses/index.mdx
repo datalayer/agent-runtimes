@@ -280,10 +280,10 @@ terms), nor is a key of Datalayer's own lent to a harness.
 
 | Harness | On Datalayer (a runtime pod) | On your machine (`loop --harness`, Desktop, VS Code) |
 | --- | --- | --- |
-| Claude Code | ai-inference's Anthropic-shaped route, answered from Bedrock, with the runtime's own token (below) | `ANTHROPIC_API_KEY` from the environment, or set once for the Shield |
+| Claude Code | ai-inference's Anthropic-shaped route, answered from Bedrock, through the runtime, which holds its token (below) | `ANTHROPIC_API_KEY` from the environment, or set once for the Shield |
 | OpenCode | ai-inference's chat completions: its configuration given inline (`OPENCODE_CONFIG_CONTENT`), one `datalayer` provider on `@ai-sdk/openai-compatible`, every other provider off | `ANTHROPIC_API_KEY` (the provider it is configured with) from the environment |
-| pi | ai-inference's Anthropic-shaped route: a configuration directory (`PI_CODING_AGENT_DIR`, under the workspace's `.datalayer/`) with one `datalayer` provider, which reads the runtime's token from the environment and holds none; `PI_OFFLINE=1`, so it fetches nothing from pi.dev. pi-acp spawns `pi` from the PATH: install `pi` beside it | `ANTHROPIC_API_KEY` (the provider pi is configured with) from the environment |
-| Codex | ai-inference's Responses route, answered from Bedrock: a configuration directory (`CODEX_HOME`, under the workspace's `.datalayer/`) with one `datalayer` provider, its model the catalogue's, its token read from the environment and never in the file. No call reaches OpenAI | `OPENAI_API_KEY` from the environment |
+| pi | ai-inference's Anthropic-shaped route: a configuration directory (`PI_CODING_AGENT_DIR`, under the workspace's `.datalayer/`) with one `datalayer` provider, which reads the relay's handle from the environment and holds none; `PI_OFFLINE=1`, so it fetches nothing from pi.dev. pi-acp spawns `pi` from the PATH: install `pi` beside it | `ANTHROPIC_API_KEY` (the provider pi is configured with) from the environment |
+| Codex | ai-inference's Responses route, answered from Bedrock: a configuration directory (`CODEX_HOME`, under the workspace's `.datalayer/`) with one `datalayer` provider, its model the catalogue's, the relay's handle read from the environment and never in the file. No call reaches OpenAI | `OPENAI_API_KEY` from the environment |
 
 Any other harness is refused on a runtime in a sentence, an organization's own
 included: a harness is served there only when its calls are known to go through
@@ -308,7 +308,7 @@ runtime does) gives no harness a key. Claude Code is started with:
 
 | Variable | Value |
 |---|---|
-| `ANTHROPIC_BASE_URL` | ai-inference's Anthropic Messages route, `<DATALAYER_AI_INFERENCE_URL>/api/ai-inference/v1/anthropic` |
+| `ANTHROPIC_BASE_URL` | the relay on the pod's loopback, `/api/v1/inference/relay/anthropic`, which goes to ai-inference's Anthropic Messages route |
 | `ANTHROPIC_AUTH_TOKEN` | an opaque handle, never the runtime's ai-inference token: the relay replaces it with the token, which stays in the runtime |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` | the catalogue's Bedrock model, `us.anthropic.claude-sonnet-4-6`: Claude Code asks for a model by tier, and a name the catalogue does not offer is refused |
 | `ANTHROPIC_CUSTOM_HEADERS` | the application and deployment the call is metered under, when it serves one |

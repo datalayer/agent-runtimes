@@ -780,6 +780,37 @@ async def runtime_proof(body: RuntimeProofRequest, request: Request) -> Dict[str
     return {"success": True, "deployment": deployment}
 
 
+@router.post("/owner-secrets")
+async def owner_secrets(request: Request) -> Dict[str, Any]:
+    """What the deployment this runtime was launched for declares, of its owner's
+    vault: for the companion to give out, in place of the launcher's. Only the pod
+    itself is answered; 409 on a runtime launched for none; 502 when ai-agents
+    gave none, and nothing is kept here either way. See
+    `agent_runtimes.apps.principal.read_owner_secrets`.
+    """
+    from agent_runtimes.apps.principal import (
+        OwnerSecretsUnread,
+        launched_for,
+        read_owner_secrets,
+    )
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403, detail="Only the runtime's own pod reads its secrets."
+        )
+    if not launched_for():
+        raise HTTPException(
+            status_code=409, detail="This runtime was launched for no deployment."
+        )
+    try:
+        return {"secrets": await read_owner_secrets()}
+    except OwnerSecretsUnread as unread:
+        raise HTTPException(status_code=502, detail=str(unread)) from None
+
+
 class RenewPrincipalRequest(BaseModel):
     """What ai-agents sends to renew a kept deployment's principal here."""
 

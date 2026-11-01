@@ -43,6 +43,12 @@ deployment runs (`read_deployment`), read as the companion gives the proof
 (`read_launched_app`) and again as the agent is made. What the launcher sends,
 with the launch, with the agent or to the start hooks, is not read.
 
+**What it declares comes from its owner's vault.** It runs what they wrote, as
+their application, whoever launched it, so its secrets are read over the proof
+from ai-agents (`read_owner_secrets`), for its companion to give out as any
+runtime's are. ai-agents says which, from the version, and nothing of the visitor
+or the launcher says whose. They are read, passed on and not kept here.
+
 **The pod is not its loopback.** Code the model writes runs in the sandbox, and a
 harness's commands in this very container, and both reach this server on
 127.0.0.1. So a runtime launched for a deployment is given a secret with its
@@ -87,6 +93,7 @@ __all__ = [
     "ORGANIZATION_OWNER",
     "OWN_ROUTES_ONLY",
     "MembershipsUnread",
+    "OwnerSecretsUnread",
     "REFRESH_MARGIN_SECONDS",
     "PrincipalTokenMissing",
     "a_deployment_is_served",
@@ -119,6 +126,7 @@ __all__ = [
     "read_deployment",
     "read_deployment_code",
     "read_launched_app",
+    "read_owner_secrets",
     "renew_principal_token",
     "use_code_reader",
     "use_memberships_asker",
@@ -832,6 +840,56 @@ async def read_launched_app(
         },
     )
     return None
+
+
+class OwnerSecretsUnread(RuntimeError):
+    """The owner's secrets of the deployment this runtime was launched for, not read."""
+
+
+async def read_owner_secrets() -> dict[str, str]:
+    """
+    What the deployment this runtime was launched for declares, of its owner's vault.
+
+    Asked over its proof alone, of the ai-agents it was given with it, whatever
+    the environment says since: nobody's token says whose vault it is.
+
+    Returns
+    -------
+    dict[str, str]
+        The secrets, by name.
+
+    Raises
+    ------
+    OwnerSecretsUnread
+        When ai-agents refused, or could not be asked: nothing is given then,
+        least of all the launcher's in their place.
+    """
+    import httpx
+
+    deployment = launched_for()
+    url = _PROOF.get("ai_agents_url", "")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{url}/api/ai-agents/v1/apps/deployments/{deployment}/owner-secrets",
+                headers=_proved(deployment, url),
+            )
+    except httpx.HTTPError as error:
+        raise OwnerSecretsUnread(
+            f"ai-agents could not be asked for what deployment {deployment} declares "
+            f"({type(error).__name__})."
+        ) from None
+    if response.status_code >= 300:
+        detail = ""
+        try:
+            detail = str((response.json() or {}).get("detail") or "")
+        except ValueError:
+            pass
+        raise OwnerSecretsUnread(
+            f"ai-agents gave deployment {deployment} none of its owner's secrets "
+            f"({response.status_code}){': ' + detail if detail else ''}."
+        )
+    return dict((response.json() or {}).get("secrets") or {})
 
 
 async def _ensure_held(

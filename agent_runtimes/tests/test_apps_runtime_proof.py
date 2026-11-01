@@ -26,6 +26,7 @@ import sys
 from types import SimpleNamespace
 from typing import Any, Iterator
 
+import httpx
 import jwt
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -511,3 +512,98 @@ def test_a_process_that_cannot_be_kept_holds_nothing(
     with pytest.raises(ValueError, match="private"):
         give_runtime_proof(_proof(), SECRET)
     assert launched_for() == ""
+
+
+# --- a deployment's secrets are its owner's ------------------------------------------
+
+
+@pytest.fixture()
+def asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]:
+    """ai-agents, keeping what reaches it, and saying the owner's secrets."""
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"success": True, "secrets": {"GITHUB_TOKEN": "of-the-owner"}})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(answer), **kwargs),
+    )
+    yield seen
+
+
+def test_the_companion_is_given_the_owners_secrets_read_on_the_proof(
+    app: FastAPI, asked: list[httpx.Request]
+) -> None:
+    proof = _proof()
+    give_runtime_proof(proof, SECRET)
+    answer = TestClient(app, client=POD, headers={POD_SECRET_HEADER: SECRET}).post(
+        "/api/v1/apps/owner-secrets"
+    )
+    assert answer.status_code == 200, answer.text
+    assert answer.json() == {"secrets": {"GITHUB_TOKEN": "of-the-owner"}}
+    [call] = asked
+    assert str(call.url) == (
+        f"{AI_AGENTS}/api/ai-agents/v1/apps/deployments/{DEPLOYMENT}/owner-secrets"
+    )
+    assert call.headers[RUNTIME_PROOF_HEADER.lower()] == proof
+    assert "authorization" not in call.headers
+
+
+def test_nobody_but_the_companion_is_given_them(
+    app: FastAPI, asked: list[httpx.Request]
+) -> None:
+    """The sandbox shares the loopback, and holds no secret."""
+    give_runtime_proof(_proof(), SECRET)
+    for caller in (
+        TestClient(app, client=POD),
+        TestClient(app, client=POD, headers={POD_SECRET_HEADER: "a-guess"}),
+        TestClient(app, client=OUTSIDE, headers={POD_SECRET_HEADER: SECRET}),
+    ):
+        answer = caller.post("/api/v1/apps/owner-secrets")
+        assert answer.status_code in (403, 404), answer.text
+    assert asked == []
+
+
+def test_the_route_asks_for_the_secret_itself_whatever_stands_before_it(
+    asked: list[httpx.Request],
+) -> None:
+    from agent_runtimes.routes import apps as routes
+
+    bare = FastAPI()
+    bare.include_router(routes.router, prefix="/api/v1")
+    give_runtime_proof(_proof(), SECRET)
+    answer = TestClient(bare, client=POD).post("/api/v1/apps/owner-secrets")
+    assert answer.status_code == 403
+    assert asked == []
+
+
+def test_a_runtime_launched_for_nothing_reads_nobodys(
+    app: FastAPI, asked: list[httpx.Request]
+) -> None:
+    answer = TestClient(app, client=POD).post("/api/v1/apps/owner-secrets")
+    assert answer.status_code == 409
+    assert asked == []
+
+
+def test_a_refusal_of_ai_agents_gives_nothing(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json={"detail": "The deployment is paused."})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(refused), **kwargs),
+    )
+    give_runtime_proof(_proof(), SECRET)
+    answer = TestClient(app, client=POD, headers={POD_SECRET_HEADER: SECRET}).post(
+        "/api/v1/apps/owner-secrets"
+    )
+    assert answer.status_code == 502
+    assert "paused" in answer.json()["detail"]

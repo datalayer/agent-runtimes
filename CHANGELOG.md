@@ -19,6 +19,8 @@ A harness is lent no credential any more. It was a file under the Shield's home 
 
 A harness holds no inference token any more. It was in the harness's environment (`ANTHROPIC_AUTH_TOKEN`, `DATALAYER_AI_INFERENCE_TOKEN`, OpenCode's inline configuration), which its commands read. A routed harness's base URL is now `/api/v1/inference/relay/<route>` on the pod's loopback, and in the token's place it holds an opaque handle; the relay replaces it with the runtime's token, read at each call, and sends the call to ai-inference under its v1 root and nowhere else. `harness_inference.routed_token` and `anthropic_base_url` are gone.
 
+What a deployment declares comes from its owner's vault, never from the launcher's or a visitor's. `POST /api/v1/apps/owner-secrets`, the companion's alone, reads them from ai-agents over the runtime's proof, and nothing is kept.
+
 ## 1.5.102
 
 A runtime launched for a deployment runs what the deployment runs, as ai-agents says it. It reads the version from `GET /apps/deployments/{uid}/code`, over its proof, when it is given the proof (`PUT /api/v1/apps/runtime-proof`, with the launcher's token) and again as the agent is made. `POST /api/v1/agents` makes the agent from that answer as a kept deployment's is made (`kept_payload`), and of what the caller sends reads only `woken_by`, `purpose`, `launch_uid` and a version number ai-agents decides on. `declared-secrets` and `mcp-servers/start` declare from it and read no spec sent to them; `configure-from-spec` is refused. Nothing is made when ai-agents says no spec. Needs an ai-agents that answers `spec` with `/code`.

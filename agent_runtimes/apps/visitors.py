@@ -354,6 +354,7 @@ _NOT_THE_APPLICATIONS = (
     "/api/v1/apps/configure",
     "/api/v1/apps/build",
     "/api/v1/apps/eject",
+    "/api/v1/apps/owner-secrets",
 )
 
 #: Where an agent is served over A2A: its own when it runs an application.
