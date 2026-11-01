@@ -544,13 +544,48 @@ def test_the_companion_is_given_the_owners_secrets_read_on_the_proof(
         "/api/v1/apps/owner-secrets"
     )
     assert answer.status_code == 200, answer.text
-    assert answer.json() == {"secrets": {"GITHUB_TOKEN": "of-the-owner"}}
+    assert answer.json() == {
+        "secrets": {"GITHUB_TOKEN": "of-the-owner"},
+        "launched_by_owner": False,
+    }
     [call] = asked
     assert str(call.url) == (
         f"{AI_AGENTS}/api/ai-agents/v1/apps/deployments/{DEPLOYMENT}/owner-secrets"
     )
     assert call.headers[RUNTIME_PROOF_HEADER.lower()] == proof
     assert "authorization" not in call.headers
+
+
+@pytest.mark.parametrize(
+    ("said", "held"), [(True, True), (False, False), ("yes", False), (None, False)]
+)
+def test_the_kernel_is_shut_unless_ai_agents_says_its_owner_launched_it(
+    app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+    said: Any,
+    held: bool,
+) -> None:
+    def answer(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"secrets": {}, **({} if said is None else {"launched_by_owner": said})}
+        )
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(answer), **kwargs),
+    )
+    give_runtime_proof(_proof(), SECRET)
+    assert not principal.kernel_holds_owner_secrets()
+    TestClient(app, client=POD, headers={POD_SECRET_HEADER: SECRET}).post(
+        "/api/v1/apps/owner-secrets"
+    )
+    assert principal.kernel_holds_owner_secrets() is held
+
+
+def test_a_runtime_launched_for_nothing_has_a_kernel_of_its_own() -> None:
+    assert principal.kernel_holds_owner_secrets()
 
 
 def test_nobody_but_the_companion_is_given_them(

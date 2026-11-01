@@ -415,6 +415,21 @@ class DeclaredSecrets:
                     )
         return sentences
 
+    def kernel_refused(self, available: Callable[[str], bool], who: str) -> List[str]:
+        """Why ``who`` cannot run here, a sentence per secret its kernel would need.
+
+        A runtime its deployment's owner did not launch keeps their secrets out
+        of its kernel, where the code the model writes runs. What is required
+        there is refused; what is only offered (``sandbox_envvars``), only when
+        there is one to keep out.
+        """
+        return [
+            f"{who} is not available here: it needs {name} in its sandbox, and its "
+            "owner's secrets reach a sandbox only on a runtime they launched themselves."
+            for name in sorted(self.kernel)
+            if name not in self.offered or available(name)
+        ]
+
     def as_names(self) -> Dict[str, Any]:
         """What the companion is answered: names only, never a value."""
         return {

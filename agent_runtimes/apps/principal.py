@@ -47,7 +47,9 @@ with the launch, with the agent or to the start hooks, is not read.
 their application, whoever launched it, so its secrets are read over the proof
 from ai-agents (`read_owner_secrets`), for its companion to give out as any
 runtime's are. ai-agents says which, from the version, and nothing of the visitor
-or the launcher says whose. They are read, passed on and not kept here.
+or the launcher says whose. They are read, passed on and not kept here. On a
+runtime anybody but its owner launched they stay in this process and never reach
+the kernel, where the code the model writes runs (`kernel_holds_owner_secrets`).
 
 **The pod is not its loopback.** Code the model writes runs in the sandbox, and a
 harness's commands in this very container, and both reach this server on
@@ -113,6 +115,7 @@ __all__ = [
     "holds_principal_token",
     "pod_secret_is",
     "is_held_principal",
+    "kernel_holds_owner_secrets",
     "launched_app",
     "launched_for",
     "owner_of",
@@ -152,6 +155,9 @@ RUNTIME_PROOF_WAIT = 15.0
 #: given. Process memory only: never `os.environ`, which a harness or a kernel
 #: could read, and never answered by a route.
 _PROOF: dict[str, str] = {}
+
+#: Whether ai-agents said the deployment's owner launched this runtime: unsaid, no.
+_LAUNCHED_BY_OWNER: dict[str, bool] = {}
 
 #: What the deployment this runtime was launched for runs, as ai-agents said it:
 #: {"spec", "instance"}. Empty when it was not said.
@@ -291,6 +297,7 @@ def forget_runtime_proof() -> None:
     """Forget this runtime's proof and what it read with it (a test)."""
     _PROOF.clear()
     _LAUNCHED_APP.clear()
+    _LAUNCHED_BY_OWNER.clear()
 
 
 def launched_for() -> str:
@@ -302,6 +309,17 @@ def launched_for() -> str:
     person's own runtime's do.
     """
     return _PROOF.get("deployment_uid", "")
+
+
+def kernel_holds_owner_secrets() -> bool:
+    """Whether what this runtime is given may reach its kernel.
+
+    On a runtime launched for no deployment, yes: its secrets are its person's.
+    On one launched for a deployment, only when ai-agents said, over the proof
+    the Operator signed, that its owner launched it (`read_owner_secrets`). Not
+    said, or not yet, no.
+    """
+    return not launched_for() or _LAUNCHED_BY_OWNER.get("said") is True
 
 
 def launched_app() -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
@@ -889,7 +907,9 @@ async def read_owner_secrets() -> dict[str, str]:
             f"ai-agents gave deployment {deployment} none of its owner's secrets "
             f"({response.status_code}){': ' + detail if detail else ''}."
         )
-    return dict((response.json() or {}).get("secrets") or {})
+    answer = response.json() or {}
+    _LAUNCHED_BY_OWNER["said"] = answer.get("launched_by_owner") is True
+    return dict(answer.get("secrets") or {})
 
 
 async def _ensure_held(

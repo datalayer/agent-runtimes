@@ -1104,3 +1104,144 @@ def test_a_runtime_serving_a_deployment_is_held_to_them(
 
 def test_a_persons_server_starts_with_what_it_declares() -> None:
     refuse_server_names("x", ["AWS_PROFILE"], from_catalogue=False)
+
+
+# --- an owner's secrets stay out of a kernel they did not launch --------------------
+
+KERNEL_SECRET = "the-owners-" + uuid.uuid4().hex
+
+
+def _as_launched_by_a_visitor(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_runtimes.apps import principal
+
+    monkeypatch.setattr(principal, "launched_for", lambda: "dep-1")
+    monkeypatch.setattr(principal, "kernel_holds_owner_secrets", lambda: False)
+
+
+def test_a_skill_that_needs_one_in_the_kernel_is_refused_in_a_sentence() -> None:
+    declared = DeclaredSecrets(
+        consumers={"the skill github": frozenset({"GITHUB_TOKEN"})},
+        kernel=frozenset({"GITHUB_TOKEN"}),
+    )
+    [said] = declared.kernel_refused(lambda _: False, who="Desk")
+    assert "GITHUB_TOKEN" in said and "Desk" in said and "launched" in said
+
+
+def test_sandbox_envvars_are_refused_only_when_the_owner_holds_them() -> None:
+    """Offered, never required: with none to keep out, there is nothing to refuse."""
+    declared = DeclaredSecrets(
+        kernel=frozenset({"EARTHDATA_PASSWORD"}),
+        offered=frozenset({"EARTHDATA_PASSWORD"}),
+    )
+    assert declared.kernel_refused(lambda _: False, who="Desk") == []
+    assert len(declared.kernel_refused(lambda _: True, who="Desk")) == 1
+
+
+def test_a_server_s_secret_is_nothing_to_the_kernel() -> None:
+    declared = DeclaredSecrets(consumers={"the MCP server s": frozenset({"A_TOKEN"})})
+    assert declared.kernel_refused(lambda _: True, who="Desk") == []
+
+
+def test_the_companion_is_told_nothing_for_a_kernel_it_may_not_fill(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.routes import agents
+
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the skill x": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
+    asked = runtime.post("/api/v1/agents/declared-secrets", json={})
+    assert asked.status_code == 200, asked.text
+    assert asked.json()["kernel"] == []
+    assert asked.json()["runtime"] == ["R19_SKILL_TOKEN"]
+
+
+def test_the_owners_stay_out_of_the_sandbox_it_is_given(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The process holds it: the sandbox shares none of it."""
+    from agent_runtimes.routes import agents
+
+    assert _configure(runtime, "r19-bare", []).status_code == 200
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the MCP server s": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
+    monkeypatch.setattr(
+        agents, "_launch_of", lambda *_: (None, None)
+    )
+    answered = runtime.post(
+        "/api/v1/agents/mcp-servers/start",
+        json={
+            "env_vars": [{"name": "R19_SKILL_TOKEN", "value": KERNEL_SECRET}],
+            "jupyter_sandbox": "http://127.0.0.1:2300?token=t",
+        },
+    )
+    assert answered.status_code == 200, answered.text
+    assert os.environ["R19_SKILL_TOKEN"] == KERNEL_SECRET
+    assert "R19_SKILL_TOKEN" not in runtime.sandbox.kernel
+
+
+def test_a_launch_that_needs_one_in_the_kernel_is_refused_and_its_agent_with_it(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.routes import agents
+
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the skill x": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(
+        agents,
+        "_launch_of",
+        lambda *_: ({"id": "desk", "name": "Desk"}, {"deployment_uid": "dep-1"}),
+    )
+    monkeypatch.setattr(agents, "_note_launched_app", lambda *_: declared)
+    answered = runtime.post(
+        "/api/v1/agents/mcp-servers/start",
+        json={"env_vars": [{"name": "R19_SKILL_TOKEN", "value": KERNEL_SECRET}]},
+    )
+    assert answered.status_code == 422, answered.text
+    assert "R19_SKILL_TOKEN" in str(answered.json()["detail"])
+    assert "launched" in (agents.set_up_refused("desk") or "")
+    assert "R19_SKILL_TOKEN" not in runtime.sandbox.kernel
+
+
+@pytest.mark.asyncio
+async def test_no_agent_is_made_for_a_visitor_from_what_needs_one_in_the_kernel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import HTTPException
+
+    from agent_runtimes.apps import principal
+    from agent_runtimes.routes import agents
+    from agent_runtimes.specs import skills
+
+    monkeypatch.setattr(principal, "kernel_holds_owner_secrets", lambda: False)
+    monkeypatch.setitem(skills.SKILLS_CATALOG, "r19-skill", PROBE_SKILL)
+    with pytest.raises(HTTPException) as refused:
+        await agents.create_agent(
+            agents.CreateAgentRequest(
+                name="r19-visitors",
+                agent_spec={"id": "r19-a", "skills": ["r19-skill:0.0.1"]},
+            ),
+            SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace())),
+        )
+    assert refused.value.status_code == 422
+    assert "R19_SKILL_TOKEN" in str(refused.value.detail)
+
+
+def test_a_persons_own_runtime_keeps_its_kernel(runtime: Any) -> None:
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    assert kernel_holds_owner_secrets()
+    response = _configure(runtime, "r19-agent", ACCOUNT)
+    assert response.status_code == 200, response.text
+    _settle()
+    assert runtime.sandbox.kernel == {"R19_SKILL_TOKEN": SKILL_SECRET}

@@ -790,6 +790,7 @@ async def owner_secrets(request: Request) -> Dict[str, Any]:
     """
     from agent_runtimes.apps.principal import (
         OwnerSecretsUnread,
+        kernel_holds_owner_secrets,
         launched_for,
         read_owner_secrets,
     )
@@ -806,7 +807,10 @@ async def owner_secrets(request: Request) -> Dict[str, Any]:
             status_code=409, detail="This runtime was launched for no deployment."
         )
     try:
-        return {"secrets": await read_owner_secrets()}
+        return {
+            "secrets": await read_owner_secrets(),
+            "launched_by_owner": kernel_holds_owner_secrets(),
+        }
     except OwnerSecretsUnread as unread:
         raise HTTPException(status_code=502, detail=str(unread)) from None
 

@@ -19,7 +19,7 @@ A harness is lent no credential any more. It was a file under the Shield's home 
 
 A harness holds no inference token any more. It was in the harness's environment (`ANTHROPIC_AUTH_TOKEN`, `DATALAYER_AI_INFERENCE_TOKEN`, OpenCode's inline configuration), which its commands read. A routed harness's base URL is now `/api/v1/inference/relay/<route>` on the pod's loopback, and in the token's place it holds an opaque handle; the relay replaces it with the runtime's token, read at each call, and sends the call to ai-inference under its v1 root and nowhere else. `harness_inference.routed_token` and `anthropic_base_url` are gone.
 
-What a deployment declares comes from its owner's vault, never from the launcher's or a visitor's. `POST /api/v1/apps/owner-secrets`, the companion's alone, reads them from ai-agents over the runtime's proof, and nothing is kept.
+What a deployment declares comes from its owner's vault, never from the launcher's or a visitor's. `POST /api/v1/apps/owner-secrets`, the companion's alone, reads them from ai-agents over the runtime's proof, and nothing is kept. On a runtime anybody but its owner launched they stay in the process and never reach the kernel, where the code the model writes runs: what needs one there is refused in a sentence, for that visitor, as the runtime is started and as its agent is made.
 
 ## 1.5.102
 

@@ -55,6 +55,9 @@ is not there or runs no application.
   alone, by a secret they hold. That code reaches its tool calls only while it
   runs, and each is decided as a tool call of the agent's in that turn: rules,
   approvals and checks see it with its real arguments.
+  What it declares comes from its owner's vault, never the launcher's. On a
+  runtime its owner did not launch, those secrets stay out of the sandbox, and an
+  application whose skill or tool needs one there is refused in a sentence.
 - **Its connections in the name of each person who uses it** (`as: user`) to
   the Datalayer MCP gateway are reached with **the person's** token, never
   the principal's: on each request the runtime asks IAM, with the token of

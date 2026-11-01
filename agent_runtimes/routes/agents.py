@@ -19,7 +19,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Callable, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -176,6 +176,24 @@ def _nothing_reserved(names: Any, declared: DeclaredSecrets) -> None:
         raise HTTPException(
             status_code=422, detail={"problems": [str(refused)]}
         ) from None
+
+
+def _kernel_names(declared: DeclaredSecrets) -> frozenset[str]:
+    """What the sandbox gets: nothing of an owner's, on a runtime they did not launch."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    return declared.kernel if kernel_holds_owner_secrets() else frozenset()
+
+
+def _kernel_refused(
+    declared: DeclaredSecrets, available: Callable[[str], bool], who: str
+) -> list[str]:
+    """Why what needs an owner's secret in the sandbox does not run for a visitor."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    if kernel_holds_owner_secrets():
+        return []
+    return declared.kernel_refused(available, who)
 
 
 def get_library_agent_spec(agent_id: str) -> Any:
@@ -1641,7 +1659,7 @@ async def create_agent(
         # This accepts both camelCase and snake_case keys.
         forwarded_spec = request.agent_spec or {}
         # What it declares is read before anything is made of it.
-        declared_secrets(
+        declared_by_it = declared_secrets(
             get_library_agent_spec(request.agent_spec_id)
             if request.agent_spec_id
             else None,
@@ -1650,6 +1668,13 @@ async def create_agent(
             app_instance=request.app_instance,
             resolve_agent=get_library_agent_spec,
         )
+        problems = _kernel_refused(
+            declared_by_it,
+            lambda name: bool((os.environ.get(name) or "").strip()),
+            request.name,
+        )
+        if problems:
+            raise HTTPException(status_code=422, detail={"problems": problems})
 
         def _spec_value(*keys: str) -> Any:
             for key in keys:
@@ -4848,7 +4873,9 @@ async def _setup_env_and_sandbox(
             sandbox_manager = get_code_sandbox_manager()
             # The skills' secrets alone: a server's stays with the server (R-19).
             env_dict = {
-                ev.name: ev.value for ev in body.env_vars if ev.name in declared.kernel
+                ev.name: ev.value
+                for ev in body.env_vars
+                if ev.name in _kernel_names(declared)
             } or None
             sandbox_manager.configure_from_url(
                 body.jupyter_sandbox,
@@ -5016,12 +5043,16 @@ async def start_all_agents_mcp_servers(
     if launch is not None:
         given = {ev.name: ev.value for ev in body.env_vars if ev.name}
         app_id = str((launch_spec or {}).get("id") or "")
-        problems = launch.missing(
-            lambda name: bool(
+        def available(name: str) -> bool:
+            return bool(
                 (given.get(name) or "").strip() or (os.environ.get(name) or "").strip()
-            ),
-            who=str((launch_spec or {}).get("name") or app_id),
-        )
+            )
+
+        who = str((launch_spec or {}).get("name") or app_id)
+        problems = [
+            *launch.missing(available, who=who),
+            *_kernel_refused(launch, available, who),
+        ]
         if problems:
             if app_id:
                 _SET_UP_REFUSED[app_id] = " ".join(problems)
@@ -5483,7 +5514,8 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     from agent_runtimes.apps.principal import launched_for
 
     if launched_for():
-        return _declared_for_agents(list(_agents)).as_names()
+        declared = _declared_for_agents(list(_agents))
+        return {**declared.as_names(), "kernel": sorted(_kernel_names(declared))}
     if body.agent_spec_id:
         spec = get_library_agent_spec(body.agent_spec_id)
         if spec is None:
