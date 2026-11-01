@@ -1005,3 +1005,19 @@ async def test_no_agent_is_made_from_a_spec_that_declares_one() -> None:
         )
     assert refused.value.status_code == 422
     assert REDIRECTED in str(refused.value.detail)
+
+
+def test_a_signed_users_secret_is_the_platforms_though_it_is_named_as_its_own() -> None:
+    """D-21: declared by the deployment's own Appspec, set as any other."""
+    from agent_runtimes.apps.host_user import secret_variable
+
+    declared = declared_secrets(
+        app_spec={
+            "connections": [],
+            "deployment": {"embedded": {"host": {"user": "signed"}}},
+        },
+        app_instance={"deployment_uid": "dep-1"},
+    )
+    name = secret_variable("dep-1")
+    assert is_reserved(name) and name in declared.runtime
+    refuse_reserved([name], declared)
