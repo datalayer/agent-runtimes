@@ -5,8 +5,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 from typing import Any, Optional
+
+import requests
 
 
 class EvalsMixin:
@@ -232,6 +236,59 @@ class EvalsMixin:
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
+
+    def evals_set_public(
+        self,
+        evalset_id: str,
+        *,
+        public: bool,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Publish a benchmark, its source with it, or take it back."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/public",
+            method="PATCH",
+            json_body={"is_public": public},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_download_source(
+        self,
+        evalset_id: str,
+        *,
+        version: Optional[int] = None,
+        public: bool = False,
+    ) -> tuple[bytes, str, str]:
+        """An imported benchmark's source: its bytes, its name and its digest.
+
+        `public` asks as a reader of its Library page, with no credential at
+        all: what anybody can download, and only once it is published. The
+        bytes are checked against the digest the service says they have.
+        """
+        base = f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals"
+        if public:
+            response = requests.get(
+                f"{base}/public/evalsets/{evalset_id}/external-source", timeout=120
+            )
+            response.raise_for_status()
+        else:
+            response = self._fetch(
+                f"{base}/evalsets/{evalset_id}/external-source",
+                method="GET",
+                params={"version": version} if version else {},
+            )
+        data = response.content
+        digest = str(response.headers.get("x-content-sha256") or "")
+        if hashlib.sha256(data).hexdigest() != digest:
+            raise ValueError(
+                f"The source of {evalset_id} does not match its digest {digest!r}."
+            )
+        named = re.search(
+            r'filename="([^"]+)"', str(response.headers.get("content-disposition"))
+        )
+        return data, named.group(1) if named else digest, digest
 
     def evals_export_eval(
         self,

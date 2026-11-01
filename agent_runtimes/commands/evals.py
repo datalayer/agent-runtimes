@@ -161,7 +161,7 @@ def _print_inspection(record: dict[str, Any]) -> None:
     console.print(table)
 
 
-def _source_bytes(
+def source_bytes(
     source: Optional[Path], *, git: str, commit: str, subfolder: str, registry: str
 ) -> tuple[bytes, str]:
     """A source as the archive it is kept as: fetched here if it is remote."""
@@ -193,6 +193,68 @@ def _source_bytes(
         return pack_source(root), "fetched.tar.gz"
 
 
+def inspected_source(
+    client: Any,
+    framework: str,
+    data: bytes,
+    filename: str,
+    task_arg: list[str],
+    *,
+    wait: bool = True,
+) -> dict[str, Any]:
+    """A source kept by its digest and inspected in a sandbox: what was found."""
+    task_args = {
+        name: json.loads(value)
+        for name, _, value in (item.partition("=") for item in task_arg)
+    }
+    answer = client.evals_inspect_source(
+        framework=framework,
+        filename=filename,
+        content_base64=base64.b64encode(data).decode(),
+        options={"task_args": task_args},
+    )
+    record = answer.get("inspection") or {}
+    deadline = time.monotonic() + INSPECTION_TIMEOUT_SECONDS
+    while wait and record.get("status") == "pending":
+        if time.monotonic() >= deadline:
+            console.print(
+                f"[red]No answer yet: follow inspection {record.get('id')}.[/red]"
+            )
+            raise typer.Exit(1)
+        time.sleep(INSPECTION_POLL_SECONDS)
+        record = (
+            client.evals_get_inspection(str(record.get("id"))).get("inspection") or {}
+        )
+    return record
+
+
+def import_selection(
+    entry_point: list[str],
+    model: list[str],
+    scorer: Optional[str],
+    threshold: Optional[float],
+    limit: Optional[int],
+    name: Optional[str],
+) -> dict[str, Any]:
+    """What of a source to import, as the service takes it."""
+    aggregation: dict[str, Any] = {}
+    if scorer:
+        aggregation["scorer"] = scorer
+    if threshold is not None:
+        aggregation["threshold"] = threshold
+    return {
+        key: value
+        for key, value in {
+            "entry_points": entry_point,
+            "models": model,
+            "aggregation": aggregation,
+            "limit": limit,
+            "name": name,
+        }.items()
+        if value
+    }
+
+
 @adapters_app.command(name="inspect")
 def adapters_inspect(
     framework: str = typer.Argument(
@@ -218,31 +280,10 @@ def adapters_inspect(
 ) -> None:
     """Keep a source by its digest and inspect it in a sandbox."""
     client = _make_client(token=token)
-    data, filename = _source_bytes(
+    data, filename = source_bytes(
         source, git=git, commit=commit, subfolder=subfolder, registry=registry
     )
-    task_args = {
-        name: json.loads(value)
-        for name, _, value in (item.partition("=") for item in task_arg)
-    }
-    answer = client.evals_inspect_source(
-        framework=framework,
-        filename=filename,
-        content_base64=base64.b64encode(data).decode(),
-        options={"task_args": task_args},
-    )
-    record = answer.get("inspection") or {}
-    deadline = time.monotonic() + INSPECTION_TIMEOUT_SECONDS
-    while wait and record.get("status") == "pending":
-        if time.monotonic() >= deadline:
-            console.print(
-                f"[red]No answer yet: follow inspection {record.get('id')}.[/red]"
-            )
-            raise typer.Exit(1)
-        time.sleep(INSPECTION_POLL_SECONDS)
-        record = (
-            client.evals_get_inspection(str(record.get("id"))).get("inspection") or {}
-        )
+    record = inspected_source(client, framework, data, filename, task_arg, wait=wait)
     if raw:
         console.print_json(json.dumps(record))
     elif record.get("status") == "failed":
@@ -276,22 +317,7 @@ def adapters_import(
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
     """A benchmark and its experiments, from what an inspection found."""
-    aggregation: dict[str, Any] = {}
-    if scorer:
-        aggregation["scorer"] = scorer
-    if threshold is not None:
-        aggregation["threshold"] = threshold
-    selection = {
-        key: value
-        for key, value in {
-            "entry_points": entry_point,
-            "models": model,
-            "aggregation": aggregation,
-            "limit": limit,
-            "name": name,
-        }.items()
-        if value
-    }
+    selection = import_selection(entry_point, model, scorer, threshold, limit, name)
     payload = _make_client(token=token).evals_import_external(
         inspection_id=inspection_id, selection=selection
     )
