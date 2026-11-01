@@ -1142,7 +1142,7 @@ class TestMcpLentThroughTheGateway:
         assert policies_of(None)[0].scope == "session"
 
     @pytest.mark.asyncio
-    async def test_lent_as_http_with_the_bearer_when_the_agent_advertises_it(
+    async def test_lent_as_http_without_the_bearer_when_the_agent_advertises_it(
         self, workspace: Path
     ) -> None:
         app = connecting("earthdata")
@@ -1158,11 +1158,9 @@ class TestMcpLentThroughTheGateway:
             events = await turn(agent, "mcp")
             assert agent.lends_over_http
             servers = agent._lent_servers("tok-run")
-            assert servers[0].type == "http" and servers[0].url.endswith(
-                "?only=earthdata"
-            )
-            assert servers[0].headers[0].name == "Authorization"
-            assert servers[0].headers[0].value == "Bearer tok-run"
+            assert servers[0].type == "http"
+            assert "/api/v1/mcp/lent/" in servers[0].url
+            assert "tok-run" not in repr(servers)
         finally:
             await agent.cleanup()
         assert "mcp: ['earthdata:http']" in texts(events)
@@ -1171,10 +1169,7 @@ class TestMcpLentThroughTheGateway:
         assert "tok-caller" not in repr(rows)
 
     @pytest.mark.asyncio
-    async def test_lent_over_the_stdio_shim_holding_the_token_otherwise(
-        self, workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
+    async def test_lent_over_the_stdio_shim_otherwise(self, workspace: Path) -> None:
         app = connecting("earthdata")
         lent = lent_toolsets(fake_harness(), app)
         agent = an_agent(
@@ -1186,10 +1181,6 @@ class TestMcpLentThroughTheGateway:
         try:
             events = await turn(agent, "mcp")
             assert not agent.lends_over_http
-            [handle] = agent._handles
-            held = tmp_path / "shield" / "lent" / handle
-            assert held.is_file() and (held.stat().st_mode & 0o777) == 0o600
-            assert "tok-caller" in held.read_text()
             servers = agent._lent_servers("tok-caller")
             assert servers[0].command == sys.executable
             assert servers[0].args[:3] == [
@@ -1203,7 +1194,7 @@ class TestMcpLentThroughTheGateway:
         finally:
             await agent.cleanup()
         assert "mcp: ['earthdata:stdio']" in texts(events)
-        assert not held.exists() and agent._handles == []
+        assert agent._handles == []
 
     @pytest.mark.asyncio
     async def test_a_server_not_on_the_allow_list_is_cut(self, workspace: Path) -> None:
@@ -1263,7 +1254,7 @@ class TestMcpLentThroughTheGateway:
     )
     @pytest.mark.asyncio
     async def test_a_lent_toolset_is_real_on_the_gateway(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
     ) -> None:
         """Read-only against the gateway: the lent toolset lists its tools, and a tool outside it is refused."""
         import mcp.types as types
@@ -1272,9 +1263,6 @@ class TestMcpLentThroughTheGateway:
         from mcp.client.streamable_http import streamable_http_client
         from mcp.shared._httpx_utils import create_mcp_http_client
 
-        from agent_runtimes.mcp.lent_stdio import hold, release
-
-        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
         token = os.environ["DATALAYER_LIVE_GATEWAY_TOKEN"]
         [lent] = lent_toolsets(fake_harness(), connecting("earthdata"))
         assert (
@@ -1298,26 +1286,6 @@ class TestMcpLentThroughTheGateway:
                     types.CallToolResult,
                 )
                 assert outside.is_error
-        # Over the stdio shim: the same toolset, the token held by the shim's process.
-        handle = hold(lent.name, lent.url, token)
-        try:
-            params = StdioServerParameters(
-                command=sys.executable,
-                args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
-                env={
-                    "AGENT_SHIELD_HOME": str(tmp_path / "shield"),
-                    "PATH": os.environ["PATH"],
-                },
-            )
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    through_shim = {
-                        tool.name for tool in (await session.list_tools()).tools
-                    }
-            assert through_shim == names
-        finally:
-            release(handle)
 
 
 def reading_skills() -> HarnessSpec:

@@ -60,10 +60,10 @@ The W3C trace context arrives with the face — an A2A or AG-UI request's `trace
 1. the request's `traceparent` becomes the request's span (`TraceContextMiddleware`; a request without one opens no span — no trace, no header, never an invented one);
 2. the turn is a child of it, so the audit's events are on the caller's trace;
 3. the harness is handed it in the prompt's **`_meta.traceparent`**, the key ACP reserves, so a harness that honours it continues the trace into its own tool calls;
-4. the lent gateway toolset carries it: as a header of the HTTP server the session opened with, and, over the stdio shim, **per call of the current turn** (the runtime carries each turn's context to the shim's handle; the shim reads it per request);
+4. the lent gateway toolset carries it **per call of the current turn**: the runtime holds what it lent, so each call of a harness reaches the gateway through it, with that turn's context;
 5. a sub-agent reached through an orchestration delegation gets it as orchestration's tracing already carries it.
 
-Proved locally through the A2A face with the ACP SDK's fake agent: one trace id on the turn's span, in the harness's `_meta.traceparent` and on the shim's outgoing header. On r1 the runtime's spans reach prod1's ingest under the deployment's account; the gateway's own spans do not leave r1 (its collector address exists on prod1 only — a plane setting).
+Proved locally through the A2A face with the ACP SDK's fake agent: one trace id on the turn's span, in the harness's `_meta.traceparent` and on the runtime's outgoing call to the gateway. On r1 the runtime's spans reach prod1's ingest under the deployment's account; the gateway's own spans do not leave r1 (its collector address exists on prod1 only — a plane setting).
 
 ## The policies: three levels, from IAM
 

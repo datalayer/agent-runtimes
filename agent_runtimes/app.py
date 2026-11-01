@@ -70,6 +70,7 @@ from .routes import (
     identity_router,
     loop_router,
     mcp_auth_router,
+    mcp_lent_router,
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
@@ -1611,6 +1612,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
+    app.include_router(mcp_lent_router, prefix=config.api_prefix)
     app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)

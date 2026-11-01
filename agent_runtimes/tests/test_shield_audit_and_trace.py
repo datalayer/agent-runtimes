@@ -545,12 +545,11 @@ class TestTheTrace:
             == "0af7651916cd43dd8448eb211c80319c"
         )
 
-    def test_the_stdio_shim_is_carried_the_turns_trace(self, tmp_path: Path) -> None:
-        handle = lent_stdio.hold(
-            "jupyter", "https://mcp.example/mcp", "tok", base=tmp_path
-        )
-        lent_stdio.carry(handle, TRACEPARENT, base=tmp_path)
-        assert lent_stdio.held(handle, base=tmp_path)["traceparent"] == TRACEPARENT
-        lent_stdio.carry(handle, None, base=tmp_path)
-        assert "traceparent" not in lent_stdio.held(handle, base=tmp_path)
-        assert lent_stdio.held(handle, base=tmp_path)["token"] == "tok"
+    def test_what_was_lent_is_carried_the_turns_trace(self) -> None:
+        handle = lent_stdio.hold("jupyter", "https://mcp.example/mcp", "tok")
+        lent_stdio.carry(handle, TRACEPARENT)
+        assert lent_stdio.held(handle)["traceparent"] == TRACEPARENT
+        lent_stdio.carry(handle, None)
+        assert "traceparent" not in lent_stdio.held(handle)
+        assert lent_stdio.held(handle)["token"] == "tok"
+        lent_stdio.release(handle)

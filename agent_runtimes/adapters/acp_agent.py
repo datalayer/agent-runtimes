@@ -64,7 +64,7 @@ from acp.schema import (
 )
 from agent_shield.__version__ import __version__ as shield_version
 from agent_shield.acp import SHIELD_CLIENT_CAPABILITIES, normalize
-from agent_shield.acp.credential import fingerprint, lent_with
+from agent_shield.acp.credential import fingerprint
 from agent_shield.acp.events import (
     CommandsUpdated,
     Event,
@@ -101,7 +101,7 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalTimeoutError,
 )
 from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
-from agent_runtimes.mcp.lent_stdio import carry, hold, release
+from agent_runtimes.mcp.lent_stdio import carry, hold, lent_url, release
 from agent_runtimes.types import HarnessSpec
 
 from .base import (
@@ -1384,10 +1384,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 "shield.runtime_session": runtime_session,
             },
         ):
-            # The stdio shims send this turn's trace to the gateway from now on.
+            # What reaches the gateway for it carries this turn's trace from now on.
             traceparent = trace_headers().get("traceparent")
             for handle in self._handles:
-                with contextlib.suppress(ValueError, OSError):
+                with contextlib.suppress(ValueError):
                     carry(handle, traceparent)
             # The turn inside this span: `ShieldProxy.prompt` would open a second.
             return await ShieldProxy.run_turn(
@@ -1588,7 +1588,13 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return "delegated:" + fingerprint(delegated)
 
     def _lent_servers(self, bearer: str) -> list[Any]:
-        """The lent toolsets as ``session/new.mcpServers``: HTTP with the bearer, or the stdio shim holding it."""
+        """The lent toolsets as ``session/new.mcpServers``, none of which holds the bearer.
+
+        Each is an address on the pod's loopback (`mcp.lent_stdio`): as an HTTP
+        server, or through the stdio shim. The bearer stays in this process,
+        which on a deployment's runtime its own user cannot read: a harness's
+        commands run as that user, and read whatever the harness holds.
+        """
         if not self.lent:
             return []
         names = ", ".join(item.name for item in self.lent)
@@ -1597,47 +1603,48 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 f"{self.harness.name} is lent {names}, and this run carries no credential "
                 "to reach the gateway with: nothing is lent without one."
             )
-        if self.lends_over_http:
-            # Lent with the bearer as the Shield lends a credential
-            # (`agent_shield.acp.credential.lent_with`, SH-33): its
-            # `Authorization` on every HTTP server, whatever else was there.
-            return lent_with(
-                [
+        from agent_runtimes.apps.principal import _keep_from_this_user, deployment_of
+        from agent_runtimes.models.models import app_instance_of
+
+        if deployment_of(app_instance_of(self._agent_id)):
+            _keep_from_this_user()
+        servers: list[Any] = []
+        for item in self.lent:
+            handle = hold(item.name, item.url, bearer)
+            self._handles.append(handle)
+            if self.lends_over_http:
+                # The trace the session opens on, to the gateway: a harness that
+                # honours `_meta.traceparent` sends its own per turn; one that
+                # does not sends this.
+                servers.append(
                     HttpMcpServer(
                         type="http",
                         name=item.name,
-                        url=item.url,
-                        # The trace the session opens on, to the gateway:
-                        # a harness that honours `_meta.traceparent`
-                        # sends its own per turn; one that does not sends this.
+                        url=lent_url(handle),
                         headers=[
                             HttpHeader(name=name, value=value)
                             for name, value in trace_headers().items()
                         ],
                     )
-                    for item in self.lent
-                ],
-                bearer,
-            )
-        servers: list[Any] = []
-        for item in self.lent:
-            # The credential stays in the runtime's hands: the shim reads it
-            # from the Shield's home by an opaque handle, never from the
-            # harness's arguments or environment.
-            handle = hold(item.name, item.url, bearer)
-            self._handles.append(handle)
-            servers.append(
-                McpServerStdio(
-                    name=item.name,
-                    command=sys.executable,
-                    args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
-                    env=[],
                 )
-            )
+            else:
+                servers.append(
+                    McpServerStdio(
+                        name=item.name,
+                        command=sys.executable,
+                        args=[
+                            "-m",
+                            "agent_runtimes.mcp.lent_stdio",
+                            "--lent",
+                            lent_url(handle),
+                        ],
+                        env=[],
+                    )
+                )
         return servers
 
     def _release_lent(self) -> None:
-        """Forget what the stdio shims were lent."""
+        """Forget what was lent: its addresses answer nothing from now on."""
         for handle in self._handles:
             release(handle)
         self._handles.clear()

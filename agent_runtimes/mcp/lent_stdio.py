@@ -1,65 +1,45 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A lent gateway toolset over stdio, the credential held here (SH-14).
+"""A lent gateway toolset, the credential held by the runtime alone (SH-14).
 
-A harness that advertises no ``mcpCapabilities.http`` cannot be given the
-gateway's toolset as an HTTP server with a bearer header; it is given this
-shim instead, as a stdio MCP server::
+Whatever a harness holds, what it runs can read: the commands the model writes
+run as the same user, so a file it could open, or its own memory, is theirs.
+So a harness is lent no credential at all. The runtime holds the toolset's URL and
+the execution credential here, in this process's memory, under an opaque handle
+(:func:`hold`), and answers the handle on the pod's loopback
+(`routes.mcp_lent`), adding the bearer as it forwards to the gateway. On a
+deployment's runtime this process is unreadable by its own user
+(`principal._keep_from_this_user`), so the credential is out of reach of every
+command; the handle is not, and what it gives is the toolset itself, which the
+harness already has: the gateway's policy, approvals, custody and audit apply to
+every call.
 
-    python -m agent_runtimes.mcp.lent_stdio --lent <handle>
+A harness that advertises ``mcpCapabilities.http`` is given that local address as
+an HTTP server. One that does not is given this shim as a stdio MCP server, which
+forwards ``tools/list`` and ``tools/call`` to the same address::
 
-The handle is opaque. The toolset's URL and the execution credential are
-**held** by the runtime in a file of the Shield's home (``lent/<handle>``,
-readable by its owner only, removed when the session ends) and read by this
-process: nothing of the credential is in the harness's arguments or its
-environment, and the audit never carries it. The shim forwards ``tools/list``
-and ``tools/call`` to the gateway over Streamable HTTP with the bearer, so the
-gateway's policy, approvals, custody and audit apply to every call.
+    python -m agent_runtimes.mcp.lent_stdio --lent <its local address>
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import json
-import os
 import secrets
 import sys
-from pathlib import Path
 from typing import Any
 
-from agent_shield.config import home
+__all__ = ["carry", "held", "hold", "lent_url", "release", "serve"]
 
-__all__ = ["LENT_DIR", "carry", "held", "hold", "lent_dir", "release", "serve"]
+#: What this runtime lent, by handle. Process memory only: never a file, an
+#: environment or an argument, all of which a harness's commands read.
+_LENT: dict[str, dict[str, str]] = {}
 
-#: Where the runtime holds what it lent, under the Shield's home.
-LENT_DIR = "lent"
 
-
-def lent_dir(base: Path | None = None) -> Path:
+def hold(name: str, url: str, token: str) -> str:
     """
-    The directory the handles live in: the Shield's home, or ``base``.
-
-    Parameters
-    ----------
-    base : Path, optional
-        The Shield's home, for a test.
-
-    Returns
-    -------
-    Path
-        ``<home>/lent``, created, readable by its owner only.
-    """
-    directory = (base or home()) / LENT_DIR
-    directory.mkdir(parents=True, exist_ok=True)
-    os.chmod(directory, 0o700)
-    return directory
-
-
-def hold(name: str, url: str, token: str, *, base: Path | None = None) -> str:
-    """
-    Hold a lent toolset's URL and credential for the shim, under an opaque handle.
+    Hold a lent toolset's URL and credential, under an opaque handle.
 
     Parameters
     ----------
@@ -69,78 +49,71 @@ def hold(name: str, url: str, token: str, *, base: Path | None = None) -> str:
         The gateway toolset's URL.
     token : str
         The execution credential.
-    base : Path, optional
-        The Shield's home, for a test.
 
     Returns
     -------
     str
-        The handle the shim is given; never the token.
+        The handle; never the token.
     """
     if not token:
         raise ValueError(f"Nothing to hold for {name!r}: the credential is empty.")
-    handle = secrets.token_urlsafe(18)
-    path = lent_dir(base) / handle
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as kept:
-        json.dump({"name": name, "url": url, "token": token}, kept)
+    handle = secrets.token_urlsafe(32)
+    _LENT[handle] = {"name": name, "url": url, "token": token}
     return handle
 
 
-def carry(handle: str, traceparent: str | None, *, base: Path | None = None) -> None:
-    """
-    Carry the turn's trace to the shim: the ``traceparent`` it sends the gateway from now on (SH-51).
+def lent_url(handle: str) -> str:
+    """Where a harness reaches what a handle holds: the pod's loopback."""
+    from agent_runtimes.apps.visitors import loopback_url
 
-    The shim is one process for the session, so what it sends per call is
-    read from the handle at each call; the runtime writes the current turn's
-    context here before each prompt. ``None`` clears it: no trace, no header,
-    never an invented one.
+    return f"{loopback_url()}/api/v1/mcp/lent/{handle}"
+
+
+def carry(handle: str, traceparent: str | None) -> None:
+    """
+    Carry the turn's trace: the ``traceparent`` the gateway is sent from now on (SH-51).
+
+    The toolset is one connection for the session, so what is sent per call is
+    read at each call; the runtime sets the current turn's context here before
+    each prompt. ``None`` clears it: no trace, no header, never an invented one.
 
     Parameters
     ----------
     handle : str
-        The handle the shim was given.
+        The handle.
     traceparent : str | None
         The W3C trace context of the turn, or nothing.
-    base : Path, optional
-        The Shield's home, for a test.
     """
-    kept = held(handle, base=base)
+    kept = held(handle)
     if traceparent:
         kept["traceparent"] = traceparent
     else:
         kept.pop("traceparent", None)
-    path = lent_dir(base) / handle
-    path.write_text(json.dumps(kept), encoding="utf-8")
 
 
-def held(handle: str, *, base: Path | None = None) -> dict[str, str]:
+def held(handle: str) -> dict[str, str]:
     """
     What a handle holds; a refusal in a sentence for one that holds nothing.
 
     Parameters
     ----------
     handle : str
-        The handle the shim was given.
-    base : Path, optional
-        The Shield's home, for a test.
+        The handle.
 
     Returns
     -------
     dict[str, str]
-        ``{"name", "url", "token"}``.
+        ``{"name", "url", "token"}``, and the turn's ``traceparent``.
     """
-    if not handle or "/" in handle or handle.startswith("."):
-        raise ValueError(f"{handle!r} is not a handle.")
-    path = lent_dir(base) / handle
-    if not path.is_file():
+    kept = _LENT.get(handle)
+    if kept is None:
         raise ValueError(
-            f"The handle {handle!r} holds nothing: the session that lent it has ended."
+            "This handle holds nothing: the session that lent it has ended."
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    return kept
 
 
-def release(handle: str, *, base: Path | None = None) -> None:
+def release(handle: str) -> None:
     """
     Forget what a handle held.
 
@@ -148,24 +121,18 @@ def release(handle: str, *, base: Path | None = None) -> None:
     ----------
     handle : str
         The handle.
-    base : Path, optional
-        The Shield's home, for a test.
     """
-    path = lent_dir(base) / handle
-    if path.is_file():
-        path.unlink()
+    _LENT.pop(handle, None)
 
 
-async def serve(handle: str, *, base: Path | None = None) -> None:
+async def serve(url: str) -> None:
     """
-    Serve the lent toolset over stdio, forwarding to the gateway with the credential.
+    Serve the lent toolset over stdio, forwarding to the runtime that holds it.
 
     Parameters
     ----------
-    handle : str
-        The handle the runtime gave.
-    base : Path, optional
-        The Shield's home, for a test.
+    url : str
+        The toolset's local address (:func:`lent_url`).
     """
     import mcp.types as types
     from mcp.client.session import ClientSession
@@ -174,26 +141,8 @@ async def serve(handle: str, *, base: Path | None = None) -> None:
     from mcp.server.stdio import stdio_server
     from mcp.shared._httpx_utils import create_mcp_http_client
 
-    lent = held(handle, base=base)
-    http_client = create_mcp_http_client(
-        headers={"Authorization": f"Bearer {lent['token']}"}
-    )
-
-    async def with_turn_trace(request: Any) -> None:
-        # The turn's trace, as the runtime carried it to the handle (SH-51):
-        # read per request, since the turn changes while this process does not.
-        try:
-            traceparent = held(handle, base=base).get("traceparent")
-        except ValueError:
-            return
-        if traceparent and "traceparent" not in request.headers:
-            request.headers["traceparent"] = traceparent
-
-    http_client.event_hooks["request"] = [
-        *http_client.event_hooks.get("request", []),
-        with_turn_trace,
-    ]
-    async with streamable_http_client(lent["url"], http_client=http_client) as streams:
+    http_client = create_mcp_http_client()
+    async with streamable_http_client(url, http_client=http_client) as streams:
         async with ClientSession(streams[0], streams[1]) as gateway:
             await gateway.initialize()
 
@@ -211,7 +160,7 @@ async def serve(handle: str, *, base: Path | None = None) -> None:
                 )
 
             server: Server[Any] = Server(
-                f"datalayer-lent:{lent['name']}",
+                "datalayer-lent",
                 on_list_tools=list_tools,
                 on_call_tool=call_tool,
             )
@@ -223,7 +172,7 @@ async def serve(handle: str, *, base: Path | None = None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """
-    The entry: ``python -m agent_runtimes.mcp.lent_stdio --lent <handle>``.
+    The entry: ``python -m agent_runtimes.mcp.lent_stdio --lent <its local address>``.
 
     Parameters
     ----------
@@ -233,16 +182,14 @@ def main(argv: list[str] | None = None) -> int:
     Returns
     -------
     int
-        The exit code: 2 for a handle that holds nothing.
+        The exit code.
     """
     parser = argparse.ArgumentParser(description="A lent gateway toolset over stdio.")
-    parser.add_argument("--lent", required=True, help="The handle the runtime gave.")
+    parser.add_argument(
+        "--lent", required=True, help="The toolset's address, as the runtime gave it."
+    )
     args = parser.parse_args(argv)
-    try:
-        asyncio.run(serve(args.lent))
-    except ValueError as refused:
-        print(f"lent_stdio: {refused}", file=sys.stderr)
-        return 2
+    asyncio.run(serve(args.lent))
     return 0
 
 

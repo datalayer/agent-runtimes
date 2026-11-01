@@ -63,6 +63,7 @@ from .identity import router as identity_router
 from .loop import router as loop_router
 from .mcp import router as mcp_router
 from .mcp_auth import router as mcp_auth_router
+from .mcp_lent import router as mcp_lent_router
 from .mcp_proxy import router as mcp_proxy_router
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 from .mcp_ui import router as mcp_ui_router
@@ -110,6 +111,7 @@ __all__ = [
     "apps_router",
     "protocols_router",
     "loop_router",
+    "mcp_lent_router",
     "mcp_proxy_router",
     "mcp_auth_router",
     "mcp_router",

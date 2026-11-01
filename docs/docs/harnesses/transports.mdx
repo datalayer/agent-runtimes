@@ -84,14 +84,19 @@ connects any.
 
 The shape follows what the agent advertised at `initialize`:
 
-- `mcpCapabilities.http` → `{type: http, name, url, headers: [Authorization:
-  Bearer <the execution credential>]}`;
+- `mcpCapabilities.http` → `{type: http, name, url}`, the URL an address on the
+  pod's loopback, `/api/v1/mcp/lent/<handle>`;
 - otherwise a **stdio shim**, `python -m agent_runtimes.mcp.lent_stdio --lent
-  <handle>`: the runtime holds the toolset's URL and the credential in the
-  Shield's home (`lent/<handle>`, owner-only, released with the session) under
-  an opaque handle, and the shim forwards `tools/list` and `tools/call` to the
-  gateway with the bearer — nothing of the credential in the harness's
-  arguments, environment or audit.
+  <that address>`, which forwards `tools/list` and `tools/call` to it.
+
+Either way the harness holds no credential. A harness's commands run as its user
+and read whatever it holds, a file, its arguments, its environment or its memory,
+so the runtime keeps the toolset's URL and the credential in its own memory, under
+an opaque handle released with the session, and adds the bearer as it forwards to
+the gateway. On a deployment's runtime that process is unreadable by its own user.
+A command that finds the handle can use the toolset, as the harness can, with
+the gateway's policy, approvals, custody and audit on every call; it cannot read
+the credential.
 
 The credential is a deployment's principal token, else the run's own
 (`user_token`), else the caller's; with none, nothing is lent and the turn says
