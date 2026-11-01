@@ -4704,6 +4704,7 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
     kernel: set[str] = set()
     held: set[str] = set()
     platform: set[str] = set()
+    for_a_deployment = False
     for name in agent_ids:
         record = _agentspecs.get(name)
         if not isinstance(record, dict):
@@ -4727,12 +4728,14 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
         kernel |= found.kernel
         held |= found.held
         platform |= found.platform
+        for_a_deployment = for_a_deployment or found.for_a_deployment
     return DeclaredSecrets(
         consumers=consumers,
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
         platform=frozenset(platform),
+        for_a_deployment=for_a_deployment,
     ).merged(launched())
 
 

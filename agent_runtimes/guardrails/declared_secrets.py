@@ -51,7 +51,9 @@ as it is applied (:func:`refuse_reserved`). The list is checked against what the
 code reads (``test_every_variable_the_runtime_reads_is_reserved``). The platform's
 own catalogue is the exception, for what it says of its own servers
 (:data:`CATALOGUE_MAY_DECLARE`), as its harnesses' keys and a deployment's user
-secret are: nobody's spec writes those.
+secret are: nobody's spec writes those. A person's own runtime is not held to
+this: their spec, their vault and their runtime cross no boundary, and a server of
+theirs may need ``AWS_PROFILE``.
 
 Pure but for the catalogues it reads; :func:`declared_secrets` is what the
 companion asks (``POST /agents/declared-secrets``) before it gives a runtime
@@ -196,6 +198,16 @@ class ReservedSecretName(ValueError):
     """A spec declares a name the runtime reads of its own, in a sentence."""
 
 
+def on_a_deployment(app_instance: Optional[Mapping[str, Any]] = None) -> bool:
+    """Whether reserved names are refused here: what is read is for a deployment,
+    wherever it is read, or this runtime was launched for one or serves one."""
+    if str((app_instance or {}).get("deployment_uid") or "").strip():
+        return True
+    from agent_runtimes.apps.principal import a_deployment_is_served, launched_for
+
+    return bool(launched_for()) or a_deployment_is_served()
+
+
 def is_reserved(name: str) -> bool:
     """Whether a variable is the runtime's own, whatever its case (``http_proxy``)."""
     upper = str(name).upper()
@@ -214,15 +226,22 @@ def _reserved_sentence(consumer: str, names: Iterable[str]) -> str:
 
 
 def refuse_server_names(
-    server_id: str, names: Iterable[str], *, from_catalogue: bool
+    server_id: str,
+    names: Iterable[str],
+    *,
+    from_catalogue: bool,
+    held: Optional[bool] = None,
 ) -> None:
-    """Refuse what an MCP server declares of the runtime's own.
+    """Refuse what an MCP server declares of the runtime's own, on a deployment
+    (``held``, asked of :func:`on_a_deployment` unsaid).
 
     Raises
     ------
     ReservedSecretName
         For any reserved name, beyond what the catalogue says of its own server.
     """
+    if not (on_a_deployment() if held is None else held):
+        return
     allowed = CATALOGUE_MAY_DECLARE if from_catalogue else frozenset()
     refused = [name for name in names if is_reserved(name) and name not in allowed]
     if refused:
@@ -350,6 +369,8 @@ class DeclaredSecrets:
     #: Reserved names, of what the platform wrote and no spec does: what its
     #: catalogue says of its own servers, its harnesses' keys, the user secret.
     platform: FrozenSet[str] = frozenset()
+    #: Whether these were read for a deployment: reserved names are refused.
+    for_a_deployment: bool = False
 
     @property
     def runtime(self) -> FrozenSet[str]:
@@ -378,6 +399,7 @@ class DeclaredSecrets:
             held=self.held | other.held,
             offered=self.offered | other.offered,
             platform=self.platform | other.platform,
+            for_a_deployment=self.for_a_deployment or other.for_a_deployment,
         )
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
@@ -416,8 +438,8 @@ def declared_secrets(
 ) -> DeclaredSecrets:
     """The secrets the specs a runtime is configured from declare.
 
-    :class:`ReservedSecretName` when a spec declares what the runtime reads of
-    its own: what declares it is not configured.
+    :class:`ReservedSecretName` when a spec read for a deployment declares what
+    the runtime reads of its own: what declares it is not configured.
 
     ``agent_spec`` is the library's (an ``Agentspec``, a Cog's spec, or a
     stored creation record); ``forwarded_spec`` the one the platform sent as
@@ -433,6 +455,7 @@ def declared_secrets(
     offered: Set[str] = set()
     platform: Set[str] = set()
     seen_agents: Set[str] = set()
+    for_a_deployment = on_a_deployment(app_instance)
 
     def add_server(server: Any) -> None:
         if isinstance(server, str) or (
@@ -465,7 +488,12 @@ def declared_secrets(
         names = server_env_names(server)
         sandbox = sandbox_env_names(server)
         from_catalogue = as_the_catalogue_wrote_it(server_id, server)
-        refuse_server_names(server_id, names | sandbox, from_catalogue=from_catalogue)
+        refuse_server_names(
+            server_id,
+            names | sandbox,
+            from_catalogue=from_catalogue,
+            held=for_a_deployment,
+        )
         if from_catalogue:
             platform.update((names | sandbox) & CATALOGUE_MAY_DECLARE)
         servers[server_id] = servers.get(server_id, frozenset()) | names
@@ -481,7 +509,7 @@ def declared_secrets(
                 skill if isinstance(skill, str) else _get(skill, "id", "name")
             )
             reserved = [name for name in names if is_reserved(name)]
-            if reserved:
+            if reserved and for_a_deployment:
                 raise ReservedSecretName(
                     _reserved_sentence(f"The skill {label}", reserved)
                 )
@@ -558,6 +586,7 @@ def declared_secrets(
         held=frozenset(held),
         offered=frozenset(offered),
         platform=frozenset(platform),
+        for_a_deployment=for_a_deployment,
     )
 
 
@@ -615,7 +644,8 @@ def keep_declared(
 
 
 def refuse_reserved(names: Iterable[str], declared: DeclaredSecrets) -> None:
-    """Refuse to set a name of the runtime's own, as secrets are about to be set.
+    """Refuse to set a name of the runtime's own on a deployment, as secrets are
+    about to be set.
 
     What was read off the specs was refused then: this is what stands between
     a name and ``os.environ``, whatever brought it here.
@@ -625,6 +655,8 @@ def refuse_reserved(names: Iterable[str], declared: DeclaredSecrets) -> None:
     ReservedSecretName
         For a reserved name the platform did not write itself.
     """
+    if not (declared.for_a_deployment or on_a_deployment()):
+        return
     refused = [
         name for name in names if is_reserved(name) and name not in declared.platform
     ]
@@ -657,6 +689,7 @@ __all__ = [
     "launched",
     "note_given",
     "note_launched",
+    "on_a_deployment",
     "refuse_reserved",
     "refuse_server_names",
     "sandbox_env_names",
