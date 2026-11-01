@@ -84,13 +84,39 @@ async def lent_toolset(handle: str, request: Request) -> Response:
     traceparent = lent.get("traceparent") or request.headers.get("traceparent")
     if traceparent:
         headers["traceparent"] = traceparent
+    return await passed_on(request, lent["url"], headers, _ANSWERED)
+
+
+async def passed_on(
+    request: Request, url: str, headers: dict[str, str], answered: tuple[str, ...]
+) -> Response:
+    """
+    Pass a request on to the one URL it is for, and its answer back as it comes.
+
+    Parameters
+    ----------
+    request : Request
+        What came in: its method and its body are passed on.
+    url : str
+        Where it goes.
+    headers : dict[str, str]
+        What goes with it, the bearer among them.
+    answered : tuple[str, ...]
+        What of the answer's headers comes back.
+
+    Returns
+    -------
+    Response
+        The answer, streamed.
+    """
     client = _client["make"]()
     try:
         answer = await client.send(
             client.build_request(
                 request.method,
-                lent["url"],
-                headers=headers,
+                url,
+                # Passed on raw: nothing here decodes what would be compressed.
+                headers={**headers, "accept-encoding": "identity"},
                 content=await request.body(),
             ),
             stream=True,
@@ -100,7 +126,7 @@ async def lent_toolset(handle: str, request: Request) -> Response:
         # Its name alone: what an error prints is nobody's to read.
         raise HTTPException(
             status_code=502,
-            detail=f"The gateway could not be reached ({type(error).__name__}).",
+            detail=f"It could not be reached ({type(error).__name__}).",
         ) from None
 
     async def closed() -> None:
@@ -111,7 +137,7 @@ async def lent_toolset(handle: str, request: Request) -> Response:
         answer.aiter_raw(),
         status_code=answer.status_code,
         headers={
-            name: answer.headers[name] for name in _ANSWERED if name in answer.headers
+            name: answer.headers[name] for name in answered if name in answer.headers
         },
         background=BackgroundTask(closed),
     )

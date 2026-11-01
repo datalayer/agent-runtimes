@@ -35,6 +35,7 @@ from agent_runtimes.adapters.acp_agent import (
     lent_toolsets,
 )
 from agent_runtimes.adapters.base import AgentContext, StreamEvent
+from agent_runtimes.adapters.harness_inference import relay_handle
 from agent_runtimes.adapters.harness_skills import (
     LENT_MARK,
     instructions_markdown,
@@ -57,6 +58,9 @@ from agent_runtimes.types import (
 )
 
 FAKE = Path(__file__).parent / "fixtures" / "acp_fake_agent.py"
+
+#: Where a routed harness calls: the relay on the pod's loopback, never ai-inference.
+RELAY = "http://127.0.0.1:8765/api/v1/inference/relay"
 
 
 def catalogued_fake(monkeypatch: Any, **overrides: Any) -> HarnessSpec:
@@ -1523,8 +1527,8 @@ class TestResolvingACatalogueHarness:
         fixed = harness_inference.claude_code_environment()
         assert given == {
             **fixed,
-            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
-            "ANTHROPIC_AUTH_TOKEN": "the-inference-token",
+            "ANTHROPIC_BASE_URL": f"{RELAY}/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": harness_inference.relay_handle(),
         }
         assert "ANTHROPIC_API_KEY" not in given
         # No key needed there: ai-inference answers from Bedrock.
@@ -1536,7 +1540,8 @@ class TestResolvingACatalogueHarness:
         given.pop("PATH", None)
         assert given == {
             **fixed,
-            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
+            "ANTHROPIC_BASE_URL": f"{RELAY}/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": harness_inference.relay_handle(),
         }
 
     def test_claude_code_asks_for_the_catalogues_model_whatever_its_tier(self) -> None:
@@ -1583,7 +1588,7 @@ class TestResolvingACatalogueHarness:
             environment={"ANTHROPIC_BASE_URL": "https://r1.example/a"},
         )
         agent._give_routed_token()
-        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "the-inference-token"
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] != "the-inference-token"
         assert agent.agent_env["ANTHROPIC_CUSTOM_HEADERS"].splitlines() == [
             "X-Datalayer-App-Uid: app-1",
             "X-Datalayer-Deployment-Uid: dep-1",
@@ -1613,10 +1618,8 @@ class TestResolvingACatalogueHarness:
             },
         )
         assert "OPENAI_API_KEY" not in given and "OPENAI_BASE_URL" not in given
-        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (
-            "https://r1.example/api/ai-inference/v1/openai/v1"
-        )
-        assert given["DATALAYER_AI_INFERENCE_TOKEN"] == "the-inference-token"
+        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == f"{RELAY}/openai/v1"
+        assert given["DATALAYER_AI_INFERENCE_TOKEN"] != "the-inference-token"
 
         monkeypatch.setitem(
             models._APP_INSTANCES,
@@ -1641,9 +1644,7 @@ class TestResolvingACatalogueHarness:
         assert config["web_search"] == "disabled"
         assert config["model_context_window"] > 0
         provider = config["model_providers"]["datalayer"]
-        assert (
-            provider["base_url"] == "https://r1.example/api/ai-inference/v1/openai/v1"
-        )
+        assert provider["base_url"] == f"{RELAY}/openai/v1"
         assert provider["env_key"] == "DATALAYER_AI_INFERENCE_TOKEN"
         assert provider["wire_api"] == "responses"
         assert provider["requires_openai_auth"] is False
@@ -1896,9 +1897,9 @@ class TestResolvingACatalogueHarness:
         )
         assert "ANTHROPIC_API_KEY" not in given
         assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (
-            "https://r1.example/api/ai-inference/v1/anthropic"
+            f"{RELAY}/anthropic"
         )
-        assert given["DATALAYER_AI_INFERENCE_TOKEN"] == "the-inference-token"
+        assert given["DATALAYER_AI_INFERENCE_TOKEN"] != "the-inference-token"
         # Nothing of pi's own reaches outside the boundary.
         assert given["PI_OFFLINE"] == "1" and given["PI_TELEMETRY"] == "0"
 
@@ -1916,7 +1917,7 @@ class TestResolvingACatalogueHarness:
         models_file = (directory / "models.json").read_text()
         assert "the-inference-token" not in models_file
         provider = json.loads(models_file)["providers"]["datalayer"]
-        assert provider["baseUrl"] == "https://r1.example/api/ai-inference/v1/anthropic"
+        assert provider["baseUrl"] == f"{RELAY}/anthropic"
         assert provider["api"] == "anthropic-messages"
         assert provider["apiKey"] == "$DATALAYER_AI_INFERENCE_TOKEN"
         assert provider["authHeader"] is True
@@ -1993,9 +1994,9 @@ class TestResolvingACatalogueHarness:
             DEFAULT_MODEL.value: {"name": DEFAULT_MODEL.value, "tool_call": True}
         }
         assert datalayer_provider["options"] == {
-            "baseURL": "https://r1.example/api/ai-inference/v1",
-            "apiKey": "the-inference-token",
-            "headers": {"Authorization": "Bearer the-inference-token"},
+            "baseURL": RELAY,
+            "apiKey": harness_inference.relay_handle(),
+            "headers": {"Authorization": f"Bearer {harness_inference.relay_handle()}"},
         }
         # The application and deployment a call is metered under go with it.
         route = harness_inference.ROUTES["opencode"]
@@ -2124,7 +2125,7 @@ class TestResolvingACatalogueHarness:
             offered, "_given", {"token": "given-later", "expires_at": None}
         )
         agent._give_routed_token()
-        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-later"
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == relay_handle()
 
     def _routed_claude(self, tmp_path: Path) -> ACPAgent:
         from agent_runtimes.specs.harnesses import get_harness
@@ -2170,7 +2171,7 @@ class TestResolvingACatalogueHarness:
             await agent.initialize()
         waited = time.monotonic() - started
         assert 0.3 <= waited < 5.0
-        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-while-waiting"
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == relay_handle()
         await giving
 
     @pytest.mark.asyncio

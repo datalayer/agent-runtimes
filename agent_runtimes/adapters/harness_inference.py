@@ -10,22 +10,29 @@ to Bedrock or Alibaba, paid in the account's credits, on no key of the
 account's. Run locally (``loop --harness``, the CLI, a laptop demo), a harness
 takes the person's own key from the environment, as its spec declares.
 
+**A harness holds no token.** Its commands run as its user and read its
+environment, its files and its memory. So every base URL below is an address on
+the pod's loopback, which goes to the same route of ai-inference
+(`routes.inference_relay`), and every "token" below is an opaque handle the
+runtime replaces there with the token it holds (:func:`relay_handle`).
+
 * Claude Code is pointed at ai-inference's Anthropic-shaped route, which
-  answers from Bedrock: ``ANTHROPIC_BASE_URL`` is ``<ai-inference>/anthropic``,
-  the runtime's ai-inference token is ``ANTHROPIC_AUTH_TOKEN``, and each of its
-  model tiers is the catalogue's model (:func:`claude_code_environment`).
+  answers from Bedrock: ``ANTHROPIC_BASE_URL`` is that route, the handle is
+  ``ANTHROPIC_AUTH_TOKEN``, and each of its model tiers is the catalogue's model
+  (:func:`claude_code_environment`).
 * OpenCode reads no base-URL variable: it is given its configuration inline
   (``OPENCODE_CONFIG_CONTENT``), a ``datalayer`` provider on the AI SDK's
   ``@ai-sdk/openai-compatible`` whose ``baseURL`` is ai-inference's own v1
   root, its chat completions, and whose key and ``Authorization`` header carry
-  the runtime's token.
+  the handle.
 * pi reads no base-URL variable either: it is given a configuration directory
   of its own (``PI_CODING_AGENT_DIR``, :func:`write_config_directory`), with a
-  ``datalayer`` provider on the same Anthropic-shaped route and no token in it.
+  ``datalayer`` provider on the same Anthropic-shaped route, reading the handle
+  from its environment.
 * Codex reads no base-URL variable either: it is given a configuration
   directory (``CODEX_HOME``, :func:`write_config_directory`) with a ``datalayer``
   provider on ai-inference's Responses route, answered from Bedrock, its model
-  pinned to the catalogue's, its token read from the environment. Nothing of
+  pinned to the catalogue's, the handle read from the environment. Nothing of
   its configuration reaches OpenAI.
 * Any other harness is not offered there (:func:`refusal`): a harness served
   on Datalayer is one whose calls are known to go through ai-inference.
@@ -39,6 +46,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -335,9 +343,8 @@ def pi_models(
 ) -> str:
     """Write pi's ``models.json``: one provider, ai-inference's Anthropic-shaped route.
 
-    pi resolves ``$NAME`` when it calls, so the token stays out of the file:
-    the runtime's token is in the process's environment, never on the
-    workspace. It speaks the Messages API there: its OpenAI-shaped messages
+    pi resolves ``$NAME`` when it calls, so the handle stays out of the file. It
+    speaks the Messages API there: its OpenAI-shaped messages
     carry content parts, which ai-inference's chat completions refuse.
     """
     from agentspecs.models import get_model
@@ -383,7 +390,7 @@ def codex_config(
 ) -> str:
     """Write Codex's ``config.toml``: one provider, ai-inference's Responses route.
 
-    ``env_key`` names the variable the token is read from, so it stays out of
+    ``env_key`` names the variable the handle is read from, so it stays out of
     the file; ``requires_openai_auth`` off, so Codex asks for no OpenAI login.
     Its hosted web search has nothing to run it on Bedrock, and a pod reaches
     nothing else of OpenAI's. JSON's strings are TOML's basic strings.
@@ -435,7 +442,9 @@ def write_config_directory(
 ) -> Path:
     """Write the configuration directory of a routed harness that reads one; its path.
 
-    It holds no token. ``model`` is the catalogue model the harness calls, the
+    It holds no token and no handle: only the base URL on the loopback, the
+    model, and the application's headers, which name it and its deployment.
+    ``model`` is the catalogue model the harness calls, the
     platform's default unsaid; ``headers`` go with each call.
     """
     from agent_runtimes.specs.models import DEFAULT_MODEL
@@ -472,7 +481,7 @@ class Route:
     path: str
     #: The variable the harness reads its base URL from.
     base_url_variable: str
-    #: The variable the harness reads its credential from: given the runtime's token.
+    #: The variable the harness reads its credential from: given the handle.
     token_variable: str
     #: The variable the harness reads its configuration from inline, when it
     #: reads no base-URL variable: written by :func:`inline_config`.
@@ -572,36 +581,26 @@ def fixed_environment(harness_id: str, route: Route) -> dict[str, str]:
     return dict(route.environment)
 
 
-def base_url(route: Route, environment: Mapping[str, str] | None = None) -> str:
-    """``<ai-inference>/api/ai-inference/v1`` and the route's path."""
-    from agent_runtimes.models.models import _normalize_ai_inference_base_url
-
+def inference_url(environment: Mapping[str, str] | None = None) -> str | None:
+    """Where this runtime's ai-inference is."""
     source = os.environ if environment is None else environment
-    return (
-        _normalize_ai_inference_base_url(source.get("DATALAYER_AI_INFERENCE_URL"))
-        + route.path
-    )
+    return source.get("DATALAYER_AI_INFERENCE_URL")
 
 
-def anthropic_base_url(environment: Mapping[str, str] | None = None) -> str:
-    """``<ai-inference>/api/ai-inference/v1/anthropic``: Claude Code adds ``/v1/messages``."""
-    from agent_runtimes.models.models import _normalize_ai_inference_base_url
+def base_url(route: Route) -> str:
+    """Where a harness calls for that route: the relay on the pod's loopback."""
+    from agent_runtimes.apps.visitors import loopback_url
 
-    source = os.environ if environment is None else environment
-    return (
-        _normalize_ai_inference_base_url(source.get("DATALAYER_AI_INFERENCE_URL"))
-        + ANTHROPIC_ROUTE
-    )
+    return f"{loopback_url()}/api/v1/inference/relay{route.path}"
 
 
-def routed_token() -> tuple[str | None, str | None]:
-    """The token the harness calls ai-inference with, and why there is none: ``(token, refusal)``."""
-    from agent_runtimes.models.offered import inference_token, inference_token_refusal
+#: What a harness is given in the place of a token, for this process's life.
+_RELAY_HANDLE: dict[str, str] = {}
 
-    refusal = inference_token_refusal()
-    if refusal:
-        return None, refusal
-    return inference_token(), None
+
+def relay_handle() -> str:
+    """The opaque handle a harness says it is at the relay with: never the token."""
+    return _RELAY_HANDLE.setdefault("handle", secrets.token_urlsafe(32))
 
 
 __all__ = [
@@ -620,6 +619,7 @@ __all__ = [
     "claude_code_environment",
     "custom_headers",
     "fixed_environment",
+    "inference_url",
     "refusal",
     "write_config_directory",
     "opencode_agents_asking",
@@ -633,7 +633,6 @@ __all__ = [
     "route_of",
     "AUTH_TOKEN_VARIABLE",
     "BASE_URL_VARIABLE",
-    "anthropic_base_url",
     "on_datalayer",
-    "routed_token",
+    "relay_handle",
 ]

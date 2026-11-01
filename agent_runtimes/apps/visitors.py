@@ -367,6 +367,10 @@ _SANDBOX_TOOLS = "/api/v1/mcp/proxy/"
 #: lent toolsets (`routes.mcp_lent`), which hold the credential for it.
 _LENT_TOOLS = "/api/v1/mcp/lent/"
 
+#: What a harness calls its models through, by the handle it was given: the
+#: runtime's token is added there (`routes.inference_relay`).
+_INFERENCE_RELAY = "/api/v1/inference/relay/"
+
 
 def path_answered(method: str, path: str) -> bool:
     """Whether a request from anybody but the runtime itself is the application's own.
@@ -467,7 +471,10 @@ class OwnRoutesOnly:
                 and scope["path"].startswith(_SANDBOX_TOOLS)
                 and code_is_running()
             )
-            or (is_loopback(host) and scope["path"].startswith(_LENT_TOOLS))
+            or (
+                is_loopback(host)
+                and scope["path"].startswith((_LENT_TOOLS, _INFERENCE_RELAY))
+            )
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).

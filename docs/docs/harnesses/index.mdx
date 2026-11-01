@@ -309,10 +309,12 @@ runtime does) gives no harness a key. Claude Code is started with:
 | Variable | Value |
 |---|---|
 | `ANTHROPIC_BASE_URL` | ai-inference's Anthropic Messages route, `<DATALAYER_AI_INFERENCE_URL>/api/ai-inference/v1/anthropic` |
-| `ANTHROPIC_AUTH_TOKEN` | the runtime's own ai-inference token (the person's token narrowed to ai-inference), set again as the harness starts |
+| `ANTHROPIC_AUTH_TOKEN` | an opaque handle, never the runtime's ai-inference token: the relay replaces it with the token, which stays in the runtime |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` | the catalogue's Bedrock model, `us.anthropic.claude-sonnet-4-6`: Claude Code asks for a model by tier, and a name the catalogue does not offer is refused |
 | `ANTHROPIC_CUSTOM_HEADERS` | the application and deployment the call is metered under, when it serves one |
 | `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `1`: no beta Bedrock would refuse, and nothing else of Anthropic's, which the pod's boundary refuses |
+
+A harness's commands run as its user, and read its environment, its files and its memory, so it holds no token. Each routed harness's base URL is `/api/v1/inference/relay` on the pod's loopback, under ai-inference's route for it. There the handle is replaced with the runtime's token, read at each call, and the call goes to ai-inference and nowhere else.
 
 ai-inference answers `POST /v1/messages` (streamed or not) and
 `/v1/messages/count_tokens` from Bedrock's Anthropic `invoke` API, so tools,

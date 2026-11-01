@@ -213,10 +213,9 @@ def harness_environment(
     fail at its first model call, after the session was opened.
 
     On Datalayer, a harness is given no key: its model calls go through
-    ai-inference (``adapters.harness_inference``), with the runtime's
-    ai-inference token (set again when the harness starts,
-    :meth:`ACPAgent.initialize`, since a runtime is given its token when it is
-    assigned), or it is refused in a sentence. Elsewhere it takes the person's
+    ai-inference (``adapters.harness_inference``), through the relay on the pod's
+    loopback, with a handle in the place of the token, which stays in this
+    process, or it is refused in a sentence. Elsewhere it takes the person's
     own key from the environment, as its spec declares.
     """
     from agent_runtimes.adapters import harness_inference
@@ -244,14 +243,12 @@ def harness_environment(
         given[asking[0]] = asking[1]
     if route:
         given.update(harness_inference.fixed_environment(harness.id, route))
-        given[route.base_url_variable] = harness_inference.base_url(route, source)
-        token, _ = harness_inference.routed_token()
-        if token:
-            given[route.token_variable] = token
-            if route.config_variable:
-                given[route.config_variable] = harness_inference.inline_config(
-                    route, given[route.base_url_variable], token
-                )
+        given[route.base_url_variable] = harness_inference.base_url(route)
+        given[route.token_variable] = harness_inference.relay_handle()
+        if route.config_variable:
+            given[route.config_variable] = harness_inference.inline_config(
+                route, given[route.base_url_variable], given[route.token_variable]
+            )
     installed = installed_bin(harness)
     if installed is not None:
         # An adapter installed in the Shield's prefix finds the program it
@@ -1138,34 +1135,35 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return time.monotonic() - started
 
     def _give_routed_token(self, waited: float = 0.0) -> None:
-        """The runtime's ai-inference token, as it is now, for a harness whose calls go through ai-inference.
+        """What a harness whose calls go through ai-inference is told as it starts.
 
-        A harness routed through ai-inference (``ANTHROPIC_BASE_URL`` in its
-        environment, :func:`harness_environment`) calls with the token the
-        runtime holds when the harness starts; none, or an expired one, is a
-        refusal in a sentence before the process is launched — saying how
-        long was waited for it (`_await_routed_token`), when it was.
+        The relay's handle in the place of the token, which stays in this
+        process (`routes.inference_relay`). A runtime with no token now, or an
+        expired one, is a refusal in a sentence before the process is launched,
+        saying how long was waited for it (`_await_routed_token`), when it was.
         """
         from agent_runtimes.adapters import harness_inference
+        from agent_runtimes.models.offered import inference_token_refusal
 
         route = self._routed()
         if route is None:
             return
-        token, refusal = harness_inference.routed_token()
-        if not token:
+        refusal = inference_token_refusal()
+        if refusal:
             after = f" (waited {waited:.0f}s for it)" if waited >= 1 else ""
             raise HarnessRefused(
                 f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}{after}"
             )
         from agent_runtimes.models.models import app_instance_of, app_usage_headers
 
-        self.agent_env[route.token_variable] = token
+        handle = harness_inference.relay_handle()
+        self.agent_env[route.token_variable] = handle
         # Each call metered under the application and deployment served.
         headers = app_usage_headers(app_instance_of(self._agent_id))
         base_url = self.agent_env[route.base_url_variable]
         if route.config_variable:
             self.agent_env[route.config_variable] = harness_inference.inline_config(
-                route, base_url, token, headers=headers
+                route, base_url, handle, headers=headers
             )
         if route.directory_variable:
             self.agent_env[route.directory_variable] = str(
