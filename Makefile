@@ -196,7 +196,6 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
 	agent_runtimes/specs/strategies.py \
-	agent_runtimes/specs/guardrails.py \
 	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
 	agent_runtimes/specs/triggers.py \
@@ -622,11 +621,6 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/strategies \
 	  --python-output agent_runtimes/specs/strategies.py \
 	  --typescript-output src/specs/strategies.ts
-	$(call step,Generating guardrail specifications)
-	python scripts/codegen/generate_guardrails.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \
-	  --python-output agent_runtimes/specs/guardrails.py \
-	  --typescript-output src/specs/guardrails.ts
 	$(call step,Generating eval specifications)
 	python scripts/codegen/generate_evals.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \

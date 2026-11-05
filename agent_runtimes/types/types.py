@@ -1027,133 +1027,6 @@ class EvalSpec(BaseModel):
     )
 
 
-class GuardrailPermissions(BaseModel):
-    """Permission toggles for a guardrail profile."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    read_data: bool = Field(default=False, description="Allow data reads")
-    write_data: bool = Field(default=False, description="Allow data writes")
-    execute_code: bool = Field(default=False, description="Allow code execution")
-    access_internet: bool = Field(default=False, description="Allow internet access")
-    send_email: bool = Field(default=False, description="Allow email sending")
-    deploy_production: bool = Field(
-        default=False, description="Allow production deploys"
-    )
-
-
-class TokenLimitsSpec(BaseModel):
-    """Token budget limits."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    per_run: str = Field(default="0", description="Token budget per run")
-    per_day: str = Field(default="0", description="Token budget per day")
-    per_month: str = Field(default="0", description="Token budget per month")
-
-
-class DataScopeSpec(BaseModel):
-    """Data-access scoping rules."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    allowed_systems: List[str] = Field(default_factory=list)
-    allowed_objects: List[str] = Field(default_factory=list)
-    denied_objects: List[str] = Field(default_factory=list)
-    denied_fields: List[str] = Field(default_factory=list)
-
-
-class DataHandlingSpec(BaseModel):
-    """Data output and PII handling policy."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    default_aggregation: bool = Field(default=False)
-    allow_row_level_output: bool = Field(default=False)
-    max_rows_in_output: int = Field(default=0, ge=0)
-    redact_fields: List[str] = Field(default_factory=list)
-    hash_fields: List[str] = Field(default_factory=list)
-    pii_detection: bool = Field(default=False)
-    pii_action: str = Field(default="warn")
-
-
-class ApprovalPolicySpec(BaseModel):
-    """Manual/automatic approval policy."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    require_manual_approval_for: List[str] = Field(default_factory=list)
-    auto_approved: List[str] = Field(default_factory=list)
-
-
-class ToolLimitsSpec(BaseModel):
-    """Tool-call limits for a run."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    max_tool_calls: int = Field(default=0, ge=0)
-    max_query_rows: int = Field(default=0, ge=0)
-    max_query_runtime: str = Field(default="0s")
-    max_time_window_days: int = Field(default=0, ge=0)
-
-
-class AuditSpec(BaseModel):
-    """Audit/logging policy."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    log_tool_calls: bool = Field(default=True)
-    log_query_metadata_only: bool = Field(default=False)
-    retain_days: int = Field(default=30, ge=0)
-    require_lineage_in_report: bool = Field(default=False)
-
-
-class ContentSafetySpec(BaseModel):
-    """Prompt-injection and untrusted-content policy."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    treat_crm_text_fields_as_untrusted: bool = Field(default=False)
-    do_not_follow_instructions_from_data: bool = Field(default=True)
-
-
-class GuardrailSpec(BaseModel):
-    """Guardrail specification."""
-
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
-
-    id: str = Field(..., description="Unique guardrail identifier")
-    version: str = Field(default="0.0.1", description="Guardrail version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Guardrail description")
-    identity_provider: str = Field(..., description="Identity provider")
-    identity_name: str = Field(..., description="Identity name")
-    permissions: GuardrailPermissions = Field(
-        default_factory=GuardrailPermissions, description="Permission toggles"
-    )
-    token_limits: TokenLimitsSpec = Field(
-        default_factory=TokenLimitsSpec, description="Token budget limits"
-    )
-    data_scope: Optional[DataScopeSpec] = Field(
-        default=None, description="Data-access scope"
-    )
-    data_handling: Optional[DataHandlingSpec] = Field(
-        default=None, description="Data handling policy"
-    )
-    approval_policy: Optional[ApprovalPolicySpec] = Field(
-        default=None, description="Approval policy"
-    )
-    tool_limits: Optional[ToolLimitsSpec] = Field(
-        default=None, description="Tool invocation limits"
-    )
-    audit: Optional[AuditSpec] = Field(
-        default=None, description="Audit trail configuration"
-    )
-    content_safety: Optional[ContentSafetySpec] = Field(
-        default=None, description="Content safety settings"
-    )
-
-
 class MemorySpec(BaseModel):
     """Specification for a memory backend."""
 
@@ -2422,16 +2295,23 @@ class GuardSignalSpec(BaseModel):
     description: str = Field(default="", description="What it measures")
 
 
-class GuardSpec(GuardrailSpec):
-    """A reusable check (`agentspecs/guards`): a Guard extends a guardrail.
+class GuardSpec(BaseModel):
+    """A reusable check (`agentspecs/guards`): a Guard extends a Policy.
 
-    The guardrail is the policy; the Guard verifies that the work stayed
-    within it. In the generated catalogue a Guard is resolved: it carries the
-    guardrail's permissions, data scope and handling, and limits, under its
-    own identity, and `guardrail` names the guardrail it extends.
+    The Policy is the Shield's document, the rules the Guard verifies the
+    work stayed within. In the generated catalogue a Guard is resolved:
+    `policy` names the Policy it extends, `id:version`, and
+    `agent_runtimes.specs.guards.policy_of` gives it from the policies
+    catalogue; nothing of the Policy is merged into the Guard.
     """
 
-    guardrail: str = Field(..., description="The id of the guardrail it extends")
+    id: str = Field(..., description="Unique Guard identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What the Guard is for")
+    policy: str = Field(
+        ..., description="The Policy it extends, `id:version`, of the policies catalogue"
+    )
     category: str = Field(
         ...,
         description=(

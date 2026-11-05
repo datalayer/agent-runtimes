@@ -23,7 +23,7 @@ export type {
   BenchmarkSpec,
   ChatCommonProps,
   TeamSpec,
-  GuardrailSpec,
+  AgentGuardrail,
   EvalSpec,
   TriggerSpec,
   OutputSpec,

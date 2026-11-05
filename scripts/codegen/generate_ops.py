@@ -11,7 +11,7 @@ strategy made of the three. One YAML per spec under ``agentspecs/guards``,
 ``gates``, ``tracks`` and ``ops``.
 
 Each is resolved here, by ``agentspecs`` itself, so the generated catalogues
-are flat: a Guard carries the guardrail it extends, a Gate the signals it
+are flat: a Guard names the Policy it extends, a Gate the signals it
 reads, a Track its retention in days, and an Op everything it names.
 
 Usage:
@@ -39,7 +39,7 @@ KINDS: dict[str, dict[str, str]] = {
         "one": "guard",
         "One": "Guard",
         "title": "Guard Catalog.",
-        "about": "Reusable checks: a Guard extends a guardrail — the policy it verifies.\nEvery Guard is resolved: it carries that guardrail's policy.",
+        "about": "Reusable checks: a Guard extends a Policy — the rules it verifies.\nEvery Guard is resolved: `policy` names that Policy, `id:version`, and\n`policy_of` gives it from the policies catalogue.",
     },
     "gates": {
         "model": "GateSpec",
@@ -70,8 +70,7 @@ KINDS: dict[str, dict[str, str]] = {
     },
 }
 
-#: The keys this generator owns, as TypeScript spells them. A guardrail's own
-#: keys (`token_limits`, `per_run`, …) stay as `GuardrailSpec` declares them.
+#: The keys this generator owns, as TypeScript spells them.
 CAMEL = {
     "max_retries": "maxRetries",
     "retain_for": "retainFor",
@@ -81,17 +80,6 @@ CAMEL = {
     "in_flight": "inFlight",
     "post_run": "postRun",
 }
-
-#: A guardrail's permissions are written `read:data` and typed `read_data`.
-PERMISSIONS = (
-    "read:data",
-    "write:data",
-    "execute:code",
-    "access:internet",
-    "send:email",
-    "deploy:production",
-)
-
 
 def _flat(text: Any) -> str:
     return " ".join(str(text or "").split())
@@ -180,14 +168,7 @@ def _const_name(kind: str, spec: dict[str, Any]) -> str:
 def _python_value(value: Any) -> Any:
     """A resolved spec as the Python models read it."""
     if isinstance(value, dict):
-        converted = {key: _python_value(item) for key, item in value.items()}
-        permissions = converted.get("permissions")
-        if isinstance(permissions, dict):
-            converted["permissions"] = {
-                (key.replace(":", "_") if key in PERMISSIONS else key): item
-                for key, item in permissions.items()
-            }
-        return converted
+        return {key: _python_value(item) for key, item in value.items()}
     if isinstance(value, list):
         return [_python_value(item) for item in value]
     return value
@@ -223,7 +204,14 @@ def generate_python_code(kind: str, specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Dict",
         "",
-        f"from agent_runtimes.types import {names['model']}",
+        *(
+            [
+                "from agent_runtimes.specs.policies import POLICY_CATALOGUE",
+                "from agent_runtimes.types import GuardSpec, PolicySpec",
+            ]
+            if kind == "guards"
+            else [f"from agent_runtimes.types import {names['model']}"]
+        ),
         "",
         "",
         "# " + "=" * 76,
@@ -273,6 +261,27 @@ def generate_python_code(kind: str, specs: list[dict[str, Any]]) -> str:
             "",
         ]
     )
+    if kind == "guards":
+        lines.extend(
+            [
+                "",
+                "def policy_of(guard: GuardSpec) -> PolicySpec:",
+                '    """The Policy a Guard extends, from the policies catalogue.',
+                "",
+                "    Raised when the catalogue does not hold it: a Guard names a Policy that",
+                "    exists, at the version the catalogue has.",
+                '    """',
+                '    base, _, version = guard.policy.rpartition(":")',
+                "    policy = POLICY_CATALOGUE.get(base)",
+                "    if policy is None or policy.version != version:",
+                "        raise ValueError(",
+                '            f"Guard {guard.id!r} extends {guard.policy!r}, "',
+                '            "which is not a Policy of the catalogue"',
+                "        )",
+                "    return policy",
+                "",
+            ]
+        )
     return "\n".join(lines)
 
 
@@ -294,7 +303,14 @@ def generate_typescript_code(kind: str, specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        f"import type {{ {names['model']} }} from '../types/agentspecs';",
+        *(
+            [
+                "import type { GuardSpec, PolicySpec } from '../types/agentspecs';",
+                "import { POLICY_CATALOGUE } from './policies';",
+            ]
+            if kind == "guards"
+            else [f"import type {{ {names['model']} }} from '../types/agentspecs';"]
+        ),
         "",
     ]
     for spec in specs:
@@ -334,6 +350,31 @@ def generate_typescript_code(kind: str, specs: list[dict[str, Any]]) -> str:
             "",
         ]
     )
+    if kind == "guards":
+        lines.extend(
+            [
+                "/**",
+                " * The Policy a Guard extends, from the policies catalogue. Thrown when the",
+                " * catalogue does not hold it: a Guard names a Policy that exists, at the",
+                " * version the catalogue has.",
+                " */",
+                "export function policyOf(guard: GuardSpec): PolicySpec {",
+                "  const at = guard.policy.lastIndexOf(':');",
+                "  const id = at > 0 ? guard.policy.slice(0, at) : guard.policy;",
+                "  const version = at > 0 ? guard.policy.slice(at + 1) : '';",
+                "  const policy = Object.prototype.hasOwnProperty.call(POLICY_CATALOGUE, id)",
+                "    ? POLICY_CATALOGUE[id]",
+                "    : undefined;",
+                "  if (policy === undefined || policy.version !== version) {",
+                "    throw new Error(",
+                "      `Guard '${guard.id}' extends '${guard.policy}', which is not a Policy of the catalogue`,",
+                "    );",
+                "  }",
+                "  return policy;",
+                "}",
+                "",
+            ]
+        )
     return "\n".join(lines)
 
 

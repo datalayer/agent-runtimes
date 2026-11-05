@@ -13,7 +13,7 @@ import type {
 import type { AgentTriggerConfig } from './triggers';
 import type { AgentModelConfig } from './models';
 import type { AgentOutputConfig } from './outputs';
-import type { GuardrailSpec } from './guardrails';
+import type { AgentGuardrail } from './guardrails';
 import type { AgentEvalConfig } from './evals';
 import type { AgentNotificationConfig } from './notifications';
 import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
@@ -538,17 +538,19 @@ export interface GuardSignalSpec {
 }
 
 /**
- * A reusable check (`agentspecs/guards`): a Guard extends a guardrail. The
- * guardrail is the policy; the Guard verifies that the work stayed within
- * it. Resolved: it carries the guardrail's policy under its own identity.
+ * A reusable check (`agentspecs/guards`): a Guard extends a Policy, the
+ * Shield's document whose rules the Guard verifies the work stayed within.
+ * Resolved: `policy` names the Policy it extends, `id:version`, and
+ * `policyOf` gives it from the policies catalogue; nothing of the Policy is
+ * merged into the Guard.
  */
-export interface GuardSpec extends GuardrailSpec {
+export interface GuardSpec {
   id: string;
   version: string;
   name: string;
   description: string;
-  /** The id of the guardrail it extends. */
-  guardrail: string;
+  /** The Policy it extends, `id:version`, of the policies catalogue. */
+  policy: string;
   /**
    * algorithmic, source-grounding, consensus, expert, policy-safety,
    * regression-drift or outcome.
@@ -1819,8 +1821,8 @@ export interface Agentspec {
   modelConfig?: AgentModelConfig;
   /** MCP server tool configurations with approval settings */
   mcpServerTools?: AgentMCPServerToolConfig[];
-  /** Guardrail configurations */
-  guardrails?: GuardrailSpec[];
+  /** The agent's guardrails: the budgets and limits the runtime enforces. */
+  guardrails?: AgentGuardrail[];
   /** Evaluation configurations */
   evals?: AgentEvalConfig[];
   /** Codemode configuration (enabled, token_reduction, speedup) */
