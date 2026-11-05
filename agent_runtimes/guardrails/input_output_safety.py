@@ -61,6 +61,17 @@ class PromptInjectionCapability(AbstractCapability[Any]):
                 )
 
 
+#: What personal data looks like, by name: the PII detector's table, and the
+#: Sensitive Data Guard's (`agent_runtimes.apps.guards`).
+PII_PATTERNS: dict[str, str] = {
+    "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    "phone": r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}",
+    "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
+    "credit_card": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
+    "ip_address": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+}
+
+
 @dataclass
 class PiiDetectorCapability(AbstractCapability[Any]):
     """PII detector for input prompts."""
@@ -73,13 +84,7 @@ class PiiDetectorCapability(AbstractCapability[Any]):
     )
 
     def __post_init__(self) -> None:
-        base = {
-            "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            "phone": r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}",
-            "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
-            "credit_card": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
-            "ip_address": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-        }
+        base = PII_PATTERNS
         targets = self.detect or list(base.keys())
         for name in targets:
             if name in base:

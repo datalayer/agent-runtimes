@@ -24,14 +24,15 @@ from agent_runtimes.apps.guards import (
     AppCheckBlockedError,
     AppChecks,
     AppChecksCapability,
+    classes_needed,
     credentials_in,
-    denied_fields_in,
     holds,
-    permissions_needed,
+    personal_data_in,
     redact,
 )
 from agent_runtimes.apps.rules import Decision
-from agent_runtimes.types import AppSpec
+from agent_runtimes.specs.guards import GUARD_CATALOGUE
+from agent_runtimes.types import AppSpec, GuardSpec
 
 AWS = "AKIA" + "ABCDEFGHIJKLMNOP"
 GITHUB = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0"
@@ -103,9 +104,6 @@ def test_credentials_are_found_and_ordinary_text_is_not():
     assert credentials_in("-----BEGIN RSA PRIVATE KEY-----\n...") == ["a private key"]
     assert credentials_in("sk-" + "a" * 30) == ["an API key"]
     assert credentials_in("The weather in Brussels, with skies and keys.") == []
-    assert denied_fields_in(
-        {"user": {"Password": "x", "name": "y"}}, ["*Password*"]
-    ) == ["Password"]
 
 
 def test_a_guard_this_runtime_cannot_run_is_said_not_passed():
@@ -135,15 +133,24 @@ def test_built_in_nothing_sensitive_leaves_in_a_call_or_an_answer():
     )
 
 
-def test_the_sensitive_data_stop_gate_stops_a_denied_field():
+def test_the_sensitive_data_stop_gate_stops_personal_data_in_a_call():
     checks = AppChecks.of(
         app(guards=["sensitive-data-guard:0.0.1"], gates=["sensitive-data-stop:0.0.1"])
     )
     verdict = checks.verdict_at(
-        "in_flight", {"tool": "update", "args": {"record": {"IBAN": "BE00"}}}
+        "in_flight",
+        {"tool": "update", "args": {"record": {"ssn": "123-45-6789"}}},
     )
     assert verdict.action == "stop" and verdict.gate == "sensitive-data-stop"
-    assert "IBAN" in verdict.sentence
+    assert "a social security number" in verdict.sentence
+    assert personal_data_in({"to": "bob@acme.com"}) == ["an email address"]
+    # A field name alone is not sensitive data: a Policy names no denied fields.
+    assert (
+        checks.verdict_at(
+            "in_flight", {"tool": "update", "args": {"record": {"IBAN": "BE00"}}}
+        ).action
+        == "proceed"
+    )
 
 
 def test_the_tool_violation_gate_sends_the_step_back():
@@ -336,7 +343,32 @@ def test_a_context_that_is_not_there_fails_the_required_frame_guard():
     assert "no-such-frame" in failed["required-frame-guard"].sentence
 
 
-def test_what_its_guardrail_does_not_allow_fails_the_permission_guard():
+def _under(guard_id: str, policy: str) -> GuardSpec:
+    """The catalogue's Guard, extending another Policy of the catalogue."""
+    return GuardSpec.model_validate(
+        {**GUARD_CATALOGUE[guard_id].model_dump(), "policy": policy}
+    )
+
+
+def _checks_under(spec: AppSpec, policy: str) -> AppChecks:
+    checks = AppChecks.of(spec)
+    checks.guards = [_under(guard.id, policy) for guard in checks.guards]
+    return checks
+
+
+def _allowing(reason: str = "granted"):
+    """An authorize hook that allows everything, as IAM would for a holder of every relation."""
+    from agent_shield.policy import Authorization
+
+    def hook(request):
+        return Authorization(
+            verdict="allow", reason=reason, authorizer="test", cached=False
+        )
+
+    return hook
+
+
+def test_what_the_application_does_is_read_by_the_classes_a_policy_decides():
     spec = app_with(
         connections=[{"server": "slack:0.0.1", "access": "write", "as": "user"}],
         permissions={
@@ -344,44 +376,101 @@ def test_what_its_guardrail_does_not_allow_fails_the_permission_guard():
             "computer": {"shell": True, "browse": True},
         },
     )
-    assert set(permissions_needed(spec)) == {
-        "read_data",
-        "write_data",
-        "execute_code",
-        "access_internet",
-        "send_email",
-    }
-    failed = {v.guard: v for v in AppChecks.of(spec).preflight({}) if v.passed is False}
+    needed = classes_needed(spec)
+    assert set(needed) == {"read", "write", "execute", "send"}
+    assert "the Space `sales`" in needed["write"]
+    assert "slack.slack_post_message" in needed["send"]
+    assert needed["execute"] == "its computer runs commands"
+
+
+def test_the_default_policy_asks_rather_than_denies_so_the_permission_guard_passes():
+    spec = app_with(
+        connections=[{"server": "slack:0.0.1", "access": "write", "as": "user"}],
+        permissions={
+            "spaces": [{"space": "sales", "access": "write"}],
+            "computer": {"shell": True},
+        },
+    )
+    # `default:0.0.1`: reading and editing inside are done, a command and
+    # sending are asked first; nothing is denied, nobody needs authorizing.
+    assert GUARD_CATALOGUE["permission-guard"].policy == "default:0.0.1"
+    verdicts = AppChecks.of(spec).preflight({})
+    assert all(v.passed for v in verdicts)
+
+
+def test_what_its_policy_denies_or_leaves_unauthorized_fails_the_permission_guard():
+    spec = app_with(
+        connections=[{"server": "slack:0.0.1", "access": "write", "as": "user"}],
+        permissions={"computer": {"shell": True}},
+        tools=[{"name": "purge", "description": "Purges", "does": ["delete"]}],
+    )
+    # The organization's baseline: nothing is deleted, and reading, writing,
+    # running a command and sending need an authorization beside the Rules.
+    checks = _checks_under(spec, "organization-baseline:0.0.1")
+    failed = {v.guard: v for v in checks.preflight({}) if v.passed is False}
     verdict = failed["permission-guard"]
-    # default-platform-user grants reading, code and the internet; not sending or writing.
-    assert (
-        "`send:email`" in verdict.sentence
-        and "slack.slack_post_message" in verdict.sentence
-    )
-    assert (
-        "`write:data`" in verdict.sentence and "the Space `sales`" in verdict.sentence
-    )
-    assert (
-        "execute:code" not in verdict.sentence
-        and "access:internet" not in verdict.sentence
-    )
     assert verdict.gate == "configuration-check"
+    assert "organization-baseline:0.0.1 denies" in verdict.sentence
+    assert "it deletes through purge" in verdict.sentence
+    # Nobody launched it that was said: nothing is authorized unsaid.
+    assert "no authorizer is configured" in verdict.sentence
+    assert "it reads" in verdict.sentence and "it can send" in verdict.sentence
+    # The launching identity authorized for every class: only the deletion stays denied.
+    from agent_shield.policy import Subject
+
+    authorized = {
+        v.guard: v
+        for v in checks.preflight(
+            {"subject": Subject(type="account", id="alice"), "authorize": _allowing()}
+        )
+        if v.passed is False
+    }
+    sentence = authorized["permission-guard"].sentence
+    assert "it deletes through purge" in sentence and "nothing is deleted" in sentence
+    assert "it reads" not in sentence and "it can send" not in sentence
 
 
-def test_a_source_outside_its_guardrails_scope_fails_the_data_source_authorization_guard():
-    spec = app_with(connections=[{"server": "tavily:0.0.1"}])
+def test_reading_its_policy_does_not_let_it_fails_the_data_source_authorization_guard():
+    spec = app_with(connections=[{"server": "tavily:0.0.1"}], contents=["pipeline"])
+    # The baseline lends every server by name (none listed): tavily is lent;
+    # reading `pipeline` needs an authorization nobody gave.
     failed = {
         v.guard: v
-        for v in AppChecks.of(spec).preflight({"prompt": "What is the SSN of Bob?"})
+        for v in _checks_under(spec, "organization-baseline:0.0.1").preflight({})
         if v.passed is False
     }
     verdict = failed["data-source-authorization-guard"]
-    assert "`tavily` is not among the systems" in verdict.sentence
-    assert "`SSN`" in verdict.sentence and "denied" in verdict.sentence
-    # The permission guard reads tavily as reading, which is allowed.
-    assert "permission-guard" not in failed
-    clean = AppChecks.of(app_with()).preflight({"prompt": "What is the weather?"})
+    assert "`tavily` is not among" not in verdict.sentence
+    assert "reading `pipeline` is denied by organization-baseline:0.0.1" in (
+        verdict.sentence
+    )
+    # Under the default Policy everything it reads is read: nothing fails.
+    assert GUARD_CATALOGUE["data-source-authorization-guard"].policy == "default:0.0.1"
+    clean = AppChecks.of(spec).preflight({"prompt": "What is the weather?"})
     assert all(v.passed for v in clean)
+
+
+def test_a_policy_lending_servers_by_name_lends_those_alone(monkeypatch):
+    from agent_runtimes.specs import guards as catalogue
+    from agent_runtimes.specs.policies import POLICY_CATALOGUE
+
+    lent = POLICY_CATALOGUE["default"].model_copy(
+        update={
+            "policy": {
+                **POLICY_CATALOGUE["default"].policy,
+                "mcp": {"allow": ["slack"]},
+            }
+        }
+    )
+    monkeypatch.setitem(catalogue.POLICY_CATALOGUE, "default", lent)
+    spec = app_with(connections=[{"server": "tavily:0.0.1"}, {"server": "slack:0.0.1"}])
+    failed = {v.guard: v for v in AppChecks.of(spec).preflight({}) if v.passed is False}
+    verdict = failed["data-source-authorization-guard"]
+    assert (
+        "`tavily` is not among the servers default:0.0.1 lends (slack)"
+        in verdict.sentence
+    )
+    assert "`slack`" not in verdict.sentence
 
 
 def test_instructions_holding_a_token_stop_the_session_before_its_model_is_asked():

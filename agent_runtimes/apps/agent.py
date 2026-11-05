@@ -163,6 +163,18 @@ def app_capabilities(
             deployment_uid=recorder.deployment_uid,
             unread=recorder.approvals_unread,
         ).granted
+    # Who launched it, for the Permission Guard's reading of its Policy's
+    # rules: the deployment served, else the credential's account; the
+    # Shield's authorizer with the same credential, read at each decision.
+    from agent_shield.policy import hook_for
+
+    from agent_runtimes.apps.record import token_for
+    from agent_runtimes.guardrails import shield_authorizer
+
+    def credential() -> str:
+        return token_for(recorder.deployment_uid)[0] or ""
+
+    authorizer = shield_authorizer.runtime_authorizer(credential)
     checks = AppChecksCapability(
         checks=AppChecks.of(app),
         agent_id=agent_id,
@@ -174,6 +186,10 @@ def app_capabilities(
         answered=recorder.answered,
         # What the Required Frame Guard reads at a session's start (R-06).
         organization=organization,
+        subject=lambda: shield_authorizer.runtime_subject(
+            credential(), recorder.deployment_uid
+        ),
+        authorize=hook_for(authorizer) if authorizer is not None else None,
     )
     # The model budget and the spend limit of the policies in force, soft then
     # hard, on every model request (SH-32): the organization's from
