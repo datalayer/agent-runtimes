@@ -54,6 +54,7 @@ dependencies = [
     # An Appspec's `a2a` extensions (PR-02): an older one refuses the field.
     # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SH-50).
     # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SH-60).
+    # 1.5.103 with agentspecs 0.0.143: a Guard extends a Policy; the Guardrails kind is gone.
     # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
     # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
     # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
@@ -72,7 +73,7 @@ dependencies = [
     # agentspecs 0.0.138: permissions.computer.repository (a repository lent to an application), the space backdrop.
     # agentspecs 0.0.139: colours by palette name.
     # agentspecs 0.0.140: the minimal and orb backdrops.
-    "agentspecs>=0.0.141",
+    "agentspecs>=0.0.143",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
