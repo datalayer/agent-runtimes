@@ -663,8 +663,8 @@ export interface BattleSpec {
   /** Two or more. */
   contestants: BattleContestantSpec[];
   referee: BattleRefereeSpec;
-  /** For a game: which arena. */
-  arena?: 'pong' | 'invaders';
+  /** The arena drawn in the page: a game's, which keeps the score (`pong`, `invaders`); a `deck` or a `sheet` the contestants of a race or a challenge work in. */
+  arena?: 'pong' | 'invaders' | 'deck' | 'sheet';
   /** What a played Battle has to show. */
   rehearsal: { expects: string[] };
   enabled: boolean;
