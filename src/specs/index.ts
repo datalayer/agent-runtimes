@@ -35,7 +35,6 @@ export * from './policies';
 export * from './guards';
 export * from './gates';
 export * from './tracks';
-export * from './battles';
 export * from './ops';
 export * from './apps';
 export * from './scenes';

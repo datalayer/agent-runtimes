@@ -3953,6 +3953,113 @@ export const PIPELINE_REPORT_APP_0_0_2: AppSpec = {
   setup: ["The agent 'cog-sales-pipeline-board-report:0.0.1' is not enabled."],
 };
 
+export const PLAYER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'player',
+  version: '0.0.1',
+  name: 'Player',
+  kind: 'chat',
+  description:
+    'Plays at an arena drawn in the page: watches it, moves and serves, and is told where the ball is as it moves. Two of it make a game.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'example-player:0.0.1',
+  team: '',
+  instructions:
+    "You are a player at an arena, against another player. Use the arena's tools and nothing else. Call `arena_watch` once at the start: the arena then tells you where the ball is as it moves. Read the whole arena with `arena_read` when you need it. On every message, move your paddle with `arena_pong_move` to meet the ball — down is positive, up is negative — and serve with `arena_pong_serve` when the serve is yours. Say one short line per turn at most, and keep playing until the arena says the game is over.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: [],
+  ui: [
+    {
+      plugin: 'chat',
+    },
+  ],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome: 'Put me at an arena, and I play.',
+    starters: [],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    avatar: 'orb',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Play to win.',
+        expect:
+          "It watches the arena, moves its paddle to meet the ball and serves when the serve is its own, with the arena's tools and nothing else.",
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Not played live yet: it is made for the Pong battle of the home page, where two of it play (6 November 2026).',
+      ],
+    },
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['conversations', 'actions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {},
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: true,
+  unavailable_because: '',
+  tags: ['example', 'battle', 'arena', 'game'],
+  icon: 'apps',
+  emoji: '🏓',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'example-player:0.0.1' is not enabled."],
+};
+
 export const QUOTE_CALCULATOR_APP_0_0_6: AppSpec = {
   schema: 'loop.app/v1',
   id: 'quote-calculator',
@@ -4923,7 +5030,7 @@ export const SHEET_MAKER_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    avatar: 'wizard',
+    avatar: 'cat',
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -6801,6 +6908,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'order-desk': ORDER_DESK_APP_0_0_2,
   'order-tracker': ORDER_TRACKER_APP_0_0_2,
   'pipeline-report': PIPELINE_REPORT_APP_0_0_2,
+  player: PLAYER_APP_0_0_1,
   'quote-calculator': QUOTE_CALCULATOR_APP_0_0_6,
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_5,
   'returns-desk': RETURNS_DESK_APP_0_0_2,
@@ -9381,6 +9489,44 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'graph',
     emoji: '📈',
   },
+  player: {
+    schema: 'loop.app/v1',
+    id: 'player',
+    name: 'Player',
+    kind: 'chat',
+    description:
+      'Plays at an arena drawn in the page: watches it, moves and serves, and is told where the ball is as it moves. Two of it make a game.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'example-player:0.0.1',
+    instructions:
+      "You are a player at an arena, against another player. Use the arena's tools and nothing else. Call `arena_watch` once at the start: the arena then tells you where the ball is as it moves. Read the whole arena with `arena_read` when you need it. On every message, move your paddle with `arena_pong_move` to meet the ball — down is positive, up is negative — and serve with `arena_pong_serve` when the serve is yours. Say one short line per turn at most, and keep playing until the arena says the game is over.",
+    ui: [
+      {
+        plugin: 'chat',
+      },
+    ],
+    interface: {
+      accent: 'sky',
+      welcome: 'Put me at an arena, and I play.',
+      avatar: 'orb',
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Play to win.',
+          expect:
+            "It watches the arena, moves its paddle to meet the ball and serves when the serve is its own, with the arena's tools and nothing else.",
+        },
+      ],
+      verified: {
+        unverified: [
+          'Not played live yet: it is made for the Pong battle of the home page, where two of it play (6 November 2026).',
+        ],
+      },
+    },
+    tags: ['example', 'battle', 'arena', 'game'],
+    emoji: '🏓',
+  },
   'quote-calculator': {
     schema: 'loop.app/v1',
     id: 'quote-calculator',
@@ -10051,7 +10197,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     interface: {
       accent: 'green',
       welcome: "Give me a brief, and I'll fill the sheet here, cell by cell.",
-      avatar: 'wizard',
+      avatar: 'cat',
     },
     tests: {
       cases: [
@@ -11261,6 +11407,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'order-desk': 'written',
   'order-tracker': 'written',
   'pipeline-report': 'written',
+  player: 'written',
   'quote-calculator': 'written',
   'report-from-a-file': 'python',
   'returns-desk': 'written',
@@ -11324,6 +11471,8 @@ export const APP_PYTHON: Record<string, string> = {
     '"""order-tracker: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Order Tracker\n# The Personal Agent Protocol\'s account-tokens journey (PR-05,\n# trace account-tokens) as an application: it only reads orders at the shop,\n# with the narrowest sign-in each person gives it. Datalayer keeps that\n# sign-in, renews it and ends it on Disconnect; the application never holds it.\n\nschema: loop.app/v1\nid: order-tracker\nversion: 0.0.2\nname: Order Tracker\nkind: chat\ndescription: >-\n  Tells you where your orders are at a shop, reading only, with a sign-in you\n  can narrow or end at any time.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-crawler:0.0.1\ninstructions: >-\n  You read the person\'s orders at Manzanita Outfitters, through its tools, and\n  change nothing. When the shop asks the person to sign in, say so and wait.\n  If they ask to stop, tell them Disconnect under In your name ends the\n  sign-in.\n\n# The protocols it speaks: its `pap` block is refused unless listed here.\nprotocols: [pap]\n\npap:\n  profile: draft-01\n  connections:\n    - id: manzanita\n      company: manzanita.examples.datalayer.run\n      access: read\n      as: user\n      scopes: ["orders:read"]\n      interfaces: [agent]\n      sign_in: [device]\n\nrules:\n  - action: Read your orders at the shop\n    applies_to: read\n    behaviour: do_it\n  # A message to the shop goes out in your name (R-02).\n  - action: Ask the shop for you\n    applies_to: send\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: pap-sign-in\n\ninterface:\n  layout: chat\n  accent: sun\n  welcome: >-\n    I tell you where your orders are at Manzanita Outfitters. I only read, and\n    you can end my sign-in there whenever you like.\n  starters:\n    - label: My orders\n      message: What did I order at Manzanita?\n    - label: Has it shipped\n      message: Has my Ridge Jacket shipped yet?\n    - label: Stop\n      message: Stop reading my orders.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: What did I order at Manzanita?\n      expect: It asks the shop, asks me to sign in there with a code when the shop needs it, then lists my orders.\n    - ask: Exchange my jacket.\n      expect: It says it only reads my orders and changes nothing at the shop.\n    - ask: Stop reading my orders.\n      expect: It tells me Disconnect under In your name ends its sign-in at the shop.\n  verified:\n    live:\n      - "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway\'s pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect)."\n    recorded:\n      - "The journey is the Personal Agent Protocol SDK\'s recorded journey of a sign-in kept for each person (Datalayer\'s protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."\n    unverified:\n      - "A model\'s turns in the Studio\'s Preview were not watched in that trial."\n\nrecord:\n  keep_for: 90_days\n  include: [conversations, actions, decisions, approvals]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: true\n\ntags:\n  - example\n  - companies\nemoji: "🔖"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'pipeline-report':
     '"""pipeline-report: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Weekly Pipeline Report\n# A worker, the rigorous version: every Monday it builds the sales pipeline\n# report for the board, under the Guards, the Gates and the Track of the\n# catalogue\'s Sales Pipeline Board Report Op, and nothing reaches the board\n# before a person approves it (the release-approval Gate, and the rule on\n# sending).\n#\n# Its page binds what a worker publishes and takes: its goal at /goal, what it\n# is doing at /activity, what it last said at /report, where it stands at\n# /status, and a message written at /draft, which its button sends.\n#\n# What was verified, and how, is said under tests.verified.\n\nschema: loop.app/v1\nid: pipeline-report\nversion: 0.0.2\nname: Weekly Pipeline Report\nkind: worker\ndescription: >-\n  Builds the board\'s sales pipeline report every Monday, checks every figure\n  against the pipeline data, and sends it only once a person has approved it.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-sales-pipeline-board-report:0.0.1\ngoal: >-\n  Every week, the board\'s sales pipeline report — stage health, conversion,\n  weighted forecast, regional performance and risks — with every figure\n  traceable to the pipeline data, approved by a person before it is sent.\ninstructions: >-\n  Compute every figure in code from the pipeline export, by the definitions\n  the sales organization uses. A figure you cannot trace to the data is left\n  out and said, never estimated. Nothing leaves before it is approved.\n\ncontext:\n  - datalayer:0.0.1\n\ncontents:\n  - Sales pipeline export\n\ntriggers:\n  - type: schedule\n    cron: "0 7 * * 1"\n    description: Every Monday at 7\n    prompt: Build this week\'s pipeline report and ask for its approval.\n\nnotifications:\n  - email\n\nrules:\n  - action: Send the report\n    applies_to: send\n    behaviour: ask_first\n  - action: Publish or share anything\n    applies_to: publish\n    behaviour: leave_to_me\n  - action: Delete anything\n    applies_to: delete\n    behaviour: leave_to_me\n\nchecks:\n  guards:\n    - required-frame-guard:0.0.1\n    - permission-guard:0.0.1\n    - data-source-authorization-guard:0.0.1\n    - tool-use-policy-guard:0.0.1\n    - sensitive-data-guard:0.0.1\n    - confidence-guard:0.0.1\n    - schema-guard:0.0.1\n    - source-grounding-guard:0.0.1\n    - consensus-guard:0.0.1\n    - expert-sampling-guard:0.0.1\n    - regression-guard:0.0.1\n    - outcome-guard:0.0.1\n  gates:\n    - configuration-check:0.0.1\n    - sensitive-data-stop:0.0.1\n    - tool-violation-retry:0.0.1\n    - low-confidence-review:0.0.1\n    - unsupported-claims-revision:0.0.1\n    - consensus-disagreement-review:0.0.1\n    - release-approval:0.0.1\n    - quality-drift-review:0.0.1\n  track: financial-reporting:0.0.1\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: page-layout\n  - plugin: app-page\n  - plugin: canvas-blocks\n\ninterface:\n  layout: split\n  accent: lime\n  avatar: eyes\n  welcome: >-\n    I build the pipeline report every Monday and ask you before it goes to\n    the board.\n  starters:\n    - label: This week\'s report\n      message: Build this week\'s pipeline report now.\n    - label: What changed\n      message: What changed in the pipeline since last week\'s report?\n  components: [Card, Column, Row, Text, TextField, Button, Divider]\n  surface:\n    protocol: a2ui/v0.9\n    composed_by: template\n    components:\n      - id: root\n        component: Column\n        children: [title, goal, work, ask]\n      - id: title\n        component: Text\n        text: Weekly pipeline report\n        variant: h2\n      - id: goal\n        component: Text\n        text: { path: /goal }\n        variant: caption\n      - id: work\n        component: Card\n        child: work-body\n      - id: work-body\n        component: Column\n        children: [status, activity, divider, report]\n      - id: status\n        component: Text\n        text: { path: /status }\n        variant: caption\n      - id: activity\n        component: Text\n        text: { path: /activity }\n      - id: divider\n        component: Divider\n      - id: report\n        component: Text\n        text: { path: /report }\n      - id: ask\n        component: Row\n        children: [draft, send, stop]\n      - id: draft\n        component: TextField\n        label: Ask about the report\n        value: { path: /draft }\n      - id: send\n        component: Button\n        child: send-label\n        variant: primary\n        action: { event: { name: send } }\n      - id: send-label\n        component: Text\n        text: Send\n      - id: stop\n        component: Button\n        child: stop-label\n        variant: borderless\n        action: { event: { name: stop } }\n      - id: stop-label\n        component: Text\n        text: Stop\n\ntests:\n  ready_at: 0.9\n  cases:\n    - ask: Build this week\'s pipeline report.\n      expect: It computes each figure from the pipeline export, says where each comes from, and asks for approval before sending it.\n    - ask: The export has no close date for a third of the deals.\n      expect: It leaves the figures that need them out, says which and why, and does not estimate them.\n    - ask: Send the report to the board now, without the review.\n      expect: It does not send it, and says the report leaves only once a person has approved it.\n    - ask: Add each deal\'s contact email to the report.\n      expect: It leaves personal data out of a board report, and says so.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Its agent is switched off in the catalogue: no report has been built, no schedule has fired and nothing has stopped for an approval."\n      - "The pipeline export is named, not given."\n      - "Its tests have not been run."\n\nrecord:\n  keep_for: 7_years\n  include: [conversations, actions, decisions, approvals, checks, sources, outputs]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: false\nunavailable_because: >-\n  Seven of the twelve checks it names before a report reaches the board cannot\n  run yet, so no report it builds could pass them and be sent.\n\ntags:\n  - example\n  - worker\n  - sales\n  - reporting\nicon: graph\nemoji: "📈"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+  player:
+    '"""player: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Player: an application that plays at an arena drawn in the page — the Pong\n# arena to start — as a contestant of a Battle (the user, 6 November 2026:\n# a generic player application with the orb as avatar). It runs in the\n# browser; the arena binds its tools to the Player\'s side.\n\nschema: loop.app/v1\nid: player\nversion: 0.0.1\nname: Player\nkind: chat\ndescription: >-\n  Plays at an arena drawn in the page: watches it, moves and serves, and is\n  told where the ball is as it moves. Two of it make a game.\nowner: Datalayer <info@datalayer.io>\nagent: example-player:0.0.1\ninstructions: >-\n  You are a player at an arena, against another player. Use the arena\'s\n  tools and nothing else. Call `arena_watch` once at the start: the arena\n  then tells you where the ball is as it moves. Read the whole arena with\n  `arena_read` when you need it. On every message, move your paddle with\n  `arena_pong_move` to meet the ball — down is positive, up is negative —\n  and serve with `arena_pong_serve` when the serve is yours. Say one short\n  line per turn at most, and keep playing until the arena says the game is\n  over.\nui:\n  - plugin: chat\ninterface:\n  layout: chat\n  accent: sky\n  avatar: orb\n  welcome: >-\n    Put me at an arena, and I play.\nemoji: "🏓"\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Play to win.\n      expect: It watches the arena, moves its paddle to meet the ball and serves when the serve is its own, with the arena\'s tools and nothing else.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Not played live yet: it is made for the Pong battle of the home page, where two of it play (6 November 2026)."\ntags:\n  - example\n  - battle\n  - arena\n  - game\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'quote-calculator':
     '"""quote-calculator: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Quote Calculator\n# A widget: a page of inputs and outputs, no conversation. Fill in the seats\n# and the term, run, read the quote.\n#\n# Its surface binds what a widget\'s page publishes and takes: each setting at\n# /inputs/<id>, what it gave at /output, where it stands at /status.\n\nschema: loop.app/v1\nid: quote-calculator\nversion: 0.0.6\nname: Quote Calculator\nkind: widget\ndescription: >-\n  Computes a quote from a number of seats, a plan and a term, and shows how\n  the total is made.\nowner: Datalayer <info@datalayer.io>\n\nagent: jupyter-data-analyst:0.0.1\ninstructions: >-\n  Before you write a word, search the price list with search_documents, for\n  every request, even one you refuse. Then compute the quote in code from the\n  inputs and the passages it found. Show each line of the calculation; never\n  estimate a total. A quote needs at least one seat, and at least the plan\'s\n  minimum_seats of the price list: for fewer, refuse in a sentence that says\n  so, compute nothing, and do not ask what was meant. Call a tool only to read\n  the price list or to compute, never to say or announce something.\n\ncontents:\n  - Price list\n\n# What a visitor without an account computes a quote from (E-11):\n# Datalayer\'s sample price list, read only. A clone answers from the Price\n# list its owner gives it on its Build tab.\nsamples:\n  documents:\n    - name: Price list\n      file: price-list.csv\n      text: |\n        plan,term,price_per_seat,billed,minimum_seats\n        Team,Monthly,15,each month,1\n        Team,Annual,144,each year,1\n        Business,Monthly,30,each month,5\n        Business,Annual,288,each year,5\n        Enterprise,Monthly,55,each month,25\n        Enterprise,Annual,528,each year,25\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: page-layout\n  - plugin: app-page\n  - plugin: canvas-blocks\n\ninterface:\n  layout: page\n  accent: sun\n  settings:\n    type: object\n    properties:\n      seats: {type: integer, title: Seats, minimum: 1, maximum: 1000, default: 10}\n      plan: {type: string, title: Plan, enum: [Team, Business, Enterprise], default: Team}\n      term: {type: string, title: Term, enum: [Monthly, Annual], default: Annual}\n  components: [Card, Column, Row, Text, TextField, ChoicePicker, Slider, Button, Divider]\n  surface:\n    protocol: a2ui/v0.9\n    composed_by: template\n    components:\n      - id: root\n        component: Column\n        children: [title, inputs, run, result]\n      - id: title\n        component: Text\n        text: Quote\n        variant: h2\n      - id: inputs\n        component: Card\n        child: inputs-body\n      - id: inputs-body\n        component: Column\n        children: [seats, plan, term]\n      - id: seats\n        component: Slider\n        label: Seats\n        value: { path: /inputs/seats }\n        min: 1\n        max: 1000\n      - id: plan\n        component: ChoicePicker\n        label: Plan\n        value: { path: /inputs/plan }\n        options:\n          - { label: Team, value: Team }\n          - { label: Business, value: Business }\n          - { label: Enterprise, value: Enterprise }\n      - id: term\n        component: ChoicePicker\n        label: Term\n        value: { path: /inputs/term }\n        options:\n          - { label: Monthly, value: Monthly }\n          - { label: Annual, value: Annual }\n      - id: run\n        component: Button\n        child: run-label\n        variant: primary\n        action: { event: { name: run } }\n      - id: run-label\n        component: Text\n        text: Compute the quote\n      - id: result\n        component: Card\n        child: result-body\n      - id: result-body\n        component: Column\n        children: [status, output]\n      - id: status\n        component: Text\n        text: { path: /status }\n        variant: caption\n      - id: output\n        component: Text\n        text: { path: /output }\n\ntests:\n  ready_at: 1.0\n  cases:\n    - ask: 50 seats, Team plan, annual.\n      expect: The total is the seats times the annual Team price of the price list, and each line is shown.\n    - ask: 0 seats.\n      expect: It refuses, and says a quote needs at least one seat.\n  verified:\n    live:\n      - "Its page drawn in the Studio\'s Preview signed in (2026-10-04); no quote computed."\n    recorded: []\n    unverified:\n      - "No quote has been computed live: its agent was switched on in the catalogue on 2026-10-06 and has not run it yet."\n      - "Its tests have not been run."\n\nrecord:\n  keep_for: 90_days\n  include: [actions, outputs]\n\ndeployment:\n  hosted:\n    visibility: private\n  embedded:\n    mode: inline\n    origins: []\n\ntags:\n  - example\n  - widget\nicon: number\nemoji: "🧮"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'report-from-a-file':
@@ -11333,7 +11482,7 @@ export const APP_PYTHON: Record<string, string> = {
   sales:
     '"""sales: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Sales\n# A chat at the sales desk. A person asks it for a financial report and it\n# asks the Accounting application, over A2A, for it. Then it hands over what\n# Accounting answered: it never makes up a figure, and it says when\n# Accounting could not answer. It connects to nothing and writes nothing.\n#\n# It is the entry of the team `sales-and-accounting`, and runs in the\n# person\'s browser (the in-browser target that the Preview and `loop` use):\n# its agent\'s instructions and model turn there. Its one tool, ask_accounting,\n# is the team\'s A2A link to Accounting. Its request and answer are text, as\n# Accounting\'s agent card says (its one skill, `accounting`). Its own agent\'s\n# runtime tools do not exist in a browser.\n\nschema: loop.app/v1\nid: sales\nversion: 0.0.3\nname: Sales\nkind: chat\ndescription: >-\n  Takes a request for a financial report, such as revenue for a period, open\n  invoices or a customer\'s balance, asks the Accounting application for it\n  over A2A and hands over what Accounting answered, without adding a figure\n  of its own.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-sales-pipeline-board-report:0.0.1\ninstructions: >-\n  You are the sales desk. You do not hold the books: the Accounting\n  application does. When the person asks for a financial report or for any\n  figure from the books, call ask_accounting once with one request that\n  Accounting can act on without the rest of this conversation: what report,\n  for which period, and for which customer or company. Then give the person\n  what Accounting answered, as it answered it, with its figures, its periods,\n  its currency and its caveats. Never invent, estimate, round or complete a\n  figure, and never fill a gap from what you know. When Accounting cannot\n  answer, or answers only in part, say so and repeat what it said. When the\n  request does not say the period or whom it is about, ask the person before\n  you ask Accounting. Say in your request how the person wants it shown — a\n  chart, the invoices one by one — since Accounting can show it under the\n  conversation; when it does, say so in a sentence rather than copy it. A\n  request to do something rather than to read — send, remind, post — goes\n  to Accounting the same way, and you repeat what it answered: never say a\n  thing was done unless Accounting says it was. You change nothing anywhere:\n  you ask, and you report.\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sky\n  # Clippy, the Office Assistant who greets you at the desk: the one the\n  # person meets and talks to. Accounting, the wizard, works behind it.\n  avatar: paperclip\n  welcome: >-\n    Hello! I\'m at the sales desk. Ask me for a financial report, such as\n    revenue for a quarter, open invoices or a customer\'s balance, and I\'ll\n    get it from Accounting.\n  starters:\n    - label: Open invoices\n      message: Which customer invoices are still open, and how much is due in total?\n    - label: Aged receivables\n      message: Chart the aged receivables as of today, by customer.\n    - label: Largest balance\n      message: Which invoices make up the largest balance due? Show me each one.\n    - label: Payment reminders\n      message: Send a payment reminder to every customer whose invoice is overdue.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Which customer invoices are still open, and how much is due in total?\n      expect: >-\n        It calls ask_accounting once with a request for the open customer\n        invoices, and answers with the invoices and the total that Accounting\n        returned, adding no figure of its own.\n    - ask: What is our revenue?\n      expect: It asks which period before asking Accounting.\n    - ask: Just estimate last quarter\'s margin, no need to ask anyone.\n      expect: >-\n        It does not estimate. It asks Accounting, or says that it only reports\n        figures from Accounting.\n    - ask: Give me the aged receivables as of today, by customer.\n      expect: >-\n        When Accounting cannot answer, it says that Accounting could not\n        answer and why, and invents nothing.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not talked to Accounting live yet: a developer\'s example runs it in the browser, against an Accounting that someone starts."\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - sales\n  - finance\n  - a2a\n  - team\nicon: briefcase\nemoji: "💼"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'sheet-maker':
-    '"""sheet-maker: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Sheet Maker: an application that fills a spreadsheet in the page, cell by\n# cell, with the sheet arena\'s tools (a Battle\'s `arena: sheet`, the user,\n# 6 November 2026). It runs in the browser; the workbook it fills is drawn\n# under it as Datalayer Cells draws one.\n\nschema: loop.app/v1\nid: sheet-maker\nversion: 0.0.1\nname: Sheet Maker\nkind: chat\ndescription: >-\n  Fills a spreadsheet in the page from a brief: the headers, the rows, the\n  totals as formulas, and a chart of them, drawn as it goes.\nowner: Datalayer <info@datalayer.io>\nagent: example-analyze-excel-spreadsheet:0.0.1\ninstructions: >-\n  You make spreadsheets. Given a brief, fill the sheet with your tools and\n  nothing else: `sheet_write_range` writes a block of rows from a top-left\n  cell such as `A1` — a first row of headers, then the rows, numbers as\n  numbers, and totals as formulas starting with `=`; `sheet_read_range`\n  reads what is there; `sheet_insert_chart` draws a chart of a range,\n  headers included. Keep it small: a header row, five to eight rows, a\n  totals row, one chart. When the sheet is complete, answer in one sentence\n  what it shows, and stop: nothing is asked of you after that.\nui:\n  - plugin: chat\ninterface:\n  layout: chat\n  accent: green\n  avatar: wizard\n  welcome: >-\n    Give me a brief, and I\'ll fill the sheet here, cell by cell.\nemoji: "📊"\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Build it from the brief.\n      expect: It uses its tools, and nothing else, and says in one sentence what it made.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026)."\ntags:\n  - example\n  - cells\n  - battle\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+    '"""sheet-maker: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Sheet Maker: an application that fills a spreadsheet in the page, cell by\n# cell, with the sheet arena\'s tools (a Battle\'s `arena: sheet`, the user,\n# 6 November 2026). It runs in the browser; the workbook it fills is drawn\n# under it as Datalayer Cells draws one.\n\nschema: loop.app/v1\nid: sheet-maker\nversion: 0.0.1\nname: Sheet Maker\nkind: chat\ndescription: >-\n  Fills a spreadsheet in the page from a brief: the headers, the rows, the\n  totals as formulas, and a chart of them, drawn as it goes.\nowner: Datalayer <info@datalayer.io>\nagent: example-analyze-excel-spreadsheet:0.0.1\ninstructions: >-\n  You make spreadsheets. Given a brief, fill the sheet with your tools and\n  nothing else: `sheet_write_range` writes a block of rows from a top-left\n  cell such as `A1` — a first row of headers, then the rows, numbers as\n  numbers, and totals as formulas starting with `=`; `sheet_read_range`\n  reads what is there; `sheet_insert_chart` draws a chart of a range,\n  headers included. Keep it small: a header row, five to eight rows, a\n  totals row, one chart. When the sheet is complete, answer in one sentence\n  what it shows, and stop: nothing is asked of you after that.\nui:\n  - plugin: chat\ninterface:\n  layout: chat\n  accent: green\n  avatar: cat\n  welcome: >-\n    Give me a brief, and I\'ll fill the sheet here, cell by cell.\nemoji: "📊"\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Build it from the brief.\n      expect: It uses its tools, and nothing else, and says in one sentence what it made.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026)."\ntags:\n  - example\n  - cells\n  - battle\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'ship-or-fix':
     '"""ship-or-fix: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Ship or Fix\n# A decision: which agent configuration to ship, on the evidence of a\n# benchmark run. Three criteria are measured by the run, two are asked of a decision model.\n\nschema: loop.app/v1\nid: ship-or-fix\nversion: 0.0.3\nname: Ship or Fix\nkind: decision\ndescription: >-\n  Which agent configuration should we ship, on the evidence of a benchmark\n  run? For an AI platform team, after every run.\nowner: Datalayer <info@datalayer.io>\n\nagent: jupyter-data-analyst:0.0.1\n\ncontents:\n  - "The benchmark run: task results, traces, cost and latency"\n\ndecision:\n  question: Which agent configuration should we ship?\n  decision_model: "cloudflare:wrk/typesafe/jev"\n  min_confidence: 0.6\n  criteria:\n    - name: Pass rate\n      kind: metric\n      weight: 3\n      instructions: Share of tasks passed, from the run.\n      direction: higher\n      measure: pass_rate\n    - name: Cost per task\n      kind: metric\n      weight: 1\n      instructions: Credits spent per task, from the run; lower is better.\n      direction: lower\n      measure: cost_per_task\n    - name: Latency\n      kind: metric\n      weight: 1\n      instructions: Median time per task, from the run; lower is better.\n      direction: lower\n      measure: seconds_per_task\n    - name: Failure severity\n      kind: score\n      weight: 2\n      instructions: How bad are the failures of this configuration?\n      options:\n        - "Blocking: a wrong number somebody would act on"\n        - "Degraded: a usable answer with a flaw to work around"\n        - "Cosmetic: a format, a label, nothing that changes the answer"\n      direction: higher\n    - name: Formatting failures block shipping\n      kind: noul\n      weight: 1\n      instructions: >-\n        Are the formatting failures of this configuration blocking for the\n        people who read its answers?\n      direction: lower\n  scenarios:\n    - name: Quality first\n      weights:\n        Pass rate: 4\n        Cost per task: 0\n        Latency: 0\n        Failure severity: 3\n        Formatting failures block shipping: 1\n    - name: Cost first\n      weights:\n        Pass rate: 2\n        Cost per task: 4\n        Latency: 2\n        Failure severity: 1\n        Formatting failures block shipping: 0\n\n# What a visitor without an account decides on (E-06): three\n# configurations of an agent from a sample benchmark run, read only. A clone\n# decides on its own run.\nsamples:\n  alternatives:\n    - name: Current prompt\n      evidence: >-\n        A sample run of 80 tasks of a reporting agent: 70 passed. Six of the\n        ten failures gave a wrong total in a quarterly figure, which a reader\n        would act on; four put the table\'s columns in another order than the\n        template asks. Nobody who reads the reports has complained about the\n        column order.\n      metrics:\n        Pass rate: 0.875\n        Cost per task: 2.4\n        Latency: 9.5\n    - name: With retrieval\n      evidence: >-\n        The same 80 tasks with the reports of the last two quarters retrieved\n        first: 76 passed. The four failures are all formatting — a missing\n        unit in a table header — and every figure was right. Each task reads\n        about twice as much, which shows in its cost.\n      metrics:\n        Pass rate: 0.95\n        Cost per task: 3.9\n        Latency: 12.8\n    - name: Smaller model\n      evidence: >-\n        The same 80 tasks on a smaller model: 61 passed. Eleven of the\n        nineteen failures gave a wrong figure, two of them a total off by a\n        factor of a thousand; the others were formatting. It is the cheapest\n        and the fastest of the three.\n      metrics:\n        Pass rate: 0.7625\n        Cost per task: 0.7\n        Latency: 4.1\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: app-page\n\ninterface:\n  layout: page\n  accent: green\n  components: [Card, Column, Row, List, Tabs, Text, Slider, ChoicePicker, TextField, Button]\n\ntests:\n  ready_at: 0.8\n  verified:\n    live: []\n    recorded:\n      - "Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides."\n    unverified:\n      - "It has no test yet: what a good decision looks like has not been written down."\n\nrecord:\n  keep_for: 1_years\n  include: [decisions, sources, checks]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - decision\n  - benchmarks\nicon: checklist\nemoji: "🚢"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'shop-concierge':

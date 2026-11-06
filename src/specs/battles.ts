@@ -105,16 +105,16 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
   version: '0.0.1',
   name: 'Pong',
   description:
-    "Two coding agents at the Pong arena, each with a paddle and the arena's tools. The arena keeps the score; the first to eleven wins.",
+    "Two Players at the Pong arena, each with a paddle and the arena's tools. The arena keeps the score; the first to eleven wins.",
   variant: 'game',
-  goal: 'You are playing Pong. Read the arena with `arena_read`, move your paddle with `arena_pong_move` to meet the ball, serve with `arena_pong_serve` when it is yours. First to eleven points wins.',
+  goal: 'You are playing Pong. Call `arena_watch` once: the arena then tells you where the ball is as it moves. Read the arena with `arena_read`, move your paddle with `arena_pong_move` to meet the ball, serve with `arena_pong_serve` when it is yours. First to eleven points wins.',
   clockSeconds: 180,
   contestants: [
     {
       id: 'left',
       name: 'Left',
       scene: '',
-      app: 'code-explainer:0.0.1',
+      app: 'player:0.0.1',
       runsIn: 'browser',
       color: 'blue',
     },
@@ -122,7 +122,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       id: 'right',
       name: 'Right',
       scene: '',
-      app: 'code-explainer:0.0.1',
+      app: 'player:0.0.1',
       runsIn: 'browser',
       color: 'red',
     },

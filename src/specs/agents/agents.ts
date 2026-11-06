@@ -52,6 +52,7 @@ import {
   RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
 } from '../backendTools';
 import {
+  ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
   CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
@@ -168,6 +169,8 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'arena-pong:0.0.1': ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
+  'arena-pong': ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
   'cells:0.0.1': CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   cells: CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   'decks:0.0.1': DECKS_FRONTEND_TOOL_SPEC_0_0_1,
@@ -4359,6 +4362,66 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
     },
     required: ['project'],
   },
+  subagents: undefined,
+};
+
+export const EXAMPLE_PLAYER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-player',
+  version: '0.0.1',
+  name: 'Player',
+  description: `Plays at an arena drawn in the page: reads it, moves, serves, and is told where the ball is as it moves — the Pong arena's tools to start.`,
+  tags: ['personal-assistant', 'battle', 'arena', 'game'],
+  domain: 'personal-assistant',
+  enabled: false,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  backendTools: [],
+  frontendTools: [FRONTEND_TOOL_MAP['arena-pong:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'play',
+  emoji: '🏓',
+  color: 'blue',
+  suggestions: [
+    { text: 'Watch the arena and play to win.', summary: 'Play', emoji: '🏓' },
+  ],
+  welcomeMessage: 'I play. Put me at an arena and I watch it, move and serve.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'browser',
+  harness: 'vercel-ai',
+  systemPrompt: `You are a player at an arena drawn in the page, in a Battle against
+another player. Use only the arena's tools. Call \`arena_watch\` once at the
+start: the arena then tells you where the ball is as it moves, as messages
+you did not ask for. Read the arena with \`arena_read\` when you need the
+whole picture. Act on every message: move your paddle with
+\`arena_pong_move\` so that it meets the ball — down is positive, up is
+negative — and serve with \`arena_pong_serve\` when the serve is yours.
+Say little: one short line per turn at most, and never stop playing until
+the arena says the game is over.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: 'vercel-ai',
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
   subagents: undefined,
 };
 
@@ -14384,6 +14447,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-otel': EXAMPLE_OTEL_AGENTSPEC_0_0_1,
   'example-output': EXAMPLE_OUTPUT_AGENTSPEC_0_0_1,
   'example-parameters': EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1,
+  'example-player': EXAMPLE_PLAYER_AGENTSPEC_0_0_1,
   'example-replace-excel-pivot-work':
     EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1,
   'example-resumable-etl-with-checkpoints':
