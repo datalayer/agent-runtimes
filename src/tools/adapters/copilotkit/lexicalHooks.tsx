@@ -11,7 +11,7 @@
  */
 
 import { useMemo } from 'react';
-import type { ToolExecutionContext } from '@datalayer/jupyter-react';
+import type { ToolExecutionContext } from '@datalayer/reactor/tools';
 import {
   useLexicalStore,
   DefaultExecutor as LexicalDefaultExecutor,

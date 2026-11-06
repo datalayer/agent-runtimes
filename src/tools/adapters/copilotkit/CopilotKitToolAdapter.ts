@@ -14,8 +14,8 @@ import type {
   ToolDefinition,
   ToolOperation,
   ToolExecutionContext,
-} from '@datalayer/jupyter-react';
-import { OperationRunner } from '@datalayer/jupyter-react';
+} from '@datalayer/reactor/tools';
+import { OperationRunner } from '@datalayer/reactor/tools';
 
 /**
  * Type signature for CopilotKit's useFrontendTool hook

@@ -162,6 +162,39 @@ vi.mock('@datalayer/jupyter-react', () => ({
   },
 }));
 
+/*
+ * The tools machinery lives in the reactor now (`@datalayer/reactor/tools`,
+ * 6 November 2026): the same runner stub as jupyter-react's above — the
+ * operation called, its result returned as it comes, a streaming one
+ * subscribed — over the real module's other exports.
+ */
+vi.mock('@datalayer/reactor/tools', async importOriginal => ({
+  ...(await importOriginal<typeof import('@datalayer/reactor/tools')>()),
+  OperationRunner: class OperationRunner {
+    async execute(
+      operation: { execute: (params: unknown, context: unknown) => unknown },
+      params: unknown,
+      context: unknown,
+    ) {
+      return operation.execute(params, context);
+    }
+    async subscribe(
+      operation: {
+        subscribe?: (
+          params: unknown,
+          context: unknown,
+          push: unknown,
+        ) => unknown;
+      },
+      params: unknown,
+      context: unknown,
+      push: unknown,
+    ) {
+      return operation.subscribe?.(params, context, push);
+    }
+  },
+}));
+
 // Its custom elements are never drawn in jsdom: every export a dependency
 // imports (provideJupyterDesignSystem, the jp* components…) is a stub that
 // registers nothing, so a newly imported one never fails a suite.

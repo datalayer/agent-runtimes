@@ -190,6 +190,14 @@ class FrontendToolSpec(BaseModel):
     enabled: bool = Field(
         default=True, description="Whether the frontend tool is enabled"
     )
+    streams: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The tools of the set that stream: called once, each keeps pushing "
+            "events the harness tells the model as turns it did not ask for — "
+            "an arena's `arena_watch`."
+        ),
+    )
     toolset: Union[str, List[str]] = Field(
         default="all",
         description=(

@@ -13,9 +13,23 @@ from typing import Dict, List
 
 from agent_runtimes.types import FrontendToolSpec
 
+
 # ============================================================================
 # Frontend Tool Definitions
 # ============================================================================
+
+ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="arena-pong",
+    version="0.0.1",
+    name="Pong arena",
+    description="Two paddles, one ball, first to eleven — read the arena, move your paddle, serve, and be told where the ball is as it moves.",
+    tags=["frontend", "arena", "battle", "game"],
+    enabled=True,
+    toolset=["arena_read", "arena_pong_move", "arena_pong_serve", "arena_watch"],
+    streams=["arena_watch"],
+    icon="@primer/octicons-react:play",
+    emoji="🏓",
+)
 
 CELLS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="cells",
@@ -24,13 +38,7 @@ CELLS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     description="Read and write the spreadsheet on the person's screen, and chart it — the grid drawn by Datalayer Cells.",
     tags=["frontend", "cells", "spreadsheets"],
     enabled=True,
-    toolset=[
-        "cells_read_range",
-        "cells_write_range",
-        "cells_insert_chart",
-        "cells_list_charts",
-        "cells_select_range",
-    ],
+    toolset=["cells_read_range", "cells_write_range", "cells_insert_chart", "cells_list_charts", "cells_select_range"],
     icon="@primer/octicons-react:table",
     emoji="🧮",
 )
@@ -42,26 +50,7 @@ DECKS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     description="Read, write and drive presentations kept as data — a deck, its slides, and the one on screen.",
     tags=["frontend", "decks", "presentations"],
     enabled=True,
-    toolset=[
-        "decks_list_decks",
-        "decks_get_deck",
-        "decks_create_deck",
-        "decks_update_deck",
-        "decks_update_slide",
-        "decks_insert_slide",
-        "decks_delete_slide",
-        "decks_list_slides",
-        "decks_get_slide",
-        "decks_add_slide",
-        "decks_delete_deck",
-        "decks_list",
-        "decks_open",
-        "decks_go_to_slide",
-        "decks_next_slide",
-        "decks_previous_slide",
-        "decks_present",
-        "decks_print",
-    ],
+    toolset=["decks_list_decks", "decks_get_deck", "decks_create_deck", "decks_update_deck", "decks_update_slide", "decks_insert_slide", "decks_delete_slide", "decks_list_slides", "decks_get_slide", "decks_add_slide", "decks_delete_deck", "decks_list", "decks_open", "decks_go_to_slide", "decks_next_slide", "decks_previous_slide", "decks_present", "decks_print"],
     icon="@primer/octicons-react:project",
     emoji="🃏",
 )
@@ -73,14 +62,7 @@ JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     description="Read and edit a notebook, and run cells — but never delete from it.",
     tags=["frontend", "notebook", "edit"],
     enabled=True,
-    toolset=[
-        "readCell",
-        "readAllCells",
-        "insertCell",
-        "updateCell",
-        "runCell",
-        "executeCode",
-    ],
+    toolset=["readCell", "readAllCells", "insertCell", "updateCell", "runCell", "executeCode"],
     icon="@datalayer/icons-react:jupyter",
     emoji="📓",
 )
@@ -138,6 +120,7 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
 # ============================================================================
 
 FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
+    "arena-pong": ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
     "cells": CELLS_FRONTEND_TOOL_SPEC_0_0_1,
     "decks": DECKS_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook-edit": JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
@@ -153,8 +136,8 @@ def get_frontend_tool_spec(tool_id: str) -> FrontendToolSpec | None:
     spec = FRONTEND_TOOL_CATALOG.get(tool_id)
     if spec is not None:
         return spec
-    base, _, ver = tool_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = tool_id.rpartition(':')
+    if base and '.' in ver:
         return FRONTEND_TOOL_CATALOG.get(base)
     return None
 

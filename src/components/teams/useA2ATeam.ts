@@ -64,6 +64,7 @@ import {
 } from '../../runtimes/browser/a2aPeer';
 import type { AppSpec } from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
+import { useToolEventLoop } from './toolEventLoop';
 import {
   frontendToolsToVercelAI,
   type FrontendToolsToVercelAIOptions,
@@ -457,7 +458,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     maxSteps = 6,
     inspector = null,
     frontendTools,
-    onToolEvent,
+    onToolEvent: givenToolEvent,
   } = options;
   // By what it names, so that a page passing a new array of the same media
   // types does not make the agent again.
@@ -598,6 +599,14 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     undefined,
   );
   const [busy, setBusy] = useState(false);
+  // A streaming tool's events, when the page gives no handler of its own
+  // (AGENT_BATTLE B1-00): turns the entry did not ask for, through its send.
+  const sendRef = useRef<(text: string) => unknown>(() => undefined);
+  const ownToolEvent = useToolEventLoop(
+    useCallback((text: string) => sendRef.current(text), []),
+    busy,
+  );
+  const onToolEvent = givenToolEvent ?? ownToolEvent;
   const history = useRef<ModelMessage[]>([]);
   const abort = useRef<AbortController | null>(null);
   const flowTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -1152,6 +1161,10 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     [peerList, personaOf, histories, reports, givens, flows, setAwayOf, NONE],
   );
   const first = teamPeers[0];
+
+  useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   return {
     entryHistory,

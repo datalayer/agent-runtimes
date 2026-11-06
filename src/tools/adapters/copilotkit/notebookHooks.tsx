@@ -11,10 +11,10 @@
  */
 
 import { useMemo } from 'react';
-import type { ToolExecutionContext } from '@datalayer/jupyter-react';
+import type { ToolExecutionContext } from '@datalayer/reactor/tools';
+import { DefaultExecutor } from '@datalayer/reactor/tools';
 import {
   notebookStore,
-  DefaultExecutor,
   notebookToolDefinitions,
   notebookToolOperations,
 } from '@datalayer/jupyter-react';

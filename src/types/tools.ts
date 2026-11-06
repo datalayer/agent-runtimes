@@ -86,6 +86,12 @@ export interface FrontendToolSpec {
    * read and edit a notebook but must never delete from it.
    */
   toolset: string | string[];
+  /**
+   * The tools of the set that stream (AGENT_BATTLE B1-00): called once,
+   * each keeps pushing events the harness tells the model as turns it did
+   * not ask for — an arena's `arena_watch`.
+   */
+  streams?: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
   /** Drawn where there is no icon */
