@@ -17,7 +17,7 @@ import time
 import traceback
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agent_runtimes.guardrails.credentials import (
     SENDS_CREDENTIAL,
@@ -576,6 +576,16 @@ class MCPLifecycleManager:
             # This ordering lets config.env reference extra_env values via ${VAR}.
             # Without the secrets a configure gave for other servers (R-19).
             env = env_for_server(os.environ, config)
+            # A deployment's agent acts as its principal (`apps/principal`):
+            # a server of the catalogue asking for `${DATALAYER_API_KEY}` on a
+            # runtime launched without one — a pool runtime a hosted page or
+            # the keeper gave an application — sends the principal's token,
+            # which the gateway reads as a run with an identity of its own.
+            # Seen 6 November 2026: the home page's Accounting could not open
+            # `odoo-accounting`, its runtime holding no key at all.
+            principal = self._principal_key(server_id, config, env)
+            if principal:
+                env["DATALAYER_API_KEY"] = principal
 
             if extra_env:
                 env.update(extra_env)
@@ -872,6 +882,57 @@ class MCPLifecycleManager:
             await exit_stack.aclose()
         except BaseException as close_error:  # noqa: BLE001
             logger.debug(f"Closing '{server_id}' after {after}: {close_error}")
+
+    @staticmethod
+    def _principal_key(
+        server_id: str, config: MCPServer, env: Mapping[str, str]
+    ) -> str:
+        """The deployment's principal token, when the server asks for
+        ``${DATALAYER_API_KEY}`` and this runtime has none: ``""`` otherwise.
+
+        One served deployment with a token: its principal is the key. None, or
+        several with different tokens: nothing is chosen, and the server
+        fails closed as before (`empty_bearer_problem`). Held, never shown
+        to the model (R-19); logged by name, never by value.
+        """
+        if env.get("DATALAYER_API_KEY"):
+            return ""
+        wanted = "${DATALAYER_API_KEY}"
+        asked = (
+            any(wanted in str(value) for value in (config.headers or {}).values())
+            or any(wanted in str(arg) for arg in (config.args or []))
+            or any(wanted in str(value) for value in (config.env or {}).values())
+        )
+        if not asked:
+            return ""
+        try:
+            from agent_runtimes.apps.principal import (  # noqa: PLC0415
+                deployments_served,
+                principal_token,
+            )
+
+            tokens = {
+                token
+                for token in (principal_token(uid) for uid in deployments_served())
+                if token
+            }
+        except Exception as error:  # noqa: BLE001 - no principal is no key
+            logger.debug(f"No principal to read a key from for '{server_id}': {error}")
+            return ""
+        if len(tokens) != 1:
+            if tokens:
+                logger.warning(
+                    f"'{server_id}' asks for DATALAYER_API_KEY and {len(tokens)} "
+                    "deployments served here hold a principal each: none chosen."
+                )
+            return ""
+        token = tokens.pop()
+        hold(token)
+        logger.info(
+            f"  [mcp/lifecycle] DATALAYER_API_KEY for '{server_id}' is the "
+            "deployment's principal token: the runtime was launched without one."
+        )
+        return token
 
     def _expanded_headers(
         self, config: MCPServer, env: dict[str, str]
