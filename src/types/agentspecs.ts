@@ -624,6 +624,55 @@ export interface TrackSpec {
   emoji?: string;
 }
 
+/** One side of a Battle: a scene of the catalogue played whole, or one application. */
+export interface BattleContestantSpec {
+  /** Its id in the Battle: `blue`, `red`, `left`. */
+  id: string;
+  /** The name the audience sees; the id, capitalised, when unsaid. */
+  name: string;
+  /** A scene of the catalogue, `id` or `id:version`, played whole. One of `scene` and `app`. */
+  scene: string;
+  /** An application of the catalogue, `id` or `id:version`. */
+  app: string;
+  /** For an app: `browser` or `runtime`. */
+  runsIn?: 'browser' | 'runtime';
+  /** Its colour on stage: a palette name or a hex; empty for none. */
+  color: string;
+}
+
+/** How a Battle's winner is decided. */
+export interface BattleRefereeSpec {
+  /** `first_done` for a race, `score` for a game, `measure` for a challenge. */
+  decidesBy: 'first_done' | 'score' | 'measure';
+  /** For `measure`: the Guard whose number signal scores each outcome. */
+  measure: string;
+}
+
+/** Scenes composed against each other, under one clock and a referee (`agentspecs/battles`). */
+export interface BattleSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** `race`, `game` or `challenge`. */
+  variant: 'race' | 'game' | 'challenge';
+  /** What every contestant is told, in the same words. */
+  goal: string;
+  /** How long it may run, ten seconds at least. */
+  clockSeconds: number;
+  /** Two or more. */
+  contestants: BattleContestantSpec[];
+  referee: BattleRefereeSpec;
+  /** For a game: which arena. */
+  arena?: 'pong' | 'invaders';
+  /** What a played Battle has to show. */
+  rehearsal: { expects: string[] };
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  emoji?: string;
+}
+
 /** A Cog as an Op names it. */
 export interface OpCogSpec {
   id: string;

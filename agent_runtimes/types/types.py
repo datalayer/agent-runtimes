@@ -2399,6 +2399,50 @@ class TrackSpec(BaseModel):
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
 
 
+class BattleContestantSpec(BaseModel):
+    """One side of a Battle: a scene played whole, or one application (`agentspecs/battles`)."""
+
+    id: str = Field(..., description="Its id in the Battle: `blue`, `red`, `left`")
+    name: str = Field(default="", description="The name the audience sees")
+    scene: str = Field(default="", description="A scene of the catalogue, played whole")
+    app: str = Field(default="", description="An application of the catalogue")
+    runs_in: Optional[str] = Field(default=None, description="For an app: `browser` or `runtime`")
+    color: str = Field(default="", description="Its colour on stage")
+
+
+class BattleRefereeSpec(BaseModel):
+    """How a Battle's winner is decided."""
+
+    decides_by: str = Field(..., description="`first_done`, `score` or `measure`")
+    measure: str = Field(default="", description="For `measure`: the Guard that scores each outcome")
+
+
+class BattleRehearsalSpec(BaseModel):
+    """What a played Battle has to show."""
+
+    expects: List[str] = Field(default_factory=list)
+
+
+class BattleSpec(BaseModel):
+    """Scenes composed against each other, under one clock and a referee (`agentspecs/battles`)."""
+
+    id: str = Field(..., description="Unique Battle identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What the Battle shows")
+    variant: str = Field(..., description="`race`, `game` or `challenge`")
+    goal: str = Field(..., description="What every contestant is told")
+    clock_seconds: int = Field(..., description="How long it may run")
+    contestants: List[BattleContestantSpec] = Field(default_factory=list)
+    referee: BattleRefereeSpec
+    arena: Optional[str] = Field(default=None, description="For a game: `pong` or `invaders`")
+    rehearsal: BattleRehearsalSpec = Field(default_factory=BattleRehearsalSpec)
+    enabled: bool = Field(default=True, description="Whether it may be played")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
 class OpCogSpec(BaseModel):
     """A Cog as an Op names it."""
 

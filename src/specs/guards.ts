@@ -207,6 +207,38 @@ export const REGRESSION_GUARD_0_0_1: GuardSpec = {
   policy: 'default:0.0.1',
 };
 
+export const REPORT_QUALITY_GUARD_0_0_1: GuardSpec = {
+  id: 'report-quality-guard',
+  version: '0.0.1',
+  name: 'Report Quality Guard',
+  description:
+    'Scores a drafted report, between 0 and 1, for completeness against what was asked and grounding in the sources read: every figure traced to a call, nothing asked left out.',
+  category: 'outcome',
+  stages: ['post_run'],
+  method: 'cog',
+  check:
+    'Read the goal, the report and the tool calls the run made. Every point the goal asks for is in the report, and every figure in the report is read from a call of the run, not assumed. Score 1 when both hold in full, 0 when neither, between the two as the shares.',
+  signals: [
+    {
+      name: 'quality',
+      type: 'number',
+      description: "The report's completeness and grounding, between 0 and 1.",
+    },
+    {
+      name: 'ungrounded_figures',
+      type: 'number',
+      description:
+        'How many figures of the report no call of the run accounts for.',
+    },
+  ],
+  required: false,
+  enabled: true,
+  tags: ['outcome', 'quality', 'challenge'],
+  icon: 'shield-check',
+  emoji: '🛡️',
+  policy: 'default:0.0.1',
+};
+
 export const REQUIRED_FRAME_GUARD_0_0_1: GuardSpec = {
   id: 'required-frame-guard',
   version: '0.0.1',
@@ -347,6 +379,7 @@ export const GUARD_CATALOGUE: Record<string, GuardSpec> = {
   'outcome-guard': OUTCOME_GUARD_0_0_1,
   'permission-guard': PERMISSION_GUARD_0_0_1,
   'regression-guard': REGRESSION_GUARD_0_0_1,
+  'report-quality-guard': REPORT_QUALITY_GUARD_0_0_1,
   'required-frame-guard': REQUIRED_FRAME_GUARD_0_0_1,
   'schema-guard': SCHEMA_GUARD_0_0_1,
   'sensitive-data-guard': SENSITIVE_DATA_GUARD_0_0_1,
