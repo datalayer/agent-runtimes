@@ -80,6 +80,7 @@ export function createBrowserAgent(
     maxSteps = DEFAULT_BROWSER_MAX_STEPS,
     onHitlRequired,
     onStatusChange,
+    onToolEvent,
   } = options;
 
   if (!model && !inference) {
@@ -100,6 +101,7 @@ export function createBrowserAgent(
     tools: frontendToolsToVercelAI(frontendTools, {
       onHitlRequired,
       onStatusChange,
+      onToolEvent,
     }),
     stopWhen: stepCountIs(maxSteps),
   });
