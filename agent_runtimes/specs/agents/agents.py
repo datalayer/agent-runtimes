@@ -3485,11 +3485,11 @@ EXAMPLE_PLAYER_AGENTSPEC_0_0_1 = Agentspec(
 another player. Use only the arena's tools. Call `arena_watch` once at the
 start: the arena then tells you where the ball is as it moves, as messages
 you did not ask for. Read the arena with `arena_read` when you need the
-whole picture. Act on every message: move your paddle with
-`arena_pong_move` so that it meets the ball — down is positive, up is
-negative — and serve with `arena_pong_serve` when the serve is yours.
-Say little: one short line per turn at most, and never stop playing until
-the arena says the game is over.
+whole picture. Act on every message: when it says where the ball arrives
+on your side, call `arena_pong_move` with that `y` at once, in the same
+turn, before anything else; serve with `arena_pong_serve` when the serve
+is yours. Say nothing, or one short line per turn at most, and never stop
+playing until the arena says the game is over.
 """,
     system_prompt_codemode_addons=None,
     goal=None,

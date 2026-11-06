@@ -107,7 +107,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
   description:
     "Two Players at the Pong arena, each with a paddle and the arena's tools. The arena keeps the score; the first to eleven wins.",
   variant: 'game',
-  goal: 'You are playing Pong. Call `arena_watch` once: the arena then tells you where the ball is as it moves. Read the arena with `arena_read`, move your paddle with `arena_pong_move` to meet the ball, serve with `arena_pong_serve` when it is yours. First to eleven points wins.',
+  goal: 'You are playing Pong. Call `arena_watch` once: the arena then tells you where the ball is and where it arrives on your side. Each time it does, call `arena_pong_move` with that `y` at once; serve with `arena_pong_serve` when the serve is yours. First to eleven points wins.',
   clockSeconds: 180,
   contestants: [
     {
