@@ -83,6 +83,7 @@ PERSONAL_DATA = {
     "phone": "a phone number",
     "ssn": "a social security number",
     "credit_card": "a card number",
+    "iban": "an IBAN",
 }
 
 
