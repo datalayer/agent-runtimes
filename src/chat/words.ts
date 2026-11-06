@@ -54,6 +54,8 @@ export type ChatWords = {
   /** The empty chat's line when it has no starters. */
   sendToBegin: string;
   copyTurn: string;
+  /** The balloon's words, copied whole. */
+  copyWords: string;
   removeTurn: string;
   /** What the agent says when its answer failed. */
   error: (message: string) => string;
@@ -142,6 +144,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Start a conversation',
     sendToBegin: 'Send a message to begin chatting',
     copyTurn: 'Copy this turn',
+    copyWords: 'Copy the words',
     removeTurn: 'Remove this turn',
     error: message => `Error: ${message}`,
     thinking: 'Thinking…',
@@ -220,6 +223,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Commencer une conversation',
     sendToBegin: 'Envoyez un message pour commencer',
     copyTurn: 'Copier cet échange',
+    copyWords: 'Copier les mots',
     removeTurn: 'Supprimer cet échange',
     error: message => `Erreur : ${message}`,
     thinking: 'Réflexion…',
@@ -300,6 +304,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Empieza una conversación',
     sendToBegin: 'Envía un mensaje para empezar',
     copyTurn: 'Copiar este turno',
+    copyWords: 'Copiar las palabras',
     removeTurn: 'Eliminar este turno',
     error: message => `Error: ${message}`,
     thinking: 'Pensando…',
@@ -381,6 +386,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Ein Gespräch beginnen',
     sendToBegin: 'Sende eine Nachricht, um zu beginnen',
     copyTurn: 'Diesen Austausch kopieren',
+    copyWords: 'Die Worte kopieren',
     removeTurn: 'Diesen Austausch entfernen',
     error: message => `Fehler: ${message}`,
     thinking: 'Denkt nach…',
@@ -462,6 +468,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Inizia una conversazione',
     sendToBegin: 'Invia un messaggio per iniziare',
     copyTurn: 'Copia questo scambio',
+    copyWords: 'Copia le parole',
     removeTurn: 'Rimuovi questo scambio',
     error: message => `Errore: ${message}`,
     thinking: 'Sta pensando…',
@@ -544,6 +551,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Comece uma conversa',
     sendToBegin: 'Envie uma mensagem para começar',
     copyTurn: 'Copiar esta troca',
+    copyWords: 'Copiar as palavras',
     removeTurn: 'Remover esta troca',
     error: message => `Erro: ${message}`,
     thinking: 'Pensando…',
