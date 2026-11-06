@@ -1507,6 +1507,113 @@ export const DECIDE_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
+export const DECK_MAKER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'deck-maker',
+  version: '0.0.1',
+  name: 'Deck Maker',
+  kind: 'chat',
+  description:
+    'Builds a short presentation in the page from a brief, slide by slide, with the deck drawn as it grows: a title, a few points, a closing word.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'example-decks:0.0.1',
+  team: '',
+  instructions:
+    'You make presentations. Given a brief, build the deck with your tools and nothing else: `deck_set_title` once, for the title and a subtitle; then `deck_add_slide` for each slide — a `section` to open a part, `bullets` with three to five short items, a `statement` for one sentence that carries, a `closing` with what to do next. Keep it to five slides or fewer. Read it back with `deck_read` when you need to. When the deck is complete, answer in one sentence what the deck says, and stop: nothing is asked of you after that.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: [],
+  ui: [
+    {
+      plugin: 'chat',
+    },
+  ],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'violet',
+    welcome: "Give me a brief, and I'll build the deck here, slide by slide.",
+    starters: [],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    avatar: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Build it from the brief.',
+        expect:
+          'It uses its tools, and nothing else, and says in one sentence what it made.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026).',
+      ],
+    },
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['conversations', 'actions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {},
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: true,
+  unavailable_because: '',
+  tags: ['example', 'decks', 'battle'],
+  icon: 'apps',
+  emoji: '🎞️',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'example-decks:0.0.1' is not enabled."],
+};
+
 export const DISASTER_ASSESSMENT_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'disaster-assessment',
@@ -4769,6 +4876,115 @@ export const SALES_APP_0_0_3: AppSpec = {
   ],
 };
 
+export const SHEET_MAKER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'sheet-maker',
+  version: '0.0.1',
+  name: 'Sheet Maker',
+  kind: 'chat',
+  description:
+    'Fills a spreadsheet in the page from a brief: the headers, the rows, the totals as formulas, and a chart of them, drawn as it goes.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'example-analyze-excel-spreadsheet:0.0.1',
+  team: '',
+  instructions:
+    'You make spreadsheets. Given a brief, fill the sheet with your tools and nothing else: `sheet_write_range` writes a block of rows from a top-left cell such as `A1` — a first row of headers, then the rows, numbers as numbers, and totals as formulas starting with `=`; `sheet_read_range` reads what is there; `sheet_insert_chart` draws a chart of a range, headers included. Keep it small: a header row, five to eight rows, a totals row, one chart. When the sheet is complete, answer in one sentence what it shows, and stop: nothing is asked of you after that.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: [],
+  ui: [
+    {
+      plugin: 'chat',
+    },
+  ],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'green',
+    welcome: "Give me a brief, and I'll fill the sheet here, cell by cell.",
+    starters: [],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    avatar: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Build it from the brief.',
+        expect:
+          'It uses its tools, and nothing else, and says in one sentence what it made.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026).',
+      ],
+    },
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['conversations', 'actions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {},
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: true,
+  unavailable_because: '',
+  tags: ['example', 'cells', 'battle'],
+  icon: 'apps',
+  emoji: '📊',
+  avatar: '',
+  banner: '',
+  setup: [
+    "The agent 'example-analyze-excel-spreadsheet:0.0.1' is not enabled.",
+  ],
+};
+
 export const SHIP_OR_FIX_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'ship-or-fix',
@@ -6572,6 +6788,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_3,
   'data-quality': DATA_QUALITY_APP_0_0_3,
   decide: DECIDE_APP_0_0_2,
+  'deck-maker': DECK_MAKER_APP_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_2,
   'errand-runner': ERRAND_RUNNER_APP_0_0_2,
   'event-response': EVENT_RESPONSE_APP_0_0_3,
@@ -6588,6 +6805,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_5,
   'returns-desk': RETURNS_DESK_APP_0_0_2,
   sales: SALES_APP_0_0_3,
+  'sheet-maker': SHEET_MAKER_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_3,
   'shop-concierge': SHOP_CONCIERGE_APP_0_0_2,
   'shopping-desk': SHOPPING_DESK_APP_0_0_2,
@@ -7588,6 +7806,44 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'decisions', 'jev'],
     icon: 'law',
     emoji: '⚖️',
+  },
+  'deck-maker': {
+    schema: 'loop.app/v1',
+    id: 'deck-maker',
+    name: 'Deck Maker',
+    kind: 'chat',
+    description:
+      'Builds a short presentation in the page from a brief, slide by slide, with the deck drawn as it grows: a title, a few points, a closing word.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'example-decks:0.0.1',
+    instructions:
+      'You make presentations. Given a brief, build the deck with your tools and nothing else: `deck_set_title` once, for the title and a subtitle; then `deck_add_slide` for each slide — a `section` to open a part, `bullets` with three to five short items, a `statement` for one sentence that carries, a `closing` with what to do next. Keep it to five slides or fewer. Read it back with `deck_read` when you need to. When the deck is complete, answer in one sentence what the deck says, and stop: nothing is asked of you after that.',
+    ui: [
+      {
+        plugin: 'chat',
+      },
+    ],
+    interface: {
+      accent: 'violet',
+      welcome: "Give me a brief, and I'll build the deck here, slide by slide.",
+      avatar: 'wizard',
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Build it from the brief.',
+          expect:
+            'It uses its tools, and nothing else, and says in one sentence what it made.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026).',
+        ],
+      },
+    },
+    tags: ['example', 'decks', 'battle'],
+    emoji: '🎞️',
   },
   'disaster-assessment': {
     schema: 'loop.app/v1',
@@ -9776,6 +10032,44 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'briefcase',
     emoji: '💼',
   },
+  'sheet-maker': {
+    schema: 'loop.app/v1',
+    id: 'sheet-maker',
+    name: 'Sheet Maker',
+    kind: 'chat',
+    description:
+      'Fills a spreadsheet in the page from a brief: the headers, the rows, the totals as formulas, and a chart of them, drawn as it goes.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'example-analyze-excel-spreadsheet:0.0.1',
+    instructions:
+      'You make spreadsheets. Given a brief, fill the sheet with your tools and nothing else: `sheet_write_range` writes a block of rows from a top-left cell such as `A1` — a first row of headers, then the rows, numbers as numbers, and totals as formulas starting with `=`; `sheet_read_range` reads what is there; `sheet_insert_chart` draws a chart of a range, headers included. Keep it small: a header row, five to eight rows, a totals row, one chart. When the sheet is complete, answer in one sentence what it shows, and stop: nothing is asked of you after that.',
+    ui: [
+      {
+        plugin: 'chat',
+      },
+    ],
+    interface: {
+      accent: 'green',
+      welcome: "Give me a brief, and I'll fill the sheet here, cell by cell.",
+      avatar: 'wizard',
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Build it from the brief.',
+          expect:
+            'It uses its tools, and nothing else, and says in one sentence what it made.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026).',
+        ],
+      },
+    },
+    tags: ['example', 'cells', 'battle'],
+    emoji: '📊',
+  },
   'ship-or-fix': {
     schema: 'loop.app/v1',
     id: 'ship-or-fix',
@@ -10954,6 +11248,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'customer-interview': 'python',
   'data-quality': 'written',
   decide: 'written',
+  'deck-maker': 'written',
   'disaster-assessment': 'written',
   'errand-runner': 'written',
   'event-response': 'written',
@@ -10970,6 +11265,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'report-from-a-file': 'python',
   'returns-desk': 'written',
   sales: 'written',
+  'sheet-maker': 'written',
   'ship-or-fix': 'written',
   'shop-concierge': 'written',
   'shopping-desk': 'written',
@@ -11002,6 +11298,8 @@ export const APP_PYTHON: Record<string, string> = {
     '"""data-quality: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Data Quality Investigation\n# A decision: which anomalies of a dataset to fix first, before it is used for\n# a decision. Two criteria are measured in the sandbox, one is asked of a decision model, and\n# one says what kind of anomaly it is.\n\nschema: loop.app/v1\nid: data-quality\nversion: 0.0.3\nname: Data Quality Investigation\nkind: decision\ndescription: >-\n  Which anomalies in this dataset should we fix first? For a data team, before\n  a dataset is used for a decision.\nowner: Datalayer <info@datalayer.io>\n\nagent: jupyter-data-analyst:0.0.1\n\ncontents:\n  - The dataset under investigation\n\ndecision:\n  question: Which anomalies in this dataset should we fix first?\n  decision_model: "cloudflare:wrk/typesafe/jev"\n  min_confidence: 0\n  criteria:\n    - name: Rows affected\n      kind: metric\n      weight: 2\n      instructions: How many rows the anomaly touches, from a validation run in the sandbox.\n      direction: higher\n    - name: Effect on the result\n      kind: metric\n      weight: 3\n      instructions: How far the headline figures move when the anomaly is corrected.\n      direction: higher\n    - name: Kind of anomaly\n      kind: choice\n      weight: 0\n      instructions: What is this anomaly?\n      options:\n        - "Genuine: a real extreme, to keep"\n        - "Outlier: a value far from the rest, to check"\n        - "Unit: a unit mismatch"\n        - "Missing: a missing value"\n        - "Duplicate: the same row twice"\n      direction: higher\n    - name: Safe to correct automatically\n      kind: noul\n      weight: 1\n      instructions: >-\n        Can the proposed correction be applied without a person checking each\n        row?\n      direction: higher\n\n# What a visitor without an account decides on (E-06): four anomalies\n# Datalayer found in a sample orders dataset, read only. A clone decides on\n# its own dataset.\nsamples:\n  alternatives:\n    - name: Prices in cents\n      evidence: >-\n        In the sample orders dataset (12,480 rows), 38 rows from the EU shop\n        carry a unit price one hundred times the catalogue price — 1999 for an\n        item listed at 19.99 — all imported by the same job on 4 March.\n        Divided by one hundred, each matches its catalogue price to the cent.\n        Corrected, total revenue falls by 6.1%.\n      metrics:\n        Rows affected: 38\n        Effect on the result: 6.1\n    - name: Duplicate orders\n      evidence: >-\n        96 order ids appear twice with identical lines, timestamps and\n        amounts, all from a retried upload on 19 April. No order id appears\n        three times. Removing the second copies lowers total revenue by 0.9%.\n      metrics:\n        Rows affected: 96\n        Effect on the result: 0.9\n    - name: Missing region\n      evidence: >-\n        1,032 rows have an empty region, all imported on 2 March from the\n        partner channel; their shipping addresses are filled in and name a\n        country in every case. Total revenue does not move; revenue by region\n        moves by up to 4.5% once the region is read from the address.\n      metrics:\n        Rows affected: 1032\n        Effect on the result: 4.5\n    - name: Very large orders\n      evidence: >-\n        11 orders exceed 40,000 in value, the largest at 182,000. Each is from\n        an account marked as a reseller, and each has an invoice and a\n        delivery record that match its amount. Left out, total revenue would\n        fall by 9.8%, but nothing suggests they are wrong.\n      metrics:\n        Rows affected: 11\n        Effect on the result: 0\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: app-page\n\ninterface:\n  layout: page\n  accent: green\n  components: [Card, Column, Row, List, Tabs, Text, Slider, ChoicePicker, TextField, Button]\n\ntests:\n  ready_at: 0.8\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not decided live: no dataset has been measured for it."\n      - "It has no test yet: what a good decision looks like has not been written down."\n\nrecord:\n  keep_for: 1_years\n  include: [decisions, sources, checks]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - decision\n  - data-quality\nicon: filter\nemoji: "🧹"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   decide:
     '"""decide: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Decide\n# A chat that answers by asking typed decisions of Jev, the typed-decision\n# model (`cloudflare:wrk/typesafe/jev`), through datalayer-ai-inference: yes or\n# no with its probability, one of named options, or a step on a scale. Its one\n# tool, decide, reaches nothing but ai-inference: a reader, done without asking.\n\nschema: loop.app/v1\nid: decide\nversion: 0.0.2\nname: Decide\nkind: chat\ndescription: >-\n  Answers a question about a text — a ticket, a message, a review — by asking\n  Jev a typed decision: yes or no, one of named options, or a score, each with\n  its confidence.\nowner: Datalayer <info@datalayer.io>\n\nagent: example-simple:0.0.1\nbackend_tools:\n  - decide:0.0.1\ninstructions: >-\n  Answer every question about a text by asking a typed decision with the decide\n  tool: the text as it was given is the state, and the question is one of noul\n  (does a statement hold: yes or no), choice (which of the options named) or\n  score (which step of a scale, lowest first). Then say the answer in plain\n  words with its probability or its confidence, for example "Urgent: yes\n  (0.87)". When the question names no options for a choice or no scale for a\n  score, ask for them rather than inventing them. When nothing was decided,\n  say why in a sentence.\n\nrules:\n  - action: Ask a decision\n    applies_to:\n      - decide\n    behaviour: do_it\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sun\n  avatar: wizard\n  welcome: >-\n    Give me a text and a question about it. I ask Jev a typed decision — yes or\n    no, a choice, or a score — and tell you the answer with its confidence.\n  starters:\n    - label: Is it urgent?\n      message: "Is this ticket urgent? \'Help! My payouts have been failing for 3 days.\'"\n    - label: Which team?\n      message: "Which team should handle this: \'I was charged twice this month\'? Billing, Tech or Sales."\n    - label: Score a review\n      message: "Score how positive this review is from 1 to 5: \'Setup took an hour, but support answered fast and it works.\'"\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: "Is this ticket urgent? \'Help! My payouts have been failing for 3 days.\'"\n      expect: It calls decide with a noul question and answers yes, with its probability.\n    - ask: "Which team should handle this: \'I was charged twice this month\'? Billing, Tech or Sales."\n      expect: It calls decide with a choice among the three and answers Billing, with its confidence.\n    - ask: Score this review.\n      expect: It asks for the review and the scale rather than inventing them.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations, decisions]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - decisions\n  - jev\nicon: law\nemoji: "⚖️"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+  'deck-maker':
+    '"""deck-maker: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Deck Maker: an application that builds a presentation in the page, slide\n# by slide, with the deck arena\'s tools (a Battle\'s `arena: deck`, the user,\n# 6 November 2026). It runs in the browser; the deck it builds is drawn\n# under it as Datalayer Decks draws one.\n\nschema: loop.app/v1\nid: deck-maker\nversion: 0.0.1\nname: Deck Maker\nkind: chat\ndescription: >-\n  Builds a short presentation in the page from a brief, slide by slide, with\n  the deck drawn as it grows: a title, a few points, a closing word.\nowner: Datalayer <info@datalayer.io>\nagent: example-decks:0.0.1\ninstructions: >-\n  You make presentations. Given a brief, build the deck with your tools and\n  nothing else: `deck_set_title` once, for the title and a subtitle; then\n  `deck_add_slide` for each slide — a `section` to open a part, `bullets`\n  with three to five short items, a `statement` for one sentence that\n  carries, a `closing` with what to do next. Keep it to five slides or\n  fewer. Read it back with `deck_read` when you need to. When the deck is\n  complete, answer in one sentence what the deck says, and stop: nothing is\n  asked of you after that.\nui:\n  - plugin: chat\ninterface:\n  layout: chat\n  accent: violet\n  avatar: wizard\n  welcome: >-\n    Give me a brief, and I\'ll build the deck here, slide by slide.\nemoji: "🎞️"\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Build it from the brief.\n      expect: It uses its tools, and nothing else, and says in one sentence what it made.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026)."\ntags:\n  - example\n  - decks\n  - battle\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'disaster-assessment':
     '"""disaster-assessment: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Disaster Assessment\n# Asked over A2A by Event response, in the scene `disaster-assessment`\n# (A-04, A-08). It estimates the area a disaster affected and the\n# extent of the damage by comparing the satellite imagery NASA Earthdata\n# holds before and after the event, found through the `earthdata` MCP\n# server at *Can read*: it searches and reads, and downloads nothing.\n#\n# It runs on a runtime, served over A2A at\n# `/api/v1/a2a/agents/disaster-assessment/`; its agent card offers one\n# skill, named for it: an event and a place in words in, the assessment in\n# words out, and a notebook beside it when the caller accepts one.\n\nschema: loop.app/v1\nid: disaster-assessment\nversion: 0.0.2\nname: Disaster Assessment\nkind: chat\ndescription: >-\n  Estimates the area a natural disaster affected and the extent of the\n  damage from the satellite imagery NASA Earthdata holds before and after\n  the event, which it searches and reads, with the granules behind each\n  figure.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-disaster-assessment:0.0.1\ninstructions: >-\n  You assess disasters from satellite imagery. Requests usually come from\n  the Event response application over A2A, and you answer them from NASA\n  Earthdata, which you reach through the earthdata tools: search the\n  datasets that observe the surface at the place asked, then the granules\n  before the event and after it, and compare what they show. You download\n  nothing: when data must be fetched, describe it and write the script a\n  person would run. Answer with the assessment itself: the event, the place\n  and the dates, the area affected and how you bounded it, the extent of\n  the damage you read and how confident you are, the dataset and granule\n  behind each figure. When a request does not say the event, the place or\n  its date, say what you need. When Earthdata holds nothing for it, say so\n  plainly and do not fill the gap. You send nothing yourself. Asked to send\n  an assessment — to the emergency services or to anyone — make the\n  assessment, then show its sending as a choice to approve with\n  `show_components` — *Send it* · *Not now* — saying what would be sent and\n  to whom; nothing leaves until a person approves, and never say it was\n  sent.\n\nconnections:\n  - server: earthdata:0.0.1\n    access: read\n    as: owner\n\nrules:\n  - action: Search and read the imagery\n    applies_to: read\n    behaviour: do_it\n  - action: Download files to the runtime\n    applies_to: write\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: a2ui-surface\n    renderer: a2ui\n\ninterface:\n  layout: chat\n  accent: rose\n  # The wizard, who reads before and after in the imagery.\n  avatar: wizard\n  welcome: >-\n    Name an event, a place and a date, and I\'ll compare the satellite\n    imagery NASA Earthdata holds before and after it: the area affected\n    and the extent of the damage. I search and read; I download nothing.\n  outputs:\n    - text/markdown\n    - application/x-ipynb+json\n    - application/json+a2ui\n  starters:\n    - label: Flood extent\n      message: Assess the flooding around Valencia, Spain, after 29 October 2024.\n    - label: Wildfire damage\n      message: How much area burned around Los Angeles in the fires of January 2025?\n    - label: Imagery before and after\n      message: Which granules show the Ahr valley before and after 14 July 2021?\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Assess the flooding around Valencia, Spain, after 29 October 2024.\n      expect: >-\n        It searches the datasets and the granules before and after the date\n        with the earthdata tools and answers with the area affected, the\n        extent it read and the granules behind each figure.\n    - ask: Which granules show the Ahr valley before and after 14 July 2021?\n      expect: It lists the granules on either side of the date, with their datasets, and downloads nothing.\n    - ask: Download everything you found.\n      expect: >-\n        It does not download it. It writes the script a person would run,\n        and says what it would fetch.\n    - ask: Assess the earthquake.\n      expect: It asks which event, where and when, before it searches.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not been asked live over A2A yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled."\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - earth-observation\n  - disaster\n  - earthdata\n  - a2a\n  - scene\nicon: pulse\nemoji: "🌊"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'errand-runner':
@@ -11034,6 +11332,8 @@ export const APP_PYTHON: Record<string, string> = {
     '"""returns-desk: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Returns Desk\n# The Personal Agent Protocol\'s operations journey (PR-05,\n# trace operations) as an application: the shop proposes a return or a\n# repair with its exact terms and a version; the person approves that version,\n# and it is done at most once.\n\nschema: loop.app/v1\nid: returns-desk\nversion: 0.0.2\nname: Returns Desk\nkind: chat\ndescription: >-\n  Arranges returns and repairs at a shop for you, each one done exactly as you\n  approved it, and only once.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-crawler:0.0.1\ninstructions: >-\n  You arrange returns and repairs at Manzanita Outfitters for the person.\n  Ask the shop for a return or a repair through its API, with pap_propose;\n  the shop proposes each one with its terms: show them, word for word, and\n  never confirm on your own; the person approves it on Waiting for you.\n\n# The protocols it speaks: its `pap` block is refused unless listed here.\nprotocols: [pap]\n\npap:\n  profile: draft-01\n  connections:\n    - id: manzanita\n      company: manzanita.examples.datalayer.run\n      access: write\n      as: user\n      scopes: ["orders:read", "orders:write"]\n      # Manzanita proposes returns and repairs through its API (decided 2026-10-13).\n      interfaces: [agent, openapi]\n      sign_in: [direct, device]\n      extensions: [operations]\n\nrules:\n  - action: Read your orders at the shop\n    applies_to: read\n    behaviour: do_it\n  # A message to the shop goes out in your name (R-02).\n  - action: Send the shop a message for you\n    applies_to: send\n    behaviour: ask_first\n  - action: Confirm a return or a repair the shop proposes\n    applies_to: write\n    behaviour: ask_first\n  - action: Pay anything\n    applies_to: buy\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: pap-sign-in\n\ninterface:\n  layout: chat\n  accent: sun\n  welcome: >-\n    I arrange returns and repairs at Manzanita Outfitters. The shop proposes\n    each one, and you approve exactly what it proposed.\n  starters:\n    - label: Return it\n      message: Return my Ridge Jacket.\n    - label: Repair it\n      message: The zip of my jacket broke, can it be repaired?\n    - label: Approve anything\n      message: Approve whatever the shop proposes.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Return my Ridge Jacket.\n      expect: It shows the shop\'s own proposal with its terms and its version, and waits for my approval.\n    - ask: Approve whatever the shop proposes.\n      expect: It still asks me to approve each proposal itself.\n    - ask: The zip of my jacket broke, can it be repaired?\n      expect: It asks the shop, shows the repair it proposes, and does nothing before I approve.\n  verified:\n    live:\n      - "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway\'s pap toolset: signed in by Device Sign-In with orders:read and orders:write; a return asked through the shop\'s API with pap_propose came back as the shop\'s operation (Return the Ridge Jacket (M) from order ord_7Hk2 for a refund of USD 180.00), approved by the person on Waiting for you, done once — the test shop\'s return fails as written, its label emailed and no money moved, which it said — and already confirmed the second time; a repair proposed the same way (a zip repair, free)."\n    recorded:\n      - "The journey is the Personal Agent Protocol SDK\'s recorded journey operations (Datalayer\'s protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."\n    unverified:\n      - "A model\'s turns in the Studio\'s Preview were not watched in that trial."\n\nrecord:\n  keep_for: 90_days\n  include: [conversations, actions, decisions, approvals]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: true\n\ntags:\n  - example\n  - companies\nemoji: "↩️"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   sales:
     '"""sales: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Sales\n# A chat at the sales desk. A person asks it for a financial report and it\n# asks the Accounting application, over A2A, for it. Then it hands over what\n# Accounting answered: it never makes up a figure, and it says when\n# Accounting could not answer. It connects to nothing and writes nothing.\n#\n# It is the entry of the team `sales-and-accounting`, and runs in the\n# person\'s browser (the in-browser target that the Preview and `loop` use):\n# its agent\'s instructions and model turn there. Its one tool, ask_accounting,\n# is the team\'s A2A link to Accounting. Its request and answer are text, as\n# Accounting\'s agent card says (its one skill, `accounting`). Its own agent\'s\n# runtime tools do not exist in a browser.\n\nschema: loop.app/v1\nid: sales\nversion: 0.0.3\nname: Sales\nkind: chat\ndescription: >-\n  Takes a request for a financial report, such as revenue for a period, open\n  invoices or a customer\'s balance, asks the Accounting application for it\n  over A2A and hands over what Accounting answered, without adding a figure\n  of its own.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-sales-pipeline-board-report:0.0.1\ninstructions: >-\n  You are the sales desk. You do not hold the books: the Accounting\n  application does. When the person asks for a financial report or for any\n  figure from the books, call ask_accounting once with one request that\n  Accounting can act on without the rest of this conversation: what report,\n  for which period, and for which customer or company. Then give the person\n  what Accounting answered, as it answered it, with its figures, its periods,\n  its currency and its caveats. Never invent, estimate, round or complete a\n  figure, and never fill a gap from what you know. When Accounting cannot\n  answer, or answers only in part, say so and repeat what it said. When the\n  request does not say the period or whom it is about, ask the person before\n  you ask Accounting. Say in your request how the person wants it shown — a\n  chart, the invoices one by one — since Accounting can show it under the\n  conversation; when it does, say so in a sentence rather than copy it. A\n  request to do something rather than to read — send, remind, post — goes\n  to Accounting the same way, and you repeat what it answered: never say a\n  thing was done unless Accounting says it was. You change nothing anywhere:\n  you ask, and you report.\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sky\n  # Clippy, the Office Assistant who greets you at the desk: the one the\n  # person meets and talks to. Accounting, the wizard, works behind it.\n  avatar: paperclip\n  welcome: >-\n    Hello! I\'m at the sales desk. Ask me for a financial report, such as\n    revenue for a quarter, open invoices or a customer\'s balance, and I\'ll\n    get it from Accounting.\n  starters:\n    - label: Open invoices\n      message: Which customer invoices are still open, and how much is due in total?\n    - label: Aged receivables\n      message: Chart the aged receivables as of today, by customer.\n    - label: Largest balance\n      message: Which invoices make up the largest balance due? Show me each one.\n    - label: Payment reminders\n      message: Send a payment reminder to every customer whose invoice is overdue.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Which customer invoices are still open, and how much is due in total?\n      expect: >-\n        It calls ask_accounting once with a request for the open customer\n        invoices, and answers with the invoices and the total that Accounting\n        returned, adding no figure of its own.\n    - ask: What is our revenue?\n      expect: It asks which period before asking Accounting.\n    - ask: Just estimate last quarter\'s margin, no need to ask anyone.\n      expect: >-\n        It does not estimate. It asks Accounting, or says that it only reports\n        figures from Accounting.\n    - ask: Give me the aged receivables as of today, by customer.\n      expect: >-\n        When Accounting cannot answer, it says that Accounting could not\n        answer and why, and invents nothing.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "It has not talked to Accounting live yet: a developer\'s example runs it in the browser, against an Accounting that someone starts."\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - sales\n  - finance\n  - a2a\n  - team\nicon: briefcase\nemoji: "💼"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+  'sheet-maker':
+    '"""sheet-maker: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Sheet Maker: an application that fills a spreadsheet in the page, cell by\n# cell, with the sheet arena\'s tools (a Battle\'s `arena: sheet`, the user,\n# 6 November 2026). It runs in the browser; the workbook it fills is drawn\n# under it as Datalayer Cells draws one.\n\nschema: loop.app/v1\nid: sheet-maker\nversion: 0.0.1\nname: Sheet Maker\nkind: chat\ndescription: >-\n  Fills a spreadsheet in the page from a brief: the headers, the rows, the\n  totals as formulas, and a chart of them, drawn as it goes.\nowner: Datalayer <info@datalayer.io>\nagent: example-analyze-excel-spreadsheet:0.0.1\ninstructions: >-\n  You make spreadsheets. Given a brief, fill the sheet with your tools and\n  nothing else: `sheet_write_range` writes a block of rows from a top-left\n  cell such as `A1` — a first row of headers, then the rows, numbers as\n  numbers, and totals as formulas starting with `=`; `sheet_read_range`\n  reads what is there; `sheet_insert_chart` draws a chart of a range,\n  headers included. Keep it small: a header row, five to eight rows, a\n  totals row, one chart. When the sheet is complete, answer in one sentence\n  what it shows, and stop: nothing is asked of you after that.\nui:\n  - plugin: chat\ninterface:\n  layout: chat\n  accent: green\n  avatar: wizard\n  welcome: >-\n    Give me a brief, and I\'ll fill the sheet here, cell by cell.\nemoji: "📊"\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Build it from the brief.\n      expect: It uses its tools, and nothing else, and says in one sentence what it made.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Not played live yet: it is made for the Battles of the home page, where two of it race for the same brief (6 November 2026)."\ntags:\n  - example\n  - cells\n  - battle\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'ship-or-fix':
     '"""ship-or-fix: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Ship or Fix\n# A decision: which agent configuration to ship, on the evidence of a\n# benchmark run. Three criteria are measured by the run, two are asked of a decision model.\n\nschema: loop.app/v1\nid: ship-or-fix\nversion: 0.0.3\nname: Ship or Fix\nkind: decision\ndescription: >-\n  Which agent configuration should we ship, on the evidence of a benchmark\n  run? For an AI platform team, after every run.\nowner: Datalayer <info@datalayer.io>\n\nagent: jupyter-data-analyst:0.0.1\n\ncontents:\n  - "The benchmark run: task results, traces, cost and latency"\n\ndecision:\n  question: Which agent configuration should we ship?\n  decision_model: "cloudflare:wrk/typesafe/jev"\n  min_confidence: 0.6\n  criteria:\n    - name: Pass rate\n      kind: metric\n      weight: 3\n      instructions: Share of tasks passed, from the run.\n      direction: higher\n      measure: pass_rate\n    - name: Cost per task\n      kind: metric\n      weight: 1\n      instructions: Credits spent per task, from the run; lower is better.\n      direction: lower\n      measure: cost_per_task\n    - name: Latency\n      kind: metric\n      weight: 1\n      instructions: Median time per task, from the run; lower is better.\n      direction: lower\n      measure: seconds_per_task\n    - name: Failure severity\n      kind: score\n      weight: 2\n      instructions: How bad are the failures of this configuration?\n      options:\n        - "Blocking: a wrong number somebody would act on"\n        - "Degraded: a usable answer with a flaw to work around"\n        - "Cosmetic: a format, a label, nothing that changes the answer"\n      direction: higher\n    - name: Formatting failures block shipping\n      kind: noul\n      weight: 1\n      instructions: >-\n        Are the formatting failures of this configuration blocking for the\n        people who read its answers?\n      direction: lower\n  scenarios:\n    - name: Quality first\n      weights:\n        Pass rate: 4\n        Cost per task: 0\n        Latency: 0\n        Failure severity: 3\n        Formatting failures block shipping: 1\n    - name: Cost first\n      weights:\n        Pass rate: 2\n        Cost per task: 4\n        Latency: 2\n        Failure severity: 1\n        Formatting failures block shipping: 0\n\n# What a visitor without an account decides on (E-06): three\n# configurations of an agent from a sample benchmark run, read only. A clone\n# decides on its own run.\nsamples:\n  alternatives:\n    - name: Current prompt\n      evidence: >-\n        A sample run of 80 tasks of a reporting agent: 70 passed. Six of the\n        ten failures gave a wrong total in a quarterly figure, which a reader\n        would act on; four put the table\'s columns in another order than the\n        template asks. Nobody who reads the reports has complained about the\n        column order.\n      metrics:\n        Pass rate: 0.875\n        Cost per task: 2.4\n        Latency: 9.5\n    - name: With retrieval\n      evidence: >-\n        The same 80 tasks with the reports of the last two quarters retrieved\n        first: 76 passed. The four failures are all formatting — a missing\n        unit in a table header — and every figure was right. Each task reads\n        about twice as much, which shows in its cost.\n      metrics:\n        Pass rate: 0.95\n        Cost per task: 3.9\n        Latency: 12.8\n    - name: Smaller model\n      evidence: >-\n        The same 80 tasks on a smaller model: 61 passed. Eleven of the\n        nineteen failures gave a wrong figure, two of them a total off by a\n        factor of a thousand; the others were formatting. It is the cheapest\n        and the fastest of the three.\n      metrics:\n        Pass rate: 0.7625\n        Cost per task: 0.7\n        Latency: 4.1\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: app-page\n\ninterface:\n  layout: page\n  accent: green\n  components: [Card, Column, Row, List, Tabs, Text, Slider, ChoicePicker, TextField, Button]\n\ntests:\n  ready_at: 0.8\n  verified:\n    live: []\n    recorded:\n      - "Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides."\n    unverified:\n      - "It has no test yet: what a good decision looks like has not been written down."\n\nrecord:\n  keep_for: 1_years\n  include: [decisions, sources, checks]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - decision\n  - benchmarks\nicon: checklist\nemoji: "🚢"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'shop-concierge':

@@ -15,6 +15,50 @@
 
 import type { BattleSpec } from '../types/agentspecs';
 
+export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
+  id: 'deck-race',
+  version: '0.0.1',
+  name: 'Create a deck',
+  description:
+    'Two Deck Makers get the same brief at the same instant and build a deck each, drawn in the page as it grows. The first to finish wins.',
+  variant: 'race',
+  goal: 'Create a five-slide deck that pitches a weekly team newsletter: why it helps, what goes in it, who writes what, and a closing call to sign up.',
+  clockSeconds: 180,
+  contestants: [
+    {
+      id: 'blue',
+      name: 'Blue',
+      scene: '',
+      app: 'deck-maker:0.0.1',
+      runsIn: 'browser',
+      color: 'blue',
+    },
+    {
+      id: 'red',
+      name: 'Red',
+      scene: '',
+      app: 'deck-maker:0.0.1',
+      runsIn: 'browser',
+      color: 'red',
+    },
+  ],
+  referee: {
+    decidesBy: 'first_done',
+    measure: '',
+  },
+  arena: 'deck',
+  rehearsal: {
+    expects: [
+      'each deck has a title and at least three slides',
+      'a verdict within the clock',
+    ],
+  },
+  enabled: true,
+  tags: ['example', 'race', 'decks'],
+  icon: 'project',
+  emoji: '🃏',
+};
+
 export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
   id: 'invoice-race',
   version: '0.0.1',
@@ -141,10 +185,56 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
   emoji: '📝',
 };
 
+export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
+  id: 'sheet-race',
+  version: '0.0.1',
+  name: 'Create a spreadsheet',
+  description:
+    'Two Sheet Makers get the same brief at the same instant and fill a sheet each, drawn in the page cell by cell, totals and chart included. The first to finish wins.',
+  variant: 'race',
+  goal: "Create a spreadsheet of a small bakery's weekly sales: a header row, one row per day from Monday to Sunday with the number of loaves and the revenue, a totals row with formulas, and a chart of the revenue by day.",
+  clockSeconds: 180,
+  contestants: [
+    {
+      id: 'blue',
+      name: 'Blue',
+      scene: '',
+      app: 'sheet-maker:0.0.1',
+      runsIn: 'browser',
+      color: 'blue',
+    },
+    {
+      id: 'red',
+      name: 'Red',
+      scene: '',
+      app: 'sheet-maker:0.0.1',
+      runsIn: 'browser',
+      color: 'red',
+    },
+  ],
+  referee: {
+    decidesBy: 'first_done',
+    measure: '',
+  },
+  arena: 'sheet',
+  rehearsal: {
+    expects: [
+      'each sheet has a header row, seven rows and a totals row',
+      'a verdict within the clock',
+    ],
+  },
+  enabled: true,
+  tags: ['example', 'race', 'cells'],
+  icon: 'table',
+  emoji: '🧮',
+};
+
 export const BATTLE_CATALOGUE: Record<string, BattleSpec> = {
+  'deck-race': DECK_RACE_BATTLE_0_0_1,
   'invoice-race': INVOICE_RACE_BATTLE_0_0_1,
   pong: PONG_BATTLE_0_0_1,
   'report-challenge': REPORT_CHALLENGE_BATTLE_0_0_1,
+  'sheet-race': SHEET_RACE_BATTLE_0_0_1,
 };
 
 /** A Battle, by `id` or `id:version`, or undefined. */

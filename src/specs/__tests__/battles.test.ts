@@ -22,23 +22,26 @@ const DECIDED = {
 } as const;
 
 describe('the Battle catalogue', () => {
-  it('holds three battles, one per variant', () => {
+  it('holds five battles, every variant among them', () => {
     expect(Object.keys(BATTLE_CATALOGUE).sort()).toEqual([
+      'deck-race',
       'invoice-race',
       'pong',
       'report-challenge',
+      'sheet-race',
     ]);
-    expect(
-      listBattles()
-        .map(battle => battle.variant)
-        .sort(),
-    ).toEqual(['challenge', 'game', 'race']);
+    expect(new Set(listBattles().map(battle => battle.variant))).toEqual(
+      new Set(['challenge', 'game', 'race']),
+    );
   });
 
   it('decides each as its variant is, and only a game has an arena', () => {
     for (const battle of listBattles()) {
       expect(battle.referee.decidesBy).toBe(DECIDED[battle.variant]);
-      expect(battle.arena !== undefined).toBe(battle.variant === 'game');
+      // A game is played in an arena that keeps a score; a race may name a deck or a sheet to work in.
+      if (battle.variant === 'game') {
+        expect(['pong', 'invaders']).toContain(battle.arena);
+      }
       expect(battle.clockSeconds).toBeGreaterThanOrEqual(10);
       expect(battle.contestants.length).toBeGreaterThanOrEqual(2);
       expect(battle.goal.length).toBeGreaterThan(0);
