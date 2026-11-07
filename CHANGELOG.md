@@ -9,6 +9,19 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.112
+
+7 November 2026.
+
+**A Battle runs to the end.** `first_done` ends a play once every contestant is done, never on the first answer, so the slower contestant's evals count; the first done still ranks first (`src/battles/verdict.ts`).
+
+**A direct provider's model is called by the agent itself.** The catalogue's `via` (agentspecs 0.0.153) decides: on a Datalayer runtime a provider reached through ai-inference (Bedrock, Azure OpenAI, Alibaba, Cloudflare) keeps going through it, and a direct one — OpenRouter with the person's `OPENROUTER_API_KEY`, Anthropic, OpenAI, Ollama — goes from the agent to the provider, never through ai-inference, which holds no account with it; offered wherever its key is, listed when the catalogue offers it, a missing key refused in a sentence (`models.called_directly`, `create_model_with_provider`'s OpenRouter branch, `offered.availability`). The local-model builder hands pydantic-ai an httpx client, which the openai package takes (httpx2 was refused).
+
+**Specs at agentspecs 0.0.155.** OpenRouter and `openrouter:anthropic/claude-opus-5.5`; every model provider says `via`; the Social Marketer carries `github`, `image`, `video` and `pdf` beside `crawl`, `events` and `text-summarizer`; the company role's `sign_in_disabled`.
+
+**PAP 0.3 as published, agent side** (PAP_DATALAYER D4-01, D4-03, D4-08, D4-10): `personal-agent-protocol` 0.31.0 (upstream `2289293`); the PAP capability sends an approval as `extensions.operations` and reads Links and Disclosures; the Appspec reader and the company role carry `sign_in_disabled`; the PAP example views and traces say *0.3 as published*. The companies and the gateway follow in the services' next deploy.
+
+
 ## 1.5.111
 
 7 November 2026.
