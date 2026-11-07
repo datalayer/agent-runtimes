@@ -211,6 +211,17 @@ OPENAI_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+OPENROUTER_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="OPENROUTER_API_KEY",
+    version="0.0.1",
+    name="OpenRouter API Key",
+    description="API key for OpenRouter, one key in front of the models of many vendors. Required by any harness configured with OpenRouter as its model provider run locally; the person's own. A Datalayer runtime takes no key: its model calls go through ai-inference.",
+    registrationUrl="https://openrouter.ai/settings/keys",
+    tags=["authentication", "api-key", "openrouter", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
 SLACK_BOT_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="SLACK_BOT_TOKEN",
     version="0.0.1",
@@ -288,6 +299,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "KAGGLE_API_TOKEN": KAGGLE_API_TOKEN_SPEC_0_0_1,
     "LLM_API_KEY": LLM_API_KEY_SPEC_0_0_1,
     "OPENAI_API_KEY": OPENAI_API_KEY_SPEC_0_0_1,
+    "OPENROUTER_API_KEY": OPENROUTER_API_KEY_SPEC_0_0_1,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,

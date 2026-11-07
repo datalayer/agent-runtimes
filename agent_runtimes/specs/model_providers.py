@@ -108,6 +108,19 @@ OPENAI_0_0_1 = ModelProvider(
     hosting="cloud",
 )
 
+OPENROUTER_0_0_1 = ModelProvider(
+    id="openrouter",
+    version="0.0.1",
+    name="OpenRouter",
+    description="One OpenAI-compatible API in front of the models of many vendors — Anthropic, OpenAI, Google, Meta, Mistral and the open-weight houses — with one key and one bill, routed to the vendor or to a host of its weights; a model is named `openrouter:<vendor>/<model>`, as OpenRouter lists it. What a request carries goes to the vendor it is routed to, under that vendor's terms; OpenRouter's own retention is set per account.",
+    website="https://openrouter.ai",
+    docs_url="https://openrouter.ai/docs",
+    terms_url="https://openrouter.ai/terms",
+    privacy_url="https://openrouter.ai/privacy",
+    data_usage_url="https://openrouter.ai/docs/features/privacy-and-logging",
+    hosting="cloud",
+)
+
 
 # ============================================================================
 # Model Provider Catalog
@@ -121,6 +134,7 @@ MODEL_PROVIDER_CATALOGUE: Dict[str, ModelProvider] = {
     "cloudflare": CLOUDFLARE_0_0_1,
     "ollama": OLLAMA_0_0_1,
     "openai": OPENAI_0_0_1,
+    "openrouter": OPENROUTER_0_0_1,
 }
 
 

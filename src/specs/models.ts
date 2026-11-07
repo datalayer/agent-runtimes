@@ -65,6 +65,7 @@ export const AIModels = {
   OPENAI_GPT_4O_MINI: 'openai:gpt-4o-mini',
   OPENAI_GPT_4O: 'openai:gpt-4o',
   OPENAI_O3_MINI: 'openai:o3-mini',
+  OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5: 'openrouter:anthropic/claude-opus-5.5',
 } as const;
 
 export type AIModelId = (typeof AIModels)[keyof typeof AIModels];
@@ -726,6 +727,22 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   pricing: { inputUsdPerMillion: 1.1, outputUsdPerMillion: 4.4 },
 };
 
+export const OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1: AIModel = {
+  id: 'openrouter:anthropic/claude-opus-5.5',
+  version: '0.0.1',
+  name: 'OpenRouter Claude Opus 5.5',
+  description:
+    'Claude Opus 5.5 by Anthropic, through OpenRouter - the current frontier Opus, one key for every vendor',
+  provider: 'openrouter',
+  providerUrl: 'https://openrouter.ai/anthropic/claude-opus-5.5',
+  default: false,
+  available: false,
+  requiredEnvVars: ['OPENROUTER_API_KEY'],
+  tokensLimit: 128000,
+  contextWindow: 1000000,
+  pricing: { inputUsdPerMillion: 4.0, outputUsdPerMillion: 20.0 },
+};
+
 // ============================================================================
 // AI Model Catalog
 // ============================================================================
@@ -785,6 +802,8 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'openai:gpt-4o-mini': OPENAI_GPT_4O_MINI_0_0_1,
   'openai:gpt-4o': OPENAI_GPT_4O_0_0_1,
   'openai:o3-mini': OPENAI_O3_MINI_0_0_1,
+  'openrouter:anthropic/claude-opus-5.5':
+    OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1,
 };
 
 /**

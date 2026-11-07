@@ -120,6 +120,20 @@ export const OPENAI_0_0_1: ModelProvider = {
   hosting: 'cloud',
 };
 
+export const OPENROUTER_0_0_1: ModelProvider = {
+  id: 'openrouter',
+  version: '0.0.1',
+  name: 'OpenRouter',
+  description:
+    "One OpenAI-compatible API in front of the models of many vendors — Anthropic, OpenAI, Google, Meta, Mistral and the open-weight houses — with one key and one bill, routed to the vendor or to a host of its weights; a model is named `openrouter:<vendor>/<model>`, as OpenRouter lists it. What a request carries goes to the vendor it is routed to, under that vendor's terms; OpenRouter's own retention is set per account.",
+  website: 'https://openrouter.ai',
+  docsUrl: 'https://openrouter.ai/docs',
+  termsUrl: 'https://openrouter.ai/terms',
+  privacyUrl: 'https://openrouter.ai/privacy',
+  dataUsageUrl: 'https://openrouter.ai/docs/features/privacy-and-logging',
+  hosting: 'cloud',
+};
+
 export const MODEL_PROVIDER_CATALOGUE: Record<string, ModelProvider> = {
   alibaba: ALIBABA_0_0_1,
   anthropic: ANTHROPIC_0_0_1,
@@ -128,6 +142,7 @@ export const MODEL_PROVIDER_CATALOGUE: Record<string, ModelProvider> = {
   cloudflare: CLOUDFLARE_0_0_1,
   ollama: OLLAMA_0_0_1,
   openai: OPENAI_0_0_1,
+  openrouter: OPENROUTER_0_0_1,
 };
 
 /** The provider a model spec's `provider` names, or undefined. */
