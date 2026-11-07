@@ -531,18 +531,22 @@
                     },
                     "role": "company",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      }
                     }
                   }
                 },
@@ -742,9 +746,13 @@
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_1",
-                  "revision": "rev_1"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1"
+                    }
+                  }
                 }
               }
             }
@@ -787,18 +795,22 @@
                     },
                     "role": "company",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      }
                     }
                   }
                 },
@@ -818,11 +830,15 @@
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1"
-                    },
-                    "role": "user"
+                    "role": "user",
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1"
+                        }
+                      }
+                    }
                   }
                 },
                 {
@@ -843,19 +859,23 @@
                     },
                     "role": "company",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_2",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
-                        },
-                        "return_by": "2026-10-25"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_2",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            },
+                            "return_by": "2026-10-25"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
                 },
@@ -975,9 +995,13 @@
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_1",
-                  "revision": "rev_2"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2"
+                    }
+                  }
                 }
               }
             }
@@ -1020,18 +1044,22 @@
                     },
                     "role": "company",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      }
                     }
                   }
                 },
@@ -1051,11 +1079,15 @@
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1"
-                    },
-                    "role": "user"
+                    "role": "user",
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1"
+                        }
+                      }
+                    }
                   }
                 },
                 {
@@ -1076,19 +1108,23 @@
                     },
                     "role": "company",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_2",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
-                        },
-                        "return_by": "2026-10-25"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_2",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            },
+                            "return_by": "2026-10-25"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
                 },
@@ -1108,11 +1144,15 @@
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_2"
-                    },
-                    "role": "user"
+                    "role": "user",
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_2"
+                        }
+                      }
+                    }
                   }
                 },
                 {
@@ -1177,9 +1217,13 @@
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_1",
-                  "revision": "rev_2"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_2"
+                    }
+                  }
                 }
               }
             }
@@ -1222,18 +1266,22 @@
                     },
                     "role": "company",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      }
                     }
                   }
                 },
@@ -1253,11 +1301,15 @@
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1"
-                    },
-                    "role": "user"
+                    "role": "user",
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1"
+                        }
+                      }
+                    }
                   }
                 },
                 {
@@ -1278,19 +1330,23 @@
                     },
                     "role": "company",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_2",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
-                        },
-                        "return_by": "2026-10-25"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_2",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more. Return the original by 2026-10-25.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            },
+                            "return_by": "2026-10-25"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
                 },
@@ -1310,11 +1366,15 @@
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_2"
-                    },
-                    "role": "user"
+                    "role": "user",
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_2"
+                        }
+                      }
+                    }
                   }
                 },
                 {

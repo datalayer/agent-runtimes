@@ -732,6 +732,151 @@
           }
         }
       ]
+    },
+    {
+      "title": "Manzanita asks for Ada",
+      "channel": "Company-first Direct Conversation",
+      "summary": "Manzanita's agent asks for the person with a user_requested event (a returns specialist wants to talk about the damaged jacket). Ada accepts: Atlas opens a Direct Conversation under the parent naming the event, with no message of its own, and Manzanita speaks first. Accepted again, the same conversation comes back (§8.10).",
+      "chat": [
+        {
+          "speaker": "manzanita",
+          "kind": "message",
+          "text": "A returns specialist would like to talk with you about the damaged jacket."
+        },
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Yes, put me through."
+        },
+        {
+          "speaker": "manzanita",
+          "kind": "message",
+          "text": "Hello Ada, this is the returns desk. What happened to the jacket?"
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Manzanita Outfitters · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · a Session JWT on every request"
+          },
+          {
+            "label": "Invitation",
+            "value": "user_requested evt_7 · accepted by Ada, never by the model"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "manzanita": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 7 events"
+          },
+          {
+            "label": "Direct conversation",
+            "value": "cnv_3 · opened by the company's first message"
+          },
+          {
+            "label": "Owner",
+            "value": "client_id + User ID (§8.2)"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "poppy-session": "‹Session JWT›"
+            },
+            "body": {
+              "parent_conversation_id": "cnv_1",
+              "user_requested_event_id": "evt_7"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_3",
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-11-07T09:05:00Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_9",
+                    "author": {
+                      "type": "agent",
+                      "name": "Manzanita Outfitters"
+                    },
+                    "role": "company",
+                    "text": "Hello Ada, this is the returns desk. What happened to the jacket?"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-11-07T09:05:00Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
+                }
+              ],
+              "cursor": "evt_2",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "POST",
+          "url": "https://manzanita.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "poppy-session": "‹Session JWT›"
+            },
+            "body": {
+              "parent_conversation_id": "cnv_1",
+              "user_requested_event_id": "evt_7"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_3",
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -24,7 +24,7 @@ type SessionSummary = {
   /** A fresh Session JWT on every request, naming the `sid`. */
   sessionHeaderOnEveryRequest: boolean;
   freshJwtPerRequest: boolean;
-  /** `invalid_session` starts a new Session once, and the request is sent again. */
+  /** `session_ended` starts a new Session once, and the request is sent again (§5.5). */
   restartedOnce: boolean;
   resentRequestStatus: number;
   sameUserAfterRestart: boolean;
@@ -45,7 +45,7 @@ const PapSessionLifecycleView: React.FC = () => {
       calls += 1;
       jwts.push(new Headers(init?.headers).get('Poppy-Session') ?? '');
       return calls === 1
-        ? new Response(JSON.stringify({ error: 'invalid_session' }), {
+        ? new Response(JSON.stringify({ error: 'session_ended' }), {
             status: 400,
             headers: { 'content-type': 'application/json' },
           })
@@ -112,7 +112,7 @@ const PapSessionLifecycleView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Session"
       title="Start and restart a Session without giving credentials to the agent"
-      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (draft 0.3) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key. Answered invalid_session, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
+      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (0.3 as published) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key. Answered invalid_session, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
     >
       <Box
         display="flex"

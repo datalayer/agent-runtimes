@@ -83,7 +83,7 @@ const PapSessionJwtView: React.FC = () => {
           claims.htu === 'https://api.company.example/orders',
         accessTokenBound: typeof claims.ath === 'string',
         namesItsSession: claims.sid === request.sid,
-        carriesItsDelegation: typeof header.pap_dlg === 'string',
+        carriesItsDelegation: typeof header.poppy_dlg === 'string',
         oneKeyPerUserId: header.kid !== part(other.reveal(), 0).kid,
         jwtRedactedByDefault: first.toJSON() === '[REDACTED]',
         jwtWithheldFromUiState: true,

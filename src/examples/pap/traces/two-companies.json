@@ -1,7 +1,7 @@
 {
   "slug": "two-companies",
   "title": "Two companies working together",
-  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: draft 0.3 defines no company-to-company protocol.",
+  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: 0.3 as published defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
   "sdk": "personal-agent-protocol 0.29.0",
   "parties": [

@@ -73,7 +73,7 @@ const STEPS: readonly JourneyStep[] = [
     channel: 'Discovery',
     messages: conversationStart,
     facts: [
-      { label: 'Publishes', value: 'poppy.json · draft 0.3' },
+      { label: 'Publishes', value: 'poppy.json · 0.3 as published' },
       { label: 'Returns', value: 'Company conversation agent' },
       { label: 'Sign-in', value: "Northstar's own page" },
     ],
@@ -314,7 +314,7 @@ const runJourney = async (): Promise<
       ],
     },
   });
-  // Direct Sign-In is what the issuer's grants offer (draft 0.3 §3.2).
+  // Direct Sign-In is what the issuer's grants offer (0.3 as published §3.2).
   parseOAuthServerMetadata({
     issuer: 'https://auth.northstar.example',
     token_endpoint: 'https://auth.northstar.example/oauth/token',
