@@ -9,6 +9,13 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.115
+
+7 November 2026.
+
+**A Battle's own token and the demo books** (B4-01). `fetchBattleToken` mints the token one play of a catalogue Battle runs on: its model calls count against a per-play budget at ai-inference instead of a visitor's minute, so two Battles in a row both answer. A catalogue Battle's member reaches the demo books (`odoo-accounting`) with `DATALAYER_BATTLE_BOOKS_API_KEY`, the Battle read from the visitor's token, never from a message or a route; the key leaves the environment at start, is redacted from what the model reads and never reaches the kernel. A runtime given no key keeps its own rule: a pool runtime reaches the books with its deployment's principal token.
+
+
 ## 1.5.114
 
 7 November 2026. (1.5.112 and 1.5.113 were tagged and never published: the first's release tests ran against agentspecs 0.0.155, which has no `publish_skills`, so the floor is 0.0.156; the second's failed on the PAP examples, whose approval messages still carried `approval` at the top level — they carry `extensions.operations` now, as 0.3 as published says.)
