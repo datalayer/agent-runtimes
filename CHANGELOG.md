@@ -9,6 +9,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.110
+
+7 November 2026.
+
+**Jokes loads from its module** (agentspecs 0.0.151, agent-skills 1.2.1): the `jokes` skill names `agent_skills.skills.jokes` like the eight others, so a pod loads it; agent-skills 1.2.1 ships it and the `accounting` module the spec already named.
+
 ## 1.5.109
 
 7 November 2026. (1.5.107 and 1.5.108 were tagged and never published: 1.5.107's build needed `@datalayer/reactor/tools`, released as reactor 1.3.5, the floor now; 1.5.108's catalogue test did not yet name the four applications of agentspecs 0.0.148 to 0.0.150.)
