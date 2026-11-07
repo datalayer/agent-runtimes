@@ -985,8 +985,8 @@ X_MCP_SERVER_0_0_1 = MCPServer(
     api_key_url="https://developer.x.com/en/portal/dashboard",
     setup="Create an app in the X Developer Portal, copy its App-only Bearer Token from Keys and tokens into X_BEARER_TOKEN; the runtime reaches https://api.x.com/mcp with it and reads. For bookmarks and articles, run the xurl bridge on a machine with a browser instead, with the app's CLIENT_ID and CLIENT_SECRET.",
     actions={
-        "tools": {"article_publish": "publish"},
-        "note": "Read off X's documentation, not the running server: posts, search, users, news and trends are reads; bookmarks are read and written; articles are drafted and published. Only `article_publish` is named there. Run the server, list its tools, and class each one here.",
+        "tools": {},
+        "note": "Read off X's documentation, not the running server: posts, search, users, news and trends are reads; bookmarks are read and written; articles are drafted and published (`article_publish` is the one tool named there). A server not read off classes nothing: run it, list its tools, and class each one here.",
     },
 )
 
