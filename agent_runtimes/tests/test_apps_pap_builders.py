@@ -203,6 +203,10 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
         scopes=[{"name": "orders:read", "description": "Read your orders"}], sign_in_disabled=True
     )
     assert role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
+    # Its public skills published to personal agents (D4-06): off unless said.
+    publishing = Application("p", "chat", agent="example-blank:0.0.1")
+    assert publishing.as_company(publish_skills=True).publish_skills is True
+    assert publishing._pap()["company"]["publish_skills"] is True
     with pytest.raises(ValidationError, match="answers them signed out"):
         Application("n", "chat", agent="example-blank:0.0.1").as_company(
             scopes=[{"name": "orders:read", "description": "Read your orders"}],

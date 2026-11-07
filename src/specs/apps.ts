@@ -249,6 +249,7 @@ export const BOOKKEEPING_DESK_APP_0_0_3: AppSpec = {
       enabled: true,
       signedOut: false,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [
         {
@@ -2148,6 +2149,7 @@ export const EXCHANGE_DESK_APP_0_0_3: AppSpec = {
       enabled: true,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent', 'openapi'],
       scopes: [
         {
@@ -2703,6 +2705,7 @@ export const LIVE_SHOP_CHAT_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],
@@ -3531,6 +3534,7 @@ export const ORDER_DESK_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],
@@ -3717,6 +3721,7 @@ export const ORDER_TRACKER_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],
@@ -4907,6 +4912,7 @@ export const RETURNS_DESK_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],
@@ -5583,6 +5589,7 @@ export const SHOP_CONCIERGE_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],
@@ -5942,6 +5949,7 @@ export const SIGN_IN_DESK_APP_0_0_2: AppSpec = {
       enabled: false,
       signedOut: true,
       signInDisabled: false,
+      publishSkills: false,
       interfaces: ['agent'],
       scopes: [],
       excludedTasks: [],

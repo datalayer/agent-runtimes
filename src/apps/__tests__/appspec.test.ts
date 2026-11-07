@@ -380,6 +380,20 @@ describe('writing an Appspec', () => {
       enabled: true,
       sign_in_disabled: true,
     });
+    // Its public skills published to personal agents (D4-06): off unless said, written as publish_skills.
+    const publishing = parseAppspec({
+      kind: 'chat',
+      skills: ['accounting'],
+      pap: {
+        profile: 'draft-01',
+        company: { ...company, publish_skills: true },
+      },
+    }).app;
+    expect(open.pap?.company.publishSkills).toBe(false);
+    expect(publishing.pap?.company.publishSkills).toBe(true);
+    expect(dumpAppspec(publishing).pap?.company).toMatchObject({
+      publish_skills: true,
+    });
   });
 
   it('leaves out what is not the spec', () => {
@@ -567,6 +581,7 @@ describe('writing an Appspec', () => {
         enabled: true,
         signedOut: true,
         signInDisabled: false,
+        publishSkills: false,
         interfaces: ['agent'],
         scopes: [
           {

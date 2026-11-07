@@ -1001,6 +1001,12 @@ export interface AppPapCompanySpec {
    * published): they ask only what anybody may ask, in nobody's account (D4-08).
    */
   signInDisabled: boolean;
+  /**
+   * Whether it publishes the application's skills to personal agents as a
+   * `skill_index` (PAP 0.3 §9.4): only the public, secret-free ones, which the
+   * platform decides at Ship (D4-06).
+   */
+  publishSkills: boolean;
   interfaces: PapInterface[];
   /** The scopes it offers, each with what it allows and its hints. */
   scopes: AppPapCompanyScopeSpec[];

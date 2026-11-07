@@ -229,6 +229,7 @@ BOOKKEEPING_DESK_APP_0_0_3 = AppSpec.model_validate(
                 "enabled": True,
                 "signed_out": False,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [
                     {
@@ -1951,6 +1952,7 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
                 "enabled": True,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent", "openapi"],
                 "scopes": [
                     {
@@ -2472,6 +2474,7 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],
@@ -3248,6 +3251,7 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],
@@ -3424,6 +3428,7 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],
@@ -4448,6 +4453,7 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],
@@ -5093,6 +5099,7 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],
@@ -5424,6 +5431,7 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
                 "enabled": False,
                 "signed_out": True,
                 "sign_in_disabled": False,
+                "publish_skills": False,
                 "interfaces": ["agent"],
                 "scopes": [],
                 "excluded_tasks": [],

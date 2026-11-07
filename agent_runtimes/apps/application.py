@@ -1014,6 +1014,7 @@ class Application:
         excluded_tasks: Sequence[Mapping[str, Any]] = (),
         signed_out: bool = True,
         sign_in_disabled: bool = False,
+        publish_skills: bool = False,
         interfaces: Sequence[str] = ("agent",),
         extensions: Sequence[str] = (),
         personal_agents: str = "any",
@@ -1042,6 +1043,10 @@ class Application:
             Whether it offers personal agents no sign-in (PAP ``auth.disabled``,
             0.3 as published): they ask only what anybody may ask, in nobody's
             account; ``signed_out`` must then stay on.
+        publish_skills : bool
+            Whether the application's skills are published to personal agents
+            as a ``skill_index`` (PAP 0.3 §9.4): only the public, secret-free
+            ones, which the platform decides at Ship.
         interfaces : sequence of str
             How personal agents reach it: ``agent``, ``openapi``, ``mcp``.
         extensions : sequence of str
@@ -1065,6 +1070,7 @@ class Application:
                 "enabled": True,
                 "signed_out": signed_out,
                 "sign_in_disabled": sign_in_disabled,
+                "publish_skills": publish_skills,
                 "interfaces": list(interfaces),
                 "scopes": list(scopes),
                 "excluded_tasks": list(excluded_tasks),

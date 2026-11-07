@@ -1332,6 +1332,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Sign In Disabled',
           type: 'boolean',
         },
+        publish_skills: {
+          default: false,
+          description:
+            "Whether it publishes the application's skills to personal agents as a `skill_index` (PAP 0.3 §9.4, the pinned Agent Skills revision): only the skills whose SKILL.md says it is public and that need no secret are listed, Company content granting no access",
+          title: 'Publish Skills',
+          type: 'boolean',
+        },
         interfaces: {
           description:
             "How personal agents reach it: `agent`, `openapi`, `mcp`, and `web` — its pages, a browser joining the person's Session through the one-time-code form (PAP draft 0.3 §6)",
