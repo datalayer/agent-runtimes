@@ -353,7 +353,9 @@ def test_the_sandbox_is_not_the_local_caller_and_the_companion_is() -> None:
     from agent_runtimes.routes.apps import LOCAL, _authorize
 
     def called(headers: dict[str, str]) -> Any:
-        request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"), headers=headers)
+        request = SimpleNamespace(
+            client=SimpleNamespace(host="127.0.0.1"), headers=headers
+        )
         return asyncio.run(_authorize(request, person_only=False))
 
     give_runtime_proof(_proof(), SECRET)
@@ -524,7 +526,9 @@ def asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]:
 
     def answer(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        return httpx.Response(200, json={"success": True, "secrets": {"GITHUB_TOKEN": "of-the-owner"}})
+        return httpx.Response(
+            200, json={"success": True, "secrets": {"GITHUB_TOKEN": "of-the-owner"}}
+        )
 
     real = httpx.AsyncClient
     monkeypatch.setattr(
@@ -567,7 +571,11 @@ def test_the_kernel_is_shut_unless_ai_agents_says_its_owner_launched_it(
 ) -> None:
     def answer(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
-            200, json={"secrets": {}, **({} if said is None else {"launched_by_owner": said})}
+            200,
+            json={
+                "secrets": {},
+                **({} if said is None else {"launched_by_owner": said}),
+            },
         )
 
     real = httpx.AsyncClient
@@ -642,3 +650,47 @@ def test_a_refusal_of_ai_agents_gives_nothing(
     )
     assert answer.status_code == 502
     assert "paused" in answer.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_the_launcher_is_asked_once_before_the_kernel_is_decided(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The keeper's relaunch configures the agent before the companion read the
+    owner's secrets (7 November 2026): the runtime asks ai-agents itself, once."""
+    calls: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json={"secrets": {}, "launched_by_owner": True})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(answer), **kwargs),
+    )
+    give_runtime_proof(_proof(), SECRET)
+    assert not principal.kernel_holds_owner_secrets()
+    await principal.ensure_launcher_known()
+    assert principal.kernel_holds_owner_secrets() is True
+    await principal.ensure_launcher_known()
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_launcher_ai_agents_does_not_say_leaves_the_kernel_shut(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def refuse(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, json={"detail": "not now"})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(refuse), **kwargs),
+    )
+    give_runtime_proof(_proof(), SECRET)
+    await principal.ensure_launcher_known()
+    assert principal.kernel_holds_owner_secrets() is False

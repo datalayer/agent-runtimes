@@ -9,6 +9,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.111
+
+7 November 2026.
+
+**A kept runtime learns who launched it before refusing a sandbox secret.** The keeper's relaunch of a deployment kept always on made its agent before the companion had read the owner's secrets, which is when ai-agents says whether the owner launched the runtime; so an application whose skill needs an owner's secret in the sandbox (crawl's `TAVILY_API_KEY`) was refused on every relaunch after a pool recycle, and only a launch from the Studio got through. The runtime now asks ai-agents itself, once, before deciding (`ensure_launcher_known`); not answered, the kernel gets nothing, as before.
+
 ## 1.5.110
 
 7 November 2026.

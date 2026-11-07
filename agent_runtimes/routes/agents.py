@@ -1668,6 +1668,10 @@ async def create_agent(
             app_instance=request.app_instance,
             resolve_agent=get_library_agent_spec,
         )
+        # Who launched this runtime, learnt before deciding what its sandbox may hold (7 November 2026).
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
         problems = _kernel_refused(
             declared_by_it,
             lambda name: bool((os.environ.get(name) or "").strip()),
@@ -5043,12 +5047,16 @@ async def start_all_agents_mcp_servers(
     if launch is not None:
         given = {ev.name: ev.value for ev in body.env_vars if ev.name}
         app_id = str((launch_spec or {}).get("id") or "")
+
         def available(name: str) -> bool:
             return bool(
                 (given.get(name) or "").strip() or (os.environ.get(name) or "").strip()
             )
 
         who = str((launch_spec or {}).get("name") or app_id)
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
         problems = [
             *launch.missing(available, who=who),
             *_kernel_refused(launch, available, who),

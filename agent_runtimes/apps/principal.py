@@ -130,6 +130,7 @@ __all__ = [
     "read_deployment_code",
     "read_launched_app",
     "read_owner_secrets",
+    "ensure_launcher_known",
     "renew_principal_token",
     "use_code_reader",
     "use_memberships_asker",
@@ -910,6 +911,25 @@ async def read_owner_secrets() -> dict[str, str]:
     answer = response.json() or {}
     _LAUNCHED_BY_OWNER["said"] = answer.get("launched_by_owner") is True
     return dict(answer.get("secrets") or {})
+
+
+async def ensure_launcher_known() -> None:
+    """Whether its owner launched this runtime, asked of ai-agents once when it has
+    not been said yet (7 November 2026).
+
+    The companion reads the owner's secrets in the start hooks, which is when
+    ai-agents says who launched the runtime; the keeper's relaunch of a kept
+    deployment made its agent before that read, so a skill needing an owner's
+    secret in the sandbox was refused on every relaunch, and only the owner's own
+    launch from the Studio got through. Asked here, the answer is the same one
+    the companion gets; not answered, the kernel gets nothing, as before.
+    """
+    if not launched_for() or "said" in _LAUNCHED_BY_OWNER:
+        return
+    try:
+        await read_owner_secrets()
+    except OwnerSecretsUnread:
+        return
 
 
 async def _ensure_held(
