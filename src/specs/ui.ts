@@ -1835,6 +1835,49 @@ export const PROMPT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
+  id: 'spreadsheet-view',
+  version: '0.0.1',
+  name: 'Spreadsheet button',
+  description:
+    'The spreadsheet beside the conversation, from under the composer.',
+  emoji: '🧮',
+  octicon: 'table',
+  plugin: '@datalayer/loop-plugin-spreadsheet-view',
+  folder: 'spreadsheet-view',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const SPREADSHEET_UI_0_0_1: UISpec = {
+  id: 'spreadsheet',
+  version: '0.0.1',
+  name: 'Spreadsheet',
+  description: 'A workbook beside the conversation, drawn by Datalayer Cells.',
+  emoji: '🧮',
+  octicon: 'table',
+  plugin: '@datalayer/loop-plugin-spreadsheet',
+  folder: 'spreadsheet',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.surface', 'loop.command'],
+    commands: ['spreadsheet'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
   id: 'subagent-activity',
   version: '0.0.1',
@@ -1907,6 +1950,8 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
   prompt: PROMPT_UI_0_0_1,
+  'spreadsheet-view': SPREADSHEET_VIEW_UI_0_0_1,
+  spreadsheet: SPREADSHEET_UI_0_0_1,
   'subagent-activity': SUBAGENT_ACTIVITY_UI_0_0_1,
   'window-frame': WINDOW_FRAME_UI_0_0_1,
 };

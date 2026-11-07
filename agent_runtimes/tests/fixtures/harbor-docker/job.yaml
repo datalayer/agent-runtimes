@@ -1,0 +1,4 @@
+n_attempts: 2
+agents:
+  - name: answerer
+    import_path: answerer:Answerer

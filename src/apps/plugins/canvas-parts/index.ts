@@ -27,6 +27,9 @@ import { listChatModels } from '../../../specs/models';
 import { getSkillSpecs } from '../../../specs/skills';
 import { listProtocolSpecs } from '../../../specs/protocols';
 import { listUI } from '../../../specs/ui';
+import { listGuards } from '../../../specs/guards';
+import { listGates } from '../../../specs/gates';
+import { listTracks } from '../../../specs/tracks';
 import { ASSISTANT_CHARACTER_FAMILIES } from '../../../chat/assistant/characters';
 import {
   SHIPPED_ASSISTANT_CHARACTERS,
@@ -56,6 +59,10 @@ export const CANVAS_PART_SOURCES = [
   'protocols',
   'ui',
   'avatars',
+  // The accountability plane (6 November 2026).
+  'guards',
+  'gates',
+  'tracks',
 ] as const;
 
 export type CanvasPartSource = (typeof CANVAS_PART_SOURCES)[number];
@@ -317,6 +324,45 @@ export const AVATAR_PARTS: CanvasPartContribution[] = [
   },
 ];
 
+/**
+ * The accountability plane (the user, 6 November 2026), dropped on the
+ * application's checks: each Guard of the catalogue, each Gate, and the
+ * Track its record is kept under — by `id:version`, as `checks` names them.
+ */
+export const GUARD_PARTS: CanvasPartContribution[] = listGuards().map(
+  guard => ({
+    id: `guard:${guard.id}`,
+    kind: 'guard',
+    label: guard.name,
+    says: guard.check,
+    emoji: guard.emoji,
+    example: `${guard.id}:${guard.version}`,
+    enabled: guard.enabled,
+  }),
+);
+
+export const GATE_PARTS: CanvasPartContribution[] = listGates().map(gate => ({
+  id: `gate:${gate.id}`,
+  kind: 'gate',
+  label: gate.name,
+  says: `When ${gate.when}: ${gate.then}; otherwise ${gate.otherwise}.`,
+  emoji: gate.emoji,
+  example: `${gate.id}:${gate.version}`,
+  enabled: gate.enabled,
+}));
+
+export const TRACK_PARTS: CanvasPartContribution[] = listTracks().map(
+  track => ({
+    id: `track:${track.id}`,
+    kind: 'track',
+    label: track.name,
+    says: track.description,
+    emoji: track.emoji,
+    example: `${track.id}:${track.version}`,
+    enabled: track.enabled,
+  }),
+);
+
 export const CANVAS_PART_PLUGINS: ReactorPlugin<
   Record<string, never>,
   unknown,
@@ -332,6 +378,9 @@ export const CANVAS_PART_PLUGINS: ReactorPlugin<
   partsPlugin('protocols', 'Protocols', PROTOCOL_PARTS),
   partsPlugin('ui', 'UI', UI_PARTS),
   partsPlugin('avatars', 'Avatars', AVATAR_PARTS),
+  partsPlugin('guards', 'Guards', GUARD_PARTS),
+  partsPlugin('gates', 'Gates', GATE_PARTS),
+  partsPlugin('tracks', 'Tracks', TRACK_PARTS),
 ];
 
 /** The toolbox's reactor, its named plugins disabled; a name no plugin has is refused. */

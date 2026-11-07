@@ -92,7 +92,7 @@ environment_name: ai-agents-env
 
 icon: package
 emoji: "📦"
-color: "#1F6FEB"
+color: blue
 
 suggestions:
   # First: proof of where the code runs — the point of a variant.

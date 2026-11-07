@@ -3,6 +3,31 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+const path = require('path');
+
+/**
+ * The module's own decks, from its source: the site shows them without a build
+ * of the package first.
+ */
+function agentProtocolDecks() {
+  return {
+    name: 'agent-protocol-decks',
+    configureWebpack() {
+      return {
+        resolve: {
+          alias: {
+            '@datalayer/agent-runtimes/lib/protocols/decks$': path.resolve(__dirname, '../src/protocols/decks/index.ts'),
+          },
+          // The source's `./x.js` imports name `./x.ts`.
+          extensionAlias: { '.js': ['.ts', '.js'] },
+          // `yaml`, for that source: it sits outside the site's node_modules.
+          modules: [path.resolve(__dirname, 'node_modules'), 'node_modules'],
+        },
+      };
+    },
+  };
+}
+
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 module.exports = {
   title: '☰ Agent Runtimes',
@@ -33,6 +58,8 @@ module.exports = {
   plugins: [
     '@docusaurus/theme-live-codeblock',
     'docusaurus-lunr-search',
+    agentProtocolDecks,
+    ['@datalayer/decks-docusaurus', { decksDir: 'decks', maxSlides: 10 }],
   ],
   themes: [
     '@docusaurus/theme-mermaid',

@@ -11,8 +11,9 @@ side is the `AgentA2ATeamExample` of the examples app. The documentation is
   this machine it needs no key.
 - `serve_scenes.py --url http://127.0.0.1:8767` serves every member on a
   runtime of every scene of the catalogue (A-15): Accounting on the
-  runtime at `--url`, and each other member — Crop monitoring, Disaster
-  assessment, Change detection, Month-end close — on a runtime of its own the
+  runtime at `--url`, and each other member — Code Explainer, Crop
+  monitoring, Disaster assessment, Change detection, Month-end close — on a
+  runtime of its own the
   script starts, ports from 8768 in that order, since a runtime serves one
   application over A2A at a time. `npm run examples` runs it (`server:scenes`);
   the `ScenesExample` reads the same ports unless `VITE_A2A_<MEMBER>_URL` says

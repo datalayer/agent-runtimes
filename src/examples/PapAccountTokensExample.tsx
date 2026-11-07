@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/** PAP Account Tokens, replayed from a PAP demo-world trace, as a Reactor workspace plugin. */
+/** PAP Refresh Tokens, replayed from a PAP demo-world trace, as a Reactor workspace plugin. */
 
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
@@ -15,9 +15,9 @@ setupPrimerPortals();
 
 const PapAccountTokensPlugin = definePapExamplePlugin({
   key: 'account-tokens',
-  title: 'PAP Account Tokens',
+  title: 'PAP Refresh Tokens',
   description:
-    'Refresh, rotate, narrow, and revoke an Account Token the host keeps by reference.',
+    'Refresh, rotate, narrow, and revoke a refresh token the host keeps by reference.',
   load: () => import('./pap/PapAccountTokensView'),
 });
 

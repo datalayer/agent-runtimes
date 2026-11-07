@@ -34,6 +34,7 @@ def test_every_runtime_member_of_every_scene_is_served_once_in_order(
     serve_scenes,
 ) -> None:
     assert serve_scenes.runtime_members() == [
+        "code-explainer",
         "crop-monitoring",
         "disaster-assessment",
         "change-detection",
@@ -47,10 +48,11 @@ def test_accounting_keeps_its_port_and_the_others_take_the_next_ones(
 ) -> None:
     members = serve_scenes.runtime_members()
     assert serve_scenes.ports_of(members) == {
-        "crop-monitoring": 8768,
-        "disaster-assessment": 8769,
-        "change-detection": 8770,
-        "month-end-close": 8771,
+        "code-explainer": 8768,
+        "crop-monitoring": 8769,
+        "disaster-assessment": 8770,
+        "change-detection": 8771,
+        "month-end-close": 8772,
         "accounting": 8767,
     }
     assert serve_scenes.ports_of(
@@ -60,8 +62,8 @@ def test_accounting_keeps_its_port_and_the_others_take_the_next_ones(
         "crop-monitoring": 9000,
     }
     assert (
-        serve_scenes.a2a_url("http://127.0.0.1:8769/", "disaster-assessment")
-        == "http://127.0.0.1:8769/api/v1/a2a/agents/disaster-assessment"
+        serve_scenes.a2a_url("http://127.0.0.1:8770/", "disaster-assessment")
+        == "http://127.0.0.1:8770/api/v1/a2a/agents/disaster-assessment"
     )
 
 

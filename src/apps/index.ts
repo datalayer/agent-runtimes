@@ -131,6 +131,10 @@ export {
   DOCUMENT_VIEW_PLUGIN_NAME,
 } from './plugins/document-view';
 export {
+  SpreadsheetViewPlugin,
+  SPREADSHEET_VIEW_PLUGIN_NAME,
+} from './plugins/spreadsheet-view';
+export {
   defineViewPlugin,
   type ViewPluginOptions,
 } from './plugins/view-switch';
@@ -325,6 +329,11 @@ export {
 } from './plugins/shell';
 export { ModelsPlugin, MODELS_PLUGIN_NAME } from './plugins/models';
 export { NotebookPlugin, NOTEBOOK_PLUGIN_NAME } from './plugins/notebook';
+export {
+  SpreadsheetPlugin,
+  SPREADSHEET_PLUGIN_NAME,
+  SPREADSHEET_SURFACE_ID,
+} from './plugins/spreadsheet';
 export {
   NotebookToolbarPlugin,
   NOTEBOOK_TOOLBAR_PLUGIN_NAME,

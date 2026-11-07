@@ -68,7 +68,7 @@ const A = AGENT_SPAN_ATTRIBUTES;
 
 /** Where a tool call comes from. */
 export type AgentToolKind =
-  'mcp' | 'frontend' | 'skill' | 'codemode' | 'runtime';
+  'mcp' | 'frontend' | 'skill' | 'codemode' | 'runtime' | 'harness';
 
 /** Every kind, in the order the filters list them. */
 export const AGENT_TOOL_KINDS: readonly AgentToolKind[] = [
@@ -77,6 +77,7 @@ export const AGENT_TOOL_KINDS: readonly AgentToolKind[] = [
   'skill',
   'codemode',
   'runtime',
+  'harness',
 ];
 
 /** What a tool call is: where it comes from, and its marks. */

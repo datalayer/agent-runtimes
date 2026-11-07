@@ -3,40 +3,40 @@
 Each directory is a small Agent Runtimes `Application` that teaches one PAP
 feature while keeping protocol secrets outside model context.
 
-| Example                                                   | Feature                                                | Model-visible result                              |
-| --------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------- |
-| [`company-discovery`](./company-discovery/)               | Verified company discovery and interface inventory     | Credential-free company summary                   |
-| [`agent-identity`](./agent-identity/)                     | Client metadata, same-domain JWKS and signing policy   | Credential-free identity summary                  |
-| [`session-assertion`](./session-assertion/)               | Pairwise identity and short-lived assertion claims     | Policy only; no subject or `jti`                  |
-| [`direct-sign-in-boundary`](./direct-sign-in-boundary/)   | State, S256 PKCE and browser handoff                   | Security properties only                          |
-| [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete Session upgrade and partial consent           | Lifecycle evidence; all secrets withheld          |
-| [`device-sign-in`](./device-sign-in/)                     | Device code, paced polling and protected token storage | Lifecycle evidence; all secrets withheld          |
-| [`dpop-proof`](./dpop-proof/)                             | Method, URL, token, nonce and replay binding           | Verified policy; all proof material withheld      |
-| [`session-lifecycle`](./session-lifecycle/)               | Start, nonce retry, and renewal over HTTP              | Lifecycle evidence; credentials withheld          |
-| [`browser-session`](./browser-session/)                   | Join form, one-time code, proof with the Session Key   | Browser policy; all credentials withheld          |
-| [`dpop-transport`](./dpop-transport/)                     | Nonce retry, fresh proofs, refused redirects           | Transport policy; credentials withheld            |
-| [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs         | Conversation state; credentials withheld          |
-| [`conversation-events`](./conversation-events/)           | Long poll and de-duplicate ordered conversation events | Event evidence; credentials withheld              |
-| [`account-tokens`](./account-tokens/)                     | Refresh, rotation, narrowing and revocation            | Lifecycle evidence; token and reference withheld  |
-| [`mediated-sign-in`](./mediated-sign-in/)                 | Credentials on `pap.protectedInput`, sent once         | Questions asked and outcome; credentials withheld |
-| [`conversation-streaming`](./conversation-streaming/)     | SSE events, display-only deltas, Last-Event-ID         | Event evidence; credentials withheld              |
-| [`conversation-control`](./conversation-control/)         | Direct Conversation, handoff and close                 | Statuses and event types; credentials withheld    |
-| [`operations`](./operations/)                             | Operations v1: exact approval, at most once            | States, revisions and company summaries           |
-| [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                      | What each party saw; codes and tokens withheld    |
-| [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind          | Who approved what, and where; secrets withheld    |
-| [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`, RU-1)      | Display's model view; no link, no code            |
-| [`company-connection`](./company-connection/)             | `pap.connections`: gateway server, level, scopes       | Tools given and withheld; credentials elsewhere   |
-| [`company-role`](./company-role/)                         | `pap.company`: propose, confirm, perform once          | Proposals, revisions and gate decisions           |
-| [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor   | Summaries only; tokens and device code withheld   |
-| [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company   | What the person was shown; ticket used once       |
+| Example                                                   | Feature                                                   | Model-visible result                              |
+| --------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
+| [`company-discovery`](./company-discovery/)               | Verified company discovery and interface inventory        | Credential-free company summary                   |
+| [`agent-identity`](./agent-identity/)                     | Client metadata, same-domain JWKS and signing policy      | Credential-free identity summary                  |
+| [`delegation`](./delegation/)                             | One delegated key per User ID, a delegation naming nobody | Policy only; no subject or `jti`                  |
+| [`direct-sign-in-boundary`](./direct-sign-in-boundary/)   | State, S256 PKCE and browser handoff                      | Security properties only                          |
+| [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete sign-in and partial consent                      | Lifecycle evidence; all secrets withheld          |
+| [`device-sign-in`](./device-sign-in/)                     | Device code, paced polling and protected token storage    | Lifecycle evidence; all secrets withheld          |
+| [`session-jwt`](./session-jwt/)                           | Method, URL, token and replay binding                     | Verified policy; the JWT and keys withheld        |
+| [`session-lifecycle`](./session-lifecycle/)               | A random `sid`, `invalid_session` and one restart         | Lifecycle evidence; credentials withheld          |
+| [`browser-session`](./browser-session/)                   | Join form, one-time code, `/authorize` with the header    | Browser policy; all credentials withheld          |
+| [`session-transport`](./session-transport/)               | Fresh Session JWTs, a restart once, refused redirects     | Transport policy; credentials withheld            |
+| [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs            | Conversation state; credentials withheld          |
+| [`conversation-events`](./conversation-events/)           | Long poll and de-duplicate ordered conversation events    | Event evidence; credentials withheld              |
+| [`account-tokens`](./account-tokens/)                     | Refresh tokens: rotation, narrowing and revocation        | Lifecycle evidence; token and reference withheld  |
+| [`mediated-sign-in`](./mediated-sign-in/)                 | The extension grant, credentials on `pap.protectedInput`  | Questions asked and outcome; credentials withheld |
+| [`conversation-streaming`](./conversation-streaming/)     | SSE events, display-only deltas, Last-Event-ID            | Event evidence; credentials withheld              |
+| [`conversation-control`](./conversation-control/)         | Direct Conversation, handoff and close                    | Statuses and event types; credentials withheld    |
+| [`operations`](./operations/)                             | Operations version 2: the person asked, at most once      | What was asked and what the company said          |
+| [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                         | What each party saw; codes and tokens withheld    |
+| [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind             | Each approval the person gave; secrets withheld   |
+| [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`)               | Display's model view; no link, no code            |
+| [`company-connection`](./company-connection/)             | `pap.connections`: gateway server, level, scopes          | Tools given and withheld; credentials elsewhere   |
+| [`company-role`](./company-role/)                         | `pap.company`: propose, approve, perform once             | Proposals, revisions and gate decisions           |
+| [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor      | Summaries only; tokens and device code withheld   |
+| [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company      | What the person was shown; ticket used once       |
 
-Every example runs against the released PAP Python SDK — Agent Runtimes pins
-0.27.0 and later (`personal-agent-protocol[ui]`), which implements
+Every example runs against the PAP Python SDK — Agent Runtimes pins 0.29.0 and
+later (`personal-agent-protocol[ui]`), which implements
 [PAP draft 0.3](https://personalagentprotocol.org/docs/0.3/spec), the
 specification published at [personalagentprotocol.org](https://personalagentprotocol.org)
 from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol);
-all of them ran on 0.27.0 on 27 October 2026
-(`python scripts/validate_pap_examples.py`). Most run
+all of them ran on 31 October 2026 at the SDK as of draft 0.3's revision
+2026-10-30 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.
 
@@ -49,7 +49,7 @@ The last three show what Agent Runtimes itself adds to PAP:
   agent through Datalayer's gateway (`pap.connections`), given only the tools
   its level gives, its sign-in asking only the scopes it names; and
 - `company-role`: an application that is itself a company (`pap.company`,
-  agentspecs 0.0.77), whose declared operation is proposed, confirmed by the
+  agentspecs 0.0.77), whose declared operation is proposed, approved by the
   person at its exact revision, and performed once.
 
 The first two examples use Agent Runtimes' Python
@@ -62,7 +62,7 @@ behavior and security guidance. A feature is considered demonstrated only when
 the raw PAP and Agent Runtimes examples agree on the same host/model boundary.
 
 The seven views of the examples gallery (`src/examples/Pap…Example.tsx`:
-Account Tokens, Mediated Sign-In, conversation streaming and control,
+refresh tokens, Mediated Sign-In, conversation streaming and control,
 Operations, a user with a company, two companies) replay traces recorded
 from the SDK's demo worlds by `traces/generate.py`: each trace names the SDK
 release that recorded it (`sdk`), and each view says it is recorded data, not

@@ -8,8 +8,9 @@
  *
  * The list the rules produce, drawn: three headings in the order they should
  * read — what is yours, your organizations', the platform's — each entry with
- * its version, size class and rate, and an entry that cannot be launched shown
- * rather than withheld, greyed, with the one thing to do about it beside it.
+ * its version, size class and rate, and an entry that cannot be launched
+ * hidden until the toggle shows it, then greyed, with the one thing to do
+ * about it beside it.
  *
  * Read through `codeSandboxEnvironmentOptions` rather than hand-written
  * options, so the picker and the launcher cannot agree with this test and
@@ -95,9 +96,24 @@ function aSelect(onSelect: (key: string) => void) {
  * and not the container's — and the trigger repeats the chosen entry, so a row
  * is found among the rows rather than by its text anywhere.
  */
-function anOpenSelect(onSelect = vi.fn()) {
+function triggerOf(rendered: ReturnType<typeof aSelect>) {
+  const trigger = rendered
+    .getAllByRole('button')
+    .find(button => button.getAttribute('aria-haspopup'));
+  if (!trigger) {
+    throw new Error('No trigger');
+  }
+  return trigger;
+}
+
+function anOpenSelect(onSelect = vi.fn(), { showDisabled = true } = {}) {
   const rendered = aSelect(onSelect);
-  fireEvent.click(rendered.getByRole('button'));
+  if (showDisabled) {
+    fireEvent.click(
+      rendered.getByRole('button', { name: 'Show disabled environments' }),
+    );
+  }
+  fireEvent.click(triggerOf(rendered));
   const rows = rendered.getAllByRole('menuitemradio');
   const rowOf = (title: string) => {
     const row = rows.find(item => item.textContent?.includes(title));
@@ -117,8 +133,7 @@ describe('the environment dropdown', () => {
   afterEach(cleanup);
 
   it('reads the chosen entry on the trigger, with its version', () => {
-    const { getByRole } = aSelect(vi.fn());
-    const trigger = getByRole('button').textContent ?? '';
+    const trigger = triggerOf(aSelect(vi.fn())).textContent ?? '';
     expect(trigger).toContain('Geo');
     expect(trigger).toContain('v3');
     expect(trigger).toContain('small');
@@ -169,5 +184,58 @@ describe('the environment dropdown', () => {
     expect(onSelect).not.toHaveBeenCalled();
     fireEvent.click(rowOf('ETL'));
     expect(onSelect).toHaveBeenCalledWith('acme/etl');
+  });
+
+  it('hides what cannot be launched until the toggle shows it', () => {
+    const { rows, screen } = anOpenSelect(vi.fn(), { showDisabled: false });
+    expect(rows.some(row => row.textContent?.includes('Ocean'))).toBe(false);
+    expect(rows.some(row => row.textContent?.includes('Geo'))).toBe(true);
+    expect(screen()).not.toContain('Build for this variant');
+  });
+
+  it('labels the toggle by its text, and offers it only when needed', () => {
+    const { getByRole } = aSelect(vi.fn());
+    const toggle = getByRole('button', { name: 'Show disabled environments' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    cleanup();
+    const launchable = codeSandboxEnvironmentOptions(
+      ENVIRONMENTS,
+      VIEWER,
+    ).filter(option => !option.disabled);
+    const { queryByText } = render(
+      <ThemeProvider>
+        <CodeSandboxEnvironmentSelect options={launchable} onSelect={vi.fn()} />
+      </ThemeProvider>,
+    );
+    expect(queryByText('Show disabled environments')).toBeNull();
+  });
+
+  it('keeps a long name on one line, with the whole of it in its tooltip', () => {
+    const long = 'benchmark-task-f1dcc6efe8d226a9';
+    render(
+      <ThemeProvider>
+        <CodeSandboxEnvironmentSelect
+          options={[
+            {
+              key: 'long',
+              title: long,
+              name: `eric/${long}`,
+              burningRate: 0.0008,
+            },
+          ]}
+          onSelect={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(document.querySelector('[aria-haspopup]') as HTMLElement);
+    const title = document.querySelector(
+      `[role="menuitemradio"] [title="${long}"]`,
+    ) as HTMLElement;
+    expect(title).not.toBeNull();
+    expect(getComputedStyle(title).whiteSpace).toBe('nowrap');
+    expect(getComputedStyle(title).textOverflow).toBe('ellipsis');
+    expect(
+      document.querySelector(`[role="menuitemradio"] [title="eric/${long}"]`),
+    ).not.toBeNull();
   });
 });

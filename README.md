@@ -40,7 +40,7 @@ loop --local -a example-simple
 
 - **The meta-harness.** Coding agents run as harnesses, driven over the Agent Client Protocol (ACP): **Claude Code, Codex, OpenCode and pi** today. The runtime launches the harness, lends it tools through the MCP gateway and writes the skills into its workspace. It serves the harness over every protocol it serves its own agents on. The **Shield** surrounds it: the pod's egress boundary, the policies and the session's rules, the audit record and the trace. See [Harnesses](https://agent-runtimes.datalayer.tech/harnesses/) and [the Shield](https://agent-runtimes.datalayer.tech/shield/).
 - **Protocol integrations.**
-  - *Transports to a UI or another agent*: AG-UI, the Vercel AI SDK, ACP and A2A (served, and called as a client), with A2UI, MCP-UI and MCP Apps for generative UI.
+  - *Transports to a UI or another agent*: AG-UI, the Vercel AI SDK, ACP and A2A (served, and called as a client), with A2UI and MCP-UI for generative UI.
   - *Tools*: MCP, local servers over stdio and remote servers over Streamable HTTP.
   - *Identity, consent and commerce*, each a Reactor plugin: Web Bot Auth (with a draft TAP profile), PAP (Personal Agent Protocol), PACT, UCP and the Agentic Commerce Protocol.
 

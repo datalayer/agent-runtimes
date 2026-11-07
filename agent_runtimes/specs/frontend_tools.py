@@ -17,6 +17,32 @@ from agent_runtimes.types import FrontendToolSpec
 # Frontend Tool Definitions
 # ============================================================================
 
+ARENA_INVADERS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="arena-invaders",
+    version="0.0.1",
+    name="Space Invaders arena",
+    description="Two cannons, one wave — read the arena, move your cannon under an invader, fire, and be told where the wave is as it marches; a hit scores its row, the wave cleared or a cannon hit ends it.",
+    tags=["frontend", "arena", "battle", "game"],
+    enabled=True,
+    toolset=["arena_read", "arena_invaders_move", "arena_invaders_fire", "arena_watch"],
+    streams=["arena_watch"],
+    icon="@primer/octicons-react:rocket",
+    emoji="👾",
+)
+
+ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="arena-pong",
+    version="0.0.1",
+    name="Pong arena",
+    description="Two paddles, one ball, first to eleven — read the arena, move your paddle, serve, and be told where the ball is as it moves.",
+    tags=["frontend", "arena", "battle", "game"],
+    enabled=True,
+    toolset=["arena_read", "arena_pong_move", "arena_pong_serve", "arena_watch"],
+    streams=["arena_watch"],
+    icon="@primer/octicons-react:play",
+    emoji="🏓",
+)
+
 CELLS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="cells",
     version="0.0.1",
@@ -138,6 +164,8 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
 # ============================================================================
 
 FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
+    "arena-invaders": ARENA_INVADERS_FRONTEND_TOOL_SPEC_0_0_1,
+    "arena-pong": ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
     "cells": CELLS_FRONTEND_TOOL_SPEC_0_0_1,
     "decks": DECKS_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook-edit": JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,

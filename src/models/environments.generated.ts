@@ -11,7 +11,7 @@ export const ENVIRONMENT_SCHEMA_ID =
 
 /** The sha256 of the schema text these types are generated from. */
 export const ENVIRONMENT_SCHEMA_SHA256 =
-  '3aa1a84206afd2d5d04d3a2eab28abca1d60e1a6a6ab8c14a94ace62b39e6015';
+  '77af40b8cefbfbc9889cae7c39a0c90f4351c0a62b6a4d2cb4896cacf79faf04';
 
 /** The `apiVersion` an Environment document carries. */
 export const ENVIRONMENT_API_VERSION = 'environments.datalayer.io/v1alpha1';
@@ -45,7 +45,12 @@ export interface BuildSpec {
   dockerfile?: DockerfileSpec | null;
   image?: ImageSourceSpec | null;
   /** Default: `"packages"`. */
-  source?: 'packages' | 'dependencyFile' | 'dockerfile' | 'image';
+  source?:
+    | 'packages'
+    | 'dependencyFile'
+    | 'dockerfile'
+    | 'image'
+    | 'foreignDockerfile';
 }
 
 export interface Commands {
@@ -67,6 +72,14 @@ export interface ContentsBuildEntry {
   source: string;
 }
 
+/** One file of an inline build context. */
+export interface ContextFile {
+  contentBase64: string;
+  /** Default: `false`. */
+  executable?: boolean;
+  path: string;
+}
+
 /** A `requirements.txt`, a `pyproject.toml` with its `uv.lock`, or a conda `environment.yml` (E3-01, E3-02). */
 export interface DependencyFileSpec {
   /** Default: `""`. */
@@ -81,6 +94,7 @@ export interface DependencyFileSpec {
 export interface DockerfileSpec {
   /** Default: `""`. */
   content?: string;
+  context?: ContextFile[] | null;
 }
 
 export interface EnvironmentSpec {

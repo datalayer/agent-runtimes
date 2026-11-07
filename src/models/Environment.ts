@@ -218,6 +218,15 @@ export interface IDatalayerEnvironment {
    * name its owner gave it, `steps-drill`, rather than that uid (E2-19).
    */
   label?: string;
+
+  /**
+   * Set on a platform entry its definition switches off — Kaggle, Daytona
+   * GPU — which is kept and still listed, but offered only behind *Show
+   * disabled environments*, greyed, and never picked. Decided where the
+   * environment is defined (`code_sandboxes` `SandboxEnvironment.disabled`)
+   * and carried by `GET /environments`; nothing here keeps its own list.
+   */
+  disabled?: boolean;
 }
 
 // -- The registry -------------------------------------

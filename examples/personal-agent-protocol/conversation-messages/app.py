@@ -1,18 +1,19 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
+#
 # Distributed under the terms of the Modified BSD License.
 
-"""Demonstrate PAP conversation creation without model-visible credentials."""
+"""A Pydantic AI tool that starts and continues a PAP conversation safely."""
 
 from __future__ import annotations
 
 import httpx
 from personal_agent_protocol import (
-    DPOP_PROOF_PROVIDERS,
+    SESSION_SIGNERS,
     Author,
     ConversationClient,
-    DpopHttpClient,
     Message,
-    SessionToken,
+    SessionClient,
+    SessionHttpClient,
     build_pap_reactor,
     generate_message_id,
 )
@@ -22,15 +23,15 @@ from reactor import PluginManifest
 from agent_runtimes.apps import Application
 
 
-class Proofs:
-    async def create(self, request: object) -> SecretStr:
-        return SecretStr("host-only-proof")
+class SessionJwts:
+    async def sign(self, request: object) -> SecretStr:
+        return SecretStr("host-only-session-jwt")
 
 
 class Plugin:
     def provide_contributions(self, contributions: object) -> None:
         contributions.contribute(  # type: ignore[attr-defined]
-            DPOP_PROOF_PROVIDERS, Proofs(), contribution_id="protected-dpop"
+            SESSION_SIGNERS, SessionJwts(), contribution_id="protected-session-signer"
         )
 
 
@@ -48,7 +49,7 @@ app = Application(
 
 @app.tool(does="read")
 async def demonstrate_conversation() -> dict[str, object]:
-    """Exercise two messages while returning only safe state."""
+    """Start and continue one local PAP conversation."""
 
     calls = 0
 
@@ -70,15 +71,14 @@ async def demonstrate_conversation() -> dict[str, object]:
             PluginManifest(name="conversation-example", version="1"), Plugin()
         )
         client = ConversationClient(
-            transport=DpopHttpClient(reactor=reactor, http_client=http)
+            transport=SessionHttpClient(reactor=reactor, http_client=http)
         )
-        token = SessionToken(
-            access_token=SecretStr("host-only-token"),
-            token_type="DPoP",  # noqa: S106 - OAuth token type
-            expires_in=300,
-            # The Session Key's JWK thumbprint names the Session; it stays in the host.
-            session_key="NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
-            signed_in=False,
+        # A Session is local: signed out, and with no request sent.
+        session = await SessionClient(reactor=reactor, http_client=http).start(
+            client_id="https://assistant.example/agent.json",
+            pairwise_user_id="usr_host_only_example",
+            issuer="https://auth.shop.example",
+            tenant_id="demo",
         )
         # The personal agent writes this message itself: its `author` is `agent`.
         first = Message(
@@ -89,9 +89,7 @@ async def demonstrate_conversation() -> dict[str, object]:
         started = await client.start(
             "https://api.shop.example/poppy/conversations",
             first,
-            token=token,
-            tenant_id="demo",
-            issuer="https://auth.shop.example",
+            session=session,
         )
         follow_up = Message(
             id=generate_message_id(reactor),
@@ -102,14 +100,12 @@ async def demonstrate_conversation() -> dict[str, object]:
             "https://api.shop.example/poppy/conversations",
             started.conversation_id,
             follow_up,
-            token=token,
-            tenant_id="demo",
-            issuer="https://auth.shop.example",
+            session=session,
         )
         reactor.stop()
     return {
         "conversation_id": continued.conversation_id,
         "unique_message_ids": first.id != follow_up.id,
-        "retry_rule": "retain the same message and ID",
+        "retry_rule": "retain the same Message object and ID",
         "credentials_withheld": True,
     }

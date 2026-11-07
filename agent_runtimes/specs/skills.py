@@ -33,7 +33,7 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["accounting", "finance", "reconciliation", "close"],
     icon="@primer/octicons-react:book",
     emoji="🧮",
-    enabled=False,
+    enabled=True,
 )
 
 CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -69,7 +69,7 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["events", "orchestration", "automation"],
     icon="@primer/octicons-react:calendar",
     emoji="📅",
-    enabled=False,
+    enabled=True,
 )
 
 GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -87,25 +87,43 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["github", "git", "code"],
     icon="@datalayer/icons-react:github-mark",
     emoji="🐙",
-    enabled=False,
+    enabled=True,
+)
+
+IMAGE_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="image",
+    version="0.0.1",
+    name="Image Skills",
+    description="Snapshots of web pages and video frames; images read, resized, cropped, converted, optimized and thumbnailed",
+    module="agent_skills.skills.image",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["Pillow>=10.0", "playwright>=1.45"],
+    tags=["image", "snapshot", "media"],
+    icon="@primer/octicons-react:image",
+    emoji="🖼️",
+    enabled=True,
 )
 
 JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
     id="jokes",
     version="0.0.1",
     name="Jokes Skill",
-    description="Return random jokes from a local path-based skill.",
-    module=None,
+    description="One joke on request, by topic or at random, from a small bundled list.",
+    module="agent_skills.skills.jokes",
     package=None,
     method=None,
-    path="jokes",
+    path=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=[],
     tags=["fun", "humor", "demo"],
     icon="@primer/octicons-react:smiley",
     emoji="😄",
-    enabled=False,
+    enabled=True,
 )
 
 PDF_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -123,7 +141,7 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["pdf", "documents", "extraction"],
     icon="@primer/octicons-react:file",
     emoji="📄",
-    enabled=False,
+    enabled=True,
 )
 
 TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -141,7 +159,25 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["nlp", "summarization", "text-processing"],
     icon="@primer/octicons-react:note",
     emoji="📝",
-    enabled=False,
+    enabled=True,
+)
+
+VIDEO_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="video",
+    version="0.0.1",
+    name="Video Skills",
+    description="Recordings of web pages; videos read, trimmed, transcoded, optimized, framed and turned to GIF",
+    module="agent_skills.skills.video",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["imageio-ffmpeg>=0.5", "playwright>=1.45"],
+    tags=["video", "recording", "media"],
+    icon="@primer/octicons-react:video",
+    emoji="🎬",
+    enabled=True,
 )
 
 # ============================================================================
@@ -153,9 +189,11 @@ SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
+    "image": IMAGE_SKILL_SPEC_0_0_1,
     "jokes": JOKES_SKILL_SPEC_0_0_1,
     "pdf": PDF_SKILL_SPEC_0_0_1,
     "text-summarizer": TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+    "video": VIDEO_SKILL_SPEC_0_0_1,
 }
 
 

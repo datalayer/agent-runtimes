@@ -19,7 +19,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Callable, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -27,6 +27,7 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..apps.today import today_instruction
 from ..capabilities import (
     LLMContextUsageCapability,
     ToolApprovalConfig,
@@ -40,14 +41,20 @@ from ..events import create_event
 from ..guardrails.credentials import release
 from ..guardrails.declared_secrets import (
     DeclaredSecrets,
-    declared_secrets,
+    ReservedSecretName,
+    as_the_catalogue_wrote_it,
     forget_given,
     given_names,
     keep_declared,
     launched,
     note_given,
     note_launched,
+    refuse_reserved,
+    refuse_server_names,
     server_env_names,
+)
+from ..guardrails.declared_secrets import (
+    declared_secrets as read_declared_secrets,
 )
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
@@ -148,6 +155,45 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
         "SkillsGuardrailCapability",
     }
 )
+
+
+def declared_secrets(*specs: Any, **read: Any) -> DeclaredSecrets:
+    """What specs declare (`guardrails.declared_secrets`): 422 when one declares
+    a name of the runtime's own."""
+    try:
+        return read_declared_secrets(*specs, **read)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+
+
+def _nothing_reserved(names: Any, declared: DeclaredSecrets) -> None:
+    """422 before any of these is set, when one is a name of the runtime's own."""
+    try:
+        refuse_reserved(names, declared)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+
+
+def _kernel_names(declared: DeclaredSecrets) -> frozenset[str]:
+    """What the sandbox gets: nothing of an owner's, on a runtime they did not launch."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    return declared.kernel if kernel_holds_owner_secrets() else frozenset()
+
+
+def _kernel_refused(
+    declared: DeclaredSecrets, available: Callable[[str], bool], who: str
+) -> list[str]:
+    """Why what needs an owner's secret in the sandbox does not run for a visitor."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    if kernel_holds_owner_secrets():
+        return []
+    return declared.kernel_refused(available, who)
 
 
 def get_library_agent_spec(agent_id: str) -> Any:
@@ -1393,6 +1439,9 @@ def _keep_app_recorder(
     from agent_runtimes.routes.apps import keep_running
 
     serving = request.app_instance or {}
+    # What woke a deployment's session is said with the session, by who may
+    # (`routes.apps._woken_by`): never of the agent every session of it runs on.
+    deployment = str(serving.get("deployment_uid") or "")
     # What it did, session by session, kept by ai-agents (R-07).
     recorder = AppRecorder(
         app=running_app,
@@ -1402,7 +1451,7 @@ def _keep_app_recorder(
         purpose=str(serving.get("purpose") or ""),
         launch_uid=str(serving.get("launch_uid") or ""),
         # What woke it, when nobody opened it (R-14).
-        woken_by=dict(serving.get("woken_by") or {}),
+        woken_by={} if deployment else dict(serving.get("woken_by") or {}),
         # Only visitors without an account talk to it (R-30).
         visitors=bool(serving.get("visitor_app")),
     )
@@ -1413,6 +1462,70 @@ def _keep_app_recorder(
     # a kept runtime too (P-24).
     keep_running(agent_id, running_app)
     return recorder
+
+
+#: What of the instance a caller sends is theirs to say on a runtime launched
+#: for a deployment: what its record is kept under, and nothing it runs.
+_INSTANCE_THE_CALLER_SAYS = ("purpose", "launch_uid")
+
+
+async def _as_deployed(
+    request: "CreateAgentRequest", http_request: Request
+) -> tuple["CreateAgentRequest", dict[str, Any]]:
+    """The agent a runtime launched for a deployment makes, as ai-agents says it.
+
+    Whoever launched the runtime makes its agent, and it acts as the
+    deployment's principal, so nothing they send makes it: not its Appspec, and
+    no other field either, each of which would change what runs as the
+    principal. It is made as the keeper makes a kept deployment's
+    (`kept_payload`), from the version ai-agents answers, which it answers to
+    whoever would be let open a session of the deployment.
+
+    Returns
+    -------
+    tuple
+        The request it is made from, and what ai-agents answered.
+    """
+    from agent_runtimes.apps.callers import bearer_of
+    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.principal import (
+        DeploymentCodeUnread,
+        launched_for,
+        read_deployment,
+    )
+
+    deployment = launched_for()
+    instance = request.app_instance or {}
+    said = instance.get("version")
+    try:
+        answer = await read_deployment(
+            deployment,
+            said if isinstance(said, int) and said > 0 else None,
+            bearer_of(http_request.headers.get("Authorization")) or None,
+        )
+    except DeploymentCodeUnread as unread:
+        raise HTTPException(status_code=422, detail=str(unread)) from None
+    try:
+        payload = kept_payload(
+            answer["spec"],
+            app_uid=str(answer["app_uid"]),
+            deployment_uid=deployment,
+            version=int(answer["version"]),
+            organization_uid=str(answer.get("organization_uid") or ""),
+            spend_limit=float(answer.get("spend_limit") or 0.0),
+            runs="launched for it",
+        )
+    except AppNotRunnable as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": refused.problems}
+        ) from None
+    except DeployRefused as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    payload["app_instance"].update(
+        {key: instance[key] for key in _INSTANCE_THE_CALLER_SAYS if key in instance}
+    )
+    return CreateAgentRequest(**payload), answer
 
 
 async def _harness_agent_of(
@@ -1498,6 +1611,24 @@ async def create_agent(
     Raises:
         HTTPException: If agent creation fails.
     """
+    # A runtime launched for a deployment makes that deployment's agent and
+    # nothing else (`principal.agent_refused_here`), as ai-agents says it
+    # (`_as_deployed`), whoever asks: its sandbox shares the pod's loopback.
+    from agent_runtimes.apps.principal import (
+        agent_refused_here,
+        deployment_of,
+        launched_for,
+    )
+
+    deployed: dict[str, Any] | None = None
+    if launched_for():
+        refused = agent_refused_here(
+            deployment_of(request.app_instance), request.sandbox_variant
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+        request, deployed = await _as_deployed(request, http_request)
+
     # Generate agent ID from name (lowercase, replace spaces with hyphens)
     agent_id = request.name.lower().replace(" ", "-")
 
@@ -1527,6 +1658,27 @@ async def create_agent(
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
         # This accepts both camelCase and snake_case keys.
         forwarded_spec = request.agent_spec or {}
+        # What it declares is read before anything is made of it.
+        declared_by_it = declared_secrets(
+            get_library_agent_spec(request.agent_spec_id)
+            if request.agent_spec_id
+            else None,
+            forwarded_spec=forwarded_spec,
+            app_spec=request.app_spec,
+            app_instance=request.app_instance,
+            resolve_agent=get_library_agent_spec,
+        )
+        # Who launched this runtime, learnt before deciding what its sandbox may hold (7 November 2026).
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
+        problems = _kernel_refused(
+            declared_by_it,
+            lambda name: bool((os.environ.get(name) or "").strip()),
+            request.name,
+        )
+        if problems:
+            raise HTTPException(status_code=422, detail={"problems": problems})
 
         def _spec_value(*keys: str) -> Any:
             for key in keys:
@@ -1940,33 +2092,39 @@ async def create_agent(
                 # The code of the version it runs, read from the deployment
                 # with the same caller's token: run for this agent's
                 # sessions, in its principal's name only.
-                try:
-                    deployed_version = int(
-                        (request.app_instance or {}).get("version") or 0
-                    )
-                except (TypeError, ValueError):
-                    deployed_version = 0
-                if deployed_version < 1:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=(
-                            "A deployment's agent names the version it runs "
-                            "(app_instance.version): its code is that version's."
-                        ),
-                    )
-                try:
-                    code = await read_deployment_code(
-                        serving_deployment, deployed_version, bearer
-                    )
-                except DeploymentCodeUnread as unread:
-                    raise HTTPException(status_code=422, detail=str(unread)) from None
+                if deployed is not None:
+                    code = deployed["code"]
+                else:
+                    try:
+                        deployed_version = int(
+                            (request.app_instance or {}).get("version") or 0
+                        )
+                    except (TypeError, ValueError):
+                        deployed_version = 0
+                    if deployed_version < 1:
+                        raise HTTPException(
+                            status_code=422,
+                            detail=(
+                                "A deployment's agent names the version it runs "
+                                "(app_instance.version): its code is that version's."
+                            ),
+                        )
+                    try:
+                        code = await read_deployment_code(
+                            serving_deployment, deployed_version, bearer
+                        )
+                    except DeploymentCodeUnread as unread:
+                        raise HTTPException(
+                            status_code=422, detail=str(unread)
+                        ) from None
                 if code is not None:
                     served_code = _application_code_of(code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
             # its own (U-31, U-32), read from IAM with the caller's
-            # token; what cannot be read stops it. Kept for the Required
-            # Frame Guard at each session's start (R-06).
+            # token; what cannot be read stops it, and what it disabled is
+            # left out and said. Kept for the Required Frame Guard at each
+            # session's start (R-06).
             organization_frames = None
             if running_app.context:
                 from datalayer_core.utils.urls import DatalayerURLs
@@ -2700,7 +2858,8 @@ async def create_agent(
             usage_limits = apply_model_output_tokens_limit(usage_limits, request.model)
 
             agent_kwargs: dict[str, Any] = {
-                "instructions": final_system_prompt,
+                # The date per run: a kept runtime outlives the day it started.
+                "instructions": [final_system_prompt, today_instruction],
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             if capabilities:
@@ -4073,6 +4232,15 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Raises:
         HTTPException: If configuration fails.
     """
+    from agent_runtimes.apps.principal import (
+        NO_SANDBOX_IN_THIS_PROCESS,
+        launched_for,
+    )
+
+    # Asked from the pod too: its sandbox shares its loopback, and code run
+    # in this process would read what acts as the deployment.
+    if launched_for() and (request.variant != "jupyter-server" or request.jupyter_url):
+        raise HTTPException(status_code=403, detail=NO_SANDBOX_IN_THIS_PROCESS)
     try:
         from ..services.code_sandbox_manager import get_code_sandbox_manager
 
@@ -4458,6 +4626,11 @@ async def _start_mcp_servers_for_agent(
             # os.environ was not populated (robust, order-independent).
             # Its own secrets alone: another server's are not its (R-19).
             own = server_env_names(config)
+            refuse_server_names(
+                server_id,
+                own,
+                from_catalogue=as_the_catalogue_wrote_it(server_id, config),
+            )
             extra_env = {ev.name: ev.value for ev in env_vars if ev.name in own} or None
             instance = await lifecycle_manager.start_server(
                 server_id, config, extra_env=extra_env
@@ -4559,6 +4732,8 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
     servers: dict[str, frozenset[str]] = {}
     kernel: set[str] = set()
     held: set[str] = set()
+    platform: set[str] = set()
+    for_a_deployment = False
     for name in agent_ids:
         record = _agentspecs.get(name)
         if not isinstance(record, dict):
@@ -4581,11 +4756,15 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
             servers[key] = servers.get(key, frozenset()) | value
         kernel |= found.kernel
         held |= found.held
+        platform |= found.platform
+        for_a_deployment = for_a_deployment or found.for_a_deployment
     return DeclaredSecrets(
         consumers=consumers,
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
+        platform=frozenset(platform),
+        for_a_deployment=for_a_deployment,
     ).merged(launched())
 
 
@@ -4612,6 +4791,18 @@ def _declared_for_app(
         app_instance=app_instance,
         resolve_agent=get_library_agent_spec,
     )
+
+
+def _launch_of(
+    app_spec: dict[str, Any] | None, app_instance: dict[str, Any] | None
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """The application the runtime was launched for: the one sent, except on a
+    runtime launched for a deployment, where it is the deployment's, as
+    ai-agents said it (`principal.read_launched_app`), and what was sent is not
+    read."""
+    from agent_runtimes.apps.principal import launched_app, launched_for
+
+    return launched_app() if launched_for() else (app_spec, app_instance)
 
 
 def _note_launched_app(
@@ -4664,6 +4855,7 @@ async def _setup_env_and_sandbox(
             }
         )
     env_var_names = [ev.name for ev in body.env_vars]
+    _nothing_reserved(env_var_names, declared)
     for env_var in body.env_vars:
         # Names only: never any part of a value.
         logger.info("[%s] setting env var: %s", label, env_var.name)
@@ -4685,7 +4877,9 @@ async def _setup_env_and_sandbox(
             sandbox_manager = get_code_sandbox_manager()
             # The skills' secrets alone: a server's stays with the server (R-19).
             env_dict = {
-                ev.name: ev.value for ev in body.env_vars if ev.name in declared.kernel
+                ev.name: ev.value
+                for ev in body.env_vars
+                if ev.name in _kernel_names(declared)
             } or None
             sandbox_manager.configure_from_url(
                 body.jupyter_sandbox,
@@ -4840,7 +5034,10 @@ async def start_all_agents_mcp_servers(
     """
     # The application the runtime was launched for (R-19): its secrets are
     # set now, before its agent is made, and a missing one is refused here.
-    launch = _note_launched_app(body.launch_app_spec, body.launch_app_instance)
+    launch_spec, launch_instance = _launch_of(
+        body.launch_app_spec, body.launch_app_instance
+    )
+    launch = _note_launched_app(launch_spec, launch_instance)
     if not _agents and launch is None:
         return AgentMcpServersResponse(
             agent_id=None,
@@ -4849,13 +5046,21 @@ async def start_all_agents_mcp_servers(
         )
     if launch is not None:
         given = {ev.name: ev.value for ev in body.env_vars if ev.name}
-        app_id = str((body.launch_app_spec or {}).get("id") or "")
-        problems = launch.missing(
-            lambda name: bool(
+        app_id = str((launch_spec or {}).get("id") or "")
+
+        def available(name: str) -> bool:
+            return bool(
                 (given.get(name) or "").strip() or (os.environ.get(name) or "").strip()
-            ),
-            who=str((body.launch_app_spec or {}).get("name") or app_id),
-        )
+            )
+
+        who = str((launch_spec or {}).get("name") or app_id)
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
+        problems = [
+            *launch.missing(available, who=who),
+            *_kernel_refused(launch, available, who),
+        ]
         if problems:
             if app_id:
                 _SET_UP_REFUSED[app_id] = " ".join(problems)
@@ -5310,7 +5515,15 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     ``kernel`` (what the code sandbox gets: the skills'), ``consumers`` (who
     needs which). The companion gives the runtime those of the account's
     secrets and no other (R-19, decided 2026-10-07).
+
+    A runtime launched for a deployment answers what that deployment declares,
+    whatever it is asked about (`_launch_of`).
     """
+    from agent_runtimes.apps.principal import launched_for
+
+    if launched_for():
+        declared = _declared_for_agents(list(_agents))
+        return {**declared.as_names(), "kernel": sorted(_kernel_names(declared))}
     if body.agent_spec_id:
         spec = get_library_agent_spec(body.agent_spec_id)
         if spec is None:
@@ -5380,6 +5593,10 @@ async def configure_from_spec_endpoint(
        that unblocks ``request_and_wait()`` — resuming or rejecting the
        tool call.
     """
+    from agent_runtimes.apps.principal import DEPLOYMENT_RUNS_ITS_OWN, launched_for
+
+    if launched_for():
+        raise HTTPException(status_code=403, detail=DEPLOYMENT_RUNS_ITS_OWN)
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
     # ── 1. The library spec, and the secrets its specs declare (R-19) ──
@@ -5444,6 +5661,7 @@ async def configure_from_spec_endpoint(
         _SET_UP_REFUSED[target_agent_name] = " ".join(problems)
         raise HTTPException(status_code=422, detail={"problems": problems})
     _SET_UP_REFUSED.pop(target_agent_name, None)
+    _nothing_reserved(kept, declared)
     for name, value in kept.items():
         logger.info("[configure-from-spec] setting env var: %s", name)
         os.environ[name] = value

@@ -553,7 +553,16 @@ loop scenes rehearse scenes/my-scene.yaml --json
 loop scenes rehearse scene.py                    # a scene written in Python (loop.scene, loop.stage)
 loop scenes build scene.py --out scene.yaml      # the scene spec it writes, loop.scene/v1
 loop scenes push scene.py --space <space id>     # kept in your Space, where the Studio opens it
+loop scenes rehearse sales-and-accounting --cloud --transcript run.json   # also save what was played
+loop scenes record sales-and-accounting --from run.json                   # keep a passing rehearsal as the scene's recording
 ```
+
+`record` keeps the transcript of a rehearsal that passed every beat as the
+scene's recording, `<id>/recording.json` beside its spec, and names it in the
+spec (`rehearsal.recording`, with `--taken` and `--note`); a transcript that
+did not pass, misses a beat or is another scene's is refused in a sentence.
+`--specs-dir` says which folder of scene specs to write to. See
+[Stages](/scenes/stages#recordings).
 
 A scene written in Python — `loop.scene(...)` and `loop.stage(...)`, see
 [A scene and its stage, in

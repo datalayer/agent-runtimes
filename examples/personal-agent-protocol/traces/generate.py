@@ -4,7 +4,7 @@
 """Generate the redacted PAP traces the UI examples replay.
 
 Each trace runs a world from the PAP Python SDK's `demo` package (real ES256
-keys, DPoP proofs, and HTTP over ASGI in one process; no network, no model)
+keys, Session JWTs, and HTTP over ASGI in one process; no network, no model)
 and records, step by step:
 
 - what the user sees in her personal agent (`chat`);
@@ -13,13 +13,12 @@ and records, step by step:
   actions on a company's page or in her agent (`sequence`).
 
 Every token, code, proof, assertion, credential, and key coordinate is
-replaced by a placeholder such as `‹session token›`, and every random opaque
+replaced by a placeholder such as `‹access token›`, and every random opaque
 identifier by a stable one (`cnv_1`), so the output is deterministic. The
 script refuses to write a trace in which a secret survives.
 
-From the Agent Runtimes repository, with the released PAP Python SDK installed
-(Agent Runtimes pins 0.27.0 and later; the traces in the repository were
-recorded with 0.27.0 (PAP draft 0.3)):
+From the Agent Runtimes repository, with the PAP Python SDK installed; each
+trace says the SDK release that recorded it:
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py
@@ -43,17 +42,26 @@ from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from personal_agent_protocol import (
+    Approval,
     Author,
+    ClientMetadata,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
-    DpopHttpClient,
     Message,
+    Operation,
+    OperationError,
+    OperationsClient,
     SessionClient,
+    SessionHttpClient,
     generate_message_id,
+    operations_negotiated,
+)
+from personal_agent_protocol import (
+    mediated_sign_in as mediated_offer,
 )
 from personal_agent_protocol.__version__ import __version__ as sdk_version
-from personal_agent_protocol.accounts import AccountTokenClient, AccountTokenContext
+from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
 from personal_agent_protocol.company import CompanyService, build_company, company_app
 from personal_agent_protocol.conversations import StreamReconnected, TextDelta
 from personal_agent_protocol.demo import kit
@@ -63,6 +71,7 @@ from personal_agent_protocol.demo.kit import (
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
+    ScriptedApprovals,
     ScriptedInput,
     personal_agent_reactor,
 )
@@ -75,13 +84,6 @@ from personal_agent_protocol.demo.manzanita import (
 )
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.mediated import MediatedSignInClient
-from personal_agent_protocol.models import ClientMetadata, Operation
-from personal_agent_protocol.operations import (
-    OperationError,
-    OperationsClient,
-    approve,
-    operations_endpoint,
-)
 from reactor import PluginManifest
 
 ROOT = Path(__file__).parents[3]
@@ -92,37 +94,36 @@ PAIRWISE_LEDGERLY = "usr_ada_at_ledgerly_00000000"
 
 #: Field names whose values never appear in a trace.
 SECRET_FIELDS = {
-    "access_token": "‹session token›",
-    "refresh_token": "‹account token›",
-    "assertion": "‹session assertion›",
+    "access_token": "‹access token›",
+    "refresh_token": "‹refresh token›",
     "client_assertion": "‹client assertion›",
     "device_code": "‹device code›",
     "user_code": "‹user code›",
     "code": "‹one-time code›",
+    "one_time_code": "‹one-time code›",
     "password": "‹password›",
     "email": "‹email›",
 }
-#: In a revocation request, `token` is the Account Token.
-REVOCATION_FIELDS = {"token": "‹account token›"}
+#: In a revocation request, `token` is the refresh token.
+REVOCATION_FIELDS = {"token": "‹refresh token›"}
 SECRET_HEADERS = {
-    "authorization": "DPoP ‹session token›",
-    "dpop": "‹DPoP proof›",
-    "dpop-nonce": "‹DPoP nonce›",
+    "authorization": "Bearer ‹access token›",
+    "poppy-session": "‹Session JWT›",
 }
 KEPT_REQUEST_HEADERS = ("content-type", "accept", "last-event-id")
 KEPT_RESPONSE_HEADERS = ("content-type", "cache-control", "retry-after", "location")
 #: Opaque identifiers that are themselves secrets: a safety net behind SECRET_FIELDS.
 SECRET_PREFIXES = {
-    "sat": "‹session token›",
-    "acct": "‹account token›",
+    "at": "‹access token›",
+    "rt": "‹refresh token›",
     "dev": "‹device code›",
 }
 OPAQUE = re.compile(
-    r"(?<![A-Za-z0-9])(cnv|op|msg|evt|ses|si|usr|jti|mediated|account|device|u)"
+    r"(?<![A-Za-z0-9])(cnv|op|rev|msg|evt|sgn|si|usr|jti|mediated|account|device|u)"
     r"_([A-Za-z0-9_-]{22})(?![A-Za-z0-9_-])"
 )
 SECRET_OPAQUE = re.compile(
-    r"(?<![A-Za-z0-9])(sat|acct|dev)_[A-Za-z0-9_-]{22}(?![A-Za-z0-9_-])"
+    r"(?<![A-Za-z0-9])(at|rt|dev)_[A-Za-z0-9_-]{22}(?![A-Za-z0-9_-])"
 )
 JWT = re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 
@@ -214,7 +215,7 @@ class Trace:
                 if name in SECRET_HEADERS:
                     self.secret(value, SECRET_HEADERS[name])
                     if name == "authorization":
-                        self.secret(value.partition(" ")[2], "‹session token›")
+                        self.secret(value.partition(" ")[2], "‹access token›")
                     value = SECRET_HEADERS[name]
                 out[name] = value
         return out
@@ -268,7 +269,7 @@ class Trace:
                 "title": self.title,
                 "description": self.description,
                 "generator": "examples/personal-agent-protocol/traces/generate.py",
-                # The released SDK it was recorded with: the views say it (E-14).
+                # The released SDK it was recorded with: the views say it.
                 "sdk": f"personal-agent-protocol {sdk_version}",
                 "parties": self.parties,
                 "steps": self.steps,
@@ -395,11 +396,13 @@ def approval(speaker: str, operation: Operation, status: str) -> dict[str, Any]:
     }
 
 
-def result(speaker: str, operation: Operation | None) -> dict[str, Any]:
-    summary = (
-        operation.result.summary if operation and operation.result else "No result yet"
-    )
-    return {"speaker": speaker, "kind": "result", "title": "Result", "text": summary}
+def result(speaker: str, summary: str | None) -> dict[str, Any]:
+    return {
+        "speaker": speaker,
+        "kind": "result",
+        "title": "Result",
+        "text": summary or "No result yet",
+    }
 
 
 def fact(label: str, value: object, group: str | None = None) -> dict[str, str]:
@@ -415,12 +418,14 @@ async def company_facts(
     """What a company holds: Sessions, accounts, conversations, operations (never tokens)."""
 
     from personal_agent_protocol.company.store import (
-        ACCOUNT_TOKEN,
+        ACCESS_TOKEN,
         CLIENT,
         CONVERSATION,
         OPERATION,
+        REFRESH_TOKEN,
         SESSION,
         AccountGrant,
+        IssuedAccessToken,
         StoredConversation,
         StoredOperation,
         StoredSession,
@@ -437,27 +442,22 @@ async def company_facts(
                 found.append(record.from_json(entry.value))
         return found
 
-    sessions = [stored.current for stored in await records(SESSION, StoredSession)]
-    signed_in = [session for session in sessions if session.account_id]
+    sessions = [s for s in await records(SESSION, StoredSession) if not s.ended]
+    tokens = await records(ACCESS_TOKEN, IssuedAccessToken)
     facts = [
         fact("Verified client", client_label if store.keys(CLIENT) else "None yet"),
-        fact(
-            "Sessions",
-            f"{len(sessions)} live · {len(signed_in)} signed in"
-            if sessions
-            else "None",
-        ),
+        fact("Sessions", f"{len(sessions)} live" if sessions else "None"),
     ]
-    if signed_in:
-        facts.append(fact("Account behind the Session", signed_in[-1].account_id))
-        facts.append(fact("Granted scopes", " ".join(signed_in[-1].scopes)))
+    if tokens:
+        facts.append(fact("Account behind the access token", tokens[-1].account_id))
+        facts.append(fact("Granted scopes", " ".join(tokens[-1].scopes)))
     elif sessions:
         facts.append(fact("Who is it?", "A pairwise identifier only"))
-    grants = await records(ACCOUNT_TOKEN, AccountGrant)
+    grants = await records(REFRESH_TOKEN, AccountGrant)
     if grants:
         live = [grant for grant in grants if not grant.revoked]
         facts.append(
-            fact("Account Tokens issued", f"{len(grants)} · {len(live)} not revoked")
+            fact("Refresh tokens issued", f"{len(grants)} · {len(live)} not revoked")
         )
     for conversation in await records(CONVERSATION, StoredConversation):
         kind = "Direct conversation" if conversation.parent_id else "Conversation"
@@ -468,37 +468,35 @@ async def company_facts(
             )
         )
     for stored in await records(OPERATION, StoredOperation):
-        operation = stored.operation
-        approved = (
-            f" · approved by {operation.confirmation.approved_by}"
-            if operation.confirmation
-            else ""
-        )
         facts.append(
             fact(
                 f"Operation {stored.action}",
-                f"revision {operation.revision} · {operation.state}{approved}",
+                f"revision {stored.operation.revision} · {stored.status}",
             )
         )
     return facts
 
 
 def atlas_facts(
-    host: PersonalAgentHost, session: Any, *, company: str | None = None
+    host: PersonalAgentHost,
+    session: Any,
+    token: Any = None,
+    *,
+    company: str | None = None,
 ) -> list[dict[str, str]]:
     facts = []
     if company:
         facts.append(fact("Company", f"{company} · discovery verified"))
     if session is not None:
-        state = "signed in" if session.signed_in else "signed out"
-        facts.append(fact("Session", f"{state} · DPoP-bound"))
-        if session.scopes:
-            facts.append(fact("Scopes", " ".join(session.scopes)))
-    references = [key for key in host.vault.values if key.startswith("account")]
+        state = "signed in" if token is not None else "signed out"
+        facts.append(fact("Session", f"{state} · a Session JWT on every request"))
+        if token is not None:
+            facts.append(fact("Scopes", " ".join(token.scopes)))
+    references = [key for key in host.vault.values if key.startswith("refresh")]
     facts.append(
         fact(
             "Vault (host only)",
-            f"{len(references)} Account Token by reference" if references else "Empty",
+            f"{len(references)} refresh token by reference" if references else "Empty",
         )
     )
     facts.append(fact("Model sees", "Summaries and statuses, never a credential"))
@@ -509,7 +507,12 @@ class World:
     """Atlas and one Manzanita, on a recording network."""
 
     def __init__(
-        self, trace: Trace, *, humans: bool = False, answers: tuple = ()
+        self,
+        trace: Trace,
+        *,
+        humans: bool = False,
+        answers: tuple = (),
+        approvals: ScriptedApprovals | None = None,
     ) -> None:
         self.trace = trace
         self.clock = MutableClock()
@@ -533,28 +536,29 @@ class World:
         self.network.add(CONFIG.domain, company_app(self.shop))
         self.network.caller = "atlas"
         self.http = self.network.client()
+        self.approvals = approvals or ScriptedApprovals(always=True)
         self.host = PersonalAgentHost(
-            self.atlas, self.clock, protected_input=ScriptedInput(*answers)
+            self.atlas,
+            self.clock,
+            protected_input=ScriptedInput(*answers),
+            approvals=self.approvals,
         )
         self.reactor = personal_agent_reactor(
             self.host, network=self.network, http_client=self.http
         )
-        self.transport = DpopHttpClient(reactor=self.reactor, http_client=self.http)
+        self.transport = SessionHttpClient(reactor=self.reactor, http_client=self.http)
         self.conversations = ConversationClient(transport=self.transport)
-        self.operations = OperationsClient(transport=self.transport)
+        self.operations = OperationsClient(reactor=self.reactor)
         self.session: Any = None
+        self.token: Any = None
 
     async def discover(self) -> None:
         self.company = await DiscoveryClient(
             reactor=self.reactor, http_client=self.http
         ).discover(CONFIG.domain)
         self.metadata = self.company.oauth_metadata
-        self.who = {
-            "tenant_id": TENANT,
-            "issuer": self.metadata.issuer,
-        }
         self.endpoint = self.company.document.agent.protocols[0].endpoint
-        self.ops = operations_endpoint(
+        self.negotiated = operations_negotiated(
             self.company.document, ClientMetadata.model_validate(self.atlas.metadata)
         )
 
@@ -565,9 +569,13 @@ class World:
             client_id=self.atlas.client_id,
             pairwise_user_id=PAIRWISE,
             issuer=self.metadata.issuer,
-            token_endpoint=self.metadata.token_endpoint,
             tenant_id=TENANT,
         )
+
+    @property
+    def auth(self) -> dict[str, Any]:
+        """What a request is sent with: the Session, and the access token signed in."""
+        return {"session": self.session, "token": self.token}
 
     async def device_sign_in(self) -> Any:
         device = DeviceSignInClient(reactor=self.reactor, http_client=self.http)
@@ -578,7 +586,6 @@ class World:
             client_id=self.atlas.client_id,
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
-            session_key=self.session.session_key,
             organization=self.company.document.organization,
             protected_resources=self.metadata.protected_resources,
         )
@@ -595,7 +602,7 @@ class World:
         self.clock.advance(started.poll_interval)
         done = await device.poll(started.reference)
         assert done.status == "complete" and done.token is not None
-        self.session = done.token
+        self.token = done.token
         return done
 
     def message(self, text: str, author: str = "human") -> Message:
@@ -605,8 +612,37 @@ class World:
             text=text,
         )
 
+    async def ask_ada(
+        self, operation: Operation, replaces: Operation | None = None
+    ) -> Approval:
+        """Ada is asked about this revision, in Atlas's own interface."""
+        return await self.operations.ask_user(
+            operation,
+            organization=self.company.document.organization,
+            tenant_id=TENANT,
+            replaces=replaces,
+        )
+
+    async def send_approval(
+        self, conversation_id: str, approval_: Approval, message_id: str | None = None
+    ) -> Any:
+        """The approval as a message; retried with the same ID, the same answer."""
+        return await self.conversations.send(
+            self.endpoint,
+            conversation_id,
+            Message(
+                id=message_id or generate_message_id(self.reactor),
+                author=Author(type="agent"),
+                approval=approval_,
+            ),
+            wait=0,
+            **self.auth,
+        )
+
     def atlas_view(self) -> list[dict[str, str]]:
-        return atlas_facts(self.host, self.session, company="Manzanita Outfitters")
+        return atlas_facts(
+            self.host, self.session, self.token, company="Manzanita Outfitters"
+        )
 
     async def shop_view(self) -> list[dict[str, str]]:
         return await company_facts(self.shop, "atlas.example/agent.json")
@@ -614,14 +650,13 @@ class World:
     async def views(self) -> dict[str, list[dict[str, str]]]:
         return {"atlas": self.atlas_view(), "manzanita": await self.shop_view()}
 
-    def context(self) -> AccountTokenContext:
-        return AccountTokenContext(
+    def context(self) -> RefreshTokenContext:
+        return RefreshTokenContext(
             token_endpoint=self.metadata.token_endpoint,
             revocation_endpoint=self.metadata.revocation_endpoint,
             issuer=self.metadata.issuer,
             client_id=self.atlas.client_id,
             tenant_id=TENANT,
-            pairwise_user_id=PAIRWISE,
         )
 
 
@@ -635,8 +670,9 @@ async def discover_and_start(world: World, chat: list[dict[str, Any]]) -> None:
     world.trace.step(
         "Atlas finds Manzanita",
         "Discovery + Session",
-        "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, "
-        "pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
+        "Atlas reads Manzanita's protected resource metadata, public poppy.json and OAuth "
+        "metadata. A Session is local: Atlas chooses a random sid for Ada's pairwise User ID, "
+        "and no request is sent. Manzanita verifies Atlas's delegation at its first request.",
         chat=chat,
         views=await world.views(),
     )
@@ -664,8 +700,8 @@ async def user_with_a_company() -> Trace:
         "user-with-a-company",
         "A user with a company",
         "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. "
-        "Both sides are the PAP Python SDK's demo world: real keys and proofs over in-process "
-        "HTTP, recorded and redacted.",
+        "Both sides are the PAP Python SDK's demo world: real keys and Session JWTs over "
+        "in-process HTTP, recorded and redacted.",
     )
     world = World(trace)
     await discover_and_start(
@@ -682,9 +718,8 @@ async def user_with_a_company() -> Trace:
     page_ = await world.conversations.start(
         world.endpoint,
         world.message("Where is my jacket order?"),
-        token=world.session,
         wait=0,
-        **world.who,
+        **world.auth,
     )
     reply = next(
         e.message.text
@@ -711,8 +746,9 @@ async def user_with_a_company() -> Trace:
         "Ada signs in on Manzanita's page",
         "Device Sign-In",
         "Atlas shows Manzanita's link and code. Ada signs in on manzanita.example and approves. "
-        "Atlas polls at the company's pace; the same Session is upgraded and the Account Token "
-        "goes to the host's vault, by reference.",
+        "Atlas polls at the company's pace; sign-in is plain OAuth and names no Session. The "
+        "same Session sends the access token from now on, and the refresh token goes to the "
+        "host's vault, by reference.",
         chat=[
             say("atlas", "Open manzanita.example/device and enter ‹user code›."),
             page(
@@ -729,17 +765,17 @@ async def user_with_a_company() -> Trace:
         world.endpoint,
         page_.conversation_id,
         world.message("Exchange it for something warmer"),
-        token=world.session,
         cursor=page_.cursor,
         wait=0,
-        **world.who,
+        **world.auth,
     )
     proposal = said(page_).operation
     trace.step(
         "The same conversation, signed in",
         "Conversation + Operation",
-        "The conversation keeps its ID; now signed in, Manzanita proposes the exchange as an "
-        "operation: one summary, exact terms, revision 1. Nothing happens until it is confirmed.",
+        "The conversation keeps its ID; now signed in, Manzanita returns the exchange as an "
+        "operation: one summary, exact terms, an opaque revision. Nothing happens until Ada "
+        "approves it.",
         chat=[
             say("user", "Exchange it for something warmer."),
             say("manzanita", said(page_).text),
@@ -749,34 +785,30 @@ async def user_with_a_company() -> Trace:
     )
 
     trace.action("user", "atlas", f"Approves revision {proposal.revision} as shown")
-    outcome = await world.operations.confirm(
-        world.ops,
-        proposal,
-        approval=approve(proposal),
-        token=world.session,
-        **world.who,
-    )
+    given = await world.ask_ada(proposal)
+    outcome = await world.send_approval(page_.conversation_id, given)
     trace.step(
         "Ada approves this exact revision",
-        "Operations v1",
-        "Atlas confirms the revision Ada saw, with approved_by: user. Manzanita performs the "
-        "exchange once and returns the result summary, which Atlas shows as written.",
+        "Operations version 2",
+        "Atlas asks Ada in its own interface, and sends her approval of that revision as a "
+        "message in the conversation. Manzanita performs the exchange once and says how it "
+        "went, which Atlas shows as written.",
         chat=[
             approval("user", proposal, "approved"),
-            result("manzanita", outcome.operation),
+            result("manzanita", said(outcome).text),
         ],
         views=await world.views(),
     )
 
     trace.action("user", "atlas", "Disconnects Atlas from Manzanita")
-    await AccountTokenClient(reactor=world.reactor, http_client=world.http).revoke(
-        done.account_token_reference, context=world.context()
+    await RefreshTokenClient(reactor=world.reactor, http_client=world.http).revoke(
+        done.refresh_token_reference, context=world.context()
     )
     trace.step(
         "Ada disconnects Atlas",
-        "Account Token revocation",
-        "Atlas revokes the Account Token at Manzanita, then forgets it. Every Session signed in "
-        "with it continues signed out.",
+        "Refresh token revocation",
+        "Atlas revokes the refresh token at Manzanita, then forgets it. With no valid refresh "
+        "token left, the account is signed out.",
         chat=[
             say("user", "Disconnect Atlas from Manzanita."),
             say("atlas", "Done. I can no longer sign in to your Manzanita account."),
@@ -792,8 +824,8 @@ async def user_with_a_company() -> Trace:
 async def account_tokens() -> Trace:
     trace = manzanita_trace(
         "account-tokens",
-        "Account Tokens",
-        "Refresh, rotation, narrowing, re-consent, and revocation of the Account Token Atlas "
+        "Refresh tokens",
+        "Refresh, rotation, narrowing, re-consent, and revocation of the refresh token Atlas "
         "holds for Ada at Manzanita, which never leaves the host's vault.",
     )
     world = World(trace)
@@ -802,10 +834,10 @@ async def account_tokens() -> Trace:
     )
     done = await world.device_sign_in()
     trace.step(
-        "Signed in: an Account Token",
+        "Signed in: an access token and a refresh token",
         "Device Sign-In",
-        "Ada approves on Manzanita's page. The sign-in returns a Session Token and an Account "
-        "Token; the host stores the Account Token behind an opaque reference.",
+        "Ada approves on Manzanita's page. The sign-in returns a Bearer access token and a "
+        "refresh token; the host stores the refresh token behind an opaque reference.",
         chat=[
             page(
                 "manzanita",
@@ -816,32 +848,27 @@ async def account_tokens() -> Trace:
         ],
         views=await world.views(),
     )
-    accounts = AccountTokenClient(reactor=world.reactor, http_client=world.http)
-    reference = done.account_token_reference
-    refreshed = await accounts.refresh(
-        reference, context=world.context(), session_key=world.session.session_key
-    )
-    world.session = refreshed.token
+    accounts = RefreshTokenClient(reactor=world.reactor, http_client=world.http)
+    reference = done.refresh_token_reference
+    refreshed = await accounts.refresh(reference, context=world.context())
+    world.token = refreshed.token
     trace.step(
         "Refresh and rotation",
         "refresh_token grant",
-        "The Session expired; Atlas signs it in again with the Account Token, a fresh client "
-        "assertion, and a fresh DPoP proof. Manzanita rotates the token; the new one replaces "
-        f"the old before the call returns (rotated: {refreshed.rotated}).",
+        "The access token ends; Atlas gets another with the refresh token and a fresh client "
+        "assertion. A refresh names no Session: any of Ada's Sessions uses the new token. "
+        "Manzanita rotates the refresh token; the new one replaces the old before the call "
+        f"returns (rotated: {refreshed.rotated}).",
         chat=[say("atlas", "(Signed in again in the background.)")],
         views=await world.views(),
     )
     narrowed = await accounts.refresh(
-        reference,
-        context=world.context(),
-        session_key=world.session.session_key,
-        scopes=("orders:read",),
+        reference, context=world.context(), scopes=("orders:read",)
     )
-    world.session = narrowed.token
+    world.token = narrowed.token
     wider = await accounts.refresh(
         reference,
         context=world.context(),
-        session_key=world.session.session_key,
         scopes=("orders:read", "orders:admin"),
     )
     trace.step(
@@ -860,13 +887,11 @@ async def account_tokens() -> Trace:
     )
     trace.action("user", "atlas", "Disconnects Atlas from Manzanita")
     await accounts.revoke(reference, context=world.context())
-    after = await accounts.refresh(
-        reference, context=world.context(), session_key=world.session.session_key
-    )
+    after = await accounts.refresh(reference, context=world.context())
     trace.step(
         "Revocation",
         "RFC 7009",
-        "Atlas revokes the Account Token at Manzanita and deletes its copy once the company "
+        "Atlas revokes the refresh token at Manzanita and deletes its copy once the company "
         f"answered. A later refresh finds nothing to use: {after.status}, without a request.",
         chat=[
             say("user", "Disconnect Atlas from Manzanita."),
@@ -885,7 +910,8 @@ async def mediated_sign_in() -> Trace:
         "mediated-sign-in",
         "Mediated Sign-In",
         "Ada signs in to Manzanita without leaving Atlas: the host's protected input collects "
-        "the fields Manzanita declares and sends them to Manzanita's endpoint, once.",
+        "the fields Manzanita declares in its mediated-sign-in extension and sends them to "
+        "Manzanita's token endpoint, once, as an extension grant.",
     )
     world = World(trace, answers=(dict(ADA), {"code": "000000"}, {"code": ADA_CODE}))
     trace.secret(ADA["password"], "‹password›")
@@ -893,25 +919,24 @@ async def mediated_sign_in() -> Trace:
     await discover_and_start(
         world, [say("user", "Sign me in to Manzanita here, please.")]
     )
-    auth = world.company.document.auth
+    offered = mediated_offer(world.company)
     mediated = MediatedSignInClient(reactor=world.reactor, http_client=world.http)
     trace.action("user", "atlas", "Types email and password on Atlas's protected input")
     started = await mediated.sign_in(
-        mediated=auth.mediated,
-        organization=world.company.document.organization,
+        company=world.company,
+        client_id=world.atlas.client_id,
         scopes=("orders:read",),
-        token=world.session,
-        **world.who,
+        tenant_id=TENANT,
     )
     fields = ", ".join(
-        f"{f.label}{' (secret)' if f.secret else ''}" for f in auth.mediated.fields
+        f"{f.label}{' (secret)' if f.secret else ''}" for f in offered.fields
     )
     trace.step(
         "The declared fields, once",
         "pap.protectedInput",
         f"Manzanita declares {fields}. The host asks Ada on its trusted surface, never through "
-        "the model, sends the values to the endpoint on Manzanita's domain with no redirect "
-        f"followed, and drops them. Manzanita answers {started.status}.",
+        "the model, sends the values with the grant to the issuer's token endpoint with no "
+        f"redirect followed, and drops them. Manzanita answers {started.status}.",
         chat=[
             page(
                 "atlas",
@@ -923,20 +948,16 @@ async def mediated_sign_in() -> Trace:
         views=await world.views(),
     )
     trace.action("user", "atlas", "Mistypes the code on the protected input")
-    wrong = await mediated.submit_code(
-        started.reference, token=world.session, **world.who
-    )
+    wrong = await mediated.submit_code(started.reference)
     trace.action("user", "atlas", "Types the right code")
-    done = await mediated.submit_code(
-        started.reference, token=world.session, **world.who
-    )
-    world.session = done.token
+    done = await mediated.submit_code(started.reference)
+    world.token = done.token
     trace.step(
         "The one-time code",
         "Mediated Sign-In",
-        f"Only the code goes to …/sign-in/{{sign_in_id}}, from the Session that started it. A "
-        f"mistyped code is {wrong.status} again; the right one signs the same Session in and "
-        "the Account Token goes to the vault.",
+        "Only the sign_in_id and the code go to the token endpoint. A mistyped code is "
+        f"{wrong.status} again; the right one signs Ada in, and the refresh token goes to the "
+        "vault.",
         chat=[
             page(
                 "atlas",
@@ -966,7 +987,7 @@ async def conversation_streaming() -> Trace:
     world = World(trace)
     await discover_and_start(world, [say("user", "Say hello to Manzanita for me.")])
     page_ = await world.conversations.start(
-        world.endpoint, world.message("Hello"), token=world.session, **world.who
+        world.endpoint, world.message("Hello"), **world.auth
     )
     trace.step(
         "A conversation starts",
@@ -975,13 +996,11 @@ async def conversation_streaming() -> Trace:
         chat=[],
         views=await world.views(),
     )
-    await world.conversations.close(
-        world.endpoint, page_.conversation_id, token=world.session, **world.who
-    )
+    await world.conversations.close(world.endpoint, page_.conversation_id, **world.auth)
     items = [
         item
         async for item in world.conversations.stream(
-            world.endpoint, page_.conversation_id, token=world.session, **world.who
+            world.endpoint, page_.conversation_id, **world.auth
         )
     ]
     deltas = [item for item in items if isinstance(item, TextDelta)]
@@ -1008,9 +1027,8 @@ async def conversation_streaming() -> Trace:
         async for item in world.conversations.stream(
             world.endpoint,
             page_.conversation_id,
-            token=world.session,
             last_event_id=events[0].id,
-            **world.who,
+            **world.auth,
         )
     ]
     resumed = [
@@ -1039,9 +1057,8 @@ async def conversation_control() -> Trace:
     parent = await world.conversations.start(
         world.endpoint,
         world.message("Hello, can someone help me?", "agent"),
-        token=world.session,
         wait=0,
-        **world.who,
+        **world.auth,
     )
     hello = next(
         e.message.text
@@ -1052,8 +1069,7 @@ async def conversation_control() -> Trace:
         world.endpoint,
         parent.conversation_id,
         world.message("I'll take it from here"),
-        token=world.session,
-        **world.who,
+        **world.auth,
     )
     trace.step(
         "Ada talks directly",
@@ -1071,8 +1087,7 @@ async def conversation_control() -> Trace:
             world.endpoint,
             parent.conversation_id,
             world.message("Still there?", "agent"),
-            token=world.session,
-            **world.who,
+            **world.auth,
         )
     except Exception as error:  # noqa: BLE001 - the refusal is the point
         refusal = getattr(error, "code", type(error).__name__)
@@ -1085,10 +1100,10 @@ async def conversation_control() -> Trace:
         views=await world.views(),
     )
     await world.conversations.close(
-        world.endpoint, direct.conversation_id, token=world.session, **world.who
+        world.endpoint, direct.conversation_id, **world.auth
     )
     receipt = await world.conversations.handoff(
-        world.endpoint, parent.conversation_id, token=world.session, **world.who
+        world.endpoint, parent.conversation_id, **world.auth
     )
     trace.step(
         "Handoff to a person",
@@ -1099,7 +1114,7 @@ async def conversation_control() -> Trace:
         views=await world.views(),
     )
     await world.conversations.close(
-        world.endpoint, parent.conversation_id, token=world.session, **world.who
+        world.endpoint, parent.conversation_id, **world.auth
     )
     trace.step(
         "Closing",
@@ -1115,10 +1130,10 @@ async def operations() -> Trace:
     trace = manzanita_trace(
         "operations",
         "Operations",
-        "Manzanita proposes an exchange; Atlas confirms only the exact revision Ada approved, "
-        "at most once.",
+        "Manzanita returns an exchange as an operation; Atlas asks Ada about every revision, "
+        "and sends her approval of that exact revision, performed at most once.",
     )
-    world = World(trace)
+    world = World(trace, approvals=ScriptedApprovals(False, True, True))
     await discover_and_start(
         world, [say("user", "Exchange my jacket for a warmer one.")]
     )
@@ -1126,26 +1141,17 @@ async def operations() -> Trace:
     page_ = await world.conversations.start(
         world.endpoint,
         world.message("Exchange my jacket for something warmer"),
-        token=world.session,
         wait=0,
-        **world.who,
+        **world.auth,
     )
+    conversation = page_.conversation_id
     first = said(page_).operation
-    try:
-        await world.operations.confirm(
-            world.ops,
-            first,
-            standing=("Manzanita Outfitters", PAIRWISE, "orders.exchange"),
-            token=world.session,
-            **world.who,
-        )
-    except OperationError as error:
-        standing = error.code
     trace.step(
-        "A proposal",
-        "Operations v1",
-        "Both sides list operations version 1. Signed in, Manzanita proposes the exchange. It "
-        f"requires Ada's own approval, so a standing permission is refused locally ({standing}).",
+        "An operation",
+        "Operations version 2",
+        f"Both sides list operations version 2 (negotiated: {world.negotiated}). Signed in, "
+        "Manzanita returns the exchange as an operation in its message: nothing is done, and "
+        "only Ada can approve it.",
         chat=[
             page(
                 "manzanita",
@@ -1157,78 +1163,60 @@ async def operations() -> Trace:
         ],
         views=await world.views(),
     )
-    trace.action("user", "atlas", "Approves revision 1")
-    approval_of_first = approve(first)
+    trace.action("user", "atlas", "Says no")
+    try:
+        await world.ask_ada(first)
+    except OperationError as error:
+        declined = error.code
+    trace.step(
+        "Ada says no",
+        "The approval surface",
+        f"Atlas asks Ada in its own interface, and she says no ({declined}). Nothing is sent: "
+        "no Rule, setting or earlier approval answers for her.",
+        chat=[approval("user", first, "declined")],
+        views=await world.views(),
+    )
+    trace.action("user", "atlas", f"Approves revision {first.revision}")
+    approval_of_first = await world.ask_ada(first)
     await world.shop.revise(
         first.operation_id,
         summary=f"{first.summary} Return the original by 2026-10-25.",
         terms={**(first.terms or {}), "return_by": "2026-10-25"},
     )
-    changed = await world.operations.confirm(
-        world.ops, first, approval=approval_of_first, token=world.session, **world.who
-    )
-    second = changed.operation
+    answered = await world.send_approval(conversation, approval_of_first)
+    second = said(answered).operation
+    trace.action("user", "atlas", f"Approves revision {second.revision}")
+    approval_of_second = await world.ask_ada(second, replaces=first)
+    changed = world.approvals.asked[-1].changed
     trace.step(
         "The terms changed",
-        "terms_changed",
-        "Before the confirmation arrives, Manzanita revises the proposal. The company refuses "
-        f"revision 1 and returns revision {second.revision}; Atlas shows what changed "  # type: ignore[union-attr]
-        f"({', '.join(changed.changed)}). Ada's approval of revision 1 cannot confirm it.",
+        "A new revision",
+        "Before the approval arrives, Manzanita changes the terms. It performs nothing and "
+        f"answers with a new revision of the same operation; Atlas shows what changed "
+        f"({', '.join(changed)}). Ada's approval covers one revision, so she is asked again.",
         chat=[
             approval("user", first, "approved"),
             say(
                 "atlas",
-                f"Manzanita changed the terms ({', '.join(changed.changed)}). Please look again.",
+                f"Manzanita changed the terms ({', '.join(changed)}). Please look again.",
             ),
-            approval("manzanita", second, "needs your approval"),  # type: ignore[arg-type]
+            approval("manzanita", second, "needs your approval"),
         ],
         views=await world.views(),
     )
-    trace.action("user", "atlas", f"Approves revision {second.revision}")  # type: ignore[union-attr]
-    confirmed = await world.operations.confirm(
-        world.ops,
-        second,
-        approval=approve(second),
-        token=world.session,
-        **world.who,  # type: ignore[arg-type]
-    )
-    await world.operations.confirm(
-        world.ops,
-        second,
-        approval=approve(second),
-        token=world.session,
-        **world.who,  # type: ignore[arg-type]
-    )
+    message_id = generate_message_id(world.reactor)
+    performed = await world.send_approval(conversation, approval_of_second, message_id)
+    await world.send_approval(conversation, approval_of_second, message_id)
+    assert len(world.plugin.executor.performed) == 1
     trace.step(
-        "Confirmed once",
-        "confirm",
-        "Atlas confirms revision 2 with approved_by: user. A retried confirmation returns the "
-        "same record: the exchange is performed once.",
+        "Approved, performed once",
+        "The approval as a message",
+        "Atlas sends Ada's approval of that revision. Sent again with the same message ID, it "
+        "gets the same answer: the exchange is performed once.",
         chat=[
             approval("user", second, "approved"),
-            result("manzanita", confirmed.operation),
-        ],  # type: ignore[arg-type]
-        views=await world.views(),
-    )
-    page_ = await world.conversations.send(
-        world.endpoint,
-        page_.conversation_id,
-        world.message("Actually, exchange it for something warmer still"),
-        token=world.session,
-        cursor=page_.cursor,
-        wait=0,
-        **world.who,
-    )
-    other = said(page_).operation
-    trace.action("user", "atlas", "Declines the second proposal")
-    cancelled = await world.operations.cancel(
-        world.ops, other.operation_id, token=world.session, **world.who
-    )
-    trace.step(
-        "Cancelled",
-        "cancel",
-        "A second proposal Ada declines is cancelled: nothing was changed.",
-        chat=[approval("manzanita", other, "declined"), result("manzanita", cancelled)],
+            result("manzanita", said(performed).text),
+        ],
         views=await world.views(),
     )
     return trace
@@ -1239,7 +1227,7 @@ async def two_companies() -> Trace:
         "two-companies",
         "Two companies working together",
         "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP "
-        "personal agent at Northwind Bank for her. Every approval is an Operation. This is "
+        "personal agent at Northwind Bank for her. Every approval is Ada's. This is "
         "composition: draft 0.3 defines no company-to-company protocol.",
         [ADA_PARTY, ATLAS_PARTY, LEDGERLY_PARTY, NORTHWIND_PARTY],
     )
@@ -1253,12 +1241,13 @@ async def two_companies() -> Trace:
     firm, at_northwind = ledgerly(network, clock)
     network.caller = "atlas"
     http = network.client()
-    host = PersonalAgentHost(atlas, clock)
+    host = PersonalAgentHost(atlas, clock, approvals=ScriptedApprovals(always=True))
     reactor = personal_agent_reactor(host, network=network, http_client=http)
-    transport = DpopHttpClient(reactor=reactor, http_client=http)
+    transport = SessionHttpClient(reactor=reactor, http_client=http)
     conversations = ConversationClient(transport=transport)
-    operations_client = OperationsClient(transport=transport)
+    operations_client = OperationsClient(reactor=reactor)
     session: Any = None
+    token: Any = None
 
     async def views() -> dict[str, list[dict[str, str]]]:
         link = next(iter(at_northwind.links.values()), None)
@@ -1270,37 +1259,25 @@ async def two_companies() -> Trace:
         if link is None:
             ledgerly_facts.append(fact("Northwind", "Not connected", as_agent))
         else:
-            state = (
-                "signed in" if link.session and link.session.signed_in else "signed out"
-            )
+            state = "signed in" if link.token else "signed out"
             ledgerly_facts.append(
-                fact("Northwind Session", f"{state} · DPoP-bound", as_agent)
+                fact(
+                    "Northwind Session",
+                    f"{state} · a Session JWT on every request",
+                    as_agent,
+                )
             )
             ledgerly_facts.append(
                 fact(
-                    "Northwind Account Token",
+                    "Northwind refresh token",
                     "in Ledgerly's vault, by reference"
-                    if link.account_token_reference
+                    if link.refresh_token_reference
                     else "Waiting for Ada on Northwind's page",
                     as_agent,
                 )
             )
-        for permission in at_northwind.standing.permissions.values():
-            ledgerly_facts.append(
-                fact(
-                    "Standing permission",
-                    f"{permission.action} · {permission.uses_remaining} uses left · "
-                    + ", ".join(
-                        f"{limit.path} ≤ {limit.maximum}"
-                        if limit.maximum is not None
-                        else f"{limit.path} = {' or '.join(sorted(limit.allowed or ()))}"
-                        for limit in permission.limits
-                    ),
-                    as_agent,
-                )
-            )
         return {
-            "atlas": atlas_facts(host, session, company="Ledgerly"),
+            "atlas": atlas_facts(host, session, token, company="Ledgerly"),
             "ledgerly": ledgerly_facts,
             "northwind": await company_facts(bank, "ledgerly.example/poppy/agent.json"),
         }
@@ -1309,22 +1286,18 @@ async def two_companies() -> Trace:
         "ledgerly.example"
     )
     metadata = company.oauth_metadata
-    who = {
-        "tenant_id": TENANT,
-        "issuer": metadata.issuer,
-    }
     session = await SessionClient(reactor=reactor, http_client=http).start(
         client_id=atlas.client_id,
         pairwise_user_id=PAIRWISE_LEDGERLY,
         issuer=metadata.issuer,
-        token_endpoint=metadata.token_endpoint,
         tenant_id=TENANT,
     )
     trace.step(
         "Atlas finds Ledgerly",
         "Discovery + Session",
-        "To Atlas, Ledgerly is an ordinary PAP company: Atlas reads its poppy.json and opens a "
-        "signed-out, pairwise Session. Ledgerly verifies Atlas's keys.",
+        "To Atlas, Ledgerly is an ordinary PAP company: Atlas reads its protected resource "
+        "metadata and poppy.json, and starts a signed-out, pairwise Session under a random "
+        "sid, which sends no request.",
         chat=[
             say(
                 "user",
@@ -1343,7 +1316,6 @@ async def two_companies() -> Trace:
         client_id=atlas.client_id,
         scopes=("books:read", "payments:write"),
         tenant_id=TENANT,
-        session_key=session.session_key,
         organization=company.document.organization,
         protected_resources=metadata.protected_resources,
     )
@@ -1354,11 +1326,12 @@ async def two_companies() -> Trace:
     await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
     clock.advance(started.poll_interval)
     done = await device.poll(started.reference)
-    session = done.token
+    token = done.token
     trace.step(
         "Ada signs in to Ledgerly",
         "Device Sign-In",
-        "Ada approves Atlas on Ledgerly's own page. Atlas's Session at Ledgerly is signed in.",
+        "Ada approves Atlas on Ledgerly's own page. Atlas's Session at Ledgerly now sends her "
+        "access token.",
         chat=[
             say(
                 "atlas", "Open ledgerly.example/device and enter ‹Ledgerly user code›."
@@ -1373,24 +1346,28 @@ async def two_companies() -> Trace:
     )
 
     endpoint = company.document.agent.protocols[0].endpoint
-    ops = firm.config.operations_endpoint
 
-    async def tell(conversation_id: str | None, cursor: str | None, text: str) -> Any:
-        message = Message(
-            id=generate_message_id(reactor), author=Author(type="human"), text=text
-        )
+    async def send(
+        conversation_id: str | None, cursor: str | None, **fields: Any
+    ) -> Any:
+        message = Message(id=generate_message_id(reactor), **fields)
         if conversation_id is None:
             return await conversations.start(
-                endpoint, message, token=session, wait=0, **who
+                endpoint, message, session=session, token=token, wait=0
             )
         return await conversations.send(
             endpoint,
             conversation_id,
             message,
-            token=session,
+            session=session,
+            token=token,
             cursor=cursor,
             wait=0,
-            **who,
+        )
+
+    async def tell(conversation_id: str | None, cursor: str | None, text: str) -> Any:
+        return await send(
+            conversation_id, cursor, author=Author(type="human"), text=text
         )
 
     page_ = await tell(None, None, "Pay INV-0042")
@@ -1401,7 +1378,7 @@ async def two_companies() -> Trace:
         "Ledgerly becomes a personal agent",
         "Ledgerly → Northwind",
         "To pay, Ledgerly needs Ada's Northwind account. It acts as a PAP personal agent with "
-        "its own client_id and keys: it discovers Northwind, opens its own pairwise Session, "
+        "its own client_id and keys: it discovers Northwind, starts its own pairwise Session, "
         "and starts Device Sign-In there. Northwind verifies Ledgerly, not Atlas.",
         chat=[say("user", "Pay INV-0042."), say("ledgerly", reply.text)],
         views=await views(),
@@ -1432,11 +1409,11 @@ async def two_companies() -> Trace:
     page_ = await tell(page_.conversation_id, page_.cursor, "Done. Pay INV-0042")
     relayed = said(page_).operation
     trace.step(
-        "Northwind proposes; Ledgerly relays",
+        "Northwind returns the payment; Ledgerly relays it",
         "Operation relayed",
         "Ledgerly finishes signing in at Northwind and asks Northwind's agent to pay. Northwind "
-        "proposes payments.transfer. No standing permission covers it, so Ledgerly relays it to "
-        "Ada as its own operation, quoting Northwind's summary as written.",
+        "returns payments.transfer as an operation. Ledgerly cannot approve it for Ada, so it "
+        "relays it to her as its own operation, quoting Northwind's summary as written.",
         chat=[
             say("user", "Done. Pay INV-0042."),
             say("ledgerly", said(page_).text),
@@ -1446,74 +1423,40 @@ async def two_companies() -> Trace:
     )
 
     trace.action("user", "atlas", f"Approves Ledgerly's revision {relayed.revision}")
-    paid = await operations_client.confirm(
-        ops, relayed, approval=approve(relayed), token=session, **who
+    given = await operations_client.ask_user(
+        relayed, organization=company.document.organization, tenant_id=TENANT
+    )
+    page_ = await send(
+        page_.conversation_id, page_.cursor, author=Author(type="agent"), approval=given
     )
     trace.step(
         "Ada approves; Northwind pays",
-        "approved_by: user",
-        "Atlas confirms Ledgerly's operation. Ledgerly checks Northwind's revision is unchanged "
-        "and confirms it at Northwind with approved_by: user. Northwind's result becomes "
-        "Ledgerly's, as written.",
+        "Each approval sent on",
+        "Atlas sends Ada's approval of Ledgerly's operation. Ledgerly checks Northwind's "
+        "revision is unchanged and sends Northwind her approval of it. Northwind's answer "
+        "becomes Ledgerly's, as written.",
         chat=[
             approval("user", relayed, "approved"),
-            result("ledgerly", paid.operation),
-        ],
-        views=await views(),
-    )
-
-    page_ = await tell(
-        page_.conversation_id,
-        page_.cursor,
-        "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking",
-    )
-    grant = said(page_).operation
-    trace.action("user", "atlas", "Approves the standing permission")
-    granted = await operations_client.confirm(
-        ops, grant, approval=approve(grant), token=session, **who
-    )
-    trace.step(
-        "A standing permission, approved",
-        "ledgerly.standing_permission",
-        "The permission is itself an operation Ada approves. Ledgerly records it in its "
-        "pap.standingPermissionStore, bounded by payee, amount, currency, uses, and time.",
-        chat=[
-            say(
-                "user",
-                "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking.",
-            ),
-            approval("ledgerly", grant, "approved"),
-            result("ledgerly", granted.operation),
+            result("ledgerly", said(page_).text),
         ],
         views=await views(),
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0043")
-    told = said(page_)
+    following = said(page_).operation
     trace.step(
-        "Within the bounds",
-        "approved_by: standing_permission",
-        "Northwind proposes the next payment; it is within the permission, so Ledgerly confirms "
-        "it at Northwind with approved_by: standing_permission and tells Ada what was done.",
-        chat=[say("user", "Pay INV-0043."), say("ledgerly", told.text)],
-        views=await views(),
-    )
-
-    page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0044")
-    over = said(page_).operation
-    trace.step(
-        "Beyond the bounds",
-        "Ask again",
-        "EUR 3400.00 is over the permission's limit: Ledgerly does not confirm it and relays "
-        "Northwind's proposal to Ada again. Nothing is paid until she approves.",
+        "The next payment is asked about too",
+        "No approval in advance",
+        "An approval says nothing of the next operation: Northwind returns INV-0043, Ledgerly "
+        "relays it, and nothing is paid until Ada approves that one as well.",
         chat=[
-            say("user", "Pay INV-0044."),
+            say("user", "Pay INV-0043."),
             say("ledgerly", said(page_).text),
-            approval("ledgerly", over, "needs your approval"),
+            approval("ledgerly", following, "needs your approval"),
         ],
         views=await views(),
     )
-    assert len(bank_plugin.executor.performed) == 2
+    assert len(bank_plugin.executor.performed) == 1
     return trace
 
 

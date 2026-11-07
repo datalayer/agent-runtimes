@@ -21,6 +21,12 @@ The scene spec's JSON Schema is written beside the TypeScript catalogue as
 ``generate_apps.py`` writes ``appspecSchema.ts``: what an editor of the text
 completes and explains is what the spec accepts (S-01, A-03).
 
+A scene's recording — the transcript of a passing rehearsal, kept beside
+the specs as ``<id>/recording.json`` and named by ``rehearsal.recording`` —
+is written to ``sceneRecordings.ts`` beside the catalogue, apart from it, so
+that a page that never plays one never loads one: ``SCENE_RECORDINGS``, read
+by ``useSceneRecording`` at the recorded pace.
+
 Usage:
     python generate_scenes.py \\
       --specs-dir agentspecs/agentspecs/scenes \\
@@ -290,6 +296,76 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def load_recordings(specs_dir: Path) -> dict[str, dict[str, Any]]:
+    """Every scene's recording its spec names, by the scene's id, as its file holds it.
+
+    A file the spec names that is not there, or is not a transcript of
+    version 1, stops the generation in a sentence (agentspecs'
+    ``scene_recording``, when the clone has it).
+    """
+    scenes_module = import_from_clone(specs_dir, "scenes")
+    read = getattr(scenes_module, "scene_recording", None)
+    recordings: dict[str, dict[str, Any]] = {}
+    for identity, scene in sorted(scenes_module.load_scenes(specs_dir).items()):
+        named = scene.rehearsal.recording
+        if named is None:
+            continue
+        path = specs_dir / named.path
+        if read is not None and path == specs_dir / identity / "recording.json":
+            found = read(identity, specs_dir)
+        else:
+            found = json.loads(path.read_text()) if path.is_file() else None
+        if not found:
+            raise SystemExit(
+                f"The recording of {identity} ({named.path}) is not there."
+            )
+        recordings[identity] = {
+            **found,
+            "scene": identity,
+            "taken": named.taken or found.get("taken") or "",
+            **({"note": named.note} if named.note else {}),
+        }
+    return recordings
+
+
+def generate_recordings_typescript_code(recordings: dict[str, dict[str, Any]]) -> str:
+    """The scenes' recordings, apart from the catalogue: a page that plays none loads none."""
+    body = json.dumps(recordings, indent=2, ensure_ascii=False)
+    return "\n".join(
+        [
+            "/*",
+            " * Copyright (c) 2025-2026 Datalayer, Inc.",
+            " * Distributed under the terms of the Modified BSD License.",
+            " */",
+            "",
+            "/**",
+            " * The scenes' recordings: each the transcript of a passing rehearsal, kept",
+            " * beside its spec as `<id>/recording.json` (`loop scenes record`) and played",
+            " * at its recorded pace when the scene cannot play live (`useSceneRecording`).",
+            " *",
+            *[f" * {line}" for line in HEADER],
+            " *",
+            " * @module specs/sceneRecordings",
+            " */",
+            "",
+            "import type { SceneRecordingFile } from '../types/scenes';",
+            "",
+            f"export const SCENE_RECORDINGS: Record<string, SceneRecordingFile> = {body};",
+            "",
+            "/** A scene's recording, by its id or `id:version`; undefined when it has none. */",
+            "export function getSceneRecording(",
+            "  ref: string,",
+            "): SceneRecordingFile | undefined {",
+            "  const id = ref.split(':')[0];",
+            "  return Object.prototype.hasOwnProperty.call(SCENE_RECORDINGS, id)",
+            "    ? SCENE_RECORDINGS[id]",
+            "    : undefined;",
+            "}",
+            "",
+        ]
+    )
+
+
 def generate_schema_typescript_code(specs_dir: Path) -> str:
     """The scene spec's JSON Schema, for the editor of its text (S-01, A-03).
 
@@ -343,6 +419,10 @@ def main() -> None:
         (
             args.typescript_output.with_name("sceneSchema.ts"),
             generate_schema_typescript_code(args.specs_dir),
+        ),
+        (
+            args.typescript_output.with_name("sceneRecordings.ts"),
+            generate_recordings_typescript_code(load_recordings(args.specs_dir)),
         ),
     ):
         path.parent.mkdir(parents=True, exist_ok=True)

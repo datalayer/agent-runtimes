@@ -1,7 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A user with a company: question, sign-in, the same conversation, one approved operation."""
+"""An application walking one user through a whole PAP journey with one company.
+
+Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters:
+discovery, a signed-out Session, sign-in mid-conversation, an exact approval, a
+approved exchange, and finally narrowing and revoking the refresh token.
+"""
 
 from __future__ import annotations
 
@@ -9,46 +14,31 @@ from typing import Any
 
 from personal_agent_protocol import (
     Author,
+    ClientMetadata,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
-    DpopHttpClient,
     Message,
     SessionClient,
+    SessionHttpClient,
     generate_message_id,
 )
-from personal_agent_protocol.accounts import AccountTokenClient, AccountTokenContext
+from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
+    ScriptedApprovals,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
-from personal_agent_protocol.models import ClientMetadata
-from personal_agent_protocol.operations import (
-    OperationsClient,
-    approve,
-    operations_endpoint,
-)
+from personal_agent_protocol.demo.manzanita import DOMAIN, manzanita
+from personal_agent_protocol.operations import OperationsClient, operations_negotiated
 
 from agent_runtimes.apps import Application
 
-TENANT = "atlas-demo"
+TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
-
-
-def _last(page: Any, what: str) -> Any:
-    """The page's last event carrying a `message` (or an `error`): SDK 0.10 ends a
-    page with the conversation's state, so it is not always the last event.
-    """
-    return next(
-        getattr(event, what)
-        for event in reversed(page.events)
-        if getattr(event, what, None) is not None
-    )
-
 
 app = Application(
     id="pap-user-with-a-company",
@@ -59,138 +49,156 @@ app = Application(
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_user_with_a_company. A chat message is never an approval. "
-        "Never expose a user code, Session Token, Account Token, assertion, or proof."
+        "Use run_manzanita_journey to show how Ada's personal agent exchanges a jacket "
+        "with Manzanita over PAP. Say what Ada approved and what the company did. Never "
+        "expose tokens, codes, or Session JWTs."
     ),
 )
 
 
 @app.tool(does="read")
-async def explain_user_with_a_company() -> dict[str, Any]:
-    """Run the whole journey over in-process HTTP and return what each party saw."""
+async def run_manzanita_journey() -> dict[str, Any]:
+    """Run the whole journey against the reference company; return safe evidence."""
 
+    steps: list[str] = []
     clock = MutableClock()
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, plugin = manzanita(network, clock)
-    host = PersonalAgentHost(atlas, clock)
-    async with network.client() as http:
-        reactor = personal_agent_reactor(host, network=network, http_client=http)
-        transport = DpopHttpClient(reactor=reactor, http_client=http)
-        conversations = ConversationClient(transport=transport)
+    shop, shop_plugin = manzanita(network, clock)
+    http = network.client()
+    approvals = ScriptedApprovals(
+        always=True
+    )  # the host's own surface, a script for Ada
+    reactor = personal_agent_reactor(
+        PersonalAgentHost(atlas, clock, approvals=approvals),
+        network=network,
+        http_client=http,
+    )
+    transport = SessionHttpClient(reactor=reactor, http_client=http)
+    conversations = ConversationClient(transport=transport)
 
-        def say(text: str) -> Message:
-            return Message(
-                id=generate_message_id(reactor), author=Author(type="human"), text=text
-            )
-
-        # 1. Atlas discovers Manzanita and opens a signed-out, pairwise Session.
-        company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-            "manzanita.example"
+    def say(text: str) -> Message:
+        return Message(
+            id=generate_message_id(reactor), author=Author(type="human"), text=text
         )
-        metadata = company.oauth_metadata
-        assert metadata is not None and metadata.device_authorization_endpoint
-        assert company.document.agent is not None
-        session = await SessionClient(reactor=reactor, http_client=http).start(
-            client_id=atlas.client_id,
-            pairwise_user_id=PAIRWISE,
-            issuer=metadata.issuer,
-            token_endpoint=metadata.token_endpoint,
-            tenant_id=TENANT,
-        )
-        who = {
-            "tenant_id": TENANT,
-            "issuer": metadata.issuer,
-        }
-        endpoint = company.document.agent.protocols[0].endpoint
 
-        # 2. Ada asks; Manzanita answers that it needs her to sign in.
-        page = await conversations.start(
-            endpoint, say("Where is my jacket order?"), token=session, wait=0, **who
-        )
-        asked_to_sign_in = _last(page, "error")
-        first_conversation = page.conversation_id
+    # Discovery and a signed-out Session.
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
+    metadata = company.oauth_metadata
+    if not (
+        metadata is not None and metadata.device_authorization_endpoint is not None
+    ):
+        raise RuntimeError("the example world is incomplete")
+    session = await SessionClient(reactor=reactor, http_client=http).start(
+        client_id=atlas.client_id,
+        pairwise_user_id=PAIRWISE,
+        issuer=metadata.issuer,
+        tenant_id=TENANT,
+    )
+    name = company.document.organization.name
+    steps.append(f"discovered {name}; signed-out Session, its ID chosen here")
 
-        # 3. Device Sign-In: Ada approves on Manzanita's own page.
-        device = DeviceSignInClient(reactor=reactor, http_client=http)
-        started = await device.begin(
-            device_authorization_endpoint=metadata.device_authorization_endpoint,
-            token_endpoint=metadata.token_endpoint,
-            issuer=metadata.issuer,
-            client_id=atlas.client_id,
-            scopes=("orders:read", "orders:write"),
-            tenant_id=TENANT,
-            session_key=session.session_key,
-            organization=company.document.organization,
-            protected_resources=metadata.protected_resources,
-        )
-        await shop.approve_device(started.user_code, account_id="acct_ada")
-        clock.advance(started.poll_interval)
-        done = await device.poll(started.reference)
-        token = done.token
-        assert token is not None and done.account_token_reference is not None
+    # A question only a signed-in user can have answered.
+    endpoint = company.document.agent.protocols[0].endpoint  # type: ignore[union-attr]
+    page = await conversations.start(
+        endpoint, say("Where is my jacket order?"), session=session, wait=0
+    )
+    asked = [e for e in page.events if e.type != "state"][-1]
+    conversation_id = page.conversation_id
+    steps.append(f"company asked for more scope: {asked.error} ({asked.scope})")
 
-        # 4. The same conversation continues, signed in; Manzanita proposes the exchange.
-        page = await conversations.send(
+    # Device Sign-In: Ada approves on Manzanita's own page.
+    device = DeviceSignInClient(reactor=reactor, http_client=http)
+    started = await device.begin(
+        device_authorization_endpoint=metadata.device_authorization_endpoint,
+        token_endpoint=metadata.token_endpoint,
+        issuer=metadata.issuer,
+        client_id=atlas.client_id,
+        scopes=("orders:read", "orders:write"),
+        tenant_id=TENANT,
+        organization=company.document.organization,
+        protected_resources=metadata.protected_resources,
+    )
+    steps.append(f"Ada opened {started.verification_uri} and entered the code")
+    await shop.approve_device(started.user_code, account_id="acct_ada")
+    clock.advance(started.poll_interval)
+    done = await device.poll(started.reference)
+    signed_in = done.token
+    if not (signed_in is not None and done.refresh_token_reference is not None):
+        raise RuntimeError("the example world is incomplete")
+    steps.append(f"same Session signed in with {', '.join(done.granted_scopes)}")
+
+    # The same conversation continues; the company proposes the exchange.
+    page = await conversations.send(
+        endpoint,
+        page.conversation_id,
+        say("Exchange it for something warmer"),
+        session=session,
+        token=signed_in,
+        cursor=page.cursor,
+        wait=0,
+    )
+    proposal = [e for e in page.events if e.type != "state"][-1].message.operation  # type: ignore[union-attr]
+    if not (proposal is not None):
+        raise RuntimeError("the example world is incomplete")
+    steps.append(f"company proposed revision {proposal.revision}: {proposal.summary}")
+
+    # Ada approves exactly that revision, in the host's own interface; it is done once.
+    if not operations_negotiated(
+        company.document, ClientMetadata.model_validate(atlas.metadata)
+    ):
+        raise RuntimeError("the example world is incomplete")
+    approval = await OperationsClient(reactor=reactor).ask_user(
+        proposal, organization=company.document.organization, tenant_id=TENANT
+    )
+
+    async def send_approval() -> Any:
+        return await conversations.send(
             endpoint,
             page.conversation_id,
-            say("Exchange it for something warmer"),
-            token=token,
-            cursor=page.cursor,
-            wait=0,
-            **who,
-        )
-        proposal = _last(page, "message").operation  # type: ignore[union-attr]
-        assert proposal is not None
-
-        # 5. Ada approves exactly this revision in Atlas; it is confirmed once.
-        operations = OperationsClient(transport=transport)
-        negotiated = operations_endpoint(
-            company.document, ClientMetadata.model_validate(atlas.metadata)
-        )
-        assert negotiated is not None
-        outcome = await operations.confirm(
-            negotiated, proposal, approval=approve(proposal), token=token, **who
-        )
-
-        # 6. Ada disconnects Atlas: the Account Token is revoked at Manzanita.
-        revoked = await AccountTokenClient(reactor=reactor, http_client=http).revoke(
-            done.account_token_reference,
-            context=AccountTokenContext(
-                token_endpoint=metadata.token_endpoint,
-                revocation_endpoint=metadata.revocation_endpoint,
-                issuer=metadata.issuer,
-                client_id=atlas.client_id,
-                tenant_id=TENANT,
-                pairwise_user_id=PAIRWISE,
+            Message(
+                id=generate_message_id(reactor),
+                author=Author(type="agent"),
+                approval=approval,
             ),
+            session=session,
+            token=signed_in,
+            wait=0,
         )
 
-    confirmed = outcome.operation
-    assert confirmed is not None and confirmed.confirmation and confirmed.result
-    stored = await shop.operation_record(proposal.operation_id)
+    outcome = await send_approval()
+    result = [
+        e.message for e in outcome.events if e.message and e.message.role == "company"
+    ][-1]
+    await send_approval()
+    steps.append(f"Ada approved; Manzanita: {result.text}")
+
+    # The refresh token: narrowed for read-only follow-up, then revoked.
+    accounts = RefreshTokenClient(reactor=reactor, http_client=http)
+    context = RefreshTokenContext(
+        token_endpoint=metadata.token_endpoint,
+        revocation_endpoint=metadata.revocation_endpoint,
+        issuer=metadata.issuer,
+        client_id=atlas.client_id,
+        tenant_id=TENANT,
+    )
+    narrowed = await accounts.refresh(
+        done.refresh_token_reference,
+        context=context,
+        scopes=("orders:read",),
+    )
+    revoked = await accounts.revoke(done.refresh_token_reference, context=context)
+    steps.append("Ada signed out: refresh token revoked")
+    await http.aclose()
+
     return {
-        "personal_agent": "Atlas",
-        "company": company.document.organization.name,
-        "first_reply_required": asked_to_sign_in,
-        "signed_in_on_company_page": done.status == "complete",
-        "same_session_signed_in": token.session_key == session.session_key,
-        "granted_scopes": token.scopes,
-        "same_conversation_continued": page.conversation_id == first_conversation,
-        "proposed_operation": {
-            "action": stored.action,
-            "summary": proposal.summary,
-            "revision": proposal.revision,
-            "user_approval_required": proposal.user_approval_required,
-        },
-        "confirmed": {
-            "state": confirmed.state,
-            "approved_by": confirmed.confirmation.approved_by,
-            "result_summary": confirmed.result.summary,
-        },
-        "performed_once": plugin.executor.performed == [proposal.operation_id],
-        "company_knows_the_account_only_after_sign_in": stored.account_id == "acct_ada",
-        "account_token_revoked": revoked.revoked,
-        "user_code_and_credentials_withheld": True,
+        "steps": steps,
+        "conversation_kept_its_id_across_sign_in": page.conversation_id
+        == conversation_id,
+        "ada_was_asked": len(approvals.asked),
+        "exchanges_performed": len(shop_plugin.executor.performed),
+        "narrowed_to": narrowed.granted_scopes,
+        "revoked": revoked.revoked,
+        "tokens_codes_and_session_jwts_withheld": True,
     }

@@ -122,7 +122,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#10B981',
+  color: 'emerald',
   suggestions: [
     {
       text: 'Search the web for recent news about AI agents',
@@ -294,7 +294,7 @@ const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'comment-discussion',
   emoji: '🎙️',
-  color: '#0EA5E9',
+  color: 'sky',
   suggestions: [
     {
       text: 'Start an interview about why I chose this product',
@@ -486,7 +486,7 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'table',
   emoji: '📊',
-  color: '#1F883D',
+  color: 'green',
   suggestions: [
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.',

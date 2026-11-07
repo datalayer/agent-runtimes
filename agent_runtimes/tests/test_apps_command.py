@@ -116,18 +116,23 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "customer-interview",
         "data-quality",
         "decide",
+        # The deck and sheet makers, the player and the Marketer (agentspecs 0.0.148 to 0.0.150, 6 and 7 November 2026).
+        "deck-maker",
         "disaster-assessment",
         "event-response",
         # The two Personal Agent Protocol examples (agentspecs 881a752, E-01, E-02).
         "exchange-desk",
         "inbox-triage",
+        "marketer",
         "month-end-close",
         "model-choice",
         "order-desk",
         "pipeline-report",
+        "player",
         "quote-calculator",
         "report-from-a-file",
         "sales",
+        "sheet-maker",
         "ship-or-fix",
         "supplier-comparison",
         "support-desk",
@@ -147,6 +152,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "sign-in-desk",
         "returns-desk",
         "bookkeeping-desk",
+        # A coding agent behind the Shield, lent one repository to read (agentspecs 0.0.137).
+        "code-explainer",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []

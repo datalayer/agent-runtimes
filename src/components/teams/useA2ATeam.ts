@@ -63,6 +63,12 @@ import {
   type A2APeerEvent,
 } from '../../runtimes/browser/a2aPeer';
 import type { AppSpec } from '../../types/agentspecs';
+import type { FrontendToolDefinition } from '../../types/tools';
+import { useToolEventLoop } from './toolEventLoop';
+import {
+  frontendToolsToVercelAI,
+  type FrontendToolsToVercelAIOptions,
+} from '../../runtimes/browser/frontendTools';
 import type {
   OtelLiveSpan,
   OtelLiveTracer,
@@ -328,6 +334,15 @@ export type UseA2ATeamOptions = {
    * peers are recorded there as spans.
    */
   inspector?: OtelLiveTracer | null;
+  /**
+   * The page's own tools for the entry, beside its peers' (AGENT_BATTLE
+   * B1-01): an arena's moves, a deck's slides, a spreadsheet's cells. With
+   * them, an entry in the browser has an agent even with no peer to ask.
+   * Give the same array while nothing changed: a new one makes the agent again.
+   */
+  frontendTools?: readonly FrontendToolDefinition[];
+  /** Where a streaming tool's events go (B1-00); without it a streaming tool is refused. */
+  onToolEvent?: FrontendToolsToVercelAIOptions['onToolEvent'];
 };
 
 /** One peer of the team, as the team keeps it. */
@@ -442,6 +457,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     inference,
     maxSteps = 6,
     inspector = null,
+    frontendTools,
+    onToolEvent: givenToolEvent,
   } = options;
   // By what it names, so that a page passing a new array of the same media
   // types does not make the agent again.
@@ -582,6 +599,14 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     undefined,
   );
   const [busy, setBusy] = useState(false);
+  // A streaming tool's events, when the page gives no handler of its own
+  // (AGENT_BATTLE B1-00): turns the entry did not ask for, through its send.
+  const sendRef = useRef<(text: string) => unknown>(() => undefined);
+  const ownToolEvent = useToolEventLoop(
+    useCallback((text: string) => sendRef.current(text), []),
+    busy,
+  );
+  const onToolEvent = givenToolEvent ?? ownToolEvent;
   const history = useRef<ModelMessage[]>([]);
   const abort = useRef<AbortController | null>(null);
   const flowTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -698,10 +723,18 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   // The peers' ids and whether each is reached: the agent is made again
   // when one connects, not when a peer's state changes.
   const agent = useMemo(() => {
-    if (entryPeer || !peerList.length || peerList.some(one => !one.peer)) {
+    // No peer and no tool of the page: nothing to be an agent for. With
+    // tools, an entry alone in the browser plays (an arena, a deck).
+    if (
+      entryPeer ||
+      (!peerList.length && !frontendTools?.length) ||
+      peerList.some(one => !one.peer)
+    ) {
       return null;
     }
-    const tools: Record<string, Tool> = {};
+    const tools: Record<string, Tool> = frontendTools?.length
+      ? { ...frontendToolsToVercelAI([...frontendTools], { onToolEvent }) }
+      : {};
     for (const one of peerList) {
       tools[one.askTool] = a2aPeerTool({
         peer: one.peer as A2APeer,
@@ -719,7 +752,17 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       tools,
       stopWhen: stepCountIs(maxSteps),
     });
-  }, [entryPeer, peerList, inference, onMemberEvent, entry, maxSteps, accept]);
+  }, [
+    entryPeer,
+    peerList,
+    inference,
+    onMemberEvent,
+    entry,
+    maxSteps,
+    accept,
+    frontendTools,
+    onToolEvent,
+  ]);
 
   /** Every peer at rest again, its greeting gone. */
   const peersAtRest = useCallback(() => {
@@ -1118,6 +1161,10 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     [peerList, personaOf, histories, reports, givens, flows, setAwayOf, NONE],
   );
   const first = teamPeers[0];
+
+  useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   return {
     entryHistory,

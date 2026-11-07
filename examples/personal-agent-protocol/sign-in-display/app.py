@@ -13,7 +13,7 @@ from ag_ui.core import RunAgentInput, ToolCallResultEvent, UserMessage
 from fastmcp.client.transports import FastMCPTransport
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent
-from personal_agent_protocol import DeviceSignInClient, DiscoveryClient, SessionClient
+from personal_agent_protocol import DeviceSignInClient, DiscoveryClient
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
     InProcessNetwork,
@@ -75,13 +75,6 @@ async def _device_sign_in() -> dict[str, Any]:
         )
         metadata = company.oauth_metadata
         assert metadata is not None and metadata.device_authorization_endpoint
-        session = await SessionClient(reactor=reactor, http_client=http).start(
-            client_id=atlas.client_id,
-            pairwise_user_id=PAIRWISE,
-            issuer=metadata.issuer,
-            token_endpoint=metadata.token_endpoint,
-            tenant_id=TENANT,
-        )
         started = await DeviceSignInClient(reactor=reactor, http_client=http).begin(
             device_authorization_endpoint=metadata.device_authorization_endpoint,
             token_endpoint=metadata.token_endpoint,
@@ -89,7 +82,6 @@ async def _device_sign_in() -> dict[str, Any]:
             client_id=atlas.client_id,
             scopes=("orders:read",),
             tenant_id=TENANT,
-            session_key=session.session_key,
             organization=company.document.organization,
             protected_resources=metadata.protected_resources,
         )
@@ -106,7 +98,7 @@ async def _device_sign_in() -> dict[str, Any]:
 
 
 def _gateway(answer: dict[str, Any]) -> MCPServer:
-    """An MCP server whose `pap_sign_in` answers as Datalayer's gateway does (RU-1).
+    """An MCP server whose `pap_sign_in` answers as Datalayer's gateway does.
 
     The result's content is the display's text and what the model may read;
     the whole `PapSignIn` rides in `_meta["reactor.ui/display"]`.

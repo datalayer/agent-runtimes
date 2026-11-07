@@ -37,48 +37,28 @@
  * zoomed, and the wheel scrolls the page. Its viewport is worked out from its
  * box, so it fits a phone as it fits a desk.
  *
+ * How it is drawn is its *backdrop* (`backdrop`, the scene's
+ * `stage.backdrop`; {@link SceneBackdrop}): `studio`, the drawing above —
+ * characters, balloons, flowing edges — `hero`, faces on a deep tint with
+ * a dot that flies with each message, `plain`, boxes and arrows that do
+ * not move, `space`, glowing marks on a ground of dots and mesh with a
+ * light flowing along each line, `minimal`, glowing circles on a dark
+ * ground, or `orb`, each member Datalayer's orb in its own colour. On every one, a member's details open in a card on hover or
+ * focus, kept by a click. The graph works out the same things for every backdrop — who
+ * stands where, which way each link carries a message, which connection
+ * answers a call, the words a screen reader hears — and reads the node
+ * types, the edge types, the colours and the layout from the backdrop.
+ *
  * @module components/teams/A2ATeamGraph
  */
 
-import type { AssistantModel3D } from '../../chat/assistant/avatar3dModel';
-import type { JSX, KeyboardEvent } from 'react';
-import {
-  createContext,
-  memo,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  Handle,
-  Position,
-  ReactFlow,
-  type Edge,
-  type EdgeProps,
-  type Node,
-  type NodeProps,
-  type Viewport,
-} from '@xyflow/react';
+import type { JSX } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ReactFlow, type Edge, type Node, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
-import { Button, Label, Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
-import {
-  AssistantStage,
-  type AssistantAbout,
-} from '../../chat/assistant/AssistantStage';
-import type { BalloonSuggestion } from '../../chat/assistant/SpeechBalloon';
-import type { DisplayItem } from '../../types/chat';
-import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMenu';
-import type { AssistantSandbox } from '../../chat/assistant/assistantDetails';
+import { Box, usePaletteColor } from '@datalayer/primer-addons';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { teamNotebookKernel } from './teamNotebookKernel';
-import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
-import { SpecMark } from '../../chat/marks/SpecMark';
 import {
   callFlow,
   toolWords,
@@ -86,93 +66,55 @@ import {
   type A2ATeamConnection,
   type A2ATeamFlow,
 } from './a2aTeamFlow';
-import type { A2ATeamPersona } from './useA2ATeam';
-import { NotebookPreview } from './NotebookPreview';
-import { notebookBalloonVisual } from './TeamNotebook';
 import { useBalloonRoom } from './useBalloonRoom';
-import type { BalloonExpandTarget } from '../../chat/assistant/BalloonVisual';
-import { toolLineText } from '../../chat/assistant/toolLine';
-import type { BalloonDisplay } from '../../chat/assistant/toolLine';
+import { sceneBackdrop, sceneStageSx } from './backdrops';
+import type {
+  A2ATeamGraphLink,
+  A2ATeamGraphMember,
+  A2ATeamGraphPosition,
+  CallData,
+  ConnectionData,
+  LinkData,
+  MemberData,
+  SceneBackdropId,
+  SceneBackdropTheme,
+  StageSx,
+} from './backdrops/types';
+import {
+  AT_PLACE,
+  Busy,
+  MEMBER_HANDLES,
+  Members,
+  Moving,
+  clampOffset,
+  connectionNodeId,
+  type MemberBounds,
+  type MemberOffset,
+} from './backdrops/nodes';
+import { STUDIO_LAYOUT } from './backdrops/studio';
+import type { SelectedEdge } from './transcript/selection';
 
-/** One member of the team, as the graph draws it. */
-export type A2ATeamGraphMember = {
-  id: string;
-  name: string;
-  emoji?: string;
-  /** Its avatar, as its Appspec's `interface.avatar` names it: an id, or a 3D model. */
-  character: string | AssistantModel3D;
-  /** Where it runs, in a few words: "in your browser", "on a runtime". */
-  where: string;
-  persona: A2ATeamPersona;
-  /** A click on the character. */
-  onToggle?: () => void;
-  /** It was sent away, or called back. */
-  onAway?: (away: boolean) => void;
-  /** The MCP servers it reaches, drawn to its right (`teamConnectionsOf`). */
-  connections?: A2ATeamConnection[];
-  /**
-   * How its balloon shows what it says (T-23): only what it says or
-   * does now (`current`, a team's default) — the words, the tool it calls,
-   * a notebook it was given — or a peek (`history`).
-   */
-  balloonDisplay?: BalloonDisplay;
-  /**
-   * The notebook in its balloon was clicked: by default, it is expanded —
-   * into `expandTarget`, scrolled to and focused, or in a dialog.
-   */
-  onNotebookOpen?: () => void;
-  /**
-   * Where the notebook it was given runs (`TeamNotebook`, editable, on the
-   * browser sandbox): an element of the page — the area under the graph —
-   * where it is drawn as it arrives and when it is expanded; without one,
-   * *Expand* opens it in a dialog over the page.
-   */
-  expandTarget?: BalloonExpandTarget;
-  /** What its notebook is called: `Accounting's notebook`. */
-  notebookTitle?: string;
-  /**
-   * What the person may ask it: chips in its balloon while it waits for a
-   * question, and a group of its menu; one chosen is sent (`onSuggestion`).
-   */
-  suggestions?: readonly BalloonSuggestion[];
-  onSuggestion?: (suggestion: BalloonSuggestion) => void;
-  /**
-   * The team's Agent Inspector's tracer: its menu offers *Inspect the
-   * agent…*, its own spans (what it did, and the A2A requests sent to it).
-   */
-  inspector?: OtelLiveTracer | null;
-  /** Stops its turn, from its menu, while it works. */
-  onStop?: () => void;
-  /** What its menu's *About* and *Agent Details…* say. */
-  about?: AssistantAbout;
-  /**
-   * Its code sandbox, for *Code Sandbox Details…*. The entry — the agent in
-   * the page — has the kernel of the notebook open under the graph, while
-   * one is.
-   */
-  sandbox?: AssistantSandbox;
-  /** The host's own entries of its menu. */
-  contextMenu?: readonly AssistantMenuItem[];
-  /**
-   * What its menu calls a click on it (`onToggle`): `Ask Sales` where it
-   * takes the person to the composer. Without `onToggle`, its menu has no
-   * such entry.
-   */
-  conversationLabel?: string;
-  /**
-   * What it said and did, as its `history` balloon lists it (`useA2ATeam`'s
-   * `entryHistory`, `peerHistory`): shown when its menu chooses *History*.
-   */
-  history?: readonly DisplayItem[];
-  /** Its balloon's display was chosen in its menu: the page may keep it. */
-  onBalloonDisplayChange?: (display: BalloonDisplay) => void;
-};
-
-/** Who talks to whom over A2A: an edge of the graph. */
-export type A2ATeamGraphLink = { from: string; to: string };
-
-/** Where a member stands: fractions of the box, as a scene's stage says. */
-export type A2ATeamGraphPosition = { x: number; y: number };
+export type {
+  A2ATeamGraphLink,
+  A2ATeamGraphMember,
+  A2ATeamGraphPosition,
+} from './backdrops/types';
+export {
+  MEMBER_HANDLES,
+  clampOffset,
+  connectionDetails,
+  connectionLabel,
+  memberLabel,
+  type MemberBounds,
+  type MemberOffset,
+} from './backdrops/nodes';
+export { arrowPath } from './backdrops/edges';
+export {
+  CallEdge,
+  LinkEdge,
+  MemberNode,
+  ConnectionNode,
+} from './backdrops/studio';
 
 export type A2ATeamGraphProps = {
   /** The member that asks: drawn on the left. */
@@ -209,69 +151,56 @@ export type A2ATeamGraphProps = {
    * The least room above the members for their balloons, in pixels at full
    * scale: the graph keeps what its balloons take now (`useBalloonRoom`) —
    * suggestions, *more* unfolded — and never less than this. A notebook in
-   * a balloon gets at least its own.
+   * a balloon gets at least its own. Unsaid, the backdrop's.
    */
   balloonRoom?: number;
+  /**
+   * How the stage is drawn (`SceneStageSpec.backdrop`): `studio`, the
+   * drawing every scene had first, `hero` or `plain`. `studio` when unsaid,
+   * and for an id the graph does not know.
+   */
+  backdrop?: SceneBackdropId;
+  /**
+   * The least height the graph takes, in pixels: a board it fills (the
+   * scene editor's Preview). The room beyond its own is shared above and
+   * below the members, so they stand in its middle. Unsaid, its own height.
+   */
+  minHeight?: number;
+  /**
+   * The exchange selected in the transcript, as the edge it is on
+   * (`selectedEdgeOf`, SCENES S3-02): drawn with a halo on every backdrop —
+   * the edge by its id, or by its ends either way, since an answer travels
+   * the asker's edge back.
+   */
+  selected?: SelectedEdge | null;
+  /**
+   * An edge was clicked: the page selects its latest exchange
+   * (`latestLineOnEdge`). With it, the edges take the pointer.
+   */
+  onSelectEdge?: (edge: A2ATeamGraphEdge) => void;
 };
 
-/** The graph's own coordinates: the members, and room above them for their balloons. */
-const NODE_WIDTH = 200;
-const BALLOON_ROOM = 144;
+/** An edge of the graph, as a click names it: `selectedEdgeOf`'s shape without the selection's key. */
+export type A2ATeamGraphEdge = Omit<SelectedEdge, 'key'>;
+
+/** Whether a selection is on the edge between two ends: by its id, or by its ends either way. */
+export function edgeSelected(
+  selected: SelectedEdge | null | undefined,
+  from: string,
+  to: string,
+): boolean {
+  return Boolean(
+    selected &&
+    (selected.id === `${from}->${to}` ||
+      (selected.from === from && selected.to === to) ||
+      (selected.from === to && selected.to === from)),
+  );
+}
+
+/** The studio's width at full scale: the entry, a peer, and the room between them. */
+const WIDTH = STUDIO_LAYOUT.nodeWidth * 2 + STUDIO_LAYOUT.gap;
 /** The room a balloon that holds a notebook needs above its member. */
 const NOTEBOOK_BALLOON_ROOM = 480;
-/** How tall the notebook in a balloon grows before it scrolls. */
-const NOTEBOOK_PREVIEW_HEIGHT = 180;
-const GAP = 220;
-const WIDTH = NODE_WIDTH * 2 + GAP;
-/** Between two rows of members. */
-const ROW_GAP = 48;
-/** A connection's node: half a member's. */
-const CONNECTION_WIDTH = NODE_WIDTH / 2;
-/**
- * Between a member and its connections, to its right: room for the MCP
- * edge's words, as the A2A edge has room for its own.
- */
-const CONNECTION_GAP = 140;
-const CONNECTIONS_APART = 16;
-/** Where a member's connections start: right of it. */
-const CONNECTION_X = NODE_WIDTH + CONNECTION_GAP;
-/** Below the character's middle, so the A2A edge leaving it passes above. */
-/** What a member's connections take beside it. */
-const CONNECTIONS_BESIDE = CONNECTION_GAP + CONNECTION_WIDTH;
-
-/** Where the edge leaves and reaches a member: the middle of its character. */
-const HANDLE = (size: number) => ({
-  opacity: 0,
-  pointerEvents: 'none' as const,
-  top: size / 2,
-  width: 1,
-  height: 1,
-  minWidth: 0,
-  minHeight: 0,
-  border: 0,
-});
-
-type MemberData = {
-  id: string;
-  side: 'left' | 'right';
-  size: number;
-};
-
-/**
- * The handles an edge leaves and reaches a member by, named: the middle of
- * its character on each side, chosen by where the other member stands.
- */
-export const MEMBER_HANDLES = {
-  inLeft: 'in-left',
-  outRight: 'out-right',
-  inTop: 'in-top',
-  outBottom: 'out-bottom',
-  inRight: 'in-right',
-  outLeft: 'out-left',
-  inBottom: 'in-bottom',
-  outTop: 'out-top',
-  connections: 'connections',
-} as const;
 
 /**
  * The handles for an edge from one place to another: rightward across,
@@ -307,532 +236,12 @@ export function handlesBetween(
 }
 
 /**
- * The members as they are now, by id. Not in the nodes' data: a node whose
- * object changes is taken by React Flow for a new one, measured again, and
- * the edge is dropped until it is — the line vanished as the characters
- * moved. The nodes stay the same objects; what they show is read from here.
- */
-const Members = createContext<Record<string, A2ATeamGraphMember>>({});
-
-/** The connections being called now, by node id: read by their nodes, as the members are. */
-const Busy = createContext<Record<string, string>>({});
-
-/** How far a member was moved from its place, in the graph's coordinates. */
-export type MemberOffset = { dx: number; dy: number };
-
-const AT_PLACE: MemberOffset = { dx: 0, dy: 0 };
-
-/** How far a member may move: its node stays inside the graph's box. */
-export type MemberBounds = {
-  minDx: number;
-  maxDx: number;
-  minDy: number;
-  maxDy: number;
-};
-
-/** An offset kept inside its bounds. */
-export function clampOffset(
-  offset: MemberOffset,
-  bounds: MemberBounds,
-): MemberOffset {
-  return {
-    dx: Math.min(bounds.maxDx, Math.max(bounds.minDx, offset.dx)),
-    dy: Math.min(bounds.maxDy, Math.max(bounds.minDy, offset.dy)),
-  };
-}
-
-/**
  * Where the members were moved, by page and member: kept for the session,
  * in memory, so a graph drawn again on the page keeps them where they were.
  */
 const MOVED = new Map<string, MemberOffset>();
 const movedKey = (id: string) =>
   `${typeof location === 'undefined' ? '' : location.pathname}#${id}`;
-
-/** How far a press moves before it is a drag, not a click, in pixels. */
-const DRAG_THRESHOLD = 4;
-
-/** How far an arrow key moves a member; with Shift, more. */
-const NUDGE = 10;
-const NUDGE_FAR = 40;
-
-/** The members' moves, read by their nodes. */
-const Moving = createContext<{
-  zoom: number;
-  offsetOf: (id: string) => MemberOffset;
-  move: (id: string, offset: MemberOffset) => void;
-  reset: (id: string) => void;
-}>({
-  zoom: 1,
-  offsetOf: () => AT_PLACE,
-  move: () => undefined,
-  reset: () => undefined,
-});
-
-/** A connection's node id: beside its member. */
-const connectionNodeId = (member: string, connection: string) =>
-  `${member}/${connection}`;
-
-const MemberNode = memo(function MemberNode({
-  data,
-}: NodeProps<Node<MemberData>>): JSX.Element | null {
-  const { id, side, size } = data;
-  const member = useContext(Members)[id];
-  const moving = useContext(Moving);
-  const offset = moving.offsetOf(id);
-  const stageRef = useRef<HTMLDivElement>(null);
-  // Its balloon's display, as its menu changes it.
-  const [display, setDisplay] = useState<BalloonDisplay | undefined>();
-  // Its balloon as a click on it left it: shown, hidden, or as the team
-  // says (`auto`: what it is doing, and on hover).
-  const [shown, setShown] = useState<'auto' | 'shown' | 'hidden'>('auto');
-  // What it says or does now: something new reopens a hidden balloon.
-  const persona = member?.persona;
-  const news = [
-    persona?.saying,
-    persona?.tool ? toolLineText(persona.tool) : '',
-    persona?.notebook?.name,
-  ].join('\u0000');
-  const seen = useRef(news);
-  useEffect(() => {
-    if (news !== seen.current) {
-      seen.current = news;
-      setShown(current => (current === 'hidden' ? 'auto' : current));
-    }
-  }, [news]);
-  if (!member || !persona) {
-    return null;
-  }
-  const shownDisplay = display ?? member.balloonDisplay ?? 'current';
-  // History: what it said and did, listed.
-  const listed =
-    shownDisplay === 'history' && member.history?.length
-      ? { history: member.history }
-      : {};
-  // A notebook it was given: read-only in its balloon, and its large visual
-  // the one that runs, editable — under the graph, or in a dialog.
-  const notebookTitle =
-    member.notebookTitle ?? (persona.notebook?.name || 'The notebook');
-  const given = persona.notebook
-    ? {
-        attachment: (
-          <NotebookPreview
-            notebook={persona.notebook.data}
-            title={notebookTitle}
-            maxHeight={NOTEBOOK_PREVIEW_HEIGHT}
-            onOpen={member.onNotebookOpen}
-            openLabel={
-              member.expandTarget ? 'Open it below to run it' : undefined
-            }
-          />
-        ),
-        visual: notebookBalloonVisual(persona.notebook, notebookTitle),
-      }
-    : {};
-  const balloonNow = persona.tool
-    ? {
-        text: toolLineText(persona.tool),
-        tool: persona.tool,
-        busy: persona.state !== 'idle',
-        ...given,
-        ...listed,
-      }
-    : persona.saying
-      ? {
-          text: persona.saying,
-          ...(persona.full ? { fullText: persona.full } : {}),
-          more: persona.saying.endsWith('…'),
-          speaking: persona.state === 'speaking',
-          busy:
-            persona.state === 'thinking' ||
-            persona.state === 'working' ||
-            persona.state === 'speaking',
-          ...given,
-          ...listed,
-        }
-      : 'history' in listed
-        ? { text: '', ...listed }
-        : undefined;
-  return (
-    <Box
-      // React Flow lets the pointer through a node that is neither dragged
-      // nor selected (`pointer-events: none` on its wrapper): the character,
-      // its balloon and its menu take it back, and are left to themselves —
-      // no drag, no pan, no wheel.
-      className="nodrag nopan nowheel"
-      width={NODE_WIDTH}
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      gap={1}
-      cursor="default"
-      pointerEvents="all"
-      data-team-member={member.id}
-      data-member-balloon={shown}
-      data-member-moved={
-        offset.dx || offset.dy
-          ? `${Math.round(offset.dx)},${Math.round(offset.dy)}`
-          : undefined
-      }
-      data-member-state={persona.state}
-    >
-      <Handle
-        id={MEMBER_HANDLES.inLeft}
-        type="target"
-        position={Position.Left}
-        style={HANDLE(size)}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.inRight}
-        type="target"
-        position={Position.Right}
-        style={HANDLE(size)}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.inTop}
-        type="target"
-        position={Position.Top}
-        style={{ ...HANDLE(size), top: 0 }}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.inBottom}
-        type="target"
-        position={Position.Bottom}
-        style={{ ...HANDLE(size), top: size }}
-        isConnectable={false}
-      />
-      <Box width={size} height={size} position="relative">
-        {persona.away ? (
-          <Button
-            size="small"
-            sx={{ position: 'absolute', top: size / 2 - 16, left: -24 }}
-            onClick={() => member.onAway?.(false)}
-          >
-            Call {member.name} back
-          </Button>
-        ) : (
-          <AssistantStage
-            character={member.character}
-            state={persona.state}
-            size={size}
-            // In the node, not over the page; the balloon opens toward the
-            // middle of the graph: rightward from the left member.
-            place={
-              side === 'left'
-                ? { position: 'absolute', left: 'auto' }
-                : { position: 'absolute', right: 'auto' }
-            }
-            stageRef={stageRef}
-            // Dragged within the graph's box: a press that moves more than
-            // a few pixels is a drag; one that does not is a click, and the
-            // stage ignores the click that ends a drag.
-            onDragStart={event => {
-              if (event.button !== 0) {
-                return;
-              }
-              const start = { x: event.clientX, y: event.clientY };
-              const from = offset;
-              let dragging = false;
-              const onMove = (next: PointerEvent) => {
-                const dx = next.clientX - start.x;
-                const dy = next.clientY - start.y;
-                if (!dragging && Math.hypot(dx, dy) <= DRAG_THRESHOLD) {
-                  return;
-                }
-                dragging = true;
-                moving.move(id, {
-                  dx: from.dx + dx / moving.zoom,
-                  dy: from.dy + dy / moving.zoom,
-                });
-              };
-              const onUp = () => {
-                window.removeEventListener('pointermove', onMove);
-                window.removeEventListener('pointerup', onUp);
-                window.removeEventListener('pointercancel', onUp);
-              };
-              window.addEventListener('pointermove', onMove);
-              window.addEventListener('pointerup', onUp);
-              window.addEventListener('pointercancel', onUp);
-            }}
-            onCharacterKeyDown={event => {
-              const step = event.shiftKey ? NUDGE_FAR : NUDGE;
-              const by: Record<string, MemberOffset> = {
-                ArrowLeft: { dx: -step, dy: 0 },
-                ArrowRight: { dx: step, dy: 0 },
-                ArrowUp: { dx: 0, dy: -step },
-                ArrowDown: { dx: 0, dy: step },
-              };
-              const nudge = by[event.key];
-              if (nudge) {
-                event.preventDefault();
-                moving.move(id, {
-                  dx: offset.dx + nudge.dx,
-                  dy: offset.dy + nudge.dy,
-                });
-              }
-            }}
-            onResetPosition={
-              offset.dx || offset.dy ? () => moving.reset(id) : undefined
-            }
-            open={false}
-            onToggle={member.onToggle ?? (() => undefined)}
-            // A click shows and hides its balloon; the menu's *Ask Sales*
-            // still takes the reader to the composer.
-            onCharacterClick={() =>
-              setShown(current =>
-                current === 'shown' ||
-                (current === 'auto' &&
-                  (persona.insist || display === 'history'))
-                  ? 'hidden'
-                  : 'shown',
-              )
-            }
-            balloonDisplay={shownDisplay}
-            onBalloonDisplayChange={next => {
-              setDisplay(next);
-              member.onBalloonDisplayChange?.(next);
-            }}
-            conversationLabel={
-              member.onToggle ? (member.conversationLabel ?? undefined) : false
-            }
-            balloon={
-              shown === 'hidden'
-                ? undefined
-                : (balloonNow ??
-                  (shown === 'shown'
-                    ? {
-                        text: `${member.name}, ${member.where ?? ''}`.replace(
-                          /, $/,
-                          '',
-                        ),
-                      }
-                    : undefined))
-            }
-            expandTarget={member.expandTarget}
-            expandOnArrival={!!member.expandTarget}
-            // History, chosen in its menu: shown until Current is.
-            insist={
-              shown === 'shown' ||
-              (shown === 'auto' && (persona.insist || display === 'history'))
-            }
-            onDismiss={away => member.onAway?.(away !== 'none')}
-            suggestions={member.suggestions}
-            onSuggestion={member.onSuggestion}
-            inspector={member.inspector}
-            inspectAgent={member.name}
-            onStop={member.onStop}
-            about={member.about}
-            sandbox={member.sandbox}
-            contextMenu={member.contextMenu}
-            // A member of the graph: what is clicked around it is the graph.
-            stayPut
-            // Named as the member, not its character: `Sales (in your
-            // browser)`; the character describes it.
-            agentName={member.name}
-            label={memberLabel(member)}
-          />
-        )}
-      </Box>
-      <Text sx={{ fontWeight: 600, textAlign: 'center' }}>
-        {member.emoji ? `${member.emoji} ` : ''}
-        {member.name}
-      </Text>
-      <Text
-        sx={{ fontSize: 0, color: 'fg.muted', textAlign: 'center' }}
-        data-member-where=""
-      >
-        {member.where}
-      </Text>
-      <Handle
-        id={MEMBER_HANDLES.outRight}
-        type="source"
-        position={Position.Right}
-        style={HANDLE(size)}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.outLeft}
-        type="source"
-        position={Position.Left}
-        style={HANDLE(size)}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.outBottom}
-        type="source"
-        position={Position.Bottom}
-        style={{ ...HANDLE(size), top: size }}
-        isConnectable={false}
-      />
-      <Handle
-        id={MEMBER_HANDLES.outTop}
-        type="source"
-        position={Position.Top}
-        style={{ ...HANDLE(size), top: 0 }}
-        isConnectable={false}
-      />
-      {member.connections?.length ? (
-        <Handle
-          id={MEMBER_HANDLES.connections}
-          type="source"
-          position={Position.Right}
-          style={{ ...HANDLE(size), left: 'auto', right: 0 }}
-          isConnectable={false}
-        />
-      ) : null}
-    </Box>
-  );
-});
-
-/** A member's accessible name: its name, and where it runs. */
-export function memberLabel(
-  member: Pick<A2ATeamGraphMember, 'name' | 'where'>,
-): string {
-  return member.where ? `${member.name} (${member.where})` : member.name;
-}
-
-/** A connection's accessible name: `Odoo, Accounting's MCP connection`. */
-export function connectionLabel(
-  connection: Pick<A2ATeamConnection, 'label'>,
-  member: string | undefined,
-): string {
-  return member
-    ? `${connection.label}, ${member}\u2019s MCP connection`
-    : `${connection.label}, an MCP connection`;
-}
-
-type ConnectionData = {
-  member: string;
-  connection: string;
-  size: number;
-};
-
-/** A connection of a member's: the server's mark, what it reaches, and how. */
-const ConnectionNode = memo(function ConnectionNode({
-  id,
-  data,
-}: NodeProps<Node<ConnectionData>>): JSX.Element | null {
-  const { member, connection: connectionId, size } = data;
-  const owner = useContext(Members)[member];
-  const connection = owner?.connections?.find(
-    known => known.id === connectionId,
-  );
-  const tool = useContext(Busy)[id];
-  // Its details, shown and hidden by a click or Enter on its mark.
-  const [told, setTold] = useState(false);
-  const detailsId = useId();
-  if (!connection) {
-    return null;
-  }
-  return (
-    <Box
-      className="nodrag nopan nowheel"
-      width={CONNECTION_WIDTH}
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      gap="2px"
-      cursor="default"
-      pointerEvents="all"
-      title={connection.name}
-      data-team-connection={connection.id}
-      data-connection-busy={tool ? 'true' : 'false'}
-    >
-      {/* The edge reaches its mark, not the node's side. */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ ...HANDLE(size), left: (CONNECTION_WIDTH - size) / 2 }}
-        isConnectable={false}
-      />
-      <Box
-        as="button"
-        type="button"
-        className={tool ? 'a2a-team-connection-busy' : undefined}
-        aria-label={connectionLabel(connection, owner?.name)}
-        aria-expanded={told}
-        aria-controls={detailsId}
-        data-connection-figure=""
-        onClick={() => setTold(shown => !shown)}
-        onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
-          if (event.key === 'Escape' && told) {
-            event.stopPropagation();
-            setTold(false);
-          }
-        }}
-        width={size}
-        height={size}
-        p={0}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        borderRadius={2}
-        border="1px solid"
-        borderColor={tool ? 'accent.emphasis' : 'border.default'}
-        bg="canvas.default"
-        cursor="pointer"
-        focusVisible={{
-          outline: '2px solid',
-          outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
-          outlineOffset: 2,
-        }}
-      >
-        <SpecMark
-          icon={connection.icon}
-          emoji={connection.emoji}
-          size={Math.round(size * 0.66)}
-        />
-      </Box>
-      <Text sx={{ fontWeight: 600, fontSize: 1, textAlign: 'center' }}>
-        {connection.label}
-      </Text>
-      {connection.via && (
-        <Text
-          sx={{ fontSize: '10px', color: 'fg.muted', textAlign: 'center' }}
-          data-connection-via=""
-        >
-          {connection.via}
-        </Text>
-      )}
-      <Box
-        id={detailsId}
-        hidden={!told}
-        data-connection-details=""
-        fontSize="10px"
-        color="fg.muted"
-        textAlign="center"
-        maxWidth={CONNECTION_WIDTH + 40}
-      >
-        {connectionDetails(connection, owner?.name, tool)}
-      </Box>
-    </Box>
-  );
-});
-
-/** What a connection's details say: the server, who reaches it, and the call running now. */
-export function connectionDetails(
-  connection: Pick<A2ATeamConnection, 'name' | 'tools'>,
-  member: string | undefined,
-  calling?: string,
-): string {
-  const tools = connection.tools.length;
-  return [
-    `${connection.name}, an MCP server${member ? ` ${member} reaches` : ''}.`,
-    tools ? `${tools} tool${tools === 1 ? '' : 's'}.` : '',
-    calling ? `Now: ${calling}.` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-}
-
-type LinkData = {
-  flow: A2ATeamFlow;
-  connected: boolean;
-  label: string;
-};
 
 /** The words on the edge for a flow. */
 export function flowWords(flow: A2ATeamFlow, entry: string, peer: string) {
@@ -843,193 +252,32 @@ export function flowWords(flow: A2ATeamFlow, entry: string, peer: string) {
       : '';
 }
 
-const ARROW = 9;
-
 /**
- * An arrowhead at the end a message goes to — the target's when `forward`,
- * the source's otherwise — pointing along the edge.
- */
-export function arrowPath(
-  source: { x: number; y: number },
-  target: { x: number; y: number },
-  forward: boolean,
-): string {
-  const tip = forward ? target : source;
-  const from = forward ? source : target;
-  const length = Math.hypot(tip.x - from.x, tip.y - from.y) || 1;
-  // Along the edge, toward the tip; and across it.
-  const ax = (tip.x - from.x) / length;
-  const ay = (tip.y - from.y) / length;
-  const bx = tip.x - ax * ARROW;
-  const by = tip.y - ay * ARROW;
-  const px = -ay * (ARROW / 1.6);
-  const py = ax * (ARROW / 1.6);
-  return `M ${tip.x},${tip.y} L ${bx + px},${by + py} L ${bx - px},${by - py} Z`;
-}
-
-const LinkEdge = memo(function LinkEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}: EdgeProps<Edge<LinkData>>): JSX.Element {
-  const flow = data?.flow ?? 'still';
-  const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-  // The arrow at the end the message goes to, along the edge.
-  const towardPeer = flow === 'asking';
-  const arrow = arrowPath(
-    { x: sourceX, y: sourceY },
-    { x: targetX, y: targetY },
-    towardPeer,
-  );
-  return (
-    <>
-      <BaseEdge
-        id={id}
-        path={path}
-        style={{
-          stroke: data?.connected
-            ? 'var(--borderColor-accent-emphasis)'
-            : 'var(--borderColor-muted)',
-          strokeWidth: 2,
-          strokeDasharray: data?.connected ? undefined : '6 6',
-          opacity: flow === 'still' ? 0.6 : 0.25,
-        }}
-      />
-      {flow !== 'still' && (
-        <g data-a2a-edge-flow={flow}>
-          <path
-            d={path}
-            fill="none"
-            className={`a2a-team-flow a2a-team-flow-${flow}`}
-            stroke="var(--fgColor-accent)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="10 14"
-          />
-          <path d={arrow} fill="var(--fgColor-accent)" />
-        </g>
-      )}
-      <EdgeLabelRenderer>
-        <Box
-          className="nodrag nopan"
-          position="absolute"
-          transform={`translate(-50%, 12px) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
-          pointerEvents="none"
-          textAlign="center"
-        >
-          <Label variant={data?.connected ? 'accent' : 'secondary'}>
-            {data?.label}
-          </Label>
-        </Box>
-      </EdgeLabelRenderer>
-    </>
-  );
-});
-
-type CallData = {
-  /** Which way it carries a call: out with the call, back with its result. */
-  flow: A2ATeamFlow;
-  /** The tool being called, in words (`list invoices`); empty while none is. */
-  calling: string;
-  /** What it says: `MCP`, and what it carries while it carries something. */
-  label: string;
-};
-
-/**
- * A member's link to a connection, drawn as the A2A link is: still, flowing
- * toward the connection while a call runs, and back with its result.
- */
-export const CallEdge = memo(function CallEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}: EdgeProps<Edge<CallData>>): JSX.Element {
-  const flow = data?.flow ?? 'still';
-  const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-  // The arrow at the end the call or its result goes to, along the edge.
-  const arrow = arrowPath(
-    { x: sourceX, y: sourceY },
-    { x: targetX, y: targetY },
-    flow === 'asking',
-  );
-  return (
-    <>
-      <BaseEdge
-        id={id}
-        path={path}
-        style={{
-          stroke: 'var(--borderColor-accent-emphasis)',
-          strokeWidth: 2,
-          opacity: flow === 'still' ? 0.6 : 0.25,
-        }}
-      />
-      {flow !== 'still' && (
-        <g data-mcp-edge-call={data?.calling} data-mcp-edge-flow={flow}>
-          <path
-            d={path}
-            fill="none"
-            className={`a2a-team-flow a2a-team-flow-${flow}`}
-            stroke="var(--fgColor-accent)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="10 14"
-          />
-          <path d={arrow} fill="var(--fgColor-accent)" />
-        </g>
-      )}
-      <EdgeLabelRenderer>
-        <Box
-          className="nodrag nopan"
-          position="absolute"
-          transform={`translate(-50%, 12px) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
-          pointerEvents="none"
-          textAlign="center"
-          whiteSpace="nowrap"
-          data-mcp-edge-label=""
-        >
-          <Label variant="accent">{data?.label}</Label>
-        </Box>
-      </EdgeLabelRenderer>
-    </>
-  );
-});
-
-const NODE_TYPES = { member: MemberNode, connection: ConnectionNode };
-const EDGE_TYPES = { a2a: LinkEdge, mcp: CallEdge };
-
-/**
- * Where a member's connections sit: right of it, the first one's mark level
- * with the character's middle (a mark half the character's size, so a
- * quarter down), the next ones under it.
+ * Where a member's connections sit: right of it, the first one's top where
+ * the backdrop puts it (level with the character's middle on `studio`),
+ * the next ones under it.
  */
 function connectionsY(
   memberY: number,
-  size: number,
+  top: number,
   count: number,
   connectionHeight: number,
+  apart: number,
 ): number[] {
-  const top = memberY + size / 4;
   return Array.from(
     { length: count },
-    (_, at) => top + at * (connectionHeight + CONNECTIONS_APART),
+    (_, at) => memberY + top + at * (connectionHeight + apart),
   );
 }
 
 /** How far down a member's connections reach, from its top; none, 0. */
 function connectionsReach(
-  size: number,
+  top: number,
   count: number,
   connectionHeight: number,
+  apart: number,
 ): number {
-  return count
-    ? size / 4 + count * connectionHeight + (count - 1) * CONNECTIONS_APART
-    : 0;
+  return count ? top + count * connectionHeight + (count - 1) * apart : 0;
 }
 
 /** What a link to a connection says at rest, as `A2A` says the members' link. */
@@ -1128,6 +376,53 @@ export function flowOfAll(flows: readonly A2ATeamFlow[]): A2ATeamFlow {
 
 const NO_PEERS: readonly A2ATeamGraphMember[] = [];
 
+/**
+ * The rules on the graph's box: what every backdrop needs — React Flow
+ * overflowing so a balloon shows whole, the cursors, a busy connection's
+ * pulse, and no movement under reduced motion — then the backdrop's own
+ * and its variables, light and dark (`sceneStageSx`).
+ */
+function stageRules(theme: SceneBackdropTheme, clickable: boolean): StageSx {
+  return {
+    // An edge is clicked for its latest exchange: it takes the pointer.
+    ...(clickable
+      ? { '& .react-flow__edge': { cursor: 'pointer', pointerEvents: 'all' } }
+      : {}),
+    '@keyframes a2aTeamPulse': {
+      '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
+      '50%': {
+        boxShadow: '0 0 0 4px var(--bgColor-accent-muted)',
+      },
+    },
+    '& .a2a-team-connection-busy': {
+      animation: 'a2aTeamPulse 1s ease-in-out infinite',
+    },
+    // The arrow and the words say which way; the movement is extra.
+    '@media (prefers-reduced-motion: reduce)': {
+      '& .a2a-team-flow, & .a2a-team-connection-busy': {
+        animation: 'none',
+      },
+    },
+    '& .react-flow, & .react-flow__renderer, & .react-flow__viewport': {
+      overflow: 'visible',
+    },
+    '& .react-flow__node': { cursor: 'default' },
+    // A node whose details' card is open stands over the others; the one
+    // hovered or focused over every one, so its card is read whole.
+    '& .react-flow__node:has([data-member-details]:not([hidden])), & .react-flow__node:has([data-connection-details]:not([hidden]))':
+      { zIndex: '10 !important' },
+    '& .react-flow__node:hover, & .react-flow__node:focus-within': {
+      zIndex: '11 !important',
+    },
+    // A member is moved by dragging its figure.
+    '& [data-team-member] [data-assistant-figure]': { cursor: 'grab' },
+    '& [data-team-member] [data-assistant-figure]:active': {
+      cursor: 'grabbing',
+    },
+    ...(sceneStageSx(theme) as Record<string, unknown>),
+  } as StageSx;
+}
+
 /** Draw a team over A2A, each link moving with what travels on it. */
 export function A2ATeamGraph({
   entry,
@@ -1142,8 +437,23 @@ export function A2ATeamGraph({
   positions,
   size = 96,
   calls = [],
-  balloonRoom = BALLOON_ROOM,
+  balloonRoom,
+  backdrop,
+  minHeight,
+  selected,
+  onSelectEdge,
 }: A2ATeamGraphProps): JSX.Element {
+  // How the stage is drawn: its nodes and edges, its colours, its layout.
+  const look = sceneBackdrop(backdrop);
+  const { layout: sized, theme } = look;
+  const NODE_WIDTH = sized.nodeWidth;
+  const GAP = sized.gap;
+  const ROW_GAP = sized.rowGap;
+  const CONNECTION_WIDTH = sized.connectionWidth;
+  const CONNECTIONS_APART = sized.connectionsApart;
+  const CONNECTION_X = NODE_WIDTH + sized.connectionGap;
+  const CONNECTIONS_BESIDE = sized.connectionGap + CONNECTION_WIDTH;
+  const roomFloor = balloonRoom ?? sized.balloonRoom;
   const peers = useMemo(() => [...(peer ? [peer] : []), ...more], [peer, more]);
   const members = useMemo(() => [entry, ...peers], [entry, peers]);
   const memberOf = (id: string) => members.find(member => member.id === id);
@@ -1178,7 +488,7 @@ export function A2ATeamGraph({
   const hasConnections = members.some(member => member.connections?.length);
   // The last column's connections sit beside it, inside the graph.
   const drawn = Math.max(
-    WIDTH,
+    NODE_WIDTH * 2 + GAP,
     placing.columns * NODE_WIDTH +
       (placing.columns - 1) * GAP +
       (hasConnections ? CONNECTIONS_BESIDE : 0),
@@ -1187,12 +497,13 @@ export function A2ATeamGraph({
     () => teamViewport(width || drawn, drawn),
     [width, drawn],
   );
-  // The members' height: the character, its name and where it runs.
-  const memberHeight = size + 56;
-  const connectionSize = Math.round(size / 2);
-  // Its mark, its label and how it is reached (about 45px under the mark),
-  // and room under it before the graph's edge.
-  const connectionHeight = connectionSize + 58;
+  // The members' height: the figure, its name and where it runs.
+  const memberHeight = sized.memberHeight(size);
+  const connectionSize = Math.round(size * sized.connectionScale);
+  // Its mark, its label and how it is reached, and room under it before
+  // the graph's edge.
+  const connectionHeight = sized.connectionHeight(connectionSize);
+  const connectionsTop = sized.connectionsTop(size);
   // The connections' ids, member by member: the nodes change only when they do.
   const placed = members.map(member => ({
     member: member.id,
@@ -1204,7 +515,7 @@ export function A2ATeamGraph({
   const measured = useBalloonRoom(box, {
     anchor: '[data-team-member]',
     zoom: viewport.zoom,
-    floor: balloonRoom,
+    floor: roomFloor,
   });
   const room = members.some(member => member.persona.notebook)
     ? Math.max(NOTEBOOK_BALLOON_ROOM, measured)
@@ -1213,18 +524,30 @@ export function A2ATeamGraph({
   const reach = Math.max(
     0,
     ...placed.map(({ connections }) =>
-      connectionsReach(size, connections.length, connectionHeight),
+      connectionsReach(
+        connectionsTop,
+        connections.length,
+        connectionHeight,
+        CONNECTIONS_APART,
+      ),
     ),
   );
   const rowHeight = Math.max(memberHeight, reach);
-  const total = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
+  const own = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
+  // A board to fill: its extra room shared above and below the members.
+  const extra =
+    minHeight && minHeight > own * viewport.zoom
+      ? minHeight / viewport.zoom - own
+      : 0;
+  const top = room + extra / 2;
+  const total = own + extra;
   const height = Math.ceil(total * viewport.zoom);
   // Where each member is laid out, before it is moved.
   const layoutOf = (id: string): { x: number; y: number } => {
     const place = placing.places[id] ?? { column: 0, row: 0 };
     return {
       x: place.column * (NODE_WIDTH + GAP),
-      y: room + place.row * (rowHeight + ROW_GAP),
+      y: top + place.row * (rowHeight + ROW_GAP),
     };
   };
 
@@ -1236,7 +559,12 @@ export function A2ATeamGraph({
     const beside = count ? CONNECTIONS_BESIDE : 0;
     const tall = Math.max(
       memberHeight,
-      connectionsReach(size, count, connectionHeight),
+      connectionsReach(
+        connectionsTop,
+        count,
+        connectionHeight,
+        CONNECTIONS_APART,
+      ),
     );
     return {
       minDx: -layout.x,
@@ -1307,9 +635,10 @@ export function A2ATeamGraph({
           ...connections.map((connection, at) => {
             const ys = connectionsY(
               y,
-              size,
+              connectionsTop,
               connections.length,
               connectionHeight,
+              CONNECTIONS_APART,
             );
             return {
               id: connectionNodeId(id, connection),
@@ -1328,7 +657,18 @@ export function A2ATeamGraph({
           }),
         ],
       ),
-    [layoutKey, size, memberHeight, connectionSize, connectionHeight],
+    [
+      layoutKey,
+      size,
+      memberHeight,
+      connectionSize,
+      connectionHeight,
+      connectionsTop,
+      CONNECTIONS_APART,
+      CONNECTION_X,
+      CONNECTION_WIDTH,
+      NODE_WIDTH,
+    ],
   );
   // The notebook open under the graph runs on a Pyodide kernel in the page:
   // the entry's sandbox, while it is open.
@@ -1399,16 +739,30 @@ export function A2ATeamGraph({
     }
     return { byNode, edgeByNode, said: [...new Set(said)] };
   }, [calls, members]);
+  // A link in the colour of the member it reaches, a call in its caller's:
+  // their spec's colour, as the current theme and mode draw it.
+  const paletteColor = usePaletteColor();
+  const colorOf = (id: string): string | undefined =>
+    paletteColor(memberOf(id)?.color);
   const linkKey = JSON.stringify(
     edgesWanted.map(link => ({
       ...link,
+      color: colorOf(link.to),
       flow: link.from === entry.id ? flowOf(link.to) : 'still',
       connected: connectedOf(link.to),
       label: wordsOf(link)
         ? `${labelOf(link.to)} · ${wordsOf(link)}`
         : labelOf(link.to),
+      selected: edgeSelected(selected, link.from, link.to),
       ...handlesBetween(layoutOf(link.from), layoutOf(link.to)),
     })),
+  );
+  const callerTonesKey = JSON.stringify(
+    Object.fromEntries(members.map(member => [member.id, colorOf(member.id)])),
+  );
+  const callerTones = useMemo(
+    () => JSON.parse(callerTonesKey) as Record<string, string | undefined>,
+    [callerTonesKey],
   );
   const edges = useMemo<Edge<LinkData | CallData>[]>(
     () => [
@@ -1422,6 +776,8 @@ export function A2ATeamGraph({
           flow: linkFlow,
           connected: reached,
           label: said,
+          selected: chosen,
+          color: tone,
           sourceHandle,
           targetHandle,
         }) => ({
@@ -1433,7 +789,13 @@ export function A2ATeamGraph({
           type: 'a2a',
           selectable: false,
           focusable: false,
-          data: { flow: linkFlow, connected: reached, label: said },
+          data: {
+            flow: linkFlow,
+            connected: reached,
+            label: said,
+            selected: chosen,
+            ...(tone ? { color: tone } : {}),
+          },
         }),
       ),
       ...(JSON.parse(placedKey) as typeof placed).flatMap(
@@ -1454,62 +816,36 @@ export function A2ATeamGraph({
                 flow: carried?.flow ?? 'still',
                 calling,
                 label: carried?.label ?? MCP_LABEL,
+                selected: edgeSelected(selected, member, node),
+                ...(callerTones[member] ? { color: callerTones[member] } : {}),
               },
             };
           }),
       ),
     ],
-    [linkKey, placedKey, busy],
+    [linkKey, placedKey, busy, selected, callerTones],
   );
   const heard = [...words, ...busy.said].filter(Boolean).join('. ');
   const flowNow = flowOfAll(peers.map(one => flowOf(one.id)));
+  const clickable = Boolean(onSelectEdge);
+  const stageSx = useMemo(
+    () => stageRules(theme, clickable),
+    [theme, clickable],
+  );
 
   return (
     <Box
       ref={box}
       data-a2a-team-graph=""
+      data-scene-backdrop={look.id}
       data-a2a-flow={flowNow}
       data-a2a-calls={calls.length}
       data-a2a-members={members.length}
+      data-a2a-selected={selected ? selected.id : undefined}
       width="100%"
       height={height}
       position="relative"
-      sx={{
-        '@keyframes a2aTeamFlow': {
-          from: { strokeDashoffset: 24 },
-          to: { strokeDashoffset: 0 },
-        },
-        '& .a2a-team-flow-asking': {
-          animation: 'a2aTeamFlow 0.6s linear infinite',
-        },
-        '& .a2a-team-flow-answering': {
-          animation: 'a2aTeamFlow 0.6s linear infinite reverse',
-        },
-        '@keyframes a2aTeamPulse': {
-          '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
-          '50%': {
-            boxShadow: '0 0 0 4px var(--bgColor-accent-muted)',
-          },
-        },
-        '& .a2a-team-connection-busy': {
-          animation: 'a2aTeamPulse 1s ease-in-out infinite',
-        },
-        // The arrow and the words say which way; the movement is extra.
-        '@media (prefers-reduced-motion: reduce)': {
-          '& .a2a-team-flow, & .a2a-team-connection-busy': {
-            animation: 'none',
-          },
-        },
-        '& .react-flow, & .react-flow__renderer, & .react-flow__viewport': {
-          overflow: 'visible',
-        },
-        '& .react-flow__node': { cursor: 'default' },
-        // A member is moved by dragging its character.
-        '& [data-team-member] [data-assistant-figure]': { cursor: 'grab' },
-        '& [data-team-member] [data-assistant-figure]:active': {
-          cursor: 'grabbing',
-        },
-      }}
+      sx={stageSx}
     >
       {/* What a screen reader hears of the exchange as it happens. */}
       <Box
@@ -1524,14 +860,28 @@ export function A2ATeamGraph({
       >
         {heard}
       </Box>
+      {/* The backdrop's ground, behind the flow: `space`'s dots and mesh. */}
+      {look.ground && <look.ground />}
       <Moving.Provider value={movingValue}>
         <Members.Provider value={membersById}>
           <Busy.Provider value={busy.byNode}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
-              nodeTypes={NODE_TYPES}
-              edgeTypes={EDGE_TYPES}
+              nodeTypes={look.nodeTypes}
+              edgeTypes={look.edgeTypes}
+              // A click on an edge: its latest exchange, for the page (S3-02).
+              onEdgeClick={
+                onSelectEdge
+                  ? (_event, edge) =>
+                      onSelectEdge({
+                        id: edge.id,
+                        from: edge.source,
+                        to: edge.target,
+                        over: edge.type === 'mcp' ? 'mcp' : 'a2a',
+                      })
+                  : undefined
+              }
               viewport={viewport}
               nodesDraggable={false}
               nodesConnectable={false}

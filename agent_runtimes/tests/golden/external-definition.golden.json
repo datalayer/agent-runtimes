@@ -1,0 +1,120 @@
+{
+  "external_definition": {
+    "adapter_version": "1",
+    "capabilities": [
+      {
+        "code": "",
+        "component": "tasks.py@arithmetic:generate",
+        "kind": "solver",
+        "reason": "",
+        "status": "framework-run"
+      }
+    ],
+    "configuration": {
+      "aggregation": {},
+      "missing": [],
+      "models": [
+        "bedrock:us.anthropic.claude-haiku-4-5"
+      ],
+      "scorers": [
+        "includes"
+      ],
+      "task_args": {},
+      "tasks": [
+        {
+          "entry_point": "tasks.py@arithmetic",
+          "scorers": [
+            {
+              "metrics": [
+                "inspect_ai/accuracy"
+              ],
+              "name": "includes"
+            }
+          ],
+          "solvers": [
+            {
+              "name": "generate",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "tools": [
+        "add"
+      ]
+    },
+    "content_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "entry_point": "tasks.py@arithmetic",
+    "framework": "inspect-ai",
+    "framework_version": "0.3.286",
+    "source": {
+      "filename": "fixture.tar.gz",
+      "kind": "archive",
+      "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "external_plan": {
+    "adapter_version": "1",
+    "capabilities": [
+      {
+        "code": "",
+        "component": "tasks.py@arithmetic:generate",
+        "kind": "solver",
+        "reason": "",
+        "status": "framework-run"
+      },
+      {
+        "code": "",
+        "component": "tasks.py@arithmetic:includes",
+        "kind": "scorer",
+        "reason": "",
+        "status": "framework-run"
+      },
+      {
+        "code": "",
+        "component": "tasks.py@arithmetic:includes:inspect_ai/accuracy",
+        "kind": "metric",
+        "reason": "",
+        "status": "framework-run"
+      },
+      {
+        "code": "",
+        "component": "tool:add",
+        "kind": "tool",
+        "reason": "",
+        "status": "framework-run"
+      },
+      {
+        "code": "",
+        "component": "model:bedrock:us.anthropic.claude-haiku-4-5",
+        "kind": "model",
+        "reason": "",
+        "status": "framework-run"
+      }
+    ],
+    "environment": "inspect-ai-env",
+    "framework": "inspect-ai",
+    "framework_version": "0.3.286",
+    "policy": {
+      "cpu_seconds": 1800,
+      "max_bytes": 1073741824,
+      "max_files": 20000,
+      "memory_bytes": 8589934592,
+      "network": "inference",
+      "root_dirs": [],
+      "secrets": [],
+      "wall_seconds": 1800
+    },
+    "reproduction": "pip install inspect-ai==0.3.286\nDATALAYER_BASE_URL=<ai-inference>/api/ai-inference/v1 DATALAYER_API_KEY=<your Datalayer token> inspect eval tasks.py@arithmetic --model openai-api/datalayer/bedrock:us.anthropic.claude-haiku-4-5 --log-format json",
+    "resolved_configuration": {
+      "aggregation": {},
+      "approved_tools": [
+        "add"
+      ],
+      "environment_only": false,
+      "max_samples": 1,
+      "task_args": {},
+      "task_environments": {}
+    }
+  }
+}

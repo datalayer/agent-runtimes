@@ -483,9 +483,9 @@ async def test_one_trace_from_the_a2a_caller_to_the_harness_and_the_lent_gateway
     carried: list[tuple[str, str | None]] = []
     earlier_carry = lent_stdio.carry
 
-    def carry_seen(handle: str, value: str | None, **kwargs: Any) -> None:
+    def carry_seen(handle: str, value: str | None) -> None:
         carried.append((handle, value))
-        earlier_carry(handle, value, **kwargs)
+        earlier_carry(handle, value)
 
     monkeypatch.setattr("agent_runtimes.adapters.acp_agent.carry", carry_seen)
 
@@ -514,5 +514,5 @@ async def test_one_trace_from_the_a2a_caller_to_the_harness_and_the_lent_gateway
         and handed[0]
         and str(handed[0]["traceparent"]).startswith(f"00-{trace_id}-")
     )
-    # The stdio shim sends it to the gateway on every call of this turn.
+    # The gateway is sent it on every call of this turn.
     assert carried and carried[0][1] and carried[0][1].startswith(f"00-{trace_id}-")

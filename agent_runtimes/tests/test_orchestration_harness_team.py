@@ -83,7 +83,7 @@ def test_the_catalogue_team_seats_its_harnesses_and_binds_them_by_the_links() ->
     team = get_team_spec("coding-agents")
     assert team is not None
     coder, reviewer = team.agents
-    assert (coder.harness, reviewer.harness) == ("claude-code", "codex")
+    assert (coder.harness, reviewer.harness) == ("claude-code", "opencode")
     assert [[m.id for m in layer] for layer in schedule(team)] == [
         ["coder"],
         ["reviewer"],

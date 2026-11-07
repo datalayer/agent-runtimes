@@ -9,11 +9,15 @@ the delegation, under ``datalayer`` in the A2A message's ``metadata`` and in the
 ACP prompt's ``_meta``, and the worker applies it to the run it starts as
 pydantic-ai's own per-run ``UsageLimits``, which stop the run when a limit is
 reached rather than after it. The worker then says which limit stopped it:
-``refusal_meta`` is what goes back in the same place, and the adapters read it
-into ``budget_exhausted`` with ``details.budget = model``.
+`context.delegation.refusal_meta` is what goes back in the same place, and the
+adapters read it into ``budget_exhausted`` with ``details.budget = model``.
 
-Nothing here knows orchestration's records: this is the worker's half, and it
-runs in any agent-runtimes process whatever asked it.
+Nothing here knows orchestration's records, nor the envelope the budget
+travels in (`context.delegation` reads the one and writes the other): this is
+the worker's half, and it runs in any agent-runtimes process whatever asked
+it. A leaf — it imports nothing of this package and nothing of ``agent_teams``,
+whose import registers this runtime's reactor extension and, through it,
+imports the applications and the adapters that import this module.
 """
 
 from __future__ import annotations
@@ -22,27 +26,16 @@ import re
 from decimal import Decimal
 from typing import Any, Mapping
 
-from agent_teams.a2a.orchestration_extension import ENVELOPE_KEY
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
 
 __all__ = [
-    "DELEGATION_META_KEY",
     "ModelBudgetExceeded",
     "ModelBudgetReached",
     "acp_stop_reason",
-    "delegated_budget",
     "reached",
-    "refusal_meta",
     "usage_limits_for",
 ]
-
-#: Where a delegation carries Datalayer's own fields beside a protocol's.
-#: Imported from the standalone orchestration-extension package
-#: (O3-02) rather than declared here — `context/delegation.py`
-#: imports it from this module in turn, so the whole runtime shares the one
-#: import rather than three hand-maintained copies of the same string.
-DELEGATION_META_KEY = ENVELOPE_KEY
 
 #: pydantic-ai's limit names, as the budget's limits are called.
 _LIMITS = {
@@ -54,27 +47,6 @@ _LIMITS = {
     "cost_limit": "cost",
 }
 _LIMIT_NAMED = re.compile("|".join(_LIMITS))
-
-
-def delegated_budget(meta: Any) -> dict[str, Any] | None:
-    """
-    The model budget a delegation carries, when it carries one.
-
-    Parameters
-    ----------
-    meta : Any
-        The A2A message's ``metadata`` or the ACP prompt's ``_meta``.
-
-    Returns
-    -------
-    dict[str, Any] | None
-        The budget, camel case as the canonical record spells it.
-    """
-    if not isinstance(meta, Mapping):
-        return None
-    ours = meta.get(DELEGATION_META_KEY)
-    budget = ours.get("budget") if isinstance(ours, Mapping) else None
-    return dict(budget) if isinstance(budget, Mapping) and budget else None
 
 
 def usage_limits_for(budget: Mapping[str, Any] | None) -> UsageLimits | None:
@@ -151,28 +123,3 @@ def acp_stop_reason(limit: str) -> str:
     tokens, and a cost is spent in tokens.
     """
     return "max_turn_requests" if limit in {"requests", "tool_calls"} else "max_tokens"
-
-
-def refusal_meta(budget_reached: ModelBudgetReached) -> dict[str, Any]:
-    """
-    What a worker says back, in the delegation's own place, when its budget stopped it.
-
-    Parameters
-    ----------
-    budget_reached : ModelBudgetReached
-        The limit reached.
-
-    Returns
-    -------
-    dict[str, Any]
-        The A2A status message's ``metadata``, or the ACP response's ``_meta``.
-    """
-    return {
-        DELEGATION_META_KEY: {
-            "error": {
-                "code": "budget_exhausted",
-                "message": str(budget_reached),
-                "details": {"budget": "model", "limit": budget_reached.limit},
-            }
-        }
-    }

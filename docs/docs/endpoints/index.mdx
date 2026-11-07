@@ -30,7 +30,7 @@ Most API endpoints should be called **without trailing slashes**. However, **mou
 
 **Protocol endpoints (trailing slash required):**
 - ✅ `/api/v1/ag-ui/{agent_id}/` - AG-UI protocol (mounted Starlette apps)
-- ✅ `/api/v1/a2a/{agent_id}/` - A2A protocol (FastA2A compatibility)
+- ✅ `/api/v1/a2a/agents/{agent_id}/` - A2A protocol (FastA2A compatibility)
 - ✅ `/api/v1/examples/{example_name}/` - AG-UI example agents
 
 Without the trailing slash, mounted apps return a 307 redirect which may break streaming clients.
@@ -96,7 +96,6 @@ Create a new agent.
 
 ```json
 {
-  "id": "my-agent",
   "name": "My Custom Agent",
   "model": "gpt-4o",
   "system_prompt": "You are a helpful assistant."
@@ -1304,15 +1303,17 @@ curl -X POST "http://localhost:8765/api/v1/ag-ui/pydantic-ai/" \
 ```typescript
 import { AGUIAdapter } from '@datalayer/agent-runtimes/lib/protocols';
 
+import { createUserMessage } from '@datalayer/agent-runtimes/lib/types/messages';
+
 const adapter = new AGUIAdapter({
+  protocol: 'ag-ui',
   baseUrl: 'http://localhost:8765/api/v1/ag-ui/pydantic-ai/',
   // Note: The adapter automatically ensures trailing slash
 });
 
-await adapter.sendMessage('Hello!', {
-  onToken: (token) => console.log(token),
-  onComplete: (message) => console.log('Done:', message),
-});
+adapter.subscribe(event => console.log(event.type));
+await adapter.connect();
+await adapter.sendMessage(createUserMessage('Hello!'));
 ```
 
 ### Example: Using Python
@@ -1330,15 +1331,19 @@ async with AGUIClient("http://localhost:8765/api/v1/ag-ui/pydantic-ai/") as clie
 ### A2UI Endpoints
 
 ```http
-GET  /api/v1/a2ui/           # A2UI protocol
-GET  /api/v1/a2ui/agents     # List A2UI agents
+POST /api/v1/a2ui/restaurant                # The restaurant finder example
+POST /api/v1/a2ui/support-assistant         # The support assistant example
+GET  /api/v1/a2ui/restaurant/health         # Whether that example is available
+GET  /api/v1/a2ui/support-assistant/health  # Whether that example is available
 ```
 
 ### MCP-UI Endpoints
 
 ```http
-GET  /api/v1/mcp-ui/         # MCP-UI protocol
-GET  /api/v1/mcp-ui/agents   # List MCP-UI agents
+GET  /api/v1/mcp-ui/                    # MCP-UI protocol
+GET  /api/v1/mcp-ui/agents              # List MCP-UI agents
+POST /api/v1/mcp-ui/chat/{agent_id}     # One answer
+POST /api/v1/mcp-ui/stream/{agent_id}   # The same as JSON lines
 ```
 
 ## Agent Nodes

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Demonstrate a complete PAP Direct Sign-In Session upgrade safely."""
+"""An application that demonstrates complete PAP Direct Sign-In."""
 
 from __future__ import annotations
 
@@ -13,12 +13,10 @@ import httpx
 from personal_agent_protocol import (
     AUTHORIZATION_STATE_STORES,
     BROWSER_HANDOFFS,
-    DPOP_PROOF_PROVIDERS,
     SIGNERS,
     TOKEN_STORES,
     AuthorizationError,
     DirectSignInClient,
-    DpopProofRequest,
     build_pap_reactor,
 )
 from pydantic import SecretStr
@@ -26,12 +24,10 @@ from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
 
-#: The existing Session's Session Key (its JWK thumbprint, RFC 7638): it names the
-#: Session. The private half stays with the host's proof provider.
-SESSION_KEY = "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
-
 
 class OneUseStateStore:
+    """Keep authorization state host-side and delete it when read."""
+
     def __init__(self) -> None:
         self.values: dict[str, object] = {}
 
@@ -42,7 +38,25 @@ class OneUseStateStore:
         return self.values.pop(reference, None)
 
 
+class HostVault:
+    """`pap.tokenStore`: the refresh token stays here, behind an opaque reference."""
+
+    def __init__(self) -> None:
+        self.values: dict[str, SecretStr] = {}
+
+    async def put(self, reference: str, token: SecretStr) -> None:
+        self.values[reference] = token
+
+    async def get(self, reference: str) -> SecretStr | None:
+        return self.values.get(reference)
+
+    async def delete(self, reference: str) -> None:
+        self.values.pop(reference, None)
+
+
 class RecordingBrowser:
+    """Stand in for a trusted browser without returning its URL to the agent."""
+
     def __init__(self) -> None:
         self.urls: list[SecretStr] = []
 
@@ -59,44 +73,20 @@ class RecordingSigner:
         return SecretStr(f"host-only-assertion-{len(self.purposes)}")
 
 
-class RecordingDpopProvider:
-    def __init__(self) -> None:
-        self.requests: list[DpopProofRequest] = []
-
-    async def create(self, request: DpopProofRequest) -> SecretStr:
-        self.requests.append(request)
-        return SecretStr(f"host-only-proof-{len(self.requests)}")
-
-
-class ProtectedTokenStore:
-    """The host's vault: the Account Token is kept here, behind a reference."""
-
-    def __init__(self) -> None:
-        self.values: dict[str, SecretStr] = {}
-
-    async def put(self, reference: str, token: SecretStr) -> None:
-        self.values[reference] = token
-
-    async def get(self, reference: str) -> SecretStr | None:
-        return self.values.get(reference)
-
-    async def delete(self, reference: str) -> None:
-        self.values.pop(reference, None)
-
-
 class DirectSignInSecurityPlugin:
+    """Supply replaceable host capabilities through Reactor."""
+
     def __init__(
         self,
         store: OneUseStateStore,
         browser: RecordingBrowser,
         signer: RecordingSigner,
-        dpop: RecordingDpopProvider,
+        vault: HostVault,
     ) -> None:
-        self.tokens = ProtectedTokenStore()
+        self.vault = vault
         self.store = store
         self.browser = browser
         self.signer = signer
-        self.dpop = dpop
 
     def provide_contributions(self, contributions: object) -> None:
         contribute = contributions.contribute  # type: ignore[attr-defined]
@@ -105,83 +95,68 @@ class DirectSignInSecurityPlugin:
         )
         contribute(BROWSER_HANDOFFS, self.browser, contribution_id="trusted-browser")
         contribute(SIGNERS, self.signer, contribution_id="protected-signer")
-        contribute(DPOP_PROOF_PROVIDERS, self.dpop, contribution_id="protected-dpop")
-        contribute(TOKEN_STORES, self.tokens, contribution_id="protected-tokens")
+        contribute(TOKEN_STORES, self.vault, contribution_id="host-vault")
 
 
 app = Application(
     id="pap-direct-sign-in-lifecycle",
     name="PAP Direct Sign-In Lifecycle",
-    description="Upgrade an existing Session with one-use state, PKCE, and DPoP.",
+    description="Sign in with one-use state and PKCE, as plain OAuth that names no Session.",
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_direct_sign_in_lifecycle. Never request or expose an "
-        "authorization URL, callback, code, verifier, assertion, proof, Session Key, "
-        "or token."
+        "Use explain_direct_sign_in_lifecycle to explain PAP Direct Sign-In. "
+        "Never ask for or expose an authorization URL, callback, code, state, "
+        "verifier, assertion, access token, or refresh token."
     ),
 )
 
 
 @app.tool(does="read")
 async def explain_direct_sign_in_lifecycle() -> dict[str, Any]:
-    """Exercise the full flow and return only safe lifecycle evidence."""
+    """Run a complete local flow and return only non-secret evidence."""
 
-    calls = 0
     forms: list[dict[str, list[str]]] = []
 
     def company(request: httpx.Request) -> httpx.Response:
-        nonlocal calls
-        calls += 1
         forms.append(parse_qs(request.content.decode()))
-        if calls == 1:
-            return httpx.Response(
-                400,
-                json={"error": "use_dpop_nonce"},
-                headers={"DPoP-Nonce": "host-only-company-nonce"},
-            )
         return httpx.Response(
             200,
             json={
-                "access_token": "host-only-session-token",
-                "token_type": "DPoP",
+                # Plain OAuth: a Bearer token for the account, naming no Session.
+                "access_token": "host-only-access-token",
+                "token_type": "Bearer",
                 "expires_in": 300,
                 "scope": "orders:read",
-                # No Session ID and no `signed_in` on the wire: the proof's key names
-                # the Session, and the grant (an authorization code) says it is
-                # signed in.
-                "refresh_token": "host-only-account-token",
+                "refresh_token": "host-only-refresh-token",
             },
         )
 
     store = OneUseStateStore()
     browser = RecordingBrowser()
     signer = RecordingSigner()
-    dpop = RecordingDpopProvider()
-    security = DirectSignInSecurityPlugin(store, browser, signer, dpop)
+    vault = HostVault()
     async with httpx.AsyncClient(transport=httpx.MockTransport(company)) as http:
         reactor, _ = build_pap_reactor(http_client=http)
         reactor.register_plugin(
             PluginManifest(name="pap-direct-sign-in-example-security", version="1"),
-            security,
+            DirectSignInSecurityPlugin(store, browser, signer, vault),
         )
         client = DirectSignInClient(reactor=reactor, http_client=http)
         started = await client.begin(
             authorization_endpoint="https://auth.shop.example/oauth/authorize",
-            token_endpoint="https://auth.shop.example/oauth/token",
+            token_endpoint="https://auth.shop.example/oauth/token",  # noqa: S106
             issuer="https://auth.shop.example",
             client_id="https://assistant.example/agent.json",
             redirect_uri="https://assistant.example/oauth/callback",
             scopes=["orders:read", "orders:return"],
             tenant_id="example-tenant",
-            session_key=SESSION_KEY,
         )
         authorization = urlsplit(browser.urls[0].get_secret_value())
-        state = parse_qs(authorization.query)["state"][0]
-        # `dpop_jkt`: the company binds the code to the Session Key.
-        code_bound = parse_qs(authorization.query).get("dpop_jkt") == [SESSION_KEY]
+        query = parse_qs(authorization.query)
+        state = query["state"][0]
         callback_url = "https://assistant.example/oauth/callback?" + urlencode(
             {
                 "code": "host-only-one-use-code",
@@ -203,27 +178,18 @@ async def explain_direct_sign_in_lifecycle() -> dict[str, Any]:
         "requested_scopes": started.requested_scopes,
         "granted_scopes": result.granted_scopes,
         "missing_scopes": result.missing_scopes,
-        "same_session": result.token.session_key == SESSION_KEY
-        and result.token.signed_in,
-        "code_bound_to_the_session_key": code_bound,
-        "every_proof_signed_with_the_session_key": all(
-            request.session_key == SESSION_KEY for request in dpop.requests
-        ),
+        "token_type": result.token.token_type,
+        "names_no_session": "sid" not in (set(query) | set(forms[0])),
         "pkce_method": "S256",
         "trusted_browser_handoff": len(browser.urls) == 1,
         "state_reuse_rejected": state_reuse_rejected,
-        "nonce_retry": [request.nonce for request in dpop.requests]
-        == [None, "host-only-company-nonce"],
-        "same_verifier_on_nonce_retry": forms[0]["code_verifier"]
-        == forms[1]["code_verifier"],
-        "fresh_assertions": forms[0]["client_assertion"]
-        != forms[1]["client_assertion"],
-        "fresh_proofs": len(dpop.requests) == 2,
+        "code_verifier_sent": "code_verifier" in forms[0],
+        "client_assertion_sent": signer.purposes == ["client_assertion"],
         "authorization_url_withheld": True,
         "callback_and_code_withheld": True,
-        "assertions_and_proofs_withheld": True,
-        "session_and_account_tokens_withheld": True,
-        "account_token_stored_by_reference": result.account_token_reference
-        in security.tokens.values,
-        "account_token_not_in_result": result.token.refresh_token is None,
+        "assertions_withheld": True,
+        "access_and_refresh_tokens_withheld": True,
+        # The refresh token went to the host's token store; the result holds only a reference.
+        "refresh_token_in_result": "refresh_token" in result.token.model_dump(),
+        "refresh_token_stored": result.refresh_token_reference in vault.values,
     }

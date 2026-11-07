@@ -17,9 +17,12 @@ import type {
   ToolDefinition,
   ToolOperation,
   ToolExecutionContext,
-} from '@datalayer/jupyter-react';
-import { OperationRunner } from '@datalayer/jupyter-react';
-import type { FrontendToolDefinition } from '../../../types/tools';
+} from '@datalayer/reactor/tools';
+import { OperationRunner } from '@datalayer/reactor/tools';
+import type {
+  FrontendToolDefinition,
+  ToolStreamEvent,
+} from '../../../types/tools';
 
 /**
  * Deduplication cache to prevent executing the same operation multiple times
@@ -112,6 +115,23 @@ export function createAgentRuntimesTool(
     name: definition.toolReferenceName || definition.name,
     description: definition.description,
     parameters: definition.parameters,
+    // A tool that streams (AGENT_BATTLE B1-00): subscribed through its
+    // operation, its events pushed to the harness until stopped.
+    ...(definition.streams && operation.subscribe
+      ? {
+          streams: true,
+          subscribe: (
+            params: unknown,
+            push: (event: ToolStreamEvent) => void,
+          ) =>
+            runner.subscribe(
+              operation,
+              processParameters(params),
+              context,
+              push,
+            ),
+        }
+      : {}),
 
     handler: async (params: unknown): Promise<unknown> => {
       // Check for duplicate execution

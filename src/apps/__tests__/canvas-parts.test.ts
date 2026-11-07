@@ -24,6 +24,7 @@ import { checkAppspec } from '../apps/checks';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { getSkillSpecs } from '../../specs/skills';
 import { listProtocolSpecs } from '../../specs/protocols';
+import { getGate } from '../../specs/gates';
 
 const LISTS: Record<string, readonly string[]> = {
   connection: ['connections'],
@@ -33,6 +34,10 @@ const LISTS: Record<string, readonly string[]> = {
   event: ['triggers'],
   protocol: ['protocols'],
   ui: ['ui'],
+  // The checks' lists (6 November 2026).
+  guard: ['checks', 'guards'],
+  gate: ['checks', 'gates'],
+  track: ['checks', 'track'],
 };
 
 /** An empty application with a part placed, as the Canvas places it: appended to its list, or a model set. */
@@ -51,6 +56,24 @@ function withPart(part: CanvasPartContribution): Record<string, unknown> {
   if (part.kind === 'avatar') {
     const face = (data.interface ?? {}) as Record<string, unknown>;
     return { ...data, interface: { ...face, avatar: part.example } };
+  }
+  if (part.kind === 'track') {
+    // One Track per application, set under its checks (6 November 2026).
+    const checks = (data.checks ?? {}) as Record<string, unknown>;
+    return { ...data, checks: { ...checks, track: part.example } };
+  }
+  if (part.kind === 'gate') {
+    // A Gate reads its Guards, which the application must run: dropped, it brings them (the Canvas does the same).
+    const checks = (data.checks ?? {}) as Record<string, unknown>;
+    const guards = getGate(String(part.example))?.guards ?? [];
+    return {
+      ...data,
+      checks: {
+        ...checks,
+        guards: [...((checks.guards as string[]) ?? []), ...guards],
+        gates: [...((checks.gates as string[]) ?? []), part.example],
+      },
+    };
   }
   const [head, tail] = LISTS[part.kind];
   if (tail) {
@@ -109,6 +132,10 @@ describe('the toolbox is what the enabled plugins contribute', () => {
         'protocol',
         'ui',
         'avatar',
+        // The accountability plane (6 November 2026).
+        'guard',
+        'gate',
+        'track',
       ]),
     );
     // Every protocol of the catalogue, a planned one offered but not enabled
@@ -135,6 +162,9 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
     expect(claude?.example).toBe('example-harness-claude-code');
+    expect(claude?.enabled).toBe(true);
+    const codex = parts.find(part => part.id === 'agent:codex');
+    expect(codex?.enabled).toBe(true);
     for (const harness of [
       'codex',
       'pi',

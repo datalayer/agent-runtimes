@@ -1,10 +1,10 @@
 # PAP Local Company
 
-`PapCompanyCapability` (PR-04) publishes an application whose
+`PapCompanyCapability` publishes an application whose
 Appspec enables `pap.company` as a PAP company, through the SDK's reference
 company (`personal_agent_protocol.company`):
 
-- `pap.company.agent` is the application over its A2A route (R-03), the
+- `pap.company.agent` is the application over its A2A route, the
   message marked `metadata.pap`;
 - a declared operation's tool call is proposed, not made, and the person is
   shown the Maker's sentence with the terms;

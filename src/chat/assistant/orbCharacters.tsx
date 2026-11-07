@@ -27,7 +27,11 @@ export function orbStateOf(state: AssistantState | undefined): AssistantState {
   return state ?? 'idle';
 }
 
-const SvgAvatarOrb = lazy(() =>
+/**
+ * The design library's orb, loaded when one is first drawn: the
+ * assistant's, and the `orb` backdrop's members (`backdrops/orb`).
+ */
+export const SvgAvatarOrb = lazy(() =>
   import('@datalayer/design/lib/avatar/SvgAvatarOrb').then(module => ({
     default: module.SvgAvatarOrb,
   })),

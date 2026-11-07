@@ -60,6 +60,7 @@ from .routes import (
     apps_router,
     checkpoints_router,
     configure_router,
+    evals_adapters_router,
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
@@ -67,8 +68,10 @@ from .routes import (
     health_router,
     history_router,
     identity_router,
+    inference_relay_router,
     loop_router,
     mcp_auth_router,
+    mcp_lent_router,
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
@@ -1610,11 +1613,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
+    app.include_router(mcp_lent_router, prefix=config.api_prefix)
+    app.include_router(inference_relay_router, prefix=config.api_prefix)
     app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)
     app.include_router(evals_router, prefix=config.api_prefix)
+    app.include_router(evals_adapters_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)

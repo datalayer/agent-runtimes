@@ -32,11 +32,66 @@ ANTHROPIC_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     id="ANTHROPIC_API_KEY",
     version="0.0.1",
     name="Anthropic API Key",
-    description="API key for Anthropic's Claude API. Required by the Claude Code harness, and by any harness configured with Anthropic as its model provider; the person's own, never a Claude.ai subscription login.",
+    description="API key for Anthropic's Claude API. Required by the Claude Code harness run locally, and by any harness configured with Anthropic as its model provider there; the person's own, never a Claude.ai subscription login. A Datalayer runtime takes no key: its model calls go through ai-inference.",
     registrationUrl="https://platform.claude.com/settings/keys",
     tags=["authentication", "api-key", "anthropic", "harness"],
     icon="key",
     emoji="🔑",
+)
+
+BLUESKY_APP_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_APP_PASSWORD",
+    version="0.0.1",
+    name="Bluesky App Password",
+    description="An app password of the Bluesky account, made for this integration alone — Settings, Privacy and security, App passwords, Add app password — never the account's own password. Read by the Bluesky MCP server with the handle beside it; revoke it there to cut the server off.",
+    registrationUrl="https://bsky.app/settings/app-passwords",
+    tags=["authentication", "password", "bluesky", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
+BLUESKY_IDENTIFIER_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_IDENTIFIER",
+    version="0.0.1",
+    name="Bluesky Handle",
+    description="The handle of the Bluesky account the server acts as, `name.bsky.social` or a custom domain. Read by the Bluesky MCP server with the app password beside it.",
+    registrationUrl="https://bsky.app",
+    tags=["authentication", "username", "bluesky", "social"],
+    icon="key",
+    emoji="🦋",
+)
+
+BLUESKY_SERVICE_URL_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_SERVICE_URL",
+    version="0.0.1",
+    name="Bluesky Service URL",
+    description="The AT Protocol service the Bluesky MCP server signs in to. `https://bsky.social` for an account on Bluesky's own servers; a self-hosted PDS names its own address.",
+    registrationUrl="https://atproto.com/guides/self-hosting",
+    tags=["configuration", "url", "bluesky"],
+    icon="link",
+    emoji="🔗",
+)
+
+DISCORD_BOT_TOKEN_SPEC_0_0_1 = EnvvarSpec(
+    id="DISCORD_BOT_TOKEN",
+    version="0.0.1",
+    name="Discord Bot Token",
+    description="The token of a Discord bot, from its application's Bot page in the Discord Developer Portal (Reset Token to see it once). The bot is invited to the server with the permissions of what the agent may do, and the Message Content intent when it reads messages. Read by the Discord MCP server as DISCORD_TOKEN.",
+    registrationUrl="https://discord.com/developers/applications",
+    tags=["authentication", "token", "discord", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
+DISCORD_GUILD_ID_SPEC_0_0_1 = EnvvarSpec(
+    id="DISCORD_GUILD_ID",
+    version="0.0.1",
+    name="Discord Server ID",
+    description="The id of the Discord server (guild) the bot works in by default — copied from the server with Developer Mode on, Copy Server ID. Optional; a tool may name another server.",
+    registrationUrl="https://support.discord.com/hc/en-us/articles/206346498",
+    tags=["configuration", "discord"],
+    icon="link",
+    emoji="🔗",
 )
 
 EARTHDATA_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
@@ -149,9 +204,20 @@ OPENAI_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     id="OPENAI_API_KEY",
     version="0.0.1",
     name="OpenAI API Key",
-    description="API key for OpenAI's API. Required by the Codex harness, which takes it in place of a ChatGPT login; the person's own.",
+    description="API key for OpenAI's API. Required by the Codex harness run locally, which takes it in place of a ChatGPT login; the person's own. A Datalayer runtime takes no key: its model calls go through ai-inference.",
     registrationUrl="https://platform.openai.com/api-keys",
     tags=["authentication", "api-key", "openai", "harness"],
+    icon="key",
+    emoji="🔑",
+)
+
+OPENROUTER_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="OPENROUTER_API_KEY",
+    version="0.0.1",
+    name="OpenRouter API Key",
+    description="API key for OpenRouter, one key in front of the models of many vendors. Required by any harness configured with OpenRouter as its model provider run locally; the person's own. A Datalayer runtime takes no key: its model calls go through ai-inference.",
+    registrationUrl="https://openrouter.ai/settings/keys",
+    tags=["authentication", "api-key", "openrouter", "harness"],
     icon="key",
     emoji="🔑",
 )
@@ -200,6 +266,17 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+X_BEARER_TOKEN_SPEC_0_0_1 = EnvvarSpec(
+    id="X_BEARER_TOKEN",
+    version="0.0.1",
+    name="X App-only Bearer Token",
+    description="The App-only Bearer Token of an X app, from its Keys and tokens page in the X Developer Portal. Sent as the bearer to X's remote MCP server at https://api.x.com/mcp, which then answers its read tools — posts, search, users, news and trends — with no user context. Writing (bookmarks, articles) needs the xurl bridge and an OAuth 2.0 login instead.",
+    registrationUrl="https://developer.x.com/en/portal/dashboard",
+    tags=["authentication", "token", "x", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
 # ============================================================================
 # Environment Variable Catalog
 # ============================================================================
@@ -207,6 +284,11 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
     "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY_SPEC_0_0_1,
+    "BLUESKY_APP_PASSWORD": BLUESKY_APP_PASSWORD_SPEC_0_0_1,
+    "BLUESKY_IDENTIFIER": BLUESKY_IDENTIFIER_SPEC_0_0_1,
+    "BLUESKY_SERVICE_URL": BLUESKY_SERVICE_URL_SPEC_0_0_1,
+    "DISCORD_BOT_TOKEN": DISCORD_BOT_TOKEN_SPEC_0_0_1,
+    "DISCORD_GUILD_ID": DISCORD_GUILD_ID_SPEC_0_0_1,
     "EARTHDATA_PASSWORD": EARTHDATA_PASSWORD_SPEC_0_0_1,
     "EARTHDATA_USERNAME": EARTHDATA_USERNAME_SPEC_0_0_1,
     "GEMINI_API_KEY": GEMINI_API_KEY_SPEC_0_0_1,
@@ -217,10 +299,12 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "KAGGLE_API_TOKEN": KAGGLE_API_TOKEN_SPEC_0_0_1,
     "LLM_API_KEY": LLM_API_KEY_SPEC_0_0_1,
     "OPENAI_API_KEY": OPENAI_API_KEY_SPEC_0_0_1,
+    "OPENROUTER_API_KEY": OPENROUTER_API_KEY_SPEC_0_0_1,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,
     "TAVILY_API_KEY": TAVILY_API_KEY_SPEC_0_0_1,
+    "X_BEARER_TOKEN": X_BEARER_TOKEN_SPEC_0_0_1,
 }
 
 

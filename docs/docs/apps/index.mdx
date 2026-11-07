@@ -580,20 +580,22 @@ declares Guards and Gates; this runtime executes them. Three moments:
     `context` resolves in the catalogue and is enabled; an organization's own
     (`org-…`) is one its organization has, which the agent was given at its
     creation (`app_capabilities(organization=…)`);
-  - the **Permission Guard** (`permission_denied`): what the application does
-    needs permissions its guardrail (`default-platform-user`) grants —
-    `read:data` for its connections, documents and Spaces; `write:data` for a
-    connection or a Space granted to write, or a tool that writes or deletes;
-    `execute:code` for a computer with a shell; `access:internet` for one
-    that browses; `send:email` for a tool that sends; `deploy:production` for
-    one that publishes (`permissions_needed`);
+  - the **Permission Guard** (`permission_denied`): what the application does,
+    by class of action — `read` for its connections, documents and Spaces;
+    `write` for a connection or a Space granted to write, or a tool that
+    writes; `delete` for a tool that deletes; `execute` for a computer with a
+    shell; `send` and `buy` for a tool that does (`classes_needed`) — is
+    decided by the [Policy](https://agentspecs.datalayer.tech/docs/policies)
+    the Guard extends (`default:0.0.1`; `policy_of`), with the Shield's own
+    engine, for who launched the session (the deployment served, else the
+    credential's account, with the Shield's authorizer when IAM is named): a
+    class a rule denies, or one the Policy lists under `authorize` that the
+    identity is not authorized for, fails it in the rule's sentence;
   - the **Data Source Authorization Guard** (`unauthorized_source`): its
-    connections' servers are among its guardrail's `allowed_systems`
-    (`data-engineering-power-user`: postgresql, mongodb, s3, kafka), its
-    documents and Spaces among the allowed objects and not among the denied,
-    and no word of its instructions or of what the session was opened with
-    matches a denied field (`*SSN*`, `*Bank*`, `*IBAN*`); an empty allowed
-    list allows every one.
+    connections' servers are among the MCP servers its Policy lends
+    (`mcp.allow`; a Policy lending none by name lends every one, as the
+    Shield cuts nothing then), and reading each of its documents and Spaces
+    is not denied by the Policy's rules for who launched it.
 
   Every Guard's verdict is a `check` entry of the record (R-07) —
   `stage: preflight`, `guard`, `passed`, `gate` when a Gate read it
@@ -603,8 +605,9 @@ declares Guards and Gates; this runtime executes them. Three moments:
   Its next turn is checked, and stopped, again. A Python application's
   session preflights the same way before its code is first asked.
 - **On every tool call** (`in_flight`): the built-in check stops a call whose
-  arguments hold a credential; the Sensitive Data Guard adds its guardrail's
-  denied fields, the Tool Use Policy Guard a tool the application does not
+  arguments hold a credential; the Sensitive Data Guard adds personal data
+  (an email address, a phone number, a social security number, a card
+  number), the Tool Use Policy Guard a tool the application does not
   declare; the Gates decide — `sensitive-data-stop` stops,
   `tool-violation-retry` sends the step back, one that asks a person asks
   through the tool-approval path. What stops a step is a `check` entry

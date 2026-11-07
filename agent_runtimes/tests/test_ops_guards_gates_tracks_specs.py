@@ -4,7 +4,7 @@
 """Ops, Guards, Gates and Tracks: four catalogues generated from agentspecs 0.0.14.
 
 Guards check, Gates decide, Tracks record, and an Op orchestrates Cogs under
-a validation strategy made of the three. A Guard extends a guardrail. All
+a validation strategy made of the three. A Guard extends a Policy. All
 arrive resolved.
 """
 
@@ -16,11 +16,16 @@ import pytest
 from agent_runtimes.specs.cogs import COG_CATALOGUE
 from agent_runtimes.specs.frames import FRAME_CATALOGUE
 from agent_runtimes.specs.gates import GATE_CATALOGUE, get_gate, list_gates
-from agent_runtimes.specs.guardrails import GUARDRAIL_CATALOG
-from agent_runtimes.specs.guards import GUARD_CATALOGUE, get_guard, list_guards
+from agent_runtimes.specs.guards import (
+    GUARD_CATALOGUE,
+    get_guard,
+    list_guards,
+    policy_of,
+)
 from agent_runtimes.specs.ops import OP_CATALOGUE, get_op, list_ops
+from agent_runtimes.specs.policies import POLICY_CATALOGUE
 from agent_runtimes.specs.tracks import TRACK_CATALOGUE, get_track, list_tracks
-from agent_runtimes.types import GuardrailSpec, GuardSpec
+from agent_runtimes.types import GuardSpec, PolicySpec
 
 REPO = Path(__file__).resolve().parents[2]
 CODEGEN = REPO / "scripts" / "codegen"
@@ -38,20 +43,20 @@ CATEGORIES = {
 STAGES = ["preflight", "in_flight", "post_run", "continuous"]
 
 
-class TestAGuardExtendsAGuardrail:
-    def test_the_type_is_a_guardrail(self) -> None:
-        assert issubclass(GuardSpec, GuardrailSpec)
+class TestAGuardExtendsAPolicy:
+    def test_the_type_carries_the_policy_it_extends_and_nothing_of_it(self) -> None:
+        assert not issubclass(GuardSpec, PolicySpec)
+        assert "policy" in GuardSpec.model_fields
+        for merged in ("permissions", "token_limits", "data_scope", "rules", "limits"):
+            assert merged not in GuardSpec.model_fields
 
     @pytest.mark.parametrize("guard", list_guards(), ids=lambda guard: guard.id)
-    def test_a_guard_carries_the_policy_of_the_guardrail_it_extends(
-        self, guard: GuardSpec
-    ) -> None:
-        guardrail = GUARDRAIL_CATALOG[guard.guardrail]
-        assert guard.permissions == guardrail.permissions
-        assert guard.token_limits == guardrail.token_limits
-        assert guard.data_handling == guardrail.data_handling
+    def test_a_guard_names_a_policy_of_the_catalogue(self, guard: GuardSpec) -> None:
+        policy = policy_of(guard)
+        assert guard.policy == f"{policy.id}:{policy.version}"
+        assert POLICY_CATALOGUE[policy.id] is policy
         # Its own identity, and what it adds.
-        assert guard.id != guardrail.id and guard.name != guardrail.name
+        assert guard.id != policy.id and guard.name != policy.name
         assert guard.check and guard.stages and guard.category in CATEGORIES
 
     def test_the_catalogue_covers_every_category_and_stage(self) -> None:
@@ -63,11 +68,17 @@ class TestAGuardExtendsAGuardrail:
     def test_a_guard_is_found_by_id_and_by_versioned_reference(self) -> None:
         guard = GUARD_CATALOGUE["sensitive-data-guard"]
         assert get_guard("sensitive-data-guard:0.0.1") is guard
-        assert guard.guardrail == "restricted-viewer"
-        # The guardrail's permissions, read from `read:data` as written.
-        assert guard.permissions.read_data is True
-        assert guard.permissions.execute_code is False
+        assert guard.policy == "organization-baseline:0.0.1"
+        assert policy_of(guard).policy["scope"] == "organization"
+        assert GUARD_CATALOGUE["permission-guard"].policy == "default:0.0.1"
         assert get_guard("nope") is None
+
+    def test_a_policy_the_catalogue_does_not_hold_is_refused(self) -> None:
+        guard = GUARD_CATALOGUE["schema-guard"]
+        for unknown in ("nope:0.0.1", "default:0.0.9", "default"):
+            broken = guard.model_copy(update={"policy": unknown})
+            with pytest.raises(ValueError, match="not a Policy of the catalogue"):
+                policy_of(broken)
 
 
 class TestGatesAndTracks:
@@ -123,7 +134,8 @@ class TestTheComprehensiveOp:
         guards = [guard for stage in by_stage.values() for guard in stage]
         assert {guard.category for guard in guards} == CATEGORIES
         for guard in guards:
-            assert GUARD_CATALOGUE[guard.id].guardrail == guard.guardrail
+            assert GUARD_CATALOGUE[guard.id].policy == guard.policy
+            assert policy_of(guard) is policy_of(GUARD_CATALOGUE[guard.id])
         ran = {guard.id for guard in guards}
         assert len(op.gates) == 8
         for gate in op.gates:
@@ -180,18 +192,27 @@ class TestTheGenerator:
         for snake in generate_ops.CAMEL:
             assert f'"{snake}":' not in typescript
 
-    def test_a_guardrails_permissions_are_typed_in_python_and_kept_in_typescript(
+    def test_a_guard_is_generated_naming_its_policy_with_the_lookup_beside_it(
         self,
     ) -> None:
         import generate_ops
 
         specs = generate_ops.load_specs("guards", CLONE / "guards")
+        assert all(spec["policy"] and "extends" not in spec for spec in specs)
+        assert all("permissions" not in spec for spec in specs)
         python = generate_ops.generate_python_code("guards", specs)
-        assert "'read_data': True" in python and "read:data" not in python
+        assert "'policy': 'default:0.0.1'" in python
+        assert "def policy_of(guard: GuardSpec) -> PolicySpec:" in python
+        assert "from agent_runtimes.specs.policies import POLICY_CATALOGUE" in python
         typescript = generate_ops.generate_typescript_code("guards", specs)
-        assert '"read:data": true' in typescript
-        # A guardrail's own keys stay as GuardrailSpec declares them.
-        assert '"token_limits"' in typescript and '"per_run"' in typescript
+        assert '"policy": "default:0.0.1"' in typescript
+        assert "export function policyOf(guard: GuardSpec): PolicySpec {" in typescript
+        assert "import { POLICY_CATALOGUE } from './policies';" in typescript
+        # Only the Guard catalogue carries the lookup.
+        gates = generate_ops.generate_python_code(
+            "gates", generate_ops.load_specs("gates", CLONE / "gates")
+        )
+        assert "policy_of" not in gates and "POLICY_CATALOGUE" not in gates
 
     def test_a_guard_that_says_no_tags_is_generated_with_none(
         self, tmp_path: Path
@@ -211,13 +232,16 @@ class TestTheGenerator:
         (package / "guards" / "__init__.py").write_text(
             (CLONE / "guards" / "__init__.py").read_text()
         )
-        (package / "guardrails").mkdir()
-        for guardrail in (CLONE / "guardrails").glob("*.yaml"):
-            (package / "guardrails" / guardrail.name).write_text(guardrail.read_text())
+        # The policies the Guards extend, as the package reads them.
+        (package / "policies").mkdir()
+        for policy in (CLONE / "policies").iterdir():
+            if policy.suffix in (".py", ".yaml", ".json"):
+                (package / "policies" / policy.name).write_text(policy.read_text())
 
         (spec,) = generate_ops.load_specs("guards", package / "guards")
         assert spec["tags"] == [] and spec["signals"] == []
         assert spec["description"] == "" and spec["icon"] and spec["emoji"]
+        assert spec["policy"] == "default:0.0.1"
         from agent_runtimes.types import GuardSpec as Model
 
         assert Model.model_validate(generate_ops._python_value(spec)).tags == []

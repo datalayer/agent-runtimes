@@ -81,7 +81,12 @@ import {
   isChatModel,
 } from '../../specs/models';
 import type { ContextSnapshotData } from '../../types/context';
-import type { FrontendToolDefinition } from '../../types/tools';
+import type {
+  FrontendToolDefinition,
+  ToolCallRequest,
+  ToolStreamEvent,
+} from '../../types/tools';
+import { ToolEventTurns } from '../../tools/toolEventTurns';
 import {
   internalQueryClient,
   isToolCallMessage,
@@ -1851,6 +1856,26 @@ function ChatBaseInner({
      it is a detour from the conversation, not a place the chat lives. */
   const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Streaming tools' events as turns the model did not ask for (AGENT_BATTLE
+  // B1-00): sent at once when the model is idle, held while a turn is in
+  // flight and sent as one turn — the latest per source — when it ends.
+  const loadingRef = useRef(false);
+  const sendRef = useRef<(text: string) => void>(() => undefined);
+  const toolEventsRef = useRef(
+    new ToolEventTurns(turn => sendRef.current(turn)),
+  );
+  const onToolEvent = useCallback(
+    (_call: ToolCallRequest, event: ToolStreamEvent) => {
+      toolEventsRef.current.take(event, !loadingRef.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    loadingRef.current = isLoading;
+    if (!isLoading) {
+      toolEventsRef.current.flush();
+    }
+  }, [isLoading]);
   const [liveKernelStatus, setLiveKernelStatus] =
     useState<KernelMessage.Status>();
   const [isStreaming, setIsStreaming] = useState(false);
@@ -3591,7 +3616,11 @@ function ChatBaseInner({
     // act on — the header already says why the chat is off.
     if (disabled) return;
 
-    const adapter = createProtocolAdapter(protocol);
+    // The chat takes the streaming tools' events, unless the host says where they go.
+    const adapter = createProtocolAdapter({
+      ...protocol,
+      options: { onToolEvent, ...(protocol.options ?? {}) },
+    });
     if (!adapter) return;
 
     adapterRef.current = adapter;
@@ -4346,6 +4375,12 @@ function ChatBaseInner({
       reduce,
     ],
   );
+  // What a streaming tool's event turn is sent through: the same send as a person's message.
+  useEffect(() => {
+    sendRef.current = text => {
+      void handleSend(text);
+    };
+  }, [handleSend]);
 
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {

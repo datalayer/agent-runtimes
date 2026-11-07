@@ -1,16 +1,17 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
+#
 # Distributed under the terms of the Modified BSD License.
 
-"""Consume ordered PAP conversation events without model-visible credentials."""
+"""A Pydantic AI tool that consumes PAP conversation events safely."""
 
 from __future__ import annotations
 
 import httpx
 from personal_agent_protocol import (
-    DPOP_PROOF_PROVIDERS,
+    SESSION_SIGNERS,
     ConversationClient,
-    DpopHttpClient,
-    SessionToken,
+    SessionClient,
+    SessionHttpClient,
     build_pap_reactor,
 )
 from pydantic import SecretStr
@@ -19,15 +20,15 @@ from reactor import PluginManifest
 from agent_runtimes.apps import Application
 
 
-class Proofs:
-    async def create(self, request: object) -> SecretStr:
-        return SecretStr("host-only-proof")
+class SessionJwts:
+    async def sign(self, request: object) -> SecretStr:
+        return SecretStr("host-only-session-jwt")
 
 
 class Plugin:
     def provide_contributions(self, contributions: object) -> None:
         contributions.contribute(  # type: ignore[attr-defined]
-            DPOP_PROOF_PROVIDERS, Proofs(), contribution_id="protected-dpop"
+            SESSION_SIGNERS, SessionJwts(), contribution_id="protected-session-signer"
         )
 
 
@@ -44,8 +45,8 @@ app = Application(
 
 
 @app.tool(does="read")
-async def follow_conversation() -> dict[str, object]:
-    """Exercise event polling while returning only safe event evidence."""
+async def read_conversation_events() -> dict[str, object]:
+    """Read ordered local events and return only safe conversation content."""
 
     calls = 0
 
@@ -94,33 +95,33 @@ async def follow_conversation() -> dict[str, object]:
             ],
         )
         client = ConversationClient(
-            transport=DpopHttpClient(reactor=reactor, http_client=http)
+            transport=SessionHttpClient(reactor=reactor, http_client=http)
         )
-        token = SessionToken(
-            access_token=SecretStr("host-only-token"),
-            token_type="DPoP",  # noqa: S106 - OAuth token type
-            expires_in=300,
-            # The Session Key's JWK thumbprint names the Session; it stays in the host.
-            session_key="NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
-            signed_in=False,
+        # A Session is local: signed out, and with no request sent.
+        session = await SessionClient(reactor=reactor, http_client=http).start(
+            client_id="https://assistant.example/agent.json",
+            pairwise_user_id="usr_host_only_example",
+            issuer="https://auth.shop.example",
+            tenant_id="demo",
         )
         events = [
             event
             async for event in client.events(
                 "https://api.shop.example/poppy/conversations",
                 "cnv_demo",
-                token=token,
-                tenant_id="demo",
-                issuer="https://auth.shop.example",
+                session=session,
                 wait=30,
             )
         ]
         reactor.stop()
 
     return {
-        "event_ids": [event.id for event in events],
         "event_types": [event.type for event in events],
-        "ordered": [event.id for event in events] == ["evt_reply", "evt_closed"],
+        "company_messages": [
+            event.message.text
+            for event in events
+            if event.message is not None and event.message.role == "company"
+        ],
         "closed": events[-1].status == "closed",
         "credentials_withheld": True,
     }

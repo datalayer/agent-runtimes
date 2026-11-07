@@ -71,12 +71,14 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   only for mail (a send whose tool names mail, `MAIL_WORDS`) and for a
   company's `pap_confirm` (since 1.5.90): reads, writes, other sends and every
   destructive, financial, publishing or unknown action are reviewed in
-  Datalayer. The `pap-confirm` renderer shows the company, its own summary,
-  every term, the operation and its **exact revision** (and the revision it
-  replaces, if any); the decision is on that revision only, and a changed
+  Datalayer. The `pap-confirm` renderer shows the company by name and domain,
+  its own summary, every term and what the terms check found, the operation,
+  its **exact revision**, opaque (and the revision it replaces, if any), and
+  until when it holds; the decision is on that revision only, and a changed
   revision is another approval. A card missing the company, the summary, the
-  operation, the revision or the digest of the terms fails closed, to be
-  reviewed in Datalayer;
+  operation, the revision, the expiry or the digest of the terms fails closed,
+  to be reviewed in Datalayer. The `retry` an approval carries holds the
+  request's body and is never shown;
 - deliveries: the signed webhook (`deliveryRoute`), the outbox poller and a
   delivery handled once (`receiveDelivery`), over the host's `DeliverySink`;
 - `TurnState`, a turn's state from its semantic events, which each host

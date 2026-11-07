@@ -26,6 +26,8 @@ from typing import Any
 
 from datalayer_core.orchestration import Artifact, ArtifactType, ContextKind, Execution
 
+from agent_runtimes.output.formats import NOTEBOOK_MEDIA_TYPE
+
 __all__ = [
     "NOTEBOOK_MEDIA_TYPE",
     "PlatformObject",
@@ -34,9 +36,6 @@ __all__ = [
     "notebook_of",
     "platform_object",
 ]
-
-#: The media type a notebook arrives under.
-NOTEBOOK_MEDIA_TYPE = "application/x-ipynb+json"
 
 
 @dataclass(frozen=True)

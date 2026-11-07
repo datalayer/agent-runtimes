@@ -410,6 +410,49 @@ def test_a_member_at_an_address_is_asked_there_and_its_steps_are_lines(
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in verdict.beats[0].lines
 
 
+def test_a_harness_s_steps_are_named_by_kind_and_title_and_drawn_on_its_workspace(
+    scene: Any,
+) -> None:
+    """OpenCode on r1 (30 October 2026): a step told as *read*, then ended as
+    *README.md*, is one line, *Read README.md*, on its workspace — not two
+    lines on its runtime, the first left open."""
+    from agent_runtimes.loop.scenes.stage import _steps_of
+
+    started = _steps_of(
+        [{"data": {"tool_call": {"id": "c1", "name": "read"}}}],
+        {"kind": "read", "title": "read", "status": "pending"},
+    )
+    ended = _steps_of(
+        [{"data": {"tool_result": {"id": "c1", "name": "README.md"}}}],
+        {"kind": "read", "title": "README.md", "status": "completed"},
+    )
+    assert [(step.name, step.id, step.harness, step.ended) for step in started] == [
+        ("Read", "c1", "read", False)
+    ]
+    assert [(step.name, step.id, step.harness, step.ended) for step in ended] == [
+        ("Read README.md", "c1", "read", True)
+    ]
+    # Another agent's call says no kind: named as it was.
+    assert [
+        step.name for step in _steps_of([{"data": {"tool_call": {"name": "odoo_x"}}}])
+    ] == ["odoo_x"]
+
+    async def over_a2a(member: StageMember, request: str) -> A2AAnswer:
+        return A2AAnswer(TABLE, (*started, *ended))
+
+    members, entry = members_of(
+        scene,
+        addresses={"accounting": ("http://runtime/api/v1/a2a/agents/accounting", "k")},
+    )
+    stage = Stage(members, entry, agent=cast(), ask=over_a2a)
+    verdict = asyncio.run(
+        rehearse(scene, stage, where="cloud", beats=["open-invoices"])
+    )
+    lines = verdict.beats[0].lines
+    assert "Accounting → its workspace: Read README.md" in lines
+    assert not any(line.endswith(": Read") for line in lines), lines
+
+
 def test_a_member_at_an_address_is_asked_for_what_it_can_show_and_its_surface_is_read(
     monkeypatch: pytest.MonkeyPatch, scene: Any
 ) -> None:
@@ -595,6 +638,37 @@ def test_rehearse_passes_in_the_validate_tab_s_words(
     assert "✓ open-invoices: passed" in result.output
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in result.output
     assert "Rehearsal: 1 of 1 beats passed. The scene is Live." in result.output
+
+
+def test_rehearse_writes_what_it_played_as_a_transcript(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """`--transcript`: the lines played, the beats they belong to, the verdict — what `record` keeps."""
+    from agent_runtimes.loop.scenes.transcript import lines_of_json
+
+    _here(monkeypatch, cast())
+    path = tmp_path / "run.json"
+    result = runner.invoke(
+        scenes_command.app,
+        [
+            "rehearse",
+            "sales-and-accounting",
+            "--beat",
+            "open-invoices",
+            "--transcript",
+            str(path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    written = json.loads(path.read_text())
+    assert written["version"] == 1 and written["scene"] == "sales-and-accounting"
+    assert written["rehearsal"]["passed"] is True
+    assert written["rehearsal"]["where"] == "on this machine"
+    [beat] = written["beats"]
+    assert beat["beat"] == "open-invoices" and beat["first"] == 0
+    lines = lines_of_json(path.read_text())
+    assert beat["count"] == len(lines) and lines[0].who == "You"
+    assert any(line.text == "odoo_accounting_list_invoices" for line in lines)
 
 
 def test_rehearse_fails_with_what_differed_and_exits_1(

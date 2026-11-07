@@ -5,8 +5,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 from typing import Any, Optional
+
+import requests
 
 
 class EvalsMixin:
@@ -158,6 +162,133 @@ class EvalsMixin:
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
+
+    def evals_list_adapters(
+        self,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The external frameworks this deployment offers, with their versions."""
+        return self._evals_request(
+            "/adapters",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_inspect_source(
+        self,
+        *,
+        framework: str,
+        filename: str,
+        content_base64: str,
+        options: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Keep a framework's archive by its digest and inspect it in a sandbox."""
+        return self._evals_request(
+            f"/adapters/{framework}/inspect",
+            method="POST",
+            json_body={
+                "filename": filename,
+                "content_base64": content_base64,
+                "options": options or {},
+            },
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_get_inspection(
+        self,
+        inspection_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """An inspection under way, or what it found."""
+        return self._evals_request(
+            f"/adapters/inspections/{inspection_id}",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_import_external(
+        self,
+        *,
+        inspection_id: str,
+        selection: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """A benchmark and its experiments, from what an inspection found."""
+        return self._evals_request(
+            "/evalsets/import",
+            method="POST",
+            json_body={
+                "external": {
+                    "inspection_id": inspection_id,
+                    "selection": selection or {},
+                }
+            },
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_set_public(
+        self,
+        evalset_id: str,
+        *,
+        public: bool,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Publish a benchmark, its source with it, or take it back."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/public",
+            method="PATCH",
+            json_body={"is_public": public},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_download_source(
+        self,
+        evalset_id: str,
+        *,
+        version: Optional[int] = None,
+        public: bool = False,
+    ) -> tuple[bytes, str, str]:
+        """An imported benchmark's source: its bytes, its name and its digest.
+
+        `public` asks as a reader of its Library page, with no credential at
+        all: what anybody can download, and only once it is published. The
+        bytes are checked against the digest the service says they have.
+        """
+        base = f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals"
+        if public:
+            response = requests.get(
+                f"{base}/public/evalsets/{evalset_id}/external-source", timeout=120
+            )
+            response.raise_for_status()
+        else:
+            response = self._fetch(
+                f"{base}/evalsets/{evalset_id}/external-source",
+                method="GET",
+                params={"version": version} if version else {},
+            )
+        data = response.content
+        digest = str(response.headers.get("x-content-sha256") or "")
+        if hashlib.sha256(data).hexdigest() != digest:
+            raise ValueError(
+                f"The source of {evalset_id} does not match its digest {digest!r}."
+            )
+        named = re.search(
+            r'filename="([^"]+)"', str(response.headers.get("content-disposition"))
+        )
+        return data, named.group(1) if named else digest, digest
 
     def evals_export_eval(
         self,

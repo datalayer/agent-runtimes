@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 
 from agent_runtimes.apps import Application, Session, principal, sessions
 from agent_runtimes.apps.enforcement import AppRulesCapability
-from agent_runtimes.apps.record import _SESSION
+from agent_runtimes.apps.record import _SESSION, agent_recorder
 from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
     _DummyRequest,
     creation_spy,
@@ -35,6 +35,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     answer_of,
     as_,
     events_of,
+    principal_token_of,
     remote,
     runtime,
 )
@@ -98,7 +99,7 @@ def deployed(
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
-            "access_token": "p-token",
+            "access_token": principal_token_of("owner"),
             "expires_in": 3600,
             "principal_uid": "principal-7",
         }
@@ -281,7 +282,16 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
     principal.give_principal_token("dep-1", "narrowed", expires_in=3600)
     token = _SESSION.set("session-tick-05")
     try:
-        assert unattended_of("digest-woken", {**DEPLOYMENT, "woken_by": woken(2)})()
+        # Said of the agent, it says nothing of the session: every session of
+        # a deployment runs on one agent, and that was its launcher's to say.
+        unattended = unattended_of(
+            "digest-woken", {**DEPLOYMENT, "woken_by": woken(2)}
+        )
+        assert not unattended()
+        recorder = agent_recorder("digest-woken")
+        assert recorder is not None
+        recorder.start("session-tick-05", woken_by=woken(2))
+        assert unattended()
         assert not unattended_of("digest-opened", DEPLOYMENT)()
     finally:
         _SESSION.reset(token)
@@ -556,25 +566,25 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     monkeypatch.setattr(httpx, "AsyncClient", client)
     monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://ai-agents.test")
     answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) == TICK_CODE
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, "person")) == TICK_CODE
     [request] = seen
     assert request.method == "GET"
     assert request.url.path == "/api/ai-agents/v1/apps/deployments/dep-14/code"
     assert request.url.params["version"] == "2"
     assert request.headers["authorization"] == "Bearer person"
     answers.append(httpx.Response(200, json={"success": True, "code": None}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) is None
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, "person")) is None
     # With no token, asked as nobody (R-30): ai-agents answers a deployment
     # somebody without an account may talk to, and refuses the rest.
     answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
-    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, None)) == TICK_CODE
+    assert asyncio.run(module._code_from_ai_agents("dep-14", 2, None)) == TICK_CODE
     assert "authorization" not in seen[-1].headers
     answers.append(httpx.Response(409, json={"detail": "Deploy it again."}))
     with pytest.raises(DeploymentCodeUnread, match=r"\(409\): Deploy it again\."):
-        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
+        asyncio.run(module._code_from_ai_agents("dep-14", 2, "person"))
     answers.append(httpx.Response(200, json={"success": True}))
     with pytest.raises(DeploymentCodeUnread, match="without it"):
-        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
+        asyncio.run(module._code_from_ai_agents("dep-14", 2, "person"))
 
 
 def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
@@ -695,7 +705,7 @@ def test_a_woken_session_runs_the_code_the_deployment_carried_not_the_prompt(
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
-            "access_token": "p-token",
+            "access_token": principal_token_of("owner"),
             "expires_in": 3600,
             "principal_uid": "principal-14",
         }
@@ -787,7 +797,7 @@ def test_a_woken_session_running_code_keeps_its_run_turn_and_output(
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
-            "access_token": "p-token",
+            "access_token": principal_token_of("owner"),
             "expires_in": 3600,
             "principal_uid": "principal-14",
         }
@@ -881,7 +891,7 @@ def test_a_kept_runtimes_code_keeps_each_turn_and_takes_feedback(
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
-            "access_token": "p-token",
+            "access_token": principal_token_of("owner"),
             "expires_in": 3600,
             "principal_uid": "principal-24",
         }

@@ -50,6 +50,7 @@ import type {
   ToolDefinition,
   ToolParameter,
   ToolRenderStatus,
+  ToolStreamEvent,
 } from '../../types/tools';
 
 /** JSON Schema for a tool that takes nothing. */
@@ -151,6 +152,12 @@ export type FrontendToolsToVercelAIOptions = {
     result?: unknown,
     error?: string,
   ) => void;
+  /**
+   * Where a streaming tool's events go (AGENT_BATTLE B1-00): the chat, which
+   * tells the model each as a turn it did not ask for. Without it a
+   * streaming tool is refused.
+   */
+  onToolEvent?: (toolCall: ToolCallRequest, event: ToolStreamEvent) => void;
 };
 
 /**
@@ -175,6 +182,7 @@ export function frontendToolsToVercelAI(
       byName.get(name) as ToolDefinition | undefined,
     onHitlRequired: options.onHitlRequired,
     onStatusChange: options.onStatusChange,
+    onToolEvent: options.onToolEvent,
   });
 
   const toolSet: ToolSet = {};

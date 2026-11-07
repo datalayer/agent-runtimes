@@ -162,7 +162,61 @@ vi.mock('@datalayer/jupyter-react', () => ({
   },
 }));
 
-vi.mock('@jupyter/web-components', () => ({}));
+/*
+ * The tools machinery lives in the reactor now (`@datalayer/reactor/tools`,
+ * 6 November 2026): the same runner stub as jupyter-react's above — the
+ * operation called, its result returned as it comes, a streaming one
+ * subscribed — over the real module's other exports.
+ */
+vi.mock('@datalayer/reactor/tools', async importOriginal => ({
+  ...(await importOriginal<typeof import('@datalayer/reactor/tools')>()),
+  OperationRunner: class OperationRunner {
+    async execute(
+      operation: { execute: (params: unknown, context: unknown) => unknown },
+      params: unknown,
+      context: unknown,
+    ) {
+      return operation.execute(params, context);
+    }
+    async subscribe(
+      operation: {
+        subscribe?: (
+          params: unknown,
+          context: unknown,
+          push: unknown,
+        ) => unknown;
+      },
+      params: unknown,
+      context: unknown,
+      push: unknown,
+    ) {
+      return operation.subscribe?.(params, context, push);
+    }
+  },
+}));
+
+// Its custom elements are never drawn in jsdom: every export a dependency
+// imports (provideJupyterDesignSystem, the jp* components…) is a stub that
+// registers nothing, so a newly imported one never fails a suite.
+vi.mock('@jupyter/web-components', () => {
+  const designSystem = { register: () => designSystem };
+  const stub = () => designSystem;
+  return new Proxy(
+    { provideJupyterDesignSystem: stub },
+    {
+      // Never a thenable (awaiting the module would wait on `then` for
+      // ever), and no symbol is a component.
+      has: (target, key) =>
+        key in target || (typeof key === 'string' && key !== 'then'),
+      get: (target, key) =>
+        key in target
+          ? target[key as keyof typeof target]
+          : typeof key === 'string' && key !== 'then'
+            ? stub
+            : undefined,
+    },
+  );
+});
 
 vi.mock('@jupyter/ydoc', () => ({
   YNotebook: class YNotebook {},

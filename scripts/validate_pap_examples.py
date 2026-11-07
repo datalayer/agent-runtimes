@@ -28,7 +28,7 @@ HOST_ONLY_TOOL_ARGUMENTS = {
     "local_user_id",
     "pairwise_user_id",
     "redirect_uri",
-    "session_token",
+    "session_jwt",
 }
 
 

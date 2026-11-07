@@ -5,7 +5,7 @@ that starts the sign-in answers with a **display**: a
 `personal_agent_protocol.ui.PapSignIn` (type
 `application/vnd.datalayer.pap.sign-in+json`) in the MCP result's
 `_meta["reactor.ui/display"]`. Datalayer's gateway answers `pap_sign_in` this
-way (Reactor UI RU-1).
+way.
 
 The page to open and the code to enter are for the person, not the model: a
 device's verification URL may even carry the code. This `Application` runs one

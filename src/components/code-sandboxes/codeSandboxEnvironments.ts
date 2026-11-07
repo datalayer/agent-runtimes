@@ -117,7 +117,8 @@ export function environmentVersionHref(uid: string, version?: number): string {
 /**
  * Whether a sandbox of this entry can be started from here.
  *
- * A platform entry always can. A user environment can once a version is
+ * A platform entry can unless the platform switched it off where it is
+ * defined (`disabled`, Kaggle and Daytona GPU among them). A user environment can once a version is
  * promoted AND that version has a Datalayer artifact: without one the Operator
  * refuses the launch with `DL_ENV_ARTIFACT_MISSING`, so offering it would be
  * offering a failure. A listing that does not say which variants are built —
@@ -127,11 +128,15 @@ export function environmentVersionHref(uid: string, version?: number): string {
 export function isCodeSandboxEnvironmentLaunchable(
   environment: Pick<
     IDatalayerEnvironment,
-    'origin' | 'promotedVersion' | 'availableVariants' | 'burning_rate'
+    | 'origin'
+    | 'promotedVersion'
+    | 'availableVariants'
+    | 'burning_rate'
+    | 'disabled'
   >,
 ): boolean {
   if (environment.origin !== 'user') {
-    return true;
+    return !environment.disabled;
   }
   if (!environment.promotedVersion) {
     return false;

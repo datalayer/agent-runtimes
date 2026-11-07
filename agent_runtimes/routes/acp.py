@@ -1062,12 +1062,8 @@ async def _handle_prompt(
     context_metadata = params.get("metadata", {}) or {}
     if model:
         context_metadata["model"] = model
-    from ..guardrails.model_budget import (
-        ModelBudgetReached,
-        acp_stop_reason,
-        delegated_budget,
-        refusal_meta,
-    )
+    from ..context.delegation import delegated_budget, refusal_meta
+    from ..guardrails.model_budget import ModelBudgetReached, acp_stop_reason
 
     # The model budget the delegation set on this turn, in the schema's `_meta`:
     # the adapter applies it as the run's usage limits (O1-07).

@@ -5,19 +5,19 @@
 
 /**
  * The protocol displays a run's tool results carry, read strictly for any
- * renderer (M-037, RU-1): the page's half of a tool result
+ * renderer: the page's half of a tool result
  * — `_meta["reactor.ui/display"]`, as the runtime's AG-UI stream sends it
  * beside the model's view — decoded into what a card draws.
  *
  * - **Sign in at a company** (`…pap.sign-in+json`, and a plain `pap_sign_in`
  *   or a business's `pact_sign_in` answer): Direct, Device or Mediated, its
  *   page (`https` only), its code, until when, what it needs.
- * - **An operation to confirm** (`…pap.confirm+json`): the company's words
- *   verbatim, its terms, the revision and the one it replaced, what it does
- *   (a Rules class; `buy` when money moves — a purchase), whether only the
- *   person may decide. It is answered where approvals are, never here: the
- *   approval it stands for is named (`approvalId`).
- * - **What a confirmed operation came to** (`…pap.outcome+json`).
+ * - **An operation to approve** (`…pap.confirm+json`): the company's words
+ *   verbatim, its terms and what the terms check found, the opaque revision
+ *   and the one it replaced, what it does (a Rules class; `buy` when money
+ *   moves — a purchase). Every operation is the person's: it is answered where
+ *   approvals are, never here, and the approval it stands for is named
+ *   (`approvalId`).
  * - **What a company answered** (`…pap.replies+json`): each reply with who
  *   wrote it there (its agent or one of its people), who answers now and
  *   where the conversation stands — participation.
@@ -44,7 +44,6 @@ import {
 
 export const PAP_SIGN_IN_TYPE = 'application/vnd.datalayer.pap.sign-in+json';
 export const PAP_CONFIRM_TYPE = 'application/vnd.datalayer.pap.confirm+json';
-export const PAP_OUTCOME_TYPE = 'application/vnd.datalayer.pap.outcome+json';
 export const PAP_REPLIES_TYPE = 'application/vnd.datalayer.pap.replies+json';
 export const SHIELD_DIFF_TYPE = 'application/vnd.datalayer.shield.diff+json';
 export const SHIELD_TERMINAL_TYPE =
@@ -53,7 +52,7 @@ export const SHIELD_TERMINAL_TYPE =
 /** Where a tool result carries its display for the page. */
 export const DISPLAY_META_KEY = 'reactor.ui/display';
 
-/** What confirming an operation does, as an application's Rules class it. */
+/** What approving an operation does, as an application's Rules class it. */
 export type ActionClass =
   'read' | 'write' | 'send' | 'buy' | 'delete' | 'publish';
 
@@ -69,23 +68,14 @@ export type ProtocolDisplay =
       summary: string;
       terms: Record<string, unknown>;
       operationRef: string;
-      revision: number;
+      /** Opaque, the company's: approved exactly as it is shown. */
+      revision: string;
       does: ActionClass | null;
       signedIn: boolean | null;
       expiresAt: string;
-      was: { revision: number; terms: Record<string, unknown> } | null;
-      onlyThePerson: boolean;
-    }
-  | {
-      kind: 'outcome';
-      id: string;
-      company: string;
-      summary: string;
-      operationRef: string;
-      revision: number;
-      state: 'in_progress' | 'succeeded' | 'failed' | 'cancelled' | 'expired';
-      result: string;
-      approvedBy: 'user' | 'standing_permission' | null;
+      /** What the terms check found: terms the summary does not say. */
+      differences: string[];
+      was: { revision: string; terms: Record<string, unknown> } | null;
     }
   | {
       kind: 'replies';
@@ -148,10 +138,6 @@ const record = (value: unknown): Raw | null =>
 const text = (value: unknown): string =>
   typeof value === 'string' ? value : '';
 const words = (value: unknown): string => text(value).trim();
-const count = (value: unknown): number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 1
-    ? value
-    : 0;
 
 const ACTIONS: readonly ActionClass[] = [
   'read',
@@ -161,13 +147,6 @@ const ACTIONS: readonly ActionClass[] = [
   'delete',
   'publish',
 ];
-const OUTCOMES = [
-  'in_progress',
-  'succeeded',
-  'failed',
-  'cancelled',
-  'expired',
-] as const;
 const STATUSES = ['working', 'idle', 'queued', 'closed'] as const;
 const who = (value: unknown): 'agent' | 'human' | null =>
   value === 'agent' || value === 'human' ? value : null;
@@ -199,21 +178,24 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
       const company = words(data.company);
       const summary = text(data.summary);
       const operationRef = words(data.operation_ref);
-      const revision = count(data.revision);
+      const revision = words(data.revision);
       const terms = record(data.terms);
       const was = record(data.was);
-      const wasRevision = was ? count(was.revision) : 0;
+      const wasRevision = was ? words(was.revision) : '';
+      const expiresAt = words(data.expires_at);
       if (
         !company ||
         !summary.trim() ||
         !operationRef ||
         !revision ||
         !terms ||
+        !expiresAt ||
+        !Array.isArray(data.differences) ||
         !id.endsWith('-confirm')
       ) {
         return unknown;
       }
-      if (was && (!wasRevision || wasRevision >= revision)) {
+      if (was && (!wasRevision || wasRevision === revision)) {
         return unknown;
       }
       const does =
@@ -236,43 +218,11 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
           session && typeof session.signed_in === 'boolean'
             ? session.signed_in
             : null,
-        expiresAt: text(data.expires_at),
+        expiresAt,
+        differences: data.differences.map(text),
         was: was
           ? { revision: wasRevision, terms: record(was.terms) ?? {} }
           : null,
-        onlyThePerson: data.only_the_person === true,
-      };
-    }
-    case PAP_OUTCOME_TYPE: {
-      const state = OUTCOMES.find(s => s === data.state);
-      const company = words(data.company);
-      const summary = text(data.summary);
-      const result = text(data.result);
-      if (
-        !state ||
-        !company ||
-        !summary.trim() ||
-        !words(data.operation_ref) ||
-        !count(data.revision)
-      ) {
-        return unknown;
-      }
-      // Final, it says what it came to in the company's words; in progress, nothing yet.
-      if ((state === 'in_progress') !== !result.trim()) return unknown;
-      return {
-        kind: 'outcome',
-        id,
-        company,
-        summary,
-        operationRef: words(data.operation_ref),
-        revision: count(data.revision),
-        state,
-        result,
-        approvedBy:
-          data.approved_by === 'user' ||
-          data.approved_by === 'standing_permission'
-            ? data.approved_by
-            : null,
       };
     }
     case PAP_REPLIES_TYPE: {
@@ -407,11 +357,7 @@ export function displayLine(display: ProtocolDisplay): string {
     case 'sign-in-refused':
       return display.why;
     case 'confirm':
-      return `${display.company} asks you to confirm: ${display.summary} (version ${display.revision})`;
-    case 'outcome':
-      return display.state === 'in_progress'
-        ? `Still in progress at ${display.company}: ${display.summary}`
-        : `${OUTCOME_LEADS[display.state]} ${display.company}: ${display.result}`;
+      return `${display.company} asks you to approve: ${display.summary} (revision ${display.revision})`;
     case 'replies':
       return `${display.company} answered${display.responder === 'human' ? ': one of its people is answering' : ''}`;
     case 'handoff':
@@ -438,16 +384,6 @@ export function displayLine(display: ProtocolDisplay): string {
   }
 }
 
-const OUTCOME_LEADS: Record<
-  'succeeded' | 'failed' | 'cancelled' | 'expired',
-  string
-> = {
-  succeeded: 'Done at',
-  failed: 'Failed at',
-  cancelled: 'Cancelled at',
-  expired: 'Expired at',
-};
-
 /** Who wrote a reply, said apart from the person's words and the agent's summaries (PAP-7.8-01). */
 export const replyAuthor = (
   company: string,
@@ -460,7 +396,7 @@ export const replyAuthor = (
       : `${company}, its agent`
   }${name ? ` (${name})` : ''}`;
 
-// -- a diff and a terminal (SH-16) ------------------------------------
+// -- a diff and a terminal ------------------------------------
 
 const countLines = (value: string): number =>
   value === '' ? 0 : value.split('\n').length - (value.endsWith('\n') ? 1 : 0);

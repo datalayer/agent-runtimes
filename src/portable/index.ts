@@ -170,7 +170,6 @@ export {
   displayOfToolResult,
   PAP_CONFIRM_TYPE,
   PAP_HANDOFF_TOOL,
-  PAP_OUTCOME_TYPE,
   PAP_REPLIES_TYPE,
   PAP_SIGN_IN_TYPE,
   protocolDisplayOf,

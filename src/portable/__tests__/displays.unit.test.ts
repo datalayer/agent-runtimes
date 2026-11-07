@@ -4,7 +4,7 @@
  */
 
 /**
- * Protocol displays from the stream (M-037): the PAP SDK's displays as
+ * Protocol displays from the stream: the PAP SDK's displays as
  * the runtime sends them beside a tool's result, read strictly; anything
  * that does not read is `unknown` with its text — never a partial card.
  *
@@ -40,15 +40,18 @@ const CONFIRM = {
   summary: 'Return order 7 for a refund of 40 EUR',
   terms: { amount: { value: 4000, currency: 'EUR' } },
   operation_ref: 'op-7',
-  revision: 2,
+  revision: 'rev_b',
   does: 'buy',
   session: { ref: '0123456789ab', signed_in: true },
   expires_at: '2026-10-15T18:00:00Z',
-  was: { revision: 1, terms: { amount: { value: 3000, currency: 'EUR' } } },
-  only_the_person: true,
+  differences: ['amount.value'],
+  was: {
+    revision: 'rev_a',
+    terms: { amount: { value: 3000, currency: 'EUR' } },
+  },
 };
 
-describe('protocol displays (M-037)', () => {
+describe('protocol displays', () => {
   it('reads Direct, Device and Mediated sign-ins, https only', () => {
     const device = protocolDisplayOf(
       wire('sign-in', {
@@ -114,19 +117,23 @@ describe('protocol displays (M-037)', () => {
       kind: 'confirm',
       approvalId: 'appr-9',
       does: 'buy',
-      revision: 2,
-      onlyThePerson: true,
+      revision: 'rev_b',
+      differences: ['amount.value'],
       signedIn: true,
-      was: { revision: 1 },
+      was: { revision: 'rev_a' },
     });
     expect(displayLine(shown!)).toBe(
-      'shop.example asks you to confirm: Return order 7 for a refund of 40 EUR (version 2)',
+      'shop.example asks you to approve: Return order 7 for a refund of 40 EUR (revision rev_b)',
     );
-    // Fails closed: a later "was", an unknown class, no terms, an id that names no approval.
+    // Fails closed: a "was" of the same revision, an unknown class, no terms, no
+    // expiry, an integer revision, an id that names no approval.
     for (const data of [
-      { ...CONFIRM, was: { revision: 3 } },
+      { ...CONFIRM, was: { revision: 'rev_b' } },
       { ...CONFIRM, does: 'teleport' },
       { ...CONFIRM, terms: 'x' },
+      { ...CONFIRM, expires_at: '' },
+      { ...CONFIRM, differences: undefined },
+      { ...CONFIRM, revision: 2 },
     ]) {
       expect(
         protocolDisplayOf(wire('confirm', data, 'a-confirm')),
@@ -137,36 +144,17 @@ describe('protocol displays (M-037)', () => {
     );
   });
 
-  it('reads outcomes, final only with the company’s words', () => {
-    const base = {
-      company: 'shop.example',
-      summary: 'Return order 7',
-      operation_ref: 'op-7',
-      revision: 2,
-    };
-    expect(
-      displayLine(
-        protocolDisplayOf(
-          wire('outcome', {
-            ...base,
-            state: 'succeeded',
-            result: 'Refund sent.',
-            approved_by: 'user',
-          }),
-        )!,
-      ),
-    ).toBe('Done at shop.example: Refund sent.');
-    expect(
-      protocolDisplayOf(wire('outcome', { ...base, state: 'in_progress' })),
-    ).toMatchObject({ kind: 'outcome', state: 'in_progress' });
-    expect(
-      protocolDisplayOf(wire('outcome', { ...base, state: 'failed' }))!.kind,
-    ).toBe('unknown');
+  it('reads no outcome: an answer to pap_confirm carries no display', () => {
     expect(
       protocolDisplayOf(
-        wire('outcome', { ...base, state: 'in_progress', result: 'early' }),
-      )!.kind,
-    ).toBe('unknown');
+        wire('outcome', {
+          company: 'shop.example',
+          summary: 'Return order 7',
+          state: 'succeeded',
+          result: 'Refund sent.',
+        }),
+      ),
+    ).toMatchObject({ kind: 'unknown', text: 'What a model reads.' });
   });
 
   it('reads replies with who wrote each one, and who answers now', () => {
@@ -286,7 +274,7 @@ describe('protocol displays (M-037)', () => {
     );
   });
 
-  it('reads a coding agent’s diff and draws it as a unified diff in the file’s language (SH-16)', () => {
+  it('reads a coding agent’s diff and draws it as a unified diff in the file’s language', () => {
     const { diff } = shieldDisplayFixtures();
     const read = protocolDisplayOf(diff);
     expect(read).toEqual({

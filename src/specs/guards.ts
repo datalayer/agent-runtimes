@@ -6,66 +6,18 @@
 /**
  * Guard Catalog.
  *
- * Reusable checks: a Guard extends a guardrail — the policy it verifies.
- * Every Guard is resolved: it carries that guardrail's policy.
+ * Reusable checks: a Guard extends a Policy — the rules it verifies.
+ * Every Guard is resolved: `policy` names that Policy, `id:version`, and
+ * `policy_of` gives it from the policies catalogue.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { GuardSpec } from '../types/agentspecs';
+import type { GuardSpec, PolicySpec } from '../types/agentspecs';
+import { POLICY_CATALOGUE } from './policies';
 
 export const CONFIDENCE_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'confidence-guard',
   version: '0.0.1',
   name: 'Confidence Guard',
@@ -86,62 +38,12 @@ export const CONFIDENCE_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['confidence'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const CONSENSUS_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'consensus-guard',
   version: '0.0.1',
   name: 'Consensus Guard',
@@ -163,80 +65,22 @@ export const CONSENSUS_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['consensus', 'verification'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const DATA_SOURCE_AUTHORIZATION_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'dave@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': true,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': true,
-    'deploy:production': true,
-  },
-  token_limits: {
-    per_run: '200K',
-    per_day: '5M',
-    per_month: '50M',
-  },
-  data_scope: {
-    allowed_systems: ['postgresql', 'mongodb', 's3', 'kafka'],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: ['*SSN*', '*Bank*', '*IBAN*'],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 100000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: true,
-    pii_action: 'redact',
-  },
-  approval_policy: {
-    require_manual_approval_for: [
-      'Schema changes',
-      'Drop or truncate operations',
-      'Production data modifications',
-    ],
-    auto_approved: [
-      'Read queries',
-      'Data transformations',
-      'Pipeline orchestration',
-    ],
-  },
-  tool_limits: {
-    max_tool_calls: 500,
-    max_query_rows: 1000000,
-    max_query_runtime: '300s',
-    max_time_window_days: 365,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 90,
-    require_lineage_in_report: true,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: true,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'data-source-authorization-guard',
   version: '0.0.1',
   name: 'Data Source Authorization Guard',
   description:
-    'Checks that each system, object and field the Op is about to read is inside the data scope of the guardrail, and that no denied field is requested.',
+    'Checks that each system the Op is about to read is one the Policy lends it, and that reading what it reads is not something the Policy denies.',
   category: 'policy-safety',
   stages: ['preflight'],
   method: 'algorithmic',
   check:
-    "Every data source named by the run is among the guardrail's allowed systems and objects; none is a denied object or matches a denied field.",
+    "Every MCP server the run connects to is among those the Policy lends (`mcp.allow`; a Policy lending none by name lends every one), and reading each document and Space the run names is not denied by the Policy's rules.",
   signals: [
     {
       name: 'unauthorized_source',
@@ -247,62 +91,12 @@ export const DATA_SOURCE_AUTHORIZATION_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['data', 'authorization'],
-  guardrail: 'data-engineering-power-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const EXPERT_SAMPLING_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'expert-sampling-guard',
   version: '0.0.1',
   name: 'Expert Sampling Guard',
@@ -329,62 +123,12 @@ export const EXPERT_SAMPLING_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['expert', 'review'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const OUTCOME_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'outcome-guard',
   version: '0.0.1',
   name: 'Outcome Guard',
@@ -405,72 +149,22 @@ export const OUTCOME_GUARD_0_0_1: GuardSpec = {
   required: false,
   enabled: true,
   tags: ['outcome', 'value'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const PERMISSION_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'permission-guard',
   version: '0.0.1',
   name: 'Permission Guard',
   description:
-    "Checks that the person or the system launching the Op holds every permission the Op's Cogs need, as the guardrail states them.",
+    "Checks that the person or the system launching the Op may do what the Op's Cogs do, by the rules of the Policy it extends.",
   category: 'policy-safety',
   stages: ['preflight'],
   method: 'algorithmic',
   check:
-    "Each permission the Op's Cogs use is granted to the launching identity by the guardrail; nothing the guardrail denies is requested.",
+    "Each class of action the Op's Cogs take — read, write, delete, execute, send, buy — is one the Policy's rules allow or ask about for the launching identity; none is a class the Policy denies, or needs an authorization the identity does not hold.",
   signals: [
     {
       name: 'permission_denied',
@@ -481,70 +175,12 @@ export const PERMISSION_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['permissions', 'identity'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const REGRESSION_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'dave@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': true,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': true,
-    'deploy:production': true,
-  },
-  token_limits: {
-    per_run: '200K',
-    per_day: '5M',
-    per_month: '50M',
-  },
-  data_scope: {
-    allowed_systems: ['postgresql', 'mongodb', 's3', 'kafka'],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: ['*SSN*', '*Bank*', '*IBAN*'],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 100000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: true,
-    pii_action: 'redact',
-  },
-  approval_policy: {
-    require_manual_approval_for: [
-      'Schema changes',
-      'Drop or truncate operations',
-      'Production data modifications',
-    ],
-    auto_approved: [
-      'Read queries',
-      'Data transformations',
-      'Pipeline orchestration',
-    ],
-  },
-  tool_limits: {
-    max_tool_calls: 500,
-    max_query_rows: 1000000,
-    max_query_runtime: '300s',
-    max_time_window_days: 365,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 90,
-    require_lineage_in_report: true,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: true,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'regression-guard',
   version: '0.0.1',
   name: 'Regression Guard',
@@ -566,62 +202,44 @@ export const REGRESSION_GUARD_0_0_1: GuardSpec = {
   required: false,
   enabled: true,
   tags: ['regression', 'drift'],
-  guardrail: 'data-engineering-power-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
+};
+
+export const REPORT_QUALITY_GUARD_0_0_1: GuardSpec = {
+  id: 'report-quality-guard',
+  version: '0.0.1',
+  name: 'Report Quality Guard',
+  description:
+    'Scores a drafted report, between 0 and 1, for completeness against what was asked and grounding in the sources read: every figure traced to a call, nothing asked left out.',
+  category: 'outcome',
+  stages: ['post_run'],
+  method: 'cog',
+  check:
+    'Read the goal, the report and the tool calls the run made. Every point the goal asks for is in the report, and every figure in the report is read from a call of the run, not assumed. Score 1 when both hold in full, 0 when neither, between the two as the shares.',
+  signals: [
+    {
+      name: 'quality',
+      type: 'number',
+      description: "The report's completeness and grounding, between 0 and 1.",
+    },
+    {
+      name: 'ungrounded_figures',
+      type: 'number',
+      description:
+        'How many figures of the report no call of the run accounts for.',
+    },
+  ],
+  required: false,
+  enabled: true,
+  tags: ['outcome', 'quality', 'challenge'],
+  icon: 'shield-check',
+  emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const REQUIRED_FRAME_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'required-frame-guard',
   version: '0.0.1',
   name: 'Required Frame Guard',
@@ -642,62 +260,12 @@ export const REQUIRED_FRAME_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['frames', 'configuration'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const SCHEMA_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'schema-guard',
   version: '0.0.1',
   name: 'Schema Guard',
@@ -718,72 +286,22 @@ export const SCHEMA_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['schema', 'structure'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const SENSITIVE_DATA_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'azure-ad',
-  identity_name: 'viewer-group@acme.onmicrosoft.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': false,
-    'access:internet': false,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '10K',
-    per_day: '50K',
-    per_month: '500K',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: ['*SSN*', '*Bank*', '*IBAN*', '*Password*', '*Secret*'],
-  },
-  data_handling: {
-    default_aggregation: true,
-    allow_row_level_output: false,
-    max_rows_in_output: 0,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: true,
-    pii_action: 'redact',
-  },
-  approval_policy: {
-    require_manual_approval_for: ['Any operation beyond read'],
-    auto_approved: ['Aggregated read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 10,
-    max_query_rows: 10000,
-    max_query_runtime: '15s',
-    max_time_window_days: 30,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: true,
-    retain_days: 90,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: true,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'sensitive-data-guard',
   version: '0.0.1',
   name: 'Sensitive Data Guard',
   description:
-    "Detects personal data, credentials and the guardrail's denied fields in what a Cog is about to send out, and in the final output.",
+    'Detects credentials and personal data in what a Cog is about to send out, and in the final output.',
   category: 'policy-safety',
   stages: ['in_flight', 'post_run'],
   method: 'algorithmic',
   check:
-    "No output, tool argument or outbound message contains a credential, a field matching the guardrail's denied fields, or personal data the guardrail's handling rules require to be redacted.",
+    'No output, tool argument or outbound message contains a credential or personal data.',
   signals: [
     {
       name: 'sensitive_data_detected',
@@ -794,62 +312,12 @@ export const SENSITIVE_DATA_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['privacy', 'pii', 'secrets'],
-  guardrail: 'restricted-viewer',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'organization-baseline:0.0.1',
 };
 
 export const SOURCE_GROUNDING_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'source-grounding-guard',
   version: '0.0.1',
   name: 'Source Grounding Guard',
@@ -871,72 +339,22 @@ export const SOURCE_GROUNDING_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['sources', 'evidence'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const TOOL_USE_POLICY_GUARD_0_0_1: GuardSpec = {
-  identity_provider: 'datalayer',
-  identity_name: 'alice@acme.com',
-  permissions: {
-    'read:data': true,
-    'write:data': false,
-    'execute:code': true,
-    'access:internet': true,
-    'send:email': false,
-    'deploy:production': false,
-  },
-  token_limits: {
-    per_run: '50K',
-    per_day: '500K',
-    per_month: '5M',
-  },
-  data_scope: {
-    allowed_systems: [],
-    allowed_objects: [],
-    denied_objects: [],
-    denied_fields: [],
-  },
-  data_handling: {
-    default_aggregation: false,
-    allow_row_level_output: true,
-    max_rows_in_output: 1000,
-    redact_fields: [],
-    hash_fields: [],
-    pii_detection: false,
-    pii_action: 'warn',
-  },
-  approval_policy: {
-    require_manual_approval_for: [],
-    auto_approved: ['All read-only queries'],
-  },
-  tool_limits: {
-    max_tool_calls: 50,
-    max_query_rows: 100000,
-    max_query_runtime: '60s',
-    max_time_window_days: 90,
-  },
-  audit: {
-    log_tool_calls: true,
-    log_query_metadata_only: false,
-    retain_days: 30,
-    require_lineage_in_report: false,
-  },
-  content_safety: {
-    treat_crm_text_fields_as_untrusted: false,
-    do_not_follow_instructions_from_data: true,
-  },
   id: 'tool-use-policy-guard',
   version: '0.0.1',
   name: 'Tool Use Policy Guard',
   description:
-    "Watches each tool call a Cog makes: the tool is one the Cog declares, and the calls stay within the guardrail's tool limits.",
+    "Watches each tool call a Cog makes: the tool is one the Cog declares, and the calls stay within the Policy's limits.",
   category: 'policy-safety',
   stages: ['in_flight'],
   method: 'algorithmic',
   check:
-    "Every tool called is declared by the calling Cog; the number of calls, the rows queried and the query runtime stay within the guardrail's limits.",
+    "Every tool called is declared by the calling Cog; the number of calls stays within the Policy's `tool_calls` limit.",
   signals: [
     {
       name: 'tool_violation',
@@ -948,9 +366,9 @@ export const TOOL_USE_POLICY_GUARD_0_0_1: GuardSpec = {
   required: true,
   enabled: true,
   tags: ['tools', 'limits'],
-  guardrail: 'default-platform-user',
   icon: 'shield-check',
   emoji: '🛡️',
+  policy: 'default:0.0.1',
 };
 
 export const GUARD_CATALOGUE: Record<string, GuardSpec> = {
@@ -961,6 +379,7 @@ export const GUARD_CATALOGUE: Record<string, GuardSpec> = {
   'outcome-guard': OUTCOME_GUARD_0_0_1,
   'permission-guard': PERMISSION_GUARD_0_0_1,
   'regression-guard': REGRESSION_GUARD_0_0_1,
+  'report-quality-guard': REPORT_QUALITY_GUARD_0_0_1,
   'required-frame-guard': REQUIRED_FRAME_GUARD_0_0_1,
   'schema-guard': SCHEMA_GUARD_0_0_1,
   'sensitive-data-guard': SENSITIVE_DATA_GUARD_0_0_1,
@@ -986,4 +405,24 @@ export function getGuard(ref: string): GuardSpec | undefined {
 
 export function listGuards(): GuardSpec[] {
   return Object.values(GUARD_CATALOGUE);
+}
+
+/**
+ * The Policy a Guard extends, from the policies catalogue. Thrown when the
+ * catalogue does not hold it: a Guard names a Policy that exists, at the
+ * version the catalogue has.
+ */
+export function policyOf(guard: GuardSpec): PolicySpec {
+  const at = guard.policy.lastIndexOf(':');
+  const id = at > 0 ? guard.policy.slice(0, at) : guard.policy;
+  const version = at > 0 ? guard.policy.slice(at + 1) : '';
+  const policy = Object.prototype.hasOwnProperty.call(POLICY_CATALOGUE, id)
+    ? POLICY_CATALOGUE[id]
+    : undefined;
+  if (policy === undefined || policy.version !== version) {
+    throw new Error(
+      `Guard '${guard.id}' extends '${guard.policy}', which is not a Policy of the catalogue`,
+    );
+  }
+  return policy;
 }

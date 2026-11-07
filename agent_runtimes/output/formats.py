@@ -47,8 +47,6 @@ from typing import Any, Iterable, Literal, Optional, Sequence
 
 from pydantic import BaseModel, Field
 
-from agent_runtimes.orchestration.documents import NOTEBOOK_MEDIA_TYPE
-
 __all__ = [
     "A2UI_MEDIA_TYPE",
     "NOTEBOOK_MEDIA_TYPE",
@@ -85,6 +83,13 @@ TEXT_MEDIA_TYPES: frozenset[str] = frozenset({"text/plain", "text/markdown"})
 
 #: The tool an agent composes a notebook with.
 WRITE_NOTEBOOK = "write_notebook"
+
+#: The media type a notebook arrives under, and is written under. Declared
+#: here, a leaf, rather than in `orchestration.documents`: the output formats
+#: are imported by the applications, whose import must not pull the
+#: orchestration package and, through it, `agent_teams` (see
+#: `tests/test_sessions_plugin_import_order.py`).
+NOTEBOOK_MEDIA_TYPE = "application/x-ipynb+json"
 
 #: Components of the catalog, as an A2UI surface: A2UI's media type over A2A.
 A2UI_MEDIA_TYPE = "application/json+a2ui"

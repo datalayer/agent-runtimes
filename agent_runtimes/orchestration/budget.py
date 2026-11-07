@@ -25,11 +25,11 @@ from datalayer_core.orchestration import ErrorCode, Execution, OrchestrationErro
 from agent_runtimes.context.delegation import (
     CHECKPOINT_FIELD,
     CREDENTIAL_FIELD,
+    DELEGATION_META_KEY,
     EXECUTION_FIELD,
     SEAT_FIELD,
     SESSION_FIELD,
 )
-from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 
 __all__ = ["budget_refusal", "delegation_meta", "model_budget"]
 

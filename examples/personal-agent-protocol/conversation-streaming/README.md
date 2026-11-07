@@ -1,17 +1,18 @@
-# PAP Conversation Streaming
+# Conversation streaming
 
-This `Application` reads a conversation with Manzanita Outfitters, the
-SDK's demo company, over Server-Sent Events through the real
-`ConversationClient.stream()`. A `text-delta` is display-only
-(`actionable: false`) and is completed by its `message` event; the stream
-ends at the `closed` state. A second stream resumes from `Last-Event-ID`
-and skips what was already handled.
+This example streams a Manzanita conversation over SSE with the real Python SDK
+`ConversationClient.stream()`. A small transport between Atlas and Manzanita
+cuts the first stream right after a `text-delta`, so the SDK reconnects with
+`Last-Event-ID`, reports the partial message as discarded, and never delivers
+an event twice. The agent closes the conversation and the stream stops on the
+`closed` state.
 
-The host keeps the Session Token, proofs, and pairwise identity. The tool
-returns event evidence only.
+Text deltas are display only (`actionable` is always false). The tool returns
+counts and the company's complete message; tokens and proofs stay in the host.
 
 ```bash
 loop apps run examples/personal-agent-protocol/conversation-streaming/app.py
 ```
 
-See the [PAP personal agent guide](https://personal-agent-protocol.datalayer.tech/guides/personal-agent/).
+Read the [conversations guide](https://personalagentprotocol.org/docs/guides/conversations)
+and the [example flow](https://personalagentprotocol.org/docs/examples/conversation-streaming).

@@ -1,0 +1,130 @@
+---
+sidebar_position: 11
+title: AG-UI
+---
+
+# AG-UI: a run streamed to a page
+
+[AG-UI](https://docs.ag-ui.com) (CopilotKit) is how an agent streams its run to
+a page: messages, tool calls and state, as events. Agent Runtimes serves it over
+HTTP and Server-Sent Events, through Pydantic AI's
+[AG-UI support](https://ai.pydantic.dev/ui/ag-ui/). The `loop` terminal talks to
+its agent over it too.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Server | `agent_runtimes.transports.AGUITransport` | — |
+| Client | `agent_runtimes.transports.clients.AGUIClient` | `AGUIAdapter` in `@datalayer/agent-runtimes/lib/protocols` |
+| Version | `ag-ui-protocol>=0.1.19,<1` (the `ui` and `cli` extras) | `@ag-ui/core` `^0.0.57`, `@ag-ui/client` `^0.0.42` |
+
+AG-UI has no specification number of its own, so the version this runtime speaks
+is that of its packages. `ag-ui-protocol` stays below 1.0: that release dropped
+the thinking events the runtime writes.
+
+## Enable it
+
+Name it when the server starts, or when the agent is made:
+
+```bash
+agent-runtimes serve --agent-id example-agentic-chat --protocol ag-ui --port 8765
+```
+
+```bash
+curl -X POST http://localhost:8765/api/v1/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "Demo", "transport": "ag-ui"}'
+```
+
+`serve` registers the agent as `default` unless `--agent-name` says otherwise.
+The create route derives the id from the name: *Demo* is `demo`. An agent on
+another transport moves over with
+`PATCH /api/v1/agents/{agent_id}/transport {"transport": "ag-ui"}`.
+
+## Routes
+
+| Route | What it does |
+| --- | --- |
+| `POST /api/v1/ag-ui/{agent_id}/` | Runs the agent: a `RunAgentInput` in, an SSE stream of events out. The trailing slash is required |
+| `GET /api/v1/ag-ui/` | The protocol's description |
+| `GET /api/v1/ag-ui/agents` | The agents served, each with its endpoint |
+| `GET /api/v1/ag-ui/threads` | The threads running now |
+| `POST /api/v1/ag-ui/terminate` | Stops `thread_id`; with none, every running thread |
+
+Besides the fields of `RunAgentInput`, the body of a run may carry `model` (this
+run's model, replacing the agent's), `builtinTools` and `skills`.
+
+## Example
+
+```bash
+curl -N -X POST http://localhost:8765/api/v1/ag-ui/demo/ \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "threadId": "thread-1",
+    "runId": "run-1",
+    "messages": [{"id": "m1", "role": "user", "content": "Hello"}],
+    "state": {},
+    "tools": [],
+    "context": [],
+    "forwardedProps": {}
+  }'
+```
+
+```text
+data: {"type":"RUN_STARTED","threadId":"thread-1","runId":"run-1",…}
+data: {"type":"TEXT_MESSAGE_START","messageId":"…","role":"assistant",…}
+data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"…","delta":"hello ",…}
+data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"…","delta":"there",…}
+data: {"type":"TEXT_MESSAGE_END","messageId":"…",…}
+data: {"type":"RUN_FINISHED","threadId":"thread-1","runId":"run-1","outcome":{"type":"success"},…}
+data: {"type": "usage", "usage": {"input_tokens": 51, "output_tokens": 2, "total_tokens": 53}}
+```
+
+In Python:
+
+```python
+from agent_runtimes.transports.clients import AGUIClient
+
+async with AGUIClient("http://localhost:8765/api/v1/ag-ui/demo/") as client:
+    async for event in client.run("Hello!"):
+        if event.delta:
+            print(event.delta, end="")
+```
+
+In TypeScript, the adapter keeps the trailing slash for you and reports through
+`subscribe`:
+
+```typescript
+import { AGUIAdapter } from '@datalayer/agent-runtimes/lib/protocols';
+import { createUserMessage } from '@datalayer/agent-runtimes/lib/types/messages';
+
+const adapter = new AGUIAdapter({
+  protocol: 'ag-ui',
+  baseUrl: 'http://localhost:8765/api/v1/ag-ui/demo',
+});
+const unsubscribe = adapter.subscribe(event => console.log(event.type));
+await adapter.connect();
+await adapter.sendMessage(createUserMessage('Hello'));
+```
+
+The gallery's `AgUi*` examples under `src/examples/` show tools, generative UI,
+shared state and human-in-the-loop.
+
+## Approvals
+
+A tool that needs a person's approval is deferred rather than run. The runtime
+reads its `TOOL_CALL_*` events and makes an approval record, as on the Vercel AI
+transport, so every surface shows it. The approval itself goes through the
+[tool approvals routes](../endpoints#tool-approvals--monitoring-stream-websocket).
+
+## Limits
+
+- Without the trailing slash the mount answers a 307, which breaks a streaming
+  client.
+- A client talks only by making a new request: AG-UI here is one stream per run.
+  Use [ACP](./acp) for a conversation on one connection.
+- After `RUN_FINISHED` the stream carries one more frame, `{"type": "usage", …}`,
+  that is not an AG-UI event. A strict client must skip it.
+- `terminate` and `threads` read this process's memory only.
+- An application's agent is stopped through its session
+  (`{appSessions}/{thread}/stop`), and a deployment's runtime does not answer the
+  generic `/ag-ui/terminate`.

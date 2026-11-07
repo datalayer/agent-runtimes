@@ -19,7 +19,7 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
   version: '0.0.1',
   name: 'Claude Code',
   description:
-    "Anthropic's coding agent, driven over ACP through the Agent Client Protocol project's adapter on the Claude Agent SDK.",
+    "Anthropic's coding agent, driven over ACP through the Agent Client Protocol project's adapter on the Claude Agent SDK. On Datalayer its model calls go through Datalayer's ai-inference, answered from AWS Bedrock on the platform's models and paid in credits, with no key of the account's.",
   enabled: true,
   unavailable_because: '',
   tags: ['harness'],
@@ -77,9 +77,10 @@ export const CLAUDE_CODE_HARNESS_0_0_1: HarnessSpec = {
     licenceSource:
       'https://www.npmjs.com/package/@agentclientprotocol/claude-agent-acp',
     termsSource: 'https://code.claude.com/docs/en/legal-and-compliance',
-    credential: "An Anthropic API key (ANTHROPIC_API_KEY), the person's own",
+    credential:
+      "Locally, an Anthropic API key (ANTHROPIC_API_KEY), the person's own; on Datalayer none, its calls answered from AWS Bedrock through ai-inference in credits",
     binaries: 'Node 22 (engines.node >=22 on npm), git',
-    note: "Anthropic's legal page (read 2026-10-15): running Claude Code in hosted sandboxes or agent infrastructure requires the Commercial Terms; each end user authenticates with their own API key or subscription; developers may not route requests through Free, Pro or Max plan credentials on behalf of their users, nor collect or intermediate Claude.ai credentials. So only API keys are taken; a subscription login is refused. The npm package moved from @zed-industries (0.23.1, March 2026) to @agentclientprotocol.",
+    note: "Anthropic's legal page (read 2026-10-15): running Claude Code in hosted sandboxes or agent infrastructure requires the Commercial Terms; each end user authenticates with their own API key or subscription; developers may not route requests through Free, Pro or Max plan credentials on behalf of their users, nor collect or intermediate Claude.ai credentials. So only API keys are taken; a subscription login is refused. The npm package moved from @zed-industries (0.23.1, March 2026) to @agentclientprotocol. On a Datalayer runtime the end user holds no key and Anthropic is not reached: the model calls are AWS Bedrock's, on Datalayer's account, metered in credits. The user decided on 30 October 2026 to offer it to customers on Datalayer that way. Counsel has not reviewed this entry's api_key_only reading against that use.",
   },
 };
 
@@ -88,7 +89,7 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
   version: '0.0.1',
   name: 'Codex',
   description:
-    "OpenAI's coding agent, driven over ACP through the Agent Client Protocol project's adapter, which ships the Codex binary it drives.",
+    "OpenAI's coding agent, driven over ACP through the Agent Client Protocol project's adapter, which ships the Codex binary it drives. On Datalayer its model calls go through Datalayer's ai-inference, answered from AWS Bedrock on the platform's models and paid in credits, with no key of the account's.",
   enabled: true,
   unavailable_because: '',
   tags: ['harness'],
@@ -137,10 +138,10 @@ export const CODEX_HARNESS_0_0_1: HarnessSpec = {
       'https://www.npmjs.com/package/@agentclientprotocol/codex-acp',
     termsSource: 'https://learn.chatgpt.com/docs/auth',
     credential:
-      "An OpenAI API key (OPENAI_API_KEY or CODEX_API_KEY), the person's own",
+      "Locally, an OpenAI API key (OPENAI_API_KEY or CODEX_API_KEY), the person's own; on Datalayer none, its calls answered from AWS Bedrock through ai-inference in credits",
     binaries:
       "Node 22 (as the Agent Client Protocol project's adapters; unstated on npm), git",
-    note: "Codex's authentication page (read 2026-10-15) recommends API keys for automation and device-code login for headless machines; a ChatGPT login needs a browser and is hidden with NO_BROWSER=1 in the adapter. Only API keys are taken; a ChatGPT login is refused. The Zed-scoped package was archived on 22 July 2026 and names this one.",
+    note: "Codex's authentication page (read 2026-10-15) recommends API keys for automation and device-code login for headless machines; a ChatGPT login needs a browser and is hidden with NO_BROWSER=1 in the adapter. Only API keys are taken; a ChatGPT login is refused. The Zed-scoped package was archived on 22 July 2026 and names this one. On a Datalayer runtime the end user holds no key and OpenAI is not reached: the model calls are AWS Bedrock's, on Datalayer's account, metered in credits. The user decided on 30 October 2026 to offer it that way. Counsel has not reviewed this entry's api_key_only reading against that use, nor whether running Codex on another vendor's model fits OpenAI's terms.",
   },
 };
 
@@ -260,7 +261,7 @@ export const GEMINI_CLI_HARNESS_0_0_1: HarnessSpec = {
     "Google's coding agent, which speaks ACP itself when started with --experimental-acp.",
   enabled: false,
   unavailable_because:
-    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it stays unfunded and unoffered there (the user's decision, 28 October 2026).",
+    "the catalogue offers four harnesses today — Claude Code, Codex, OpenCode and pi (28 October 2026); Gemini CLI's API host (generativelanguage.googleapis.com) is outside a Datalayer runtime's egress boundary and is not routed through ai-inference, so it is not offered there.",
   tags: ['harness'],
   docs: 'https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/cli-reference.md',
   acp: {
@@ -381,7 +382,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
   version: '0.0.1',
   name: 'OpenCode',
   description:
-    "Anomaly's open coding agent, which speaks ACP itself with opencode acp; any model provider it is configured with.",
+    "Anomaly's open coding agent, which speaks ACP itself with opencode acp; any model provider it is configured with. On Datalayer its model calls go through Datalayer's ai-inference, on the platform's models and paid in credits, with no key of the account's.",
   enabled: true,
   unavailable_because: '',
   tags: ['harness'],
@@ -429,7 +430,7 @@ export const OPENCODE_HARNESS_0_0_1: HarnessSpec = {
     licenceSource: 'https://www.npmjs.com/package/opencode-ai',
     termsSource: 'https://github.com/anomalyco/opencode/blob/dev/LICENSE',
     credential:
-      "The provider's key OpenCode is configured with; ANTHROPIC_API_KEY declared",
+      "Locally, the provider's key OpenCode is configured with, ANTHROPIC_API_KEY declared; on Datalayer none, its calls go through ai-inference in credits",
     binaries: 'Node (the opencode-ai package), git',
     note: "Open source under MIT, no vendor terms of its own; the model provider's terms apply to the key. Launched as opencode acp (opencode.ai/docs/acp); reads skills from .opencode/skills, .claude/skills and .agents/skills.",
   },
@@ -506,7 +507,7 @@ export const PI_HARNESS_0_0_1: HarnessSpec = {
   version: '0.0.1',
   name: 'pi',
   description:
-    "Earendil's pi coding agent, driven over ACP through the pi-acp adapter, which spawns the published pi executable; any model provider pi is configured with.",
+    "Earendil's pi coding agent, driven over ACP through the pi-acp adapter, which spawns the published pi executable; any model provider pi is configured with. On Datalayer its model calls go through Datalayer's ai-inference, answered from AWS Bedrock on the platform's models and paid in credits, with no key of the account's.",
   enabled: true,
   unavailable_because: '',
   tags: ['harness'],
@@ -555,7 +556,7 @@ export const PI_HARNESS_0_0_1: HarnessSpec = {
     licenceSource: 'https://www.npmjs.com/package/pi-acp',
     termsSource: 'https://github.com/earendil-works/pi/blob/main/LICENSE',
     credential:
-      "The provider's key pi is configured with; ANTHROPIC_API_KEY declared, the person's own",
+      "Locally, the provider's key pi is configured with, ANTHROPIC_API_KEY declared, the person's own; on Datalayer none, its calls answered from AWS Bedrock through ai-inference in credits",
     binaries:
       'Node 22 (pi-coding-agent engines.node >=22.19.0; pi-acp >=20), the pi executable 1.4.0 on the PATH (@earendil-works/pi-coding-agent), git',
     note: "Read 2026-10-28. pi speaks no ACP itself; pi-acp 0.0.34 (MIT, an individual's, github.com/svkozak/pi-acp) speaks ACP JSON-RPC over stdio and spawns the published `pi` executable with `pi --mode rpc`, so pi 1.4.0 runs as published — chosen over @automatalabs/pi-acp 0.9.4 (Apache-2.0, in-process, which embeds pi 0.87.1 through its SDK on a fork's package). Open source under MIT on both sides, no vendor terms of their own; the model provider's terms apply to the key. Session persistence through pi's own session files (session/load).",

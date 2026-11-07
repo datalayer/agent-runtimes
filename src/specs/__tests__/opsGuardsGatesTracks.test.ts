@@ -5,15 +5,15 @@
 
 /**
  * Ops, Guards, Gates and Tracks: four catalogues generated from agentspecs
- * 0.0.14. A Guard extends a guardrail; an Op arrives with everything it names.
+ * 0.0.14. A Guard extends a Policy; an Op arrives with everything it names.
  */
 
 import { describe, expect, it } from 'vitest';
 import { COG_CATALOGUE } from '../cogs';
 import { GATE_CATALOGUE, getGate, listGates } from '../gates';
-import { GUARDRAIL_CATALOG } from '../guardrails';
-import { GUARD_CATALOGUE, getGuard, listGuards } from '../guards';
+import { GUARD_CATALOGUE, getGuard, listGuards, policyOf } from '../guards';
 import { OP_CATALOGUE, getOp, listOps } from '../ops';
+import { POLICY_CATALOGUE } from '../policies';
 import { TRACK_CATALOGUE, getTrack, listTracks } from '../tracks';
 import * as specs from '..';
 
@@ -29,20 +29,39 @@ const CATEGORIES = [
 ];
 
 describe('the Guard catalogue', () => {
-  it('gives each Guard with the policy of the guardrail it extends', () => {
+  it('gives each Guard naming the Policy it extends, and nothing of it', () => {
     expect(listGuards().length).toBeGreaterThanOrEqual(12);
     for (const guard of listGuards()) {
-      const guardrail = GUARDRAIL_CATALOG[guard.guardrail];
-      expect(guardrail).toBeDefined();
-      expect(guard.permissions).toEqual(guardrail.permissions);
-      expect(guard.token_limits).toEqual(guardrail.token_limits);
-      expect(guard.id).not.toBe(guardrail.id);
+      const policy = policyOf(guard);
+      expect(guard.policy).toBe(`${policy.id}:${policy.version}`);
+      expect(POLICY_CATALOGUE[policy.id]).toBe(policy);
+      expect(guard.id).not.toBe(policy.id);
+      expect(guard).not.toHaveProperty('permissions');
+      expect(guard).not.toHaveProperty('rules');
+      expect(guard).not.toHaveProperty('extends');
       expect(guard.check).toBeTruthy();
       expect(guard.stages.length).toBeGreaterThan(0);
     }
     expect(
       [...new Set(listGuards().map(guard => guard.category))].sort(),
     ).toEqual(CATEGORIES);
+    expect(GUARD_CATALOGUE['permission-guard'].policy).toBe('default:0.0.1');
+    expect(GUARD_CATALOGUE['sensitive-data-guard'].policy).toBe(
+      'organization-baseline:0.0.1',
+    );
+    expect(policyOf(GUARD_CATALOGUE['sensitive-data-guard']).policy.scope).toBe(
+      'organization',
+    );
+  });
+
+  it('refuses a Guard naming a Policy the catalogue does not hold', () => {
+    const guard = GUARD_CATALOGUE['schema-guard'];
+    for (const unknown of ['nope:0.0.1', 'default:0.0.9', 'default', '']) {
+      expect(() => policyOf({ ...guard, policy: unknown })).toThrow(
+        /is not a Policy of the catalogue/,
+      );
+    }
+    expect(() => policyOf({ ...guard, policy: 'constructor:0.0.1' })).toThrow();
   });
 
   it('answers a lookup with a catalogue entry or with nothing', () => {
@@ -116,6 +135,10 @@ describe('the comprehensive Op', () => {
     expect([...new Set(guards.map(guard => guard.category))].sort()).toEqual(
       CATEGORIES,
     );
+    for (const guard of guards) {
+      expect(guard.policy).toBe(GUARD_CATALOGUE[guard.id].policy);
+      expect(policyOf(guard)).toBe(policyOf(GUARD_CATALOGUE[guard.id]));
+    }
     const ran = guards.map(guard => guard.id);
     expect(op.gates).toHaveLength(8);
     for (const gate of op.gates) {
@@ -127,10 +150,13 @@ describe('the comprehensive Op', () => {
     expect(op.frameGuards.map(guard => guard.id)).toContain('finance-review');
   });
 
-  it('is exported with the other catalogues', () => {
+  it('is exported with the other catalogues, and no Guardrail catalogue', () => {
     expect(specs.OP_CATALOGUE).toBe(OP_CATALOGUE);
     expect(specs.GUARD_CATALOGUE).toBe(GUARD_CATALOGUE);
     expect(specs.GATE_CATALOGUE).toBe(GATE_CATALOGUE);
     expect(specs.TRACK_CATALOGUE).toBe(TRACK_CATALOGUE);
+    expect(specs.policyOf).toBe(policyOf);
+    expect(specs).not.toHaveProperty('GUARDRAIL_CATALOG');
+    expect(specs).not.toHaveProperty('getGuardrailSpec');
   });
 });

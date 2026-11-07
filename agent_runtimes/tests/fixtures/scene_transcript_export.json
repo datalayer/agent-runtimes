@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "exported": "2026-10-29T12:00:00.000Z",
+  "scene": "sales-and-accounting",
+  "lines": [
+    {
+      "key": "f1:asked",
+      "at": 1791374400000,
+      "from": "You",
+      "to": "Sales",
+      "kind": "asked",
+      "text": "Open invoices?"
+    },
+    {
+      "key": "f2:asked",
+      "at": 1791374400000,
+      "from": "Sales",
+      "to": "Accounting",
+      "kind": "asked",
+      "text": "Open invoices.",
+      "ended": 1791374401000
+    },
+    {
+      "key": "f3:called",
+      "at": 1791374400000,
+      "from": "Accounting",
+      "to": "Odoo",
+      "kind": "called",
+      "text": "odoo_accounting_list_invoices",
+      "open": true
+    },
+    {
+      "key": "f2:said",
+      "at": 1791374401000,
+      "from": "Accounting",
+      "to": "Sales",
+      "kind": "said",
+      "text": "could not answer: TASK_STATE_FAILED",
+      "failed": true
+    }
+  ]
+}

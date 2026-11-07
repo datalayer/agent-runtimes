@@ -43,16 +43,18 @@ dependencies = [
     # 0.27.0: PAP draft 0.3 (a DPoP key per Session, its thumbprint the
     # Session Key; insufficient_scope; protected_resources; the issuer's
     # grant_types_supported; author); a 0.3 personal agent uses only 0.3 companies.
-    "personal-agent-protocol[ui]>=0.27.0,<0.28",
+    # 0.29.0: DPoP proofs, a Company with no issuer (`DiscoveredCompany.identifier`).
+    "personal-agent-protocol[ui]>=0.29.0,<0.30",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
-    "agent-skills>=1.1.0",
+    "agent-skills>=1.2.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
     # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
     # An Appspec's `a2a` extensions (PR-02): an older one refuses the field.
     # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SH-50).
     # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SH-60).
+    # 1.5.103 with agentspecs 0.0.143: a Guard extends a Policy; the Guardrails kind is gone.
     # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
     # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
     # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
@@ -67,7 +69,11 @@ dependencies = [
     # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
     # catalogue's Python applications import agent_runtimes.apps.
-    "agentspecs>=0.0.132",
+    # agentspecs 0.0.137: the coding-agent-behind-the-shield scene and code-explainer, scene recordings, stage.backdrop.
+    # agentspecs 0.0.138: permissions.computer.repository (a repository lent to an application), the space backdrop.
+    # agentspecs 0.0.139: colours by palette name.
+    # agentspecs 0.0.140: the minimal and orb backdrops.
+    "agentspecs>=0.0.144",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -99,7 +105,7 @@ dependencies = [
     # the environments client is typed with (D-14), in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
-    "code-sandboxes>=1.10.0",
+    "code-sandboxes>=1.11.5",
     "croniter",
     # Web Bot Auth's signature bases (PR-20): RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.

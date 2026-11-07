@@ -82,6 +82,49 @@ def test_a_principals_own_token_is_a_principal_never_a_person() -> None:
     assert (through.kind, through.uid) == ("person", "u1")
 
 
+class Grants:
+    """IAM's task-grant route: its status, and whether the grant stands."""
+
+    def __init__(self, status: int = 200, live: bool = True):
+        self.status, self.live = status, live
+        self.asked: List[str] = []
+
+    async def __call__(self, url: str, bearer: str) -> tuple:
+        self.asked.append(url)
+        return self.status, self.live
+
+
+def test_a_task_grants_token_is_verified_where_iam_takes_it() -> None:
+    """IAM's whoami refuses a run's token (narrowed tokens fail closed, 14
+    October 2026): it is verified at the task grant's own route, and only
+    while its grant stands."""
+    whoami, grants = Platform(), Grants()
+    verifier = CallerVerifier(fetch=whoami, fetch_live=grants)
+    caller = asyncio.run(verifier.verify(token(sub="u1", task_grant_uid="g1")))
+    assert (caller.kind, caller.uid) == ("person", "u1")
+    assert grants.asked == ["http://iam/api/iam/v1/oauth/task-grants/live"]
+    assert whoami.asked == []
+    principal = asyncio.run(
+        verifier.verify(
+            token(sub="01P", agent_uid="01P", app_uid="01APP", task_grant_uid="g2")
+        )
+    )
+    assert (principal.kind, principal.uid) == ("principal", "01P")
+
+
+def test_a_task_grants_token_is_refused_once_its_grant_no_longer_stands() -> None:
+    revoked = CallerVerifier(fetch=Platform(), fetch_live=Grants(live=False))
+    with pytest.raises(CallerRefused) as refused:
+        asyncio.run(revoked.verify(token(sub="u1", task_grant_uid="g1")))
+    assert refused.value.status == 401 and "no longer stands" in refused.value.reason
+    unknown = CallerVerifier(
+        fetch=Platform(), fetch_live=Grants(status=403, live=False)
+    )
+    with pytest.raises(CallerRefused) as refused:
+        asyncio.run(unknown.verify(token(sub="u1", task_grant_uid="g1")))
+    assert refused.value.status == 401
+
+
 def test_an_embed_token_is_whom_spacer_accepts_for_its_application() -> None:
     platform = Platform()
     verifier = CallerVerifier(fetch=platform)
