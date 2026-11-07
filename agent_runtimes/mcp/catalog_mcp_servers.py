@@ -62,7 +62,7 @@ BLUESKY_MCP_SERVER_0_0_1 = MCPServer(
         "/opt/mcp-servers/bsky-mcp-server/build/src/index.js",
     ],
     transport="stdio",
-    enabled=False,
+    enabled=True,
     tools=[],
     env={
         "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
@@ -352,7 +352,7 @@ DISCORD_MCP_SERVER_0_0_1 = MCPServer(
         "saseq/discord-mcp:latest",
     ],
     transport="stdio",
-    enabled=False,
+    enabled=True,
     tools=[],
     env={
         "DISCORD_TOKEN": "${DISCORD_BOT_TOKEN}",
@@ -812,7 +812,7 @@ LINKEDIN_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-server-linkedin",
     ],
     transport="stdio",
-    enabled=False,
+    enabled=True,
     tools=[],
     env={
         "UV_HTTP_TIMEOUT": "300",
