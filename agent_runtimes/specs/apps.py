@@ -1728,7 +1728,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Tried live on Datalayer as a pair on 13 October 2026, its copy and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt."
+                    "Tried live on Datalayer as a pair on 13 October 2026, its clone and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt."
                 ],
                 "recorded": [
                     "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests."
@@ -2187,7 +2187,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Tried live on Datalayer as a pair on 13 October 2026: two copies joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's copy as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
+                    "Tried live on Datalayer as a pair on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's copy as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
                 ],
                 "recorded": [
                     "A shipped business at its own domain was tried on Datalayer on 13 October 2026: its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused."
