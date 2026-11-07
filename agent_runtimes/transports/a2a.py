@@ -864,7 +864,10 @@ class A2AWorker(_FastA2AWorker):
         turn: "TurnSpend",
     ) -> None:
         from ..apps.visitors import (
+            battle_of_a2a,
+            enter_battle_run,
             enter_visitor_run,
+            leave_battle_run,
             leave_visitor_run,
             visitor_of_a2a,
         )
@@ -878,7 +881,12 @@ class A2AWorker(_FastA2AWorker):
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         # A visitor's run, as the application's gate marked it: it only reads,
         # whatever its rules say (R-30).
-        visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        meta = params["message"].get("metadata")
+        visitor = visitor_of_a2a(meta)
+        visiting = enter_visitor_run(visitor)
+        # A visitor's run of a catalogue Battle, as the gate marked it from
+        # their token (B4-01): the Battle's books are reached with its key.
+        battling = enter_battle_run(battle_of_a2a(meta) if visitor else "")
         # A turn asked by a personal agent through the company service: its
         # declared operations are proposed, or performed once confirmed
         # (B-04).
@@ -898,6 +906,7 @@ class A2AWorker(_FastA2AWorker):
         finally:
             leave_run_outputs(composing)
             leave_pap_turn(pap_turn)
+            leave_battle_run(battling)
             leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)

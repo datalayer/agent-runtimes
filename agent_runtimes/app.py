@@ -1131,6 +1131,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         logger.info("Sessions are kept in the %s store", active_store().name)
 
+        # The demo books' key, taken out of the environment before anything is
+        # started from it: no MCP server, command or sandbox inherits it (B4-01).
+        from .apps.battle_books import take_books_key
+
+        if take_books_key():
+            logger.info("This runtime holds the demo books' key for catalogue Battles.")
+
         # ---- DBOS Durable Execution ----
         from .durable import DurableConfig, DurableLifecycle
 

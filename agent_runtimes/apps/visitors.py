@@ -71,6 +71,10 @@ __all__ = [
     "ONLY_VISITORS",
     "OTHER_APPLICATION",
     "agent_of",
+    "battle_of_a2a",
+    "battle_of_the_run",
+    "enter_battle_run",
+    "leave_battle_run",
     "forget_turns",
     "held_to_own_routes",
     "is_anonymous_audience",
@@ -203,6 +207,38 @@ def visitor_of_a2a(meta: Any) -> str:
     ours = meta.get(DELEGATION_META_KEY) if isinstance(meta, Mapping) else None
     visitor = ours.get(A2A_VISITOR_FIELD) if isinstance(ours, Mapping) else None
     return visitor if isinstance(visitor, str) else ""
+
+
+#: Where the gate marks a visitor's A2A run with the catalogue Battle their
+#: token names (B4-01): ``datalayer.battle``, never what the message says.
+A2A_BATTLE_FIELD = "battle"
+
+#: The catalogue Battle the run under way is played for, as the visitor's
+#: token names it at ai-inference: ``""`` for none (`battle_books`).
+_BATTLE_RUN: ContextVar[str] = ContextVar("loop_battle_run", default="")
+
+
+def battle_of_a2a(meta: Any) -> str:
+    """The Battle an A2A message was marked for by the gate, or ``""``."""
+    from agent_runtimes.context.delegation import DELEGATION_META_KEY
+
+    ours = meta.get(DELEGATION_META_KEY) if isinstance(meta, Mapping) else None
+    battle = ours.get(A2A_BATTLE_FIELD) if isinstance(ours, Mapping) else None
+    return battle if isinstance(battle, str) else ""
+
+
+def enter_battle_run(battle: str) -> Any:
+    """Make the run under way a Battle's (``""`` for none); answer the token to reset it."""
+    return _BATTLE_RUN.set(battle or "")
+
+
+def leave_battle_run(token: Any) -> None:
+    _BATTLE_RUN.reset(token)
+
+
+def battle_of_the_run() -> str:
+    """The catalogue Battle the run under way is played for, ``""`` for none."""
+    return _BATTLE_RUN.get()
 
 
 def enter_visitor_run(visitor: str) -> Any:

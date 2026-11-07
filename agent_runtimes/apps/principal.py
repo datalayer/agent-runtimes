@@ -319,6 +319,11 @@ def kernel_holds_owner_secrets() -> bool:
     On one launched for a deployment, only when ai-agents said, over the proof
     the Operator signed, that its owner launched it (`read_owner_secrets`). Not
     said, or not yet, no.
+
+    The demo books' key a runtime playing a catalogue Battle holds (B4-01,
+    `battle_books`) never reaches it, whoever launched: taken out of the
+    environment as the runtime starts, held in this process, and no spec may
+    declare it (``DATALAYER_`` is the runtime's own).
     """
     return not launched_for() or _LAUNCHED_BY_OWNER.get("said") is True
 
@@ -1124,7 +1129,10 @@ async def gateway_toolsets_of_the_run(
 
     instance = app_instance_of(agent_id)
     if not instance or not str(instance.get("app_uid") or "").strip():
-        return toolsets
+        # As the process holds them, but the books only for a Battle's run (B4-01).
+        from agent_runtimes.apps.battle_books import books_left_out
+
+        return books_left_out(toolsets)
     deployment = deployment_of(instance)
     if not deployment:
         # A Preview: its session's run carries the person's token narrowed to

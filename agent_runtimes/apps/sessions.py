@@ -1219,6 +1219,7 @@ class LiveSession:
             """The turn, framed, its failure said on the stream."""
             from agent_runtimes.apps.memory import remember_for
             from agent_runtimes.apps.visitors import (
+                enter_battle_run,
                 enter_visitor_run,
                 use_turn_token,
             )
@@ -1229,6 +1230,9 @@ class LiveSession:
             # A visitor's turn calls its models with their own token, and
             # reads only (R-30); anybody else's with what it always did.
             use_turn_token(token if visitor else "")
+            # A visitor's turn of a catalogue Battle reaches its books with
+            # the Battle's key, its token naming the Battle (B4-01).
+            enter_battle_run(self.opened_by.battle if visitor else "")
             # An embed's visitor is nobody the platform knows: their turn
             # only reads, and asks nobody, as a visitor's (R-20).
             if self.opened_by.kind == "embed":

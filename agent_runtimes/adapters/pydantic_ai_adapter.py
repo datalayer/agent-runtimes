@@ -557,7 +557,10 @@ class PydanticAIAdapter(BaseAgent):
             from ..mcp.datalayer_gateway import toolsets_for_the_run
 
             return toolsets_for_the_run(toolsets, user_token)
-        return toolsets
+        # As the process holds them, but the books only for a Battle's run (B4-01).
+        from ..apps.battle_books import books_left_out
+
+        return books_left_out(toolsets)
 
     def _get_runtime_toolsets(self) -> list[Any]:
         """

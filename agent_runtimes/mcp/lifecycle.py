@@ -583,7 +583,13 @@ class MCPLifecycleManager:
             # which the gateway reads as a run with an identity of its own.
             # Seen 6 November 2026: the home page's Accounting could not open
             # `odoo-accounting`, its runtime holding no key at all.
+            # On the visitors' runtime, the gateway's Odoo servers start with
+            # the demo books' key, for a catalogue Battle's runs alone (B4-01).
             principal = self._principal_key(server_id, config, env)
+            if not principal and self._asks_for_datalayer_key(config):
+                from agent_runtimes.apps.battle_books import books_start_key
+
+                principal = books_start_key(server_id, env)
             if principal:
                 env["DATALAYER_API_KEY"] = principal
 
@@ -884,6 +890,16 @@ class MCPLifecycleManager:
             logger.debug(f"Closing '{server_id}' after {after}: {close_error}")
 
     @staticmethod
+    def _asks_for_datalayer_key(config: MCPServer) -> bool:
+        """Whether a server's address, arguments or environment ask for ``${DATALAYER_API_KEY}``."""
+        wanted = "${DATALAYER_API_KEY}"
+        return (
+            any(wanted in str(value) for value in (config.headers or {}).values())
+            or any(wanted in str(arg) for arg in (config.args or []))
+            or any(wanted in str(value) for value in (config.env or {}).values())
+        )
+
+    @staticmethod
     def _principal_key(
         server_id: str, config: MCPServer, env: Mapping[str, str]
     ) -> str:
@@ -897,13 +913,7 @@ class MCPLifecycleManager:
         """
         if env.get("DATALAYER_API_KEY"):
             return ""
-        wanted = "${DATALAYER_API_KEY}"
-        asked = (
-            any(wanted in str(value) for value in (config.headers or {}).values())
-            or any(wanted in str(arg) for arg in (config.args or []))
-            or any(wanted in str(value) for value in (config.env or {}).values())
-        )
-        if not asked:
+        if not MCPLifecycleManager._asks_for_datalayer_key(config):
             return ""
         try:
             from agent_runtimes.apps.principal import (  # noqa: PLC0415

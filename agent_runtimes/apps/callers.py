@@ -97,6 +97,9 @@ class Caller:
     #: For a person: their name, as their verified token's profile says it
     #: (`person_name`); ``""`` when it says none — never their uid (I-10).
     name: str = ""
+    #: For a visitor: the catalogue Battle their token is played for, as
+    #: ai-inference says it (B4-01); ``""`` for none.
+    battle: str = ""
 
 
 LOCAL = Caller(kind="local")
@@ -483,7 +486,12 @@ class CallerVerifier:
         visitor = str(said.get("visitor") or "")
         if not visitor:
             raise CallerRefused(401, "The token names no visitor.")
-        caller = Caller(kind="visitor", uid=visitor, app_uid=str(said.get("app") or ""))
+        caller = Caller(
+            kind="visitor",
+            uid=visitor,
+            app_uid=str(said.get("app") or ""),
+            battle=str(said.get("battle") or ""),
+        )
         lifetime = min(CACHE_SECONDS, max(0.0, float(said.get("expires_in") or 0)))
         self._remember(key, caller, self._clock() + lifetime)
         return caller
