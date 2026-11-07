@@ -7,8 +7,9 @@ Generate Python and TypeScript code from YAML model-provider specifications.
 
 A model provider is who serves a model (Anthropic, Amazon Bedrock, Cloudflare,
 Ollama…): its site, its documentation, its terms of service, its privacy
-policy, what it says about the data a request carries, and whether it runs
-the model or the user's machine does. One YAML per provider under
+policy, what it says about the data a request carries, whether it runs
+the model or the user's machine does, and how a runtime's call reaches it
+(``via``: through ai-inference, or directly from the agent). One YAML per provider under
 ``agentspecs/model-providers``; a model spec's ``provider`` names one.
 
 Usage:
@@ -105,6 +106,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             if value:
                 lines.append(f"    {field}={_py(str(value))},")
         lines.append(f"    hosting={_py(spec.get('hosting', 'cloud'))},")
+        lines.append(f"    via={_py(spec['via'])},")
         lines.extend([")", ""])
     lines.extend(
         [
@@ -176,6 +178,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             if value:
                 lines.append(f"  {CAMEL[field]}: {_ts(str(value))},")
         lines.append(f"  hosting: {_ts(spec.get('hosting', 'cloud'))},")
+        lines.append(f"  via: {_ts(spec['via'])},")
         lines.extend(["};", ""])
     lines.append(
         "export const MODEL_PROVIDER_CATALOGUE: Record<string, ModelProvider> = {"

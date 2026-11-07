@@ -736,7 +736,7 @@ export const OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1: AIModel = {
   provider: 'openrouter',
   providerUrl: 'https://openrouter.ai/anthropic/claude-opus-5.5',
   default: false,
-  available: false,
+  available: true,
   requiredEnvVars: ['OPENROUTER_API_KEY'],
   tokensLimit: 128000,
   contextWindow: 1000000,

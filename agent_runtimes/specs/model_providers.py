@@ -29,6 +29,7 @@ ALIBABA_0_0_1 = ModelProvider(
     terms_url="https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
     privacy_url="https://www.alibabacloud.com/help/en/legal/latest/privacy-policy",
     hosting="cloud",
+    via="ai-inference",
 )
 
 ANTHROPIC_0_0_1 = ModelProvider(
@@ -42,6 +43,7 @@ ANTHROPIC_0_0_1 = ModelProvider(
     privacy_url="https://www.anthropic.com/legal/privacy",
     data_usage_url="https://www.anthropic.com/legal/aup",
     hosting="cloud",
+    via="direct",
 )
 
 AZURE_OPENAI_0_0_1 = ModelProvider(
@@ -55,6 +57,7 @@ AZURE_OPENAI_0_0_1 = ModelProvider(
     privacy_url="https://www.microsoft.com/en-us/privacy/privacystatement",
     data_usage_url="https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
     hosting="cloud",
+    via="ai-inference",
 )
 
 BEDROCK_0_0_1 = ModelProvider(
@@ -68,6 +71,7 @@ BEDROCK_0_0_1 = ModelProvider(
     privacy_url="https://aws.amazon.com/privacy/",
     data_usage_url="https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html",
     hosting="cloud",
+    via="ai-inference",
 )
 
 CLOUDFLARE_0_0_1 = ModelProvider(
@@ -81,6 +85,7 @@ CLOUDFLARE_0_0_1 = ModelProvider(
     privacy_url="https://www.cloudflare.com/privacypolicy/",
     data_usage_url="https://developers.cloudflare.com/workers-ai/platform/data-usage/",
     hosting="cloud",
+    via="ai-inference",
 )
 
 OLLAMA_0_0_1 = ModelProvider(
@@ -93,6 +98,7 @@ OLLAMA_0_0_1 = ModelProvider(
     terms_url="https://ollama.com/terms",
     privacy_url="https://ollama.com/privacy",
     hosting="local",
+    via="direct",
 )
 
 OPENAI_0_0_1 = ModelProvider(
@@ -106,6 +112,7 @@ OPENAI_0_0_1 = ModelProvider(
     privacy_url="https://openai.com/policies/privacy-policy/",
     data_usage_url="https://platform.openai.com/docs/guides/your-data",
     hosting="cloud",
+    via="direct",
 )
 
 OPENROUTER_0_0_1 = ModelProvider(
@@ -119,6 +126,7 @@ OPENROUTER_0_0_1 = ModelProvider(
     privacy_url="https://openrouter.ai/privacy",
     data_usage_url="https://openrouter.ai/docs/features/privacy-and-logging",
     hosting="cloud",
+    via="direct",
 )
 
 

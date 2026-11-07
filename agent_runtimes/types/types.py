@@ -796,6 +796,10 @@ class ModelProvider(BaseModel):
         default="cloud",
         description="Where the model runs: 'cloud' (the provider's) or 'local' (the user's machine)",
     )
+    via: Literal["ai-inference", "direct"] = Field(
+        ...,
+        description="How a runtime's call reaches the provider: 'ai-inference' (through Datalayer's inference service, which holds the account, metered in credits) or 'direct' (the agent calls the provider itself with the person's own key, the models' required_env_vars)",
+    )
 
 
 class AIModel(BaseModel):

@@ -243,8 +243,11 @@ class TestCatalogEndpoint:
         )
         payload = self._payload(monkeypatch, {"ollama": ("mystery-model:7b",)})
 
+        # A direct provider's model (OpenRouter, the user, 7 November 2026) is
+        # the exception: listed, as the agent calls it itself, wanting its key.
         assert [(m["id"], m["available"]) for m in payload["models"]] == [
-            (sonnet, True)
+            (sonnet, True),
+            ("openrouter:anthropic/claude-opus-5.5", False),
         ]
         assert payload["local_runtimes"] == {}
         assert payload["uncatalogued_local"] == []

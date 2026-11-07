@@ -102,6 +102,13 @@ export interface ModelProvider {
   dataUsageUrl?: string;
   /** Where the model runs: the provider's cloud, or the user's machine. */
   hosting: 'cloud' | 'local';
+  /**
+   * How a runtime's call reaches the provider: 'ai-inference' (through
+   * Datalayer's inference service, which holds the account, metered in
+   * credits) or 'direct' (the agent calls the provider itself with the
+   * person's own key, the models' `requiredEnvVars`).
+   */
+  via: 'ai-inference' | 'direct';
 }
 
 /**

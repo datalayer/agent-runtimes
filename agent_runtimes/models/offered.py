@@ -426,6 +426,7 @@ def availability(
 ) -> tuple[bool, str | None]:
     """Whether a model can be used here, and why not when it cannot."""
     from agent_runtimes.models.models import (
+        called_directly,
         credentials_ready,
         effective_inference_provider,
     )
@@ -435,12 +436,21 @@ def availability(
     if spec is None:
         return False, "Not in the models catalogue"
     provider = inference_provider or effective_inference_provider()
-    if provider == "datalayer" and not spec.local and inference_token_refusal():
+    # A direct provider's model (OpenRouter…) never goes through ai-inference:
+    # neither its token nor its list decides; the person's key does, below.
+    direct = called_directly(model_id)
+    if (
+        provider == "datalayer"
+        and not spec.local
+        and not direct
+        and inference_token_refusal()
+    ):
         return False, "No ai-inference token"
     state = _state
     if (
         provider == "datalayer"
         and not spec.local
+        and not direct
         and state is not None
         and state.served is not None
     ):
@@ -471,9 +481,11 @@ def listed(model_id: str, inference_provider: str | None = None) -> bool:
     bool
         When ai-inference decides, only the models it serves: never a local
         one, and none it said it does not serve; before it answered (a runtime
-        waiting for its token), every hosted model, each marked. Otherwise
-        every model.
+        waiting for its token), every hosted model, each marked. A direct
+        provider's model (OpenRouter…) is listed whatever it serves: the agent
+        calls it itself. Otherwise every model.
     """
+    from agent_runtimes.models.models import called_directly
     from agent_runtimes.specs.models import get_model
 
     source, _ = models_source(inference_provider)
@@ -482,6 +494,10 @@ def listed(model_id: str, inference_provider: str | None = None) -> bool:
     spec = get_model(model_id)
     if spec is None or spec.local:
         return False
+    if called_directly(model_id):
+        # Listed wherever the agent may call it, when the catalogue offers it;
+        # `availability` says whether the person's key is there.
+        return bool(getattr(spec, "available", True))
     _, reason = availability(model_id, inference_provider)
     return reason != "Not served by ai-inference"
 
