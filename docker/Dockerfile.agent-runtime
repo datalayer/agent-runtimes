@@ -31,6 +31,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
         @datalayer/slack-mcp-server \
         @xdevplatform/xurl \
     && npm cache clean --force
+# Discord's server (SaseQ/discord-mcp) is a Java application shipped as a Docker image: neither Docker nor Java is here, so it stays off on the platform.
 # Bluesky's server has no package on npm and no bin: built from its repository,
 # run with node (`mcp-servers/bluesky.yaml`).
 RUN git clone --depth 1 https://github.com/brianellin/bsky-mcp-server /opt/mcp-servers/bsky-mcp-server \

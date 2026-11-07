@@ -78,6 +78,30 @@ export const BLUESKY_SERVICE_URL_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔗',
 };
 
+export const DISCORD_BOT_TOKEN_SPEC_0_0_1: EnvvarSpec = {
+  id: 'DISCORD_BOT_TOKEN',
+  version: '0.0.1',
+  name: 'Discord Bot Token',
+  description:
+    "The token of a Discord bot, from its application's Bot page in the Discord Developer Portal (Reset Token to see it once). The bot is invited to the server with the permissions of what the agent may do, and the Message Content intent when it reads messages. Read by the Discord MCP server as DISCORD_TOKEN.",
+  registrationUrl: 'https://discord.com/developers/applications',
+  tags: ['authentication', 'token', 'discord', 'social'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const DISCORD_GUILD_ID_SPEC_0_0_1: EnvvarSpec = {
+  id: 'DISCORD_GUILD_ID',
+  version: '0.0.1',
+  name: 'Discord Server ID',
+  description:
+    'The id of the Discord server (guild) the bot works in by default — copied from the server with Developer Mode on, Copy Server ID. Optional; a tool may name another server.',
+  registrationUrl: 'https://support.discord.com/hc/en-us/articles/206346498',
+  tags: ['configuration', 'discord'],
+  icon: 'link',
+  emoji: '🔗',
+};
+
 export const EARTHDATA_PASSWORD_SPEC_0_0_1: EnvvarSpec = {
   id: 'EARTHDATA_PASSWORD',
   version: '0.0.1',
@@ -275,6 +299,8 @@ export const ENVVAR_CATALOG: Record<string, EnvvarSpec> = {
   BLUESKY_APP_PASSWORD: BLUESKY_APP_PASSWORD_SPEC_0_0_1,
   BLUESKY_IDENTIFIER: BLUESKY_IDENTIFIER_SPEC_0_0_1,
   BLUESKY_SERVICE_URL: BLUESKY_SERVICE_URL_SPEC_0_0_1,
+  DISCORD_BOT_TOKEN: DISCORD_BOT_TOKEN_SPEC_0_0_1,
+  DISCORD_GUILD_ID: DISCORD_GUILD_ID_SPEC_0_0_1,
   EARTHDATA_PASSWORD: EARTHDATA_PASSWORD_SPEC_0_0_1,
   EARTHDATA_USERNAME: EARTHDATA_USERNAME_SPEC_0_0_1,
   GEMINI_API_KEY: GEMINI_API_KEY_SPEC_0_0_1,

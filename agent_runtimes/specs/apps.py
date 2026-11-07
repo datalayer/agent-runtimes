@@ -2605,7 +2605,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "version": "0.0.1",
         "name": "Marketer",
         "kind": "chat",
-        "description": "Plans a campaign and drafts the posts for X, Bluesky and LinkedIn in your brand's voice, reads what comes back, remembers what worked, and publishes only what you approved.",
+        "description": "Plans a campaign and drafts the posts for X, Bluesky, LinkedIn and Discord in your brand's voice, reads what comes back, remembers what worked, and publishes only what you approved.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-marketer:0.0.1",
         "team": "",
@@ -2620,6 +2620,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             {"server": "x:0.0.1", "access": "read", "as": "owner", "only": []},
             {"server": "bluesky:0.0.1", "access": "write", "as": "owner", "only": []},
             {"server": "linkedin:0.0.1", "access": "write", "as": "owner", "only": []},
+            {"server": "discord:0.0.1", "access": "write", "as": "owner", "only": []},
         ],
         "protocols": [],
         "ui": [{"plugin": "chat", "renderer": None}],
@@ -2673,7 +2674,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             "starters": [
                 {
                     "label": "Plan a launch",
-                    "message": "Plan a two-week launch campaign for our new feature across X, Bluesky and LinkedIn, with one goal and a post a day.",
+                    "message": "Plan a two-week launch campaign for our new feature across X, Bluesky, LinkedIn and our Discord, with one goal and a post a day.",
                 },
                 {
                     "label": "Draft today's post",
@@ -2701,8 +2702,13 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                     "networks": {
                         "type": "string",
                         "title": "Where to post",
-                        "enum": ["All three", "X and Bluesky", "LinkedIn only"],
-                        "default": "All three",
+                        "enum": [
+                            "All four",
+                            "X and Bluesky",
+                            "LinkedIn only",
+                            "Discord only",
+                        ],
+                        "default": "All four",
                     },
                 },
             },
@@ -2746,7 +2752,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Not played live yet: X reads with a bearer token today; Bluesky and LinkedIn wait for the runtime image that carries their servers and, for LinkedIn, a signed-in session."
+                    "Not played live yet: X reads with a bearer token today; Bluesky and LinkedIn wait for the runtime image that carries their servers and, for LinkedIn, a signed-in session; Discord's runs in Docker."
                 ],
             },
         },
@@ -2761,7 +2767,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
-        "goal": "Grow my audience honestly: one voice across X, Bluesky and LinkedIn, posts that serve a stated campaign goal, nothing published without my approval, and a memory of what worked.",
+        "goal": "Grow my audience honestly: one voice across X, Bluesky, LinkedIn and Discord, posts that serve a stated campaign goal, nothing published without my approval, and a memory of what worked.",
         "triggers": [],
         "memory": "mem0",
         "notifications": [],
@@ -2777,6 +2783,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "setup": [
             "The MCP server 'bluesky:0.0.1' is not enabled.",
             "The MCP server 'linkedin:0.0.1' is not enabled.",
+            "The MCP server 'discord:0.0.1' is not enabled.",
         ],
     }
 )

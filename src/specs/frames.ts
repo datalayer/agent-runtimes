@@ -291,7 +291,7 @@ export const MARKETING_FRAME_0_0_1: FrameSpec = {
     'Make no claim about the product, a number or a customer that cannot be shown from a source the person can open.',
     'Never invent a quote, an endorsement, a metric or a trend; report what was read, with where it was read.',
     'Never buy reach, followers or engagement, and never disguise a paid placement.',
-    'Keep one voice across networks, fitted to each: short on X, conversational on Bluesky, professional on LinkedIn.',
+    'Keep one voice across networks, fitted to each: short on X, conversational on Bluesky, professional on LinkedIn, a message to a community that talks back on Discord.',
   ],
   terminology: {
     Agentspec: 'The declarative YAML specification of an agent.',
@@ -325,6 +325,7 @@ export const MARKETING_FRAME_0_0_1: FrameSpec = {
     'Cite the source of every factual claim.',
     'Prefer the smallest change, and the simplest explanation, that is correct.',
     'Draft for the network it goes to; do not cross-post the same text everywhere.',
+    "On Discord, answer the community in the thread it asked in, and never moderate — kick, ban, delete — on the brand's behalf.",
     'Read the replies before drafting the next post, and say what they changed.',
     'Remember the voice, what was posted and what worked, and use it next time.',
   ],
@@ -339,7 +340,7 @@ export const MARKETING_FRAME_0_0_1: FrameSpec = {
   prompts: [],
   skills: [],
   backendTools: [],
-  mcpServers: ['x:0.0.1', 'bluesky:0.0.1', 'linkedin:0.0.1'],
+  mcpServers: ['x:0.0.1', 'bluesky:0.0.1', 'linkedin:0.0.1', 'discord:0.0.1'],
   guards: [
     {
       id: 'no-secrets',
