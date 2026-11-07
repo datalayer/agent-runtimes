@@ -9,9 +9,9 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
-## 1.5.107
+## 1.5.108
 
-7 November 2026.
+7 November 2026. (1.5.107 was tagged and never published: its build needed `@datalayer/reactor/tools`, released as reactor 1.3.5, the floor now.)
 
 **Image and Video Skills, every skill enabled** (agentspecs 0.0.149, agent-skills 1.2.0). Two skills join the catalogue: `image` — snapshots of web pages and video frames; images read, resized, cropped, converted, optimized and thumbnailed — and `video` — recordings of web pages; videos read, trimmed, transcoded, optimized, framed and turned to GIF. The seven others are enabled now that the runtime image installs `agent-skills[skills]` with Chromium and ffmpeg; the Marketer's agent carries all nine. `agent-skills>=1.2.0` is the floor; `docker/Dockerfile.agent-runtime` installs the skills' operating-system libraries and Chromium.
 
