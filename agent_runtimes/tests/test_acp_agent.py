@@ -1357,15 +1357,29 @@ class TestSkillsLentInTheHarnessFormat:
         assert "It needs TAVILY_API_KEY, which Datalayer holds" in text
         assert "do not write it anywhere" in text
 
-    def test_an_unknown_or_disabled_skill_is_refused_at_load(self) -> None:
+    def test_an_unknown_or_disabled_skill_is_refused_at_load(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with pytest.raises(
             HarnessRefused, match="no skill named 'nope' in the catalogue"
         ):
             skill_specs_of(an_app(skills=["nope"]), reading_skills())
+        # Every skill of the catalogue is enabled (7 November 2026), so the
+        # disabled one is put there for the test.
+        from agent_runtimes.specs import skills as skills_catalogue
+        from agent_runtimes.types.types import SkillSpec
+
+        monkeypatch.setitem(
+            skills_catalogue.SKILLS_CATALOG,
+            "off-skill",
+            SkillSpec(id="off-skill", name="Off skill", enabled=False),
+        )
         with pytest.raises(
-            HarnessRefused, match="'events' is not enabled in the catalogue"
+            HarnessRefused, match="'off-skill' is not enabled in the catalogue"
         ):
-            skill_specs_of(an_app(skills=["crawl", "events:0.0.1"]), reading_skills())
+            skill_specs_of(
+                an_app(skills=["crawl", "off-skill:0.0.1"]), reading_skills()
+            )
         with pytest.raises(HarnessRefused, match="Fake agent reads no skills"):
             skill_specs_of(an_app(), fake_harness())
         assert skill_specs_of(an_app(skills=[]), fake_harness()) == []
