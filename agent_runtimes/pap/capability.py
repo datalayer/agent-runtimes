@@ -50,6 +50,7 @@ from personal_agent_protocol.models import (
     DiscoveredCompany,
     JsonWebKeySet,
     Operation,
+    operations_content,
 )
 from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
@@ -681,17 +682,21 @@ class PapPersonalAgentCapability:
             document.agent is not None
         )  # It returned the operation in a conversation.
         session = await self._session(link)
+        # The approval is the Operations extension's content, under `extensions.operations`
+        # (0.3 as published, Operations 6): never a member beside `text`.
         message = Message(
             id=generate_message_id(reactor),
             author=Author(type="agent"),
             text="The person approved this.",
-            approval=approval,
+            extensions=operations_content(approval=approval),
         )
         sent = await client.send(
             lambda approved: conversations.send(
                 document.agent.protocols[0].endpoint,
                 returned.conversation_id,
-                message.model_copy(update={"approval": approved}),
+                message.model_copy(
+                    update={"extensions": operations_content(approval=approved)}
+                ),
                 session=session,
                 token=link.token,
                 cursor=link.cursor
