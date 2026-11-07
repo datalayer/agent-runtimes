@@ -39,6 +39,39 @@ ANTHROPIC_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+BLUESKY_APP_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_APP_PASSWORD",
+    version="0.0.1",
+    name="Bluesky App Password",
+    description="An app password of the Bluesky account, made for this integration alone — Settings, Privacy and security, App passwords, Add app password — never the account's own password. Read by the Bluesky MCP server with the handle beside it; revoke it there to cut the server off.",
+    registrationUrl="https://bsky.app/settings/app-passwords",
+    tags=["authentication", "password", "bluesky", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
+BLUESKY_IDENTIFIER_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_IDENTIFIER",
+    version="0.0.1",
+    name="Bluesky Handle",
+    description="The handle of the Bluesky account the server acts as, `name.bsky.social` or a custom domain. Read by the Bluesky MCP server with the app password beside it.",
+    registrationUrl="https://bsky.app",
+    tags=["authentication", "username", "bluesky", "social"],
+    icon="key",
+    emoji="🦋",
+)
+
+BLUESKY_SERVICE_URL_SPEC_0_0_1 = EnvvarSpec(
+    id="BLUESKY_SERVICE_URL",
+    version="0.0.1",
+    name="Bluesky Service URL",
+    description="The AT Protocol service the Bluesky MCP server signs in to. `https://bsky.social` for an account on Bluesky's own servers; a self-hosted PDS names its own address.",
+    registrationUrl="https://atproto.com/guides/self-hosting",
+    tags=["configuration", "url", "bluesky"],
+    icon="link",
+    emoji="🔗",
+)
+
 EARTHDATA_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
     id="EARTHDATA_PASSWORD",
     version="0.0.1",
@@ -200,6 +233,17 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+X_BEARER_TOKEN_SPEC_0_0_1 = EnvvarSpec(
+    id="X_BEARER_TOKEN",
+    version="0.0.1",
+    name="X App-only Bearer Token",
+    description="The App-only Bearer Token of an X app, from its Keys and tokens page in the X Developer Portal. Sent as the bearer to X's remote MCP server at https://api.x.com/mcp, which then answers its read tools — posts, search, users, news and trends — with no user context. Writing (bookmarks, articles) needs the xurl bridge and an OAuth 2.0 login instead.",
+    registrationUrl="https://developer.x.com/en/portal/dashboard",
+    tags=["authentication", "token", "x", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
 # ============================================================================
 # Environment Variable Catalog
 # ============================================================================
@@ -207,6 +251,9 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
     "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY_SPEC_0_0_1,
+    "BLUESKY_APP_PASSWORD": BLUESKY_APP_PASSWORD_SPEC_0_0_1,
+    "BLUESKY_IDENTIFIER": BLUESKY_IDENTIFIER_SPEC_0_0_1,
+    "BLUESKY_SERVICE_URL": BLUESKY_SERVICE_URL_SPEC_0_0_1,
     "EARTHDATA_PASSWORD": EARTHDATA_PASSWORD_SPEC_0_0_1,
     "EARTHDATA_USERNAME": EARTHDATA_USERNAME_SPEC_0_0_1,
     "GEMINI_API_KEY": GEMINI_API_KEY_SPEC_0_0_1,
@@ -221,6 +268,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,
     "TAVILY_API_KEY": TAVILY_API_KEY_SPEC_0_0_1,
+    "X_BEARER_TOKEN": X_BEARER_TOKEN_SPEC_0_0_1,
 }
 
 

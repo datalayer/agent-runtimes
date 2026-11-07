@@ -50,6 +50,61 @@ ALPHAVANTAGE_MCP_SERVER_0_0_1 = MCPServer(
     },
 )
 
+BLUESKY_MCP_SERVER_0_0_1 = MCPServer(
+    id="bluesky",
+    version="0.0.1",
+    name="Bluesky",
+    description="A Bluesky account's timeline, feeds, profiles, follows, likes, trends and searches, and posting, liking and following as it",
+    icon="@datalayer/icons-react:bluesky",
+    emoji="🦋",
+    command="node",
+    args=[
+        "/opt/mcp-servers/bsky-mcp-server/build/src/index.js",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    env={
+        "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
+        "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}",
+        "BLUESKY_SERVICE_URL": "${BLUESKY_SERVICE_URL}",
+    },
+    required_env_vars=[
+        "BLUESKY_IDENTIFIER:0.0.1",
+        "BLUESKY_APP_PASSWORD:0.0.1",
+        "BLUESKY_SERVICE_URL:0.0.1",
+    ],
+    tags=["social", "bluesky", "atproto", "publishing"],
+    documentation_url="https://github.com/brianellin/bsky-mcp-server",
+    signup_url="https://bsky.app",
+    api_key_url="https://bsky.app/settings/app-passwords",
+    setup="Sign in to Bluesky, make an app password under Settings, Privacy and security, App passwords, and put the account's handle in BLUESKY_IDENTIFIER, the app password in BLUESKY_APP_PASSWORD and https://bsky.social in BLUESKY_SERVICE_URL; the server is built into the runtime image and runs with node.",
+    actions={
+        "tools": {
+            "get-pinned-feeds": "read",
+            "get-timeline-posts": "read",
+            "get-feed-posts": "read",
+            "get-list-posts": "read",
+            "get-user-posts": "read",
+            "get-profile": "read",
+            "get-follows": "read",
+            "get-followers": "read",
+            "get-liked-posts": "read",
+            "get-trends": "read",
+            "get-post-thread": "read",
+            "convert-url-to-uri": "read",
+            "search-posts": "read",
+            "search-people": "read",
+            "search-feeds": "read",
+            "like-post": "write",
+            "create-post": "publish",
+            "follow-user": "write",
+        },
+        "checked": "2026-11-07",
+        "note": "Read off the server's README: the gets and searches read Bluesky and change nothing; like-post and follow-user write to the account; create-post publishes under its name.",
+    },
+)
+
 CHART_MCP_SERVER_0_0_1 = MCPServer(
     id="chart",
     version="0.0.1",
@@ -625,6 +680,62 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
     },
 )
 
+LINKEDIN_MCP_SERVER_0_0_1 = MCPServer(
+    id="linkedin",
+    version="0.0.1",
+    name="LinkedIn",
+    description="A LinkedIn account's feed, profiles, companies, jobs and inbox through a signed-in browser session, and messaging, connecting and replying as it",
+    icon="@datalayer/icons-react:linked-in",
+    emoji="💼",
+    command="uvx",
+    args=[
+        "mcp-server-linkedin",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    env={
+        "UV_HTTP_TIMEOUT": "300",
+    },
+    required_env_vars=[],
+    tags=["social", "linkedin", "jobs", "messaging"],
+    documentation_url="https://github.com/stickerdaniel/linkedin-mcp-server",
+    signup_url="https://www.linkedin.com/signup",
+    api_key_url="https://github.com/stickerdaniel/linkedin-mcp-server#installation",
+    setup="No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under ~/.linkedin-mcp; a runtime needs that directory mounted. LinkedIn restricts automated access — use an account you can afford to see restricted.",
+    actions={
+        "tools": {
+            "get_person_profile": "read",
+            "get_my_profile": "read",
+            "connect_with_person": "send",
+            "get_sidebar_profiles": "read",
+            "get_inbox": "read",
+            "get_conversation": "read",
+            "search_conversations": "read",
+            "archive_conversation": "write",
+            "send_message": "send",
+            "reply_to_conversation": "send",
+            "get_company_profile": "read",
+            "get_company_posts": "read",
+            "search_companies": "read",
+            "get_company_employees": "read",
+            "search_jobs": "read",
+            "get_saved_jobs": "read",
+            "dismiss_job": "delete",
+            "search_people": "read",
+            "get_job_details": "read",
+            "get_job_apply_url": "read",
+            "get_easy_apply_form": "read",
+            "get_feed": "read",
+            "search_posts": "read",
+            "get_session_status": "read",
+            "close_session": "write",
+        },
+        "checked": "2026-11-07",
+        "note": "Read off the server's README: profiles, companies, jobs, the feed and the inbox are read; connect_with_person, send_message and reply_to_conversation send on the person's behalf (after confirmation, the README says); archive_conversation and close_session write; dismiss_job deletes, and cannot be undone.",
+    },
+)
+
 ODOO_ACCOUNTING_MCP_SERVER_0_0_1 = MCPServer(
     id="odoo-accounting",
     version="0.0.1",
@@ -851,12 +962,41 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
     },
 )
 
+X_MCP_SERVER_0_0_1 = MCPServer(
+    id="x",
+    version="0.0.1",
+    name="X",
+    description="X's own MCP server — posts, full-archive search, users, news and trends, read with an app's bearer token; bookmarks and articles with a signed-in bridge",
+    icon="@datalayer/icons-react:x",
+    emoji="✖️",
+    command=None,
+    args=[],
+    transport="streamable-http",
+    enabled=True,
+    tools=[],
+    url="https://api.x.com/mcp",
+    headers={
+        "Authorization": "Bearer ${X_BEARER_TOKEN}",
+    },
+    required_env_vars=["X_BEARER_TOKEN:0.0.1"],
+    tags=["social", "x", "search", "news"],
+    documentation_url="https://docs.x.com/tools/mcp",
+    signup_url="https://developer.x.com",
+    api_key_url="https://developer.x.com/en/portal/dashboard",
+    setup="Create an app in the X Developer Portal, copy its App-only Bearer Token from Keys and tokens into X_BEARER_TOKEN; the runtime reaches https://api.x.com/mcp with it and reads. For bookmarks and articles, run the xurl bridge on a machine with a browser instead, with the app's CLIENT_ID and CLIENT_SECRET.",
+    actions={
+        "tools": {"article_publish": "publish"},
+        "note": "Read off X's documentation, not the running server: posts, search, users, news and trends are reads; bookmarks are read and written; articles are drafted and published. Only `article_publish` is named there. Run the server, list its tools, and class each one here.",
+    },
+)
+
 # ============================================================================
 # MCP Server Catalog
 # ============================================================================
 
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER_0_0_1,
+    "bluesky": BLUESKY_MCP_SERVER_0_0_1,
     "chart": CHART_MCP_SERVER_0_0_1,
     "datalayer": DATALAYER_MCP_SERVER_0_0_1,
     "earthdata": EARTHDATA_MCP_SERVER_0_0_1,
@@ -866,11 +1006,13 @@ MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
     "huggingface": HUGGINGFACE_MCP_SERVER_0_0_1,
     "kaggle": KAGGLE_MCP_SERVER_0_0_1,
+    "linkedin": LINKEDIN_MCP_SERVER_0_0_1,
     "odoo-accounting": ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
     "odoo": ODOO_MCP_SERVER_0_0_1,
     "salesforce": SALESFORCE_MCP_SERVER_0_0_1,
     "slack": SLACK_MCP_SERVER_0_0_1,
     "tavily": TAVILY_MCP_SERVER_0_0_1,
+    "x": X_MCP_SERVER_0_0_1,
 }
 
 
