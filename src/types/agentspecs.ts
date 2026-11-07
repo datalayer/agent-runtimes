@@ -624,6 +624,20 @@ export interface TrackSpec {
   emoji?: string;
 }
 
+/**
+ * What an appearance on stage plays differently of its application (the
+ * user, 7 November 2026; `agentspecs/overrides`): a Battle's contestant or a
+ * scene's cast member, as a child spec says it with `extends`, for one place
+ * on stage. Four keys, nothing else; each whole when said.
+ */
+export interface AppOverridesSpec {
+  /** The model it answers with: a model of the catalogue, `provider:name`. */
+  model?: string;
+  instructions?: string;
+  skills?: string[];
+  context?: string[];
+}
+
 /** One side of a Battle: a scene of the catalogue played whole, or one application. */
 export interface BattleContestantSpec {
   /** Its id in the Battle: `blue`, `red`, `left`. */
@@ -638,6 +652,8 @@ export interface BattleContestantSpec {
   runsIn?: 'browser' | 'runtime';
   /** Its colour on stage: a palette name or a hex; empty for none. */
   color: string;
+  /** What it plays differently of its application; on a scene, of every member played in the page. Empty for nothing. */
+  overrides: AppOverridesSpec;
 }
 
 /** How a Battle's winner is decided. */

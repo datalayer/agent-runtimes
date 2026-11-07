@@ -409,6 +409,13 @@ export const SCENE_SCHEMA: JsonSchema = {
           title: 'Brief',
           type: 'string',
         },
+        overrides: {
+          additionalProperties: true,
+          description:
+            'What it plays differently of its application here: `model`, `instructions`, `skills`, `context`',
+          title: 'Overrides',
+          type: 'object',
+        },
       },
       required: ['member'],
       title: 'SceneCastMember',

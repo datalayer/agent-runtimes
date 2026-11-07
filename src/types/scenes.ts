@@ -15,7 +15,7 @@
  * @module types/scenes
  */
 
-import type { AppVerifiedSpec } from './agentspecs';
+import type { AppOverridesSpec, AppVerifiedSpec } from './agentspecs';
 import type { TeamLinkSpec } from './teams';
 
 /** How a member appears to the audience, in a scene. */
@@ -47,6 +47,8 @@ export interface SceneCastMemberSpec {
   persona: ScenePersonaSpec;
   /** What it is for in this scene, over its application's instructions. */
   brief: string;
+  /** What it plays differently of its application here: `model`, `instructions`, `skills`, `context`. Empty for nothing. */
+  overrides: AppOverridesSpec;
 }
 
 /** A system on stage: an MCP server the cast reaches. */

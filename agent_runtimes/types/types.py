@@ -2419,6 +2419,10 @@ class BattleContestantSpec(BaseModel):
         default=None, description="For an app: `browser` or `runtime`"
     )
     color: str = Field(default="", description="Its colour on stage")
+    overrides: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="What it plays differently of its application: model, instructions, skills, context",
+    )
 
 
 class BattleRefereeSpec(BaseModel):
@@ -4004,6 +4008,10 @@ class SceneCastMemberSpec(BaseModel):
     )
     persona: ScenePersonaSpec = Field(default_factory=ScenePersonaSpec)
     brief: str = Field(default="", description="What it is for in this scene")
+    overrides: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="What it plays differently of its application here: model, instructions, skills, context",
+    )
 
 
 class SceneSystemSpec(BaseModel):

@@ -45,6 +45,7 @@ CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I read the repository I am lent and explain it; the Shield decides what I may do.",
                 },
                 "brief": "Read only what the cue asks about and explain it, naming each file you read. A cue that asks for a change is still a cue to you: do not ask the audience first, nobody is standing there to answer you back.",
+                "overrides": {},
             }
         ],
         "setting": {
@@ -213,6 +214,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I search the imagery and tell you how the fields are doing.",
                 },
                 "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person. Do not question the audience: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that names a place and a period is enough: when it names no dataset, take the vegetation indices (MOD13Q1) and say that you did. A cue to save granules is searched like any other, and what you found is then a `choice` to approve, Save them · Not now; nothing is saved.",
+                "overrides": {},
             }
         ],
         "setting": {
@@ -535,6 +537,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "Tell me what happened; I ask the specialists and report.",
                 },
                 "brief": "Take the event and ask one specialist at a time, never both at once, waiting for each answer before you ask the next: Disaster Assessment for the area affected and the damage and for what the archive holds around the event, day by day, and then, only if the request asks what changed on the ground between two dates, Change detection. Report what they answer without adding to it. Do not question the audience first: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that says no date is yours to fill with the most recent one the imagery has, and a cue that says no place with the area the event names; ask the specialists with what you assumed, and say in your answer what you assumed. A cue that asks to send something is Disaster Assessment's: tell it what is to be sent and to whom, so that it shows the sending as a choice to approve, and never ask the audience to confirm it yourself.",
+                "overrides": {},
             },
             {
                 "member": "disaster-assessment",
@@ -549,6 +552,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I estimate the area affected and the damage from the imagery.",
                 },
                 "brief": "From the imagery before and after the event, estimate the area affected and the extent of the damage; say what the imagery does not show. Asked to send an assessment, send nothing: show its sending as a choice to approve — *Send it* · *Not now*.",
+                "overrides": {},
             },
             {
                 "member": "change-detection",
@@ -563,6 +567,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I find what changed on the ground between two dates.",
                 },
                 "brief": "From the imagery at two dates, find what changed on the ground; give the granules the change was read from.",
+                "overrides": {},
             },
         ],
         "setting": {
@@ -947,6 +952,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I read the books and tell you where the close stands.",
                 },
                 "brief": "Read the period's books, one call at a time, and report what is done, what is to book and what is still open; change nothing, and say so when asked to. Show it the way the cue asked to see it, with `show_components` and never drawn in words: the checklist and figures that compare as a `table`; a month against the month before as a `chart`; the entries an accrual rests on as `sources`, a card each; and anything that would post to the books as a `choice` to approve. Asked to post, you do not refuse and you do not post: read the entries you would post and show them as that `choice` — *Post the accruals* · *Not now* — which is what your rule *Change the books: ask first* means. A person decides, and nothing reaches Odoo until they do.",
+                "overrides": {},
             }
         ],
         "setting": {
@@ -1950,6 +1956,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I take your request and bring the figures back.",
                 },
                 "brief": "Ask Accounting for every figure, one request each time, and report what it answers without adding to it. Do not question the audience first: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that names the report it wants — the invoices still open, the aged receivables as of today, the invoices behind the largest balance, a reminder to whoever is overdue — goes to Accounting as it stands, with how the audience asked to see it. A cue that says no period and no customer is Accounting's to fill: it takes the current fiscal year and the default company, and tells you which it took, so you ask it rather than the audience.",
+                "overrides": {},
             },
             {
                 "member": "accounting",
@@ -1964,6 +1971,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
                     "line": "I read the books and answer; I change nothing.",
                 },
                 "brief": "Answer from the Odoo books, read only, and say so when the books do not hold the answer. Show it the way the cue asked to see it, with `show_components` and never drawn in words: figures that compare as a `table`; a balance by age or by customer as a `chart`; and, when the cue says to see each one, the records themselves as `sources` — a card per invoice, its number the title and its date and what is due the passage — rather than another table. Anything that would change the books is a `choice` to approve.",
+                "overrides": {},
             },
         ],
         "setting": {

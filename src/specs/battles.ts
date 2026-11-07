@@ -32,6 +32,7 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
       app: 'deck-maker:0.0.1',
       runsIn: 'browser',
       color: 'blue',
+      overrides: {},
     },
     {
       id: 'red',
@@ -40,6 +41,9 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
       app: 'deck-maker:0.0.1',
       runsIn: 'browser',
       color: 'red',
+      overrides: {
+        model: 'alibaba:qwen-max',
+      },
     },
   ],
   referee: {
@@ -75,6 +79,7 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
       scene: 'sales-and-accounting:0.0.1',
       app: '',
       color: 'blue',
+      overrides: {},
     },
     {
       id: 'red',
@@ -82,6 +87,9 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
       scene: 'sales-and-accounting:0.0.1',
       app: '',
       color: 'red',
+      overrides: {
+        model: 'alibaba:qwen-max',
+      },
     },
   ],
   referee: {
@@ -117,6 +125,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       app: 'player:0.0.1',
       runsIn: 'browser',
       color: 'blue',
+      overrides: {},
     },
     {
       id: 'right',
@@ -125,6 +134,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       app: 'player:0.0.1',
       runsIn: 'browser',
       color: 'red',
+      overrides: {},
     },
   ],
   referee: {
@@ -160,6 +170,7 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
       scene: 'month-end-close:0.0.1',
       app: '',
       color: 'blue',
+      overrides: {},
     },
     {
       id: 'red',
@@ -167,6 +178,9 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
       scene: 'month-end-close:0.0.1',
       app: '',
       color: 'red',
+      overrides: {
+        model: 'alibaba:qwen-max',
+      },
     },
   ],
   referee: {
@@ -202,6 +216,7 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
       app: 'sheet-maker:0.0.1',
       runsIn: 'browser',
       color: 'blue',
+      overrides: {},
     },
     {
       id: 'red',
@@ -210,6 +225,9 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
       app: 'sheet-maker:0.0.1',
       runsIn: 'browser',
       color: 'red',
+      overrides: {
+        model: 'alibaba:qwen-max',
+      },
     },
   ],
   referee: {
