@@ -73,9 +73,12 @@ describe('a race', () => {
     });
   });
 
-  it('ends on its rule once someone is done', () => {
+  it('ends on its rule once everyone is done, never on the first answer (the user, 7 November 2026)', () => {
     expect(ruleEnds(race, startRecord(race, T0))).toBe(false);
-    expect(ruleEnds(race, done(startRecord(race, T0), 'blue', 3))).toBe(true);
+    expect(ruleEnds(race, done(startRecord(race, T0), 'blue', 3))).toBe(false);
+    expect(
+      ruleEnds(race, done(done(startRecord(race, T0), 'blue', 3), 'red', 9)),
+    ).toBe(true);
   });
 });
 

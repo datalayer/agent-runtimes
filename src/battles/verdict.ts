@@ -252,7 +252,13 @@ export function startRecord(spec: BattleSpec, startedAt: number): BattleRecord {
   };
 }
 
-/** Whether the Battle's own rule ends it now: a race once someone is done, a game once the arena says so. */
+/**
+ * Whether the Battle's own rule ends it now: a race once every contestant is
+ * done (the user, 7 November 2026: the slowest may be the one whose tests
+ * pass, so nobody is stopped on the first answer; the first done still
+ * ranks first), a game once the arena says so, a challenge once everyone is
+ * done. The clock ends any of them.
+ */
 export function ruleEnds(
   spec: BattleSpec,
   record: BattleRecord,
@@ -260,7 +266,7 @@ export function ruleEnds(
 ): boolean {
   switch (spec.referee.decidesBy) {
     case 'first_done':
-      return record.contestants.some(
+      return record.contestants.every(
         contestant => contestant.doneAt !== undefined,
       );
     case 'score':
