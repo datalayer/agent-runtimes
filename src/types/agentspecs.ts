@@ -996,6 +996,12 @@ export interface AppPapCompanySpec {
   enabled: boolean;
   /** Whether a personal agent may ask before signing in. */
   signedOut: boolean;
+  /**
+   * Whether it offers personal agents no sign-in (PAP `auth.disabled`, 0.3 as
+   * published): they ask only what anybody may ask, in nobody's account. Off
+   * when unsaid (D4-08).
+   */
+  sign_in_disabled?: boolean;
   interfaces: PapInterface[];
   /** The scopes it offers, each with what it allows and its hints. */
   scopes: AppPapCompanyScopeSpec[];

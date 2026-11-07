@@ -2713,6 +2713,9 @@ class AppPapCompanySpec(BaseModel):
 
     enabled: bool = Field(default=False)
     signed_out: bool = Field(default=True)
+    #: Whether it offers personal agents no sign-in (PAP `auth.disabled`, 0.3 as published): they ask
+    #: only what anybody may ask, in nobody's account (D4-08).
+    sign_in_disabled: bool = Field(default=False)
     scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
     excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)
