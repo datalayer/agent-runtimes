@@ -652,8 +652,8 @@ export interface BattleContestantSpec {
   runsIn?: 'browser' | 'runtime';
   /** Its colour on stage: a palette name or a hex; empty for none. */
   color: string;
-  /** What it plays differently of its application; on a scene, of every member played in the page. Empty for nothing. */
-  overrides: AppOverridesSpec;
+  /** What it plays differently of its application; on a scene, of every member played in the page. Empty, or absent, for nothing. */
+  overrides?: AppOverridesSpec;
 }
 
 /** How a Battle's winner is decided. */

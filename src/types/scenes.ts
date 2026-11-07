@@ -47,8 +47,8 @@ export interface SceneCastMemberSpec {
   persona: ScenePersonaSpec;
   /** What it is for in this scene, over its application's instructions. */
   brief: string;
-  /** What it plays differently of its application here: `model`, `instructions`, `skills`, `context`. Empty for nothing. */
-  overrides: AppOverridesSpec;
+  /** What it plays differently of its application here: `model`, `instructions`, `skills`, `context`. Empty, or absent, for nothing. */
+  overrides?: AppOverridesSpec;
 }
 
 /** A system on stage: an MCP server the cast reaches. */
