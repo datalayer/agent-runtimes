@@ -55,6 +55,7 @@ from personal_agent_protocol import (
     SessionClient,
     SessionHttpClient,
     generate_message_id,
+    operations_content,
     operations_negotiated,
 )
 from personal_agent_protocol import (
@@ -633,7 +634,7 @@ class World:
             Message(
                 id=message_id or generate_message_id(self.reactor),
                 author=Author(type="agent"),
-                approval=approval_,
+                extensions=operations_content(approval=approval_),
             ),
             wait=0,
             **self.auth,
@@ -1427,7 +1428,10 @@ async def two_companies() -> Trace:
         relayed, organization=company.document.organization, tenant_id=TENANT
     )
     page_ = await send(
-        page_.conversation_id, page_.cursor, author=Author(type="agent"), approval=given
+        page_.conversation_id,
+        page_.cursor,
+        author=Author(type="agent"),
+        extensions=operations_content(approval=given),
     )
     trace.step(
         "Ada approves; Northwind pays",

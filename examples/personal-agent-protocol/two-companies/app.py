@@ -21,6 +21,7 @@ from personal_agent_protocol import (
     SessionClient,
     SessionHttpClient,
     generate_message_id,
+    operations_content,
 )
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
@@ -143,7 +144,12 @@ async def run_two_companies() -> dict[str, Any]:
     approval = await operations.ask_user(
         relayed, organization=company.document.organization, tenant_id=TENANT
     )
-    paid = await send({"author": Author(type="agent"), "approval": approval})
+    paid = await send(
+        {
+            "author": Author(type="agent"),
+            "extensions": operations_content(approval=approval),
+        }
+    )
     first = await bank.operation_record(bank_plugin.executor.performed[0])
 
     # 4. The next payment is asked about too: an approval says nothing of the next one.

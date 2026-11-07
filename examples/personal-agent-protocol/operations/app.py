@@ -19,6 +19,7 @@ from personal_agent_protocol import (
     SessionClient,
     SessionHttpClient,
     generate_message_id,
+    operations_content,
 )
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
@@ -158,7 +159,12 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     conversation = page.conversation_id
 
     async def approving(approval: Approval, message_id: str) -> Any:
-        message = Message(id=message_id, author=Author(type="agent"), approval=approval)
+        message = Message(
+            id=message_id,
+            author=Author(type="agent"),
+            # The approval is the Operations extension's content (0.3 as published).
+            extensions=operations_content(approval=approval),
+        )
         sent = await conversations.send(
             chat, conversation, message, session=session, token=token, wait=0
         )
