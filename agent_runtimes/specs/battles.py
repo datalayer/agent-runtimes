@@ -63,6 +63,50 @@ DECK_RACE_BATTLE_0_0_1 = BattleSpec.model_validate(
     }
 )
 
+INVADERS_BATTLE_0_0_1 = BattleSpec.model_validate(
+    {
+        "id": "invaders",
+        "version": "0.0.1",
+        "name": "Space Invaders",
+        "description": "Two Players at the Space Invaders arena, a cannon each under one wave. A hit scores the invader's row; the wave cleared, a cannon hit or the wave landed ends it, and the score decides.",
+        "variant": "game",
+        "goal": "You are playing Space Invaders. Call `arena_watch` once: the arena then tells you where the invaders are and which one is nearest your cannon. Each time it does, call `arena_invaders_move` with the `x` it names, then `arena_invaders_fire`; move away when it says a bomb is falling on you. The higher score when the wave is cleared, a cannon is hit or the wave lands wins.",
+        "clock_seconds": 180,
+        "contestants": [
+            {
+                "id": "left",
+                "name": "Left",
+                "scene": "",
+                "app": "player:0.0.1",
+                "runs_in": "browser",
+                "color": "blue",
+                "overrides": {},
+            },
+            {
+                "id": "right",
+                "name": "Right",
+                "scene": "",
+                "app": "player:0.0.1",
+                "runs_in": "browser",
+                "color": "red",
+                "overrides": {},
+            },
+        ],
+        "referee": {"decides_by": "score", "measure": ""},
+        "arena": "invaders",
+        "rehearsal": {
+            "expects": [
+                "both contestants fire at least once",
+                "a score when the clock ends",
+            ]
+        },
+        "enabled": True,
+        "tags": ["example", "game", "arena"],
+        "icon": "rocket",
+        "emoji": "👾",
+    }
+)
+
 INVOICE_RACE_BATTLE_0_0_1 = BattleSpec.model_validate(
     {
         "id": "invoice-race",
@@ -246,6 +290,7 @@ SHEET_RACE_BATTLE_0_0_1 = BattleSpec.model_validate(
 
 BATTLE_CATALOGUE: Dict[str, BattleSpec] = {
     "deck-race": DECK_RACE_BATTLE_0_0_1,
+    "invaders": INVADERS_BATTLE_0_0_1,
     "invoice-race": INVOICE_RACE_BATTLE_0_0_1,
     "pong": PONG_BATTLE_0_0_1,
     "report-challenge": REPORT_CHALLENGE_BATTLE_0_0_1,

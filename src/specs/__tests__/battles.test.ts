@@ -22,9 +22,10 @@ const DECIDED = {
 } as const;
 
 describe('the Battle catalogue', () => {
-  it('holds five battles, every variant among them', () => {
+  it('holds six battles, every variant among them', () => {
     expect(Object.keys(BATTLE_CATALOGUE).sort()).toEqual([
       'deck-race',
+      'invaders',
       'invoice-race',
       'pong',
       'report-challenge',

@@ -56,6 +56,7 @@ import {
   RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
 } from '../backendTools';
 import {
+  ARENA_INVADERS_FRONTEND_TOOL_SPEC_0_0_1,
   ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
   CELLS_FRONTEND_TOOL_SPEC_0_0_1,
   DECKS_FRONTEND_TOOL_SPEC_0_0_1,
@@ -181,6 +182,8 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'arena-invaders:0.0.1': ARENA_INVADERS_FRONTEND_TOOL_SPEC_0_0_1,
+  'arena-invaders': ARENA_INVADERS_FRONTEND_TOOL_SPEC_0_0_1,
   'arena-pong:0.0.1': ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
   'arena-pong': ARENA_PONG_FRONTEND_TOOL_SPEC_0_0_1,
   'cells:0.0.1': CELLS_FRONTEND_TOOL_SPEC_0_0_1,
@@ -4389,7 +4392,10 @@ export const EXAMPLE_PLAYER_AGENTSPEC_0_0_1: Agentspec = {
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
-  frontendTools: [FRONTEND_TOOL_MAP['arena-pong:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['arena-pong:0.0.1'],
+    FRONTEND_TOOL_MAP['arena-invaders:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'play',
   emoji: '🏓',
