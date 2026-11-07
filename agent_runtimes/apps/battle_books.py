@@ -25,9 +25,10 @@ verified at ``whoami``), the gate marks the run with it
 (:func:`agent_runtimes.apps.visitors.battle_of_the_run`), and only the
 gateway's Odoo servers the Battle's scenes connect to are reached with the
 key, read only as every visitor's run is (`visitors.visitor_refusal`). Any
-other run on the visitors' runtime leaves those servers out; a Battle on the
-books with no key configured leaves them out too, in a log line, rather than
-reaching another account's books.
+other run on the visitors' runtime leaves those servers out. A runtime given
+no key keeps its own rule: a pool runtime reaches the books as its
+deployment's principal (its owner's, which it serves to visitors already),
+and the visitors' runtime, holding no key at all, never starts them.
 """
 
 from __future__ import annotations
@@ -155,23 +156,15 @@ def books_bearer(server_id: str) -> Optional[str]:
     """The bearer a gateway server is reached with in the run under way, as a Battle decides it.
 
     - The run plays a catalogue Battle whose scenes connect to this Odoo
-      server: the books key — ``""`` (left out) when none is given.
+      server, and the runtime holds the books key: the key.
     - Otherwise, a server started with the books key: ``""``, left out.
     - Otherwise ``None``: the run's own rule holds.
     """
     from agent_runtimes.apps.visitors import battle_of_the_run
 
     battle = battle_of_the_run()
-    if battle and server_id in books_servers_of(battle):
-        key = books_key()
-        if not key:
-            logger.warning(
-                "The Battle %s plays on the books and this runtime was given no %s: "
-                "'%s' is left out of its run.",
-                battle,
-                BOOKS_KEY_ENV,
-                server_id,
-            )
+    key = books_key() if battle else ""
+    if key and server_id in books_servers_of(battle):
         return key
     with _LOCK:
         started_with_key = server_id in _STARTED_WITH_KEY

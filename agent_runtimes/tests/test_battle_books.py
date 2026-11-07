@@ -111,10 +111,10 @@ def test_only_a_battles_run_reaches_the_books(monkeypatch: pytest.MonkeyPatch) -
     assert battle_of_the_run() == ""
 
 
-def test_a_battle_on_the_books_without_the_key_leaves_them_out() -> None:
+def test_a_runtime_given_no_key_keeps_its_own_rule() -> None:
+    # A pool runtime's server started with its principal: the owner's books, as before.
     with _InTheRun("report-challenge"):
-        assert books_bearer("odoo-accounting") == ""
-    # A pool runtime's server started with its principal, no Battle: its rule holds.
+        assert books_bearer("odoo-accounting") is None
     assert books_bearer("odoo-accounting") is None
 
 
