@@ -73,7 +73,7 @@ dependencies = [
     # agentspecs 0.0.138: permissions.computer.repository (a repository lent to an application), the space backdrop.
     # agentspecs 0.0.139: colours by palette name.
     # agentspecs 0.0.140: the minimal and orb backdrops.
-    "agentspecs>=0.0.144",
+    "agentspecs>=0.0.156",  # a company's publish_skills
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

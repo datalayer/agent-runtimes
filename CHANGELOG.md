@@ -9,9 +9,9 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
-## 1.5.112
+## 1.5.113
 
-7 November 2026.
+7 November 2026. (1.5.112 was tagged and never published: its release tests ran against agentspecs 0.0.155, which has no `publish_skills`; the floor is 0.0.156 now.)
 
 **A Battle runs to the end.** `first_done` ends a play once every contestant is done, never on the first answer, so the slower contestant's evals count; the first done still ranks first (`src/battles/verdict.ts`).
 
