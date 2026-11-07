@@ -53,7 +53,17 @@ COPY package.json pyproject.toml setup.py README.md hatch_build.py ./
 COPY jupyter-config ./jupyter-config
 COPY agent_runtimes ./agent_runtimes
 
-RUN pip install -e .
+# The skills of the catalogue (the user, 7 November 2026): agent-skills with every
+# skill's dependencies, and what the image and video skills need of the operating
+# system — ffmpeg for the video skill, the libraries Pillow and Chromium load,
+# poppler for PDF pages, fonts for the pages Chromium renders — then Chromium
+# itself, for the snapshots and the recordings.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 poppler-utils fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install -e . "agent-skills[skills]>=1.2.0" \
+    && python -m playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8765
 

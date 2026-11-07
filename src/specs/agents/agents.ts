@@ -36,9 +36,11 @@ import {
   CRAWL_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
+  IMAGE_SKILL_SPEC_0_0_1,
   JOKES_SKILL_SPEC_0_0_1,
   PDF_SKILL_SPEC_0_0_1,
   TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+  VIDEO_SKILL_SPEC_0_0_1,
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
@@ -120,12 +122,16 @@ const SKILL_MAP: Record<string, any> = {
   events: EVENTS_SKILL_SPEC_0_0_1,
   'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,
+  'image:0.0.1': IMAGE_SKILL_SPEC_0_0_1,
+  image: IMAGE_SKILL_SPEC_0_0_1,
   'jokes:0.0.1': JOKES_SKILL_SPEC_0_0_1,
   jokes: JOKES_SKILL_SPEC_0_0_1,
   'pdf:0.0.1': PDF_SKILL_SPEC_0_0_1,
   pdf: PDF_SKILL_SPEC_0_0_1,
   'text-summarizer:0.0.1': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
   'text-summarizer': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+  'video:0.0.1': VIDEO_SKILL_SPEC_0_0_1,
+  video: VIDEO_SKILL_SPEC_0_0_1,
 };
 
 function toAgentSkillSpec(skill: SkillSpec) {
@@ -11030,7 +11036,35 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
     MCP_SERVER_MAP['linkedin:0.0.1'],
     MCP_SERVER_MAP['discord:0.0.1'],
   ],
-  skills: [].filter(Boolean) as SkillSpec[],
+  skills: [
+    SKILL_MAP['accounting:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['image:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['image:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['video:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['video:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   backendTools: [],
   frontendTools: [],
   environmentName: 'ai-agents-env',

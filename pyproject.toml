@@ -47,7 +47,7 @@ dependencies = [
     "personal-agent-protocol[ui]>=0.29.0,<0.30",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
-    "agent-skills>=1.1.0",
+    "agent-skills>=1.2.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
     # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
