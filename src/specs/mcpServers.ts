@@ -39,7 +39,7 @@ export const ALPHAVANTAGE_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://www.alphavantage.co/support/#api-key',
   apiKeyUrl: 'https://www.alphavantage.co/support/#api-key',
   setup:
-    "A free key, sent by email from Alpha Vantage's support page; put it in ALPHAVANTAGE_API_KEY.",
+    "A free key, sent by email from [Alpha Vantage's support page](https://www.alphavantage.co/support/#api-key); put it in `ALPHAVANTAGE_API_KEY`. The API is documented [there](https://www.alphavantage.co/documentation/).",
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -76,7 +76,7 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://bsky.app',
   apiKeyUrl: 'https://bsky.app/settings/app-passwords',
   setup:
-    "Sign in to Bluesky, make an app password under Settings, Privacy and security, App passwords, and put the account's handle in BLUESKY_IDENTIFIER, the app password in BLUESKY_APP_PASSWORD and https://bsky.social in BLUESKY_SERVICE_URL; the server is built into the runtime image and runs with node.",
+    "Sign in to [Bluesky](https://bsky.app), make an [app password](https://bsky.app/settings/app-passwords) under Settings, Privacy and security, App passwords, and put the account's handle in `BLUESKY_IDENTIFIER`, the app password in `BLUESKY_APP_PASSWORD` and `https://bsky.social` in `BLUESKY_SERVICE_URL`; the server is built into the runtime image and runs with node.",
   actions: {
     tools: {
       'get-pinned-feeds': 'read',
@@ -120,7 +120,8 @@ export const CHART_MCP_SERVER_0_0_1: MCPServer = {
   requiredEnvVars: [],
   tags: ['visualization', 'charts', 'graphics'],
   documentationUrl: 'https://github.com/antvis/mcp-server-chart',
-  setup: 'Runs with npx; no account and no key.',
+  setup:
+    'Runs with `npx`; no account and no key ([mcp-server-chart](https://github.com/antvis/mcp-server-chart)).',
   actions: {
     tools: {
       generate_area_chart: 'read',
@@ -177,7 +178,7 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://datalayer.ai/signin',
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
-    "Datalayer's own gateway, reached at its url with your Datalayer API key as the bearer: create one under Settings, API keys, and put it in DATALAYER_API_KEY.",
+    "Datalayer's own gateway, reached at its url with your Datalayer API key as the bearer: create one under [Settings, API keys](https://datalayer.ai/settings/api-keys) and put it in `DATALAYER_API_KEY`.",
   actions: {
     tools: {
       read_notebook: 'read',
@@ -364,7 +365,7 @@ export const DISCORD_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://discord.com/developers/applications',
   apiKeyUrl: 'https://discord.com/developers/applications',
   setup:
-    "Create an application in the Discord Developer Portal, add a bot, copy its token into DISCORD_BOT_TOKEN, invite the bot to the server with the permissions of what the agent may do (and the Message Content intent to read messages); put the server's id in DISCORD_GUILD_ID. The server runs in Docker, saseq/discord-mcp.",
+    "Create an application in the [Discord Developer Portal](https://discord.com/developers/applications), add a bot, copy its token into `DISCORD_BOT_TOKEN`, invite the bot to the server with the permissions of what the agent may do (and the Message Content intent to read messages); put the server's id in `DISCORD_GUILD_ID`. The server runs in Docker, [saseq/discord-mcp](https://github.com/SaseQ/discord-mcp).",
   actions: {
     tools: {
       get_server_info: 'read',
@@ -475,7 +476,7 @@ export const EARTHDATA_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://urs.earthdata.nasa.gov/users/new',
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
-    "Searching NASA's catalogue is anonymous, through Datalayer's gateway with your Datalayer API key; a download runs in the code sandbox with an Earthdata Login (EARTHDATA_USERNAME, EARTHDATA_PASSWORD).",
+    "Searching NASA's catalogue is anonymous, through Datalayer's gateway with your [Datalayer API key](https://datalayer.ai/settings/api-keys); a download runs in the code sandbox with an [Earthdata Login](https://urs.earthdata.nasa.gov/users/new) (`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`).",
   actions: {
     tools: {
       search_earth_datasets: 'read',
@@ -504,7 +505,7 @@ export const EURUS_MCP_SERVER_0_0_1: MCPServer = {
   requiredEnvVars: [],
   tags: ['geospatial', 'climate', 'analysis'],
   setup:
-    'Runs the eurus-mcp command where it is installed; no account and no key.',
+    'Runs the `eurus-mcp` command where it is installed; no account and no key.',
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -529,7 +530,8 @@ export const FILESYSTEM_MCP_SERVER_0_0_1: MCPServer = {
   tags: ['files', 'local', 'storage'],
   documentationUrl:
     'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem',
-  setup: "Runs with npx on the runtime's own files; no account and no key.",
+  setup:
+    "Runs with `npx` on the runtime's own files; no account and no key ([the reference server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)).",
   actions: {
     tools: {
       read_file: 'read',
@@ -580,7 +582,7 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://github.com/signup',
   apiKeyUrl: 'https://github.com/settings/tokens',
   setup:
-    'A personal access token with the scopes of what the agent may do, in GITHUB_TOKEN; the server runs in Docker.',
+    'A [personal access token](https://github.com/settings/tokens) with the scopes of what the agent may do, in `GITHUB_TOKEN`; the server runs in Docker, see [github-mcp-server](https://github.com/github/github-mcp-server).',
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -621,7 +623,7 @@ export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://console.cloud.google.com/',
   apiKeyUrl: 'https://console.cloud.google.com/apis/credentials',
   setup:
-    'An OAuth client in a Google Cloud project (GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET); Datalayer mints the person’s token per call.',
+    "An OAuth client in a Google Cloud project, from [APIs and services, Credentials](https://console.cloud.google.com/apis/credentials) (`GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`); Datalayer mints the person's token per call. See [workspace-mcp](https://github.com/taylorwilsdon/google_workspace_mcp).",
   actions: {
     tools: {
       start_google_auth: 'write',
@@ -790,7 +792,7 @@ export const HUGGINGFACE_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://huggingface.co/join',
   apiKeyUrl: 'https://huggingface.co/settings/tokens',
   setup:
-    "A read token from your Hugging Face settings, in HF_TOKEN; the server is Hugging Face's own, reached at its url.",
+    "A read token from your [Hugging Face settings](https://huggingface.co/settings/tokens), in `HF_TOKEN`; the server is Hugging Face's own, reached at its url ([docs](https://huggingface.co/docs/hub/mcp)).",
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -817,7 +819,7 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://www.kaggle.com/account/login',
   apiKeyUrl: 'https://www.kaggle.com/settings/account',
   setup:
-    'An API token from your Kaggle account settings, in KAGGLE_API_TOKEN; the server is Kaggle’s own, reached at its url.',
+    "An API token from your [Kaggle account settings](https://www.kaggle.com/settings/account), in `KAGGLE_API_TOKEN`; the server is Kaggle's own, reached at its url ([docs](https://www.kaggle.com/docs/api)).",
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -847,7 +849,7 @@ export const LINKEDIN_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl:
     'https://github.com/stickerdaniel/linkedin-mcp-server#installation',
   setup:
-    'No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under ~/.linkedin-mcp; a runtime needs that directory mounted. LinkedIn restricts automated access — use an account you can afford to see restricted.',
+    'No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under `~/.linkedin-mcp`; a runtime needs that directory mounted — see [its README](https://github.com/stickerdaniel/linkedin-mcp-server#installation). LinkedIn restricts automated access: use an account you can afford to see restricted.',
   actions: {
     tools: {
       get_person_profile: 'read',
@@ -902,7 +904,7 @@ export const ODOO_ACCOUNTING_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://datalayer.ai/signin',
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
-    "Datalayer's gateway with its odoo-accounting toolset, on Datalayer's own books; your Datalayer API key as the bearer.",
+    "Datalayer's gateway with its odoo-accounting toolset, on Datalayer's own books: your Datalayer API key as the bearer, made under [Settings, API keys](https://datalayer.ai/settings/api-keys) and put in `DATALAYER_API_KEY`.",
   actions: {
     tools: {
       odoo_accounting_list_invoices: 'read',
@@ -985,7 +987,7 @@ export const ODOO_MCP_SERVER_0_0_1: MCPServer = {
   },
   documentationUrl: 'https://github.com/ivnvxd/mcp-server-odoo',
   setup:
-    "Runs with uvx against the Odoo instance its env names, with that Odoo user's API key.",
+    "Runs with `uvx` against the Odoo instance its env names, with that Odoo user's API key ([mcp-server-odoo](https://github.com/ivnvxd/mcp-server-odoo)).",
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -1020,7 +1022,7 @@ export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl:
     'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/quickstart_oauth.htm',
   setup:
-    'An access token and the instance url (SALESFORCE_ACCESS_TOKEN, SALESFORCE_INSTANCE_URL) from a connected app of your org.',
+    'An access token and the instance url (`SALESFORCE_ACCESS_TOKEN`, `SALESFORCE_INSTANCE_URL`) from a [connected app](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/quickstart_oauth.htm) of your org; [sign up](https://developer.salesforce.com/signup) for a developer org if you have none.',
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -1056,7 +1058,7 @@ export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://slack.com/get-started',
   apiKeyUrl: 'https://api.slack.com/apps',
   setup:
-    'A Slack app with a bot token (SLACK_BOT_TOKEN), the workspace id (SLACK_TEAM_ID) and the channels it may read (SLACK_CHANNEL_IDS).',
+    "A [Slack app](https://api.slack.com/apps) with a bot token (`SLACK_BOT_TOKEN`), the workspace id (`SLACK_TEAM_ID`) and the channels it may read (`SLACK_CHANNEL_IDS`); see [Slack's docs](https://api.slack.com/docs).",
   actions: {
     tools: {
       slack_list_channels: 'read',
@@ -1093,7 +1095,8 @@ export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {
   documentationUrl: 'https://docs.tavily.com',
   signupUrl: 'https://app.tavily.com',
   apiKeyUrl: 'https://app.tavily.com/home',
-  setup: 'A key from the Tavily dashboard, in TAVILY_API_KEY.',
+  setup:
+    'A key from the [Tavily dashboard](https://app.tavily.com/home), in `TAVILY_API_KEY`; the docs are at [docs.tavily.com](https://docs.tavily.com).',
   actions: {
     tools: {
       tavily_search: 'read',
@@ -1128,7 +1131,7 @@ export const X_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://developer.x.com',
   apiKeyUrl: 'https://developer.x.com/en/portal/dashboard',
   setup:
-    "Create an app in the X Developer Portal, copy its App-only Bearer Token from Keys and tokens into X_BEARER_TOKEN; the runtime reaches https://api.x.com/mcp with it and reads. For bookmarks and articles, run the xurl bridge on a machine with a browser instead, with the app's CLIENT_ID and CLIENT_SECRET.",
+    "Create an app in the [X Developer Portal](https://developer.x.com/en/portal/dashboard), copy its App-only Bearer Token from **Keys and tokens** into `X_BEARER_TOKEN`; the runtime reaches [https://api.x.com/mcp](https://api.x.com/mcp) with it and reads. For bookmarks and articles, run the [xurl bridge](https://docs.x.com/tools/mcp) on a machine with a browser instead, with the app's `CLIENT_ID` and `CLIENT_SECRET`.",
   actions: {
     tools: {},
     note: "Read off X's documentation, not the running server: posts, search, users, news and trends are reads; bookmarks are read and written; articles are drafted and published (`article_publish` is the one tool named there). A server not read off classes nothing: run it, list its tools, and class each one here.",
