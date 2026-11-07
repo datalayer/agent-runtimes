@@ -68,6 +68,15 @@ KINDS: dict[str, dict[str, str]] = {
         "title": "Battle Catalog.",
         "about": "Scenes composed against each other: a variant, a goal, a clock, the contestants,\na referee decided as the variant is, an arena for a game.",
     },
+    "stages": {
+        "model": "StageSpec",
+        "suffix": "STAGE",
+        "catalogue": "STAGE_CATALOGUE",
+        "one": "stage",
+        "One": "Stage",
+        "title": "Stage Catalog.",
+        "about": "Something of the catalogue put on stage, and where it plays: a scene played whole,\nan app or a Battle; each member on a runtime at the deployment that answers for it;\nwhether anyone may watch without an account. Resolved: a Stage wears what it stages.",
+    },
     "ops": {
         "model": "OpSpec",
         "suffix": "OP",
@@ -141,6 +150,9 @@ def load_specs(kind: str, specs_dir: Path) -> list[dict[str, Any]]:
     elif kind == "battles":
         battles = module.load_battles(specs_dir)
         specs = [battles[identity].model_dump(mode="json") for identity in sorted(battles)]
+    elif kind == "stages":
+        stages = module.load_stages(specs_dir)
+        specs = [stages[identity].model_dump(mode="json") for identity in sorted(stages)]
     elif kind == "tracks":
         tracks = module.load_tracks(specs_dir)
         specs = [
@@ -396,7 +408,7 @@ def generate_typescript_code(kind: str, specs: list[dict[str, Any]]) -> str:
 def main() -> None:
     """Generate one kind's catalogues."""
     parser = argparse.ArgumentParser(
-        description="Generate Python and TypeScript code from YAML Op, Guard, Gate, Track and Battle specifications"
+        description="Generate Python and TypeScript code from YAML Op, Guard, Gate, Track, Battle and Stage specifications"
     )
     parser.add_argument(
         "--kind",

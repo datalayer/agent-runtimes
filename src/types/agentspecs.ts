@@ -673,6 +673,47 @@ export interface BattleSpec {
   emoji?: string;
 }
 
+/**
+ * Something of the catalogue put on stage, and where it plays
+ * (`agentspecs/stages`): exactly one of a scene played whole, an app or a
+ * Battle; each member on a runtime at the deployment that answers for it;
+ * whether anyone may watch without an account. Resolved: its name, face and
+ * description are what it stages says, unless it says otherwise.
+ */
+export interface StageSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** A scene of the catalogue, `id` or `id:version`, played whole. One of `scene`, `app` and `battle`; the others empty. */
+  scene: string;
+  /** An application of the catalogue, `id` or `id:version`. */
+  app: string;
+  /** A Battle of the catalogue, `id` or `id:version`. */
+  battle: string;
+  /** Each member on a runtime to the slug of the deployment that answers for it on Datalayer; none for a scripted scene or a Battle. */
+  deployments: Record<string, string>;
+  /** Whether it has a page of its own that needs no account. */
+  public: boolean;
+  enabled: boolean;
+  tags: string[];
+  icon: string;
+  emoji: string;
+}
+
+/** What is on a Stage. */
+export type StageKind = 'scene' | 'app' | 'battle';
+
+/** What is on a Stage: the one of `scene`, `app` and `battle` it names. */
+export const stageKindOf = (
+  stage: Pick<StageSpec, 'scene' | 'app' | 'battle'>,
+): StageKind => (stage.scene ? 'scene' : stage.app ? 'app' : 'battle');
+
+/** What a Stage stages: the scene's, the app's or the Battle's reference. */
+export const stagedRefOf = (
+  stage: Pick<StageSpec, 'scene' | 'app' | 'battle'>,
+): string => stage.scene || stage.app || stage.battle;
+
 /** A Cog as an Op names it. */
 export interface OpCogSpec {
   id: string;

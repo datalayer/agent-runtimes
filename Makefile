@@ -434,7 +434,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, applications, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -590,6 +590,15 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	    --typescript-output src/specs/battles.ts; \
 	else \
 	  echo "Skipping Battle specifications: $(AGENTSPECS_DIR)/agentspecs/battles not found (agentspecs < 0.0.145)"; \
+	fi
+	$(call step,Generating Stage specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/stages" ]; then \
+	  python scripts/codegen/generate_ops.py --kind stages \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/stages \
+	    --python-output agent_runtimes/specs/stages.py \
+	    --typescript-output src/specs/stages.ts; \
+	else \
+	  echo "Skipping Stage specifications: $(AGENTSPECS_DIR)/agentspecs/stages not found (agentspecs < 0.0.149)"; \
 	fi
 	$(call step,Generating Op specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/ops" ]; then \

@@ -2318,7 +2318,8 @@ class GuardSpec(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="What the Guard is for")
     policy: str = Field(
-        ..., description="The Policy it extends, `id:version`, of the policies catalogue"
+        ...,
+        description="The Policy it extends, `id:version`, of the policies catalogue",
     )
     category: str = Field(
         ...,
@@ -2414,7 +2415,9 @@ class BattleContestantSpec(BaseModel):
     name: str = Field(default="", description="The name the audience sees")
     scene: str = Field(default="", description="A scene of the catalogue, played whole")
     app: str = Field(default="", description="An application of the catalogue")
-    runs_in: Optional[str] = Field(default=None, description="For an app: `browser` or `runtime`")
+    runs_in: Optional[str] = Field(
+        default=None, description="For an app: `browser` or `runtime`"
+    )
     color: str = Field(default="", description="Its colour on stage")
 
 
@@ -2422,7 +2425,9 @@ class BattleRefereeSpec(BaseModel):
     """How a Battle's winner is decided."""
 
     decides_by: str = Field(..., description="`first_done`, `score` or `measure`")
-    measure: str = Field(default="", description="For `measure`: the Guard that scores each outcome")
+    measure: str = Field(
+        default="", description="For `measure`: the Guard that scores each outcome"
+    )
 
 
 class BattleRehearsalSpec(BaseModel):
@@ -2443,12 +2448,48 @@ class BattleSpec(BaseModel):
     clock_seconds: int = Field(..., description="How long it may run")
     contestants: List[BattleContestantSpec] = Field(default_factory=list)
     referee: BattleRefereeSpec
-    arena: Optional[str] = Field(default=None, description="For a game: `pong` or `invaders`")
+    arena: Optional[str] = Field(
+        default=None, description="For a game: `pong` or `invaders`"
+    )
     rehearsal: BattleRehearsalSpec = Field(default_factory=BattleRehearsalSpec)
     enabled: bool = Field(default=True, description="Whether it may be played")
     tags: List[str] = Field(default_factory=list)
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
+class StageSpec(BaseModel):
+    """Something of the catalogue put on stage, and where it plays (`agentspecs/stages`)."""
+
+    id: str = Field(..., description="Unique Stage identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(
+        default="", description="Display name; what it stages is named when unsaid"
+    )
+    description: str = Field(default="", description="What it shows")
+    scene: str = Field(
+        default="",
+        description="A scene of the catalogue, played whole; one of scene, app and battle",
+    )
+    app: str = Field(default="", description="An application of the catalogue")
+    battle: str = Field(default="", description="A Battle of the catalogue")
+    deployments: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Each member on a runtime to the slug of the deployment that answers for it",
+    )
+    public: bool = Field(
+        default=False,
+        description="Whether it has a page of its own that needs no account",
+    )
+    enabled: bool = Field(default=True, description="Whether it may be watched")
+    tags: List[str] = Field(default_factory=list)
+    icon: str = Field(default="", description="Icon identifier")
+    emoji: str = Field(default="", description="Its face")
+
+    @property
+    def kind(self) -> str:
+        """What is on it: `scene`, `app` or `battle`."""
+        return "scene" if self.scene else "app" if self.app else "battle"
 
 
 class OpCogSpec(BaseModel):
