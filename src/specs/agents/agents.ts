@@ -13724,6 +13724,18 @@ export const WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
     SKILL_MAP['events:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['image:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['image:0.0.1'])
+      : undefined,
+    SKILL_MAP['video:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['video:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
   ].filter(Boolean) as SkillSpec[],
   backendTools: [
     TOOL_MAP['runtime-echo:0.0.1'],

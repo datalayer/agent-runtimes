@@ -1310,7 +1310,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     AppPapCompany: {
       additionalProperties: false,
-      description: 'The application is a company personal agents work with.',
+      description:
+        "The application is a company personal agents work with.\n\nPublished at PAP 0.3 as published: the application's `avatar` is served to personal agents\nas the company's logo (`organization.logo_uri`), and `sign_in_disabled` turns sign-in off\nfor them (`auth.disabled`), the company then answering them signed out only.",
       properties: {
         enabled: {
           default: false,
@@ -1322,6 +1323,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           default: true,
           description: 'Whether a personal agent may ask before signing in',
           title: 'Signed Out',
+          type: 'boolean',
+        },
+        sign_in_disabled: {
+          default: false,
+          description:
+            "Whether it offers personal agents no sign-in (`auth.disabled`): they ask only what anybody may ask, in nobody's account, whatever scopes it lists for its other clients",
+          title: 'Sign In Disabled',
           type: 'boolean',
         },
         interfaces: {
@@ -3127,7 +3135,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     avatar: {
       default: '',
       description:
-        'Its avatar, as people keep theirs on their profile: `emoji:<emoji>`, or `@datalayer/icons-react:<Name>Icon` for a drawing of the set. Its emoji stands for it when unsaid, and where only text goes',
+        'Its avatar, as people keep theirs on their profile: `emoji:<emoji>`, or `@datalayer/icons-react:<Name>Icon` for a drawing of the set. Its emoji stands for it when unsaid, and where only text goes. Published as a company, it is served to personal agents as its logo (`organization.logo_uri`)',
       pattern:
         '^\\s*(emoji:[^\\sA-Za-z0-9]{1,32}|@datalayer/icons-react:[A-Z][A-Za-z0-9]{0,62}Icon)?\\s*$',
       title: 'Avatar',
