@@ -1558,6 +1558,27 @@ class MCPServer(BaseModel):
         description="Whether this server is currently running",
         alias="isRunning",
     )
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    documentation_url: Optional[str] = Field(
+        default=None, description="Where to read about it", alias="documentationUrl"
+    )
+    signup_url: Optional[str] = Field(
+        default=None,
+        description="Where to sign up for the service behind it",
+        alias="signupUrl",
+    )
+    api_key_url: Optional[str] = Field(
+        default=None,
+        description="Where to make the key or token it needs",
+        alias="apiKeyUrl",
+    )
+    setup: Optional[str] = Field(
+        default=None, description="How it is set up, in a sentence"
+    )
+    actions: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="What each tool does to the world: its class by tool name, when checked, a note",
+    )
 
 
 class FrontendConfig(BaseModel):

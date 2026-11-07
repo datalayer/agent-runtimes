@@ -51,6 +51,31 @@ export interface MCPServer {
   icon?: string;
   /** Drawn where there is no icon */
   emoji?: string;
+  /** Tags for categorization */
+  tags?: string[];
+  /** The environment the server's process is given, `${VAR}` expanded as it starts */
+  env?: Record<string, string>;
+  /** The variables the code its tools write reads in the code sandbox, never the server (a download's script) */
+  sandboxEnvVars?: string[];
+  /** Where to read about it (the user, 7 November 2026) */
+  documentationUrl?: string;
+  /** Where to sign up for the service behind it */
+  signupUrl?: string;
+  /** Where to make the key or token it needs */
+  apiKeyUrl?: string;
+  /** How it is set up, in a sentence: which key, where it goes */
+  setup?: string;
+  /** What each tool does to the world (agentspecs.actions): its class by tool name, when it was checked, and a note */
+  actions?: MCPServerActions;
+}
+
+/** What an MCP server's tools do to the world, as its spec classes them. */
+export interface MCPServerActions {
+  /** The day the classes were read off the running server; none when they were not yet */
+  checked?: string;
+  note?: string;
+  /** Each tool's class: `read`, `write`, `send`, `pay`, …; a tool not named is unknown, the most restricted */
+  tools: Record<string, string>;
 }
 
 /**

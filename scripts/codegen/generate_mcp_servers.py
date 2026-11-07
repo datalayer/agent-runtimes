@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -154,6 +155,15 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 + ", ".join(f'"{v}"' for v in sandbox_envvars)
                 + "],"
             )
+        # The rest of what the spec says (the user, 7 November 2026): its tags,
+        # where to read about it and get its key, and what its tools do.
+        if spec.get("tags"):
+            lines.append(f"    tags={list(spec['tags'])!r},")
+        for key in ("documentation_url", "signup_url", "api_key_url", "setup"):
+            if spec.get(key):
+                lines.append(f"    {key}={str(spec[key])!r},")
+        if spec.get("actions"):
+            lines.append(f"    actions={_actions_of(spec)!r},")
         lines.extend([")", ""])
 
     # Generate catalog dictionary
@@ -238,6 +248,17 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _actions_of(spec: dict[str, Any]) -> dict[str, Any]:
+    """What the spec says its tools do, as plain data: the classes by tool, the day checked, the note."""
+    actions = spec.get("actions") or {}
+    tidy: dict[str, Any] = {"tools": {str(k): str(v) for k, v in (actions.get("tools") or {}).items()}}
+    if actions.get("checked"):
+        tidy["checked"] = str(actions["checked"])
+    if actions.get("note"):
+        tidy["note"] = " ".join(str(actions["note"]).split())
+    return tidy
+
+
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     """Generate TypeScript code from MCP server specifications."""
     lines = [
@@ -318,6 +339,36 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 "  isAvailable: false,",
                 "  tools: [],",
                 f"  requiredEnvVars: {envvars_formatted},",
+                *(
+                    [f"  tags: {json.dumps(list(spec['tags']), ensure_ascii=False)},"]
+                    if spec.get("tags")
+                    else []
+                ),
+                *(
+                    [f"  env: {json.dumps(spec['env'], ensure_ascii=False)},"]
+                    if spec.get("env")
+                    else []
+                ),
+                *(
+                    [f"  sandboxEnvVars: {json.dumps(list(spec['sandbox_envvars']))},"]
+                    if spec.get("sandbox_envvars")
+                    else []
+                ),
+                *[
+                    f"  {camel}: {json.dumps(str(spec[key]), ensure_ascii=False)},"
+                    for key, camel in (
+                        ("documentation_url", "documentationUrl"),
+                        ("signup_url", "signupUrl"),
+                        ("api_key_url", "apiKeyUrl"),
+                        ("setup", "setup"),
+                    )
+                    if spec.get(key)
+                ],
+                *(
+                    [f"  actions: {json.dumps(_actions_of(spec), ensure_ascii=False)},"]
+                    if spec.get("actions")
+                    else []
+                ),
                 "};",
                 "",
             ]
