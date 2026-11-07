@@ -15,10 +15,18 @@
  * visitor is on the servers (turns a day, a session's minutes, a rate and a
  * ceiling for the day), not the life of a key.
  *
+ * A token may also name the catalogue Battle it is played for (B4-01): its
+ * model calls then count against that play's own budget at ai-inference,
+ * instead of the visitor's rate, and the runtime that plays a member of the
+ * Battle's scene reads the Battle from it (`fetchBattleToken`, and
+ * `DatalayerVisitors.battle` for the members).
+ *
  * @module apps/apps/visitorToken
  */
 
 import { useEffect, useState } from 'react';
+
+import { tokenLifetimeMs } from '../../runtimes/browser/anonymousToken';
 
 /** Where a conversation without an account runs: the visitors' runtime, and what it is for. */
 export type DatalayerVisitors = {
@@ -28,6 +36,8 @@ export type DatalayerVisitors = {
   app: string;
   /** ai-inference, which mints the visitor's token. */
   inferenceUrl: string;
+  /** The catalogue Battle the token is played for, when it is (B4-01). */
+  battle?: string;
 };
 
 /** The id this tab keeps for its visitor. */
@@ -67,28 +77,39 @@ export type VisitorToken = {
   renewAt: number;
 };
 
-/** The body ai-inference is asked with. */
+/** The body ai-inference is asked with: the application, the visitor once there is one, the Battle when it is played for one. */
 export function visitorTokenRequest(
   app: string,
   visitor: string,
-): { app: string; visitor?: string } {
-  return isVisitorId(visitor) ? { app, visitor } : { app };
+  battle = '',
+): { app?: string; visitor?: string; battle?: string } {
+  return {
+    ...(app ? { app } : {}),
+    ...(isVisitorId(visitor) ? { visitor } : {}),
+    ...(battle ? { battle } : {}),
+  };
 }
 
-/** Mint a visitor's token for an application; throws with ai-inference's sentence. */
-export async function fetchVisitorToken(
+/** What ai-inference answers a mint with. */
+type MintedVisitorToken = {
+  token: string;
+  visitor?: string;
+  expires_in?: number;
+};
+
+/** Ask ai-inference for a token; throws with its sentence. The visitor it names is kept for the next one. */
+async function mintVisitorToken(
   inferenceUrl: string,
-  app: string,
-  visitor = keptVisitorId(),
-  fetcher: typeof fetch = fetch,
-): Promise<VisitorToken> {
+  request: ReturnType<typeof visitorTokenRequest>,
+  fetcher: typeof fetch,
+): Promise<MintedVisitorToken> {
   const base = inferenceUrl.replace(/\/+$/, '');
   const response = await fetcher(
     `${base}/api/ai-inference/v1/anonymous/token`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(visitorTokenRequest(app, visitor)),
+      body: JSON.stringify(request),
     },
   );
   const body = (await response.json().catch(() => ({}))) as {
@@ -106,11 +127,70 @@ export async function fetchVisitorToken(
   if (isVisitorId(body.visitor)) {
     keepVisitorId(body.visitor);
   }
+  return {
+    token: body.token,
+    visitor: body.visitor,
+    expires_in: body.expires_in,
+  };
+}
+
+/** Mint a visitor's token for an application — played for a Battle when `battle` names one; throws with ai-inference's sentence. */
+export async function fetchVisitorToken(
+  inferenceUrl: string,
+  app: string,
+  visitor = keptVisitorId(),
+  fetcher: typeof fetch = fetch,
+  battle = '',
+): Promise<VisitorToken> {
+  const body = await mintVisitorToken(
+    inferenceUrl,
+    visitorTokenRequest(app, visitor, battle),
+    fetcher,
+  );
   const lifetimeMs = Math.max(60_000, (body.expires_in ?? 300) * 1000);
   return {
     token: body.token,
     visitor: body.visitor ?? visitor,
     renewAt: Date.now() + lifetimeMs - MARGIN_MS,
+  };
+}
+
+/** A Battle's token for the page's players: its own budget at ai-inference, for one play. */
+export type BattleToken = {
+  token: string;
+  visitor: string;
+  /** Epoch milliseconds: the token's own lifetime from now. */
+  expiresAt: number;
+  /** How long it was signed for, as the token declares. */
+  lifetimeMs: number;
+};
+
+/**
+ * Mint the token one play of a catalogue Battle is played with, by the
+ * visitor this tab keeps (B4-01): the players in the page call their models
+ * with it, its calls counted against the play's budget. Never renewed: a play
+ * is minutes, and the next play mints its own.
+ */
+export async function fetchBattleToken(
+  inferenceUrl: string,
+  battle: string,
+  visitor = keptVisitorId(),
+  fetcher: typeof fetch = fetch,
+): Promise<BattleToken> {
+  if (!battle) {
+    throw new Error('A Battle token is minted for a Battle.');
+  }
+  const body = await mintVisitorToken(
+    inferenceUrl,
+    visitorTokenRequest('', visitor, battle),
+    fetcher,
+  );
+  const lifetimeMs = tokenLifetimeMs(body.token, body.expires_in);
+  return {
+    token: body.token,
+    visitor: body.visitor ?? visitor,
+    expiresAt: Date.now() + lifetimeMs,
+    lifetimeMs,
   };
 }
 
@@ -125,6 +205,7 @@ export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
   const [state, setState] = useState<{ token?: string; error?: string }>({});
   const app = visitors?.app;
   const inferenceUrl = visitors?.inferenceUrl;
+  const battle = visitors?.battle ?? '';
   useEffect(() => {
     if (!app || !inferenceUrl) {
       setState({});
@@ -133,7 +214,7 @@ export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const mint = () => {
-      fetchVisitorToken(inferenceUrl, app)
+      fetchVisitorToken(inferenceUrl, app, keptVisitorId(), fetch, battle)
         .then(minted => {
           if (cancelled) {
             return;
@@ -159,7 +240,7 @@ export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
         clearTimeout(timer);
       }
     };
-  }, [app, inferenceUrl]);
+  }, [app, inferenceUrl, battle]);
   return state;
 }
 

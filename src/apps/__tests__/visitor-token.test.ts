@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ensureVisitorAgent,
+  fetchBattleToken,
   fetchVisitorAgent,
   fetchVisitorToken,
   isVisitorId,
@@ -82,6 +83,90 @@ describe('a visitor token', () => {
         }),
       ),
     ).rejects.toThrow("A visitor's id is 8 to 64 letters, digits or dashes.");
+  });
+});
+
+describe("a Battle's token (B4-01)", () => {
+  const bodyOf = (fetcher: typeof fetch) =>
+    JSON.parse(
+      String(
+        (
+          (fetcher as unknown as { mock: { calls: unknown[][] } }).mock
+            .calls[0] as [string, RequestInit]
+        )[1].body,
+      ),
+    );
+
+  it('names the Battle beside the application and the visitor', () => {
+    expect(
+      visitorTokenRequest('accounting', 'tab-0001-visitor', 'invoice-race'),
+    ).toEqual({
+      app: 'accounting',
+      visitor: 'tab-0001-visitor',
+      battle: 'invoice-race',
+    });
+    expect(visitorTokenRequest('', '', 'pong')).toEqual({ battle: 'pong' });
+  });
+
+  it("mints one play's token, its life read off the token", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = btoa(JSON.stringify({ iat: now, exp: now + 300 }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const fetcher = answer(200, {
+      token: `h.${payload}.s`,
+      visitor: 'made-by-ai-inference-02',
+      battle: 'pong',
+      budget: 200,
+      expires_in: 299,
+    });
+    const minted = await fetchBattleToken(
+      'https://r1.test',
+      'pong',
+      '',
+      fetcher,
+    );
+    expect(bodyOf(fetcher)).toEqual({ battle: 'pong' });
+    expect(minted.visitor).toBe('made-by-ai-inference-02');
+    expect(minted.lifetimeMs).toBe(300_000);
+    expect(minted.expiresAt - Date.now()).toBeGreaterThan(290_000);
+  });
+
+  it('a member keeps renewing its token for the Battle', async () => {
+    const fetcher = answer(200, {
+      token: 't',
+      visitor: 'tab-0002-visitor',
+      expires_in: 300,
+    });
+    await fetchVisitorToken(
+      'https://r1.test',
+      'accounting',
+      'tab-0002-visitor',
+      fetcher,
+      'invoice-race',
+    );
+    expect(bodyOf(fetcher)).toEqual({
+      app: 'accounting',
+      visitor: 'tab-0002-visitor',
+      battle: 'invoice-race',
+    });
+  });
+
+  it("refuses a mint for no Battle, and says ai-inference's refusal", async () => {
+    await expect(
+      fetchBattleToken('https://r1.test', '', '', answer(200, {})),
+    ).rejects.toThrow('for a Battle');
+    await expect(
+      fetchBattleToken(
+        'https://r1.test',
+        'Pong',
+        '',
+        answer(422, {
+          detail: 'A token is played for a Battle of the catalogue, by its id.',
+        }),
+      ),
+    ).rejects.toThrow('by its id');
   });
 });
 
