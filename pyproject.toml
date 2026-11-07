@@ -44,7 +44,7 @@ dependencies = [
     # Session Key; insufficient_scope; protected_resources; the issuer's
     # grant_types_supported; author); a 0.3 personal agent uses only 0.3 companies.
     # 0.29.0: DPoP proofs, a Company with no issuer (`DiscoveredCompany.identifier`).
-    "personal-agent-protocol[ui]>=0.29.0,<0.30",
+    "personal-agent-protocol[ui]>=0.31.0,<0.32",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.2.0",
