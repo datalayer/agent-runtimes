@@ -192,6 +192,25 @@ def test_what_the_builders_refuse() -> None:
         )
 
 
+def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
+    """D4-08 (PAP 0.3 as published §3.2, `auth.disabled`): off unless said; on, written as
+    `sign_in_disabled`, and the company answers signed out only."""
+    quiet = Application("q", "chat", agent="example-blank:0.0.1")
+    assert quiet.as_company(scopes=[{"name": "orders:read", "description": "Read your orders"}]).sign_in_disabled is False
+    assert "sign_in_disabled" not in quiet._pap()["company"]
+    closed = Application("c", "chat", agent="example-blank:0.0.1")
+    role = closed.as_company(
+        scopes=[{"name": "orders:read", "description": "Read your orders"}], sign_in_disabled=True
+    )
+    assert role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
+    with pytest.raises(ValidationError, match="answers them signed out"):
+        Application("n", "chat", agent="example-blank:0.0.1").as_company(
+            scopes=[{"name": "orders:read", "description": "Read your orders"}],
+            sign_in_disabled=True,
+            signed_out=False,
+        )
+
+
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
     """`protocols` and `ui` from Python (R8): the Canvas and the YAML read the same lists."""
     from agent_runtimes.apps.application import Application

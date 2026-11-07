@@ -1013,6 +1013,7 @@ class Application:
         scopes: Sequence[Mapping[str, Any]] = (),
         excluded_tasks: Sequence[Mapping[str, Any]] = (),
         signed_out: bool = True,
+        sign_in_disabled: bool = False,
         interfaces: Sequence[str] = ("agent",),
         extensions: Sequence[str] = (),
         personal_agents: str = "any",
@@ -1037,6 +1038,10 @@ class Application:
             ``instructions`` and/or ``references``).
         signed_out : bool
             Whether a personal agent may ask before the person signs in.
+        sign_in_disabled : bool
+            Whether it offers personal agents no sign-in (PAP ``auth.disabled``,
+            0.3 as published): they ask only what anybody may ask, in nobody's
+            account; ``signed_out`` must then stay on.
         interfaces : sequence of str
             How personal agents reach it: ``agent``, ``openapi``, ``mcp``.
         extensions : sequence of str
@@ -1059,6 +1064,7 @@ class Application:
             {
                 "enabled": True,
                 "signed_out": signed_out,
+                "sign_in_disabled": sign_in_disabled,
                 "interfaces": list(interfaces),
                 "scopes": list(scopes),
                 "excluded_tasks": list(excluded_tasks),

@@ -355,6 +355,33 @@ describe('writing an Appspec', () => {
     ).toBeUndefined();
   });
 
+  it('reads and writes a company that offers personal agents no sign-in, off unless said (D4-08)', () => {
+    const company = {
+      enabled: true,
+      scopes: [{ name: 'orders:read', description: 'Read your orders' }],
+    };
+    const open = parseAppspec({
+      kind: 'chat',
+      pap: { profile: 'draft-01', company },
+    }).app;
+    expect(open.pap?.company.signInDisabled).toBe(false);
+    expect(dumpAppspec(open).pap?.company).not.toHaveProperty(
+      'sign_in_disabled',
+    );
+    const closed = parseAppspec({
+      kind: 'chat',
+      pap: {
+        profile: 'draft-01',
+        company: { ...company, sign_in_disabled: true },
+      },
+    }).app;
+    expect(closed.pap?.company.signInDisabled).toBe(true);
+    expect(dumpAppspec(closed).pap?.company).toMatchObject({
+      enabled: true,
+      sign_in_disabled: true,
+    });
+  });
+
   it('leaves out what is not the spec', () => {
     const app = {
       ...emptyAppspec('chat'),
@@ -539,6 +566,7 @@ describe('writing an Appspec', () => {
       company: {
         enabled: true,
         signedOut: true,
+        signInDisabled: false,
         interfaces: ['agent'],
         scopes: [
           {

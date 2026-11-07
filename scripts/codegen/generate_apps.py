@@ -59,6 +59,7 @@ CAMEL = {
     # Personal Agent Protocol (pap.connections[], pap.company, its operations).
     "sign_in": "signIn",
     "signed_out": "signedOut",
+    "sign_in_disabled": "signInDisabled",
     "personal_agents": "personalAgents",
     "registered_agents": "registeredAgents",
     # Its company scopes' hints and excluded tasks (PAP draft 0.3).

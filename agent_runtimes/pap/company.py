@@ -449,6 +449,8 @@ class PapCompanyCapability:
             write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
             device=True,
             direct=False,
+            # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
+            sign_in_disabled=bool(company.sign_in_disabled),
             operations="operations" in company.extensions,
             device_page=device_page,
         )
