@@ -16,8 +16,8 @@ from agent_runtimes.types import (
     AgentCapability,
     Agentspec,
     AgentSuggestion,
-    SubAgentspecConfig,
     SubAgentsConfig,
+    SubAgentspecConfig,
 )
 
 # ============================================================================

@@ -86,6 +86,7 @@ export const ALIBABA_QWEN_MAX_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
+  pricing: { inputUsdPerMillion: 1.6, outputUsdPerMillion: 6.4 },
 };
 
 export const ALIBABA_QWEN3_32B_0_0_1: AIModel = {

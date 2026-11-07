@@ -2455,6 +2455,14 @@ class BattleRefereeSpec(BaseModel):
     )
 
 
+class BattleEvalSpec(BaseModel):
+    """An eval of the catalogue that confirms a contestant's result."""
+
+    eval: str = Field(..., description="An eval of the catalogue, `id` or `id:version`")
+    config: Dict[str, Any] = Field(default_factory=dict, description="What the evaluator is given")
+    says: str = Field(default="", description="What passing confirms")
+
+
 class BattleRehearsalSpec(BaseModel):
     """What a played Battle has to show."""
 
@@ -2475,6 +2483,9 @@ class BattleSpec(BaseModel):
     referee: BattleRefereeSpec
     arena: Optional[str] = Field(
         default=None, description="For a game: `pong` or `invaders`"
+    )
+    evals: List[BattleEvalSpec] = Field(
+        default_factory=list, description="The evals that confirm each contestant's result once the referee has a verdict"
     )
     rehearsal: BattleRehearsalSpec = Field(default_factory=BattleRehearsalSpec)
     enabled: bool = Field(default=True, description="Whether it may be played")

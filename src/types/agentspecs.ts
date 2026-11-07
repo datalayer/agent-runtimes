@@ -664,6 +664,16 @@ export interface BattleRefereeSpec {
   measure: string;
 }
 
+/** An eval of the catalogue that confirms a contestant's result (the user, 7 November 2026): run once the referee has a verdict; the winner is declared only when its evals all pass. */
+export interface BattleEvalSpec {
+  /** An eval of the catalogue a Battle can run where it plays, `id` or `id:version`: `contains`, `equals`, `equals-expected`, `max-duration`, `llm-judge`. */
+  eval: string;
+  /** What the evaluator is given: `expected_output`, `max_duration_ms`, `rubric`, `threshold`. */
+  config: Record<string, unknown>;
+  /** What passing confirms, in a sentence. */
+  says: string;
+}
+
 /** Scenes composed against each other, under one clock and a referee (`agentspecs/battles`). */
 export interface BattleSpec {
   id: string;
@@ -681,6 +691,8 @@ export interface BattleSpec {
   referee: BattleRefereeSpec;
   /** The arena drawn in the page: a game's, which keeps the score (`pong`, `invaders`); a `deck` or a `sheet` the contestants of a race or a challenge work in. */
   arena?: 'pong' | 'invaders' | 'deck' | 'sheet';
+  /** The evals that confirm each contestant's result once the referee has a verdict; empty for none. */
+  evals: BattleEvalSpec[];
   /** What a played Battle has to show. */
   rehearsal: { expects: string[] };
   enabled: boolean;

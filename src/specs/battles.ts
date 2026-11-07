@@ -51,6 +51,24 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
     measure: '',
   },
   arena: 'deck',
+  evals: [
+    {
+      eval: 'max-duration:0.0.1',
+      config: {
+        max_duration_ms: 180000,
+      },
+      says: 'It finished within the clock.',
+    },
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.7,
+        rubric:
+          'The contestant reports a deck with a title and at least three slides on the brief: why the newsletter helps, what goes in it, who writes what, and a closing call to sign up.',
+      },
+      says: 'It built the deck the brief asked for.',
+    },
+  ],
   rehearsal: {
     expects: [
       'each deck has a title and at least three slides',
@@ -97,6 +115,24 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
     measure: '',
   },
   arena: 'invaders',
+  evals: [
+    {
+      eval: 'max-duration:0.0.1',
+      config: {
+        max_duration_ms: 180000,
+      },
+      says: 'The game ended within the clock.',
+    },
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.6,
+        rubric:
+          'The player watched the arena, moved its cannon under the invader the arena named and fired, and moved away from a bomb it was told about.',
+      },
+      says: 'The player played the arena, not around it.',
+    },
+  ],
   rehearsal: {
     expects: [
       'both contestants fire at least once',
@@ -142,6 +178,24 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
     decidesBy: 'first_done',
     measure: '',
   },
+  evals: [
+    {
+      eval: 'max-duration:0.0.1',
+      config: {
+        max_duration_ms: 120000,
+      },
+      says: 'It answered within the clock.',
+    },
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.7,
+        rubric:
+          'The answer lists the customer invoices still open, each named, and gives the total due as one figure; it invents no invoice.',
+      },
+      says: 'It listed the open invoices and a total, as the goal asked.',
+    },
+  ],
   rehearsal: {
     expects: [
       'a verdict within the clock',
@@ -188,6 +242,24 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
     measure: '',
   },
   arena: 'pong',
+  evals: [
+    {
+      eval: 'max-duration:0.0.1',
+      config: {
+        max_duration_ms: 180000,
+      },
+      says: 'The game ended within the clock.',
+    },
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.6,
+        rubric:
+          'The player watched the arena, moved its paddle where the arena said the ball arrived, and served when the serve was its own; it did not idle while the ball came to it.',
+      },
+      says: 'The player played the arena, not around it.',
+    },
+  ],
   rehearsal: {
     expects: [
       'both contestants move at least once',
@@ -233,6 +305,17 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
     decidesBy: 'measure',
     measure: 'report-quality-guard:0.0.1',
   },
+  evals: [
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.7,
+        rubric:
+          'The summary covers what was asked and rests on figures the run read from the books; it says what it could not check.',
+      },
+      says: 'The summary is complete and grounded.',
+    },
+  ],
   rehearsal: {
     expects: [
       "each contestant's draft measured",
@@ -281,6 +364,24 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
     measure: '',
   },
   arena: 'sheet',
+  evals: [
+    {
+      eval: 'max-duration:0.0.1',
+      config: {
+        max_duration_ms: 180000,
+      },
+      says: 'It finished within the clock.',
+    },
+    {
+      eval: 'llm-judge:0.0.1',
+      config: {
+        threshold: 0.7,
+        rubric:
+          'The contestant reports a workbook with the figures the brief asked for, their totals, and a chart.',
+      },
+      says: 'It filled the sheet the brief asked for, chart included.',
+    },
+  ],
   rehearsal: {
     expects: [
       'each sheet has a header row, seven rows and a totals row',

@@ -104,6 +104,7 @@ ALIBABA_QWEN_MAX_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
+    pricing=ModelPricing(input_usd_per_million=1.6, output_usd_per_million=6.4),
 )
 
 ALIBABA_QWEN3_32B_0_0_1 = AIModel(

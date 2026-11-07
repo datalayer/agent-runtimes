@@ -9,10 +9,10 @@ that can be used by both Jupyter and FastAPI servers.
 """
 
 from .catalog_mcp_servers import (
+    MCP_SERVER_CATALOG,
     check_env_vars_available,
     get_catalog_server,
     list_catalog_servers,
-    MCP_SERVER_CATALOG,
 )
 from .client import (
     MCPClient,
@@ -133,7 +133,7 @@ __all__ = [
     "shutdown_config_mcp_toolsets",
     "wait_for_config_mcp_toolsets",
     "tools_to_builtin_list",
-                            # catalog_mcp_servers.py exports
+    # catalog_mcp_servers.py exports
     "MCP_SERVER_CATALOG",
     "check_env_vars_available",
     "get_catalog_server",

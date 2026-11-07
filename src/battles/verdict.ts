@@ -67,7 +67,8 @@ export interface BattleStanding {
 
 /** What the referee says. */
 export interface BattleVerdict {
-  outcome: 'won' | 'draw' | 'unfinished';
+  /** `unconfirmed` (the user, 7 November 2026): the referee named a winner whose evals did not all pass — the page says what failed, and no winner. */
+  outcome: 'won' | 'draw' | 'unfinished' | 'unconfirmed';
   /** The winner's id, when there is one. */
   winner?: string;
   /** Why, in a sentence. */
