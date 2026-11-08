@@ -67,6 +67,7 @@ from agent_runtimes.commands.list_specs import (
 from agent_runtimes.commands.list_specs import (
     list_agentspecs,
 )
+from agent_runtimes.commands.mcp import app as mcp_app
 from agent_runtimes.commands.mcp_servers_catalog import (
     OutputFormat as CatalogOutputFormat,
 )
@@ -563,6 +564,7 @@ app.add_typer(checkpoints_app)
 app.add_typer(sandboxes_app)
 app.add_typer(console_app)
 app.add_typer(memory_app)
+app.add_typer(mcp_app)
 app.add_typer(envs_app)
 app.add_typer(evals_app)
 app.add_typer(pools_app)

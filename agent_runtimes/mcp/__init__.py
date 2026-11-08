@@ -30,6 +30,10 @@ from .config_mcp_servers import (
     initialize_config_mcp_servers,
     load_mcp_config,
 )
+from .hosted_client import (
+    HostedMCPClient,
+    MCPToolError,
+)
 from .lifecycle import (
     MCPLifecycleManager,
     MCPServerInstance,
@@ -83,6 +87,9 @@ from .toolsets import (
 
 __all__ = [
     "MCPClient",
+    # hosted_client.py exports: one session to the gateway or any MCP server
+    "HostedMCPClient",
+    "MCPToolError",
     # tasks.py exports: a call whose answer outlives the request
     "TASKS_EXTENSION",
     "TaskCancelled",

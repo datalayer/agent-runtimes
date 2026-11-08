@@ -816,6 +816,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `mcp-servers-config` | Display MCP servers from the user's config |
 | `start-mcp-servers` | Start MCP servers for a running agent |
 | `stop-mcp-servers` | Stop MCP servers for a running agent |
+| `mcp` | Talk to the Datalayer MCP gateway, or any MCP server: `toolsets`, `tools`, `describe`, `call`, `run` (see below) |
 | `apps` | Applications: `init`, `build`, `eject`, `validate`, `run`, `deploy`, `pull`, `push`, `threads`, `feedback` (see above) |
 | `scenes` | Scenes: `ls` the catalogue, `rehearse` a scene (see above) |
 | `agents` | Agent runtime lifecycle commands |
@@ -1819,6 +1820,86 @@ try:
 except AgentMcpServersError as e:
     print(f"Error: {e}")
 ```
+
+---
+
+## `mcp` Command
+
+`agent-runtimes mcp` is a plain MCP client for the terminal: it opens a streamable-HTTP session to the Datalayer MCP gateway (or any MCP server), lists its toolsets and tools, calls a tool, or runs a script that makes many calls on one session.
+
+By default it reaches the gateway at `$DATALAYER_MCP_SERVER_URL` (or `https://mcp.datalayer.run/mcp`) with the bearer token in `$DATALAYER_API_KEY`. The token is never printed.
+
+### Options
+
+Every subcommand takes the session options:
+
+| Option | Description |
+|--------|-------------|
+| `--url, -u` | MCP endpoint (default: `$DATALAYER_MCP_SERVER_URL`, or the hosted gateway) |
+| `--toolset, -t` | A gateway toolset to add to its defaults (repeatable, or comma-separated) |
+| `--only` | Exactly the given toolsets, without the gateway's defaults (`?only=…`) |
+| `--param, -p` | A session parameter `KEY=VALUE` in the query string (repeatable), e.g. `odoo-company=2` |
+| `--token-env` | Environment variable holding the bearer token (default: `DATALAYER_API_KEY`) |
+| `--header, -H` | An extra request header `KEY=VALUE` (repeatable) |
+
+The gateway's toolsets are chosen in the query string: `-t odoo -t odoo-accounting -p odoo-company=2` opens `…/mcp?odoo,odoo-accounting&odoo-company=2`.
+
+### Examples
+
+```bash
+# The gateway's toolsets; `*` marks those the session would have
+agent-runtimes mcp toolsets
+agent-runtimes mcp toolsets -t odoo-accounting --json
+
+# A session's tools, with the first line of each description
+agent-runtimes mcp tools --only -t odoo-accounting -p odoo-company=1
+
+# A tool's description and input schema
+agent-runtimes mcp describe odoo_search_records --only -t odoo
+agent-runtimes mcp tools --only -t odoo --schema odoo_search_records
+
+# Call a tool: arguments as JSON, a JSON file, or KEY=VALUE pairs (values decoded as JSON when they are)
+agent-runtimes mcp call odoo_get_account -t odoo -p odoo-company=1
+agent-runtimes mcp call odoo_search_records -t odoo -p odoo-company=1 \
+  --args '{"model": "res.partner", "fields": ["name"]}' -a limit=5
+agent-runtimes mcp call odoo_search_records -t odoo --args @query.json
+
+# Any other MCP server
+agent-runtimes mcp tools --url http://localhost:4040/mcp --token-env MY_SERVER_TOKEN
+```
+
+`call` prints the tool's result as JSON: a result of one content alone, several as a list (`--raw` prints the whole `CallToolResult`). It exits 1 when the tool answers with an error, printing the error's text, and 2 when the session cannot be opened.
+
+### A script on one session
+
+`mcp run` opens one session and runs a script's `async def main(client)`; what `main` returns, when not `None`, is printed as JSON.
+
+```python
+# partners.py
+async def main(client):
+    [account] = await client.call("odoo_get_account")
+    rows = await client.call(
+        "odoo_search_records", model="res.partner", fields=["name"], limit=5
+    )
+    return {"company": account["current_company"], "partners": rows[0]}
+```
+
+```bash
+agent-runtimes mcp run partners.py -t odoo -p odoo-company=1
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.mcp.hosted_client import MCPToolError, connect
+
+async with connect(toolsets=["odoo-accounting"], params={"odoo-company": 1}, only=True) as client:
+    tools = await client.list_tools()          # mcp.types.Tool, across pages
+    [account] = await client.call("odoo_get_account")
+    result = await client.call_raw("odoo_get_account")   # the CallToolResult as sent
+```
+
+`client.call(tool, **arguments)` returns one decoded value per content (JSON text decoded, other text kept) and raises `MCPToolError` (with `.tool` and `.text`) when the tool errs. The gateway answers with JSON text rather than structured content, which the SDK's `ClientSession.call_tool` refuses for a tool with an output schema; the client sends a raw `tools/call` instead. `connect(url=..., headers=..., token=...)` reaches any other MCP server.
 
 ---
 
