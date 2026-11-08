@@ -64,7 +64,7 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.7,
         rubric:
-          'The contestant reports a deck with a title and at least three slides on the brief: why the newsletter helps, what goes in it, who writes what, and a closing call to sign up.',
+          'The deck in the arena has a title and at least three slides on the brief: why the newsletter helps, what goes in it, who writes what, and a closing call to sign up.',
       },
       says: 'It built the deck the brief asked for.',
     },
@@ -128,7 +128,7 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.6,
         rubric:
-          'The player watched the arena, moved its cannon under the invader the arena named and fired, and moved away from a bomb it was told about.',
+          'The player watched the arena (arena_watch or arena_read), moved its cannon under the invaders and fired, and its cannon was not hit by a bomb it had been warned of.',
       },
       says: 'The player played the arena, not around it.',
     },
@@ -191,7 +191,7 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.7,
         rubric:
-          'The answer lists the customer invoices still open, each named, and gives the total due as one figure; it invents no invoice.',
+          "The answer lists the customer invoices still open, each named, and gives the total due as one figure; each invoice comes from what the run read from the books, as its members' tool calls and answers show.",
       },
       says: 'It listed the open invoices and a total, as the goal asked.',
     },
@@ -255,7 +255,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.6,
         rubric:
-          'The player watched the arena, moved its paddle where the arena said the ball arrived, and served when the serve was its own; it did not idle while the ball came to it.',
+          'The player watched the arena (arena_watch or arena_read), moved its paddle as the ball came and served when the serve was its own; its tool calls and moves show it played rather than idled.',
       },
       says: 'The player played the arena, not around it.',
     },
@@ -311,7 +311,7 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.7,
         rubric:
-          'The summary covers what was asked and rests on figures the run read from the books; it says what it could not check.',
+          'The summary says where the close stands, what is to book and what is still open, with figures the run read from the books, as its tool calls show; where it could not check a figure, it says so.',
       },
       says: 'The summary is complete and grounded.',
     },
@@ -377,7 +377,7 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.7,
         rubric:
-          'The contestant reports a workbook with the figures the brief asked for, their totals, and a chart.',
+          'The sheet in the arena holds a header row, a row per day from Monday to Sunday with the loaves and the revenue, a totals row computed by formulas, and a chart of the revenue by day.',
       },
       says: 'It filled the sheet the brief asked for, chart included.',
     },
