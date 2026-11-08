@@ -436,6 +436,34 @@ def test_a_spec_whose_secret_is_not_given_is_refused_and_a_launch_is_told(
     )
 
 
+def test_an_agent_configured_without_its_mcp_servers_needs_none_of_their_secrets(
+    runtime: Any,
+) -> None:
+    from agent_runtimes.routes.agents import _agentspecs
+
+    # Only the skill's secret: the MCP server's is not asked for.
+    response = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={
+            "agent_spec_id": "r19-agent",
+            "env_vars": [ACCOUNT[2]],
+            "without_mcp_servers": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert "R19_SERVER_TOKEN" not in os.environ
+    assert os.environ["R19_SKILL_TOKEN"] == SKILL_SECRET
+    # The agent is made with none of its servers selected.
+    assert _agentspecs["default"]["selected_mcp_servers"] == []
+    # Without the switch, the same configure is refused for the server's secret.
+    refused = _configure(runtime, "r19-agent", [ACCOUNT[2]])
+    assert refused.status_code == 422
+    assert any(
+        "the MCP server r19-probe needs R19_SERVER_TOKEN" in problem
+        for problem in refused.json()["detail"]["problems"]
+    )
+
+
 def test_a_secret_no_longer_declared_is_taken_back(runtime: Any) -> None:
     assert _configure(runtime, "r19-agent", ACCOUNT).status_code == 200
     assert os.environ.get("R19_SERVER_TOKEN") == SERVER_SECRET

@@ -5493,6 +5493,10 @@ class ConfigureFromSpecRequest(BaseModel):
     connections' secrets (R-19). Not the agent's own ``app_spec``."""
     launch_app_instance: dict[str, Any] | None = None
     """Where that application runs: its app_uid and deployment_uid."""
+    without_mcp_servers: bool = False
+    """Configure the agent with none of its spec's MCP servers: their secrets
+    are neither declared nor asked for, and the agent is given none of their
+    tools: an agent tried before its servers' secrets are in the account."""
 
 
 class DeclaredSecretsRequest(BaseModel):
@@ -5607,6 +5611,19 @@ async def configure_from_spec_endpoint(
             detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
     target_agent_name = body.agent_id
+    if body.without_mcp_servers:
+        # Its MCP servers left out: neither their secrets nor their tools.
+        spec = spec.model_copy(update={"mcp_servers": []})
+        if body.agent_spec:
+            body.agent_spec = {
+                key: value
+                for key, value in body.agent_spec.items()
+                if key not in ("mcp_servers", "mcpServers")
+            }
+        logger.info(
+            "[configure-from-spec] '%s' configured without its MCP servers",
+            body.agent_spec_id,
+        )
     _note_launched_app(body.launch_app_spec, body.launch_app_instance)
     declared = declared_secrets(
         spec,
@@ -5734,6 +5751,7 @@ async def configure_from_spec_endpoint(
         app_spec=body.app_spec,
         app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
+        **({"selected_mcp_servers": []} if body.without_mcp_servers else {}),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).
