@@ -9,6 +9,11 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.123
+
+What 1.5.122 carries; 1.5.122 never published (its release tests still expected Inbox triage
+to need no setup, while agentspecs 0.0.164 put its worker out of the picker).
+
 ## 1.5.122
 
 8 November 2026. **An agent answers while its MCP servers start.** `configure-from-spec` answers as soon as the agent can answer with its model (`ready`, and `mcp_servers` each `starting`): the agent is made without waiting on its MCP servers (`CreateAgentRequest.mcp_servers_in_background`; a codemode agent starts with no MCP binding), and the servers start in the background, all at once, each once and with its own secrets, each given 30 s (`AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT`). As each comes up its tools are in the agent's next turn (a codemode agent's bindings are rebuilt with the servers that started, the conversation kept); a turn no longer waits on a server that is starting. A server that fails is said in a sentence, read off its error and the last of its process's stderr: "tavily could not start: the runtime cannot reach registry.npmjs.org." (`reason`, in the snapshot's `mcpStatus` and in the new `GET /api/v1/configure/mcp-toolsets-status?agent_id=`, which also says `agent_ready`). `/apps/configure` waits for its connections' starts, bounded, before it answers which did not start.

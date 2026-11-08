@@ -158,8 +158,11 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
     assert reports["decide"].setup == []
-    # Inbox triage's agent and Gmail's server are offered since agentspecs 0.0.128 (W-02).
-    assert reports["inbox-triage"].setup == []
+    # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
+    # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
+    assert reports["inbox-triage"].setup == [
+        "The agent 'worker-mail-triage:0.0.1' is not enabled."
+    ]
     # The team over A2A: each ready, its setup what is not enabled today.
     assert reports["sales"].setup == [
         "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
