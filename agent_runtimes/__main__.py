@@ -96,6 +96,7 @@ from agent_runtimes.commands.serve import (
     serve_server,
 )
 from agent_runtimes.commands.sessions import app as sessions_app
+from agent_runtimes.commands.tool_approvals import app as tool_approvals_app
 
 
 def _log_level(argv: list[str]) -> int:
@@ -595,6 +596,7 @@ app.add_typer(checkpoints_app)
 app.add_typer(sandboxes_app)
 app.add_typer(console_app)
 app.add_typer(memory_app)
+app.add_typer(tool_approvals_app)
 app.add_typer(mcp_app)
 app.add_typer(envs_app)
 app.add_typer(evals_app)

@@ -242,6 +242,25 @@ grep -qi "ready" answers.txt
 
 Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `loop --local -a example-simple -q "/models"`.
 
+### Tool calls waiting on your approval
+
+When an agent's tool call needs your approval, its run waits until you decide. Decide from the terminal, from another shell while the run waits, or after it:
+
+```bash
+loop tool-approvals list                       # the calls waiting on you
+loop tool-approvals list --status all --tool tavily_search
+loop tool-approvals approve 01M6Y0SQ --note "ok for this search"
+loop tool-approvals reject 01M6Y1AA --note "not this file"
+```
+
+| Command | What it does |
+| --- | --- |
+| `list` | Lists your pending approvals: id, tool, agent, runtime, when it was asked, and its arguments. `--status` takes `approved`, `rejected`, `expired` or `all`; `--agent` and `--tool` filter; `--json` prints the records. |
+| `approve <id>` | Approves the call; the waiting run goes on with it. |
+| `reject <id>` | Rejects the call; the waiting run is refused it, and the agent is told your `--note`. |
+
+An id can be given whole or by its start, as long as it names a single pending approval. Only you decide the approvals that wait on you: one that is already decided says so, and nothing changes. These are the same approvals as on the approvals page of datalayer.ai.
+
 ### A new application
 
 `loop apps init <id>` writes a new application's folder, named by its id: its Appspec, `app.yaml`, and, with `--python`, the `app.py` that is its source, the spec beside it built from it (`loop apps build`), so the two agree from the start.

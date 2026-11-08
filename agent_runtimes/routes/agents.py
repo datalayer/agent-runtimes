@@ -3958,7 +3958,7 @@ async def update_agent_transport(
     # Unregister from old transport
     if current_transport == "ag-ui":
         try:
-            unregister_agui_agent(agent_id)
+            unregister_agui_agent(agent_id, keep_state=True)
             # Remove the dynamic mount
             if http_request.app:
                 mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
@@ -3974,7 +3974,7 @@ async def update_agent_transport(
             logger.warning(f"Could not unregister from AG-UI: {e}")
     elif current_transport == "vercel-ai":
         try:
-            unregister_vercel_agent(agent_id)
+            unregister_vercel_agent(agent_id, keep_state=True)
             logger.info(f"Unregistered agent from Vercel AI: {agent_id}")
         except Exception as e:
             logger.warning(f"Could not unregister from Vercel AI: {e}")
