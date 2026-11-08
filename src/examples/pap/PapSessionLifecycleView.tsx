@@ -112,7 +112,7 @@ const PapSessionLifecycleView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Session"
       title="Start and restart a Session without giving credentials to the agent"
-      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (0.3 as published) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key. Answered invalid_session, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
+      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (draft 0.4) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key and names its protocol version in Poppy-Version. Answered session_ended, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
     >
       <Box
         display="flex"

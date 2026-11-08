@@ -14,14 +14,13 @@ from typing import Any
 
 from personal_agent_protocol import (
     Author,
-    ClientMetadata,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
     operations_content,
 )
 from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
@@ -81,7 +80,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
 
     def say(text: str) -> Message:
         return Message(
-            id=generate_message_id(reactor), author=Author(type="human"), text=text
+            id=generate_request_id(reactor), author=Author(type="human"), text=text
         )
 
     # Discovery and a signed-out Session.
@@ -96,6 +95,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
     name = company.document.organization.name
     steps.append(f"discovered {name}; signed-out Session, its ID chosen here")
@@ -120,6 +120,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
         tenant_id=TENANT,
         organization=company.document.organization,
         protected_resources=metadata.protected_resources,
+        pairwise_user_id=PAIRWISE,
     )
     steps.append(f"Ada opened {started.verification_uri} and entered the code")
     await shop.approve_device(started.user_code, account_id="acct_ada")
@@ -146,9 +147,8 @@ async def run_manzanita_journey() -> dict[str, Any]:
     steps.append(f"company proposed revision {proposal.revision}: {proposal.summary}")
 
     # Ada approves exactly that revision, in the host's own interface; it is done once.
-    if not operations_negotiated(
-        company.document, ClientMetadata.model_validate(atlas.metadata)
-    ):
+    # Draft 0.4 §3.4: Operations as the company lists it and the Session declares it.
+    if not operations_negotiated(company.document, session):
         raise RuntimeError("the example world is incomplete")
     approval = await OperationsClient(reactor=reactor).ask_user(
         proposal, organization=company.document.organization, tenant_id=TENANT
@@ -159,7 +159,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
             endpoint,
             page.conversation_id,
             Message(
-                id=generate_message_id(reactor),
+                id=generate_request_id(reactor),
                 author=Author(type="agent"),
                 extensions=operations_content(approval=approval),
             ),
@@ -183,6 +183,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
         issuer=metadata.issuer,
         client_id=atlas.client_id,
         tenant_id=TENANT,
+        pairwise_user_id=PAIRWISE,
     )
     narrowed = await accounts.refresh(
         done.refresh_token_reference,

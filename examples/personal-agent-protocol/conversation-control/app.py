@@ -20,7 +20,7 @@ from personal_agent_protocol import (
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
 )
 from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
@@ -89,6 +89,8 @@ async def explain_conversation_control() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        # Its extensions negotiated from the company's document, declared on every request.
+        company=company,
     )
     conversations = ConversationClient(
         transport=SessionHttpClient(reactor=reactor, http_client=http)
@@ -97,7 +99,7 @@ async def explain_conversation_control() -> dict[str, Any]:
 
     def say(text: str, author: str = "agent") -> Message:
         return Message(
-            id=generate_message_id(reactor),
+            id=generate_request_id(reactor),
             author=Author(type=author),  # type: ignore[arg-type]
             text=text,
         )
@@ -122,6 +124,7 @@ async def explain_conversation_control() -> dict[str, Any]:
         tenant_id=TENANT,
         organization=company.document.organization,
         protected_resources=metadata.protected_resources,
+        pairwise_user_id=PAIRWISE,
     )
     await shop.approve_device(started.user_code, account_id="acct_ada")
     clock.advance(started.poll_interval)
@@ -167,8 +170,13 @@ async def explain_conversation_control() -> dict[str, Any]:
         endpoint, direct.conversation_id, session=session, token=token
     )
 
-    # 4. Handoff to a person at the company; their replies' author is `human`.
-    handed = await conversations.handoff(endpoint, parent, session=session, token=token)
+    # 4. Handoff to a person at the company: accepted (202), `handoff` pending while one is
+    #    looked for, then `none` with `responder` `human` (draft 0.4 §8.9); their replies'
+    #    author is `human`.
+    await conversations.handoff(endpoint, parent, session=session, token=token)
+    handed = await conversations.read_until_done(
+        endpoint, parent, session=session, token=token, cursor=page.cursor, wait=0
+    )
     page = await conversations.send(
         endpoint,
         parent,
@@ -179,7 +187,9 @@ async def explain_conversation_control() -> dict[str, Any]:
         wait=0,
     )
     after_handoff = [
-        f"{event.type}:{event.status}" if event.status else event.type
+        f"{event.type}:handoff={event.handoff},responder={event.responder}"
+        if event.type == "state"
+        else event.type
         for event in page.events
     ]
     # A person at Manzanita answers; their message names its `author`: `human`, and who.
@@ -196,8 +206,12 @@ async def explain_conversation_control() -> dict[str, Any]:
     replies = [event.message for event in page.events if event.message is not None]
     person = replies[-1].author.model_dump(exclude_none=True) if replies else None
 
-    # 5. Closing ends the conversation; what it started is not cancelled.
-    closed = await conversations.close(endpoint, parent, session=session, token=token)
+    # 5. Closing ends the conversation, accepted with 202 (draft 0.4 §8.12); what it started
+    #    is not cancelled.
+    await conversations.close(endpoint, parent, session=session, token=token)
+    closed = await conversations.read_events(
+        endpoint, parent, session=session, token=token, cursor=page.cursor, wait=0
+    )
     try:
         await conversations.send(
             endpoint, parent, say("One more thing"), session=session, token=token
@@ -213,12 +227,12 @@ async def explain_conversation_control() -> dict[str, Any]:
         "signed_in_answer": answered.text if answered else None,
         "direct_conversation_opened": direct.conversation_id != parent,
         "parent_while_direct_is_open": refusals,
-        "direct_conversation_closed": direct_closed.status,
-        "handoff_status": handed.status,
+        "direct_conversation_closed": direct_closed.conversation_id == direct.conversation_id,
+        "handoff": handed.handoff,
         "handoff_responder": handed.responder,
         "events_after_handoff": after_handoff,
         "person_reply_author": person,
-        "closed": closed.status,
+        "closed": closed.closed,
         "message_after_close": after_close,
         "tokens_and_codes_withheld": True,
     }

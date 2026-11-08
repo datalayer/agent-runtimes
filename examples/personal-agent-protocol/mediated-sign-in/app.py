@@ -71,8 +71,9 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
     # A field named like a parameter of the grant is refused before the user is asked anything.
     hostile = company.document.model_copy(
         update={
+            # Draft 0.4 §3.3: an entry per version the company supports.
             "extensions": {
-                MEDIATED_EXTENSION: ExtensionDescriptor.model_validate(
+                MEDIATED_EXTENSION: [ExtensionDescriptor.model_validate(
                     {
                         "version": "1",
                         "fields": [
@@ -80,7 +81,7 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
                         ],
                         "scopes": ["orders:read"],
                     }
-                )
+                )]
             }
         }
     )

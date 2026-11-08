@@ -15,9 +15,9 @@ from personal_agent_protocol import (
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
 )
-from personal_agent_protocol.conversations import StreamReconnected, TextDelta
+from personal_agent_protocol.conversations import StreamReconnected, TextDelta, WorkingChanged
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
     InProcessNetwork,
@@ -103,6 +103,7 @@ async def explain_conversation_streaming() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
     conversations = ConversationClient(
         transport=SessionHttpClient(reactor=reactor, http_client=http)
@@ -111,7 +112,7 @@ async def explain_conversation_streaming() -> dict[str, Any]:
     receipt = await conversations.start(
         endpoint,
         Message(
-            id=generate_message_id(reactor), author=Author(type="human"), text="Hello"
+            id=generate_request_id(reactor), author=Author(type="human"), text="Hello"
         ),
         session=session,
     )
@@ -133,9 +134,13 @@ async def explain_conversation_streaming() -> dict[str, Any]:
                 await conversations.close(
                     endpoint, receipt.conversation_id, session=session
                 )
+        elif isinstance(item, WorkingChanged):
+            pass  # `working` is no recorded event (draft 0.4 §8.6): no SSE id, nothing to deliver
         else:
             delivered.append(item.id)
-            last_state = item.status if item.type == "state" else last_state
+            last_state = (
+                ("closed" if item.closed else "open") if item.type == "state" else last_state
+            )
             if item.message is not None and item.message.role == "company":
                 final_text.append(item.message.text or "")
     await http.aclose()

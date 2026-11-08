@@ -2,7 +2,7 @@
 
 Ledgerly, an accounting firm, pays Ada's invoices at Northwind Bank for her.
 
-This is **composition**, not a company-to-company protocol: PAP draft 0.3
+This is **composition**, not a company-to-company protocol: PAP draft 0.4
 defines none. Ledgerly is a PAP company to Atlas (Ada's personal agent) and,
 for the same Ada, a PAP personal agent at Northwind with its own `client_id`
 and keys. Ada connects Ledgerly to Northwind on Northwind's own page. Every

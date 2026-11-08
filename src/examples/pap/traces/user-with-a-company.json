@@ -3,7 +3,7 @@
   "title": "A user with a company",
   "description": "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. Both sides are the PAP Python SDK's demo world: real keys and Session JWTs over in-process HTTP, recorded and redacted.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.29.0",
+  "sdk": "personal-agent-protocol 0.32.0",
   "parties": [
     {
       "id": "user",
@@ -91,7 +91,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -108,7 +108,8 @@
                 "issuer": "https://manzanita.example",
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
-                  "orders:write": "Exchange or return items in your orders"
+                  "orders:write": "Exchange or return items in your orders",
+                  "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
                 },
                 "scope_hints": {
                   "orders:read": {
@@ -143,25 +144,44 @@
                 "url": "https://manzanita.example/poppy/excluded-tasks.json"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                },
-                "mediated-sign-in": {
-                  "version": "1",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ],
+                "links": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "disclosures": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "ucp": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "mediated-sign-in": [
+                  {
+                    "version": "1",
+                    "fields": [
+                      {
+                        "name": "email",
+                        "label": "Email",
+                        "secret": false
+                      },
+                      {
+                        "name": "password",
+                        "label": "Password",
+                        "secret": true
+                      }
+                    ],
+                    "scopes": ["orders:read", "orders:write"]
+                  }
+                ]
               }
             }
           }
@@ -185,7 +205,11 @@
             "body": {
               "resource": "https://manzanita.example",
               "authorization_servers": ["https://manzanita.example"],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "bearer_methods_supported": ["header"]
             }
           }
@@ -216,7 +240,12 @@
                 "urn:ietf:params:oauth:grant-type:device_code",
                 "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
@@ -279,7 +308,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 5 events"
+            "value": "open · handoff none · agent · 3 events"
           }
         ]
       },
@@ -298,8 +327,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_ovNAh3jL5ONFaSuJh_gCZA",
               "message": {
-                "id": "msg_1",
                 "author": {
                   "type": "human"
                 },
@@ -319,7 +348,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_1",
+                    "id": "req_ovNAh3jL5ONFaSuJh_gCZA",
                     "author": {
                       "type": "human"
                     },
@@ -330,42 +359,31 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_3",
-                  "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_2",
+                    "id": "msg_1",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_ovNAh3jL5ONFaSuJh_gCZA",
                     "text": "I can look that up once you sign in to your Manzanita account."
                   }
                 },
                 {
-                  "id": "evt_4",
+                  "id": "evt_3",
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "authorization",
                   "error": "insufficient_scope",
                   "scope": "orders:read orders:write"
-                },
-                {
-                  "id": "evt_5",
-                  "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_5",
+              "cursor": "evt_3",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -390,12 +408,7 @@
               "client_name": "Atlas",
               "jwks_uri": "https://atlas.example/jwks.json",
               "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },
@@ -500,7 +513,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 5 events"
+            "value": "open · handoff none · agent · 3 events"
           }
         ]
       },
@@ -681,7 +694,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 9 events"
+            "value": "open · handoff none · agent · 5 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -695,7 +708,7 @@
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?cursor=evt_5&wait=0",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?cursor=evt_3&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -705,8 +718,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_llKq-t7ehB7uStAEPwA-EQ",
               "message": {
-                "id": "msg_3",
                 "author": {
                   "type": "human"
                 },
@@ -722,11 +735,11 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_6",
+                  "id": "evt_4",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_3",
+                    "id": "req_llKq-t7ehB7uStAEPwA-EQ",
                     "author": {
                       "type": "human"
                     },
@@ -735,50 +748,50 @@
                   }
                 },
                 {
-                  "id": "evt_7",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_8",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_4",
+                    "id": "msg_2",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_llKq-t7ehB7uStAEPwA-EQ",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
                       },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      "disclosures": {
+                        "items": [
+                          {
+                            "text": "Exchanged items ship once the original jacket is received."
+                          }
+                        ]
+                      }
                     }
                   }
-                },
-                {
-                  "id": "evt_9",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_9",
+              "cursor": "evt_5",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         }
@@ -848,7 +861,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 13 events"
+            "value": "open · handoff none · agent · 7 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -878,14 +891,19 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_C2RMJFzN2uY1bej9lHoFcQ",
               "message": {
-                "id": "msg_5",
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_1",
-                  "revision": "rev_1"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "approved_at": 1791709210
+                    }
+                  }
                 }
               }
             }
@@ -902,7 +920,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_1",
+                    "id": "req_ovNAh3jL5ONFaSuJh_gCZA",
                     "author": {
                       "type": "human"
                     },
@@ -913,43 +931,30 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_3",
-                  "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_2",
+                    "id": "msg_1",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_ovNAh3jL5ONFaSuJh_gCZA",
                     "text": "I can look that up once you sign in to your Manzanita account."
                   }
                 },
                 {
-                  "id": "evt_4",
+                  "id": "evt_3",
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "authorization",
                   "error": "insufficient_scope",
                   "scope": "orders:read orders:write"
                 },
                 {
-                  "id": "evt_5",
-                  "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_6",
+                  "id": "evt_4",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_3",
+                    "id": "req_llKq-t7ehB7uStAEPwA-EQ",
                     "author": {
                       "type": "human"
                     },
@@ -958,78 +963,75 @@
                   }
                 },
                 {
-                  "id": "evt_7",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_8",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_4",
+                    "id": "msg_2",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_llKq-t7ehB7uStAEPwA-EQ",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
-                      "terms": {
-                        "order_id": "ord_7Hk2",
-                        "price_difference": {
-                          "amount": "70.00",
-                          "currency": "USD"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.",
+                          "terms": {
+                            "order_id": "ord_7Hk2",
+                            "price_difference": {
+                              "amount": "70.00",
+                              "currency": "USD"
+                            }
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
                         }
                       },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                      "disclosures": {
+                        "items": [
+                          {
+                            "text": "Exchanged items ship once the original jacket is received."
+                          }
+                        ]
+                      }
                     }
                   }
                 },
                 {
-                  "id": "evt_9",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_10",
+                  "id": "evt_6",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_5",
+                    "id": "req_C2RMJFzN2uY1bej9lHoFcQ",
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1"
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "approved_at": 1791709210
+                        }
+                      }
                     },
                     "role": "user"
                   }
                 },
                 {
-                  "id": "evt_11",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_12",
+                  "id": "evt_7",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_6",
+                    "id": "msg_3",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_C2RMJFzN2uY1bej9lHoFcQ",
                     "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
                     "data": {
                       "order_id": "ord_7Hk2",
@@ -1039,19 +1041,14 @@
                       }
                     }
                   }
-                },
-                {
-                  "id": "evt_13",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_13",
+              "cursor": "evt_7",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         }
@@ -1107,7 +1104,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 13 events"
+            "value": "open · handoff none · agent · 7 events"
           },
           {
             "label": "Operation orders.exchange",

@@ -3,7 +3,7 @@
   "title": "Conversation control",
   "description": "A Direct Conversation under an open one, a handoff to a person at Manzanita, and closing, through the real ConversationClient.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.29.0",
+  "sdk": "personal-agent-protocol 0.32.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -103,7 +103,8 @@
                 "issuer": "https://manzanita.example",
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
-                  "orders:write": "Exchange or return items in your orders"
+                  "orders:write": "Exchange or return items in your orders",
+                  "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
                 },
                 "scope_hints": {
                   "orders:read": {
@@ -138,25 +139,44 @@
                 "url": "https://manzanita.example/poppy/excluded-tasks.json"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                },
-                "mediated-sign-in": {
-                  "version": "1",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ],
+                "links": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "disclosures": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "ucp": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "mediated-sign-in": [
+                  {
+                    "version": "1",
+                    "fields": [
+                      {
+                        "name": "email",
+                        "label": "Email",
+                        "secret": false
+                      },
+                      {
+                        "name": "password",
+                        "label": "Password",
+                        "secret": true
+                      }
+                    ],
+                    "scopes": ["orders:read", "orders:write"]
+                  }
+                ]
               }
             }
           }
@@ -180,7 +200,11 @@
             "body": {
               "resource": "https://manzanita.example",
               "authorization_servers": ["https://manzanita.example"],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "bearer_methods_supported": ["header"]
             }
           }
@@ -211,7 +235,12 @@
                 "urn:ietf:params:oauth:grant-type:device_code",
                 "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
@@ -274,11 +303,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 5 events"
+            "value": "open · handoff none · agent · 3 events"
           },
           {
             "label": "Direct conversation",
-            "value": "idle · agent · 4 events"
+            "value": "open · handoff none · agent · 2 events"
           }
         ]
       },
@@ -297,8 +326,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_XSR3SKeEAANSIWLnFUqnPg",
               "message": {
-                "id": "msg_1",
                 "author": {
                   "type": "agent"
                 },
@@ -318,7 +347,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_1",
+                    "id": "req_XSR3SKeEAANSIWLnFUqnPg",
                     "author": {
                       "type": "agent"
                     },
@@ -329,35 +358,24 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_3",
-                  "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_2",
+                    "id": "msg_1",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_XSR3SKeEAANSIWLnFUqnPg",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
-                },
-                {
-                  "id": "evt_4",
-                  "created_at": "2026-10-11T09:00:00Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_4",
+              "cursor": "evt_2",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -382,12 +400,7 @@
               "client_name": "Atlas",
               "jwks_uri": "https://atlas.example/jwks.json",
               "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },
@@ -436,8 +449,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_mjMEXXexenM3mnqayLUhFg",
               "message": {
-                "id": "msg_3",
                 "author": {
                   "type": "human"
                 },
@@ -451,9 +464,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "conversation_id": "cnv_2",
-              "status": "idle",
-              "responder": "agent"
+              "conversation_id": "cnv_2"
             }
           }
         }
@@ -498,11 +509,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 5 events"
+            "value": "open · handoff none · agent · 3 events"
           },
           {
             "label": "Direct conversation",
-            "value": "idle · agent · 4 events"
+            "value": "open · handoff none · agent · 2 events"
           }
         ]
       },
@@ -521,8 +532,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_gRt4MjFfxL3ml0fvRj5n2g",
               "message": {
-                "id": "msg_4",
                 "author": {
                   "type": "agent"
                 },
@@ -546,7 +557,7 @@
     {
       "title": "Handoff to a person",
       "channel": "Handoff",
-      "summary": "Closing the direct conversation tells the parent (direct_closed). Atlas then asks for a person: the parent goes queued, then a human responds.",
+      "summary": "Closing the direct conversation tells the parent (direct_closed). Atlas then asks for a person: accepted, handoff pending while one is found, then a human responds.",
       "chat": [
         {
           "speaker": "atlas",
@@ -588,11 +599,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · human · 8 events"
+            "value": "open · handoff none · human · 6 events"
           },
           {
             "label": "Direct conversation",
-            "value": "closed · agent · 5 events"
+            "value": "closed · handoff none · agent · 3 events"
           }
         ]
       },
@@ -603,23 +614,23 @@
           "to": "manzanita",
           "method": "POST",
           "url": "https://manzanita.example/poppy/conversations/cnv_2/close",
-          "status": 200,
+          "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
               "poppy-session": "‹Session JWT›"
             },
-            "body": {}
+            "body": {
+              "id": "req_qhxw1Nv3JHtGWc3nPlowdQ"
+            }
           },
           "response": {
             "headers": {
               "content-type": "application/json"
             },
             "body": {
-              "conversation_id": "cnv_2",
-              "status": "closed",
-              "responder": "agent"
+              "conversation_id": "cnv_2"
             }
           }
         },
@@ -636,7 +647,31 @@
               "accept": "*/*",
               "poppy-session": "‹Session JWT›"
             },
-            "body": {}
+            "body": {
+              "id": "req_H6dJqM3I05JdS6LDxA4R_g"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "manzanita",
+          "method": "GET",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/events?wait=0",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json",
+              "poppy-session": "‹Session JWT›"
+            }
           },
           "response": {
             "headers": {
@@ -644,8 +679,69 @@
             },
             "body": {
               "conversation_id": "cnv_1",
-              "status": "idle",
-              "responder": "human"
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "message",
+                  "message": {
+                    "id": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "text": "Hello, can someone help me?",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "author": {
+                      "type": "agent"
+                    },
+                    "role": "company",
+                    "as_of_request": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "text": "Hello from Manzanita Outfitters. Ask me about an order."
+                  }
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "direct_opened",
+                  "conversation_id": "cnv_2"
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "direct_closed",
+                  "conversation_id": "cnv_2"
+                },
+                {
+                  "id": "evt_5",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "handoff": "pending",
+                  "responder": "agent",
+                  "closed": false
+                },
+                {
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "handoff": "none",
+                  "responder": "human",
+                  "closed": false
+                }
+              ],
+              "cursor": "evt_6",
+              "has_more": false,
+              "working": false,
+              "handoff": "none",
+              "responder": "human",
+              "closed": false
             }
           }
         }
@@ -696,11 +792,11 @@
           },
           {
             "label": "Conversation",
-            "value": "closed · human · 9 events"
+            "value": "closed · handoff none · human · 7 events"
           },
           {
             "label": "Direct conversation",
-            "value": "closed · agent · 5 events"
+            "value": "closed · handoff none · agent · 3 events"
           }
         ]
       },
@@ -711,95 +807,7 @@
           "to": "manzanita",
           "method": "POST",
           "url": "https://manzanita.example/poppy/conversations/cnv_1/close",
-          "status": 200,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "*/*",
-              "poppy-session": "‹Session JWT›"
-            },
-            "body": {}
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "conversation_id": "cnv_1",
-              "status": "closed",
-              "responder": "human"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "title": "Manzanita asks for Ada",
-      "channel": "Company-first Direct Conversation",
-      "summary": "Manzanita's agent asks for the person with a user_requested event (a returns specialist wants to talk about the damaged jacket). Ada accepts: Atlas opens a Direct Conversation under the parent naming the event, with no message of its own, and Manzanita speaks first. Accepted again, the same conversation comes back (§8.10).",
-      "chat": [
-        {
-          "speaker": "manzanita",
-          "kind": "message",
-          "text": "A returns specialist would like to talk with you about the damaged jacket."
-        },
-        {
-          "speaker": "user",
-          "kind": "message",
-          "text": "Yes, put me through."
-        },
-        {
-          "speaker": "manzanita",
-          "kind": "message",
-          "text": "Hello Ada, this is the returns desk. What happened to the jacket?"
-        }
-      ],
-      "views": {
-        "atlas": [
-          {
-            "label": "Company",
-            "value": "Manzanita Outfitters · discovery verified"
-          },
-          {
-            "label": "Session",
-            "value": "signed out · a Session JWT on every request"
-          },
-          {
-            "label": "Invitation",
-            "value": "user_requested evt_7 · accepted by Ada, never by the model"
-          },
-          {
-            "label": "Model sees",
-            "value": "Summaries and statuses, never a credential"
-          }
-        ],
-        "manzanita": [
-          {
-            "label": "Verified client",
-            "value": "atlas.example/agent.json"
-          },
-          {
-            "label": "Conversation",
-            "value": "idle · agent · 7 events"
-          },
-          {
-            "label": "Direct conversation",
-            "value": "cnv_3 · opened by the company's first message"
-          },
-          {
-            "label": "Owner",
-            "value": "client_id + User ID (§8.2)"
-          }
-        ]
-      },
-      "sequence": [
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/conversations?wait=0",
-          "status": 201,
+          "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
@@ -807,8 +815,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "parent_conversation_id": "cnv_1",
-              "user_requested_event_id": "evt_7"
+              "id": "req_yWVCDRK5M-6zRFwWzMGsWA"
             }
           },
           "response": {
@@ -816,63 +823,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "conversation_id": "cnv_3",
-              "events": [
-                {
-                  "id": "evt_1",
-                  "created_at": "2026-11-07T09:05:00Z",
-                  "type": "message",
-                  "message": {
-                    "id": "msg_9",
-                    "author": {
-                      "type": "agent",
-                      "name": "Manzanita Outfitters"
-                    },
-                    "role": "company",
-                    "text": "Hello Ada, this is the returns desk. What happened to the jacket?"
-                  }
-                },
-                {
-                  "id": "evt_2",
-                  "created_at": "2026-11-07T09:05:00Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
-                }
-              ],
-              "cursor": "evt_2",
-              "has_more": false,
-              "status": "idle",
-              "responder": "agent"
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "atlas",
-          "to": "manzanita",
-          "method": "POST",
-          "url": "https://manzanita.example/poppy/conversations?wait=0",
-          "status": 201,
-          "request": {
-            "headers": {
-              "content-type": "application/json",
-              "accept": "*/*",
-              "poppy-session": "‹Session JWT›"
-            },
-            "body": {
-              "parent_conversation_id": "cnv_1",
-              "user_requested_event_id": "evt_7"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "conversation_id": "cnv_3",
-              "status": "idle",
-              "responder": "agent"
+              "conversation_id": "cnv_1"
             }
           }
         }

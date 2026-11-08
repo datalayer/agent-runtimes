@@ -73,7 +73,7 @@ const STEPS: readonly JourneyStep[] = [
     channel: 'Discovery',
     messages: conversationStart,
     facts: [
-      { label: 'Publishes', value: 'poppy.json · 0.3 as published' },
+      { label: 'Publishes', value: 'poppy.json · draft 0.4' },
       { label: 'Returns', value: 'Company conversation agent' },
       { label: 'Sign-in', value: "Northstar's own page" },
     ],
@@ -83,7 +83,7 @@ const STEPS: readonly JourneyStep[] = [
     request: 'Accept: application/json',
     response: `200 OK
 {
-  "protocol_version": "0.3",
+  "protocol_version": "0.4",
   "organization": { "name": "Northstar Outfitters" },
   "auth": {
     "issuer": "https://auth.northstar.example",
@@ -116,11 +116,12 @@ const STEPS: readonly JourneyStep[] = [
     target: 'https://api.northstar.example/poppy/conversations',
     detailLabel: 'Atlas → company agent',
     request: `Poppy-Session: [fresh JWT, naming the sid, signed with a delegated key]
+Poppy-Version: 0.4
 Content-Type: application/json
 
 {
+  "id": "req_return",
   "message": {
-    "id": "msg_return",
     "author": { "type": "agent" },
     "text": "The user wants to return a jacket."
   }
@@ -133,8 +134,10 @@ Content-Type: application/json
     "error": "insufficient_scope",
     "scope": "orders:read orders:return"
   }],
-  "status": "idle",
-  "responder": "agent"
+  "working": false,
+  "handoff": "none",
+  "responder": "agent",
+  "closed": false
 }`,
   },
   {
@@ -189,11 +192,12 @@ Location: https://atlas.example/oauth/callback
     detailLabel: 'Atlas ↔ company agent',
     request: `Authorization: Bearer [host-only access token]
 Poppy-Session: [fresh JWT]
+Poppy-Version: 0.4
 Content-Type: application/json
 
 {
+  "id": "req_offer",
   "message": {
-    "id": "msg_offer",
     "author": { "type": "agent" },
     "text": "The user has signed in. Continue the return request."
   }
@@ -208,8 +212,10 @@ Content-Type: application/json
       "text": "Choose an even exchange or refund."
     }
   }],
-  "status": "idle",
-  "responder": "agent"
+  "working": false,
+  "handoff": "none",
+  "responder": "agent",
+  "closed": false
 }`,
   },
   {
@@ -242,11 +248,12 @@ Content-Type: application/json
     detailLabel: 'Atlas ↔ company agent',
     request: `Authorization: Bearer [host-only access token]
 Poppy-Session: [fresh JWT]
+Poppy-Version: 0.4
 Content-Type: application/json
 
 {
+  "id": "req_exchange_choice",
   "message": {
-    "id": "msg_exchange_choice",
     "author": { "type": "agent" },
     "text": "The user chose the even exchange."
   }
@@ -261,7 +268,10 @@ Content-Type: application/json
       "text": "The exchange is arranged."
     }
   }],
-  "status": "closed"
+  "working": false,
+  "handoff": "none",
+  "responder": "agent",
+  "closed": true
 }`,
   },
 ];
@@ -296,7 +306,7 @@ const runJourney = async (): Promise<
   readonly (readonly JourneyMessage[])[]
 > => {
   parseDiscoveryDocument({
-    protocol_version: '0.3',
+    protocol_version: '0.4',
     organization: { name: 'Northstar Outfitters', domain: 'northstar.example' },
     auth: {
       issuer: 'https://auth.northstar.example',
@@ -314,7 +324,7 @@ const runJourney = async (): Promise<
       ],
     },
   });
-  // Direct Sign-In is what the issuer's grants offer (0.3 as published §3.2).
+  // Direct Sign-In is what the issuer's grants offer (draft 0.4 §3.2).
   parseOAuthServerMetadata({
     issuer: 'https://auth.northstar.example',
     token_endpoint: 'https://auth.northstar.example/oauth/token',
@@ -347,8 +357,9 @@ const runJourney = async (): Promise<
         headers: { 'content-type': 'application/json' },
       });
     }
+    // The request's id is top-level, the message's own (draft 0.4 §8.3).
     const incoming = JSON.parse(String(init?.body ?? '{}')) as {
-      message?: { id?: string };
+      id?: string;
     };
     return new Response(
       JSON.stringify({
@@ -363,14 +374,17 @@ const runJourney = async (): Promise<
               author: { type: 'agent' },
               role: 'company',
               text: reply,
-              context: { in_reply_to: incoming.message?.id ?? 'unknown' },
+              as_of_request: incoming.id,
             },
           },
         ],
         cursor: `cursor_${index + 1}`,
         has_more: false,
-        status: index === replies.length - 1 ? 'closed' : 'idle',
+        // Draft 0.4 §8.7: the four state fields.
+        working: false,
+        handoff: 'none',
         responder: 'agent',
+        closed: index === replies.length - 1,
       }),
       {
         status: index === 0 ? 201 : 202,

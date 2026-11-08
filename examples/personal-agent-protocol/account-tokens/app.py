@@ -19,7 +19,7 @@ from personal_agent_protocol import (
     PapSession,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
 )
 from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
 from personal_agent_protocol.demo.kit import (
@@ -84,6 +84,7 @@ async def explain_account_tokens() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
             issuer=metadata.issuer,
             tenant_id=TENANT,
+            company=company,
         )
         started = await device.begin(
             device_authorization_endpoint=metadata.device_authorization_endpoint,  # type: ignore[arg-type]
@@ -117,7 +118,7 @@ async def explain_account_tokens() -> dict[str, Any]:
 
     def question() -> Message:
         return Message(
-            id=generate_message_id(reactor),
+            id=generate_request_id(reactor),
             author=Author(type="human"),
             text="Where is my order?",
         )
@@ -133,6 +134,7 @@ async def explain_account_tokens() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
     answered = await conversations.start(
         endpoint, question(), session=another_session, token=refreshed.token, wait=0

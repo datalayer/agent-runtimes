@@ -165,6 +165,7 @@ async def explain_browser_session() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
 
     # 1. The join: load the form in the agent's browser, authorize its code with the

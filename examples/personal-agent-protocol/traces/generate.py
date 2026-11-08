@@ -44,7 +44,6 @@ import httpx
 from personal_agent_protocol import (
     Approval,
     Author,
-    ClientMetadata,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -54,7 +53,7 @@ from personal_agent_protocol import (
     OperationsClient,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
     operations_content,
     operations_negotiated,
 )
@@ -64,7 +63,7 @@ from personal_agent_protocol import (
 from personal_agent_protocol.__version__ import __version__ as sdk_version
 from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
 from personal_agent_protocol.company import CompanyService, build_company, company_app
-from personal_agent_protocol.conversations import StreamReconnected, TextDelta
+from personal_agent_protocol.conversations import StreamReconnected, TextDelta, WorkingChanged
 from personal_agent_protocol.demo import kit
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
@@ -465,7 +464,8 @@ async def company_facts(
         facts.append(
             fact(
                 kind,
-                f"{conversation.status} · {conversation.responder} · {len(conversation.events)} events",
+                f"{'closed' if conversation.closed else 'open'} · handoff {conversation.handoff} · "
+                f"{conversation.responder} · {len(conversation.events)} events",
             )
         )
     for stored in await records(OPERATION, StoredOperation):
@@ -559,9 +559,6 @@ class World:
         ).discover(CONFIG.domain)
         self.metadata = self.company.oauth_metadata
         self.endpoint = self.company.document.agent.protocols[0].endpoint
-        self.negotiated = operations_negotiated(
-            self.company.document, ClientMetadata.model_validate(self.atlas.metadata)
-        )
 
     async def start_session(self) -> None:
         self.session = await SessionClient(
@@ -571,7 +568,11 @@ class World:
             pairwise_user_id=PAIRWISE,
             issuer=self.metadata.issuer,
             tenant_id=TENANT,
+            # The extensions negotiated from the company's document, declared on every request
+            # in Poppy-Extensions (draft 0.4 §3.4).
+            company=self.company,
         )
+        self.negotiated = operations_negotiated(self.company.document, self.session)
 
     @property
     def auth(self) -> dict[str, Any]:
@@ -608,7 +609,7 @@ class World:
 
     def message(self, text: str, author: str = "human") -> Message:
         return Message(
-            id=generate_message_id(self.reactor),
+            id=generate_request_id(self.reactor),
             author=Author(type=author),  # type: ignore[arg-type]
             text=text,
         )
@@ -632,7 +633,7 @@ class World:
             self.endpoint,
             conversation_id,
             Message(
-                id=message_id or generate_message_id(self.reactor),
+                id=message_id or generate_request_id(self.reactor),
                 author=Author(type="agent"),
                 extensions=operations_content(approval=approval_),
             ),
@@ -1006,7 +1007,10 @@ async def conversation_streaming() -> Trace:
     ]
     deltas = [item for item in items if isinstance(item, TextDelta)]
     events = [
-        item for item in items if not isinstance(item, (TextDelta, StreamReconnected))
+        item
+        for item in items
+        # `working` is no recorded event (draft 0.4 §8.6): sent with no SSE id, nothing to replay.
+        if not isinstance(item, (TextDelta, StreamReconnected, WorkingChanged))
     ]
     reply = next(
         e.message.text for e in events if e.message and e.message.role == "company"
@@ -1033,7 +1037,7 @@ async def conversation_streaming() -> Trace:
         )
     ]
     resumed = [
-        i for i in await_items if not isinstance(i, (TextDelta, StreamReconnected))
+        i for i in await_items if not isinstance(i, (TextDelta, StreamReconnected, WorkingChanged))
     ]
     trace.step(
         "Resuming from Last-Event-ID",
@@ -1103,14 +1107,15 @@ async def conversation_control() -> Trace:
     await world.conversations.close(
         world.endpoint, direct.conversation_id, **world.auth
     )
-    receipt = await world.conversations.handoff(
-        world.endpoint, parent.conversation_id, **world.auth
+    await world.conversations.handoff(world.endpoint, parent.conversation_id, **world.auth)
+    receipt = await world.conversations.read_until_done(
+        world.endpoint, parent.conversation_id, wait=0, **world.auth
     )
     trace.step(
         "Handoff to a person",
         "Handoff",
         "Closing the direct conversation tells the parent (direct_closed). Atlas then asks for "
-        f"a person: the parent goes queued, then a {receipt.responder} responds.",
+        f"a person: accepted, handoff pending while one is found, then a {receipt.responder} responds.",
         chat=[say("atlas", "A person at Manzanita will take it from here.")],
         views=await world.views(),
     )
@@ -1150,7 +1155,7 @@ async def operations() -> Trace:
     trace.step(
         "An operation",
         "Operations version 2",
-        f"Both sides list operations version 2 (negotiated: {world.negotiated}). Signed in, "
+        f"The company lists operations version 2 and the Session declares it in Poppy-Extensions (negotiated: {world.negotiated}). Signed in, "
         "Manzanita returns the exchange as an operation in its message: nothing is done, and "
         "only Ada can approve it.",
         chat=[
@@ -1205,7 +1210,7 @@ async def operations() -> Trace:
         ],
         views=await world.views(),
     )
-    message_id = generate_message_id(world.reactor)
+    message_id = generate_request_id(world.reactor)
     performed = await world.send_approval(conversation, approval_of_second, message_id)
     await world.send_approval(conversation, approval_of_second, message_id)
     assert len(world.plugin.executor.performed) == 1
@@ -1229,7 +1234,7 @@ async def two_companies() -> Trace:
         "Two companies working together",
         "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP "
         "personal agent at Northwind Bank for her. Every approval is Ada's. This is "
-        "composition: draft 0.3 defines no company-to-company protocol.",
+        "composition: draft 0.4 defines no company-to-company protocol.",
         [ADA_PARTY, ATLAS_PARTY, LEDGERLY_PARTY, NORTHWIND_PARTY],
     )
     clock = MutableClock()
@@ -1292,6 +1297,7 @@ async def two_companies() -> Trace:
         pairwise_user_id=PAIRWISE_LEDGERLY,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
     trace.step(
         "Atlas finds Ledgerly",
@@ -1351,7 +1357,7 @@ async def two_companies() -> Trace:
     async def send(
         conversation_id: str | None, cursor: str | None, **fields: Any
     ) -> Any:
-        message = Message(id=generate_message_id(reactor), **fields)
+        message = Message(id=generate_request_id(reactor), **fields)
         if conversation_id is None:
             return await conversations.start(
                 endpoint, message, session=session, token=token, wait=0

@@ -11,14 +11,13 @@ import httpx
 from personal_agent_protocol import (
     Approval,
     Author,
-    ClientMetadata,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
     operations_content,
 )
 from personal_agent_protocol.demo.kit import (
@@ -110,6 +109,8 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        # The extensions negotiated from the bank's document, declared on every request.
+        company=company,
     )
     device = DeviceSignInClient(reactor=reactor, http_client=http)
     started = await device.begin(
@@ -121,6 +122,7 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
         tenant_id=TENANT,
         organization=company.document.organization,
         protected_resources=metadata.protected_resources,
+        pairwise_user_id=PAIRWISE,
     )
     await bank.approve_device(started.user_code, account_id=ACCOUNT)
     clock.advance(started.poll_interval)
@@ -128,13 +130,17 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     if not (token is not None):
         raise RuntimeError("the example world is incomplete")
 
-    # Negotiation: both the bank's poppy.json and the agent's metadata list version 2.
-    negotiated = operations_negotiated(
-        company.document, ClientMetadata.model_validate(atlas.metadata)
+    # Negotiation (draft 0.4 §3.3, §3.4): the bank lists version 2 and the Session declares it in
+    # Poppy-Extensions; a Session declaring no extension uses none.
+    negotiated = operations_negotiated(company.document, session)
+    bare = await SessionClient(reactor=reactor, http_client=http).start(
+        client_id=plain.client_id,
+        pairwise_user_id=PAIRWISE,
+        issuer=metadata.issuer,
+        tenant_id=TENANT,
+        extensions={},
     )
-    without = operations_negotiated(
-        company.document, ClientMetadata.model_validate(plain.metadata)
-    )
+    without = operations_negotiated(company.document, bare)
     transport = SessionHttpClient(reactor=reactor, http_client=http)
     conversations = ConversationClient(transport=transport)
     operations = OperationsClient(reactor=reactor)
@@ -145,7 +151,7 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     page = await conversations.start(
         chat,
         Message(
-            id=generate_message_id(reactor),
+            id=generate_request_id(reactor),
             author=Author(type="agent"),
             text="Pay INV-0042: EUR 1250.00 to Acme GmbH",
         ),
@@ -162,7 +168,7 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
         message = Message(
             id=message_id,
             author=Author(type="agent"),
-            # The approval is the Operations extension's content (0.3 as published).
+            # The approval is the Operations extension's content (Operations 2, PAP draft 0.4).
             extensions=operations_content(approval=approval),
         )
         sent = await conversations.send(
@@ -193,7 +199,7 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
             "amount": {"amount": "1262.50", "currency": "EUR"},
         },
     )
-    answered = await approving(approval, generate_message_id(reactor))
+    answered = await approving(approval, generate_request_id(reactor))
     revised = answered.operation
     if not (revised is not None):
         raise RuntimeError("the example world is incomplete")
@@ -207,7 +213,7 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     # 5. The answer to the approval is lost. The same approval, in the same message, is
     #    sent again: the bank performs it once, and a retry adds nothing.
     wire.armed = True
-    message_id = generate_message_id(reactor)
+    message_id = generate_request_id(reactor)
     sent = await operations.send(lambda given: approving(given, message_id), newer)
     told = await conversations.read_events(
         chat, conversation, session=session, token=token

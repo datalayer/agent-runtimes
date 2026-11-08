@@ -3,7 +3,7 @@
   "title": "Mediated Sign-In",
   "description": "Ada signs in to Manzanita without leaving Atlas: the host's protected input collects the fields Manzanita declares in its mediated-sign-in extension and sends them to Manzanita's token endpoint, once, as an extension grant.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.29.0",
+  "sdk": "personal-agent-protocol 0.32.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -103,7 +103,8 @@
                 "issuer": "https://manzanita.example",
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
-                  "orders:write": "Exchange or return items in your orders"
+                  "orders:write": "Exchange or return items in your orders",
+                  "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
                 },
                 "scope_hints": {
                   "orders:read": {
@@ -138,25 +139,44 @@
                 "url": "https://manzanita.example/poppy/excluded-tasks.json"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                },
-                "mediated-sign-in": {
-                  "version": "1",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ],
+                "links": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "disclosures": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "ucp": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "mediated-sign-in": [
+                  {
+                    "version": "1",
+                    "fields": [
+                      {
+                        "name": "email",
+                        "label": "Email",
+                        "secret": false
+                      },
+                      {
+                        "name": "password",
+                        "label": "Password",
+                        "secret": true
+                      }
+                    ],
+                    "scopes": ["orders:read", "orders:write"]
+                  }
+                ]
               }
             }
           }
@@ -180,7 +200,11 @@
             "body": {
               "resource": "https://manzanita.example",
               "authorization_servers": ["https://manzanita.example"],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "bearer_methods_supported": ["header"]
             }
           }
@@ -211,7 +235,12 @@
                 "urn:ietf:params:oauth:grant-type:device_code",
                 "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
@@ -335,12 +364,7 @@
               "client_name": "Atlas",
               "jwks_uri": "https://atlas.example/jwks.json",
               "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },

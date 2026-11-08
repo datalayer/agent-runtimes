@@ -20,7 +20,7 @@ from personal_agent_protocol import (
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
     operations_content,
 )
 from personal_agent_protocol.demo.kit import (
@@ -89,6 +89,7 @@ async def run_two_companies() -> dict[str, Any]:
         pairwise_user_id=PAIRWISE,
         issuer=metadata.issuer,
         tenant_id=TENANT,
+        company=company,
     )
     device = DeviceSignInClient(reactor=reactor, http_client=http)
     started = await device.begin(
@@ -110,7 +111,7 @@ async def run_two_companies() -> dict[str, Any]:
     cursor: dict[str, Any] = {}
 
     async def send(fields: dict[str, Any]):  # type: ignore[no-untyped-def]
-        message = Message(id=generate_message_id(reactor), **fields)
+        message = Message(id=generate_request_id(reactor), **fields)
         if not cursor:
             page = await conversations.start(
                 chat, message, session=session, token=token, wait=0

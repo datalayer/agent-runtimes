@@ -1,9 +1,9 @@
 {
   "slug": "two-companies",
   "title": "Two companies working together",
-  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: 0.3 as published defines no company-to-company protocol.",
+  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: draft 0.4 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.29.0",
+  "sdk": "personal-agent-protocol 0.32.0",
   "parties": [
     {
       "id": "user",
@@ -115,7 +115,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Ledgerly",
                 "domain": "ledgerly.example"
@@ -149,9 +149,11 @@
                 "endpoint": "https://ledgerly.example/poppy/feedback"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ]
               }
             }
           }
@@ -205,6 +207,7 @@
                 "authorization_code",
                 "urn:ietf:params:oauth:grant-type:device_code"
               ],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
               "scopes_supported": ["books:read", "payments:write"],
               "protected_resources": ["https://ledgerly.example"],
               "authorization_endpoint": "https://ledgerly.example/oauth/authorize",
@@ -355,12 +358,7 @@
               "client_name": "Atlas",
               "jwks_uri": "https://atlas.example/jwks.json",
               "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },
@@ -504,7 +502,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events",
+            "value": "open · handoff none · agent · 2 events",
             "group": "As a company to Atlas"
           },
           {
@@ -545,8 +543,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_isGVOx1vvk3h1jz4bwMfzA",
               "message": {
-                "id": "msg_1",
                 "author": {
                   "type": "human"
                 },
@@ -566,7 +564,7 @@
                   "created_at": "2026-10-11T09:00:05Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_1",
+                    "id": "req_isGVOx1vvk3h1jz4bwMfzA",
                     "author": {
                       "type": "human"
                     },
@@ -577,20 +575,14 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:05Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_3",
-                  "created_at": "2026-10-11T09:00:05Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_2",
+                    "id": "msg_1",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_isGVOx1vvk3h1jz4bwMfzA",
                     "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter the code shown with this message. Tell me when done.",
                     "data": {
                       "connect": {
@@ -600,19 +592,14 @@
                       }
                     }
                   }
-                },
-                {
-                  "id": "evt_4",
-                  "created_at": "2026-10-11T09:00:05Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_4",
+              "cursor": "evt_2",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -633,7 +620,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Northwind Bank",
                 "domain": "northwind.example"
@@ -670,25 +657,29 @@
                 "url": "https://northwind.example/poppy/excluded-tasks.json"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                },
-                "mediated-sign-in": {
-                  "version": "1",
-                  "fields": [
-                    {
-                      "name": "account_number",
-                      "label": "Account number",
-                      "secret": false
-                    },
-                    {
-                      "name": "pin",
-                      "label": "PIN",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["accounts:read"]
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ],
+                "mediated-sign-in": [
+                  {
+                    "version": "1",
+                    "fields": [
+                      {
+                        "name": "account_number",
+                        "label": "Account number",
+                        "secret": false
+                      },
+                      {
+                        "name": "pin",
+                        "label": "PIN",
+                        "secret": true
+                      }
+                    ],
+                    "scopes": ["accounts:read"]
+                  }
+                ]
               }
             }
           }
@@ -743,6 +734,7 @@
                 "urn:ietf:params:oauth:grant-type:device_code",
                 "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
               "scopes_supported": ["accounts:read", "payments:write"],
               "protected_resources": ["https://northwind.example"],
               "authorization_endpoint": "https://northwind.example/oauth/authorize",
@@ -807,12 +799,7 @@
               "client_name": "Ledgerly",
               "jwks_uri": "https://ledgerly.example/jwks.json",
               "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },
@@ -912,7 +899,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events",
+            "value": "open · handoff none · agent · 2 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1019,7 +1006,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 8 events",
+            "value": "open · handoff none · agent · 4 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1061,7 +1048,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events"
+            "value": "open · handoff none · agent · 2 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -1075,7 +1062,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_2&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -1085,8 +1072,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_y8FmA8b2T7PHObFb23bPfw",
               "message": {
-                "id": "msg_3",
                 "author": {
                   "type": "human"
                 },
@@ -1102,11 +1089,11 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_5",
+                  "id": "evt_3",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_3",
+                    "id": "req_y8FmA8b2T7PHObFb23bPfw",
                     "author": {
                       "type": "human"
                     },
@@ -1115,54 +1102,47 @@
                   }
                 },
                 {
-                  "id": "evt_6",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_7",
+                  "id": "evt_4",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_4",
+                    "id": "msg_2",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_y8FmA8b2T7PHObFb23bPfw",
                     "text": "Northwind Bank asks approval for this payment.",
-                    "operation": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1",
-                      "summary": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
-                      "terms": {
-                        "northwind_operation_id": "op_2",
-                        "northwind_revision": "rev_2",
-                        "amount": {
-                          "amount": "1250.00",
-                          "currency": "EUR"
-                        },
-                        "payee": "Acme GmbH",
-                        "reference": "INV-0042",
-                        "from_account": "DE89 3704 0044 0532 0130 00"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "summary": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                          "terms": {
+                            "northwind_operation_id": "op_2",
+                            "northwind_revision": "rev_2",
+                            "amount": {
+                              "amount": "1250.00",
+                              "currency": "EUR"
+                            },
+                            "payee": "Acme GmbH",
+                            "reference": "INV-0042",
+                            "from_account": "DE89 3704 0044 0532 0130 00"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
-                },
-                {
-                  "id": "evt_8",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_8",
+              "cursor": "evt_4",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -1215,8 +1195,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_22gRTYwagFoSZ3ml8DLRmA",
               "message": {
-                "id": "msg_5",
                 "author": {
                   "type": "agent"
                 },
@@ -1232,11 +1212,11 @@
               "conversation_id": "cnv_2",
               "events": [
                 {
-                  "id": "evt_9",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_5",
+                    "id": "req_22gRTYwagFoSZ3ml8DLRmA",
                     "author": {
                       "type": "agent"
                     },
@@ -1245,52 +1225,45 @@
                   }
                 },
                 {
-                  "id": "evt_10",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_11",
+                  "id": "evt_6",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_6",
+                    "id": "msg_3",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_22gRTYwagFoSZ3ml8DLRmA",
                     "text": "Ready to pay INV-0042.",
-                    "operation": {
-                      "operation_id": "op_2",
-                      "revision": "rev_2",
-                      "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
-                      "terms": {
-                        "amount": {
-                          "amount": "1250.00",
-                          "currency": "EUR"
-                        },
-                        "payee": "Acme GmbH",
-                        "reference": "INV-0042",
-                        "from_account": "DE89 3704 0044 0532 0130 00"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_2",
+                          "revision": "rev_2",
+                          "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                          "terms": {
+                            "amount": {
+                              "amount": "1250.00",
+                              "currency": "EUR"
+                            },
+                            "payee": "Acme GmbH",
+                            "reference": "INV-0042",
+                            "from_account": "DE89 3704 0044 0532 0130 00"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
-                },
-                {
-                  "id": "evt_12",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_12",
+              "cursor": "evt_6",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         }
@@ -1365,7 +1338,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 12 events",
+            "value": "open · handoff none · agent · 6 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1407,7 +1380,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 8 events"
+            "value": "open · handoff none · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -1427,7 +1400,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_8&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -1437,14 +1410,19 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_xUzra5hgAoTheFL4XhYniA",
               "message": {
-                "id": "msg_7",
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_1",
-                  "revision": "rev_1"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_1",
+                      "revision": "rev_1",
+                      "approved_at": 1791709210
+                    }
+                  }
                 }
               }
             }
@@ -1457,56 +1435,50 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_13",
+                  "id": "evt_7",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_7",
+                    "id": "req_xUzra5hgAoTheFL4XhYniA",
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_1",
-                      "revision": "rev_1"
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_1",
+                          "revision": "rev_1",
+                          "approved_at": 1791709210
+                        }
+                      }
                     },
                     "role": "user"
                   }
                 },
                 {
-                  "id": "evt_14",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_15",
+                  "id": "evt_8",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_8",
+                    "id": "msg_4",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_xUzra5hgAoTheFL4XhYniA",
                     "text": "Northwind Bank: Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
                     "data": {
                       "bank_reference": "NW-0001"
                     }
                   }
-                },
-                {
-                  "id": "evt_16",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_16",
+              "cursor": "evt_8",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -1525,14 +1497,18 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_ozy9jN8k5JHxbfNkZziwfA",
               "message": {
-                "id": "msg_9",
                 "author": {
                   "type": "agent"
                 },
-                "approval": {
-                  "operation_id": "op_2",
-                  "revision": "rev_2"
+                "extensions": {
+                  "operations": {
+                    "approval": {
+                      "operation_id": "op_2",
+                      "revision": "rev_2"
+                    }
+                  }
                 }
               }
             }
@@ -1545,11 +1521,11 @@
               "conversation_id": "cnv_2",
               "events": [
                 {
-                  "id": "evt_9",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_5",
+                    "id": "req_22gRTYwagFoSZ3ml8DLRmA",
                     "author": {
                       "type": "agent"
                     },
@@ -1558,98 +1534,82 @@
                   }
                 },
                 {
-                  "id": "evt_10",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_11",
+                  "id": "evt_6",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_6",
+                    "id": "msg_3",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_22gRTYwagFoSZ3ml8DLRmA",
                     "text": "Ready to pay INV-0042.",
-                    "operation": {
-                      "operation_id": "op_2",
-                      "revision": "rev_2",
-                      "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
-                      "terms": {
-                        "amount": {
-                          "amount": "1250.00",
-                          "currency": "EUR"
-                        },
-                        "payee": "Acme GmbH",
-                        "reference": "INV-0042",
-                        "from_account": "DE89 3704 0044 0532 0130 00"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_2",
+                          "revision": "rev_2",
+                          "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                          "terms": {
+                            "amount": {
+                              "amount": "1250.00",
+                              "currency": "EUR"
+                            },
+                            "payee": "Acme GmbH",
+                            "reference": "INV-0042",
+                            "from_account": "DE89 3704 0044 0532 0130 00"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
                 },
                 {
-                  "id": "evt_12",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_17",
+                  "id": "evt_9",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_9",
+                    "id": "req_ozy9jN8k5JHxbfNkZziwfA",
                     "author": {
                       "type": "agent"
                     },
-                    "approval": {
-                      "operation_id": "op_2",
-                      "revision": "rev_2"
+                    "extensions": {
+                      "operations": {
+                        "approval": {
+                          "operation_id": "op_2",
+                          "revision": "rev_2"
+                        }
+                      }
                     },
                     "role": "user"
                   }
                 },
                 {
-                  "id": "evt_18",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_19",
+                  "id": "evt_10",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_10",
+                    "id": "msg_5",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_ozy9jN8k5JHxbfNkZziwfA",
                     "text": "Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
                     "data": {
                       "bank_reference": "NW-0001"
                     }
                   }
-                },
-                {
-                  "id": "evt_20",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_20",
+              "cursor": "evt_10",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         }
@@ -1728,7 +1688,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 16 events",
+            "value": "open · handoff none · agent · 8 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1775,11 +1735,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 8 events"
+            "value": "open · handoff none · agent · 4 events"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events"
+            "value": "open · handoff none · agent · 2 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -1797,7 +1757,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_16&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_8&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -1807,8 +1767,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_xaabhAV7X80xJ8zZO3FJ8A",
               "message": {
-                "id": "msg_11",
                 "author": {
                   "type": "human"
                 },
@@ -1824,11 +1784,11 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_21",
+                  "id": "evt_11",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_11",
+                    "id": "req_xaabhAV7X80xJ8zZO3FJ8A",
                     "author": {
                       "type": "human"
                     },
@@ -1837,54 +1797,47 @@
                   }
                 },
                 {
-                  "id": "evt_22",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_23",
+                  "id": "evt_12",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_12",
+                    "id": "msg_6",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_xaabhAV7X80xJ8zZO3FJ8A",
                     "text": "Northwind Bank asks approval for this payment.",
-                    "operation": {
-                      "operation_id": "op_3",
-                      "revision": "rev_3",
-                      "summary": "At Northwind Bank: Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
-                      "terms": {
-                        "northwind_operation_id": "op_4",
-                        "northwind_revision": "rev_4",
-                        "amount": {
-                          "amount": "980.00",
-                          "currency": "EUR"
-                        },
-                        "payee": "Acme GmbH",
-                        "reference": "INV-0043",
-                        "from_account": "DE89 3704 0044 0532 0130 00"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_3",
+                          "revision": "rev_3",
+                          "summary": "At Northwind Bank: Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                          "terms": {
+                            "northwind_operation_id": "op_4",
+                            "northwind_revision": "rev_4",
+                            "amount": {
+                              "amount": "980.00",
+                              "currency": "EUR"
+                            },
+                            "payee": "Acme GmbH",
+                            "reference": "INV-0043",
+                            "from_account": "DE89 3704 0044 0532 0130 00"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
-                },
-                {
-                  "id": "evt_24",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_24",
+              "cursor": "evt_12",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         },
@@ -1903,8 +1856,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_NifQ6-CIbcGOFlajTc3qRQ",
               "message": {
-                "id": "msg_13",
                 "author": {
                   "type": "agent"
                 },
@@ -1920,11 +1873,11 @@
               "conversation_id": "cnv_3",
               "events": [
                 {
-                  "id": "evt_25",
+                  "id": "evt_13",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_13",
+                    "id": "req_NifQ6-CIbcGOFlajTc3qRQ",
                     "author": {
                       "type": "agent"
                     },
@@ -1933,52 +1886,45 @@
                   }
                 },
                 {
-                  "id": "evt_26",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "working",
-                  "responder": "agent"
-                },
-                {
-                  "id": "evt_27",
+                  "id": "evt_14",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "msg_14",
+                    "id": "msg_7",
                     "author": {
                       "type": "agent"
                     },
                     "role": "company",
+                    "as_of_request": "req_NifQ6-CIbcGOFlajTc3qRQ",
                     "text": "Ready to pay INV-0043.",
-                    "operation": {
-                      "operation_id": "op_4",
-                      "revision": "rev_4",
-                      "summary": "Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
-                      "terms": {
-                        "amount": {
-                          "amount": "980.00",
-                          "currency": "EUR"
-                        },
-                        "payee": "Acme GmbH",
-                        "reference": "INV-0043",
-                        "from_account": "DE89 3704 0044 0532 0130 00"
-                      },
-                      "expires_at": "2026-10-11T09:15:10Z"
+                    "extensions": {
+                      "operations": {
+                        "operation": {
+                          "operation_id": "op_4",
+                          "revision": "rev_4",
+                          "summary": "Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                          "terms": {
+                            "amount": {
+                              "amount": "980.00",
+                              "currency": "EUR"
+                            },
+                            "payee": "Acme GmbH",
+                            "reference": "INV-0043",
+                            "from_account": "DE89 3704 0044 0532 0130 00"
+                          },
+                          "expires_at": "2026-10-11T09:15:10Z"
+                        }
+                      }
                     }
                   }
-                },
-                {
-                  "id": "evt_28",
-                  "created_at": "2026-10-11T09:00:10Z",
-                  "type": "state",
-                  "status": "idle",
-                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_28",
+              "cursor": "evt_14",
               "has_more": false,
-              "status": "idle",
-              "responder": "agent"
+              "working": false,
+              "handoff": "none",
+              "responder": "agent",
+              "closed": false
             }
           }
         }

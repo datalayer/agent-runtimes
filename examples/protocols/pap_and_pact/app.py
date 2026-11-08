@@ -33,7 +33,7 @@ from personal_agent_protocol import (
     Message,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
 )
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
@@ -140,7 +140,7 @@ async def _at_manzanita(record: Record) -> str:
 
         def say(text: str) -> Message:
             return Message(
-                id=generate_message_id(reactor), author=Author(type="human"), text=text
+                id=generate_request_id(reactor), author=Author(type="human"), text=text
             )
 
         company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
@@ -156,6 +156,7 @@ async def _at_manzanita(record: Record) -> str:
             pairwise_user_id=PAP_USER,
             issuer=metadata.issuer,
             tenant_id=TENANT,
+            company=company,
         )
         endpoint = company.document.agent.protocols[0].endpoint
         page = await conversations.start(

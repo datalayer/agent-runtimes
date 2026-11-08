@@ -3,7 +3,7 @@
   "title": "Conversation streaming",
   "description": "Atlas reads a Manzanita conversation over Server-Sent Events: display-only text deltas, complete message events, and a resume from Last-Event-ID.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.29.0",
+  "sdk": "personal-agent-protocol 0.32.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.3",
+              "protocol_version": "0.4",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -103,7 +103,8 @@
                 "issuer": "https://manzanita.example",
                 "scopes": {
                   "orders:read": "See your orders, returns and exchanges",
-                  "orders:write": "Exchange or return items in your orders"
+                  "orders:write": "Exchange or return items in your orders",
+                  "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
                 },
                 "scope_hints": {
                   "orders:read": {
@@ -138,25 +139,44 @@
                 "url": "https://manzanita.example/poppy/excluded-tasks.json"
               },
               "extensions": {
-                "operations": {
-                  "version": "2"
-                },
-                "mediated-sign-in": {
-                  "version": "1",
-                  "fields": [
-                    {
-                      "name": "email",
-                      "label": "Email",
-                      "secret": false
-                    },
-                    {
-                      "name": "password",
-                      "label": "Password",
-                      "secret": true
-                    }
-                  ],
-                  "scopes": ["orders:read", "orders:write"]
-                }
+                "operations": [
+                  {
+                    "version": "2"
+                  }
+                ],
+                "links": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "disclosures": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "ucp": [
+                  {
+                    "version": "1"
+                  }
+                ],
+                "mediated-sign-in": [
+                  {
+                    "version": "1",
+                    "fields": [
+                      {
+                        "name": "email",
+                        "label": "Email",
+                        "secret": false
+                      },
+                      {
+                        "name": "password",
+                        "label": "Password",
+                        "secret": true
+                      }
+                    ],
+                    "scopes": ["orders:read", "orders:write"]
+                  }
+                ]
               }
             }
           }
@@ -180,7 +200,11 @@
             "body": {
               "resource": "https://manzanita.example",
               "authorization_servers": ["https://manzanita.example"],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "bearer_methods_supported": ["header"]
             }
           }
@@ -211,7 +235,12 @@
                 "urn:ietf:params:oauth:grant-type:device_code",
                 "https://personalagentprotocol.org/grant/mediated-sign-in"
               ],
-              "scopes_supported": ["orders:read", "orders:write"],
+              "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+              "scopes_supported": [
+                "orders:read",
+                "orders:write",
+                "poppy:browser-sign-in"
+              ],
               "protected_resources": [
                 "https://manzanita.example",
                 "https://manzanita.example/mcp"
@@ -263,7 +292,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events"
+            "value": "open · handoff none · agent · 2 events"
           }
         ]
       },
@@ -282,8 +311,8 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
+              "id": "req_Ivd96OaxRnL5xoZA6CUC8w",
               "message": {
-                "id": "msg_1",
                 "author": {
                   "type": "human"
                 },
@@ -296,9 +325,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "conversation_id": "cnv_1",
-              "status": "idle",
-              "responder": "agent"
+              "conversation_id": "cnv_1"
             }
           }
         },
@@ -323,12 +350,7 @@
               "client_name": "Atlas",
               "jwks_uri": "https://atlas.example/jwks.json",
               "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "2"
-                }
-              }
+              "token_endpoint_auth_method": "private_key_jwt"
             }
           }
         },
@@ -415,7 +437,7 @@
           },
           {
             "label": "Conversation",
-            "value": "closed · agent · 5 events"
+            "value": "closed · handoff none · agent · 3 events"
           }
         ]
       },
@@ -426,23 +448,23 @@
           "to": "manzanita",
           "method": "POST",
           "url": "https://manzanita.example/poppy/conversations/cnv_1/close",
-          "status": 200,
+          "status": 202,
           "request": {
             "headers": {
               "content-type": "application/json",
               "accept": "*/*",
               "poppy-session": "‹Session JWT›"
             },
-            "body": {}
+            "body": {
+              "id": "req_1ZXKbbSdgK4N-K1-e9ca5Q"
+            }
           },
           "response": {
             "headers": {
               "content-type": "application/json"
             },
             "body": {
-              "conversation_id": "cnv_1",
-              "status": "closed",
-              "responder": "agent"
+              "conversation_id": "cnv_1"
             }
           }
         },
@@ -464,7 +486,7 @@
               "content-type": "text/event-stream",
               "cache-control": "no-store"
             },
-            "body": ": poppy\n\nid: evt_1\ndata: {\"id\": \"evt_1\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_1\", \"author\": {\"type\": \"human\"}, \"text\": \"Hello\", \"role\": \"user\"}}\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"working\", \"responder\": \"agent\"}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_2\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_2\", \"author\": {\"type\": \"agent\"}, \"role\": \"company\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_4\ndata: {\"id\": \"evt_4\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"idle\", \"responder\": \"agent\"}\n\nid: evt_5\ndata: {\"id\": \"evt_5\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"closed\", \"responder\": \"agent\"}\n\n",
+            "body": ": poppy\n\nevent: working\ndata: {\"working\": false}\n\nid: evt_1\ndata: {\"id\": \"evt_1\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"req_Ivd96OaxRnL5xoZA6CUC8w\", \"author\": {\"type\": \"human\"}, \"text\": \"Hello\", \"role\": \"user\"}}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_1\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_1\", \"author\": {\"type\": \"agent\"}, \"role\": \"company\", \"as_of_request\": \"req_Ivd96OaxRnL5xoZA6CUC8w\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"handoff\": \"none\", \"responder\": \"agent\", \"closed\": true}\n\n",
             "encoding": "sse"
           }
         }
@@ -509,7 +531,7 @@
           },
           {
             "label": "Conversation",
-            "value": "closed · agent · 5 events"
+            "value": "closed · handoff none · agent · 3 events"
           }
         ]
       },
@@ -533,7 +555,7 @@
               "content-type": "text/event-stream",
               "cache-control": "no-store"
             },
-            "body": ": poppy\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"working\", \"responder\": \"agent\"}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_2\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_2\", \"author\": {\"type\": \"agent\"}, \"role\": \"company\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_4\ndata: {\"id\": \"evt_4\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"idle\", \"responder\": \"agent\"}\n\nid: evt_5\ndata: {\"id\": \"evt_5\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"status\": \"closed\", \"responder\": \"agent\"}\n\n",
+            "body": ": poppy\n\nevent: working\ndata: {\"working\": false}\n\nevent: text-delta\ndata: {\"message_id\": \"msg_1\", \"text\": \"Hello from Manzanita Outfit\"}\n\nid: evt_2\ndata: {\"id\": \"evt_2\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"message\", \"message\": {\"id\": \"msg_1\", \"author\": {\"type\": \"agent\"}, \"role\": \"company\", \"as_of_request\": \"req_Ivd96OaxRnL5xoZA6CUC8w\", \"text\": \"Hello from Manzanita Outfitters. Ask me about an order.\"}}\n\nid: evt_3\ndata: {\"id\": \"evt_3\", \"created_at\": \"2026-10-11T09:00:00Z\", \"type\": \"state\", \"handoff\": \"none\", \"responder\": \"agent\", \"closed\": true}\n\n",
             "encoding": "sse"
           }
         }
