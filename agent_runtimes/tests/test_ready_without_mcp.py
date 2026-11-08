@@ -203,8 +203,9 @@ def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
 
     async def start_server(server_id: str, config: Any = None, **kwargs: Any) -> Any:
         calls.append({"id": server_id, **kwargs})
-        # A slow start: the configure has answered long before it ends.
-        await asyncio.sleep(0.5)
+        # A slow start (3 s): the configure has answered long before it ends, with
+        # room for a slow runner (0.5 s against 0.5 s failed on GitHub's 3.13 runner).
+        await asyncio.sleep(3)
         return await real(server_id, config, **kwargs)
 
     monkeypatch.setattr(manager, "start_server", start_server)
@@ -244,7 +245,7 @@ def test_configure_answers_before_the_servers_start_and_says_each_one(
         },
     )
     assert response.status_code == 200, response.text
-    assert time.monotonic() - started < 0.5, "the configure waited on a server"
+    assert time.monotonic() - started < 2, "the configure waited on a server"
     body = response.json()
     assert body["agent_id"] == "default"
     assert body["ready"] is True
