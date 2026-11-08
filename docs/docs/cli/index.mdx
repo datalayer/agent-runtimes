@@ -259,6 +259,16 @@ loop tool-approvals reject 01M6Y1AA --note "not this file"
 | `approve <id>` | Approves the call; the waiting run goes on with it. |
 | `reject <id>` | Rejects the call; the waiting run is refused it, and the agent is told your `--note`. |
 
+While a run waits on your approval, `loop` says so instead of giving up on a silent run. In the chat it asks you (`Approve?`), and your answer goes to the run. On `--prompt` lines, which ask nothing, it prints the call and how to decide it on standard error, then waits for the decision and prints it:
+
+```text
+  🔒 skill:datalayer-memory-add waits on your approval (01M6Y475W1Q8ATP6WHNN00ZX3D)
+    (skill=datalayer-memory-add)
+    Approve: loop tool-approvals approve 01M6Y475W1Q8ATP6WHNN00ZX3D   Reject: loop tool-approvals reject 01M6Y475W1Q8ATP6WHNN00ZX3D
+    Waiting for your decision…
+    ✓ skill:datalayer-memory-add approved
+```
+
 An id can be given whole or by its start, as long as it names a single pending approval. Only you decide the approvals that wait on you: one that is already decided says so, and nothing changes. These are the same approvals as on the approvals page of datalayer.ai.
 
 ### A new application

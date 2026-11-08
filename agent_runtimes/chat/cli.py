@@ -1126,6 +1126,7 @@ def run_prompts(
             eggs=eggs,
             jupyter_url=cloud_launch.jupyter_url if cloud_launch else None,
             where=cloud_launch.label if cloud_launch else None,
+            cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
         )
         return asyncio.run(_run_lines(tux, prompts))
     except KeyboardInterrupt:
@@ -1686,6 +1687,7 @@ def main_callback(
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
                             where=cloud_launch.label if cloud_launch else None,
+                            cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
                             voice=voice,
                             speak=speak,
                         )

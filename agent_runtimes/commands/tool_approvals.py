@@ -115,6 +115,11 @@ class ApprovalsClient:
             params["tool_name"] = tool_name
         return list(self._request("GET", "", params=params).get("approvals") or [])
 
+    def get(self, approval_id: str) -> dict[str, Any]:
+        """One approval, decided or not."""
+        data = self._request("GET", f"/{approval_id}")
+        return dict(data.get("approval") or data)
+
     def resolve_id(self, ref: str) -> str:
         """The whole id of the pending approval *ref* names (itself or its start)."""
         ref = ref.strip()

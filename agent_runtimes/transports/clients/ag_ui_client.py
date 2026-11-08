@@ -19,11 +19,12 @@ Example:
                 print(event.delta, end="", flush=True)
 """
 
+import asyncio
 import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, AsyncIterator, Callable
 
 try:
     import httpx
@@ -227,6 +228,7 @@ class AGUIClient:
         tools: list[dict[str, Any]] | None = None,
         identities: list[dict[str, Any]] | None = None,
         forwarded_props: dict[str, Any] | None = None,
+        keep_waiting: Callable[[], bool] | None = None,
     ) -> AsyncGenerator[AGUIEvent, None]:
         """
         Run the agent on the given input with SSE streaming.
@@ -238,6 +240,10 @@ class AGUIClient:
             identities: Optional OAuth identities for tool authentication.
             forwarded_props: What goes with the run besides the conversation:
                 ``voice``, how a spoken message was heard (VO-27).
+            keep_waiting: Asked while the agent says nothing: ``True`` keeps the
+                run open however long it is silent — a tool call waits on a
+                person's approval, and the run says nothing until it is
+                decided. Unsaid, a silence of ``timeout`` seconds ends the run.
 
         Yields:
             AGUIEvent objects for each SSE event.
@@ -272,11 +278,17 @@ class AGUIClient:
             raise AGUIClientError("Client not connected. Call connect() first.")
 
         try:
+            stream_options: dict[str, Any] = {}
+            if keep_waiting is not None:
+                # The silence is watched below, not by httpx: a read never ends
+                # the run while ``keep_waiting`` says so.
+                stream_options["timeout"] = httpx.Timeout(self.timeout, read=None)
             async with self._client.stream(
                 "POST",
                 self.url,
                 json=payload,
                 headers={"Accept": "text/event-stream", **self.headers},
+                **stream_options,
             ) as response:
                 # Check for HTTP errors - must read body first for streaming responses
                 if response.status_code >= 400:
@@ -285,7 +297,12 @@ class AGUIClient:
                         f"HTTP error: {response.status_code} - {response.text}"
                     )
 
-                async for line in response.aiter_lines():
+                lines = (
+                    response.aiter_lines()
+                    if keep_waiting is None
+                    else self._lines_while(response, keep_waiting)
+                )
+                async for line in lines:
                     if not line:
                         continue
 
@@ -328,6 +345,60 @@ class AGUIClient:
             raise AGUIClientError(f"Request error: {e}")
         except Exception as e:
             raise AGUIClientError(f"Unexpected error: {e}")
+
+    #: How often the silence is looked at while ``keep_waiting`` is given.
+    IDLE_TICK_SECONDS = 2.0
+
+    async def _lines_while(
+        self, response: "httpx.Response", keep_waiting: Callable[[], bool]
+    ) -> AsyncIterator[str]:
+        """The stream's lines, a silence ending it only when nothing is awaited.
+
+        A reader task fills a queue, so a tick that finds nothing never
+        cancels a read halfway through a line.
+        """
+        queue: asyncio.Queue[Any] = asyncio.Queue()
+        done = object()
+
+        async def _read() -> None:
+            try:
+                async for line in response.aiter_lines():
+                    await queue.put(line)
+            except BaseException as error:  # noqa: BLE001 - handed to the reader
+                await queue.put(error)
+            finally:
+                await queue.put(done)
+
+        reader = asyncio.create_task(_read())
+        silent = 0.0
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(
+                        queue.get(), timeout=self.IDLE_TICK_SECONDS
+                    )
+                except asyncio.TimeoutError:
+                    if keep_waiting():
+                        silent = 0.0
+                        continue
+                    silent += self.IDLE_TICK_SECONDS
+                    if silent >= self.timeout:
+                        raise AGUIClientError(
+                            f"The agent said nothing for {int(self.timeout)} s."
+                        )
+                    continue
+                if item is done:
+                    return
+                if isinstance(item, BaseException):
+                    raise item
+                silent = 0.0
+                yield item
+        finally:
+            reader.cancel()
+            try:
+                await reader
+            except BaseException:  # noqa: BLE001 - the reader is gone either way
+                pass
 
     async def send_message(
         self,
