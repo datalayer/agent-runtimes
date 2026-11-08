@@ -3632,6 +3632,122 @@ async def search_agent_memory(agent_id: str, request: Request) -> dict[str, Any]
     return {"results": memories}
 
 
+#: The longest memory kept through the routes below, in characters.
+MEMORY_TEXT_LIMIT = 2000
+
+
+class MemoryToKeep(BaseModel):
+    """What the agent is to remember of the person."""
+
+    content: str
+    metadata: dict[str, Any] | None = None
+
+
+def _durable_memory_of(agent_id: str) -> Any:
+    """The memory backend an agent of this runtime keeps the person's memories in.
+
+    Its scope is the backend's own — the runtime owner's account and the
+    agent (``memory.identity``) — never one the caller names. An agent
+    without durable memory is not found, in a sentence.
+    """
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"The agent {agent_id} has no durable memory on this runtime.",
+        )
+    return backend
+
+
+def _memory_refusal(exc: Exception) -> HTTPException:
+    """A memory that cannot be kept here, said in its own sentence (409)."""
+    from ..memory.config import MemoryNotConfigured
+
+    if isinstance(exc, MemoryNotConfigured):
+        return HTTPException(status_code=409, detail=str(exc))
+    raise exc
+
+
+# Declared before ``DELETE /{agent_id:path}`` below, which would otherwise
+# take ``DELETE /{agent_id}/memory`` for the deletion of the agent itself.
+@router.post("/{agent_id}/memory")
+async def add_agent_memory(agent_id: str, memory: MemoryToKeep) -> dict[str, Any]:
+    """Keep one thing in an agent's durable memory of the person, in their words."""
+    words = " ".join(memory.content.split())
+    if not words:
+        raise HTTPException(
+            status_code=422, detail="A memory says what to remember: it is empty."
+        )
+    if len(words) > MEMORY_TEXT_LIMIT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"A memory is at most {MEMORY_TEXT_LIMIT} characters, not {len(words)}.",
+        )
+    backend = _durable_memory_of(agent_id)
+    try:
+        await backend.add(
+            [{"role": "user", "content": words}], metadata=memory.metadata
+        )
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    return {"added": 1, "content": words}
+
+
+@router.delete("/{agent_id}/memory/{memory_id}")
+async def forget_agent_memory(agent_id: str, memory_id: str) -> dict[str, Any]:
+    """Forget one memory of the agent; somebody else's, or another agent's, is not found."""
+    backend = _durable_memory_of(agent_id)
+    forget = getattr(backend, "forget", None)
+    if forget is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"The memory of {agent_id} cannot forget one memory.",
+        )
+    try:
+        forgotten = await forget(memory_id)
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    if not forgotten:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{agent_id} remembers nothing as {memory_id}.",
+        )
+    return {"forgotten": 1}
+
+
+@router.delete("/{agent_id}/memory")
+async def forget_all_agent_memory(
+    agent_id: str, count: int = Query(..., ge=0)
+) -> dict[str, Any]:
+    """Forget everything the agent remembers of the person — no more than ``count``.
+
+    ``count`` is what the person was shown and confirmed: when it remembers
+    more now, nothing is forgotten (409).
+    """
+    backend = _durable_memory_of(agent_id)
+    forget_all = getattr(backend, "forget_all", None)
+    if forget_all is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"The memory of {agent_id} cannot forget everything.",
+        )
+    try:
+        if len(await backend.list_all(limit=count + 1)) > count:
+            raise HTTPException(
+                status_code=409,
+                detail=f"It remembers more than the {count} you confirmed now. "
+                "Nothing was forgotten.",
+            )
+        forgotten = await forget_all()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    return {"forgotten": forgotten}
+
+
 @router.get("/{agent_id:path}")
 async def get_agent(agent_id: str) -> dict[str, Any]:
     """

@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+**An agent's memory kept and forgotten through its routes.** Beside `GET /api/v1/agents/{agent_id}/memory` and `POST …/memory/search`: `POST …/memory` keeps one thing in the person's words (`{"content", "metadata"}`, at most 2,000 characters), `DELETE …/memory/{memory_id}` forgets one memory (somebody else's, or another agent's, is not found), and `DELETE …/memory?count=N` forgets everything, no more than the `count` the person was shown and confirmed (409 when it remembers more now; nothing is forgotten). Each works in the backend's own scope, the runtime owner's account and the agent, never one the caller names; an agent without durable memory is 404, and a memory that cannot be kept on this runtime says why (409). They are what datalayer-skills' memory skills call from the sandbox, over the pod's loopback. The Crawler Agent (agentspecs 0.0.166) remembers with mem0 and carries those skills.
+
 ## 1.5.123
 
 What 1.5.122 carries; 1.5.122 never published (its release tests still expected Inbox triage
