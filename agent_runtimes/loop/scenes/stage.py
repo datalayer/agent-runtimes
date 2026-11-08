@@ -42,6 +42,7 @@ from agent_runtimes.loop.scenes.transcript import (
     SceneMember,
     TranscriptLine,
     connection_of_tool,
+    millis,
     transcript_of_spans,
 )
 from agent_runtimes.output.formats import A2UI_MEDIA_TYPE, NOTEBOOK_MEDIA_TYPE
@@ -101,8 +102,12 @@ _PARENT: contextvars.ContextVar[str] = contextvars.ContextVar(
 )
 
 
+def _iso(at: datetime) -> str:
+    return at.isoformat().replace("+00:00", "Z")
+
+
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return _iso(datetime.now(timezone.utc))
 
 
 def _span_id() -> str:
@@ -205,10 +210,12 @@ class Recording:
                 child_end = datetime.fromisoformat(
                     child["end_time"].replace("Z", "+00:00")
                 )
-                # The transcript reads milliseconds: the same one is a tie.
-                if int(child_end.timestamp() * 1000) >= int(end.timestamp() * 1000):
+                # A tie as the transcript reads it, in its milliseconds
+                # (rounded): a child at .9 of one and its parent at .2 of the
+                # next truncate apart but round together.
+                if millis(child["end_time"]) >= millis(_iso(end)):
                     end = child_end + timedelta(milliseconds=1)
-        span["end_time"] = end.isoformat().replace("+00:00", "Z")
+        span["end_time"] = _iso(end)
         span["duration_ms"] = int((end - start).total_seconds() * 1000)
         span["in_progress"] = False
         if error:

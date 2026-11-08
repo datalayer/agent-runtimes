@@ -145,6 +145,10 @@ class TestManagedFromIam:
     def test_iams_documents_decide_first_above_the_appspecs_and_the_default(
         self, managed: FakeIam
     ) -> None:
+        # The fixture's 50 ms copy can expire between two reads on a loaded
+        # machine (a full suite under a memory cap): this one asks a copy held
+        # for longer than the test takes.
+        runtime_policies().poll_seconds = 30.0
         policies = policies_in_force()
         assert [p.scope for p in policies] == ["organization", "session"]
         decision = decide(act("execute", command="pytest"), _ctx(), policies)

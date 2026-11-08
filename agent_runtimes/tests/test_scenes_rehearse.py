@@ -410,6 +410,38 @@ def test_a_member_at_an_address_is_asked_there_and_its_steps_are_lines(
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in verdict.beats[0].lines
 
 
+def test_a_span_ends_after_its_child_in_the_milliseconds_the_transcript_reads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The 1.5.120 release run: the A2A request ended at .9 of a millisecond
+    and the turn above it at .2 of the next. Truncated they were apart, so
+    the turn kept its end; rounded, as the transcript reads them, they tied,
+    and the turn's words came before the answer it waited for."""
+    from datetime import datetime as real_datetime
+    from datetime import timezone
+
+    from agent_runtimes.loop.scenes import stage as stage_module
+    from agent_runtimes.loop.scenes.stage import Recording
+    from agent_runtimes.loop.scenes.transcript import millis
+
+    now = real_datetime(2026, 11, 8, 10, 0, 0, 101200, tzinfo=timezone.utc)
+
+    class _Clock(real_datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> real_datetime:  # type: ignore[override]
+            return now
+
+    monkeypatch.setattr(stage_module, "datetime", _Clock)
+    recording = Recording()
+    turn = recording.start("invoke_agent Sales", "Sales", {})
+    asked = recording.start(
+        "a2a SendStreamingMessage", "Sales", {}, parent=turn["span_id"]
+    )
+    asked["end_time"] = "2026-11-08T10:00:00.100900Z"
+    recording.end(turn)
+    assert millis(turn["end_time"]) > millis(asked["end_time"])
+
+
 def test_a_harness_s_steps_are_named_by_kind_and_title_and_drawn_on_its_workspace(
     scene: Any,
 ) -> None:

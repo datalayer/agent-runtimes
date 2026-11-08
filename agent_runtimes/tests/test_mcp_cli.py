@@ -18,6 +18,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import sys
 from contextlib import asynccontextmanager
 
@@ -635,7 +636,10 @@ def test_cli_run_argv_needs_a_main_that_takes_it(fake, tmp_path):
     script.write_text("async def main(client):\n    return 1\n")
     result = runner.invoke(mcp_cli.app, ["run", str(script), "--", "--apply"])
     assert result.exit_code != 0
-    flat = " ".join(result.output.replace("│", " ").split())
+    # Typer's error panel is colored on GitHub's runner (GITHUB_ACTIONS forces
+    # a terminal): the words are read without the escapes or the box.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    flat = " ".join(plain.replace("│", " ").split())
     assert "main(client, argv)" in flat
 
 
