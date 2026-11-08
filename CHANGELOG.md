@@ -9,6 +9,17 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.116
+
+8 November 2026.
+
+**PAP draft 0.4** (`personal-agent-protocol` 0.32.0, draft 0.4 as of upstream `46beb21`): the PAP capabilities name `Poppy-Version` and `Poppy-Extensions`, send request ids (`generateRequestId`), read a conversation's four state fields (`working`, `handoff`, `responder`, `closed`); the examples, their traces and views at 0.4; the Appspec's company website flags (`web.unscoped`, `web.disabled`, agentspecs 0.0.159).
+
+**Memory that is kept.** Mem0 on a runtime keeps an agent's memories in PostgreSQL (pgvector), keyed by the user and the agentspec id, never the runtime's name, with embeddings through ai-inference (Titan) on the runtime's token; a runtime with no owner keeps none; failures are said in a sentence. `configure-from-spec` takes `owner_uid` (from the pod, once), `without_mcp_servers` and `without_skills`; `loop --cloud --prompt` takes `--without-mcp-servers` and `--without-skill`, and a launch carries `agent_setup`. The image installs the `memory` extra.
+
+**An MCP session the server forgot is opened again.** A tool call or a tool listing answered "Session not found" closes that session, opens a new one and asks again once; a second loss surfaces.
+
+
 ## 1.5.115
 
 7 November 2026.
