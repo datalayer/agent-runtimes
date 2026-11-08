@@ -1825,13 +1825,15 @@ except AgentMcpServersError as e:
 
 ## `mcp` Command
 
-`agent-runtimes mcp` is a plain MCP client for the terminal: it opens a streamable-HTTP session to the Datalayer MCP gateway (or any MCP server), lists its toolsets and tools, calls a tool, or runs a script that makes many calls on one session.
+`agent-runtimes mcp` is a plain MCP client for the terminal: it opens a streamable-HTTP session to the Datalayer MCP gateway (or any MCP server), lists its toolsets and tools, calls a tool, runs a script that makes many calls on one session, or reads the gateway's health.
 
 By default it reaches the gateway at `$DATALAYER_MCP_SERVER_URL` (or `https://mcp.datalayer.run/mcp`) with the bearer token in `$DATALAYER_API_KEY`. The token is never printed.
 
+Stdout carries the result alone, so it pipes into `jq` or `json.load`: logs, retry notices and errors go to stderr, and library logs (httpx, botocore, the MCP SDK) stay quiet unless `-v`.
+
 ### Options
 
-Every subcommand takes the session options:
+Every subcommand that opens a session takes:
 
 | Option | Description |
 |--------|-------------|
@@ -1839,40 +1841,65 @@ Every subcommand takes the session options:
 | `--toolset, -t` | A gateway toolset to add to its defaults (repeatable, or comma-separated) |
 | `--only` | Exactly the given toolsets, without the gateway's defaults (`?only=…`) |
 | `--param, -p` | A session parameter `KEY=VALUE` in the query string (repeatable), e.g. `odoo-company=2` |
+| `--company, -c` | Odoo-specific sugar for `-p odoo-company=N` |
 | `--token-env` | Environment variable holding the bearer token (default: `DATALAYER_API_KEY`) |
 | `--header, -H` | An extra request header `KEY=VALUE` (repeatable) |
+| `--retries` | How many more times opening the session is tried (default: 2) |
+| `--retry-wait` | The first wait between tries in seconds, doubling each time (default: 1) |
+| `--verbose, -v` | Show library logs, on stderr |
 
-The gateway's toolsets are chosen in the query string: `-t odoo -t odoo-accounting -p odoo-company=2` opens `…/mcp?odoo,odoo-accounting&odoo-company=2`.
+The gateway's toolsets are chosen in the query string: `-t odoo -t odoo-accounting -c 2` opens `…/mcp?odoo,odoo-accounting&odoo-company=2`.
+
+Opening a session is retried on what heals by itself — a refused connection, a TLS failure while an ingress is reinstalled, a failed initialize, a 502, 503 or 504 — with one line on stderr per retry. A 401, 403 or 404 fails at once. A tool call is **never** retried: once it reached the server, repeating it could repeat a write. When the retries are spent, one line says what failed and where to look (`the server answered 503 at initialize (after 3 attempts): check https://mcp.datalayer.run/api/mcp/readyz`).
+
+`call` and `run` also take:
+
+| Option | Description |
+|--------|-------------|
+| `--output, -o` | `json` (default), or `text`: a string result printed as it is, anything else as JSON |
+| `--compact` | JSON on one line |
 
 ### Examples
 
 ```bash
+# The gateway's readiness and liveness (/api/mcp/readyz, /api/mcp/healthz), with failing checks
+agent-runtimes mcp health
+
 # The gateway's toolsets; `*` marks those the session would have
 agent-runtimes mcp toolsets
 agent-runtimes mcp toolsets -t odoo-accounting --json
 
 # A session's tools, with the first line of each description
-agent-runtimes mcp tools --only -t odoo-accounting -p odoo-company=1
+agent-runtimes mcp tools --only -t odoo-accounting -c 1
 
 # A tool's description and input schema
 agent-runtimes mcp describe odoo_search_records --only -t odoo
 agent-runtimes mcp tools --only -t odoo --schema odoo_search_records
 
-# Call a tool: arguments as JSON, a JSON file, or KEY=VALUE pairs (values decoded as JSON when they are)
-agent-runtimes mcp call odoo_get_account -t odoo -p odoo-company=1
-agent-runtimes mcp call odoo_search_records -t odoo -p odoo-company=1 \
+# Call a tool: arguments as JSON, a JSON file, or KEY=VALUE pairs
+agent-runtimes mcp call odoo_get_account -t odoo -c 1
+agent-runtimes mcp call odoo_search_records -t odoo -c 1 \
   --args '{"model": "res.partner", "fields": ["name"]}' -a limit=5
 agent-runtimes mcp call odoo_search_records -t odoo --args @query.json
+agent-runtimes mcp call odoo_accounting_find_document -t odoo-accounting -c 1 \
+  -a number=1618720029 | jq '.documents[0].move'
+
+# A base64 payload to a file (here the Intervat XML's xml_base64); the rest printed
+agent-runtimes mcp call odoo_accounting_intervat_xml -t odoo-accounting -c 1 \
+  -a date_from=2026-07-01 -a date_to=2026-09-30 --save intervat-q3.xml
+agent-runtimes mcp call some_tool --save out.pdf --save-field raw.content
 
 # Any other MCP server
 agent-runtimes mcp tools --url http://localhost:4040/mcp --token-env MY_SERVER_TOKEN
 ```
 
-`call` prints the tool's result as JSON: a result of one content alone, several as a list (`--raw` prints the whole `CallToolResult`). It exits 1 when the tool answers with an error, printing the error's text, and 2 when the session cannot be opened.
+`-a KEY=VALUE` values are typed by the tool's input schema, read once per call: a string property keeps the text however numeric it looks (`number=1618720029` stays `"1618720029"`), an integer, number, boolean, array or object property decodes it as JSON (`limit=5`, `draft=true`, `ids=[1,2]`). A property the schema does not type is decoded as JSON when it is JSON. `--args` is sent exactly as written.
+
+`call` prints the tool's result: a result of one content alone, several as a list (`--raw` prints the whole `CallToolResult`). `--save PATH` decodes the first base64 field it finds (`xml_base64`, `raw.content`, `content`, `datas`, `data`, `resource.blob`, or the one `--save-field a.b.c` names) to the file and prints the rest with that field replaced by a note. Exit codes: 0 done, 1 when the tool answers with an error (its text on stderr, no traceback), 2 when the session cannot be opened.
 
 ### A script on one session
 
-`mcp run` opens one session and runs a script's `async def main(client)`; what `main` returns, when not `None`, is printed as JSON.
+`mcp run` opens one session and runs a script's `async def main(client)`; what `main` returns, when not `None`, is printed as JSON. Arguments after `--` go to the script when `main` takes a second parameter, `async def main(client, argv)`, as a list of strings.
 
 ```python
 # partners.py
@@ -1885,21 +1912,47 @@ async def main(client):
 ```
 
 ```bash
-agent-runtimes mcp run partners.py -t odoo -p odoo-company=1
+agent-runtimes mcp run partners.py -t odoo -c 1
+```
+
+A script that writes is safest as a dry run by default, writing only when told to:
+
+```python
+# recode.py
+async def main(client, argv):
+    apply = "--apply" in argv
+    [found] = await client.call("odoo_accounting_find_document", number="1618720029")
+    plan = [doc["move"] for doc in found["documents"] if doc["state"] == "draft"]
+    if not apply:
+        return {"would_change": plan}          # dry run: nothing written
+    for move in plan:
+        ...                                    # the writes
+    return {"changed": plan}
+```
+
+```bash
+agent-runtimes mcp run recode.py -t odoo-accounting -c 1             # dry run
+agent-runtimes mcp run recode.py -t odoo-accounting -c 1 -- --apply  # writes
 ```
 
 ### Programmatic Usage
 
 ```python
-from agent_runtimes.mcp.hosted_client import MCPToolError, connect
+from agent_runtimes.mcp import MCPConnectError, MCPToolError, connect
 
-async with connect(toolsets=["odoo-accounting"], params={"odoo-company": 1}, only=True) as client:
+async with connect(
+    toolsets=["odoo-accounting"], params={"odoo-company": 1}, only=True,
+    retries=2, retry_wait=1.0,
+) as client:
     tools = await client.list_tools()          # mcp.types.Tool, across pages
     [account] = await client.call("odoo_get_account")
+    [found] = await client.call(
+        "odoo_accounting_find_document", number=1618720029, coerce=True
+    )                                          # sent as "1618720029"
     result = await client.call_raw("odoo_get_account")   # the CallToolResult as sent
 ```
 
-`client.call(tool, **arguments)` returns one decoded value per content (JSON text decoded, other text kept) and raises `MCPToolError` (with `.tool` and `.text`) when the tool errs. The gateway answers with JSON text rather than structured content, which the SDK's `ClientSession.call_tool` refuses for a tool with an output schema; the client sends a raw `tools/call` instead. `connect(url=..., headers=..., token=...)` reaches any other MCP server.
+`client.call(tool, **arguments)` returns one decoded value per content (JSON text decoded, other text kept) and raises `MCPToolError` (with `.tool` and `.text`) when the tool errs or the server refuses the request. `coerce=True` types the arguments by the tool's input schema first (fetched once per session). `connect` retries opening the session as the CLI does (`retries`, `retry_wait`, and `on_retry` to be told each retry; a warning is logged otherwise) and raises `MCPConnectError` with the diagnosis when it gives up. The gateway answers with JSON text rather than structured content, which the SDK's `ClientSession.call_tool` refuses for a tool with an output schema; the client sends a raw `tools/call` instead. `connect(url=..., headers=..., token=...)` reaches any other MCP server.
 
 ---
 

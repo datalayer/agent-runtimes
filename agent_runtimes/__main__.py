@@ -31,6 +31,7 @@ For programmatic usage, import from agent_runtimes.commands:
 import asyncio
 import logging
 import os
+import sys
 from typing import Annotated, Optional
 
 import typer
@@ -96,8 +97,22 @@ from agent_runtimes.commands.serve import (
 )
 from agent_runtimes.commands.sessions import app as sessions_app
 
+
+def _log_level(argv: list[str]) -> int:
+    """INFO, but WARNING for `agent-runtimes mcp …` without `-v`.
+
+    `mcp` prints a result meant for `| jq`; the libraries imported below
+    (botocore at the chat import) log at INFO before any command runs.
+    """
+    words = [word for word in argv[1:] if not word.startswith("-")]
+    if words[:1] == ["mcp"] and not {"-v", "--verbose"} & set(argv[1:]):
+        return logging.WARNING
+    return logging.INFO
+
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level(sys.argv),
+    stream=sys.stderr,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
