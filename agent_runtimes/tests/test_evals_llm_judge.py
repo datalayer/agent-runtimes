@@ -301,3 +301,122 @@ def test_a_run_carries_the_judges_explanation_and_failure_mode():
     metrics = evaluate_run(cases, ["0"])
     assert metrics["case_results"][0]["explanation"] == "wrong count"
     assert metrics["case_results"][0]["failure_mode"] == "wrong_answer"
+
+
+CLAUDE = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+DAILY_429 = (
+    '{"detail": "' + CLAUDE + " is not answering: its provider's daily limit is "
+    'reached; try again in 5400 s, or ask another model."}'
+)
+
+
+def _http_judge(monkeypatch, answer_for):
+    """`make_judge` against a mocked AI Inference: `answer_for(model)` answers."""
+    import httpx
+
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        asked.append(model)
+        return answer_for(model)
+
+    transport = httpx.MockTransport(handler)
+    # The unpatched client, though an earlier call in the same test patched it.
+    real_client = getattr(httpx.Client, "_unpatched", httpx.Client)
+
+    class PatchedClient(real_client):
+        _unpatched = real_client
+
+        def __init__(self, *args, **kwargs):
+            kwargs["transport"] = transport
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", PatchedClient)
+    return make_judge(url="https://inference.example", token="t"), asked
+
+
+def _scored():
+    import httpx
+
+    return httpx.Response(
+        200,
+        json={
+            "data": {
+                "response": '{"score": 0.9, "passed": true, "explanation": "All there."}'
+            }
+        },
+    )
+
+
+def test_at_its_limit_the_judge_gives_way_to_qwen_max_and_says_so(monkeypatch):
+    """Bedrock refused Claude for the day (8 November 2026): AI Inference's 429
+    makes the judge ask Qwen-Max once, and the verdict names who judged."""
+    import httpx
+
+    judge, asked = _http_judge(
+        monkeypatch,
+        lambda model: (
+            httpx.Response(429, text=DAILY_429) if model == CLAUDE else _scored()
+        ),
+    )
+    outcome = evaluators._evaluate_llm_judge(
+        "2000 rows", "2000", {"_judge": judge, "model": CLAUDE}
+    )
+    assert asked == [CLAUDE, evaluators.JUDGE_FALLBACK_MODEL]
+    assert evaluators.JUDGE_FALLBACK_MODEL == "alibaba:qwen-max"
+    assert outcome["passed"] is True and outcome["judge_model"] == "alibaba:qwen-max"
+    assert outcome["judged_by"] == "judged by Qwen-Max, Claude's daily limit reached"
+    assert (
+        outcome["reason"]
+        == "All there. (judged by Qwen-Max, Claude's daily limit reached)"
+    )
+
+
+def test_a_5xx_naming_a_rate_limit_falls_back_and_nothing_else_does(monkeypatch):
+    import httpx
+
+    assert evaluators.is_judge_limited(429, "")
+    assert evaluators.is_judge_limited(
+        500, "Chat completion failed: litellm.RateLimitError: ThrottlingException"
+    )
+    assert not evaluators.is_judge_limited(500, "Chat completion failed: reset")
+    assert not evaluators.is_judge_limited(402, "quota")
+
+    judge, asked = _http_judge(
+        monkeypatch,
+        lambda model: (
+            httpx.Response(500, text="litellm.RateLimitError: Too many requests")
+            if model == CLAUDE
+            else _scored()
+        ),
+    )
+    outcome = evaluators._evaluate_llm_judge(
+        "x", "x", {"_judge": judge, "model": CLAUDE}
+    )
+    assert asked == [CLAUDE, "alibaba:qwen-max"]
+    assert outcome["judged_by"] == "judged by Qwen-Max, Claude's rate limit reached"
+
+    judge, asked = _http_judge(
+        monkeypatch, lambda model: httpx.Response(402, text="no credits")
+    )
+    outcome = evaluators._evaluate_llm_judge(
+        "x", "x", {"_judge": judge, "model": CLAUDE}
+    )
+    assert asked == [CLAUDE]
+    assert outcome["failure_stage"] == "scorer" and "judged_by" not in outcome
+
+
+def test_the_fallback_is_asked_once(monkeypatch):
+    import httpx
+
+    judge, asked = _http_judge(
+        monkeypatch, lambda model: httpx.Response(429, text="rate limit")
+    )
+    outcome = evaluators._evaluate_llm_judge(
+        "x", "x", {"_judge": judge, "model": CLAUDE}
+    )
+    assert asked == [CLAUDE, "alibaba:qwen-max"]
+    assert outcome["passed"] is False and outcome["failure_stage"] == "scorer"
+    assert outcome["judge_model"] == "alibaba:qwen-max"
+    assert "Claude's rate limit reached" in outcome["reason"]

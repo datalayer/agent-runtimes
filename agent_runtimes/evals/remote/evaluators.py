@@ -13,6 +13,7 @@ evaluator.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable
 
 from agent_runtimes.evals.common import as_dict
@@ -140,6 +141,54 @@ JudgeCall = Callable[[str, str], str]
 
 _judge_state: dict[str, Any] = {"call": None, "url": "", "token": "", "model": ""}
 
+#: The judge asked when the first judge's model is at its provider's limit
+#: (8 November 2026: Bedrock refused Claude for the day): Qwen-Max, by its
+#: catalogue id. Asked once; the verdict says which model judged and why.
+JUDGE_FALLBACK_MODEL = "alibaba:qwen-max"
+
+_LIMIT_WORDS = re.compile(
+    r"rate[ _-]?limit|too many (tokens|requests)|throttl|quota", re.IGNORECASE
+)
+_DAILY_WORDS = re.compile(r"daily|per day", re.IGNORECASE)
+
+
+class JudgeLimited(RuntimeError):
+    """The judge's model refused for its provider's limit: AI Inference's
+    429, or a 5xx whose body names a rate limit or a quota."""
+
+    def __init__(self, message: str, *, daily: bool = False) -> None:
+        super().__init__(message)
+        self.daily = daily
+
+
+def is_judge_limited(status: int, body: str) -> bool:
+    """Whether a refusal is the provider's limit (the landing's `isJudgeLimited`)."""
+    return status == 429 or (status >= 500 and bool(_LIMIT_WORDS.search(body or "")))
+
+
+def judge_name_of(model: str) -> str:
+    """A model's short name for a sentence: Claude for any Claude, else its
+    catalogue name without the vendor (Qwen-Max)."""
+    if "claude" in (model or "").lower():
+        return "Claude"
+    if not model:
+        return "the judge's model"
+    from agent_runtimes.specs.models import get_model  # noqa: PLC0415
+
+    spec = get_model(model)
+    name = str(getattr(spec, "name", "") or "")
+    return (
+        re.sub(
+            r"^(Alibaba|Amazon|Anthropic|OpenAI|Azure OpenAI|Cloudflare)\s+", "", name
+        )
+        or model
+    )
+
+
+def judged_by_fallback(judge: str, first: str, daily: bool) -> str:
+    """Who judged when the first judge's model was at its limit (the landing's words)."""
+    return f"judged by {judge}, {first}'s {'daily' if daily else 'rate'} limit reached"
+
 
 def configure_judge(
     *,
@@ -194,9 +243,12 @@ def make_judge(*, url: str, token: str, timeout: float = 60.0) -> JudgeCall:
                 headers=headers,
             )
         if response.status_code >= 400:
-            raise RuntimeError(
+            said = (
                 f"the judge refused: HTTP {response.status_code} {response.text[:200]}"
             )
+            if is_judge_limited(response.status_code, response.text):
+                raise JudgeLimited(said, daily=bool(_DAILY_WORDS.search(response.text)))
+            raise RuntimeError(said)
         payload = response.json() if response.content else {}
         data = (
             payload.get("data")
@@ -359,24 +411,40 @@ def _evaluate_llm_judge(
         failure_modes=modes,
         record=None if record is None else [str(line) for line in record],
     )
+    # At its provider's limit, the judge's model gives way to Qwen-Max, once,
+    # and the verdict says so (8 November 2026; the landing's judge alike).
+    judged_by = ""
     try:
-        reply = judge(prompt, model)
+        try:
+            reply = judge(prompt, model)
+        except JudgeLimited as limited:
+            if model == JUDGE_FALLBACK_MODEL:
+                raise
+            judged_by = judged_by_fallback(
+                judge_name_of(JUDGE_FALLBACK_MODEL), judge_name_of(model), limited.daily
+            )
+            model = JUDGE_FALLBACK_MODEL
+            reply = judge(prompt, model)
     except Exception as error:  # noqa: BLE001 - the judge not answering is the outcome
         return {
             "passed": False,
             "score": 0.0,
-            "reason": f"the judge could not be asked: {error}",
+            "reason": f"the judge could not be asked: {error}"
+            + (f" ({judged_by})" if judged_by else ""),
             "failure_mode": "other",
             "failure_stage": "scorer",
+            **({"judge_model": model, "judged_by": judged_by} if judged_by else {}),
         }
     verdict = _first_json_object(str(reply or ""))
     if not verdict:
         return {
             "passed": False,
             "score": 0.0,
-            "reason": "the judge did not answer with a JSON verdict",
+            "reason": "the judge did not answer with a JSON verdict"
+            + (f" ({judged_by})" if judged_by else ""),
             "failure_mode": "other",
             "failure_stage": "scorer",
+            **({"judge_model": model, "judged_by": judged_by} if judged_by else {}),
         }
     try:
         score = max(0.0, min(1.0, float(verdict.get("score", 0.0))))
@@ -388,13 +456,15 @@ def _evaluate_llm_judge(
         mode = ""
     elif mode not in modes:
         mode = "other"
+    reason = str(verdict.get("explanation") or "").strip()
     return {
         "passed": passed,
         "score": round(score, 4),
-        "reason": str(verdict.get("explanation") or "").strip(),
+        "reason": f"{reason} ({judged_by})" if judged_by else reason,
         "failure_mode": mode,
         "threshold": threshold,
         "judge_model": model,
+        **({"judged_by": judged_by} if judged_by else {}),
     }
 
 
