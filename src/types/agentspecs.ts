@@ -1007,6 +1007,16 @@ export interface AppPapCompanySpec {
    * platform decides at Ship (D4-06).
    */
   publishSkills: boolean;
+  /**
+   * Whether a browser signed in for the person on its website has everything
+   * the account can do there (PAP `web.unscoped`, draft 0.4 §6; D5-09).
+   */
+  webUnscoped: boolean;
+  /**
+   * Whether it asks personal agents to use its agent and APIs rather than its
+   * website (PAP `web.disabled`, draft 0.4 §6; D5-09).
+   */
+  webDisabled: boolean;
   interfaces: PapInterface[];
   /** The scopes it offers, each with what it allows and its hints. */
   scopes: AppPapCompanyScopeSpec[];

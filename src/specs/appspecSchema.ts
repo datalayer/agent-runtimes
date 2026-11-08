@@ -1311,7 +1311,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapCompany: {
       additionalProperties: false,
       description:
-        "The application is a company personal agents work with.\n\nPublished at PAP 0.3 as published: the application's `avatar` is served to personal agents\nas the company's logo (`organization.logo_uri`), and `sign_in_disabled` turns sign-in off\nfor them (`auth.disabled`), the company then answering them signed out only.",
+        "The application is a company personal agents work with.\n\nPublished at PAP 0.3 as published: the application's `avatar` is served to personal agents\nas the company's logo (`organization.logo_uri`), and `sign_in_disabled` turns sign-in off\nfor them (`auth.disabled`), the company then answering them signed out only. At PAP draft 0.4\nits website says two things of itself (§6): `web_unscoped`, a browser signed in for the person\nhas everything the account can do there (`web.unscoped`), and `web_disabled`, personal agents\nare asked to use its agent and APIs rather than its website (`web.disabled`). The protocol\nversions it serves are the platform's, never an Appspec's.",
       properties: {
         enabled: {
           default: false,
@@ -1330,6 +1330,20 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description:
             "Whether it offers personal agents no sign-in (`auth.disabled`): they ask only what anybody may ask, in nobody's account, whatever scopes it lists for its other clients",
           title: 'Sign In Disabled',
+          type: 'boolean',
+        },
+        web_unscoped: {
+          default: false,
+          description:
+            'Whether a browser signed in for the person on its website has everything the account can do there, not only what the person approved (`web.unscoped`, PAP draft 0.4 §6): the person is told so when they sign in. Needs the `web` interface',
+          title: 'Web Unscoped',
+          type: 'boolean',
+        },
+        web_disabled: {
+          default: false,
+          description:
+            'Whether it asks personal agents not to use its website, but its agent and APIs (`web.disabled`, PAP draft 0.4 §6): a preference, not enforced. It then lists no `web` interface, and offers `agent` or `openapi`',
+          title: 'Web Disabled',
           type: 'boolean',
         },
         publish_skills: {

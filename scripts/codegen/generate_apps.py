@@ -61,6 +61,8 @@ CAMEL = {
     "signed_out": "signedOut",
     "sign_in_disabled": "signInDisabled",
     "publish_skills": "publishSkills",
+    "web_unscoped": "webUnscoped",
+    "web_disabled": "webDisabled",
     "personal_agents": "personalAgents",
     "registered_agents": "registeredAgents",
     # Its company scopes' hints and excluded tasks (PAP draft 0.3).

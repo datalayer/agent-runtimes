@@ -394,6 +394,27 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(publishing).pap?.company).toMatchObject({
       publish_skills: true,
     });
+    // Its website's flags at PAP draft 0.4 (D5-09): off unless said, written as web_unscoped / web_disabled.
+    expect(open.pap?.company.webUnscoped).toBe(false);
+    expect(open.pap?.company.webDisabled).toBe(false);
+    const unscoped = parseAppspec({
+      kind: 'chat',
+      pap: {
+        profile: 'draft-01',
+        company: {
+          ...company,
+          interfaces: ['agent', 'web'],
+          web_unscoped: true,
+        },
+      },
+    }).app;
+    expect(unscoped.pap?.company.webUnscoped).toBe(true);
+    expect(dumpAppspec(unscoped).pap?.company).toMatchObject({
+      web_unscoped: true,
+    });
+    expect(dumpAppspec(unscoped).pap?.company).not.toHaveProperty(
+      'web_disabled',
+    );
   });
 
   it('leaves out what is not the spec', () => {
@@ -582,6 +603,8 @@ describe('writing an Appspec', () => {
         signedOut: true,
         signInDisabled: false,
         publishSkills: false,
+        webUnscoped: false,
+        webDisabled: false,
         interfaces: ['agent'],
         scopes: [
           {

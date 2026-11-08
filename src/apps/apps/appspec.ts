@@ -569,6 +569,8 @@ function parsePap(data: Data): AppPapSpec {
       signedOut: flag(company.signed_out, true),
       signInDisabled: flag(company.sign_in_disabled, false),
       publishSkills: flag(company.publish_skills, false),
+      webUnscoped: flag(company.web_unscoped, false),
+      webDisabled: flag(company.web_disabled, false),
       interfaces: enumsOf(
         company.interfaces,
         PAP_INTERFACES,
@@ -702,6 +704,8 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         .value('signed_out', pap.company.signedOut, true)
         .value('sign_in_disabled', pap.company.signInDisabled, false)
         .value('publish_skills', pap.company.publishSkills, false)
+        .value('web_unscoped', pap.company.webUnscoped, false)
+        .value('web_disabled', pap.company.webDisabled, false)
         .list('interfaces', pap.company.interfaces, [...PAP_DEFAULT_INTERFACES])
         .list('scopes', pap.company.scopes.map(dumpPapCompanyScope))
         .list(

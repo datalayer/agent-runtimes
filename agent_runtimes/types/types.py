@@ -2719,6 +2719,10 @@ class AppPapCompanySpec(BaseModel):
     #: Whether it publishes the application's public skills to personal agents as a `skill_index`
     #: (PAP 0.3 §9.4, D4-06).
     publish_skills: bool = Field(default=False)
+    #: Its website's two flags at PAP draft 0.4 (§6, D5-09): a signed-in browser has the account's full
+    #: access (`web.unscoped`), or personal agents are asked to use its agent and APIs (`web.disabled`).
+    web_unscoped: bool = Field(default=False)
+    web_disabled: bool = Field(default=False)
     scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
     excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)

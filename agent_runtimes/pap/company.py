@@ -451,6 +451,9 @@ class PapCompanyCapability:
             direct=False,
             # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
             sign_in_disabled=bool(company.sign_in_disabled),
+            # `web.disabled` (PAP draft 0.4 §6, D5-09): agents are asked to use its agent and APIs. It serves
+            # no website, so `web.unscoped` says nothing here.
+            web_disabled=bool(company.web_disabled),
             operations="operations" in company.extensions,
             device_page=device_page,
         )

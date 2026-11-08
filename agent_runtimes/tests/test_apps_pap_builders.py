@@ -215,6 +215,17 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
         )
 
 
+def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None:
+    """D5-09 (PAP draft 0.4 §6): `web_unscoped` with the website, `web_disabled` without it; off unless said."""
+    full = Application("w", "chat", agent="example-blank:0.0.1")
+    assert full.as_company(interfaces=("agent", "web"), web_unscoped=True).web_unscoped is True
+    assert full._pap()["company"]["web_unscoped"] is True and "web_disabled" not in full._pap()["company"]
+    away = Application("a", "chat", agent="example-blank:0.0.1")
+    assert away.as_company(web_disabled=True).web_disabled is True
+    with pytest.raises(ValidationError, match="add the `web` interface"):
+        Application("x", "chat", agent="example-blank:0.0.1").as_company(web_unscoped=True)
+
+
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
     """`protocols` and `ui` from Python (R8): the Canvas and the YAML read the same lists."""
     from agent_runtimes.apps.application import Application
