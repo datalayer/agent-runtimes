@@ -465,33 +465,15 @@ class PydanticAIAdapter(BaseAgent):
 
     async def _get_runtime_toolsets_async(self) -> list[Any]:
         """
-        Async version of ``_get_runtime_toolsets`` that waits for any MCP
-        servers that are still starting up before building the toolset list.
+        The toolsets of a run: the MCP servers running now, never waited for.
 
-        This is called at the start of every ``run()`` and ``stream()`` so that
-        the first user prompt can always see the MCP tools even when servers
-        are launched as a background task after agent creation.
+        A turn no longer waits on a server that is starting: the agent
+        answers with its model as soon as it is ready, and each server's
+        tools are in the turns after it is up (the user, 8 November 2026 —
+        a turn waited 30 s on a server that was never going to start).
+        A server that is not running is started again in the background
+        (`MCPLifecycleManager.retry_in_background`).
         """
-        # For non-codemode agents, wait for any selected servers that are
-        # still in the "starting" state before building the toolset list.
-        codemode_enabled = self._codemode_toolset_index is not None
-        if self._selected_mcp_servers and not codemode_enabled:
-            lifecycle_manager = get_mcp_lifecycle_manager()
-            for selection in self._selected_mcp_servers:
-                server_id = getattr(selection, "id", None)
-                if not server_id or getattr(selection, "origin", None) == "contents":
-                    # A Contents session has no process here to wait for.
-                    continue
-                logger.info(
-                    f"PydanticAIAdapter [{self._name}]: ensuring MCP server '{server_id}' readiness"
-                )
-                ready = await lifecycle_manager.wait_until_ready(
-                    server_id, timeout=30.0
-                )
-                logger.info(
-                    f"PydanticAIAdapter [{self._name}]: '{server_id}' readiness check complete, ready={ready}"
-                )
-
         return self._get_runtime_toolsets()
 
     def _contents_toolset(self, selection: Any) -> Any:

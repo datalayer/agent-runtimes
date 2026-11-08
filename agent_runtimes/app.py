@@ -1100,6 +1100,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if config is None:
         config = ServerConfig()
 
+    # No token of a websocket's query string in uvicorn's log.
+    from .access_log import install_access_log_redaction
+
+    install_access_log_redaction()
+
     # Set the API prefix for dynamic agent creation
     set_api_prefix(config.api_prefix)
 

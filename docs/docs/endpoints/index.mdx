@@ -672,20 +672,37 @@ Get the current system configuration including available models and MCP servers.
 ### MCP Toolsets Status
 
 ```http
-GET /api/v1/configure/mcp-toolsets-status
+GET /api/v1/configure/mcp-toolsets-status?agent_id=default
 ```
 
-Get the status of MCP toolsets initialization.
+Whether the agent answers, and each MCP server's state. An agent configured
+from a spec answers with its model as soon as it is made; its MCP servers start
+in the background, each given 30 seconds
+(`AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT`), and their tools are in the
+agent's turns once each is up. A server is `starting`, `started` (with its
+tools) or `failed`, with `reason`, a sentence to show. The same status reaches
+the page in every `agent.snapshot` (`mcpStatus`) on the monitoring websocket.
 
 **Response:**
 
 ```json
 {
+  "agent_id": "default",
+  "agent_ready": true,
   "initialized": true,
-  "ready_count": 3,
-  "failed_count": 0,
-  "ready_servers": ["tavily", "linkedin", "kaggle"],
-  "failed_servers": {}
+  "ready_count": 1,
+  "failed_count": 1,
+  "ready_servers": ["github"],
+  "failed_servers": {"tavily": "MCP server 'tavily' failed to start: Connection closed"},
+  "servers": [
+    {"id": "github", "status": "started", "tools_count": 26},
+    {
+      "id": "tavily",
+      "status": "failed",
+      "error": "MCP server 'tavily' failed to start: Connection closed",
+      "reason": "tavily could not start: the runtime cannot reach registry.npmjs.org."
+    }
+  ]
 }
 ```
 

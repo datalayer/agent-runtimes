@@ -246,6 +246,27 @@ async def set_node_mode(body: NodeModeRequest) -> dict[str, Any]:
     }
 
 
+@router.get("/mcp-toolsets-status")
+async def get_mcp_toolsets_status(
+    agent_id: str | None = Query(default=None),
+) -> dict[str, Any]:
+    """Whether the agent answers, and each MCP server starting, ready or failed.
+
+    The agent answers with its model as soon as it is registered; its MCP
+    servers start in the background, each said ``starting``, ``started`` (its
+    tools with it) or ``failed`` with ``reason``, a sentence a page shows
+    (the user, 8 November 2026). The same as a snapshot's ``mcpStatus``.
+    """
+    from agent_runtimes.mcp import get_config_mcp_toolsets_status
+    from agent_runtimes.routes.acp import _agents
+
+    status = get_config_mcp_toolsets_status()
+    if agent_id is not None:
+        status["agent_id"] = agent_id
+        status["agent_ready"] = agent_id in _agents
+    return status
+
+
 @router.get("/inference/provider")
 async def get_inference_provider() -> dict[str, Any]:
     """Return the effective runtime inference provider."""

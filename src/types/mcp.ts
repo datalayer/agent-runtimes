@@ -110,6 +110,8 @@ export interface McpServerStatus {
   id: string;
   status: 'none' | 'not_started' | 'starting' | 'failed' | 'started';
   error?: string;
+  /** Why it failed, in a sentence a page shows: "tavily could not start: the runtime cannot reach registry.npmjs.org." */
+  reason?: string | null;
   tools_count?: number;
   tools?: Array<{ name: string; description?: string; enabled?: boolean }>;
 }
@@ -118,6 +120,9 @@ export interface McpServerStatus {
  * Full response from `/api/v1/configure/mcp-toolsets-status`.
  */
 export interface McpToolsetsStatusResponse {
+  /** The agent asked about (`?agent_id=`), and whether it answers with its model now. */
+  agent_id?: string;
+  agent_ready?: boolean;
   initialized: boolean;
   ready_count: number;
   failed_count: number;

@@ -9,6 +9,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.122
+
+8 November 2026. **An agent answers while its MCP servers start.** `configure-from-spec` answers as soon as the agent can answer with its model (`ready`, and `mcp_servers` each `starting`): the agent is made without waiting on its MCP servers (`CreateAgentRequest.mcp_servers_in_background`; a codemode agent starts with no MCP binding), and the servers start in the background, all at once, each once and with its own secrets, each given 30 s (`AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT`). As each comes up its tools are in the agent's next turn (a codemode agent's bindings are rebuilt with the servers that started, the conversation kept); a turn no longer waits on a server that is starting. A server that fails is said in a sentence, read off its error and the last of its process's stderr: "tavily could not start: the runtime cannot reach registry.npmjs.org." (`reason`, in the snapshot's `mcpStatus` and in the new `GET /api/v1/configure/mcp-toolsets-status?agent_id=`, which also says `agent_ready`). `/apps/configure` waits for its connections' starts, bounded, before it answers which did not start.
+
+**No token in the server's log.** The token of a websocket's query string (`?token=…`) is withheld from uvicorn's access and error logs.
+
 ## 1.5.121
 
 8 November 2026. (1.5.120 was tagged and never published: its release run failed two tests that pass locally. Typer's error panel is colored on GitHub's runner, and `mcp run`'s test read it with the escapes in; a rehearsal's A2A answer and the turn that waited for it tied in the transcript, because a span's end was kept after its children's in truncated milliseconds while the transcript reads them rounded, so the turn's words came first. A span now ends after its children in the milliseconds the transcript reads. 1.5.119 was tagged and never published either: four tests still said odoo-accounting was not enabled, which agentspecs 0.0.162 changed.) The Titan embedding models priced in the catalogue are no chat model and no decision model (`is_chat_model`, `is_decision_model`); the MCP client's second round from a day on Odoo. 1.5.119:

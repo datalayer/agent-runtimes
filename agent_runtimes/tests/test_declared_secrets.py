@@ -315,8 +315,27 @@ class FakeLifecycle:
     def is_server_running(self, server_id: str, is_config: bool = False) -> bool:
         return False
 
+    def is_start_under_way(self, server_id: str) -> bool:
+        return False
+
+    def is_starting(self, server_id: str) -> bool:
+        return False
+
+    def announce(self, server_ids: list[str]) -> None:
+        pass
+
+    def withdraw(self, server_id: str) -> None:
+        pass
+
+    def get_server_status(self, server_id: str) -> Dict[str, Any]:
+        return {"id": server_id, "status": "stopped"}
+
     async def start_server(
-        self, server_id: str, config: Any, extra_env: Any = None
+        self,
+        server_id: str,
+        config: Any,
+        extra_env: Any = None,
+        deadline: float | None = None,
     ) -> Any:
         self.started[server_id] = dict(extra_env or {})
         return object()
@@ -1087,6 +1106,12 @@ async def test_a_server_that_declares_one_is_not_started_with_it(
         def is_server_running(self, *_: Any, **__: Any) -> bool:
             return False
 
+        def is_start_under_way(self, *_: Any) -> bool:
+            return False
+
+        def withdraw(self, *_: Any) -> None:
+            pass
+
         async def start_server(self, server_id: str, *_: Any, **__: Any) -> Any:
             started.append(server_id)
             return object()
@@ -1096,9 +1121,7 @@ async def test_a_server_that_declares_one_is_not_started_with_it(
     )
     monkeypatch.setitem(_agents, "r19-held", (adapter, SimpleNamespace()))
     monkeypatch.setattr(agents, "get_mcp_lifecycle_manager", lambda: Lifecycle())
-    monkeypatch.setattr(
-        agents, "MCP_SERVER_CATALOG", {"r19-redirect": REDIRECT_SERVER}
-    )
+    monkeypatch.setattr(agents, "MCP_SERVER_CATALOG", {"r19-redirect": REDIRECT_SERVER})
     answer = await agents._start_mcp_servers_for_agent(
         "r19-held", [agents.EnvVar(name=SENT[0]["name"], value=SENT[0]["value"])]
     )
@@ -1267,9 +1290,7 @@ def test_the_owners_stay_out_of_the_sandbox_it_is_given(
         kernel=frozenset({"R19_SKILL_TOKEN"}),
     )
     monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
-    monkeypatch.setattr(
-        agents, "_launch_of", lambda *_: (None, None)
-    )
+    monkeypatch.setattr(agents, "_launch_of", lambda *_: (None, None))
     answered = runtime.post(
         "/api/v1/agents/mcp-servers/start",
         json={

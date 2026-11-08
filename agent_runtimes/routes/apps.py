@@ -479,7 +479,11 @@ def connections_not_started(adapter: Any) -> List[Tuple[str, str]]:
         server_id = getattr(selection, "id", str(selection))
         if getattr(selection, "origin", None) == "contents":
             continue
-        if server_id in starting or manager.is_server_running(server_id):
+        if (
+            server_id in starting
+            or manager.is_starting(server_id)
+            or manager.is_server_running(server_id)
+        ):
             continue
         if server_id in failed:
             # A traceback's last line says what went wrong.
@@ -574,6 +578,24 @@ async def configure_app(
     from agent_runtimes.routes.acp import _agents as _acp_agents
 
     if "default" in _acp_agents:
+        # Its connections start in the background, each bounded: an
+        # application is served once they have, or told which did not.
+        from agent_runtimes.mcp.lifecycle import (
+            MCP_SERVER_START_GRACE,
+            background_start_timeout,
+            get_mcp_lifecycle_manager,
+        )
+
+        await get_mcp_lifecycle_manager().wait_while_starting(
+            [
+                str(getattr(s, "id", s))
+                for s in getattr(
+                    _acp_agents["default"][0], "_selected_mcp_servers", None
+                )
+                or []
+            ],
+            timeout=background_start_timeout() + MCP_SERVER_START_GRACE + 1,
+        )
         not_started = connections_not_started(_acp_agents["default"][0])
         if not_started:
             raise HTTPException(

@@ -58,7 +58,7 @@ from ..guardrails.declared_secrets import (
 )
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..mcp.lifecycle import background_start_timeout, get_mcp_lifecycle_manager
 from ..models.models import (
     remember_app_instance,
     resolve_model_for_inference_provider,
@@ -1333,6 +1333,16 @@ class CreateAgentRequest(BaseModel):
             "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
     )
+    mcp_servers_in_background: bool = Field(
+        default=False,
+        exclude=True,
+        description=(
+            "Create the agent without waiting on its MCP servers: it answers "
+            "with its model at once, its servers are started by whoever asked "
+            "(configure-from-spec, once, with their secrets) and their tools "
+            "added as each comes up. Codemode starts with no MCP binding."
+        ),
+    )
     agent_spec_id: str | None = Field(
         default=None,
         description="ID of a library agent spec to use as base configuration. When provided, the spec's system_prompt, system_prompt_codemode_addons, skills, and MCP servers are used as defaults (request fields can override).",
@@ -2181,7 +2191,15 @@ async def create_agent(
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset
-        if not request.enable_codemode and selected_mcp_servers:
+        if request.mcp_servers_in_background and selected_mcp_servers:
+            # Started in the background by the configure, once, with their
+            # secrets: the agent answers with its model meanwhile.
+            logger.info(
+                "Agent %s: MCP servers %s start in the background",
+                agent_id,
+                [s.id for s in selected_mcp_servers],
+            )
+        elif not request.enable_codemode and selected_mcp_servers:
             logger.info(
                 f"Agent {agent_id} will use MCP servers: {selected_mcp_servers}"
             )
@@ -2556,7 +2574,12 @@ async def create_agent(
         # - Sandbox-only mode (sandbox_variant set, codemode disabled):
         #   execute_code only, with MCP conversion/discovery disabled.
         if request.enable_codemode:
-            disable_mcp_for_codemode = (
+            # In the background, codemode starts with no MCP binding: its
+            # codegen connects to every server, and a server that cannot start
+            # held the configure for as long as its start took (72 s on r1,
+            # 8 November 2026). The bindings of each server are added once it
+            # is up (`_start_mcp_servers_for_agent`).
+            disable_mcp_for_codemode = request.mcp_servers_in_background or (
                 selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
             )
             mcp_manager = get_mcp_manager()
@@ -3286,7 +3309,7 @@ async def create_agent(
         # lifecycle manager. Starting them here keeps that surface in sync
         # for codemode agents too. ``start_server`` is idempotent, so this
         # is safe.
-        if selected_mcp_servers:
+        if selected_mcp_servers and not request.mcp_servers_in_background:
             _in_background(_start_mcp_servers_background(agent_id, http_request))
 
         return CreateAgentResponse(
@@ -4475,18 +4498,38 @@ async def _start_mcp_servers_background(
             )
 
 
+async def _say_mcp_status(agent_id: str) -> None:
+    """Send the page a snapshot: an MCP server's start has ended."""
+    try:
+        from ..streams.loop import publish_stream_event
+
+        await publish_stream_event(
+            event_type="agent.mcp.ready",
+            payload={"agentId": agent_id},
+            agent_id=agent_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - the page is told on its next poll
+        logger.debug("Could not broadcast the MCP status of '%s': %s", agent_id, exc)
+
+
 async def _start_mcp_servers_for_agent(
     agent_id: str,
     env_vars: list[EnvVar],
     request: Request | None = None,
+    deadline: float | None = None,
 ) -> tuple[list[str], list[str], list[dict[str, str]], bool]:
     """
     Internal helper to start MCP servers for a single agent.
+
+    The servers are started at once, each on its own; a codemode agent is
+    given the bindings of those that started.
 
     Args:
         agent_id: The agent ID to start servers for
         env_vars: Environment variables to set before starting
         request: Optional FastAPI request (used to access app.state.pending_mcp_servers)
+        deadline: How long each server's start is given, in seconds
+            (`lifecycle.start_deadline` when None)
 
     Returns:
         Tuple of (started_servers, already_running, failed_servers, codemode_rebuilt)
@@ -4564,12 +4607,13 @@ async def _start_mcp_servers_for_agent(
     already_running: list[str] = []
     failed: list[dict[str, str]] = []
 
-    for selection in selected_servers:
+    async def _start_one(selection: Any) -> None:
+        """Start one server, said as it ends: its tools appear when it is up."""
         server_id = selection.id if hasattr(selection, "id") else str(selection)
         if getattr(selection, "origin", None) == "contents":
             # Reached through a Contents session; there is no process to start.
             already_running.append(server_id)
-            continue
+            return
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already running
@@ -4577,8 +4621,18 @@ async def _start_mcp_servers_for_agent(
             logger.info(
                 f"_start_mcp_servers_for_agent: Server '{server_id}' is already running"
             )
+            lifecycle_manager.withdraw(server_id)
             already_running.append(server_id)
-            continue
+            return
+        if lifecycle_manager.is_start_under_way(server_id):
+            # Started once: another start of it is not asked for, its result
+            # is the one said (the user, 8 November 2026 — tavily was started
+            # twice on r1, once without its secrets).
+            logger.info(
+                f"_start_mcp_servers_for_agent: Server '{server_id}' is starting already"
+            )
+            lifecycle_manager.withdraw(server_id)
+            return
 
         # Get server config from appropriate source.
         # Try all sources in order: config file → catalog → mcp_manager.
@@ -4609,18 +4663,21 @@ async def _start_mcp_servers_for_agent(
             logger.warning(
                 f"_start_mcp_servers_for_agent: Server config not found for '{server_id}'"
             )
+            lifecycle_manager.withdraw(server_id)
             failed.append(
                 {
                     "server_id": server_id,
                     "error": f"Server config not found (origin={getattr(selection, 'origin', 'unknown')})",
                 }
             )
-            continue
+            return
 
         # Start the server
         try:
             logger.info(
-                f"_start_mcp_servers_for_agent: Starting server '{server_id}'..."
+                f"_start_mcp_servers_for_agent: Starting server '{server_id}'"
+                + (f" (deadline {deadline:g}s)" if deadline is not None else "")
+                + "..."
             )
             # Pass env vars explicitly so MCP subprocess gets them even if
             # os.environ was not populated (robust, order-independent).
@@ -4633,7 +4690,7 @@ async def _start_mcp_servers_for_agent(
             )
             extra_env = {ev.name: ev.value for ev in env_vars if ev.name in own} or None
             instance = await lifecycle_manager.start_server(
-                server_id, config, extra_env=extra_env
+                server_id, config, extra_env=extra_env, deadline=deadline
             )
             if instance is not None:
                 logger.info(
@@ -4648,22 +4705,31 @@ async def _start_mcp_servers_for_agent(
                         f"_start_mcp_servers_for_agent: Added server '{server_id}' to mcp_manager"
                     )
             else:
-                error = lifecycle_manager._failed_servers.get(
-                    server_id, "Unknown error"
-                )
+                error = lifecycle_manager.failure_reason(
+                    server_id
+                ) or lifecycle_manager._failed_servers.get(server_id, "Unknown error")
                 logger.warning(
                     f"_start_mcp_servers_for_agent: ✗ Failed to start server '{server_id}': {error}"
                 )
                 failed.append({"server_id": server_id, "error": str(error)})
         except Exception as e:
+            lifecycle_manager.withdraw(server_id)
             logger.error(
                 f"_start_mcp_servers_for_agent: ✗ Exception starting server '{server_id}': {e}"
             )
             failed.append({"server_id": server_id, "error": str(e)})
+        finally:
+            await _say_mcp_status(agent_id)
+
+    # Each server on its own, at once: a server that is slow to start holds
+    # back no other, each bounded by its own deadline.
+    await asyncio.gather(*(_start_one(selection) for selection in selected_servers))
 
     # Rebuild Codemode toolset if enabled
     codemode_rebuilt = False
-    if hasattr(adapter, "_codemode_builder") and adapter._codemode_builder is not None:
+    if getattr(adapter, "_codemode_builder", None) is not None and (
+        started or already_running
+    ):
         try:
             # Log sandbox configuration before rebuild
             try:
@@ -4677,7 +4743,12 @@ async def _start_mcp_servers_for_agent(
             except ImportError:
                 logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
 
-            new_codemode = adapter._codemode_builder(selected_servers)
+            # Those that are up alone: a server that failed would hold the
+            # codegen as long as its start takes again.
+            up = set(started) | set(already_running)
+            new_codemode = adapter._codemode_builder(
+                [s for s in selected_servers if getattr(s, "id", str(s)) in up]
+            )
             if new_codemode is not None:
                 # Log which sandbox the new toolset is using
                 if getattr(new_codemode, "sandbox_client", None) is not None:
@@ -4690,7 +4761,10 @@ async def _start_mcp_servers_for_agent(
                 # we still want to use the new toolset since it has the correct sandbox
                 start_succeeded = False
                 try:
-                    await new_codemode.start()
+                    if deadline is None:
+                        await new_codemode.start()
+                    else:
+                        await asyncio.wait_for(new_codemode.start(), timeout=deadline)
                     start_succeeded = True
                     logger.info("Codemode toolset start() completed successfully")
                 except Exception as start_error:
@@ -5608,6 +5682,19 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     return declared.as_names()
 
 
+def _mcp_server_ids_of(agent_id: str) -> list[str]:
+    """The ids of the MCP servers the agent runs with a process, in order."""
+    entry = _agents.get(agent_id)
+    if entry is None:
+        return []
+    selected = getattr(entry[0], "_selected_mcp_servers", None) or []
+    return [
+        str(getattr(s, "id", s))
+        for s in selected
+        if getattr(s, "origin", None) != "contents"
+    ]
+
+
 def set_up_refused(agent_id: str) -> str | None:
     """Why the agent's last configure was refused, or None."""
     return _SET_UP_REFUSED.get(agent_id)
@@ -5833,6 +5920,10 @@ async def configure_from_spec_endpoint(
         app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
         **({"selected_mcp_servers": []} if body.without_mcp_servers else {}),
+        # Its MCP servers are started below, in the background, once, with
+        # their secrets: the agent answers with its model meanwhile (the
+        # user, 8 November 2026).
+        mcp_servers_in_background=True,
         **(
             (
                 {"skills": [str(s) for s in spec.skills]}
@@ -5967,6 +6058,7 @@ async def configure_from_spec_endpoint(
                     target_agent_name,
                     env_var_objects,
                     request=http_request,
+                    deadline=background_start_timeout(),
                 )
                 logger.info(
                     "[configure-from-spec] MCP server start results for '%s': "
@@ -5983,6 +6075,10 @@ async def configure_from_spec_endpoint(
                     target_agent_name,
                     e,
                 )
+            finally:
+                # None is left "starting" whose start was never asked for.
+                for server_id in mcp_server_ids:
+                    get_mcp_lifecycle_manager().withdraw(server_id)
 
         # ── Sandbox env-var injection ────────────────────────
         if sandbox_env_vars:
@@ -6009,6 +6105,10 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
+    # Said "starting" from now: the page reads the agent ready, its servers
+    # starting, before the background has begun (the user, 8 November 2026).
+    mcp_server_ids = _mcp_server_ids_of(target_agent_name)
+    get_mcp_lifecycle_manager().announce(mcp_server_ids)
     _in_background(_background_mcp_and_sandbox())
 
     # The model the agent runs on now: a switch's, not the library spec's.
@@ -6024,6 +6124,15 @@ async def configure_from_spec_endpoint(
         if isinstance(effective_model, str)
         else str(effective_model),
         "specs_changed": specs_changed,
+        # It answers with its model now; its MCP servers start in the
+        # background, each said in `mcp-toolsets-status` as it ends.
+        "ready": target_agent_name in _agents,
+        "mcp_servers": [
+            {"id": server_id, "status": "starting"}
+            if get_mcp_lifecycle_manager().is_starting(server_id)
+            else get_mcp_lifecycle_manager().get_server_status(server_id)
+            for server_id in mcp_server_ids
+        ],
         "evals_mode": body.evals_mode,
         "emit_live_events": body.emit_live_events,
         "message": (

@@ -161,13 +161,14 @@ def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
     deletes: list[dict[str, Any]] = []
 
     async def create_agent(request: Any, http_request: Any) -> dict:
-        # The agent reaches the one server, started as create_agent starts it.
+        # The agent reaches the one server, which the configure starts in
+        # the background (8 November 2026): create_agent no longer starts it.
+        assert request.mcp_servers_in_background
         adapter = SimpleNamespace(
             _selected_mcp_servers=[SimpleNamespace(id="hanging", origin="catalog")]
         )
         _agents["default"] = (adapter, SimpleNamespace())  # type: ignore[assignment]
         agents._agentspecs["default"] = request.model_dump()
-        await manager.start_server("hanging", HANGING.model_copy())
         return {"id": request.name}
 
     async def delete_agent(
