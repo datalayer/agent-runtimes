@@ -9,6 +9,13 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.119
+
+8 November 2026.
+
+**`loop` takes `--without-mcp-servers` and `--without-skill`.** The command read the two flags as a command name and refused them; they are declared on `loop` itself and passed to the chat. Drilled on r1: the Marketer remembered a brand voice in PostgreSQL, was paused, resumed on a new runtime and answered from its memory.
+
+
 ## 1.5.118
 
 8 November 2026. (1.5.116 and 1.5.117 were tagged and never published. 1.5.116's release tests ran without mem0 and against the catalogue's PAP *draft 0.3*; 1.5.117's first ran before agentspecs 0.0.160 reached PyPI, then found no FAISS for the app-memory tests, which the memory backend reported as a missing mem0: it now names the package that is missing, and the test extra installs `faiss-cpu`. 1.5.116: its release tests ran without mem0 and against the catalogue's PAP *draft 0.3*; the test extra now installs `memory`, and agentspecs 0.0.160, the floor, says PAP draft 0.4.)
