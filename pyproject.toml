@@ -76,7 +76,7 @@ dependencies = [
     # agentspecs 0.0.138: permissions.computer.repository (a repository lent to an application), the space backdrop.
     # agentspecs 0.0.139: colours by palette name.
     # agentspecs 0.0.140: the minimal and orb backdrops.
-    "agentspecs>=0.0.159",  # the company role's website flags (web.unscoped, web.disabled)
+    "agentspecs>=0.0.160",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -360,8 +360,9 @@ test = [
     # CLI tests also import the ACP client, so keep the test dependency explicit
     # instead of promoting agent-client-protocol to a core runtime dependency.
     # The A2A worker and protocol-state tests import fasta2a and a2a-sdk, and
-    # the default agentspecs name `bedrock:` models, which need boto3.
-    "agent_runtimes[a2a,aws,cli,openai]",
+    # the default agentspecs name `bedrock:` models, which need boto3; the memory
+    # tests keep memories with mem0 itself, two of them in a real PostgreSQL.
+    "agent_runtimes[a2a,aws,cli,memory,openai]",
     "coverage>=7.9.2",
     "mypy>=1.16.1",
     "pytest>=8.4.1",
