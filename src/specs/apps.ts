@@ -2656,7 +2656,7 @@ export const INBOX_TRIAGE_APP_0_0_2: AppSpec = {
   emoji: '📬',
   avatar: '',
   banner: '',
-  setup: [],
+  setup: ["The agent 'worker-mail-triage:0.0.1' is not enabled."],
 };
 
 export const LIVE_SHOP_CHAT_APP_0_0_2: AppSpec = {
@@ -6798,7 +6798,7 @@ export const SUPPORT_DESK_APP_0_0_5: AppSpec = {
   emoji: '🛟',
   avatar: '',
   banner: '',
-  setup: [],
+  setup: ["The agent 'worker-document-qa:0.0.1' is not enabled."],
 };
 
 export const TRAVEL_DESK_APP_0_0_2: AppSpec = {

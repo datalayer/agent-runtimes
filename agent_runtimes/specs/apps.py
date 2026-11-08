@@ -2429,7 +2429,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "📬",
         "avatar": "",
         "banner": "",
-        "setup": [],
+        "setup": ["The agent 'worker-mail-triage:0.0.1' is not enabled."],
     }
 )
 
@@ -6198,7 +6198,7 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "🛟",
         "avatar": "",
         "banner": "",
-        "setup": [],
+        "setup": ["The agent 'worker-document-qa:0.0.1' is not enabled."],
     }
 )
 
