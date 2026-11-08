@@ -116,8 +116,9 @@ class TestTheCatalogue:
         assert triage.record.retention_days == 365
         assert triage.connections[0].acts_as == "user"
         assert triage.connections[0].only == ["*gmail*"]
-        # Gmail's server and the worker are offered since agentspecs 0.0.128 (W-02).
-        assert triage.setup == []
+        # Gmail's server is offered since agentspecs 0.0.128; its worker is out of the
+        # picker since agentspecs 0.0.164 (enabled: false), so the setup names it.
+        assert triage.setup == ["The agent 'worker-mail-triage:0.0.1' is not enabled."]
         assert any("not enabled" in line for line in APP_CATALOGUE["accounting"].setup)
         assert APP_CATALOGUE["web-research"].setup == []
         assert APP_CATALOGUE["web-research"].interface.layout == "chat"
