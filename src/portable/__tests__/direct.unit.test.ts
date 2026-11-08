@@ -37,15 +37,21 @@ describe('a Direct Conversation (M-038)', () => {
         return json({
           direct_conversation: 'dc_1',
           replies: [{ text: 'Sam here.', from: 'human', name: 'Sam' }],
-          status: 'working',
+          // PAP draft 0.4 §8.7: the four state fields.
+          working: true,
+          handoff: 'none',
           responder: 'human',
+          closed: false,
           cursor: 'c1',
         });
       }
       return json({
         direct_conversation: 'dc_1',
         replies: [],
-        status: 'closed',
+        working: false,
+        handoff: 'none',
+        responder: 'human',
+        closed: true,
         cursor: 'c2',
       });
     });
