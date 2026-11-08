@@ -164,9 +164,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     assert reports["sales"].setup == [
         "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
     ]
-    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." in (
-        reports["accounting"].setup
-    )
+    # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
+    assert not any("odoo-accounting" in step for step in reports["accounting"].setup)
 
 
 def test_json_for_ci(tmp_path: Path) -> None:

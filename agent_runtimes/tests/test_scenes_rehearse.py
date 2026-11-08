@@ -600,10 +600,8 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
         "Beats: open-invoices, aged-receivables, largest-balance, payment-reminders"
         in result.output
     )
-    assert (
-        "· To set up: The MCP server 'odoo-accounting:0.0.1' is not enabled."
-        in result.output
-    )
+    # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
+    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." not in result.output
     listed = json.loads(runner.invoke(scenes_command.app, ["ls", "--json"]).output)
     # The teams staged live: a scripted scene is played as written on its page (X-02).
     assert [scene["id"] for scene in listed] == sorted(
