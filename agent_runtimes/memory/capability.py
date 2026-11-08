@@ -28,6 +28,7 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.toolsets import AgentToolset, FunctionToolset
 
 from .base import BaseMemoryBackend
+from .config import MemoryNotConfigured
 from .ephemeral import EphemeralMemory
 from .registry import create_memory_backend, register_memory_backend
 
@@ -153,6 +154,8 @@ class MemoryCapability(AbstractCapability[Any]):
                 return why
             try:
                 results = await self.backend.search(query, limit=self.max_memories)
+            except MemoryNotConfigured as why_not:
+                return str(why_not)
             except Exception as exc:  # noqa: BLE001 - degrade gracefully
                 logger.warning("Memory search tool failed: %s", exc)
                 return "Memory search is unavailable right now."
@@ -178,6 +181,8 @@ class MemoryCapability(AbstractCapability[Any]):
                 return why
             try:
                 await self.backend.add([{"role": "user", "content": content}])
+            except MemoryNotConfigured as why_not:
+                return str(why_not)
             except Exception as exc:  # noqa: BLE001 - degrade gracefully
                 logger.warning("Memory remember tool failed: %s", exc)
                 return "Could not store that in memory right now."
@@ -194,6 +199,7 @@ def build_memory_capability(
     agent_id: str | None = None,
     config: dict[str, Any] | None = None,
     withheld: Callable[[], str] | None = None,
+    register_as: str | None = None,
 ) -> MemoryCapability | None:
     """Build a ``MemoryCapability`` from an Agentspec ``memory`` field.
 
@@ -205,6 +211,8 @@ def build_memory_capability(
     persisted under the composite ``(user_id, agent_id)`` key: the user is
     the ownership boundary and the agent uid namespaces memories per agent.
     ``withheld``, when given, is asked at each run why memory may not be used.
+    ``register_as`` is the agent's name on this runtime, which the memory
+    routes look its backend up by, when it is not ``agent_id``.
     """
     if not memory_type or memory_type == "ephemeral":
         return None
@@ -214,4 +222,6 @@ def build_memory_capability(
         agent_id=agent_id,
         config=config,
     )
-    return MemoryCapability(backend=backend, agent_id=agent_id, withheld=withheld)
+    return MemoryCapability(
+        backend=backend, agent_id=register_as or agent_id, withheld=withheld
+    )

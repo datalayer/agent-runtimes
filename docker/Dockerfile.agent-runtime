@@ -61,7 +61,9 @@ COPY agent_runtimes ./agent_runtimes
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 poppler-utils fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install -e . "agent-skills[skills]>=1.2.0" \
+# With its memory: mem0 and the pgvector store an agent's memories are kept
+# in, in PostgreSQL, past the runtime.
+RUN pip install -e ".[memory]" "agent-skills[skills]>=1.2.0" \
     && python -m playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 

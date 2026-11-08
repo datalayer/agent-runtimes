@@ -283,6 +283,9 @@ a2ui = [
 ]
 memory = [
     "mem0ai>=2.0.1",
+    # mem0's pgvector store pools its connections with psycopg_pool, and
+    # refuses to start without it.
+    "psycopg[binary,pool]>=3.2.8",
 ]
 durable = [
     "dbos",

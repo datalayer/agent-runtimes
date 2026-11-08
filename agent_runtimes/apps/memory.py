@@ -243,10 +243,13 @@ def app_memory(key: str, user_id: str) -> Mem0Backend:
         raise MemoryNotKept(
             "This runtime keeps no memories: mem0 is not installed on it."
         ) from None
+    from agent_runtimes.memory.config import on_datalayer_runtime
+
     return Mem0Backend(
         user_id=user_id,
         agent_id=key,
-        config=resolve_mem0_config(user_id=user_id, agent_id=key),
+        config=lambda: resolve_mem0_config(user_id=user_id, agent_id=key),
+        infer=not on_datalayer_runtime(),
     )
 
 

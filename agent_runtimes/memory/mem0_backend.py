@@ -13,9 +13,10 @@ Requires ``mem0ai`` package: ``pip install mem0ai``
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable, Union
 
 from .base import BaseMemoryBackend
 
@@ -36,36 +37,55 @@ class Mem0Backend(BaseMemoryBackend):
         ownership boundary for stored memories (derived from the runtime
         environment, never from the caller) and forms the persistence key
         together with ``agent_id``.
-    config : dict | None
-        Mem0 configuration (vector store, embedding model, etc.).
-        If None, uses Mem0 defaults.
+    config : dict | Callable[[], dict | None] | None
+        Mem0 configuration (vector store, embedding model, etc.), or what
+        reads it at each use: mem0 is built again when it changes (a
+        runtime's token is given after it starts, and renewed). If None,
+        uses Mem0 defaults.
     agent_id : str | None
-        Agent uid. Combined with ``user_id`` as the persistence key so each
-        agent has its own memory namespace within the user's account.
+        Agent id. Combined with ``user_id`` as the persistence key so each
+        agent has its own memory namespace within the user's account. It is
+        the agent's own (its agentspec's id), never the runtime's: a new
+        runtime for the same agent and user reads the same memories.
+    infer : bool
+        Whether mem0 asks its LLM to extract facts from what is added. Off
+        where the model already chose the fact (its ``remember`` tool) and
+        mem0's LLM is not one to ask (through ai-inference).
     """
 
     def __init__(
         self,
         user_id: str,
-        config: dict[str, Any] | None = None,
+        config: Union[dict[str, Any], Callable[[], dict[str, Any] | None], None] = None,
         agent_id: str | None = None,
+        infer: bool = True,
     ):
         self.user_id = user_id
         self.agent_id = agent_id
+        self.infer = infer
         self._memory: Any = None
         self._config = config
+        self._built_with: dict[str, Any] | None = None
+
+    def _current_config(self) -> dict[str, Any] | None:
+        """The configuration mem0 is to run with now."""
+        return self._config() if callable(self._config) else self._config
 
     def _ensure_initialized(self) -> Any:
-        """Lazily init Mem0 on first use."""
-        if self._memory is not None:
+        """Lazily init Mem0 on first use, and again when its config changed."""
+        config = self._current_config()
+        if self._memory is not None and config == self._built_with:
             return self._memory
         try:
             from mem0 import Memory
 
-            if self._config:
-                self._memory = Memory.from_config(self._config)
+            # Kept as it was given: mem0 may change what it is handed.
+            built_with = copy.deepcopy(config)
+            if config:
+                self._memory = Memory.from_config(config)
             else:
                 self._memory = Memory()
+            self._built_with = built_with
             logger.info(
                 "Mem0 memory initialized for user=%s, agent=%s",
                 self.user_id,
@@ -95,7 +115,11 @@ class Mem0Backend(BaseMemoryBackend):
         scoped_metadata: dict[str, Any] = dict(metadata or {})
         scoped_metadata.setdefault("scope", "agent" if self.agent_id else "user")
         await asyncio.to_thread(
-            memory.add, messages, metadata=scoped_metadata, **self._scope()
+            memory.add,
+            messages,
+            metadata=scoped_metadata,
+            infer=self.infer,
+            **self._scope(),
         )
         logger.debug("Added %d messages to Mem0 (user=%s)", len(messages), self.user_id)
 
@@ -183,6 +207,7 @@ class Mem0Backend(BaseMemoryBackend):
     async def close(self) -> None:
         """Release Mem0 resources."""
         self._memory = None
+        self._built_with = None
 
 
 def _results_of(results: Any) -> list[dict[str, Any]]:

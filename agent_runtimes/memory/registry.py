@@ -12,7 +12,7 @@ import os
 from typing import Any
 
 from .base import BaseMemoryBackend
-from .config import resolve_mem0_config
+from .config import MemoryNotConfigured, resolve_mem0_config
 from .ephemeral import EphemeralMemory
 
 logger = logging.getLogger(__name__)
@@ -123,24 +123,28 @@ def create_memory_backend(
 
     if memory_type == "mem0":
         try:
+            from .config import on_datalayer_runtime
             from .mem0_backend import Mem0Backend
 
-            resolved_config = resolve_mem0_config(
-                user_id=user_id,
-                agent_id=agent_id,
-                explicit_config=config,
-            )
             logger.info("Using Mem0 memory backend for user=%s", user_id)
+            if config:
+                return Mem0Backend(user_id=user_id, agent_id=agent_id, config=config)
+            # Read at each use: on a Datalayer runtime the token mem0 embeds
+            # with is given after the agent is made, and renewed; a runtime
+            # that cannot keep memories says why at the first use.
             return Mem0Backend(
                 user_id=user_id,
                 agent_id=agent_id,
-                config=resolved_config,
+                config=lambda: resolve_mem0_config(user_id=user_id, agent_id=agent_id),
+                infer=not on_datalayer_runtime(),
             )
         except ImportError:
-            logger.warning(
-                "Mem0 not available (pip install mem0ai) — falling back to ephemeral"
-            )
-            return EphemeralMemory(user_id=user_id, agent_id=agent_id)
+            # Never an ephemeral memory in its place: what the agent is told
+            # would be forgotten when its runtime stops.
+            raise MemoryNotConfigured(
+                "This agent remembers with mem0, which is not installed here: "
+                "pip install 'agent-runtimes[memory]'."
+            ) from None
 
     # Unknown backend types fall back to ephemeral
     logger.warning(
