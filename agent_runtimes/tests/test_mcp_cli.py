@@ -163,6 +163,15 @@ def test_decode_result_json_text_and_other_contents():
     assert decode_result(CallToolResult(content=[], structured_content={"x": 2})) == [
         {"x": 2}
     ]
+    # An empty search: no content, its list wrapped in structured content.
+    assert (
+        decode_result(CallToolResult(content=[], structured_content={"result": []}))
+        == []
+    )
+    assert decode_result(
+        CallToolResult(content=[], structured_content={"result": [{"id": 1}]})
+    ) == [{"id": 1}]
+    assert decode_result(CallToolResult(content=[])) == []
 
 
 def test_call_sends_a_raw_tools_call_and_decodes():

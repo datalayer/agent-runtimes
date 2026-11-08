@@ -152,11 +152,21 @@ def decode_result(result: Any) -> list[Any]:
 
     Each text content is decoded as JSON when it is JSON, and kept as text
     otherwise; any other content (an image, a resource) is kept as its
-    MCP dict. A result with no content but structured content answers that.
+    MCP dict.
+
+    A result with no content answers its structured content, if any: the
+    items of a wrapped list (``{"result": [...]}``, how FastMCP wraps a tool
+    returning a list, which an empty search answers with no content at all),
+    or the structured content itself.
     """
     contents = list(getattr(result, "content", None) or [])
-    if not contents and getattr(result, "structured_content", None) is not None:
-        return [result.structured_content]
+    if not contents:
+        structured = getattr(result, "structured_content", None)
+        if structured is None:
+            return []
+        if set(structured) == {"result"} and isinstance(structured["result"], list):
+            return list(structured["result"])
+        return [structured]
     decoded: list[Any] = []
     for content in contents:
         text = getattr(content, "text", None)
