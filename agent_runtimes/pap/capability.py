@@ -29,6 +29,7 @@ from typing import Any, Literal, Protocol
 
 import httpx
 from personal_agent_protocol import (
+    BROWSER_SIGN_IN_SCOPE,
     AgentIdentityClient,
     ConversationClient,
     DeviceSignInClient,
@@ -39,7 +40,7 @@ from personal_agent_protocol import (
     PapSession,
     SessionClient,
     SessionHttpClient,
-    generate_message_id,
+    generate_request_id,
     mediated_sign_in,
     operations_negotiated,
     resolve_pairwise_user_id,
@@ -52,6 +53,7 @@ from personal_agent_protocol.models import (
     Operation,
     operations_content,
 )
+from personal_agent_protocol.extensions import SUPPORTED_EXTENSIONS, negotiate_extensions
 from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
@@ -87,6 +89,8 @@ class PapCompanySummary(BaseModel):
     #: The domains whose ``poppy.json`` names this issuer (``protected_resources``).
     protected_resources: tuple[str, ...]
     interfaces: tuple[str, ...]
+    #: The extensions a Session with it declares, one version each (`Poppy-Extensions`, PAP draft
+    #: 0.4 §3.3, §3.4): each it lists at a version this agent implements.
     extensions: dict[str, str]
 
 
@@ -99,6 +103,8 @@ class PapAgentIdentitySummary(BaseModel):
     client_name: str
     redirect_count: int
     signing_algorithms: tuple[str, ...]
+    #: The extensions this personal agent implements, one version each, declared per Session in
+    #: `Poppy-Extensions` (PAP draft 0.4 §3.3): client metadata lists none any more.
     extensions: dict[str, str]
 
 
@@ -150,7 +156,7 @@ def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
         if metadata is not None
         else (),
         interfaces=tuple(interfaces),
-        extensions={name: value.version for name, value in document.extensions.items()},
+        extensions=negotiate_extensions(document.extensions),
     )
 
 
@@ -167,7 +173,7 @@ def _identity_summary(
         client_name=metadata.client_name,
         redirect_count=len(metadata.redirect_uris),
         signing_algorithms=tuple(sorted(algorithms)),
-        extensions={name: value.version for name, value in metadata.extensions.items()},
+        extensions=dict(SUPPORTED_EXTENSIONS),
     )
 
 
@@ -207,8 +213,12 @@ class PapAnswer(BaseModel):
     #: signed out, the person signs in for them; signed in, with them.
     authorization: dict[str, str] | None
     operations: tuple[PapOperationSummary, ...]
-    status: str | None
-    responder: str | None
+    #: Where the conversation stands, in PAP draft 0.4's four fields (§8.7): whether the company is
+    #: still working, whether a person is being looked for, who answers, whether it is closed.
+    working: bool
+    handoff: str
+    responder: str
+    closed: bool
 
 
 class PapSignInSummary(BaseModel):
@@ -341,7 +351,6 @@ class PapPersonalAgentCapability:
         self._client_id = client_id
         self._tenant_id = tenant_id
         self._links: dict[tuple[str, str], _Link] = {}
-        self._metadata: ClientMetadata | None = None
         hosted = {"reactor": reactor, "http_client": http_client} if reactor else {}
         if company_client is None:
             self._owned_company: DiscoveryClient | None = DiscoveryClient(**hosted)
@@ -443,6 +452,9 @@ class PapPersonalAgentCapability:
                 pairwise_user_id=link.pairwise_user_id,
                 issuer=link.company.identifier,
                 tenant_id=self._tenant_id,
+                # Its extensions negotiated from the company's document, declared on every request
+                # (`Poppy-Extensions`, PAP draft 0.4 §3.4).
+                company=link.company,
             )
         return link.session
 
@@ -485,8 +497,9 @@ class PapPersonalAgentCapability:
         client = ConversationClient(transport=self._transport())
         # The agent's own words (PAP-7.8-01): what it is given to say is not
         # known to be the person's, so it is never sent as theirs.
+        # Its id is the request's (PAP draft 0.4 §8.3), the same on a retry.
         message = Message(
-            id=generate_message_id(reactor), author=Author(type="agent"), text=text
+            id=generate_request_id(reactor), author=Author(type="agent"), text=text
         )
         if link.conversation_id is None:
             page = await client.start(
@@ -499,8 +512,18 @@ class PapPersonalAgentCapability:
                 message,
                 session=session,
                 token=link.token,
+                as_of_cursor=link.cursor,
                 cursor=link.cursor,
                 wait=10,
+            )
+        if page.working or page.has_more:
+            # Accepted, not yet acted on (§8.3): read until the company has no work in progress (§8.7).
+            rest = await client.read_until_done(
+                endpoint, page.conversation_id, session=session, token=link.token, cursor=page.cursor, wait=10
+            )
+            seen = {event.id for event in page.events}
+            page = rest.model_copy(
+                update={"events": [*page.events, *(e for e in rest.events if e.id not in seen)]}
             )
         operations = self._keep(link, page)
         replies: list[PapReplyLine] = []
@@ -526,8 +549,10 @@ class PapPersonalAgentCapability:
             replies=tuple(replies),
             authorization=authorization,
             operations=tuple(_operation_summary(item) for item in operations),
-            status=getattr(page, "status", None),
-            responder=getattr(page, "responder", None),
+            working=page.working,
+            handoff=page.handoff,
+            responder=page.responder,
+            closed=page.closed,
         )
 
     async def sign_in(
@@ -555,7 +580,10 @@ class PapPersonalAgentCapability:
                 company=name,
                 reason=f"{domain} offers no Device Sign-In, the one a local runtime does",
             )
-        offered = tuple(metadata.scopes_supported or ())
+        # Never `poppy:browser-sign-in` (PAP draft 0.4 §4.7, §6): it joins no browser to a Session.
+        offered = tuple(
+            scope for scope in metadata.scopes_supported or () if scope != BROWSER_SIGN_IN_SCOPE
+        )
         asked = offered if scopes is None else tuple(scopes)
         beyond = [scope for scope in asked if scope not in offered]
         if beyond or not asked:
@@ -584,6 +612,8 @@ class PapPersonalAgentCapability:
             organization=link.company.document.organization,
             protected_resources=metadata.protected_resources,
             dpop_signing_algs=metadata.dpop_signing_alg_values_supported,
+            # A DPoP key proves for one User ID only (PAP draft 0.4 §4.5).
+            pairwise_user_id=link.pairwise_user_id,
         )
         link.device_reference = started.reference
         return PapSignInSummary(
@@ -623,13 +653,6 @@ class PapPersonalAgentCapability:
             missing_scopes=tuple(polled.missing_scopes),
         )
 
-    async def _metadata_of_self(self) -> ClientMetadata:
-        """Read this personal agent's own client metadata, once."""
-        _, _, client_id = self._host()
-        if self._metadata is None:
-            self._metadata = await self._identity.fetch_metadata(client_id)
-        return self._metadata
-
     async def confirm(
         self, domain: str, operation_ref: str, revision: str, *, user_id: str
     ) -> PapConfirmSummary:
@@ -652,9 +675,7 @@ class PapPersonalAgentCapability:
                 "Confirm an operation and revision the company returned, as it was shown",
             )
         operation = returned.operation
-        if not operations_negotiated(
-            link.company.document, await self._metadata_of_self()
-        ):
+        if not operations_negotiated(link.company.document, await self._session(link)):
             raise PapCapabilityError(
                 "no_operations", f"{domain} and this agent do not both offer Operations"
             )
@@ -685,7 +706,7 @@ class PapPersonalAgentCapability:
         # The approval is the Operations extension's content, under `extensions.operations`
         # (0.3 as published, Operations 6): never a member beside `text`.
         message = Message(
-            id=generate_message_id(reactor),
+            id=generate_request_id(reactor),
             author=Author(type="agent"),
             text="The person approved this.",
             extensions=operations_content(approval=approval),

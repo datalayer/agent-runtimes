@@ -430,7 +430,7 @@ const runJourney = async (): Promise<
     const started = await conversations.start(
       endpoint,
       {
-        id: conversations.generateMessageId(),
+        id: conversations.generateRequestId(),
         author: { type: 'agent' },
         text: conversationStart[0]?.text,
       },
@@ -442,7 +442,7 @@ const runJourney = async (): Promise<
         endpoint,
         'cnv_return',
         {
-          id: conversations.generateMessageId(),
+          id: conversations.generateRequestId(),
           author: { type: 'agent' },
           text: 'The user has signed in. Continue the return request.',
         },
@@ -454,7 +454,7 @@ const runJourney = async (): Promise<
         endpoint,
         'cnv_return',
         {
-          id: conversations.generateMessageId(),
+          id: conversations.generateRequestId(),
           author: { type: 'agent' },
           text: 'The user chose the even exchange.',
         },

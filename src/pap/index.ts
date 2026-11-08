@@ -7,7 +7,9 @@ import {
   AgentIdentityClient,
   discoverCompany,
   mediatedSignIn,
+  negotiateExtensions,
   offersDevice,
+  SUPPORTED_EXTENSIONS,
   offersDirect,
   type DiscoveredCompany,
   type DiscoveryOptions,
@@ -39,6 +41,10 @@ export interface PapCompanySummary {
   /** The domains whose `poppy.json` names this issuer (`protected_resources`). */
   readonly protectedResources: readonly string[];
   readonly interfaces: readonly string[];
+  /**
+   * The extensions a Session with it declares, one version each (`Poppy-Extensions`, PAP draft
+   * 0.4 §3.3, §3.4): each it lists at a version this agent implements.
+   */
   readonly extensions: Readonly<Record<string, string>>;
 }
 
@@ -48,6 +54,10 @@ export interface PapAgentIdentitySummary {
   readonly clientName: string;
   readonly redirectCount: number;
   readonly signingAlgorithms: readonly string[];
+  /**
+   * The extensions this personal agent implements, one version each, declared per Session (PAP
+   * draft 0.4 §3.3): client metadata lists none any more.
+   */
   readonly extensions: Readonly<Record<string, string>>;
 }
 
@@ -70,16 +80,6 @@ interface IdentityClient {
 export interface PapPersonalAgentCapabilityOptions {
   readonly discover?: DiscoverCompany;
   readonly identity?: IdentityClient;
-}
-
-function extensionVersions(
-  extensions: Readonly<Record<string, { readonly version: string }>>,
-): Readonly<Record<string, string>> {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(extensions).map(([name, value]) => [name, value.version]),
-    ),
-  );
 }
 
 /**
@@ -138,7 +138,7 @@ export class PapPersonalAgentCapability {
         ...(oauthMetadata?.protected_resources ?? []),
       ]),
       interfaces: Object.freeze(interfaces),
-      extensions: extensionVersions(document.extensions),
+      extensions: Object.freeze(negotiateExtensions(document.extensions)),
     });
   }
 
@@ -158,7 +158,7 @@ export class PapPersonalAgentCapability {
       clientName: metadata.client_name,
       redirectCount: metadata.redirect_uris.length,
       signingAlgorithms: Object.freeze(signingAlgorithms),
-      extensions: extensionVersions(metadata.extensions),
+      extensions: Object.freeze({ ...SUPPORTED_EXTENSIONS }),
     });
   }
 }
