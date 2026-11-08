@@ -9,9 +9,9 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
-## 1.5.120
+## 1.5.121
 
-8 November 2026. (1.5.119 was tagged and never published: four tests still said odoo-accounting was not enabled, which agentspecs 0.0.162 changed.) The Titan embedding models priced in the catalogue are no chat model and no decision model (`is_chat_model`, `is_decision_model`); the MCP client's second round from a day on Odoo. 1.5.119:
+8 November 2026. (1.5.120 was tagged and never published: its release run failed two tests that pass locally. Typer's error panel is colored on GitHub's runner, and `mcp run`'s test read it with the escapes in; a rehearsal's A2A answer and the turn that waited for it tied in the transcript, because a span's end was kept after its children's in truncated milliseconds while the transcript reads them rounded, so the turn's words came first. A span now ends after its children in the milliseconds the transcript reads. 1.5.119 was tagged and never published either: four tests still said odoo-accounting was not enabled, which agentspecs 0.0.162 changed.) The Titan embedding models priced in the catalogue are no chat model and no decision model (`is_chat_model`, `is_decision_model`); the MCP client's second round from a day on Odoo. 1.5.119:
 
 **`loop` takes `--without-mcp-servers` and `--without-skill`.** The command read the two flags as a command name and refused them; they are declared on `loop` itself and passed to the chat. Drilled on r1: the Marketer remembered a brand voice in PostgreSQL, was paused, resumed on a new runtime and answered from its memory.
 
