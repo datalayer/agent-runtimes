@@ -169,10 +169,7 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🧾",
         "avatar": "",
         "banner": "",
-        "setup": [
-            "The agent 'worker-accountant:0.0.1' is not enabled.",
-            "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
-        ],
+        "setup": ["The agent 'worker-accountant:0.0.1' is not enabled."],
     }
 )
 
@@ -3208,10 +3205,7 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🗓️",
         "avatar": "",
         "banner": "",
-        "setup": [
-            "The agent 'worker-month-end-close:0.0.1' is not enabled.",
-            "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
-        ],
+        "setup": ["The agent 'worker-month-end-close:0.0.1' is not enabled."],
     }
 )
 

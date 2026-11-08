@@ -1275,10 +1275,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   actors: [],
   lines: [],
   live: '',
-  setup: [
-    "The agent 'worker-month-end-close:0.0.1' is not enabled.",
-    "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
-  ],
+  setup: ["The agent 'worker-month-end-close:0.0.1' is not enabled."],
   played: {
     at: '2026-10-29T14:17:04+00:00',
     where: 'on Datalayer',
@@ -2513,7 +2510,6 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   setup: [
     "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
     "The agent 'worker-accountant:0.0.1' is not enabled.",
-    "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
   ],
   played: {
     at: '2026-10-29T14:00:28+00:00',

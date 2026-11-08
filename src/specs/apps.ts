@@ -181,10 +181,7 @@ export const ACCOUNTING_APP_0_0_2: AppSpec = {
   emoji: '🧾',
   avatar: '',
   banner: '',
-  setup: [
-    "The agent 'worker-accountant:0.0.1' is not enabled.",
-    "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
-  ],
+  setup: ["The agent 'worker-accountant:0.0.1' is not enabled."],
 };
 
 export const BOOKKEEPING_DESK_APP_0_0_3: AppSpec = {
@@ -3487,10 +3484,7 @@ export const MONTH_END_CLOSE_APP_0_0_2: AppSpec = {
   emoji: '🗓️',
   avatar: '',
   banner: '',
-  setup: [
-    "The agent 'worker-month-end-close:0.0.1' is not enabled.",
-    "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
-  ],
+  setup: ["The agent 'worker-month-end-close:0.0.1' is not enabled."],
 };
 
 export const ORDER_DESK_APP_0_0_2: AppSpec = {

@@ -26,6 +26,7 @@ import {
   KAGGLE_MCP_SERVER_0_0_1,
   LINKEDIN_MCP_SERVER_0_0_1,
   ODOO_MCP_SERVER_0_0_1,
+  ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   SALESFORCE_MCP_SERVER_0_0_1,
   SLACK_MCP_SERVER_0_0_1,
   TAVILY_MCP_SERVER_0_0_1,
@@ -100,6 +101,8 @@ const MCP_SERVER_MAP: Record<string, any> = {
   linkedin: LINKEDIN_MCP_SERVER_0_0_1,
   'odoo:0.0.1': ODOO_MCP_SERVER_0_0_1,
   odoo: ODOO_MCP_SERVER_0_0_1,
+  'odoo-accounting:0.0.1': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
+  'odoo-accounting': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   'salesforce:0.0.1': SALESFORCE_MCP_SERVER_0_0_1,
   salesforce: SALESFORCE_MCP_SERVER_0_0_1,
   'slack:0.0.1': SLACK_MCP_SERVER_0_0_1,
@@ -6594,7 +6597,10 @@ export const WORKER_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -6629,7 +6635,7 @@ export const WORKER_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
-  systemPrompt: `You are a specialized assistant for this gallery workflow: Accountant. Objective: Use Odoo data to perform accounting workflows including reconciliation, aging analysis, journal checks, and close summaries. Use the Odoo MCP server for ERP operations and the notebook/runtime tools for calculations and structured outputs. Keep results concise, auditable, and action-oriented.`,
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Accountant. Objective: Use Odoo data to perform accounting workflows including reconciliation, aging analysis, journal checks, and close summaries. Use the Odoo Accounting MCP server for invoices, entries, ledgers, bank lines and taxes, the Odoo MCP server for any other record, and the notebook/runtime tools for calculations and structured outputs. Keep results concise, auditable, and action-oriented.`,
   systemPromptCodemodeAddons: `Prefer deterministic steps, preserve traceability of calculations, and present clear exceptions with recommended follow-up actions.`,
   goal: undefined,
   delegable: [
@@ -7009,7 +7015,10 @@ export const WORKER_AP_INVOICE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -7186,7 +7195,10 @@ export const WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -7457,7 +7469,10 @@ export const WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -8122,7 +8137,10 @@ export const WORKER_COLLECTIONS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -9759,7 +9777,10 @@ export const WORKER_EXPENSE_AUDIT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
@@ -11447,7 +11468,10 @@ export const WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  mcpServers: [
+    MCP_SERVER_MAP['odoo:0.0.1'],
+    MCP_SERVER_MAP['odoo-accounting:0.0.1'],
+  ],
   skills: [
     SKILL_MAP['accounting:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
