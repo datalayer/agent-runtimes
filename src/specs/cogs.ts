@@ -110,6 +110,18 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
     SKILL_MAP['events:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
+    SKILL_MAP['datalayer-memory-add:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-memory-add:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-memory-search:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-memory-search:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-memory-list:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-memory-list:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-memory-delete:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-memory-delete:0.0.1'])
+      : undefined,
     SKILL_MAP['crawl:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
       : undefined,
@@ -147,7 +159,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
-  systemPrompt: `You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
+  systemPrompt: `You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited. You keep durable memory of the person across sessions: when they ask you to remember, recall, list or forget something, use the datalayer-memory skills, and never delete everything they remember without their explicit confirmation of how many.
 
 ## Frames
 
@@ -260,7 +272,7 @@ Check your output against every Guard before you hand it over, and say which you
   authorizationPolicy: undefined,
   policy: { shield: { egress: ['*'] } },
   notifications: undefined,
-  memory: 'ephemeral',
+  memory: 'mem0',
   preHooks: undefined,
   postHooks: undefined,
   toolHooks: undefined,

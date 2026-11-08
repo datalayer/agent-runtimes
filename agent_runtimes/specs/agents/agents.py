@@ -8005,7 +8005,14 @@ WORKER_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     model_additionals=["alibaba:qwen-max"],
     inference_provider=None,
     mcp_servers=[MCP_SERVER_CATALOG["tavily"]],
-    skills=["github:0.0.1", "events:0.0.1"],
+    skills=[
+        "github:0.0.1",
+        "events:0.0.1",
+        "datalayer-memory-add:0.0.1",
+        "datalayer-memory-search:0.0.1",
+        "datalayer-memory-list:0.0.1",
+        "datalayer-memory-delete:0.0.1",
+    ],
     backend_tools=[],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
     environment_name="ai-agents-env",
@@ -8035,7 +8042,7 @@ WORKER_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
-    system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
+    system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited. You keep durable memory of the person across sessions: when they ask you to remember, recall, list or forget something, use the datalayer-memory skills, and never delete everything they remember without their explicit confirmation of how many.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
 ## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
@@ -8078,7 +8085,7 @@ WORKER_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     authorization_policy=None,
     policy={"shield": {"egress": ["*"]}},
     notifications=None,
-    memory="ephemeral",
+    memory="mem0",
     pre_hooks=None,
     post_hooks=None,
     tool_hooks=None,
