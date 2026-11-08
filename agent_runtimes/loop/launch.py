@@ -832,7 +832,12 @@ def unavailable(agent_spec_id: str, runtime_name: str) -> CloudRefused:
 
 
 def ensure_agentspec(
-    relay_url: str, agent_spec_id: str, *, runtime_name: str, token: str
+    relay_url: str,
+    agent_spec_id: str,
+    *,
+    runtime_name: str,
+    token: str,
+    agent_setup: Optional[dict[str, Any]] = None,
 ) -> bool:
     """Make the runtime's agent the chosen agentspec's. Whether it was changed.
 
@@ -853,6 +858,7 @@ def ensure_agentspec(
                 "agent_spec_id": agent_spec_id,
                 "transport": "ag-ui",
                 "user_token": token,
+                **(agent_setup or {}),
             },
             timeout=120.0,
         )
@@ -896,6 +902,7 @@ def _attach(
     client: Any,
     token: str,
     status: Callable[[str], None],
+    agent_setup: Optional[dict[str, Any]] = None,
 ) -> Optional[CloudLaunch]:
     """Reach a running runtime through a relay, or None when it does not answer."""
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
@@ -919,7 +926,11 @@ def _attach(
         return None
     try:
         if agent_spec_id and ensure_agentspec(
-            relay.url, agent_spec_id, runtime_name=back.runtime_name, token=token
+            relay.url,
+            agent_spec_id,
+            runtime_name=back.runtime_name,
+            token=token,
+            agent_setup=agent_setup,
         ):
             status(f"{back.runtime_name} now runs {agent_spec_id}.")
     except CloudRefused:
@@ -960,6 +971,7 @@ def launch_cloud(
     status: Callable[[str], None] = lambda message: None,
     note: Callable[[str], None] = lambda message: None,
     app_spec: Optional[dict[str, Any]] = None,
+    agent_setup: Optional[dict[str, Any]] = None,
 ) -> CloudLaunch:
     """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
 
@@ -978,6 +990,11 @@ def launch_cloud(
     its secrets. ``runtime`` still attaches to the one the person names; its
     configure then declares the application's secrets and refuses, in a
     sentence, one the runtime was not given (`attached_refusal`).
+
+    ``agent_setup`` is how the runtime's agent is configured, at its launch
+    as when it is attached to: ``without_mcp_servers`` and ``without_skills``
+    leave the spec's MCP servers, or those skills, out, their secrets not
+    asked for (``loop --without-mcp-servers --without-skill github``).
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
@@ -987,7 +1004,12 @@ def launch_cloud(
     if runtime:
         named = find_running(offer, runtime)
         back = _attach(
-            named, agent_spec_id=agent_id, client=client, token=token, status=status
+            named,
+            agent_spec_id=agent_id,
+            client=client,
+            token=token,
+            status=status,
+            agent_setup=agent_setup,
         )
         if back is None:
             raise CloudRefused(f"{named.runtime_name} is running but does not answer.")
@@ -996,7 +1018,12 @@ def launch_cloud(
         again = choose_running(offer.running, can_ask=asking)
         if again is not None:
             back = _attach(
-                again, agent_spec_id=agent_id, client=client, token=token, status=status
+                again,
+                agent_spec_id=agent_id,
+                client=client,
+                token=token,
+                status=status,
+                agent_setup=agent_setup,
             )
             if back is not None:
                 return back
@@ -1034,6 +1061,7 @@ def launch_cloud(
             time_reservation=reserved,
             agent_spec_id=agent_id,
             **({"app_spec": dict(app_spec)} if app_spec else {}),
+            **({"agent_setup": dict(agent_setup)} if agent_setup else {}),
         )
     except (RuntimeError, ValueError) as error:
         raise CloudRefused(f"Datalayer refused the launch: {error}") from None

@@ -964,6 +964,18 @@ async def _run_lines(tux: Any, lines: List[str]) -> int:
             tux._agui_client = None
 
 
+def _agent_setup(
+    without_mcp_servers: bool, without_skills: Optional[List[str]]
+) -> Optional[dict]:
+    """How a cloud runtime's agent is configured, from the options; ``None`` as its spec says."""
+    setup: dict = {}
+    if without_mcp_servers:
+        setup["without_mcp_servers"] = True
+    if without_skills:
+        setup["without_skills"] = list(without_skills)
+    return setup or None
+
+
 def run_prompts(
     prompts: List[str],
     *,
@@ -978,6 +990,7 @@ def run_prompts(
     codemode: bool = True,
     debug: bool = False,
     eggs: bool = False,
+    agent_setup: Optional[dict] = None,
 ) -> int:
     """``loop --prompt``: launch the agent, run each line in one session, stop it.
 
@@ -1016,6 +1029,9 @@ def run_prompts(
         Whether the local server logs.
     eggs : bool
         Whether the Easter egg commands are registered.
+    agent_setup : dict or None
+        How a cloud runtime's agent is configured (``--without-mcp-servers``,
+        ``--without-skill``).
 
     Returns
     -------
@@ -1063,6 +1079,7 @@ def run_prompts(
                     can_ask=False,
                     status=_say,
                     note=_say,
+                    agent_setup=agent_setup,
                 )
             except NotSignedIn:
                 _say(
@@ -1201,6 +1218,22 @@ def main_callback(
         "--keep",
         help="Leave the cloud runtime running when the session ends (with --cloud).",
     ),
+    without_mcp_servers: bool = typer.Option(
+        False,
+        "--without-mcp-servers",
+        help=(
+            "Configure the cloud runtime's agent with none of its MCP servers: "
+            "their secrets are not asked for (with --cloud and --prompt)."
+        ),
+    ),
+    without_skills: Optional[List[str]] = typer.Option(
+        None,
+        "--without-skill",
+        help=(
+            "Leave this skill of the agent out, by id, its secrets not asked for; "
+            "repeat it for each (with --cloud and --prompt)."
+        ),
+    ),
     runtime: Optional[str] = typer.Option(
         None,
         "--runtime",
@@ -1319,7 +1352,13 @@ def main_callback(
                 codemode=not codemode_disabled,
                 debug=debug,
                 eggs=eggs,
+                agent_setup=_agent_setup(without_mcp_servers, without_skills),
             )
+        )
+    if without_mcp_servers or without_skills:
+        raise typer.BadParameter(
+            "--without-mcp-servers and --without-skill configure a cloud runtime "
+            "with --prompt: give the lines with --prompt."
         )
 
     global _subprocess_ref

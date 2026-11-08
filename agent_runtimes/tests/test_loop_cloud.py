@@ -245,7 +245,9 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
     monkeypatch.setattr(
         launch,
         "ensure_agentspec",
-        lambda url, spec, runtime_name, token: _kept(asked, (spec, token), True),
+        lambda url, spec, runtime_name, token, agent_setup=None: _kept(
+            asked, (spec, token), True
+        ),
     )
     back = launch.launch_cloud("crawler", runtime="runtime-9", can_ask=False)
     try:
@@ -761,3 +763,43 @@ def test_loop_forwards_where_to_the_chat(monkeypatch: pytest.MonkeyPatch) -> Non
             "--keep",
         ]
     ]
+
+
+def test_a_launch_carries_how_its_agent_is_configured(
+    datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    setup = {"without_mcp_servers": True, "without_skills": ["github"]}
+    started = launch.launch_cloud(
+        "worker-marketer", reconnect=False, can_ask=False, minutes=5, agent_setup=setup
+    )
+    try:
+        assert datalayer.created["agent_setup"] == setup
+    finally:
+        started.relay.stop()
+    # Attached to, the runtime's agent is configured the same way.
+    datalayer.running = [Running("runtime-9", "ai-agents-env")]
+    asked: List[Any] = []
+    monkeypatch.setattr(
+        launch,
+        "ensure_agentspec",
+        lambda url, spec, runtime_name, token, agent_setup=None: _kept(
+            asked, agent_setup, True
+        ),
+    )
+    back = launch.launch_cloud(
+        "worker-marketer", runtime="runtime-9", can_ask=False, agent_setup=setup
+    )
+    try:
+        assert asked == [setup]
+    finally:
+        back.relay.stop()
+
+
+def test_the_cli_says_the_setup_from_its_options() -> None:
+    from agent_runtimes.chat.cli import _agent_setup
+
+    assert _agent_setup(False, None) is None
+    assert _agent_setup(True, ["github", "crawl"]) == {
+        "without_mcp_servers": True,
+        "without_skills": ["github", "crawl"],
+    }

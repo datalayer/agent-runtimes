@@ -1095,6 +1095,7 @@ class AgentClient(
         parent_reservation_uid: Optional[str] = None,
         version: Optional[Union[int, str]] = None,
         app_spec: Optional[dict[str, Any]] = None,
+        agent_setup: Optional[dict[str, Any]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -1132,6 +1133,9 @@ class AgentClient(
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made
             (R-19), as `loop apps run --cloud` launches one.
+        agent_setup : Optional[dict[str, Any]], optional
+            How its agent is configured at launch: ``without_mcp_servers``,
+            ``without_skills`` (``loop --without-mcp-servers``).
 
         Returns
         -------
@@ -1205,6 +1209,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
+                **({"agent_setup": agent_setup} if agent_setup else {}),
             )
         else:
             # Create runtime without snapshot
@@ -1222,6 +1227,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
+                **({"agent_setup": agent_setup} if agent_setup else {}),
             )
 
         # Process the response and create RuntimesService object
