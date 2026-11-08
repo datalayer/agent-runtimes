@@ -464,6 +464,35 @@ def test_an_agent_configured_without_its_mcp_servers_needs_none_of_their_secrets
     )
 
 
+def test_an_agent_configured_without_a_skill_needs_none_of_its_secrets(
+    runtime: Any,
+) -> None:
+    from agent_runtimes.routes.agents import _agentspecs
+
+    # Nothing given: the server and the skill both left out.
+    response = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={
+            "agent_spec_id": "r19-agent",
+            "env_vars": [],
+            "without_mcp_servers": True,
+            "without_skills": ["r19-skill:0.0.1"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert "R19_SKILL_TOKEN" not in os.environ
+    made = _agentspecs["default"]
+    assert made["selected_mcp_servers"] == []
+    assert made["enable_skills"] is False
+    # A skill the spec does not have is refused, never ignored.
+    refused = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={"agent_spec_id": "r19-agent", "without_skills": ["github"]},
+    )
+    assert refused.status_code == 422
+    assert "has no skill github" in refused.json()["detail"]
+
+
 def test_the_companion_names_the_runtime_s_owner_once(
     runtime: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:

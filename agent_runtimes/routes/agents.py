@@ -5500,6 +5500,37 @@ class ConfigureFromSpecRequest(BaseModel):
     """Configure the agent with none of its spec's MCP servers: their secrets
     are neither declared nor asked for, and the agent is given none of their
     tools: an agent tried before its servers' secrets are in the account."""
+    without_skills: list[str] = Field(default_factory=list)
+    """Skills of the spec to leave out, by id (``github`` or ``github:0.0.1``):
+    their secrets neither declared nor asked for, the skills not given. A
+    skill the spec does not have is refused (422)."""
+
+
+def _skill_ref(skill: Any) -> str:
+    """A skill's id without its version, however a spec lists it."""
+    from ..guardrails.declared_secrets import _ref_id
+
+    if isinstance(skill, str):
+        return _ref_id(skill)
+    if isinstance(skill, dict):
+        return _ref_id(skill.get("id") or skill.get("name"))
+    return _ref_id(getattr(skill, "id", None) or getattr(skill, "name", None))
+
+
+def _without_skills(spec: Any, agent_spec_id: str, left_out: list[str]) -> Any:
+    """The spec with the skills named left out; a name it has not is refused."""
+    from ..guardrails.declared_secrets import _ref_id
+
+    names = {_ref_id(name) for name in left_out}
+    unknown = sorted(names - {_skill_ref(skill) for skill in spec.skills or []})
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{agent_spec_id} has no skill {', '.join(unknown)} to leave out.",
+        )
+    return spec.model_copy(
+        update={"skills": [s for s in spec.skills or [] if _skill_ref(s) not in names]}
+    )
 
 
 def _take_owner(http_request: Request, owner_uid: str) -> None:
@@ -5656,6 +5687,24 @@ async def configure_from_spec_endpoint(
             "[configure-from-spec] '%s' configured without its MCP servers",
             body.agent_spec_id,
         )
+    if body.without_skills:
+        # The skills named left out: neither their secrets nor the skills.
+        spec = _without_skills(spec, body.agent_spec_id, body.without_skills)
+        if body.agent_spec and isinstance(body.agent_spec.get("skills"), list):
+            left_out = {_skill_ref(name) for name in body.without_skills}
+            body.agent_spec = {
+                **body.agent_spec,
+                "skills": [
+                    s
+                    for s in body.agent_spec["skills"]
+                    if _skill_ref(s) not in left_out
+                ],
+            }
+        logger.info(
+            "[configure-from-spec] '%s' configured without the skills %s",
+            body.agent_spec_id,
+            sorted(body.without_skills),
+        )
     _note_launched_app(body.launch_app_spec, body.launch_app_instance)
     declared = declared_secrets(
         spec,
@@ -5784,6 +5833,15 @@ async def configure_from_spec_endpoint(
         app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
         **({"selected_mcp_servers": []} if body.without_mcp_servers else {}),
+        **(
+            (
+                {"skills": [str(s) for s in spec.skills]}
+                if spec.skills
+                else {"enable_skills": False}
+            )
+            if body.without_skills
+            else {}
+        ),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).
