@@ -78,25 +78,26 @@ class Mem0Backend(BaseMemoryBackend):
             return self._memory
         try:
             from mem0 import Memory
-
-            # Kept as it was given: mem0 may change what it is handed.
-            built_with = copy.deepcopy(config)
-            if config:
-                self._memory = Memory.from_config(config)
-            else:
-                self._memory = Memory()
-            self._built_with = built_with
-            logger.info(
-                "Mem0 memory initialized for user=%s, agent=%s",
-                self.user_id,
-                self.agent_id,
-            )
-            return self._memory
-        except ImportError:
+        except ImportError as error:
             raise ImportError(
                 "Mem0 memory backend requires 'mem0ai'. "
                 "Install with: pip install mem0ai"
-            )
+            ) from error
+        # Kept as it was given: mem0 may change what it is handed. A package the
+        # configured store or embedder needs and lacks says its own name here,
+        # never "requires mem0ai".
+        built_with = copy.deepcopy(config)
+        if config:
+            self._memory = Memory.from_config(config)
+        else:
+            self._memory = Memory()
+        self._built_with = built_with
+        logger.info(
+            "Mem0 memory initialized for user=%s, agent=%s",
+            self.user_id,
+            self.agent_id,
+        )
+        return self._memory
 
     def _scope(self) -> dict[str, Any]:
         """The memories this backend reads and writes: its user's, of its agent."""

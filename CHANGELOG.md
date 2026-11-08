@@ -9,9 +9,9 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
-## 1.5.117
+## 1.5.118
 
-8 November 2026. (1.5.116 was tagged and never published: its release tests ran without mem0 and against the catalogue's PAP *draft 0.3*; the test extra now installs `memory`, and agentspecs 0.0.160, the floor, says PAP draft 0.4.)
+8 November 2026. (1.5.116 and 1.5.117 were tagged and never published. 1.5.116's release tests ran without mem0 and against the catalogue's PAP *draft 0.3*; 1.5.117's first ran before agentspecs 0.0.160 reached PyPI, then found no FAISS for the app-memory tests, which the memory backend reported as a missing mem0: it now names the package that is missing, and the test extra installs `faiss-cpu`. 1.5.116: its release tests ran without mem0 and against the catalogue's PAP *draft 0.3*; the test extra now installs `memory`, and agentspecs 0.0.160, the floor, says PAP draft 0.4.)
 
 **PAP draft 0.4** (`personal-agent-protocol` 0.32.0, draft 0.4 as of upstream `46beb21`): the PAP capabilities name `Poppy-Version` and `Poppy-Extensions`, send request ids (`generateRequestId`), read a conversation's four state fields (`working`, `handoff`, `responder`, `closed`); the examples, their traces and views at 0.4; the Appspec's company website flags (`web.unscoped`, `web.disabled`, agentspecs 0.0.159).
 

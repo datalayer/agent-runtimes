@@ -363,6 +363,8 @@ test = [
     # the default agentspecs name `bedrock:` models, which need boto3; the memory
     # tests keep memories with mem0 itself, two of them in a real PostgreSQL.
     "agent_runtimes[a2a,aws,cli,memory,openai]",
+    # The app-memory tests keep their memories in mem0's FAISS store.
+    "faiss-cpu>=1.8",
     "coverage>=7.9.2",
     "mypy>=1.16.1",
     "pytest>=8.4.1",
