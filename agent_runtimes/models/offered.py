@@ -106,7 +106,7 @@ DECISIONS_NOTE = (
 
 def _catalogue_ids(names: list[Any], decisions: bool) -> list[str]:
     """The catalogue ids of ``names``: its chat models, or its decision models."""
-    from agent_runtimes.specs.models import get_model, is_chat_model
+    from agent_runtimes.specs.models import get_model, is_chat_model, is_decision_model
 
     ids: list[str] = []
     for name in names:
@@ -119,7 +119,9 @@ def _catalogue_ids(names: list[Any], decisions: bool) -> list[str]:
             )
             continue
         spec = get_model(model_id)
-        if spec is None or is_chat_model(spec) == decisions:
+        if spec is None:
+            continue
+        if not (is_decision_model(spec) if decisions else is_chat_model(spec)):
             continue
         if model_id not in ids:
             ids.append(model_id)
@@ -519,10 +521,10 @@ def decision_refusal(model_id: str, *, switch: bool) -> str | None:
     str | None
         The sentence, for a typed-decision model (Jev); ``None`` for any other.
     """
-    from agent_runtimes.specs.models import get_model, is_chat_model
+    from agent_runtimes.specs.models import get_model, is_decision_model
 
     spec = get_model(model_id)
-    if spec is None or is_chat_model(spec):
+    if spec is None or not is_decision_model(spec):
         return None
     outcome = ", so nothing was switched" if switch else ""
     return (
@@ -548,14 +550,14 @@ def decision_model_ids(inference_provider: str | None = None) -> list[str]:
         none usable. Otherwise none: only ai-inference serves them.
     """
     from agent_runtimes.models.models import effective_inference_provider
-    from agent_runtimes.specs.models import is_chat_model, list_models
+    from agent_runtimes.specs.models import is_decision_model, list_models
 
     state = _state
     if state is not None and state.decisions is not None:
         return list(state.decisions)
     provider = inference_provider or effective_inference_provider()
     if provider == "datalayer" and inference_token_refusal():
-        return [model.id for model in list_models() if not is_chat_model(model)]
+        return [model.id for model in list_models() if is_decision_model(model)]
     return []
 
 
@@ -778,7 +780,8 @@ def model_rows(
             continue
         spec = get_model(model_id)
         if spec is not None and not is_chat_model(spec):
-            # A typed-decision model is listed apart (``decision_rows``).
+            # A typed-decision model is listed apart (``decision_rows``); an
+            # embedding model is no model an agent runs on.
             continue
         usable, reason = availability(model_id, inference_provider)
         rows.append(

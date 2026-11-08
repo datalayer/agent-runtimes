@@ -54,6 +54,26 @@ class TestModelsOffered:
         # Otherwise the test above passes by having nothing to exclude.
         assert any(not model.available for model in list_models())
 
+    def test_an_embedding_model_is_neither_a_chat_nor_a_decision_model(self) -> None:
+        # Titan turns texts into vectors (what memories are embedded with
+        # through ai-inference): no chat runs on it, and no decision asks it.
+        from agent_runtimes.models.offered import _catalogue_ids, decision_refusal
+        from agent_runtimes.specs.models import get_model, is_decision_model
+
+        for model_id in (
+            "bedrock:amazon.titan-embed-text-v1",
+            "bedrock:amazon.titan-embed-text-v2:0",
+        ):
+            spec = get_model(model_id)
+            assert spec is not None and spec.pricing is not None
+            assert not is_chat_model(spec)
+            assert not is_decision_model(spec)
+            assert decision_refusal(model_id, switch=False) is None
+            assert _catalogue_ids([model_id], decisions=False) == []
+            assert _catalogue_ids([model_id], decisions=True) == []
+            offered_ids, _, _ = _available_model_ids_by_env()
+            assert model_id not in offered_ids
+
 
 class TestTerminalConstruction:
     def test_the_terminal_carries_its_prompt_session(self) -> None:
