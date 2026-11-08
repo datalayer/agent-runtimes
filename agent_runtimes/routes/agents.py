@@ -5493,10 +5493,40 @@ class ConfigureFromSpecRequest(BaseModel):
     connections' secrets (R-19). Not the agent's own ``app_spec``."""
     launch_app_instance: dict[str, Any] | None = None
     """Where that application runs: its app_uid and deployment_uid."""
+    owner_uid: str | None = None
+    """Who the runtime is assigned to, named by its companion alone, once: its
+    agent's memories are kept under them (`_take_owner`)."""
     without_mcp_servers: bool = False
     """Configure the agent with none of its spec's MCP servers: their secrets
     are neither declared nor asked for, and the agent is given none of their
     tools: an agent tried before its servers' secrets are in the account."""
+
+
+def _take_owner(http_request: Request, owner_uid: str) -> None:
+    """Know who this runtime is assigned to: ``DATALAYER_USER_UID``, which an
+    agent's memories are kept under (`memory.identity`).
+
+    A pooled runtime is started before it is anybody's, so the Operator
+    cannot set it then; its companion names the owner when it configures the
+    runtime it was assigned. Only the pod names it (`callers.is_the_pod`),
+    and only once: a runtime is never given another owner.
+    """
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    host = http_request.client.host if http_request.client else None
+    if not is_the_pod(host, http_request.headers.get(POD_SECRET_HEADER)):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's companion names who the runtime is assigned to.",
+        )
+    owner = owner_uid.strip()
+    held = os.environ.get("DATALAYER_USER_UID", "").strip()
+    if held and held != owner:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This runtime is assigned to {held}: it is never given another owner.",
+        )
+    os.environ["DATALAYER_USER_UID"] = owner
 
 
 class DeclaredSecretsRequest(BaseModel):
@@ -5611,6 +5641,8 @@ async def configure_from_spec_endpoint(
             detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
     target_agent_name = body.agent_id
+    if body.owner_uid:
+        _take_owner(http_request, body.owner_uid)
     if body.without_mcp_servers:
         # Its MCP servers left out: neither their secrets nor their tools.
         spec = spec.model_copy(update={"mcp_servers": []})

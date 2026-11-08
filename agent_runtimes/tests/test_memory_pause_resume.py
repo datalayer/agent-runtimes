@@ -110,6 +110,14 @@ def test_a_runtime_without_its_token_is_refused(
         memory_config.resolve_mem0_config("u1", "worker-marketer")
 
 
+def test_a_runtime_nobody_was_named_the_owner_of_keeps_no_memories(
+    datalayer_runtime: Dict[str, str],
+) -> None:
+    # Every user's memories would meet under the one id a runtime falls back to.
+    with pytest.raises(MemoryNotConfigured, match="not told whose it is"):
+        memory_config.resolve_mem0_config("default", "worker-marketer")
+
+
 def test_off_datalayer_the_local_defaults_stay(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_runtimes.models import models
 

@@ -202,6 +202,10 @@ def datalayer_mem0_config() -> dict[str, object]:
     return {**postgres, **through_ai_inference(), "history_db_path": ":memory:"}
 
 
+#: The user id of a runtime nobody was named the owner of (`memory.identity`).
+UNOWNED_USER_ID = "default"
+
+
 def resolve_mem0_config(
     user_id: str,
     agent_id: str | None,
@@ -218,6 +222,12 @@ def resolve_mem0_config(
     if explicit_config:
         return explicit_config
     if on_datalayer_runtime():
+        if user_id == UNOWNED_USER_ID:
+            # Every user's memories would meet under one id: never kept so.
+            raise MemoryNotConfigured(
+                "Memories cannot be kept on this runtime: it was not told whose "
+                "it is, and memories are kept under the person whose runtime it is."
+            )
         return datalayer_mem0_config()
 
     raw_json = os.environ.get("AGENT_RUNTIMES_MEM0_CONFIG_JSON", "").strip()

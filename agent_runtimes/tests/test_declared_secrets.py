@@ -464,6 +464,44 @@ def test_an_agent_configured_without_its_mcp_servers_needs_none_of_their_secrets
     )
 
 
+def test_the_companion_names_the_runtime_s_owner_once(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A pooled runtime is started before it is anybody's: its agent's
+    # memories are kept under the owner its companion names at assignment.
+    monkeypatch.delenv("DATALAYER_USER_UID", raising=False)
+
+    def configure(owner: str) -> Any:
+        return runtime.post(
+            "/api/v1/agents/configure-from-spec",
+            json={"agent_spec_id": "r19-bare", "owner_uid": owner},
+        )
+
+    assert configure("user-ada").status_code == 200
+    assert os.environ["DATALAYER_USER_UID"] == "user-ada"
+    assert configure("user-ada").status_code == 200
+    # Never another owner.
+    taken = configure("user-bob")
+    assert taken.status_code == 409
+    assert "never given another owner" in taken.json()["detail"]
+    assert os.environ["DATALAYER_USER_UID"] == "user-ada"
+
+
+def test_nothing_but_the_pod_names_the_runtime_s_owner(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.apps import callers
+
+    monkeypatch.delenv("DATALAYER_USER_UID", raising=False)
+    monkeypatch.setattr(callers, "is_the_pod", lambda host, secret: False)
+    refused = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={"agent_spec_id": "r19-bare", "owner_uid": "user-mallory"},
+    )
+    assert refused.status_code == 403
+    assert "DATALAYER_USER_UID" not in os.environ
+
+
 def test_a_secret_no_longer_declared_is_taken_back(runtime: Any) -> None:
     assert _configure(runtime, "r19-agent", ACCOUNT).status_code == 200
     assert os.environ.get("R19_SERVER_TOKEN") == SERVER_SECRET
