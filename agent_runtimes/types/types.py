@@ -2223,6 +2223,14 @@ class Agentspec(BaseModel):
         description="Authorization policy",
         alias="authorizationPolicy",
     )
+    policy: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "The agent's own ask of the Shield: `shield`, agent-shield's firewall "
+            "rules — `egress` ('*' or hosts, host:port, addresses, CIDRs) and "
+            "`ingress` (who may reach the agent's ports)."
+        ),
+    )
     notifications: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Notification configuration (email, slack)",

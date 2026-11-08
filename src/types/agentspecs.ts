@@ -1863,6 +1863,22 @@ export interface AppSpec {
   banner: string;
 }
 
+/**
+ * agent-shield's firewall rules for an agent's runtime (`policy.shield`).
+ * `egress`: '*' alone (any public address), or exact hosts, host:port, IPv4
+ * addresses and CIDRs with an optional port; `ingress`: 'platform' (the
+ * default), '*', or addresses and CIDRs with the agent's port.
+ */
+export interface AgentShieldFirewall {
+  egress?: string[];
+  ingress?: string[];
+}
+
+/** An agent's own ask of the Shield. */
+export interface AgentPolicy {
+  shield?: AgentShieldFirewall;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -1974,6 +1990,8 @@ export interface Agentspec {
   checkpoints?: AgentCheckpointsConfig;
   /** Authorization policy */
   authorizationPolicy?: string;
+  /** The agent's own ask of the Shield: its firewall rules under `shield`. */
+  policy?: AgentPolicy;
   /** Notification configuration (email, slack) */
   notifications?: AgentNotificationConfig;
   /** Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem') */
