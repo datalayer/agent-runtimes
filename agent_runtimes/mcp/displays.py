@@ -20,10 +20,19 @@ A call whose result carries a display returns a ``ToolReturn``:
   draws (``agent_runtimes.transports.agui_displays``).
 
 A result without a display passes through as pydantic-ai maps it.
+
+A server that no longer knows the toolset's session (its process restarted,
+its replica changed, or it reaped the session as idle) answers 404 "Session
+not found". The MCP spec says the client then opens a new session; the SDK's
+client gives up instead, and the run failed with ``RuntimeError: Session not
+found``. The toolset opens a new session once and asks that one call again
+(:func:`session_lost`); a second loss, or any other error, surfaces as before.
 """
 
 from __future__ import annotations
 
+import logging
+from contextlib import AsyncExitStack
 from contextvars import ContextVar
 from typing import Any
 
@@ -31,6 +40,8 @@ from typing import Any
 # them in `DISPLAY_TYPES` (PAP's sign-in, from the gateway's `pap_sign_in`).
 import personal_agent_protocol.ui  # noqa: F401
 from fastmcp.client.client import CallToolResult
+from fastmcp.exceptions import McpError
+from mcp.types import INVALID_REQUEST
 from pydantic_ai.mcp import MCPToolset
 from pydantic_ai.messages import ToolReturn, ToolReturnPart
 from reactor.ui import DISPLAY_META_KEY, DISPLAY_TYPES, DisplayWire
@@ -42,7 +53,48 @@ __all__ = [
     "model_view_of",
     "page_meta",
     "returned",
+    "session_lost",
 ]
+
+logger = logging.getLogger(__name__)
+
+#: What the SDK's client raises when the server answers 404 to a request on a
+#: session it does not know: the body the SDK's server sends ("Session not
+#: found"), the client's own wording for a 404 without a JSON-RPC body
+#: ("Session terminated"), and a terminated transport's body.
+SESSION_LOST_MESSAGES = frozenset(
+    {
+        "Session not found",
+        "Session terminated",
+        "Not Found: Session has been terminated",
+    }
+)
+
+
+def session_lost(error: BaseException) -> bool:
+    """
+    Whether an MCP call failed because the server no longer knows the session.
+
+    Parameters
+    ----------
+    error : BaseException
+        What the call raised.
+
+    Returns
+    -------
+    bool
+        True for the SDK's protocol error with code ``INVALID_REQUEST`` and one
+        of :data:`SESSION_LOST_MESSAGES`, bare or the only kind in a group;
+        False for anything else.
+    """
+    if isinstance(error, BaseExceptionGroup):
+        return all(session_lost(leaf) for leaf in error.exceptions)
+    return (
+        isinstance(error, McpError)
+        and error.error.code == INVALID_REQUEST
+        and error.error.message in SESSION_LOST_MESSAGES
+    )
+
 
 #: The displays the results of the call under way carried, as their tool
 #: returned them: set by `DisplayMCPToolset.call_tool`, filled by its client.
@@ -145,7 +197,10 @@ class DisplayMCPToolset(MCPToolset):
             kwargs.setdefault("init_timeout", MCP_INIT_TIMEOUT)
         self._init_timeout = kwargs.get("init_timeout")
         super().__init__(*args, **kwargs)
-        call = self.client.call_tool
+        call = self._once_more_on_a_lost_session(self.client.call_tool)
+        self.client.list_tools = self._once_more_on_a_lost_session(
+            self.client.list_tools
+        )
 
         async def call_tool(*a: Any, **kw: Any) -> Any:
             result = await call(*a, **kw)
@@ -164,6 +219,57 @@ class DisplayMCPToolset(MCPToolset):
             return result
 
         self.client.call_tool = call_tool
+
+    def _once_more_on_a_lost_session(self, request: Any) -> Any:
+        """``request`` on the client, asked again once in a new session when
+        the server has lost the one it was asked in."""
+
+        async def asked(*a: Any, **kw: Any) -> Any:
+            lost = self._open_session()
+            try:
+                return await request(*a, **kw)
+            except BaseException as error:
+                if lost is None or not session_lost(error):
+                    raise
+            await self._reopen(lost)
+            return await request(*a, **kw)
+
+        return asked
+
+    def _open_session(self) -> object | None:
+        """The client's session under way, or None when none is open."""
+        try:
+            return self.client.session
+        except RuntimeError:
+            return None
+
+    async def _reopen(self, lost: object) -> None:
+        """
+        Close the client's session the server lost and open a new one.
+
+        Concurrent calls that lost the same session open one new session: the
+        first reopens, the others find it open already. The toolset's entries
+        (``_running_count``) are kept: those under way go on in the new session.
+        """
+        async with self._enter_lock:
+            if self._open_session() is not lost or self._exit_stack is None:
+                return
+            logger.warning(
+                "The MCP server `%s` no longer knows its session: opening a new "
+                "one and asking the call again",
+                self.id or self.label,
+            )
+            stale, self._exit_stack = self._exit_stack, None
+            try:
+                await stale.aclose()
+            except Exception as error:  # the old session is gone either way
+                logger.debug("Closing the lost MCP session: %s", error)
+            async with AsyncExitStack() as stack:
+                await stack.enter_async_context(self.client)
+                self._exit_stack = stack.pop_all()
+            self._cached_tools = None
+            self._cached_resources = None
+            self._cached_prompts = None
 
     async def __aenter__(self) -> "DisplayMCPToolset":
         try:
