@@ -364,6 +364,16 @@ def main_callback(
         "--keep",
         help="Leave the cloud runtime running when the session ends.",
     ),
+    without_mcp_servers: bool = typer.Option(
+        False,
+        "--without-mcp-servers",
+        help="Configure the cloud runtime's agent with none of its MCP servers (with --cloud and --prompt).",
+    ),
+    without_skills: list[str] | None = typer.Option(
+        None,
+        "--without-skill",
+        help="Leave this skill of the agent out, by id; repeat for each (with --cloud and --prompt).",
+    ),
     prompts: list[str] | None = typer.Option(
         None,
         "--prompt",
@@ -511,6 +521,12 @@ def main_callback(
             chat_args.extend(["--minutes", str(minutes)])
         if keep:
             chat_args.append("--keep")
+        # Declared here and handed on: an option the group does not know is
+        # read as the name of a command.
+        if without_mcp_servers:
+            chat_args.append("--without-mcp-servers")
+        for skill in without_skills or []:
+            chat_args.extend(["--without-skill", skill])
         for prompt in prompts or []:
             chat_args.extend(["--prompt", prompt])
         if harness:
