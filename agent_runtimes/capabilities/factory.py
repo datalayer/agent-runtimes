@@ -518,6 +518,12 @@ def build_capabilities_from_agent_spec(
 
         capabilities.append(PromptHistoryCapability(agent_id=agent_id))
 
+    # The skill a `load_skill` call loaded, on its tool span, as AgentCore's
+    # skill evaluators read it (AC-15).
+    from ..otel.skill_spans import SkillSpanCapability
+
+    capabilities.append(SkillSpanCapability())
+
     # Monitoring snapshot broadcast (pushes to WebSocket after each run).
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_MONITORING", True) and agent_id:
         capabilities.append(

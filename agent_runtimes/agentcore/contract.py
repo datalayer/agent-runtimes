@@ -23,6 +23,11 @@ A run naming another thread is refused in a sentence. A session this process
 has not held is resumed from its record before the turn runs — the session model's
 resume (`apps.sessions.rebuilt_from_record`, MH-03): its turns and tool rows
 given to the run as the conversation so far.
+
+Behind Datalayer IAM's authorizer, the token AgentCore validated is exchanged
+for the platform's tokens before anything else (AC-06, `exchange`): the run
+is given the caller's platform token as its bearer, and its model calls the
+caller's inference token. A refused exchange answers 401, in IAM's sentence.
 """
 
 from __future__ import annotations
@@ -39,6 +44,7 @@ from typing import Any, Awaitable, Callable, Iterator, Mapping, Optional
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
 
+from .exchange import ExchangeRefused, PlatformTokens, runtime_exchange
 from .session_ids import agentcore_to_session_uid
 from .settings import AGENT_ID, agentcore_settings
 
@@ -311,13 +317,33 @@ def _agent_app() -> Any:
     return app
 
 
-def _forwarded(headers: Mapping[str, str]) -> list[tuple[bytes, bytes]]:
-    """The invocation's headers the agent's AG-UI app reads."""
+def _forwarded(
+    headers: Mapping[str, str], tokens: Optional[PlatformTokens] = None
+) -> list[tuple[bytes, bytes]]:
+    """The invocation's headers the agent's AG-UI app reads.
+
+    With the platform's tokens of an exchange, the run's bearer is the
+    caller's platform token, never the token AgentCore validated.
+    """
+    said = {name: str(headers[name]) for name in FORWARDED_HEADERS if headers.get(name)}
+    if tokens is not None:
+        said["authorization"] = f"Bearer {tokens.platform}"
     return [
-        (name.encode("latin-1"), str(headers[name]).encode("latin-1"))
-        for name in FORWARDED_HEADERS
-        if headers.get(name)
+        (name.encode("latin-1"), value.encode("latin-1"))
+        for name, value in said.items()
     ]
+
+
+@contextlib.contextmanager
+def _tokens_held(tokens: Optional[PlatformTokens]) -> Iterator[None]:
+    """Hold, for the run, the caller's inference token of an exchange."""
+    if tokens is None:
+        yield
+        return
+    from agent_runtimes.models.offered import use_inference_token
+
+    with use_inference_token(tokens.inference):
+        yield
 
 
 def _inner_scope(
@@ -389,17 +415,22 @@ class _Streamed(Response):
     """The agent's AG-UI app answering the invocation itself: its SSE as it runs."""
 
     def __init__(
-        self, agent_app: Any, body: dict[str, Any], headers: list[tuple[bytes, bytes]]
+        self,
+        agent_app: Any,
+        body: dict[str, Any],
+        headers: list[tuple[bytes, bytes]],
+        tokens: Optional[PlatformTokens] = None,
     ):
         self.agent_app = agent_app
         self.payload = json.dumps(body).encode()
         self.forwarded = headers
+        self.tokens = tokens
         self.status_code = 200
         self.background = None
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         inner = _inner_scope(scope, self.forwarded, len(self.payload))
-        with LIVENESS.working(), _workload_of(scope):
+        with LIVENESS.working(), _workload_of(scope), _tokens_held(self.tokens):
             await self.agent_app(inner, _receiver(self.payload, receive), send)
 
 
@@ -425,6 +456,7 @@ async def collected(
     body: dict[str, Any],
     headers: list[tuple[bytes, bytes]],
     on_event: Optional[Callable[[dict[str, Any]], Awaitable[None]]] = None,
+    tokens: Optional[PlatformTokens] = None,
 ) -> tuple[int, list[dict[str, Any]], bytes]:
     """One run of the agent's AG-UI app, read whole: its status, its events, and a refusal's body."""
     payload = json.dumps(body).encode()
@@ -455,7 +487,7 @@ async def collected(
                 if on_event is not None:
                     await on_event(event)
 
-    with LIVENESS.working(), _workload_of(scope):
+    with LIVENESS.working(), _workload_of(scope), _tokens_held(tokens):
         await agent_app(
             _inner_scope(scope, headers, len(payload)), _receiver(payload, None), send
         )
@@ -486,17 +518,53 @@ def _wants_events(accept: Optional[str]) -> bool:
 # --- the routes -------------------------------------------------------------------------
 
 
+async def tokens_of(headers: Mapping[str, str]) -> Optional[PlatformTokens]:
+    """Exchange the token AgentCore validated for the platform's tokens (AC-06).
+
+    Parameters
+    ----------
+    headers : Mapping[str, str]
+        The invocation's headers.
+
+    Returns
+    -------
+    PlatformTokens or None
+        The caller's platform and inference tokens; ``None`` when the
+        runtime exchanges nothing (no ``AGENTCORE_RUNTIME_ARN``).
+
+    Raises
+    ------
+    ContractRefused
+        When IAM refuses the token (401) or cannot be asked, in its sentence.
+    """
+    from agent_runtimes.apps.callers import bearer_of
+
+    exchange = runtime_exchange()
+    if exchange is None:
+        return None
+    try:
+        return await exchange.tokens_for(bearer_of(headers.get("authorization")))
+    except ExchangeRefused as refused:
+        raise ContractRefused(refused.status, refused.sentence) from None
+
+
 async def _prepared(
     payload: Any, headers: Mapping[str, str]
-) -> tuple[dict[str, Any], bool, str, Any]:
-    """The run of an invocation, resumed when need be, and the app that runs it."""
+) -> tuple[dict[str, Any], bool, str, Any, Optional[PlatformTokens]]:
+    """The run of an invocation, resumed when need be, the app that runs it, and its tokens."""
     from agent_runtimes.apps.callers import bearer_of
 
     uid, sid = session_of_headers(headers)
     body, prompt_shape = run_input_of(payload, uid, sid)
+    tokens = await tokens_of(headers)
     agent_app = _agent_app()
-    body = await resumed(body, uid, bearer_of(headers.get("authorization")))
-    return body, prompt_shape, uid, agent_app
+    bearer = (
+        tokens.platform
+        if tokens is not None
+        else bearer_of(headers.get("authorization"))
+    )
+    body = await resumed(body, uid, bearer)
+    return body, prompt_shape, uid, agent_app, tokens
 
 
 @router.post("/invocations")
@@ -509,15 +577,19 @@ async def invocations(request: Request) -> Response:
             raise ContractRefused(
                 400, 'An invocation is JSON: an AG-UI RunAgentInput or {"prompt": ...}.'
             ) from None
-        body, prompt_shape, _, agent_app = await _prepared(payload, request.headers)
+        body, prompt_shape, _, agent_app, tokens = await _prepared(
+            payload, request.headers
+        )
     except ContractRefused as refused:
         raise HTTPException(
             status_code=refused.status, detail=refused.sentence
         ) from None
-    forwarded = _forwarded(request.headers)
+    forwarded = _forwarded(request.headers, tokens)
     if not prompt_shape or _wants_events(request.headers.get("accept")):
-        return _Streamed(agent_app, body, forwarded)
-    status, events, raw = await collected(agent_app, request.scope, body, forwarded)
+        return _Streamed(agent_app, body, forwarded, tokens)
+    status, events, raw = await collected(
+        agent_app, request.scope, body, forwarded, tokens=tokens
+    )
     if status != 200:
         return Response(raw, status_code=status, media_type="application/json")
     error = error_of(events)
@@ -538,7 +610,6 @@ async def invocations_ws(websocket: WebSocket) -> None:
         await websocket.close(code=1008, reason=refused.sentence)
         return
     await websocket.accept()
-    forwarded = _forwarded(websocket.headers)
 
     async def said(event: dict[str, Any]) -> None:
         await websocket.send_text(json.dumps(event))
@@ -555,14 +626,19 @@ async def invocations_ws(websocket: WebSocket) -> None:
                 raise ContractRefused(
                     400, 'A message is JSON: {"prompt": ..., "session_id": ...}.'
                 ) from None
-            body, _, _, agent_app = await _prepared(payload, websocket.headers)
+            body, _, _, agent_app, tokens = await _prepared(payload, websocket.headers)
         except ContractRefused as refused:
             await said(
                 {"status": "error", "error": refused.sentence, "session_id": uid}
             )
             continue
         status, events, raw = await collected(
-            agent_app, websocket.scope, body, forwarded, said
+            agent_app,
+            websocket.scope,
+            body,
+            _forwarded(websocket.headers, tokens),
+            said,
+            tokens,
         )
         error = error_of(events) or (
             "" if status == 200 else raw.decode("utf-8", errors="replace")
@@ -598,6 +674,9 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
     )
 
     settings = agentcore_settings()
+    # The exchange's configuration, refused now rather than at the first
+    # invocation (AC-06).
+    runtime_exchange()
     scope = {
         "type": "http",
         "app": app,
@@ -637,5 +716,6 @@ __all__ = [
     "router",
     "run_input_of",
     "session_of_headers",
+    "tokens_of",
     "track_background",
 ]

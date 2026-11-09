@@ -25,6 +25,7 @@ _ADAPTERS: dict[str, str] = {
     "fake": "agent_runtimes.evals.adapters.fake:FakeAdapter",
     "inspect-ai": "agent_runtimes.evals.adapters.inspect_ai:InspectAdapter",
     "harbor": "agent_runtimes.evals.adapters.harbor:HarborAdapter",
+    "agentcore": "agent_runtimes.evals.adapters.agentcore:AgentCoreAdapter",
 }
 
 OFFERED_VARIABLE = "DATALAYER_EVALS_ADAPTERS"

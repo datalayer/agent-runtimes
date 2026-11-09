@@ -40,8 +40,10 @@ import json
 import logging
 import os
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping
+from typing import Any, Iterator, Literal, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +225,36 @@ def give_inference_token(token: str | None) -> float | None:
     return _given["expires_at"]
 
 
+#: The token of the calls under way, when the request that started them
+#: brought its own (an AgentCore invocation's exchanged token, AC-06): it wins
+#: over the one the runtime was given, for those calls only.
+_CALL_TOKEN: ContextVar[Optional[str]] = ContextVar(
+    "agent_runtimes_call_inference_token", default=None
+)
+
+
+@contextmanager
+def use_inference_token(token: str) -> Iterator[None]:
+    """
+    Hold ``token`` as the ai-inference token of the calls made in the block.
+
+    Parameters
+    ----------
+    token : str
+        The caller's own token for ai-inference.
+
+    Yields
+    ------
+    None
+        Control, with the token held for the block's calls.
+    """
+    reset = _CALL_TOKEN.set((token or "").strip() or None)
+    try:
+        yield
+    finally:
+        _CALL_TOKEN.reset(reset)
+
+
 def inference_token() -> str | None:
     """
     The token this runtime calls ai-inference with, or ``None``.
@@ -230,9 +262,13 @@ def inference_token() -> str | None:
     Returns
     -------
     str | None
-        The one the platform gave it, else ``DATALAYER_AI_INFERENCE_API_KEY``,
+        The one held for the calls under way (`use_inference_token`), else
+        the one the platform gave it, else ``DATALAYER_AI_INFERENCE_API_KEY``,
         else ``DATALAYER_API_KEY``.
     """
+    call = _CALL_TOKEN.get()
+    if call:
+        return call
     given = _given["token"]
     if given:
         return str(given)
@@ -250,6 +286,12 @@ def inference_token_refusal() -> str | None:
     """
     if not inference_token():
         return NO_TOKEN_NOTE
+    call = _CALL_TOKEN.get()
+    if call:
+        call_expiry = _expiry_of(call)
+        if call_expiry is not None and call_expiry <= time.time():
+            return "The caller's ai-inference token expired: invoke again."
+        return None
     expires_at = _given["expires_at"]
     if _given["token"] and expires_at is not None and expires_at <= time.time():
         when = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(expires_at))

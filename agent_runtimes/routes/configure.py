@@ -356,6 +356,42 @@ async def give_inference_token_endpoint(
     }
 
 
+class AgentCoreWorkloadRequest(BaseModel):
+    """The workload token a pod is given for AgentCore Identity, as the companion gives it."""
+
+    workload_access_token: str = ""
+    workload_name: str = ""
+    region: str = ""
+
+
+@router.put("/identity/agentcore")
+async def give_agentcore_workload_token_endpoint(
+    request: Request, body: AgentCoreWorkloadRequest
+) -> dict[str, Any]:
+    """Give this pod the workload token the ``agentcore`` identity provider uses (ID-06).
+
+    The companion asks AgentCore Identity for it with the person's token
+    (``GetWorkloadAccessTokenForJWT``) and gives it here, as it gives the
+    inference token. Only the pod itself may. A later call replaces it.
+    """
+    from agent_runtimes.agentcore.identity import give_workload_token
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its AgentCore workload token.",
+        )
+    try:
+        give_workload_token(body.workload_access_token, body.workload_name, body.region)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    return {"workloadName": body.workload_name.strip(), "region": body.region.strip()}
+
+
 @router.get("/inference/models")
 async def list_inference_models() -> dict[str, Any]:
     """The models this runtime's inference serves, as the runtime knows them.

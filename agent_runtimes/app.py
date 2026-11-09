@@ -1139,6 +1139,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         logger.info("Sessions are kept in the %s store", active_store().name)
 
+        # pydantic-ai's GenAI spans for every agent (AC-12), on AgentCore
+        # Runtime also to AgentCore Observability's endpoint (AC-13).
+        from .otel.genai import enable_genai_instrumentation, genai_tracer_provider
+
+        enable_genai_instrumentation(genai_tracer_provider())
+
         # The demo books' key, taken out of the environment before anything is
         # started from it: no MCP server, command or sandbox inherits it (B4-01).
         from .apps.battle_books import take_books_key
@@ -1470,7 +1476,18 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             else None
         )
 
+        # AgentCore's A2A contract (AC-05): the configured agent as a team
+        # seat, on port 9000 at `/`, through the runtime's A2A transport.
+        _agentcore_seat = None
+        if _agentcore and not is_reload_parent:
+            from .agentcore.a2a import start_seat
+
+            _agentcore_seat = await start_seat()
+
         yield
+
+        if _agentcore_seat is not None:
+            await _agentcore_seat.stop()
 
         # The sessions this runtime holds are paused in their record before
         # it goes (MH-01): a listing from the record then says the truth.

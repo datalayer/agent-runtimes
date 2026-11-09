@@ -86,6 +86,56 @@ def use_workload_token(token: str) -> Iterator[None]:
         _WORKLOAD_TOKEN.reset(reset)
 
 
+#: The workload token a Datalayer pod was given by its companion (ID-06), the
+#: workload it is for and its region: outside AgentCore Runtime, the token
+#: the provider uses when no invocation carries one.
+_GIVEN: Dict[str, str] = {}
+
+
+def give_workload_token(token: str, workload_name: str, region: str) -> None:
+    """Hold the workload token the companion gave this pod; a later one replaces it.
+
+    Parameters
+    ----------
+    token : str
+        The workload access token (``GetWorkloadAccessTokenForJWT``'s answer).
+    workload_name : str
+        The workload identity it was asked for.
+    region : str
+        The AWS region of that workload identity.
+
+    Raises
+    ------
+    ValueError
+        When any of the three is empty, naming it in a sentence.
+    """
+    given = {
+        "workload_access_token": (token or "").strip(),
+        "workload_name": (workload_name or "").strip(),
+        "region": (region or "").strip(),
+    }
+    missing = [name for name, value in given.items() if not value]
+    if missing:
+        raise ValueError(
+            "A workload token is given with its workload_access_token, "
+            f"workload_name and region; {', '.join(missing)} "
+            f"{'is' if len(missing) == 1 else 'are'} empty or missing."
+        )
+    _hold(given["workload_access_token"])
+    _GIVEN.clear()
+    _GIVEN.update(given)
+
+
+def given_workload() -> Dict[str, str]:
+    """Return the workload token this pod was given, its workload and region (or ``{}``)."""
+    return dict(_GIVEN)
+
+
+def forget_given_workload() -> None:
+    """Forget the workload token this pod was given (a test)."""
+    _GIVEN.clear()
+
+
 def _hold(token: str) -> str:
     from agent_runtimes.guardrails.credentials import hold
 
@@ -131,7 +181,10 @@ class AgentCoreIdentity:
 
             self._client = boto3.client(
                 "bedrock-agentcore",
-                region_name=self.region or os.environ.get("AWS_REGION") or None,
+                region_name=self.region
+                or _GIVEN.get("region")
+                or os.environ.get("AWS_REGION")
+                or None,
             )
         return self._client
 
@@ -158,6 +211,7 @@ class AgentCoreIdentity:
             str(context.get("workload_access_token") or "").strip()
             or workload_token_from_headers(context.get("headers") or {})
             or _WORKLOAD_TOKEN.get()
+            or _GIVEN.get("workload_access_token", "")
         )
         if token:
             return token
@@ -303,6 +357,9 @@ __all__ = [
     "WORKLOAD_NAME_ENV",
     "WORKLOAD_TOKEN_HEADER",
     "AgentCoreIdentity",
+    "forget_given_workload",
+    "give_workload_token",
+    "given_workload",
     "use_workload_token",
     "workload_token_from_headers",
 ]
