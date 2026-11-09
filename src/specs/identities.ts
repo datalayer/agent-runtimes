@@ -643,6 +643,6 @@ export function getIdentity(ref: string): IdentitySpec | undefined {
   );
 }
 
-export function listIdentitys(): IdentitySpec[] {
+export function listIdentities(): IdentitySpec[] {
   return Object.values(IDENTITY_CATALOGUE);
 }

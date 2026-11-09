@@ -16,6 +16,7 @@ from typing import Dict
 
 from agent_runtimes.types import IdentitySpec
 
+
 # ============================================================================
 # Identity Definitions
 # ============================================================================
