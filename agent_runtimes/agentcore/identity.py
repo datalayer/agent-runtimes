@@ -192,13 +192,35 @@ class AgentCoreIdentity:
         return await asyncio.to_thread(getattr(self.client(), operation), **parameters)
 
     async def inbound_token(self, caller: Mapping[str, Any], audience: str) -> str:
-        """Exchange for IAM's token for ``audience`` (the runtime's ARN), by the exchange given."""
-        if self.exchange is None:
-            raise IdentityRefused(
-                f"No token exchange is configured: AgentCore accepts IAM's exchanged token "
-                f"for {audience}, which the platform mints."
+        """Exchange for IAM's token for ``audience`` (an AgentCore resource's ARN).
+
+        By the exchange given; else, on an AgentCore runtime behind IAM's
+        authorizer, the runtime's own exchange of the caller's ``token`` (the
+        invocation's) for the resource.
+        """
+        exchange = self.exchange
+        if exchange is None:
+            from agent_runtimes.agentcore.exchange import (
+                ExchangeRefused,
+                runtime_exchange,
             )
-        token = str(await _call(self.exchange(caller, audience)) or "")
+
+            runtime = runtime_exchange()
+            if runtime is None:
+                raise IdentityRefused(
+                    f"No token exchange is configured: AgentCore accepts IAM's exchanged token "
+                    f"for {audience}, which the platform mints."
+                )
+
+            async def exchange(caller: Mapping[str, Any], audience: str) -> str:
+                try:
+                    return await runtime.token_for_resource(
+                        str(caller.get("token") or ""), audience
+                    )
+                except ExchangeRefused as refused:
+                    raise IdentityRefused(str(refused)) from None
+
+        token = str(await _call(exchange(caller, audience)) or "")
         if not token:
             raise IdentityRefused(
                 f"The token exchange answered no token for {audience}."

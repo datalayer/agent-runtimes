@@ -92,7 +92,9 @@ def _toolsets(monkeypatch: pytest.MonkeyPatch, *toolsets: _Toolset) -> list[Any]
     queue = list(toolsets)
     built: list[Any] = []
 
-    def remote_toolset(server_id: str, url: str, headers: Any, timeout: float) -> Any:
+    def remote_toolset(
+        server_id: str, url: str, headers: Any, timeout: float, auth: Any = None
+    ) -> Any:
         built.append((server_id, url, dict(headers)))
         return queue.pop(0)
 

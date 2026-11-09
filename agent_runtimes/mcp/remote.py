@@ -191,7 +191,11 @@ def refusals_client_factory(refusals: Refusals) -> Any:
 
 
 def remote_toolset(
-    server_id: str, url: str, headers: dict[str, str], init_timeout: float
+    server_id: str,
+    url: str,
+    headers: dict[str, str],
+    init_timeout: float,
+    auth: httpx2.Auth | None = None,
 ) -> Any:
     """
     The toolset of a remote server: its url, its headers sent with every request.
@@ -206,6 +210,9 @@ def remote_toolset(
         The headers of every request, expanded: the bearer among them.
     init_timeout : float
         How long the handshake is given, in seconds.
+    auth : httpx2.Auth, optional
+        Set each request's bearer as it is sent: an AgentCore Gateway's,
+        minted for the run (AC-20).
 
     Returns
     -------
@@ -223,6 +230,7 @@ def remote_toolset(
         StreamableHttpTransport(
             url,
             headers=dict(headers),
+            auth=auth,
             httpx_client_factory=refusals_client_factory(refusals),
         ),
         id=server_id,

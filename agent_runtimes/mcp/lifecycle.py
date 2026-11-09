@@ -27,8 +27,10 @@ from agent_runtimes.guardrails.credentials import (
     redact,
 )
 from agent_runtimes.guardrails.declared_secrets import env_for_server
+from agent_runtimes.mcp.agentcore_gateway import gateway_auth_of
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.mcp.remote import remote_toolset
+from agent_runtimes.plugins.points import IdentityRefused
 from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
@@ -815,8 +817,20 @@ class MCPLifecycleManager:
                     logger.error(f"✗ {problem}")
                     self._failed_servers[server_id] = problem
                     return None
+                # An AgentCore Gateway: its bearer minted for the run by
+                # the agentcore identity provider, never a header (AC-20).
+                try:
+                    gateway_auth = gateway_auth_of(config)
+                except IdentityRefused as refused:
+                    logger.error(f"✗ {refused}")
+                    self._failed_servers[server_id] = str(refused)
+                    return None
                 pydantic_server = remote_toolset(
-                    server_id, config.url, headers, MCP_SERVER_HANDSHAKE_TIMEOUT
+                    server_id,
+                    config.url,
+                    headers,
+                    MCP_SERVER_HANDSHAKE_TIMEOUT,
+                    auth=gateway_auth,
                 )
             elif config.transport == "streamable-http" and config.url:
                 # Its command runs as a local HTTP process, reached at its

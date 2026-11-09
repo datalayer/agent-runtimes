@@ -53,7 +53,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "import tempfile",
         "from typing import Dict",
         "",
-        "from agent_runtimes.types import MCPServer",
+        "from agent_runtimes.types import MCPServer"
+        + (", MCPServerAuth" if any(spec.get("auth") for spec in specs) else ""),
         "",
         "# " + "=" * 76,
         "# MCP Server Definitions",
@@ -140,6 +141,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             for key, value in headers.items():
                 lines.append(f'        "{key}": "{value}",')
             lines.append("    },")
+        # A bearer minted for the run (AC-20): an AgentCore Gateway trusting
+        # the identity named, never a header written in the spec.
+        if spec.get("auth"):
+            auth = spec["auth"]
+            lines.append(
+                f'    auth=MCPServerAuth(kind="{auth["kind"]}", identity="{auth["identity"]}"),'
+            )
 
         # Add env field if present
         if env_formatted:
@@ -251,7 +259,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 def _actions_of(spec: dict[str, Any]) -> dict[str, Any]:
     """What the spec says its tools do, as plain data: the classes by tool, the day checked, the note."""
     actions = spec.get("actions") or {}
-    tidy: dict[str, Any] = {"tools": {str(k): str(v) for k, v in (actions.get("tools") or {}).items()}}
+    tidy: dict[str, Any] = {
+        "tools": {str(k): str(v) for k, v in (actions.get("tools") or {}).items()}
+    }
     if actions.get("checked"):
         tidy["checked"] = str(actions["checked"])
     if actions.get("note"):
@@ -332,6 +342,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                         + "},"
                     ]
                     if spec.get("headers")
+                    else []
+                ),
+                *(
+                    [f"  auth: {json.dumps(spec['auth'], ensure_ascii=False)},"]
+                    if spec.get("auth")
                     else []
                 ),
                 f"  transport: '{spec.get('transport', 'stdio')}',",

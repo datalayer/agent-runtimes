@@ -52,26 +52,43 @@ def _serving(monkeypatch: pytest.MonkeyPatch, *uids: str) -> None:
     monkeypatch.setattr(principal, "deployments_served", lambda: list(uids))
 
 
-def test_one_served_deployment_lends_its_principal(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_one_served_deployment_lends_its_principal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _serving(monkeypatch, "dep-1")
     principal.give_principal_token("dep-1", "principal-token-1", expires_in=3600)
-    assert MCPLifecycleManager._principal_key(SERVER, _asking(), {}) == "principal-token-1"
+    assert (
+        MCPLifecycleManager._principal_key(SERVER, _asking(), {}) == "principal-token-1"
+    )
 
 
 def test_a_key_of_the_runtimes_own_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
     _serving(monkeypatch, "dep-1")
     principal.give_principal_token("dep-1", "principal-token-1", expires_in=3600)
-    assert MCPLifecycleManager._principal_key(SERVER, _asking(), {"DATALAYER_API_KEY": "own"}) == ""
+    assert (
+        MCPLifecycleManager._principal_key(
+            SERVER, _asking(), {"DATALAYER_API_KEY": "own"}
+        )
+        == ""
+    )
 
 
 def test_a_server_not_asking_gets_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     _serving(monkeypatch, "dep-1")
     principal.give_principal_token("dep-1", "principal-token-1", expires_in=3600)
-    other = MCPServer(id="x", name="X", transport="streamable-http", url="https://x.example/mcp", headers={"Authorization": "Bearer ${OTHER}"})
+    other = MCPServer(
+        id="x",
+        name="X",
+        transport="streamable-http",
+        url="https://x.example/mcp",
+        headers={"Authorization": "Bearer ${OTHER}"},
+    )
     assert MCPLifecycleManager._principal_key("x", other, {}) == ""
 
 
-def test_no_deployment_or_two_with_different_principals_choose_none(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_no_deployment_or_two_with_different_principals_choose_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _serving(monkeypatch)
     assert MCPLifecycleManager._principal_key(SERVER, _asking(), {}) == ""
     _serving(monkeypatch, "dep-1", "dep-2")
@@ -85,12 +102,20 @@ def test_no_deployment_or_two_with_different_principals_choose_none(monkeypatch:
 
 
 @pytest.mark.asyncio
-async def test_the_server_starts_with_the_principal_as_its_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_the_server_starts_with_the_principal_as_its_bearer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _serving(monkeypatch, "dep-1")
     principal.give_principal_token("dep-1", "principal-token-1", expires_in=3600)
     seen: dict[str, str] = {}
 
-    def remote_toolset(server_id: str, url: str, headers: dict[str, str], timeout: float):
+    def remote_toolset(
+        server_id: str,
+        url: str,
+        headers: dict[str, str],
+        timeout: float,
+        auth: object = None,
+    ):
         seen.update(headers)
         return _Toolset()
 

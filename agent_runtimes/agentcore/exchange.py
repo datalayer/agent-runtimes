@@ -115,7 +115,11 @@ class TokenExchange:
         self._client = client or (lambda: httpx.AsyncClient(timeout=TIMEOUT))
         self._clock = clock
         self._kept: dict[str, PlatformTokens] = {}
+        self._resources: dict[tuple[str, str], tuple[str, float]] = {}
         self._lock = asyncio.Lock()
+        #: The last invocation's inbound token: an AgentCore microVM serves
+        #: one session, one person, so it is theirs.
+        self.last_inbound = ""
 
     async def tokens_for(self, inbound: str) -> PlatformTokens:
         """Return the platform tokens of an inbound token, exchanged once per expiry.
@@ -141,6 +145,7 @@ class TokenExchange:
                 "An invocation of this runtime carries the token AgentCore "
                 "validated in its Authorization header.",
             )
+        self.last_inbound = inbound
         async with self._lock:
             now = self._clock()
             self._kept = {
@@ -153,10 +158,10 @@ class TokenExchange:
                 return kept
             async with self._client() as client:
                 platform, platform_expiry = await self._exchange(
-                    client, inbound, PLATFORM_AUDIENCE
+                    client, inbound, self.runtime_arn, PLATFORM_AUDIENCE
                 )
                 inference, inference_expiry = await self._exchange(
-                    client, inbound, INFERENCE_AUDIENCE
+                    client, inbound, self.runtime_arn, INFERENCE_AUDIENCE
                 )
             tokens = PlatformTokens(
                 platform=platform,
@@ -166,21 +171,68 @@ class TokenExchange:
             self._kept[inbound] = tokens
             return tokens
 
+    async def token_for_resource(self, inbound: str, resource: str) -> str:
+        """Return IAM's RS256 token for another AgentCore resource (a gateway's ARN).
+
+        Parameters
+        ----------
+        inbound : str
+            The RS256 token AgentCore validated for this runtime.
+        resource : str
+            The ARN the token is for, its ``aud``.
+
+        Returns
+        -------
+        str
+            The token, held as a secret, kept until it expires.
+
+        Raises
+        ------
+        ExchangeRefused
+            When there is no inbound token, or IAM refuses or cannot be asked.
+        """
+        if not inbound:
+            raise ExchangeRefused(
+                401,
+                f"No invocation's token to exchange for {resource}: this runtime "
+                "was not invoked behind Datalayer IAM's authorizer yet.",
+            )
+        async with self._lock:
+            now = self._clock()
+            kept = self._resources.get((inbound, resource))
+            if kept is not None and kept[1] - EXPIRY_MARGIN > now:
+                return kept[0]
+            async with self._client() as client:
+                token, expiry = await self._exchange(client, inbound, resource, None)
+            self._resources = {
+                key: value
+                for key, value in self._resources.items()
+                if value[1] - EXPIRY_MARGIN > now
+            }
+            self._resources[(inbound, resource)] = (token, expiry)
+            return token
+
     async def _exchange(
-        self, client: httpx.AsyncClient, inbound: str, audience: str
+        self,
+        client: httpx.AsyncClient,
+        inbound: str,
+        resource: str,
+        audience: Optional[str],
     ) -> tuple[str, float]:
-        """Ask IAM for one token of ``audience``; answer it and when it expires."""
+        """Ask IAM for one token of ``resource`` (and ``audience``); answer it and its expiry."""
         url = f"{self.iam_url}{TOKEN_PATH}"
+        data = {
+            "grant_type": GRANT_TYPE,
+            "subject_token": inbound,
+            "subject_token_type": ACCESS_TOKEN_TYPE,
+            "resource": resource,
+        }
+        if audience:
+            data["audience"] = audience
         try:
             response = await client.post(
                 url,
-                data={
-                    "grant_type": GRANT_TYPE,
-                    "subject_token": inbound,
-                    "subject_token_type": ACCESS_TOKEN_TYPE,
-                    "resource": self.runtime_arn,
-                    "audience": audience,
-                },
+                data=data,
                 headers={"Accept": "application/json"},
             )
         except httpx.HTTPError as error:

@@ -1472,6 +1472,21 @@ class AgentSuggestion(BaseModel):
     )
 
 
+class MCPServerAuth(BaseModel):
+    """How a remote MCP server's bearer is minted for the run (AC-20)."""
+
+    kind: Literal["agentcore-gateway"] = Field(
+        ...,
+        description=(
+            "Who mints it: an Amazon Bedrock AgentCore Gateway, whose inbound "
+            "authorizer trusts the identity named"
+        ),
+    )
+    identity: str = Field(
+        ..., description="The identity of the identities catalogue it trusts, by id"
+    )
+
+
 class MCPServer(BaseModel):
     """
     Configuration for an MCP server.
@@ -1505,6 +1520,13 @@ class MCPServer(BaseModel):
         description=(
             "The headers a remote server is sent with every request, "
             "`${VAR}` expanded as it starts: the bearer among them"
+        ),
+    )
+    auth: Optional[MCPServerAuth] = Field(
+        default=None,
+        description=(
+            "A bearer minted for the run instead of one in `headers` "
+            "(an AgentCore Gateway trusting the identity named)"
         ),
     )
     enabled: bool = Field(default=True, description="Whether the server is enabled")
@@ -2478,7 +2500,9 @@ class BattleEvalSpec(BaseModel):
     """An eval of the catalogue that confirms a contestant's result."""
 
     eval: str = Field(..., description="An eval of the catalogue, `id` or `id:version`")
-    config: Dict[str, Any] = Field(default_factory=dict, description="What the evaluator is given")
+    config: Dict[str, Any] = Field(
+        default_factory=dict, description="What the evaluator is given"
+    )
     says: str = Field(default="", description="What passing confirms")
 
 
@@ -2504,7 +2528,8 @@ class BattleSpec(BaseModel):
         default=None, description="For a game: `pong` or `invaders`"
     )
     evals: List[BattleEvalSpec] = Field(
-        default_factory=list, description="The evals that confirm each contestant's result once the referee has a verdict"
+        default_factory=list,
+        description="The evals that confirm each contestant's result once the referee has a verdict",
     )
     rehearsal: BattleRehearsalSpec = Field(default_factory=BattleRehearsalSpec)
     enabled: bool = Field(default=True, description="Whether it may be played")
@@ -2588,7 +2613,9 @@ class IdentitySpec(BaseModel):
     protocols: List[str] = Field(default_factory=list)
     inbound: IdentityInboundSpec = Field(default_factory=IdentityInboundSpec)
     workload: IdentityWorkloadSpec = Field(default_factory=IdentityWorkloadSpec)
-    credentials: IdentityCredentialsSpec = Field(default_factory=IdentityCredentialsSpec)
+    credentials: IdentityCredentialsSpec = Field(
+        default_factory=IdentityCredentialsSpec
+    )
     custody: IdentityCustodySpec = Field(default_factory=IdentityCustodySpec)
     consent: IdentityConsentSpec = Field(default_factory=IdentityConsentSpec)
     pap: Optional[IdentityPapSpec] = Field(default=None)
