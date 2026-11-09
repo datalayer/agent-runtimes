@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.128
+
+What 1.5.127 carries (it never published: the evals-adapters gate installed agent-client-protocol 1.0.0, released on 9 November 2026 without `acp.helpers`, which the pinned inspect-ai imports; the gate's inspect environment now takes `agent-client-protocol<1`).
+
 ## 1.5.127
 
 **The Marketer lists and forgets what it remembers.** worker-marketer (agentspecs 0.0.167) carries datalayer-skills' memory skills — add, search, list and delete — as the Crawler does since 0.0.166, and its prompt says to use them and never to forget everything without the person's confirmation of how many. The Marketer's and the Crawler's memories are kept under the person and the agent, so a resumed agent reads back what it was told before its pause (tested for both).

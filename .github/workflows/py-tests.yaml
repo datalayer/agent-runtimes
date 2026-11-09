@@ -116,7 +116,7 @@ jobs:
         run: |
           version=$(sed -n 's/^INSPECT_VERSION = "\(.*\)"$/\1/p' agent_runtimes/evals/adapters/inspect_ai.py)
           uv venv "$RUNNER_TEMP/inspect"
-          uv pip install --python "$RUNNER_TEMP/inspect/bin/python" "inspect-ai==$version" openai packaging
+          uv pip install --python "$RUNNER_TEMP/inspect/bin/python" "inspect-ai==$version" "agent-client-protocol<1" openai packaging
           TIKTOKEN_CACHE_DIR="$RUNNER_TEMP/tiktoken" "$RUNNER_TEMP/inspect/bin/python" -c "import tiktoken; tiktoken.get_encoding('o200k_base')"
 
       - name: Install the pinned Harbor
