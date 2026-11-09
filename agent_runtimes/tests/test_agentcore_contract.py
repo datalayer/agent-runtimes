@@ -594,3 +594,27 @@ def test_the_agent_is_configured_at_start_as_a_pool_pods_is(
     assert str(refused.value) == (
         "The agentspec refused was not configured: Agentspec 'refused' not found."
     )
+
+
+def test_a_run_holds_the_workload_token_agentcore_sent():
+    """The `agentcore` identity provider finds the invocation's workload token while the run runs."""
+    import asyncio
+
+    from agent_runtimes.agentcore import identity
+    from agent_runtimes.agentcore.contract import collected
+
+    seen: list[str] = []
+
+    async def agent_app(scope, receive, send):
+        seen.append(identity._WORKLOAD_TOKEN.get())
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"{}"})
+
+    scope = {
+        "type": "http",
+        "headers": [(b"workloadaccesstoken", b"wat-123"), (b"host", b"x")],
+    }
+    status, _, _ = asyncio.run(collected(agent_app, scope, {"messages": []}, []))
+    assert status == 200
+    assert seen == ["wat-123"]
+    assert identity._WORKLOAD_TOKEN.get() == ""

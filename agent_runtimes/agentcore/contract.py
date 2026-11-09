@@ -366,6 +366,25 @@ def _receiver(payload: bytes, receive: Optional[Callable[[], Awaitable[Any]]]) -
     return receive_
 
 
+def _workload_of(scope: Mapping[str, Any]) -> Any:
+    """Hold, for the run, the workload token AgentCore Runtime sent with the invocation.
+
+    The ``agentcore`` identity provider reads it to reach AgentCore's token
+    vault for the person (AWS_IDENTITY ID-21); an invocation without one runs
+    with none held.
+    """
+    from agent_runtimes.agentcore.identity import (
+        use_workload_token,
+        workload_token_from_headers,
+    )
+
+    headers = {
+        bytes(name).decode("latin-1"): bytes(value).decode("latin-1")
+        for name, value in scope.get("headers") or []
+    }
+    return use_workload_token(workload_token_from_headers(headers))
+
+
 class _Streamed(Response):
     """The agent's AG-UI app answering the invocation itself: its SSE as it runs."""
 
@@ -380,7 +399,7 @@ class _Streamed(Response):
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         inner = _inner_scope(scope, self.forwarded, len(self.payload))
-        with LIVENESS.working():
+        with LIVENESS.working(), _workload_of(scope):
             await self.agent_app(inner, _receiver(self.payload, receive), send)
 
 
@@ -436,7 +455,7 @@ async def collected(
                 if on_event is not None:
                     await on_event(event)
 
-    with LIVENESS.working():
+    with LIVENESS.working(), _workload_of(scope):
         await agent_app(
             _inner_scope(scope, headers, len(payload)), _receiver(payload, None), send
         )
