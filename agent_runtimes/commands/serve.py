@@ -52,6 +52,14 @@ class Protocol(str, Enum):
     a2a = "a2a"
 
 
+class Target(str, Enum):
+    """
+    Where the server runs, when it answers a platform's own contract.
+    """
+
+    agentcore = "agentcore"
+
+
 def is_port_free(host: str, port: int) -> bool:
     """
     Check if a port is available for binding.
@@ -331,6 +339,7 @@ def serve_server(
     node: bool = False,
     disable_tool_approvals: bool = False,
     orchestrator_root: Optional[str] = None,
+    target: Optional[Target] = None,
 ) -> int:
     """
     Start the agent-runtimes server.
@@ -372,6 +381,11 @@ def serve_server(
         orchestrator_root: Register the orchestrator as an ACP agent, delegating
                            each turn to this agent: an agentspec ID, or an A2A
                            (http) or ACP (ws) endpoint. Unset, none is registered.
+        target: ``agentcore`` answers Amazon Bedrock AgentCore Runtime's
+                contract (AC-01): on ``0.0.0.0``, port 8080 (``AGENTCORE_PORT``
+                to change it), ``/invocations``, ``/ping`` and ``/ws`` at the
+                root, the agentspec named by ``AGENT_SPEC_ID`` configured at
+                start; it refuses to start without one.
 
     Returns:
         The actual port the server is running on
@@ -379,6 +393,31 @@ def serve_server(
     Raises:
         ServeError: If validation fails or server cannot start
     """
+    if target == Target.agentcore:
+        from agent_runtimes.agentcore.settings import (
+            TARGET_VARIABLE,
+            agentcore_settings,
+        )
+
+        try:
+            settings = agentcore_settings()
+        except ValueError as refused:
+            raise ServeError(str(refused)) from None
+        if agent_id:
+            raise ServeError(
+                "--target agentcore serves the agentspec of AGENT_SPEC_ID, not --agent-id."
+            )
+        from agent_runtimes.specs.agents import get_agent_spec
+
+        if not get_agent_spec(settings.spec_id):
+            raise ServeError(
+                f"AGENT_SPEC_ID names {settings.spec_id!r}, which the library does not have."
+            )
+        host, port, find_free_port_flag = settings.host, settings.port, False
+        protocol = Protocol.ag_ui
+        os.environ[TARGET_VARIABLE] = target.value
+        logger.info(f"AgentCore target: agentspec {settings.spec_id} on {host}:{port}")
+
     # Resolve the effective port:
     # - port == 0  → pick a random free port (default behaviour)
     # - port > 0 + find_free_port_flag → sequential search from port

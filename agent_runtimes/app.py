@@ -1116,6 +1116,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     _agent_node_stop_event = asyncio.Event()
     _node_enabled = is_node_enabled()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
+    from .agentcore.settings import is_agentcore_target
+
+    _agentcore = is_agentcore_target()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -1228,6 +1231,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         harness_id = os.environ.get("AGENT_RUNTIMES_HARNESS")
         if harness_id:
             await _create_harness_agent(app, harness_id, config.api_prefix)
+
+        # Amazon Bedrock AgentCore (AC-01): the agentspec of AGENT_SPEC_ID
+        # configured as a pool pod's is, before the first invocation.
+        if _agentcore and not is_reload_parent:
+            from .agentcore.contract import configure_at_start
+
+            await configure_at_start(app, config.api_prefix)
 
         # Register default agent if specified via CLI (--agent-id flag)
         default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
@@ -1641,6 +1651,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(a2ui_router, prefix=config.api_prefix)
     if triggers_webhook_router is not None:
         app.include_router(triggers_webhook_router, prefix=config.api_prefix)
+    if _agentcore:
+        # AgentCore Runtime's contract, at the root (AC-02).
+        from .agentcore.contract import router as agentcore_router
+
+        app.include_router(agentcore_router)
 
     # Note: AG-UI mounts and example mounts are added dynamically during lifespan startup
 
