@@ -204,24 +204,38 @@ def fake_mem0(monkeypatch: pytest.MonkeyPatch) -> type[FakeMem0]:
     return FakeMem0
 
 
-def _marketer() -> Any:
+#: The catalogue agents that keep the person's memories across a pause (the
+#: user, 9 November 2026): the Marketer and the Crawler.
+REMEMBERING_AGENTS = ["worker-marketer", "worker-crawler"]
+
+
+def _spec(agent_spec_id: str = "worker-marketer") -> Any:
     from agent_runtimes.routes.agents import get_library_agent_spec
 
-    spec = get_library_agent_spec("worker-marketer")
+    spec = get_library_agent_spec(agent_spec_id)
     assert spec is not None
     return spec
 
 
+def _marketer() -> Any:
+    return _spec("worker-marketer")
+
+
 def _runtime(
-    monkeypatch: pytest.MonkeyPatch, runtime_uid: str, user_uid: str
+    monkeypatch: pytest.MonkeyPatch,
+    runtime_uid: str,
+    user_uid: str,
+    agent_spec_id: str = "worker-marketer",
 ) -> MemoryCapability:
-    """The marketer's memory on a runtime launched for a user: its agent is `default`."""
+    """An agent's memory on a runtime launched for a user: its agent is `default`."""
     monkeypatch.setenv("DATALAYER_RUNTIME_ID", runtime_uid)
     monkeypatch.setenv("DATALAYER_USER_UID", user_uid)
     monkeypatch.delenv("AGENT_RUNTIMES_MEMORY_USER_ID", raising=False)
     monkeypatch.delenv("DATALAYER_USER_HANDLE", raising=False)
     capabilities = build_capabilities_from_agent_spec(
-        _marketer(), agent_id="default", model="bedrock:us.anthropic.claude-sonnet-4-6"
+        _spec(agent_spec_id),
+        agent_id="default",
+        model="bedrock:us.anthropic.claude-sonnet-4-6",
     )
     [memory] = [c for c in capabilities if isinstance(c, MemoryCapability)]
     assert get_memory_backend("default") is memory.backend
@@ -242,24 +256,35 @@ def test_the_marketer_s_spec_carries_mem0() -> None:
     assert app is not None and app.memory == "mem0"
 
 
+@pytest.mark.parametrize("agent_spec_id", REMEMBERING_AGENTS)
+def test_the_agent_s_spec_carries_mem0(agent_spec_id: str) -> None:
+    assert _spec(agent_spec_id).memory == "mem0"
+
+
+@pytest.mark.parametrize("agent_spec_id", REMEMBERING_AGENTS)
 def test_a_resumed_agent_reads_back_what_it_was_told_before_its_pause(
     datalayer_runtime: Dict[str, str],
     fake_mem0: type[FakeMem0],
     monkeypatch: pytest.MonkeyPatch,
+    agent_spec_id: str,
 ) -> None:
-    before = _runtime(monkeypatch, "01runtimebeforepause000000", "user-ada")
+    before = _runtime(
+        monkeypatch, "01runtimebeforepause000000", "user-ada", agent_spec_id
+    )
     said = asyncio.run(_tool(before, "remember")(BRAND_FACT))
     assert said == "Stored in memory."
     [row] = fake_mem0.rows.values()
     # Kept under the user and the agent's own id: nothing of the runtime's.
-    assert (row["user_id"], row["agent_id"]) == ("user-ada", "worker-marketer")
+    assert (row["user_id"], row["agent_id"]) == ("user-ada", agent_spec_id)
     assert row["infer"] is False
     assert "01runtimebeforepause000000" not in json.dumps(row)
 
     # Paused: the runtime stops, its process with it.
     asyncio.run(before.backend.close())
 
-    after = _runtime(monkeypatch, "01runtimeafterresume000000", "user-ada")
+    after = _runtime(
+        monkeypatch, "01runtimeafterresume000000", "user-ada", agent_spec_id
+    )
     assert after.backend is not before.backend
     answer = asyncio.run(_tool(after, "search_memory")("What is the brand voice?"))
     assert BRAND_FACT in answer
