@@ -102,6 +102,7 @@ from agent_runtimes.guardrails.tool_approvals import (
 )
 from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
 from agent_runtimes.mcp.lent_stdio import carry, hold, lent_url, release
+from agent_runtimes.otel.harness_spans import HarnessTurnSpans, traced_turn
 from agent_runtimes.types import HarnessSpec
 
 from .base import (
@@ -798,6 +799,9 @@ class _RuntimeFace:
 class ACPAgent(BaseAgent, ShieldProxy):
     """A harness, driven over ACP, as a Datalayer agent (see the module)."""
 
+    #: Where the turns' GenAI spans are made; the process's, under the scope, when ``None``.
+    genai_tracer_provider: Any = None
+
     def __init__(
         self,
         *,
@@ -1271,7 +1275,27 @@ class ACPAgent(BaseAgent, ShieldProxy):
     async def stream(
         self, prompt: str, context: AgentContext
     ) -> AsyncIterator[StreamEvent]:
-        """One turn: the harness's updates as the runtime's events, then ``done``."""
+        """Run one turn: the harness's updates as the runtime's events, then ``done``.
+
+        Its GenAI spans written as they come (AC-12): an ``invoke_agent`` span
+        for the turn, an ``execute_tool`` span for each tool call.
+        """
+        spans = HarnessTurnSpans(
+            agent_id=self._agent_id,
+            agent_name=self.name,
+            harness=self.harness.id,
+            session_id=context.session_id,
+            tracer_provider=self.genai_tracer_provider,
+        )
+        async for event in traced_turn(
+            self._stream_turn(prompt, context), prompt, spans
+        ):
+            yield event
+
+    async def _stream_turn(
+        self, prompt: str, context: AgentContext
+    ) -> AsyncIterator[StreamEvent]:
+        """Run one turn: the harness's updates as the runtime's events, then ``done``."""
         if not self.started:
             await self.initialize()
         runtime_session = context.session_id
