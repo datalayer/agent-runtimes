@@ -8,7 +8,7 @@ an AgentCore agent runtime with the agentspec's id in its environment
 (``AGENT_SPEC_ID``, and ``AGENT_RUNTIMES_TARGET=agentcore`` so the runtime
 knows where it runs and which identity provider it uses), speaking AG-UI
 (``protocolConfiguration.serverProtocol = AGUI``), optionally behind a JWT
-authorizer that trusts an OIDC issuer (Datalayer IAM, AWS_IDENTITY ID-02).
+authorizer that trusts an OIDC issuer (Datalayer IAM, ID-02).
 
 The calls, as botocore names them:
 

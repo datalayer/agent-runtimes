@@ -415,7 +415,7 @@ class AuthorizationTimedOut(IdentityRefused):
 
 @runtime_checkable
 class IdentityProvider(Protocol):
-    """The tokens a session acts with (AWS_IDENTITY §2): Datalayer IAM built
+    """The tokens a session acts with: Datalayer IAM built
     in, AgentCore Identity beside it. Each method is a coroutine.
     """
 

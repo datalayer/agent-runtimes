@@ -20,7 +20,7 @@ At the root, as AgentCore calls a container:
 Every request is a session: ``X-Amzn-Bedrock-AgentCore-Runtime-Session-Id``
 is read and mapped to the session uid (`session_ids`), the AG-UI ``threadId``.
 A run naming another thread is refused in a sentence. A session this process
-has not held is resumed from its record before the turn runs — META_HARNESS's
+has not held is resumed from its record before the turn runs — the session model's
 resume (`apps.sessions.rebuilt_from_record`, MH-03): its turns and tool rows
 given to the run as the conversation so far.
 """
@@ -242,7 +242,7 @@ def _carries_history(body: Mapping[str, Any]) -> bool:
 async def resumed(body: dict[str, Any], uid: str, bearer: str) -> dict[str, Any]:
     """The run, with the session's conversation from its record when this process never held it.
 
-    The resume is META_HARNESS's (MH-03, `rebuilt_from_record`): the turns and
+    The resume is the session model's (MH-03, `rebuilt_from_record`): the turns and
     the tool rows of the record, on the application the agent runs. A run
     bringing its own conversation, a session the record has no turn of (its
     first), and an agent running no application (nothing of its sessions is
