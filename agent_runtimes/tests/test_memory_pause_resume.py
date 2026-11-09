@@ -262,6 +262,20 @@ def test_the_agent_s_spec_carries_mem0(agent_spec_id: str) -> None:
 
 
 @pytest.mark.parametrize("agent_spec_id", REMEMBERING_AGENTS)
+def test_the_agent_can_list_and_forget_what_it_remembers(agent_spec_id: str) -> None:
+    # The datalayer-memory skills: the Marketer's since agentspecs 0.0.167
+    # (9 November 2026), as the Crawler's since 0.0.166.
+    skills = {str(skill).split(":", 1)[0] for skill in _spec(agent_spec_id).skills}
+    for skill in (
+        "datalayer-memory-add",
+        "datalayer-memory-search",
+        "datalayer-memory-list",
+        "datalayer-memory-delete",
+    ):
+        assert skill in skills
+
+
+@pytest.mark.parametrize("agent_spec_id", REMEMBERING_AGENTS)
 def test_a_resumed_agent_reads_back_what_it_was_told_before_its_pause(
     datalayer_runtime: Dict[str, str],
     fake_mem0: type[FakeMem0],
