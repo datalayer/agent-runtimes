@@ -83,6 +83,8 @@ def test_the_sessions_plugin_contributes_on_agent_teams_platform(first: str) -> 
         "session.format",
         "session.carry",
         "session.hook",
+        "runtime.target",
+        "identity.provider",
     }
     assert all(counts.values()), counts
 

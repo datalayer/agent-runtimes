@@ -1,8 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``agent-runtimes`` reactor extension (MH-F01): the session's points,
-and the built-in plugin that contributes today's implementations.
+"""The ``agent-runtimes`` reactor extension (MH-F01): the session's points
+— with where it runs (``runtime.target``) and the tokens it acts with
+(``identity.provider``) — and the built-in plugin that contributes today's
+implementations.
 
 Advertised under ``datalayer.reactor.extensions`` beside ``agent-protocols``
 (``pyproject.toml``), so a reactor host that discovers extensions gets the
@@ -29,7 +31,8 @@ DEFAULT_ORDER = 0
 
 class SessionsPlugin:
     """Contributes the harness catalogue, the stores, the format, the carry
-    policy and the hooks agent-runtimes ships (:mod:`.builtin`).
+    policy, the hooks, the ``agentcore`` target and the ``datalayer`` and
+    ``agentcore`` identity providers agent-runtimes ships (:mod:`.builtin`).
     """
 
     @hookimpl
@@ -47,7 +50,8 @@ def plugin() -> tuple[PluginManifest, SessionsPlugin]:
             version="1.0.0",
             description=(
                 "The session's points — harness, session.store, session.format, "
-                "session.carry, session.hook — and what agent-runtimes contributes to each."
+                "session.carry, session.hook, runtime.target, identity.provider — "
+                "and what agent-runtimes contributes to each."
             ),
             tags=["agent-runtimes", "sessions"],
             contribution_points=[point.id for point in POINTS],
@@ -67,7 +71,8 @@ def extension() -> ReactorExtension:
             display_name="Agent runtimes",
             description=(
                 "The session as the unit of agent-runtimes: its harnesses, where it is kept, "
-                "the files it travels as, what a swap carries, what runs before each operation."
+                "the files it travels as, what a swap carries, what runs before each operation, "
+                "where it runs and the tokens it acts with."
             ),
             octicon="versions",
         ),

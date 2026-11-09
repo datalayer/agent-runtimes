@@ -72,6 +72,8 @@ def test_the_points_are_registered_at_start(platform: PluginPlatform) -> None:
         "session.format",
         "session.carry",
         "session.hook",
+        "runtime.target",
+        "identity.provider",
     ]
     [held] = [e for e in platform.list_extensions() if e["name"] == host.EXTENSION]
     assert held["plugins"] == [
