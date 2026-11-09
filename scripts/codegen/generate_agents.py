@@ -356,11 +356,13 @@ def load_identity_ids(specs_dir: Path) -> set[str]:
 def check_identities(
     specs: List[tuple[str, Dict[str, Any]]], identity_ids: set[str]
 ) -> None:
-    """Refuse an agent whose `identity` is not an id of the identities catalogue."""
+    """Refuse an agent that names no identity, or one the identities catalogue does not hold."""
     problems = []
     for _, spec in specs:
         said = spec.get("identity")
-        if said is None:
+        if not said:
+            if identity_ids:
+                problems.append(f"{spec.get('id')}: identity is required (who the agent acts as)")
             continue
         base, _, version = str(said).rpartition(":")
         identity = base if base and "." in version else str(said)

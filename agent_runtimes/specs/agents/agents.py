@@ -78,6 +78,7 @@ EXAMPLE_A2A_RESEARCHER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_A2A_WRITER_AGENTSPEC_0_0_1 = Agentspec(
@@ -134,6 +135,7 @@ EXAMPLE_A2A_WRITER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_A2A_AGENTSPEC_0_0_1 = Agentspec(
@@ -218,6 +220,7 @@ Answer in the conversation, and only with the tools you actually have; never cal
         ],
         include_general_purpose=False,
     ),
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_A2UI_AGENT_SPEC_0_0_1 = Agentspec(
@@ -305,6 +308,7 @@ How to respond:
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
@@ -418,6 +422,7 @@ screen â€” do not apologise for it or offer to fix the code.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
@@ -531,6 +536,7 @@ helpers or skills in the sandbox; write the Python yourself.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -587,6 +593,7 @@ EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1 = Agentspec(
@@ -642,6 +649,7 @@ EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1 = Agentspec(
@@ -714,6 +722,7 @@ IMPORTANT:
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1 = Agentspec(
@@ -770,6 +779,7 @@ EXAMPLE_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
@@ -826,6 +836,7 @@ EXAMPLE_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -882,6 +893,7 @@ EXAMPLE_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1 = Agentspec(
@@ -938,6 +950,7 @@ EXAMPLE_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1 = Agentspec(
@@ -1009,6 +1022,7 @@ Use the `get_weather` tool to fetch current weather data.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_BLANK_AGENTSPEC_0_0_1 = Agentspec(
@@ -1061,6 +1075,7 @@ EXAMPLE_BLANK_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1 = Agentspec(
@@ -1117,6 +1132,7 @@ EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_CHECKPOINTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -1188,6 +1204,7 @@ Answer in the conversation, briefly, and only with the tools you actually have; 
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1 = Agentspec(
@@ -1252,6 +1269,7 @@ EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1 = Agentspec(
@@ -1316,6 +1334,7 @@ EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_CODEMODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -1382,6 +1401,7 @@ Codemode is the point of this agent: do a whole task in one execute_code call â€
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_COMPACTION_AGENTSPEC_0_0_1 = Agentspec(
@@ -1446,6 +1466,7 @@ EXAMPLE_COMPACTION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1 = Agentspec(
@@ -1502,6 +1523,7 @@ EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1 = Agentspec(
@@ -1558,6 +1580,7 @@ EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_DECKS_AGENTSPEC_0_0_1 = Agentspec(
@@ -1692,6 +1715,7 @@ invent a tool name.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1 = Agentspec(
@@ -1759,6 +1783,7 @@ EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1 = Agentspec(
@@ -1826,6 +1851,7 @@ EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -1884,6 +1910,7 @@ EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_EVALS_AGENTSPEC_0_0_1 = Agentspec(
@@ -1942,6 +1969,7 @@ EXAMPLE_EVALS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1 = Agentspec(
@@ -1998,6 +2026,7 @@ EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1 = Agentspec(
@@ -2054,6 +2083,7 @@ EXAMPLE_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1 = Agentspec(
@@ -2110,6 +2140,7 @@ EXAMPLE_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_FULL_AGENTSPEC_0_0_1 = Agentspec(
@@ -2199,6 +2230,7 @@ EXAMPLE_FULL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1 = Agentspec(
@@ -2255,6 +2287,7 @@ EXAMPLE_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1 = Agentspec(
@@ -2362,6 +2395,7 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
     },
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1 = Agentspec(
@@ -2446,6 +2480,7 @@ beautifully. Just acknowledge that you've created the haiku.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_CLAUDE_CODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -2497,6 +2532,7 @@ EXAMPLE_HARNESS_CLAUDE_CODE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_CODEX_AGENTSPEC_0_0_1 = Agentspec(
@@ -2548,6 +2584,7 @@ EXAMPLE_HARNESS_CODEX_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_FAST_AGENT_SPEC_0_0_1 = Agentspec(
@@ -2599,6 +2636,7 @@ EXAMPLE_HARNESS_FAST_AGENT_SPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_GEMINI_CLI_AGENTSPEC_0_0_1 = Agentspec(
@@ -2650,6 +2688,7 @@ EXAMPLE_HARNESS_GEMINI_CLI_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_GOOSE_AGENTSPEC_0_0_1 = Agentspec(
@@ -2701,6 +2740,7 @@ EXAMPLE_HARNESS_GOOSE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_OPENCODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -2752,6 +2792,7 @@ EXAMPLE_HARNESS_OPENCODE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_OPENHANDS_AGENTSPEC_0_0_1 = Agentspec(
@@ -2803,6 +2844,7 @@ EXAMPLE_HARNESS_OPENHANDS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HARNESS_PI_AGENTSPEC_0_0_1 = Agentspec(
@@ -2854,6 +2896,7 @@ EXAMPLE_HARNESS_PI_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HOOKS_AGENTSPEC_0_0_1 = Agentspec(
@@ -2979,6 +3022,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
     },
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1 = Agentspec(
@@ -3035,6 +3079,7 @@ EXAMPLE_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1 = Agentspec(
@@ -3110,6 +3155,7 @@ IMPORTANT:
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_INFERENCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -3174,6 +3220,7 @@ EXAMPLE_INFERENCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1 = Agentspec(
@@ -3230,6 +3277,7 @@ EXAMPLE_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_MCP_AGENTSPEC_0_0_1 = Agentspec(
@@ -3299,6 +3347,7 @@ EXAMPLE_MCP_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_MEMORY_AGENTSPEC_0_0_1 = Agentspec(
@@ -3363,6 +3412,7 @@ EXAMPLE_MEMORY_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
@@ -3427,6 +3477,7 @@ EXAMPLE_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1 = Agentspec(
@@ -3483,6 +3534,7 @@ EXAMPLE_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -3539,6 +3591,7 @@ EXAMPLE_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1 = Agentspec(
@@ -3604,6 +3657,7 @@ EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1 = Agentspec(
@@ -3672,6 +3726,7 @@ EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1 = Agentspec(
@@ -3727,6 +3782,7 @@ EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1 = Agentspec(
@@ -3797,6 +3853,7 @@ EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 EXAMPLE_OTEL_AGENTSPEC_0_0_1 = Agentspec(
@@ -3863,6 +3920,7 @@ EXAMPLE_OTEL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
@@ -3961,6 +4019,7 @@ If mode is ambiguous, default to JSON.""",
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1 = Agentspec(
@@ -4049,6 +4108,7 @@ EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1 = Agentspec(
         "required": ["project"],
     },
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_PLAYER_AGENTSPEC_0_0_1 = Agentspec(
@@ -4113,6 +4173,7 @@ playing until the arena says the game is over.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1 = Agentspec(
@@ -4169,6 +4230,7 @@ EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -4225,6 +4287,7 @@ EXAMPLE_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1 = Agentspec(
@@ -4281,6 +4344,7 @@ EXAMPLE_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1 = Agentspec(
@@ -4345,6 +4409,7 @@ EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_DATALAYER_AGENTSPEC_0_0_1 = Agentspec(
@@ -4409,6 +4474,7 @@ EXAMPLE_SANDBOX_DATALAYER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1 = Agentspec(
@@ -4473,6 +4539,7 @@ EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1 = Agentspec(
@@ -4537,6 +4604,7 @@ EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1 = Agentspec(
@@ -4601,6 +4669,7 @@ EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1 = Agentspec(
@@ -4665,6 +4734,7 @@ EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1 = Agentspec(
@@ -4729,6 +4799,7 @@ EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1 = Agentspec(
@@ -4793,6 +4864,7 @@ EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1 = Agentspec(
@@ -4860,6 +4932,7 @@ Don't describe the full recipe.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SIMPLE_AGENTSPEC_0_0_1 = Agentspec(
@@ -4939,6 +5012,7 @@ EXAMPLE_SIMPLE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SKILLS_AGENTSPEC_0_0_1 = Agentspec(
@@ -5015,6 +5089,7 @@ EXAMPLE_SKILLS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -5095,6 +5170,7 @@ Answer in the conversation, and only with the tools you actually have; never cal
         ],
         include_general_purpose=True,
     ),
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1 = Agentspec(
@@ -5199,6 +5275,7 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
     },
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1 = Agentspec(
@@ -5260,6 +5337,7 @@ EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1 = Agentspec(
@@ -5362,6 +5440,7 @@ Rules you do not break:
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_DATA_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
@@ -5510,6 +5589,7 @@ been given; never invent a tool name.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -5619,6 +5699,7 @@ Where you can execute the notebook, verify by running rather than by eye. Where 
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1 = Agentspec(
@@ -5724,6 +5805,7 @@ Rules you do not break:
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_NOTEBOOK_REVIEWER_AGENTSPEC_0_0_1 = Agentspec(
@@ -5819,6 +5901,7 @@ you have been given; never invent a tool name.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1 = Agentspec(
@@ -5918,6 +6001,7 @@ you have been given; never invent a tool name.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 JUPYTER_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -6085,6 +6169,7 @@ On execution: where you can run code, run it to show a result rather than assert
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 LOOP_SHELL_AGENTSPEC_0_0_1 = Agentspec(
@@ -6226,6 +6311,7 @@ switches the editor, `/help` lists the rest.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_ACCOUNTANT_AGENTSPEC_0_0_1 = Agentspec(
@@ -6294,6 +6380,7 @@ WORKER_ACCOUNTANT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1 = Agentspec(
@@ -6353,6 +6440,7 @@ WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -6484,6 +6572,7 @@ WORKER_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1 = Agentspec(
@@ -6593,6 +6682,7 @@ WORKER_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_AP_INVOICE_AGENTSPEC_0_0_1 = Agentspec(
@@ -6648,6 +6738,7 @@ WORKER_AP_INVOICE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1 = Agentspec(
@@ -6750,6 +6841,7 @@ WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1 = Agentspec(
@@ -6803,6 +6895,7 @@ WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1 = Agentspec(
@@ -6932,6 +7025,7 @@ WORKER_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_BACKTEST_AUDITOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -6986,6 +7080,7 @@ WORKER_BACKTEST_AUDITOR_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1 = Agentspec(
@@ -7040,6 +7135,7 @@ WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1 = Agentspec(
@@ -7093,6 +7189,7 @@ WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1 = Agentspec(
@@ -7146,6 +7243,7 @@ WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1 = Agentspec(
@@ -7200,6 +7298,7 @@ WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1 = Agentspec(
@@ -7301,6 +7400,7 @@ WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_CMS_ASTRO_AGENTSPEC_0_0_1 = Agentspec(
@@ -7464,6 +7564,7 @@ Use only tools actually provided to you.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CODING_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -7517,6 +7618,7 @@ WORKER_CODING_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1 = Agentspec(
@@ -7571,6 +7673,7 @@ WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COLLECTIONS_AGENTSPEC_0_0_1 = Agentspec(
@@ -7625,6 +7728,7 @@ WORKER_COLLECTIONS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1 = Agentspec(
@@ -7678,6 +7782,7 @@ WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COMPETITIVE_INTELLIGENCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -7732,6 +7837,7 @@ WORKER_COMPETITIVE_INTELLIGENCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1 = Agentspec(
@@ -7799,6 +7905,7 @@ WORKER_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
@@ -7884,6 +7991,7 @@ WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_COMPUTE_COST_OPTIMIZER_AGENTSPEC_0_0_1 = Agentspec(
@@ -7937,6 +8045,7 @@ WORKER_COMPUTE_COST_OPTIMIZER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CONTENT_REPURPOSING_AGENTSPEC_0_0_1 = Agentspec(
@@ -7991,6 +8100,7 @@ WORKER_CONTENT_REPURPOSING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
@@ -8145,6 +8255,7 @@ WORKER_CROP_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CURTAILMENT_INVESTIGATOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -8198,6 +8309,7 @@ WORKER_CURTAILMENT_INVESTIGATOR_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -8258,6 +8370,7 @@ WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
@@ -8364,6 +8477,7 @@ WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
         "required": ["research_goal"],
     },
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1 = Agentspec(
@@ -8457,6 +8571,7 @@ WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1 = Agentspec(
@@ -8510,6 +8625,7 @@ WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1 = Agentspec(
@@ -8578,6 +8694,7 @@ WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -8794,6 +8911,7 @@ WORKER_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_ENERGY_TRADING_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
@@ -8847,6 +8965,7 @@ WORKER_ENERGY_TRADING_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_ENVIRONMENTAL_COMPLIANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -8901,6 +9020,7 @@ WORKER_ENVIRONMENTAL_COMPLIANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_EVENT_RESPONSE_AGENTSPEC_0_0_1 = Agentspec(
@@ -8954,6 +9074,7 @@ WORKER_EVENT_RESPONSE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_EVIDENCE_REPOSITORY_AGENTSPEC_0_0_1 = Agentspec(
@@ -9008,6 +9129,7 @@ WORKER_EVIDENCE_REPOSITORY_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_EXPENSE_AUDIT_AGENTSPEC_0_0_1 = Agentspec(
@@ -9061,6 +9183,7 @@ WORKER_EXPENSE_AUDIT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_EXPOSURE_DATA_QUALITY_AGENTSPEC_0_0_1 = Agentspec(
@@ -9116,6 +9239,7 @@ WORKER_EXPOSURE_DATA_QUALITY_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1 = Agentspec(
@@ -9224,6 +9348,7 @@ WORKER_EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1 = Agentspec(
@@ -9286,6 +9411,7 @@ WORKER_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_FACTOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -9339,6 +9465,7 @@ WORKER_FACTOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_FINANCIAL_VIZ_AGENTSPEC_0_0_1 = Agentspec(
@@ -9429,6 +9556,7 @@ WORKER_FINANCIAL_VIZ_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -9554,6 +9682,7 @@ WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_GITHUB_AGENT_SPEC_0_0_1 = Agentspec(
@@ -9697,6 +9826,7 @@ WORKER_GRID_FORECAST_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_INFORMATION_ROUTING_AGENTSPEC_0_0_1 = Agentspec(
@@ -9793,6 +9923,7 @@ WORKER_INFORMATION_ROUTING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_INFRASTRUCTURE_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
@@ -9846,6 +9977,7 @@ WORKER_INFRASTRUCTURE_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
@@ -9906,6 +10038,7 @@ WORKER_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_INTERVIEW_GUIDE_AGENTSPEC_0_0_1 = Agentspec(
@@ -9960,6 +10093,7 @@ WORKER_INTERVIEW_GUIDE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1 = Agentspec(
@@ -10018,6 +10152,7 @@ WORKER_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_JOB_HUNTER_AGENTSPEC_0_0_1 = Agentspec(
@@ -10072,6 +10207,7 @@ WORKER_JOB_HUNTER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MAIL_TRIAGE_AGENTSPEC_0_0_1 = Agentspec(
@@ -10127,6 +10263,7 @@ WORKER_MAIL_TRIAGE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
@@ -10260,6 +10397,7 @@ WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
@@ -10322,6 +10460,7 @@ WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1 = Agentspec(
@@ -10375,6 +10514,7 @@ WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -10505,6 +10645,7 @@ WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1 = Agentspec(
@@ -10558,6 +10699,7 @@ WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1 = Agentspec(
@@ -10676,6 +10818,7 @@ WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1 = Agentspec(
         "required": ["topics"],
     },
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1 = Agentspec(
@@ -10813,6 +10956,7 @@ WORKER_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1 = Agentspec(
@@ -10937,6 +11081,7 @@ WORKER_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -10996,6 +11141,7 @@ WORKER_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PERFORMANCE_ATTRIBUTION_AGENTSPEC_0_0_1 = Agentspec(
@@ -11051,6 +11197,7 @@ WORKER_PERFORMANCE_ATTRIBUTION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PIPELINE_DEBUGGER_AGENTSPEC_0_0_1 = Agentspec(
@@ -11105,6 +11252,7 @@ WORKER_PIPELINE_DEBUGGER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PITCHER_AGENTSPEC_0_0_1 = Agentspec(
@@ -11288,6 +11436,7 @@ invent a tool name.
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PORTFOLIO_ACCUMULATION_AGENTSPEC_0_0_1 = Agentspec(
@@ -11341,6 +11490,7 @@ WORKER_PORTFOLIO_ACCUMULATION_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PORTFOLIO_RISK_AGENTSPEC_0_0_1 = Agentspec(
@@ -11395,6 +11545,7 @@ WORKER_PORTFOLIO_RISK_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PREDICTIVE_MAINTENANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -11448,6 +11599,7 @@ WORKER_PREDICTIVE_MAINTENANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -11583,6 +11735,7 @@ WORKER_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1 = Agentspec(
@@ -11718,6 +11871,7 @@ WORKER_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1 = Agentspec(
@@ -11833,6 +11987,7 @@ WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1 = Agentspec(
@@ -11886,6 +12041,7 @@ WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1 = Agentspec(
@@ -11939,6 +12095,7 @@ WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
@@ -11993,6 +12150,7 @@ WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_RESEARCH_RECRUITER_AGENTSPEC_0_0_1 = Agentspec(
@@ -12047,6 +12205,7 @@ WORKER_RESEARCH_RECRUITER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_RNA_SEQ_AGENTSPEC_0_0_1 = Agentspec(
@@ -12101,6 +12260,7 @@ WORKER_RNA_SEQ_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SALES_FORECASTING_AGENTSPEC_0_0_1 = Agentspec(
@@ -12159,6 +12319,7 @@ WORKER_SALES_FORECASTING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
@@ -12220,6 +12381,7 @@ WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SCENARIO_TESTING_AGENTSPEC_0_0_1 = Agentspec(
@@ -12273,6 +12435,7 @@ WORKER_SCENARIO_TESTING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12402,6 +12565,7 @@ WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SINGLE_CELL_PROCESSING_AGENTSPEC_0_0_1 = Agentspec(
@@ -12455,6 +12619,7 @@ WORKER_SINGLE_CELL_PROCESSING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SOCIAL_LISTENING_AGENTSPEC_0_0_1 = Agentspec(
@@ -12508,6 +12673,7 @@ WORKER_SOCIAL_LISTENING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
@@ -12621,6 +12787,7 @@ WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12706,6 +12873,7 @@ WORKER_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12813,6 +12981,7 @@ WORKER_SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12917,6 +13086,7 @@ WORKER_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12971,6 +13141,7 @@ WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1 = Agentspec(
@@ -13024,6 +13195,7 @@ WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1 = Agentspec(
@@ -13077,6 +13249,7 @@ WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
@@ -13131,6 +13304,7 @@ WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1 = Agentspec(
@@ -13190,6 +13364,7 @@ WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 
