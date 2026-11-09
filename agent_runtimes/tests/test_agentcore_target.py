@@ -105,48 +105,110 @@ def _created() -> dict[str, Any]:
     }
 
 
+def _got(status: str, name: str = "datalayer_crawler", **more: Any) -> dict[str, Any]:
+    return {
+        "agentRuntimeArn": ARN,
+        "agentRuntimeName": name,
+        "agentRuntimeId": RUNTIME_ID,
+        "agentRuntimeVersion": "1",
+        "createdAt": NOW,
+        "lastUpdatedAt": NOW,
+        "roleArn": ROLE,
+        "status": status,
+        "lifecycleConfiguration": {},
+        **more,
+    }
+
+
+def _updated() -> dict[str, Any]:
+    return {
+        "agentRuntimeArn": ARN,
+        "agentRuntimeId": RUNTIME_ID,
+        "agentRuntimeVersion": "2",
+        "createdAt": NOW,
+        "lastUpdatedAt": NOW,
+        "status": "UPDATING",
+    }
+
+
+RUNTIME_URL = (
+    "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/"
+    "arn%3Aaws%3Abedrock-agentcore%3Aus-east-1%3A111122223333%3Aruntime%2F"
+    "datalayer_crawler-AbCdEf1234/invocations/"
+)
+
+
 def _sse(*events: dict[str, Any]) -> StreamingBody:
     raw = "".join(f"data: {json.dumps(event)}\n\n" for event in events).encode()
     return StreamingBody(io.BytesIO(raw), len(raw))
 
 
-def test_deploy_creates_an_agui_runtime_with_the_spec_and_the_jwt_authorizer(
+def _authorizer(audience: list[str] | None) -> dict[str, Any]:
+    authorizer: dict[str, Any] = {
+        "discoveryUrl": "https://prod1.datalayer.run/api/iam/v1/.well-known/openid-configuration",
+    }
+    if audience is not None:
+        authorizer["allowedAudience"] = audience
+    authorizer["allowedClients"] = ["datalayer-platform"]
+    authorizer["customClaims"] = [
+        {
+            "inboundTokenClaimName": "org_uid",
+            "inboundTokenClaimValueType": "STRING",
+            "authorizingClaimMatchValue": {
+                "claimMatchValue": {"matchValueString": "org-1"},
+                "claimMatchOperator": "EQUALS",
+            },
+        }
+    ]
+    return {"customJWTAuthorizer": authorizer}
+
+
+def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
     control,
 ) -> None:
     client, stub = control
+    created_with = {
+        "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
+        "roleArn": ROLE,
+        "networkConfiguration": {"networkMode": "PUBLIC"},
+        "protocolConfiguration": {"serverProtocol": "AGUI"},
+        "description": "The Crawler",
+    }
     stub.add_response(
         "create_agent_runtime",
         _created(),
         {
             "agentRuntimeName": "datalayer_crawler",
-            "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
-            "roleArn": ROLE,
-            "networkConfiguration": {"networkMode": "PUBLIC"},
-            "protocolConfiguration": {"serverProtocol": "AGUI"},
+            **created_with,
             "environmentVariables": {
                 "LOG_LEVEL": "INFO",
                 "AGENT_SPEC_ID": "crawler",
                 "AGENT_RUNTIMES_TARGET": "agentcore",
             },
-            "description": "The Crawler",
-            "authorizerConfiguration": {
-                "customJWTAuthorizer": {
-                    "discoveryUrl": "https://prod1.datalayer.run/api/iam/v1/.well-known/openid-configuration",
-                    "allowedAudience": [ARN],
-                    "allowedClients": ["datalayer-platform"],
-                    "customClaims": [
-                        {
-                            "inboundTokenClaimName": "org_uid",
-                            "inboundTokenClaimValueType": "STRING",
-                            "authorizingClaimMatchValue": {
-                                "claimMatchValue": {"matchValueString": "org-1"},
-                                "claimMatchOperator": "EQUALS",
-                            },
-                        }
-                    ],
-                }
-            },
+            "authorizerConfiguration": _authorizer(None),
             "clientToken": "deploy-crawler-0000000000000000000000",
+        },
+    )
+    stub.add_response(
+        "get_agent_runtime", _got("CREATING"), {"agentRuntimeId": RUNTIME_ID}
+    )
+    stub.add_response(
+        "get_agent_runtime", _got("READY"), {"agentRuntimeId": RUNTIME_ID}
+    )
+    stub.add_response(
+        "update_agent_runtime",
+        _updated(),
+        {
+            "agentRuntimeId": RUNTIME_ID,
+            **created_with,
+            "environmentVariables": {
+                "LOG_LEVEL": "INFO",
+                "AGENT_SPEC_ID": "crawler",
+                "AGENT_RUNTIMES_TARGET": "agentcore",
+                "AGENTCORE_RUNTIME_ARN": ARN,
+                "AGENTCORE_RUNTIME_URL": RUNTIME_URL,
+            },
+            "authorizerConfiguration": _authorizer([ARN]),
         },
     )
     settings = _settings(
@@ -154,26 +216,65 @@ def test_deploy_creates_an_agui_runtime_with_the_spec_and_the_jwt_authorizer(
         environment={"LOG_LEVEL": "INFO"},
         authorizer=JwtAuthorizer(
             discovery_url="https://prod1.datalayer.run/api/iam/v1/.well-known/openid-configuration",
-            allowed_audience=(ARN,),
             allowed_clients=("datalayer-platform",),
             custom_claims={"org_uid": "org-1"},
         ),
         client_token="deploy-crawler-0000000000000000000000",
     )
+    slept: list[float] = []
+
+    async def sleep(seconds: float) -> None:
+        slept.append(seconds)
+
     deployment = asyncio.run(
-        AgentCoreTarget(control_client=client).deploy({"id": "crawler"}, settings)
+        AgentCoreTarget(control_client=client, sleep=sleep).deploy(
+            {"id": "crawler"}, settings
+        )
     )
+    assert slept == [5.0]
     assert deployment == Deployment(
         target="agentcore",
         agent_spec_id="crawler",
         id=RUNTIME_ID,
         arn=ARN,
-        version="1",
-        status="CREATING",
+        version="2",
+        status="UPDATING",
         endpoint="DEFAULT",
         workload_identity=WORKLOAD,
         region=REGION,
     )
+
+
+def test_deploy_refuses_a_runtime_that_failed_or_is_never_ready(control) -> None:
+    client, stub = control
+    stub.add_response("create_agent_runtime", _created())
+    stub.add_response(
+        "get_agent_runtime",
+        _got("CREATE_FAILED", failureReason="the image is not arm64"),
+        {"agentRuntimeId": RUNTIME_ID},
+    )
+    with pytest.raises(
+        AgentCoreError, match="CREATE_FAILED, not READY: the image is not arm64"
+    ):
+        asyncio.run(
+            AgentCoreTarget(control_client=client).deploy("crawler", _settings())
+        )
+
+    now = [0.0]
+
+    async def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    stub.add_response("create_agent_runtime", _created())
+    for _ in range(3):
+        stub.add_response(
+            "get_agent_runtime", _got("CREATING"), {"agentRuntimeId": RUNTIME_ID}
+        )
+    target = AgentCoreTarget(
+        control_client=client, sleep=sleep, clock=lambda: now[0], ready_timeout=10
+    )
+    with pytest.raises(AgentCoreError, match="was not READY within 10 seconds"):
+        asyncio.run(target.deploy("crawler", _settings()))
 
 
 def test_deploy_refuses_what_agentcore_would_and_what_the_deployment_sets_itself() -> (
@@ -185,6 +286,12 @@ def test_deploy_refuses_what_agentcore_would_and_what_the_deployment_sets_itself
     ):
         target.create_request(
             "crawler", _settings(environment={"AGENT_SPEC_ID": "other"})
+        )
+    with pytest.raises(
+        ValueError, match="AGENTCORE_RUNTIME_ARN is set by the deployment itself"
+    ):
+        target.create_request(
+            "crawler", _settings(environment={"AGENTCORE_RUNTIME_ARN": ARN})
         )
     with pytest.raises(ValueError, match="is not an agent runtime name"):
         target.create_request("crawler", _settings(name="9-lives"))
@@ -394,6 +501,28 @@ def test_loop_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
             },
         },
     )
+    control_stub.add_response(
+        "get_agent_runtime",
+        _got("READY", "datalayer_example_simple"),
+        {"agentRuntimeId": RUNTIME_ID},
+    )
+    control_stub.add_response(
+        "update_agent_runtime",
+        _updated(),
+        {
+            "agentRuntimeId": RUNTIME_ID,
+            "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
+            "roleArn": ROLE,
+            "networkConfiguration": {"networkMode": "PUBLIC"},
+            "protocolConfiguration": {"serverProtocol": "AGUI"},
+            "environmentVariables": {
+                "AGENT_SPEC_ID": spec,
+                "AGENT_RUNTIMES_TARGET": "agentcore",
+                "AGENTCORE_RUNTIME_ARN": ARN,
+                "AGENTCORE_RUNTIME_URL": RUNTIME_URL,
+            },
+        },
+    )
     deployed = runner.invoke(
         app,
         [
@@ -409,7 +538,7 @@ def test_loop_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
         ],
     )
     assert deployed.exit_code == 0, deployed.output
-    assert f"example-simple deployed as {ARN} (CREATING)." in deployed.output
+    assert f"example-simple deployed as {ARN} (UPDATING)." in deployed.output
     assert (
         json.loads(state.read_text())["deployments"][spec]["deployment"]["arn"] == ARN
     )

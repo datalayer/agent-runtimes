@@ -12,8 +12,10 @@ authorizer that trusts an OIDC issuer (Datalayer IAM, ID-02).
 
 The calls, as botocore names them:
 
-- ``bedrock-agentcore-control``: ``create_agent_runtime`` (deploy),
-  ``get_agent_runtime`` (status), ``delete_agent_runtime`` (destroy);
+- ``bedrock-agentcore-control``: ``create_agent_runtime``, then once it is
+  ``READY`` ``update_agent_runtime`` (deploy: the runtime told its own ARN
+  and URL, its authorizer given the ARN as audience), ``get_agent_runtime``
+  (status), ``delete_agent_runtime`` (destroy);
 - ``bedrock-agentcore``: ``invoke_agent_runtime`` (a turn; the answer read
   as ``text/event-stream``), ``stop_runtime_session`` (stop).
 
@@ -26,9 +28,22 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Dict, Mapping, Optional, Sequence
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Mapping,
+    Optional,
+    Sequence,
+)
+from urllib.parse import quote
 
+from agent_runtimes.agentcore.a2a import RUNTIME_URL_VARIABLE
+from agent_runtimes.agentcore.exchange import RUNTIME_ARN_VARIABLE
 from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
 from agent_runtimes.agentcore.settings import SPEC_VARIABLE, TARGET, TARGET_VARIABLE
 from agent_runtimes.plugins.points import Deployment, TargetCapabilities
@@ -49,6 +64,36 @@ RUNTIME_NAME = re.compile(r"[a-zA-Z][a-zA-Z0-9_]{0,47}")
 
 #: Where an OIDC issuer's discovery document is; AgentCore asks for it.
 DISCOVERY_SUFFIX = "/.well-known/openid-configuration"
+
+#: The variables a deployment sets itself once AgentCore names the runtime.
+RUNTIME_ENV = (RUNTIME_ARN_VARIABLE, RUNTIME_URL_VARIABLE)
+
+#: How long a created runtime is waited for before it is told its ARN.
+READY_TIMEOUT_SECONDS = 600.0
+#: How often it is asked meanwhile.
+READY_POLL_SECONDS = 5.0
+
+
+def runtime_url_of(arn: str, region: str) -> str:
+    """Return the address callers reach an agent runtime at (its invocations).
+
+    Parameters
+    ----------
+    arn : str
+        The agent runtime's ARN.
+    region : str
+        The region it runs in.
+
+    Returns
+    -------
+    str
+        ``https://bedrock-agentcore.<region>.amazonaws.com/runtimes/<arn>/invocations/``,
+        the ARN escaped.
+    """
+    return (
+        f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/"
+        f"{quote(arn, safe='')}/invocations/"
+    )
 
 
 class AgentCoreError(RuntimeError):
@@ -160,9 +205,22 @@ class AgentCoreTarget:
         resume=True, pause=False, a2a=False, gpu=False, customer_account=True
     )
 
-    def __init__(self, control_client: Any = None, data_client: Any = None) -> None:
+    def __init__(
+        self,
+        control_client: Any = None,
+        data_client: Any = None,
+        *,
+        sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
+        clock: Callable[[], float] = time.monotonic,
+        ready_timeout: float = READY_TIMEOUT_SECONDS,
+        poll_seconds: float = READY_POLL_SECONDS,
+    ) -> None:
         self._control_client = control_client
         self._data_client = data_client
+        self._sleep = sleep
+        self._clock = clock
+        self._ready_timeout = ready_timeout
+        self._poll_seconds = poll_seconds
 
     def _control(self, region: str) -> Any:
         return self._control_client or _client("bedrock-agentcore-control", region)
@@ -188,7 +246,9 @@ class AgentCoreTarget:
                 f"{name!r} is not an agent runtime name: a letter, then up to 47 "
                 "letters, digits or underscores."
             )
-        overridden = sorted({SPEC_ENV, TARGET_ENV} & set(settings.environment))
+        overridden = sorted(
+            {SPEC_ENV, TARGET_ENV, *RUNTIME_ENV} & set(settings.environment)
+        )
         if overridden:
             raise ValueError(
                 f"{', '.join(overridden)} is set by the deployment itself, never by its settings."
@@ -215,26 +275,95 @@ class AgentCoreTarget:
             request["clientToken"] = settings.client_token
         return request
 
+    def update_request(
+        self, request: Mapping[str, Any], runtime_id: str, arn: str, region: str
+    ) -> Dict[str, Any]:
+        """Return the ``update_agent_runtime`` parameters that tell a runtime who it is.
+
+        AgentCore names the runtime only once it is created: the update sends
+        the create's configuration again (the artifact and the role are
+        required), with ``AGENTCORE_RUNTIME_ARN`` and ``AGENTCORE_RUNTIME_URL``
+        in the environment and the ARN among the authorizer's audiences, so a
+        token made for another runtime is refused.
+        """
+        update: Dict[str, Any] = {
+            key: value
+            for key, value in request.items()
+            if key not in ("agentRuntimeName", "clientToken")
+        }
+        update["agentRuntimeId"] = runtime_id
+        update["environmentVariables"] = {
+            **dict(request["environmentVariables"]),
+            RUNTIME_ARN_VARIABLE: arn,
+            RUNTIME_URL_VARIABLE: runtime_url_of(arn, region),
+        }
+        authorizer = (request.get("authorizerConfiguration") or {}).get(
+            "customJWTAuthorizer"
+        )
+        if authorizer is not None:
+            audience = list(authorizer.get("allowedAudience") or [])
+            if arn not in audience:
+                audience.append(arn)
+            update["authorizerConfiguration"] = {
+                "customJWTAuthorizer": {**authorizer, "allowedAudience": audience}
+            }
+        return update
+
+    async def _ready(self, client: Any, runtime_id: str) -> None:
+        """Wait until a created runtime is ``READY``; refuse when it failed or never is."""
+        deadline = self._clock() + self._ready_timeout
+        while True:
+            answer = await asyncio.to_thread(
+                client.get_agent_runtime, agentRuntimeId=runtime_id
+            )
+            status = answer["status"]
+            if status == "READY":
+                return
+            if status != "CREATING":
+                raise AgentCoreError(
+                    f"The agent runtime {runtime_id} is {status}, not READY: "
+                    f"{answer.get('failureReason') or 'AgentCore gave no reason'}."
+                )
+            if self._clock() >= deadline:
+                raise AgentCoreError(
+                    f"The agent runtime {runtime_id} was not READY within "
+                    f"{int(self._ready_timeout)} seconds: it is not told its ARN."
+                )
+            await self._sleep(self._poll_seconds)
+
     async def deploy(self, spec: Any, settings: AgentCoreDeploySettings) -> Deployment:
-        """``create_agent_runtime``: the agentspec made an agent runtime."""
+        """Make the agentspec an agent runtime that knows its own ARN.
+
+        ``create_agent_runtime``; once the runtime is ``READY``,
+        ``update_agent_runtime`` with its ARN and URL in the environment and
+        the ARN as its authorizer's audience.
+        """
         if not isinstance(settings, AgentCoreDeploySettings):
             raise TypeError(
                 "The agentcore target is deployed with AgentCoreDeploySettings."
             )
         request = self.create_request(spec, settings)
         client = self._control(settings.region)
-        answer = await asyncio.to_thread(client.create_agent_runtime, **request)
+        created = await asyncio.to_thread(client.create_agent_runtime, **request)
+        runtime_id = created["agentRuntimeId"]
+        arn = created["agentRuntimeArn"]
+        await self._ready(client, runtime_id)
+        updated = await asyncio.to_thread(
+            client.update_agent_runtime,
+            **self.update_request(request, runtime_id, arn, settings.region),
+        )
+        workload = updated.get("workloadIdentityDetails") or created.get(
+            "workloadIdentityDetails"
+        )
         return Deployment(
             target=self.id,
             agent_spec_id=request["environmentVariables"][SPEC_ENV],
-            id=answer["agentRuntimeId"],
-            arn=answer["agentRuntimeArn"],
-            version=answer["agentRuntimeVersion"],
-            status=answer["status"],
+            id=runtime_id,
+            arn=arn,
+            version=updated["agentRuntimeVersion"],
+            status=updated["status"],
             endpoint=settings.endpoint,
-            workload_identity=(answer.get("workloadIdentityDetails") or {}).get(
-                "workloadIdentityArn", ""
-            ),
+            workload_identity=(workload or {}).get("workloadIdentityArn", ""),
             region=settings.region,
         )
 
