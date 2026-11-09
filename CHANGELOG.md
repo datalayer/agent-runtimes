@@ -9,6 +9,16 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.6.0
+
+The minor moves past 1.5.128 (a patch above 100 bumps the minor).
+
+**Amazon Bedrock AgentCore as a place an agent runs** (AWS AgentCore AC-01, AC-02, AC-03, AC-10, AC-11). `agent-runtimes serve --target agentcore` answers AgentCore Runtime's contract: `POST /invocations` (an AG-UI run streamed, or `{"prompt": …}` answered as JSON or a stream), `GET /ping` (`Healthy`, `HealthyBusy` while a turn or background work runs), `/ws`; AgentCore's session id is the Datalayer session, and a session whose microVM went resumes from the record. The `runtime.target` contribution point and its `agentcore` target (`bedrock-agentcore-control` and `bedrock-agentcore` through boto3) deploy, invoke, stop and destroy; `loop agentcore deploy|status|invoke|sessions|destroy`.
+
+**Identity providers** (AWS Identity ID-20, ID-21, ID-22). The `identity.provider` contribution point: the built-in `datalayer` provider and the `agentcore` provider — the workload token AgentCore Runtime sends, held for each run, or `GetWorkloadAccessTokenForJWT` outside it (never by user id), OAuth tokens and API keys from AgentCore's token vault with a bounded wait for consent, the consent bound. `identity.oauth_token` and `@requires_oauth` for tools and skills; the authorization URL as an AG-UI custom event.
+
+**Identities and every agent's identity** (agentspecs 0.0.169). The identities catalogue generated (`agent_runtimes.specs.identities`, `listIdentities`), `IdentitySpec` in the Python and TypeScript types; every agent carries `identity`, and the generator refuses one that names none.
+
 ## 1.5.128
 
 What 1.5.127 carries (it never published: the evals-adapters gate installed agent-client-protocol 1.0.0, released on 9 November 2026 without `acp.helpers`, which the pinned inspect-ai imports; the gate's inspect environment now takes `agent-client-protocol<1`).
