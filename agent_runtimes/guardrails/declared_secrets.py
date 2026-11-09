@@ -90,6 +90,8 @@ PLATFORM_RUNTIME_SECRETS: FrozenSet[str] = frozenset()
 RESERVED_PREFIXES: Tuple[str, ...] = (
     "DATALAYER_",
     "AGENT_",
+    # AgentCore Runtime's own (AGENTCORE_PORT, AGENTCORE_WORKLOAD_NAME, AGENTCORE_OAUTH_RETURN_URL).
+    "AGENTCORE_",
     "RUNTIME_",
     "RUNTIMES_",
     "LOOP_",

@@ -146,7 +146,7 @@ def track_background(task: "asyncio.Future[Any]") -> "asyncio.Future[Any]":
 
 @router.get("/ping")
 async def ping() -> dict[str, Any]:
-    """AgentCore's health check: ``Healthy`` or ``HealthyBusy``."""
+    """Answer AgentCore's health check: ``Healthy`` or ``HealthyBusy``."""
     return LIVENESS.ping()
 
 
@@ -501,7 +501,7 @@ async def _prepared(
 
 @router.post("/invocations")
 async def invocations(request: Request) -> Response:
-    """AgentCore's ``InvokeAgentRuntime``: one AG-UI run of the agent, on the session's thread."""
+    """Run one AG-UI turn of the agent for AgentCore's ``InvokeAgentRuntime``, on the session's thread."""
     try:
         try:
             payload = await request.json()

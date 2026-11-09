@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.6.1
+
+What 1.6.0 carries (it never published: the runtime reads `AGENTCORE_PORT`, `AGENTCORE_WORKLOAD_NAME` and `AGENTCORE_OAUTH_RETURN_URL`, and `AGENTCORE_` was not among the reserved prefixes an agent's own variables may not use; it is now).
+
 ## 1.6.0
 
 The minor moves past 1.5.128 (a patch above 100 bumps the minor).

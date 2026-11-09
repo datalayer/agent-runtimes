@@ -439,8 +439,11 @@ class IdentityProvider(Protocol):
         *,
         context: Optional[Mapping[str, Any]] = None,
     ) -> str:
-        """A third party's access token for the person; :class:`AuthorizationRequired`
-        carrying the URL when they must grant it and nobody waits for them."""
+        """Return a third party's access token for the person.
+
+        Raises :class:`AuthorizationRequired`, carrying the URL, when they must
+        grant it and nobody waits for them.
+        """
         ...
 
     async def api_key(

@@ -69,8 +69,11 @@ def use_authorization_sink(sink: Callable[[Any], Any]) -> Iterator[None]:
 
 @contextmanager
 def use_identity_context(context: Mapping[str, Any]) -> Iterator[None]:
-    """What the providers are told of the run: ``agent_id``, ``bearer``,
-    ``deployment_uid``, ``user_token``, ``workload_access_token``…"""
+    """Hold what the providers are told of the run.
+
+    The keys are ``agent_id``, ``bearer``, ``deployment_uid``, ``user_token``
+    and ``workload_access_token``.
+    """
     reset = _CONTEXT.set(dict(context))
     try:
         yield

@@ -139,7 +139,7 @@ class AgentCoreIdentity:
         return await asyncio.to_thread(getattr(self.client(), operation), **parameters)
 
     async def inbound_token(self, caller: Mapping[str, Any], audience: str) -> str:
-        """IAM's token for ``audience`` (the runtime's ARN), by the exchange given."""
+        """Exchange for IAM's token for ``audience`` (the runtime's ARN), by the exchange given."""
         if self.exchange is None:
             raise IdentityRefused(
                 f"No token exchange is configured: AgentCore accepts IAM's exchanged token "
