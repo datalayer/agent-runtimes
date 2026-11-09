@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.127
+
+**The Marketer lists and forgets what it remembers.** worker-marketer (agentspecs 0.0.167) carries datalayer-skills' memory skills — add, search, list and delete — as the Crawler does since 0.0.166, and its prompt says to use them and never to forget everything without the person's confirmation of how many. The Marketer's and the Crawler's memories are kept under the person and the agent, so a resumed agent reads back what it was told before its pause (tested for both).
+
 ## 1.5.124
 
 What 1.5.122 carries (1.5.123 never published: the ready-without-MCP test left the configure
