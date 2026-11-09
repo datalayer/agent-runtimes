@@ -729,6 +729,78 @@ export interface StageSpec {
   emoji: string;
 }
 
+/**
+ * Who is acting when an agent acts, issued by whom and proven how
+ * (`agentspecs/identities`): a person, an agent, an application, an
+ * organization, a visitor or a service, under Datalayer IAM, the Personal
+ * Agent Protocol, Amazon Bedrock AgentCore Identity or an organization's OIDC.
+ */
+export interface IdentitySpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  subject:
+    'person' | 'agent' | 'application' | 'organization' | 'visitor' | 'service';
+  provider: 'datalayer' | 'pap' | 'aws-agentcore' | 'oidc';
+  /** Protocols of the catalogue it speaks, by id. */
+  protocols: string[];
+  /** How a caller proves it on the way in. */
+  inbound: {
+    kind:
+      | 'none'
+      | 'session'
+      | 'jwt'
+      | 'sigv4'
+      | 'api-key'
+      | 'dpop'
+      | 'http-signature';
+    issuer: string;
+    discoveryUrl: string;
+    algorithms: string[];
+    audiences: string[];
+    clients: string[];
+    scopes: string[];
+    claims: Record<string, string>;
+    lifetimeSeconds: number;
+  };
+  /** The token the agent holds while it acts. */
+  workload: {
+    token:
+      | 'none'
+      | 'acting'
+      | 'client-credentials'
+      | 'agentcore-runtime'
+      | 'agentcore-jwt';
+    lifetimeSeconds: number;
+  };
+  /** Where third-party credentials are kept, and for which providers. */
+  credentials: {
+    vault: 'none' | 'datalayer' | 'agentcore';
+    providers: {
+      name: string;
+      kind: 'oauth2' | 'api-key';
+      flow: '' | 'user-federation' | 'm2m';
+      scopes: string[];
+    }[];
+  };
+  /** Who keeps the signing keys, and the algorithm. */
+  custody: { keys: string; algorithm: string };
+  /** Who consents, who hosts it, and whether it is bound to the session that asked. */
+  consent: { by: string; hostedBy: string; binding: boolean };
+  /** For a PAP identity: what the protocol binds. */
+  pap?: {
+    roles: ('personal-agent' | 'company')[];
+    clientIdPerApplication: boolean;
+    pairwise: boolean;
+    dpop: boolean;
+  };
+  enabled: boolean;
+  tags: string[];
+  icon: string;
+  emoji: string;
+}
+
 /** What is on a Stage. */
 export type StageKind = 'scene' | 'app' | 'battle';
 
@@ -2016,6 +2088,11 @@ export interface Agentspec {
    * the fields an Appspec says under `interface.voice`; absent when unsaid.
    */
   voice?: AppVoiceSpec;
+  /**
+   * Who it acts as: an Identity of the catalogue (`agentspecs/identities`),
+   * `id` or `id:version`; absent when unsaid (the platform's default).
+   */
+  identity?: string;
 }
 
 /**

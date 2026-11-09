@@ -8848,6 +8848,7 @@ export const WORKER_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
+  identity: 'web-bot-auth-agent',
 };
 
 export const WORKER_CROP_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
@@ -10635,6 +10636,7 @@ export const WORKER_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
+  identity: 'aws-agentcore-runtime',
 };
 
 export const WORKER_GRID_FORECAST_AGENTSPEC_0_0_1: Agentspec = {
@@ -11286,6 +11288,7 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
+  identity: 'datalayer-acting-agent',
 };
 
 export const WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
@@ -13719,6 +13722,7 @@ export const WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agent
     toolHooks: undefined,
     parameters: undefined,
     subagents: undefined,
+    identity: 'datalayer-service-agent',
   };
 
 export const WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec = {

@@ -77,6 +77,15 @@ KINDS: dict[str, dict[str, str]] = {
         "title": "Stage Catalog.",
         "about": "Something of the catalogue put on stage, and where it plays: a scene played whole,\nan app or a Battle; each member on a runtime at the deployment that answers for it;\nwhether anyone may watch without an account. Resolved: a Stage wears what it stages.",
     },
+    "identities": {
+        "model": "IdentitySpec",
+        "suffix": "IDENTITY",
+        "catalogue": "IDENTITY_CATALOGUE",
+        "one": "identity",
+        "One": "Identity",
+        "title": "Identity Catalog.",
+        "about": "Who is acting when an agent acts: a person, an agent, an application, an\norganization, a visitor or a service, issued by Datalayer IAM, the Personal Agent\nProtocol, Amazon Bedrock AgentCore Identity or an organization's OIDC provider;\nhow each proves it, the token it holds, where its third-party credentials are kept.",
+    },
     "ops": {
         "model": "OpSpec",
         "suffix": "OP",
@@ -100,6 +109,10 @@ CAMEL = {
     "clock_seconds": "clockSeconds",
     "decides_by": "decidesBy",
     "runs_in": "runsIn",
+    "discovery_url": "discoveryUrl",
+    "lifetime_seconds": "lifetimeSeconds",
+    "hosted_by": "hostedBy",
+    "client_id_per_application": "clientIdPerApplication",
 }
 
 def _flat(text: Any) -> str:
@@ -153,6 +166,11 @@ def load_specs(kind: str, specs_dir: Path) -> list[dict[str, Any]]:
     elif kind == "stages":
         stages = module.load_stages(specs_dir)
         specs = [stages[identity].model_dump(mode="json") for identity in sorted(stages)]
+    elif kind == "identities":
+        identities = module.load_identities(specs_dir)
+        specs = [
+            identities[identity].model_dump(mode="json") for identity in sorted(identities)
+        ]
     elif kind == "tracks":
         tracks = module.load_tracks(specs_dir)
         specs = [
@@ -408,7 +426,7 @@ def generate_typescript_code(kind: str, specs: list[dict[str, Any]]) -> str:
 def main() -> None:
     """Generate one kind's catalogues."""
     parser = argparse.ArgumentParser(
-        description="Generate Python and TypeScript code from YAML Op, Guard, Gate, Track, Battle and Stage specifications"
+        description="Generate Python and TypeScript code from YAML Op, Guard, Gate, Track, Battle, Stage and Identity specifications"
     )
     parser.add_argument(
         "--kind",

@@ -8091,6 +8091,7 @@ WORKER_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="web-bot-auth-agent",
 )
 
 WORKER_CROP_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
@@ -9641,6 +9642,7 @@ WORKER_GITHUB_AGENT_SPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="aws-agentcore-runtime",
 )
 
 WORKER_GRID_FORECAST_AGENTSPEC_0_0_1 = Agentspec(
@@ -10198,6 +10200,7 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
@@ -12336,6 +12339,7 @@ WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-service-agent",
 )
 
 WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(

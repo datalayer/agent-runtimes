@@ -2289,6 +2289,13 @@ class Agentspec(BaseModel):
             ": the fields an Appspec says under `interface.voice`."
         ),
     )
+    identity: Optional[str] = Field(
+        default=None,
+        description=(
+            "Who it acts as: an Identity of the catalogue (`agentspecs/identities`), "
+            "`id` or `id:version`; unsaid, the platform's default."
+        ),
+    )
 
 
 class CogSpec(BaseModel):
@@ -2504,6 +2511,91 @@ class BattleSpec(BaseModel):
     tags: List[str] = Field(default_factory=list)
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
+class IdentityInboundSpec(BaseModel):
+    """How a caller proves an Identity on the way in."""
+
+    kind: str = Field(default="none")
+    issuer: str = Field(default="")
+    discovery_url: str = Field(default="")
+    algorithms: List[str] = Field(default_factory=list)
+    audiences: List[str] = Field(default_factory=list)
+    clients: List[str] = Field(default_factory=list)
+    scopes: List[str] = Field(default_factory=list)
+    claims: Dict[str, str] = Field(default_factory=dict)
+    lifetime_seconds: int = Field(default=0)
+
+
+class IdentityWorkloadSpec(BaseModel):
+    """The token an agent holds while it acts."""
+
+    token: str = Field(default="none")
+    lifetime_seconds: int = Field(default=0)
+
+
+class IdentityCredentialProviderSpec(BaseModel):
+    """A third party an Identity may obtain credentials for."""
+
+    name: str
+    kind: str = Field(default="oauth2")
+    flow: str = Field(default="")
+    scopes: List[str] = Field(default_factory=list)
+
+
+class IdentityCredentialsSpec(BaseModel):
+    """Where third-party credentials are kept."""
+
+    vault: str = Field(default="none")
+    providers: List[IdentityCredentialProviderSpec] = Field(default_factory=list)
+
+
+class IdentityCustodySpec(BaseModel):
+    """Who keeps an Identity's signing keys."""
+
+    keys: str = Field(default="none")
+    algorithm: str = Field(default="")
+
+
+class IdentityConsentSpec(BaseModel):
+    """Who consents, and who hosts the consent."""
+
+    by: str = Field(default="none")
+    hosted_by: str = Field(default="none")
+    binding: bool = Field(default=False)
+
+
+class IdentityPapSpec(BaseModel):
+    """What the Personal Agent Protocol binds for an Identity."""
+
+    roles: List[str]
+    client_id_per_application: bool = Field(default=True)
+    pairwise: bool = Field(default=True)
+    dpop: bool = Field(default=True)
+
+
+class IdentitySpec(BaseModel):
+    """Who is acting, issued by whom, proven how (`agentspecs/identities`)."""
+
+    id: str = Field(..., description="Unique Identity identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="")
+    subject: str = Field(
+        ..., description="person, agent, application, organization, visitor or service"
+    )
+    provider: str = Field(..., description="datalayer, pap, aws-agentcore or oidc")
+    protocols: List[str] = Field(default_factory=list)
+    inbound: IdentityInboundSpec = Field(default_factory=IdentityInboundSpec)
+    workload: IdentityWorkloadSpec = Field(default_factory=IdentityWorkloadSpec)
+    credentials: IdentityCredentialsSpec = Field(default_factory=IdentityCredentialsSpec)
+    custody: IdentityCustodySpec = Field(default_factory=IdentityCustodySpec)
+    consent: IdentityConsentSpec = Field(default_factory=IdentityConsentSpec)
+    pap: Optional[IdentityPapSpec] = Field(default=None)
+    enabled: bool = Field(default=True)
+    tags: List[str] = Field(default_factory=list)
+    icon: str = Field(default="person")
+    emoji: str = Field(default="")
 
 
 class StageSpec(BaseModel):

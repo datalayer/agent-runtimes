@@ -306,6 +306,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     check_protocols(resolved, load_protocol_ids(specs_dir))
     check_harnesses(resolved, load_harnesses(specs_dir))
     check_voices(resolved)
+    check_identities(resolved, load_identity_ids(specs_dir))
     return resolved
 
 
@@ -340,6 +341,35 @@ def load_protocol_ids(specs_dir: Path) -> set[str]:
         if protocol.get("id"):
             ids.add(str(protocol["id"]))
     return ids
+
+
+def load_identity_ids(specs_dir: Path) -> set[str]:
+    """Every id of the identities catalogue (`agentspecs/identities`)."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "identities").glob("*.yaml")):
+        identity = yaml.safe_load(yaml_file.read_text()) or {}
+        if identity.get("id"):
+            ids.add(str(identity["id"]))
+    return ids
+
+
+def check_identities(
+    specs: List[tuple[str, Dict[str, Any]]], identity_ids: set[str]
+) -> None:
+    """Refuse an agent whose `identity` is not an id of the identities catalogue."""
+    problems = []
+    for _, spec in specs:
+        said = spec.get("identity")
+        if said is None:
+            continue
+        base, _, version = str(said).rpartition(":")
+        identity = base if base and "." in version else str(said)
+        if identity not in identity_ids:
+            problems.append(
+                f"{spec.get('id')}: identity names what the catalogue does not know: {said}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
 
 
 def check_protocols(
@@ -607,6 +637,10 @@ from agent_runtimes.types import (
             voice = voice_of(spec)
             voice_py_line = (
                 f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
+            )
+            identity_val = spec.get("identity")
+            voice_py_line += (
+                f'    identity="{identity_val}",\n' if identity_val else ""
             )
             inference_provider = spec.get("inference_provider")
             inference_provider_str = (
@@ -1241,6 +1275,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             voice = voice_of(spec)
             voice_ts_line = (
                 f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
+            )
+            identity_val = spec.get("identity")
+            voice_ts_line += (
+                f"    identity: '{identity_val}',\n" if identity_val else ""
             )
             inference_provider = spec.get("inference_provider")
             inference_provider_ts = (
