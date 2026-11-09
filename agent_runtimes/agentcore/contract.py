@@ -370,7 +370,7 @@ def _workload_of(scope: Mapping[str, Any]) -> Any:
     """Hold, for the run, the workload token AgentCore Runtime sent with the invocation.
 
     The ``agentcore`` identity provider reads it to reach AgentCore's token
-    vault for the person (AWS_IDENTITY ID-21); an invocation without one runs
+    vault for the person (ID-21); an invocation without one runs
     with none held.
     """
     from agent_runtimes.agentcore.identity import (
