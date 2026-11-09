@@ -1,6 +1,6 @@
-# Agent Node on AWS
+# Datalayer on AWS
 
-CloudFormation templates to deploy an Agent Node on AWS.
+CloudFormation templates to deploy an Agent Node on AWS, and the roles to run agents on Amazon Bedrock AgentCore.
 
 Two deployment models are provided:
 
@@ -73,6 +73,49 @@ aws cloudformation describe-stacks --stack-name agent-node-fargate \
 If you need a dedicated ai-inference endpoint, add
 `DatalayerAiInferenceUrl=<url>` to either template's `--parameter-overrides`.
 When omitted, both templates default ai-inference routing to `DatalayerIamUrl`.
+
+## Run agents on Amazon Bedrock AgentCore
+
+[`agentcore-cross-account-role.yaml`](./agentcore-cross-account-role.yaml)
+lets Datalayer run your organization's agentspecs on Amazon Bedrock
+AgentCore Runtime in your own AWS account. It creates two IAM roles and
+nothing else:
+
+| Role | Assumed by | Allows |
+|------|------------|--------|
+| `DatalayerRole` | Datalayer's AWS account, only with your organization's external id (`sts:ExternalId`) | Create, read, update, list and delete agent runtimes and their endpoints; invoke a session and stop it; create the workload identity of a deployment; `GetWorkloadAccessTokenForJWT` (a token for a person Datalayer signed in), with an explicit deny on `GetWorkloadAccessTokenForUserId`; the third-party credentials of AgentCore Identity; ECR pull; `iam:PassRole` on the execution role below and no other role. |
+| `ExecutionRole` | `bedrock-agentcore.amazonaws.com`, for this account | Pull the image; CloudWatch Logs under `/aws/bedrock-agentcore/runtimes/`, X-Ray and CloudWatch metrics; the third-party credentials of AgentCore Identity; Amazon Bedrock models only with `UseCustomerBedrock=true`. |
+
+The control plane's actions (`CreateAgentRuntime`, …) and the data plane's
+(`InvokeAgentRuntime`, …) share the IAM prefix `bedrock-agentcore`.
+
+Your organization's AWS settings on Datalayer show the two values to pass:
+Datalayer's AWS account id and your organization's external id.
+
+```bash
+aws cloudformation deploy \
+  --template-file agentcore-cross-account-role.yaml \
+  --stack-name datalayer-agentcore \
+  --region us-east-1 \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+      DatalayerAccountId=$DATALAYER_AWS_ACCOUNT_ID \
+      ExternalId=$DATALAYER_EXTERNAL_ID \
+      UseCustomerBedrock=false
+```
+
+Then copy the outputs (`DatalayerRoleArn`, `ExecutionRoleArn`, `ExternalId`,
+`Region`) into the same settings page:
+
+```bash
+aws cloudformation describe-stacks --stack-name datalayer-agentcore \
+  --region us-east-1 --query 'Stacks[0].Outputs'
+```
+
+The permissions are scoped to the stack's region: deploy one stack per region
+your agents run in. To stop Datalayer from acting in the account, delete the
+stack (`aws cloudformation delete-stack --stack-name datalayer-agentcore`);
+agent runtimes Datalayer created stay until you delete them.
 
 ## Cleanup
 
