@@ -194,6 +194,13 @@ Resources:
                 Action:
                   - bedrock-agentcore:ListAgentRuntimes
                 Resource: '*'
+              # The organization's credential providers, listed on its settings page.
+              - Sid: ListCredentialProviders
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:ListOauth2CredentialProviders
+                  - bedrock-agentcore:ListApiKeyCredentialProviders
+                Resource: '*'
               # A session: a turn, and its microVM stopped.
               - Sid: Sessions
                 Effect: Allow
