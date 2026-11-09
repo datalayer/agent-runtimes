@@ -103,6 +103,11 @@ export type ChatWords = {
   arguments: string;
   approvalWarning: string;
   rememberChoice: string;
+  // A third party's grant a tool waits for (ID-10).
+  connectToContinue: (provider: string) => string;
+  connectAsks: (agent: string, scopes: string) => string;
+  connect: string;
+  decline: string;
   // The assistant's balloon.
   /** An approval waits and cannot be answered in the balloon itself. */
   waitingOpen: string;
@@ -189,6 +194,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'This tool will perform an action on your behalf. Please review the arguments before approving.',
     rememberChoice: 'Remember my choice for this tool',
+    connectToContinue: provider => `Connect ${provider} to continue`,
+    connectAsks: (agent, scopes) => `${agent} asks for access to ${scopes}.`,
+    connect: 'Connect',
+    decline: 'Decline',
     waitingOpen: 'Waiting for you — open the conversation to answer.',
     waitingForYou: 'Waiting for you',
     paused: 'Paused — it answers again once it is resumed.',
@@ -270,6 +279,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Cet outil va agir en votre nom. Vérifiez ses arguments avant de l’approuver.',
     rememberChoice: 'Mémoriser mon choix pour cet outil',
+    connectToContinue: provider => `Connectez ${provider} pour continuer`,
+    connectAsks: (agent, scopes) => `${agent} demande l’accès à ${scopes}.`,
+    connect: 'Connecter',
+    decline: 'Refuser',
     waitingOpen: 'Il vous attend — ouvrez la conversation pour répondre.',
     waitingForYou: 'Il vous attend',
     paused: 'En pause — il répondra de nouveau une fois relancé.',
@@ -352,6 +365,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Esta herramienta actuará en tu nombre. Revisa sus argumentos antes de aprobarla.',
     rememberChoice: 'Recordar mi elección para esta herramienta',
+    connectToContinue: provider => `Conecta ${provider} para continuar`,
+    connectAsks: (agent, scopes) => `${agent} pide acceso a ${scopes}.`,
+    connect: 'Conectar',
+    decline: 'Rechazar',
     waitingOpen: 'Te está esperando: abre la conversación para responder.',
     waitingForYou: 'Te está esperando',
     paused: 'En pausa: responderá de nuevo cuando se reanude.',
@@ -434,6 +451,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Dieses Werkzeug handelt in deinem Namen. Prüfe seine Argumente, bevor du es freigibst.',
     rememberChoice: 'Meine Wahl für dieses Werkzeug merken',
+    connectToContinue: provider => `${provider} verbinden, um fortzufahren`,
+    connectAsks: (agent, scopes) => `${agent} bittet um Zugriff auf ${scopes}.`,
+    connect: 'Verbinden',
+    decline: 'Ablehnen',
     waitingOpen: 'Wartet auf dich – öffne das Gespräch, um zu antworten.',
     waitingForYou: 'Wartet auf dich',
     paused: 'Pausiert – antwortet wieder, sobald es fortgesetzt wird.',
@@ -517,6 +538,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Questo strumento agirà per tuo conto. Controlla i suoi argomenti prima di approvarlo.',
     rememberChoice: 'Ricorda la mia scelta per questo strumento',
+    connectToContinue: provider => `Collega ${provider} per continuare`,
+    connectAsks: (agent, scopes) => `${agent} chiede l’accesso a ${scopes}.`,
+    connect: 'Collega',
+    decline: 'Rifiuta',
     waitingOpen: 'Ti sta aspettando: apri la conversazione per rispondere.',
     waitingForYou: 'Ti sta aspettando',
     paused: 'In pausa: risponderà di nuovo quando verrà ripreso.',
@@ -600,6 +625,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Esta ferramenta vai agir em seu nome. Revise os argumentos antes de aprovar.',
     rememberChoice: 'Lembrar minha escolha para esta ferramenta',
+    connectToContinue: provider => `Conecte ${provider} para continuar`,
+    connectAsks: (agent, scopes) => `${agent} pede acesso a ${scopes}.`,
+    connect: 'Conectar',
+    decline: 'Recusar',
     waitingOpen: 'Esperando por você — abra a conversa para responder.',
     waitingForYou: 'Esperando por você',
     paused: 'Em pausa — volta a responder quando for retomado.',

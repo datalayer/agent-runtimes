@@ -392,6 +392,24 @@ async def give_agentcore_workload_token_endpoint(
     return {"workloadName": body.workload_name.strip(), "region": body.region.strip()}
 
 
+@router.post("/identity/authorizations/{authorization_id}/decline")
+async def decline_authorization_endpoint(authorization_id: str) -> dict[str, Any]:
+    """Decline the grant a tool waits for, as the chat's *Decline* asks (ID-10).
+
+    The id is the one the ``identity.authorization_required`` event carried to
+    the person's own turn stream, never listed elsewhere. The tool call ends
+    with a sentence.
+    """
+    from agent_runtimes.identity import decline_authorization
+
+    if not decline_authorization(authorization_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"No authorization {authorization_id} waits: answered, timed out, or never asked.",
+        )
+    return {"id": authorization_id, "declined": True}
+
+
 @router.get("/inference/models")
 async def list_inference_models() -> dict[str, Any]:
     """The models this runtime's inference serves, as the runtime knows them.

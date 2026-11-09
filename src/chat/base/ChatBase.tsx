@@ -168,6 +168,13 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
+import {
+  IDENTITY_AUTHORIZATION_REQUIRED,
+  IdentityAuthorizationPanel,
+  declineIdentityAuthorization,
+  identityAuthorizationOf,
+  type IdentityAuthorization,
+} from '../tools/IdentityAuthorization';
 import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
 import {
   initialModelId,
@@ -1745,6 +1752,10 @@ function ChatBaseInner({
     emptyConversation(BROWSER_LIMITS),
   );
   const conversationRef = useRef(conversation);
+  // The grants the turn's tools wait for (ID-10), until it ends.
+  const [identityAuthorizations, setIdentityAuthorizations] = useState<
+    IdentityAuthorization[]
+  >([]);
   // Whether anything has changed it yet: a store is not written over by the
   // empty conversation a chat mounts with.
   const conversationTouchedRef = useRef(false);
@@ -3869,6 +3880,16 @@ function ChatBaseInner({
           if (event.activity) {
             voiceSayRef.current?.(event.activity);
           }
+          if (event.activity?.type === IDENTITY_AUTHORIZATION_REQUIRED) {
+            const authorization = identityAuthorizationOf(event.activity.data);
+            if (authorization) {
+              setIdentityAuthorizations(shown =>
+                shown.some(a => a.id === authorization.id)
+                  ? shown
+                  : [...shown, authorization],
+              );
+            }
+          }
           read();
           // A running row said again with its display (VS-24): the host
           // drawing it elsewhere follows it as it streams.
@@ -3943,6 +3964,7 @@ function ChatBaseInner({
           }
           suppressAssistantTextForToolOnlyRef.current = false;
           pendingToolExecutionsRef.current = 0;
+          setIdentityAuthorizations([]);
           setIsLoading(false);
           setIsStreaming(false);
           agentRuntimeStore.getState().requestRefresh(activeAgentId);
@@ -3950,6 +3972,7 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          setIdentityAuthorizations([]);
           recorderRef.current?.recorder.turnEnded({
             error: event.error?.message ?? 'error',
           });
@@ -5482,6 +5505,22 @@ function ChatBaseInner({
             onReject={handleBannerReject}
           />
         )}
+
+      {/* A third party's grant a tool waits for (ID-10) */}
+      <IdentityAuthorizationPanel
+        authorizations={identityAuthorizations}
+        agentName={title || activeAgentId}
+        onDecline={authorization => {
+          setIdentityAuthorizations(shown =>
+            shown.filter(a => a.id !== authorization.id),
+          );
+          declineIdentityAuthorization(
+            wsBaseUrl,
+            authorization.id,
+            protocol?.authToken,
+          ).catch(refused => console.warn('[ChatBase]', refused));
+        }}
+      />
 
       {/* Error banner */}
       {showErrors && error && (

@@ -145,6 +145,14 @@ export {
   type ToolApprovalBannerProps,
   type PendingApproval,
 } from './tools/ToolApprovalBanner';
+export {
+  IDENTITY_AUTHORIZATION_REQUIRED,
+  IdentityAuthorizationPanel,
+  declineIdentityAuthorization,
+  identityAuthorizationOf,
+  type IdentityAuthorization,
+  type IdentityAuthorizationPanelProps,
+} from './tools/IdentityAuthorization';
 
 // Components - Transport-agnostic chat
 export { Chat, type ChatProps, type ChatSessionActions } from './Chat';

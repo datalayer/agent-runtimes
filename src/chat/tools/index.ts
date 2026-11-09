@@ -40,3 +40,12 @@ export {
   useToolApprovalDialog,
   type ToolApprovalDialogProps,
 } from './ToolApprovalDialog';
+
+export {
+  IDENTITY_AUTHORIZATION_REQUIRED,
+  IdentityAuthorizationPanel,
+  declineIdentityAuthorization,
+  identityAuthorizationOf,
+  type IdentityAuthorization,
+  type IdentityAuthorizationPanelProps,
+} from './IdentityAuthorization';

@@ -36,6 +36,7 @@ from ..otel.prompt_turn_metrics import (
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
+from .agui_authorizations import stream_with_authorizations
 
 # AG-UI's adapter, with a tool's display beside the result the page draws
 # (RU-1).
@@ -819,6 +820,18 @@ class AGUITransport(BaseTransport):
                                 agent_id=transport_self._agent_id,
                                 user_jwt_token=metric_user_jwt_token,
                             )
+
+                        # A tool waiting for a person's grant: its
+                        # authorization event reaches the chat meanwhile (ID-10).
+                        original_iter = stream_with_authorizations(
+                            original_iter,
+                            {
+                                "agent_id": agent_id,
+                                "bearer": extract_jwt_token(
+                                    request.headers.get("authorization"), None
+                                ),
+                            },
+                        )
 
                         async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
                             async for chunk in watch_run_stream(

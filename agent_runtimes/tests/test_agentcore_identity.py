@@ -440,7 +440,14 @@ def test_a_decorated_skill_run_with_a_url(stubbed, monkeypatch) -> None:
     [event] = emitted
     assert isinstance(event, CustomEvent)
     assert event.name == "identity.authorization_required"
-    assert event.value == {"provider": "github", "scopes": ["read:user"], "url": URL}
+    assert event.value == {
+        "id": event.value["id"],
+        "agent": "",
+        "provider": "github",
+        "scopes": ["read:user"],
+        "url": URL,
+    }
+    assert event.value["id"]
 
     async def without_sink() -> str:
         with use_workload_token(WORKLOAD):
