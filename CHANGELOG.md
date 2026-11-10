@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.6.6
+
+The AgentCore image builds: its smoke test gives the container the AWS region a Bedrock model asks for at start (AgentCore Runtime sets it itself), and the build waits longer for PyPI's index after a release. What 1.6.5 carries.
+
 ## 1.6.5
 
 What 1.6.4 carries (it never published: the test of the generated MCP catalogue read the agentcore-gateway-example spec from the agentspecs clone, which CI does not have; the test now writes the spec itself).
