@@ -9,7 +9,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
-## 1.6.1
+## 1.6.2
+
+**AgentCore, continued** (AC-05, AC-06, AC-12 to AC-15, AC-20). A team seat in AgentCore answers A2A on port 9000 through the existing transport. Each AgentCore invocation's bearer is exchanged at IAM for the person's platform and inference tokens (`AGENTCORE_RUNTIME_ARN`), cached to their expiry. A deployed runtime is told its own ARN and URL once READY, and its authorizer checks that ARN as audience. Pydantic AI's instrumentation is on (GenAI semantic conventions, scope `opentelemetry.instrumentation.agent_runtimes`, content never captured for visitors), exported to AgentCore Observability on that target beside Datalayer's; ACP harnesses (Claude Code, Codex) write one `invoke_agent` span per turn and one `execute_tool` per tool call. The `agentcore` evals adapter runs AgentCore's built-in evaluators (`Evaluate`); a skill's load carries `invoked_skill`, `skill_content`, `available_skills`. An MCP server can be an AgentCore Gateway (`auth: agentcore-gateway`, an AgentCore identity), reached with a token from the identity provider.
+
+**Identity** (ID-06, ID-10). `PUT /api/v1/configure/identity/agentcore` holds the workload token a Datalayer pod's companion obtains; the chat draws *Connect <provider> to continue* when a tool needs a person's grant, with Decline.
+
 
 What 1.6.0 carries (it never published: the runtime reads `AGENTCORE_PORT`, `AGENTCORE_WORKLOAD_NAME` and `AGENTCORE_OAUTH_RETURN_URL`, and `AGENTCORE_` was not among the reserved prefixes an agent's own variables may not use; it is now).
 
