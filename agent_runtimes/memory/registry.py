@@ -122,6 +122,20 @@ def create_memory_backend(
         return SqliteMemory(user_id=user_id, agent_id=agent_id, config=config)
 
     if memory_type == "mem0":
+        # Run on a person's own machine with their Datalayer API key, the
+        # agent remembers where it does on Datalayer: the same memories, read
+        # and kept through the runtimes service, never a local store apart.
+        from .datalayer_backend import DatalayerMemory, datalayer_api_key
+
+        if not config and not _running_on_kubernetes() and datalayer_api_key():
+            if not agent_id:
+                raise ValueError(
+                    "An agent's memories are kept under its agentspec's id: none was given."
+                )
+            logger.info(
+                "Using Datalayer memory for agent=%s (DATALAYER_API_KEY)", agent_id
+            )
+            return DatalayerMemory(agent_id=agent_id)
         try:
             from .config import on_datalayer_runtime
             from .mem0_backend import Mem0Backend

@@ -673,7 +673,9 @@ async def _create_and_register_cli_agent(
 
                     # Get env vars from environment
                     server_env: dict[str, str] = {}
-                    for env_key in server.required_env_vars:
+                    for env_ref in server.required_env_vars:
+                        # A reference is versioned (NAME:0.0.1): its name is the variable.
+                        env_key = env_ref.rsplit(":", 1)[0]
                         env_val = os.getenv(env_key)
                         if env_val:
                             server_env[env_key] = env_val

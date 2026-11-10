@@ -33,6 +33,7 @@ DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
     "example-agent-critic-loop-for-analysis",
     "example-ai-explains-notebook-output",
     "example-replace-excel-pivot-work",
+    "worker-marketer",
 )
 
 
@@ -586,21 +587,24 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
     return available_ids, available_lines, len(models)
 
 
+def _env_var_name(reference: str) -> str:
+    """An env var's name from its reference, versioned (``NAME:0.0.1``) or not."""
+    return str(reference).rsplit(":", 1)[0] if ":" in str(reference) else str(reference)
+
+
 def _spec_has_valid_env(spec: Any, available_model_ids: set[str] | None = None) -> bool:
-    """Return True when a spec is enabled and all required env vars are set.
+    """Return True when a spec is enabled and its model can be reached.
 
     Validation includes:
     - spec is enabled
-    - MCP server required env vars are present
     - model required env vars are present (when model exists in catalog)
+
+    An MCP server whose env vars are missing does not hold the agent back:
+    it is listed in red, and the agent runs without its tools (the server
+    fails to start, and says why).
     """
     if not spec.enabled:
         return False
-
-    for mcp in spec.mcp_servers:
-        for var in mcp.required_env_vars:
-            if not os.environ.get(var):
-                return False
 
     if available_model_ids is not None and getattr(spec, "model", None):
         try:
@@ -688,7 +692,7 @@ def _pick_agentspec_interactive() -> str:
                 f"{GRAY}Only agents whose model requirements are available are selectable.{RESET}"
             )
 
-        # Partition into valid (enabled + MCP/model env vars) and the rest, each sorted by id.
+        # Partition into valid (enabled, its model reachable) and the rest, each sorted by id.
         # Display invalid first, then valid, while keeping selection restricted to valid.
         valid_specs = sorted(
             [s for s in specs if _spec_has_valid_env(s, available_model_ids)],
@@ -704,9 +708,7 @@ def _pick_agentspec_interactive() -> str:
 
         if valid_count == 0:
             print(f"\n{RED}No valid agent specs available.{RESET}")
-            print(
-                f"{GRAY}Enable a spec and/or set the required MCP/model environment variables.{RESET}"
-            )
+            print(f"{GRAY}Enable a spec and/or set the env vars of its model.{RESET}")
             raise typer.Exit(1)
 
         # Default preference: example-simple when valid, otherwise first valid spec.
@@ -740,7 +742,7 @@ def _pick_agentspec_interactive() -> str:
                 env_vars.update(mcp.required_env_vars)
             if env_vars:
                 env_parts: list[str] = []
-                for var in sorted(env_vars):
+                for var in sorted({_env_var_name(v) for v in env_vars}):
                     if os.environ.get(var):
                         env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
                     else:
@@ -1687,7 +1689,9 @@ def main_callback(
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
                             where=cloud_launch.label if cloud_launch else None,
-                            cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
+                            cloud_runtime=cloud_launch.runtime_name
+                            if cloud_launch
+                            else None,
                             voice=voice,
                             speak=speak,
                         )
