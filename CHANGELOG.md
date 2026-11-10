@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.6.7
+
+**AgentCore invocation time in the record.** On the `agentcore` target, each run's `output` entry carries the invocation that called it: `invocation: {target: "agentcore", started_at, ended_at, seconds, microvm_started_at}`. `started_at` is when `POST /invocations` (or a `/ws` message) arrived, `ended_at` when the run ended, `seconds` the wall time between, and `microvm_started_at` when the runtime's process started. Measured, never estimated; the platform's AgentCore usage sums `seconds` per organization and month as invocation hours. Nothing changes on other targets.
+
 ## 1.6.6
 
 The AgentCore image builds: its smoke test gives the container the AWS region a Bedrock model asks for at start (AgentCore Runtime sets it itself), and the build waits longer for PyPI's index after a release. What 1.6.5 carries.

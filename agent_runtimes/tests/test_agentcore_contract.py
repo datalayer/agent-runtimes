@@ -14,6 +14,7 @@ refused, a session unknown to the process resumed from its record; and
 
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List
 
@@ -470,6 +471,55 @@ def test_a_session_unknown_here_is_resumed_from_its_record(
     )
     assert third.status_code == 200
     assert recorded.prompts[-1] == ["Remember", "Third"]
+
+
+def test_each_invocation_is_recorded_with_its_wall_time(
+    client: TestClient, recorded: Said
+) -> None:
+    """The run's end in the record carries its invocation: what the usage sums
+    as invocation hours, measured from the invocation's arrival to the run's end."""
+    from agent_runtimes.apps.record import agent_recorder
+
+    recorder = agent_recorder(AGENT_ID)
+    assert recorder is not None
+    bodies: List[Dict[str, Any]] = []
+
+    async def kept(body: Dict[str, Any]) -> None:
+        bodies.append(body)
+
+    recorder.send = kept
+    sid = session_uid_to_agentcore("session-invoked-0001")
+    before = time.time()
+    for prompt in ("One", "Two"):
+        answer = client.post(
+            "/invocations", headers={SESSION_HEADER: sid}, json={"prompt": prompt}
+        )
+        assert answer.json()["status"] == "success"
+    # Streamed as SSE: the same.
+    streamed = client.post(
+        "/invocations",
+        headers={SESSION_HEADER: sid},
+        json=run_input("Three", "session-invoked-0001"),
+    )
+    assert streamed.status_code == 200
+    ends = [
+        entry["payload"]
+        for body in bodies
+        for entry in body["entries"]
+        if entry["kind"] == "output"
+    ]
+    assert len(ends) == 3
+    for end in ends:
+        invocation = end["invocation"]
+        assert invocation["target"] == "agentcore"
+        assert invocation["ended_at"] == end["ended_at"]
+        assert 0 <= invocation["seconds"] <= time.time() - before
+        # The process's start, the same on every invocation it answers.
+        assert (
+            invocation["microvm_started_at"]
+            == ends[0]["invocation"]["microvm_started_at"]
+        )
+    assert ends[0]["invocation"]["started_at"] <= ends[1]["invocation"]["started_at"]
 
 
 def test_a_first_session_is_run_as_it_comes(client: TestClient, recorded: Said) -> None:

@@ -26,6 +26,12 @@ has not held is resumed from its record before the turn runs — the session mod
 resume (`apps.sessions.rebuilt_from_record`, MH-03): its turns and tool rows
 given to the run as the conversation so far.
 
+Each run's ``output`` entry in the record carries its invocation
+(`apps.record.invoked`): ``{target: agentcore, started_at, ended_at, seconds,
+microvm_started_at}`` — when the invocation arrived, when its run ended, the
+wall time between (what the usage reads as invocation hours), and when this
+process, the microVM's, started.
+
 Behind Datalayer IAM's authorizer, the token AgentCore validated is exchanged
 for the platform's tokens before anything else (AC-06, `exchange`): the run
 is given the caller's platform token as its bearer, and its model calls the
@@ -145,6 +151,20 @@ class Liveness:
 
 #: This process's liveness, as ``/ping`` says it.
 LIVENESS = Liveness()
+
+#: When this process started, as the platform's clock says it: taken as the
+#: contract is loaded, at the runtime's start — the microVM's start, as near as
+#: the process knows it. Written with each invocation (`_invoked`).
+MICROVM_STARTED = time.time()
+
+
+def _invoked(started: Optional[float]) -> Any:
+    """Hold, for the run, when its invocation arrived (`apps.record.invoked`)."""
+    from agent_runtimes.apps.record import invoked
+
+    return invoked(
+        "agentcore", time.time() if started is None else started, MICROVM_STARTED
+    )
 
 
 def track_background(task: "asyncio.Future[Any]") -> "asyncio.Future[Any]":
@@ -422,17 +442,24 @@ class _Streamed(Response):
         body: dict[str, Any],
         headers: list[tuple[bytes, bytes]],
         tokens: Optional[PlatformTokens] = None,
+        started: Optional[float] = None,
     ):
         self.agent_app = agent_app
         self.payload = json.dumps(body).encode()
         self.forwarded = headers
         self.tokens = tokens
+        self.started = started
         self.status_code = 200
         self.background = None
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         inner = _inner_scope(scope, self.forwarded, len(self.payload))
-        with LIVENESS.working(), _workload_of(scope), _tokens_held(self.tokens):
+        with (
+            LIVENESS.working(),
+            _invoked(self.started),
+            _workload_of(scope),
+            _tokens_held(self.tokens),
+        ):
             await self.agent_app(inner, _receiver(self.payload, receive), send)
 
 
@@ -459,8 +486,12 @@ async def collected(
     headers: list[tuple[bytes, bytes]],
     on_event: Optional[Callable[[dict[str, Any]], Awaitable[None]]] = None,
     tokens: Optional[PlatformTokens] = None,
+    started: Optional[float] = None,
 ) -> tuple[int, list[dict[str, Any]], bytes]:
-    """One run of the agent's AG-UI app, read whole: its status, its events, and a refusal's body."""
+    """One run of the agent's AG-UI app, read whole: its status, its events, and a refusal's body.
+
+    ``started`` is when the invocation arrived (``time.time()``), now when unsaid.
+    """
     payload = json.dumps(body).encode()
     status = 500
     streamed = False
@@ -489,7 +520,12 @@ async def collected(
                 if on_event is not None:
                     await on_event(event)
 
-    with LIVENESS.working(), _workload_of(scope), _tokens_held(tokens):
+    with (
+        LIVENESS.working(),
+        _invoked(started),
+        _workload_of(scope),
+        _tokens_held(tokens),
+    ):
         await agent_app(
             _inner_scope(scope, headers, len(payload)), _receiver(payload, None), send
         )
@@ -574,6 +610,7 @@ async def _prepared(
 @router.post("/invocations")
 async def invocations(request: Request) -> Response:
     """Run one AG-UI turn of the agent for AgentCore's ``InvokeAgentRuntime``, on the session's thread."""
+    started = time.time()
     try:
         try:
             payload = await request.json()
@@ -590,9 +627,9 @@ async def invocations(request: Request) -> Response:
         ) from None
     forwarded = _forwarded(request.headers, tokens)
     if not prompt_shape or _wants_events(request.headers.get("accept")):
-        return _Streamed(agent_app, body, forwarded, tokens)
+        return _Streamed(agent_app, body, forwarded, tokens, started)
     status, events, raw = await collected(
-        agent_app, request.scope, body, forwarded, tokens=tokens
+        agent_app, request.scope, body, forwarded, tokens=tokens, started=started
     )
     if status != 200:
         return Response(raw, status_code=status, media_type="application/json")
@@ -626,6 +663,7 @@ async def invocations_ws(websocket: WebSocket) -> None:
             text = await websocket.receive_text()
         except WebSocketDisconnect:
             return
+        started = time.time()
         try:
             try:
                 payload = json.loads(text)
@@ -646,6 +684,7 @@ async def invocations_ws(websocket: WebSocket) -> None:
             _forwarded(websocket.headers, tokens),
             said,
             tokens,
+            started,
         )
         error = error_of(events) or (
             "" if status == 200 else raw.decode("utf-8", errors="replace")
@@ -711,6 +750,7 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
 __all__ = [
     "FORWARDED_HEADERS",
     "LIVENESS",
+    "MICROVM_STARTED",
     "SESSION_HEADER",
     "ContractRefused",
     "Liveness",
