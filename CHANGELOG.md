@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+**AgentCore Policy** (AC-44). Every request to an AgentCore Gateway names the run's policy session in `x-amzn-bedrock-agentcore-policy-session-id`: the session uid of the last invocation. The organization's policy engine keeps its temporal policies' history over that session. When those policies change, AgentCore ends the open sessions and answers `409`. The runtime then restarts the session under a new id (`<uid>-<n>`, whose history starts empty), logs a sentence saying so, and sends the request again once. A call made before any invocation has named its session is refused. The cross-account stack (`aws/agentcore-cross-account-role.yaml`) adds `GatewayRole`, the role an organization's Gateways run with. It holds `AuthorizeAction`, `PartiallyAuthorizeActions`, `GetPolicyEngine` and `GetWorkloadAccessToken`, and its ARN is the new `GatewayRoleArn` output. The stack also grants Datalayer's role the policy engine, its policies, the Gateway update that attaches the engine, the Gateway rate limits (AC-45), and `iam:PassRole` on the Gateway role.
+
 ## 1.6.3
 
 What 1.6.2 carries (it never published: the agentcore evals adapter's test imported pydantic-evals, which the basic test install lacks; it now skips without it).

@@ -1,12 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Datalayer on Amazon Bedrock AgentCore, in your own AWS account.
-  Creates two roles: the cross-account role Datalayer assumes (with your
+  Creates three roles: the cross-account role Datalayer assumes (with your
   organization's external id) to deploy agentspecs as AgentCore agent
-  runtimes, invoke and stop their sessions, and obtain workload access
-  tokens from a person's token; and the execution role AgentCore runs the
+  runtimes, invoke and stop their sessions, obtain workload access tokens
+  from a person's token, and push your organization's policy and rate
+  limits to your AgentCore Gateways; the execution role AgentCore runs the
   agent with (CloudWatch Logs, X-Ray, and Bedrock models only when you
-  choose to pay for them in this account).
+  choose to pay for them in this account); and the role your Gateways run
+  with, which lets their policy engine decide each call.
 
 Parameters:
 
@@ -149,6 +151,53 @@ Resources:
               - !Sub 'arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*'
 
   # -------------------------------------------------------------------------
+  # The Gateway role: what your AgentCore Gateways run with. Give it to each
+  # Gateway your organization registers on Datalayer: its policy engine then
+  # decides every tool call, over the policy session's history.
+  # -------------------------------------------------------------------------
+
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: The role your Amazon Bedrock AgentCore Gateways run with, for Datalayer's policies.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AgentCoreGateway
+            Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+      Policies:
+        - PolicyName: datalayer-agentcore-gateway
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The policy engine attached to the Gateway decides each call.
+              - Sid: PolicyDecisions
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:AuthorizeAction
+                  - bedrock-agentcore:PartiallyAuthorizeActions
+                  - bedrock-agentcore:GetPolicyEngine
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*'
+              # A temporal policy's session: the Gateway's own workload token.
+              - Sid: PolicySessions
+                Effect: Allow
+                Action: bedrock-agentcore:GetWorkloadAccessToken
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+
+  # -------------------------------------------------------------------------
   # The cross-account role: what Datalayer assumes, with the external id.
   # -------------------------------------------------------------------------
 
@@ -261,6 +310,46 @@ Resources:
                 Effect: Allow
                 Action: ecr:GetAuthorizationToken
                 Resource: '*'
+              # Your organization's policy: one policy engine, its policies,
+              # LOG_ONLY first and then ACTIVE, attached to your Gateways.
+              - Sid: PolicyEngines
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreatePolicyEngine
+                  - bedrock-agentcore:ListPolicyEngines
+                Resource: '*'
+              - Sid: Policies
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetPolicyEngine
+                  - bedrock-agentcore:CreatePolicy
+                  - bedrock-agentcore:GetPolicy
+                  - bedrock-agentcore:UpdatePolicy
+                  - bedrock-agentcore:DeletePolicy
+                  - bedrock-agentcore:ListPolicies
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*'
+              # Your Gateways: the engine attached, the policies scoped to
+              # them, and your organization's rate limits per user.
+              - Sid: Gateways
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetGateway
+                  - bedrock-agentcore:UpdateGateway
+                  - bedrock-agentcore:ManageResourceScopedPolicy
+                  - bedrock-agentcore:BatchPutGatewayRateLimits
+                  - bedrock-agentcore:ListGatewayRateLimits
+                  - bedrock-agentcore:DeleteGatewayRateLimit
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+              # The Gateway role above, handed back to a Gateway as it is updated.
+              - Sid: PassTheGatewayRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt GatewayRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: bedrock-agentcore.amazonaws.com
               # The execution role above, handed to AgentCore, and no other role.
               - Sid: PassTheExecutionRole
                 Effect: Allow
@@ -279,6 +368,10 @@ Outputs:
   ExecutionRoleArn:
     Description: The role AgentCore runs your agents with; paste it in your organization's AWS settings.
     Value: !GetAtt ExecutionRole.Arn
+
+  GatewayRoleArn:
+    Description: The role to give each AgentCore Gateway your organization registers on Datalayer.
+    Value: !GetAtt GatewayRole.Arn
 
   ExternalId:
     Description: The external id the cross-account role requires.

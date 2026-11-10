@@ -18,7 +18,9 @@ At the root, as AgentCore calls a container:
   messages in, each run's AG-UI events and then its response out.
 
 Every request is a session: ``X-Amzn-Bedrock-AgentCore-Runtime-Session-Id``
-is read and mapped to the session uid (`session_ids`), the AG-UI ``threadId``.
+is read and mapped to the session uid (`session_ids`), the AG-UI ``threadId``,
+which is also the policy session the AgentCore Gateway's calls are decided in
+(`mcp.agentcore_gateway.policy_session`).
 A run naming another thread is refused in a sentence. A session this process
 has not held is resumed from its record before the turn runs — the session model's
 resume (`apps.sessions.rebuilt_from_record`, MH-03): its turns and tool rows
@@ -553,8 +555,10 @@ async def _prepared(
 ) -> tuple[dict[str, Any], bool, str, Any, Optional[PlatformTokens]]:
     """The run of an invocation, resumed when need be, the app that runs it, and its tokens."""
     from agent_runtimes.apps.callers import bearer_of
+    from agent_runtimes.mcp.agentcore_gateway import policy_session
 
     uid, sid = session_of_headers(headers)
+    policy_session().use(uid)
     body, prompt_shape = run_input_of(payload, uid, sid)
     tokens = await tokens_of(headers)
     agent_app = _agent_app()
@@ -604,11 +608,14 @@ async def invocations(request: Request) -> Response:
 @router.websocket("/ws")
 async def invocations_ws(websocket: WebSocket) -> None:
     """The same run over a WebSocket: ``{"prompt", "session_id"}`` in; its events, then its response, out."""
+    from agent_runtimes.mcp.agentcore_gateway import policy_session
+
     try:
         uid, _ = session_of_headers(websocket.headers)
     except ContractRefused as refused:
         await websocket.close(code=1008, reason=refused.sentence)
         return
+    policy_session().use(uid)
     await websocket.accept()
 
     async def said(event: dict[str, Any]) -> None:

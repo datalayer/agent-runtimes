@@ -18,9 +18,12 @@ from agent_runtimes.agentcore.exchange import TokenExchange, use_exchange
 from agent_runtimes.agentcore.identity import AgentCoreIdentity
 from agent_runtimes.mcp import lifecycle
 from agent_runtimes.mcp.agentcore_gateway import (
+    POLICY_SESSION_HEADER,
     AgentCoreGatewayAuth,
+    PolicySession,
     gateway_arn_of,
     gateway_auth_of,
+    policy_session,
 )
 from agent_runtimes.plugins.points import IdentityRefused
 from agent_runtimes.tests.test_mcp_remote_server import (  # noqa: F401 — fixtures
@@ -48,6 +51,12 @@ def _gateway_server(url: str = GATEWAY_URL) -> MCPServer:
         url=url,
         auth=AUTH,
     )
+
+
+def _session(uid: str) -> PolicySession:
+    session = PolicySession()
+    session.use(uid)
+    return session
 
 
 class FakeProvider:
@@ -97,7 +106,10 @@ def test_a_server_without_auth_has_no_gateway_auth(
 def test_each_request_carries_the_inbound_token_the_provider_obtains() -> None:
     provider = FakeProvider("gw-token-1")
     auth = AgentCoreGatewayAuth(
-        GATEWAY_ARN, provider=lambda: provider, caller=lambda: {"token": "rs256-in"}
+        GATEWAY_ARN,
+        provider=lambda: provider,
+        caller=lambda: {"token": "rs256-in"},
+        session=lambda: _session("sess-1"),
     )
     seen: List[str] = []
 
@@ -129,7 +141,10 @@ async def test_the_gateway_server_starts_with_the_minted_bearer(
         lifecycle,
         "gateway_auth_of",
         lambda config: AgentCoreGatewayAuth(
-            GATEWAY_ARN, provider=lambda: provider, caller=lambda: {"token": "rs256-in"}
+            GATEWAY_ARN,
+            provider=lambda: provider,
+            caller=lambda: {"token": "rs256-in"},
+            session=lambda: _session("sess-1"),
         ),
     )
     instance = await manager.start_server("my-gateway", _gateway_server(gateway.url))
@@ -138,6 +153,7 @@ async def test_the_gateway_server_starts_with_the_minted_bearer(
         assert gateway.seen and all(
             seen.get("authorization") == f"Bearer {KEY}" for seen in gateway.seen
         )
+        assert all(seen.get(POLICY_SESSION_HEADER) == "sess-1" for seen in gateway.seen)
         assert provider.asked and provider.asked[0][1] == GATEWAY_ARN
     finally:
         assert await manager.stop_server("my-gateway")
@@ -270,3 +286,100 @@ def test_the_generated_catalogue_carries_the_auth(
         'auth: {"kind": "agentcore-gateway", "identity": "aws-agentcore-gateway"},'
         in typescript
     )
+
+
+# --- the policy session (AC-44) ---------------------------------------------------
+
+
+def _asked(
+    auth: AgentCoreGatewayAuth, statuses: List[int], times: int = 1
+) -> tuple[List[str], List[int]]:
+    """The policy session each request carried, and what each call answered."""
+    seen: List[str] = []
+    answers = list(statuses)
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request.headers[POLICY_SESSION_HEADER])
+        assert request.content == b'{"jsonrpc":"2.0"}'
+        return httpx2.Response(answers.pop(0) if answers else 200, json={})
+
+    async def ask() -> List[int]:
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(handler), auth=auth
+        ) as c:
+            return [
+                (
+                    await c.post(
+                        GATEWAY_URL,
+                        content=b'{"jsonrpc":"2.0"}',
+                        headers={"content-type": "application/json"},
+                    )
+                ).status_code
+                for _ in range(times)
+            ]
+
+    return seen, asyncio.run(ask())
+
+
+def _auth(session: PolicySession) -> AgentCoreGatewayAuth:
+    return AgentCoreGatewayAuth(
+        GATEWAY_ARN,
+        provider=lambda: FakeProvider("gw"),
+        caller=lambda: {"token": "rs256-in"},
+        session=lambda: session,
+    )
+
+
+def test_each_request_names_the_session_uid_as_the_policy_session() -> None:
+    session = PolicySession()
+    session.use("sess-1")
+    seen, answered = _asked(_auth(session), [], times=2)
+    assert seen == ["sess-1", "sess-1"] and answered == [200, 200]
+
+
+def test_a_call_with_no_session_is_refused() -> None:
+    with pytest.raises(IdentityRefused, match="No session to decide"):
+        _asked(_auth(PolicySession()), [])
+
+
+def test_a_session_agentcore_ended_is_restarted_in_a_sentence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    session = PolicySession()
+    session.use("sess-1")
+    with caplog.at_level("WARNING", logger="agent_runtimes.mcp.agentcore_gateway"):
+        seen, answered = _asked(_auth(session), [409], times=2)
+    # Sent again once in the new session; the next call stays in it.
+    assert seen == ["sess-1", "sess-1-1", "sess-1-1"]
+    assert answered == [200, 200]
+    assert (
+        "AgentCore ended the policy session sess-1: the organization's temporal "
+        "policies changed. The Gateway's calls go on in policy session sess-1-1"
+    ) in caplog.text
+    # A second 409 in a row is the caller's to read.
+    seen, answered = _asked(_auth(session), [409, 409])
+    assert seen == ["sess-1-1", "sess-1-2"] and answered == [409]
+    # A new invocation's session starts afresh.
+    session.use("sess-2")
+    assert session.id == "sess-2"
+
+
+def test_an_invocation_names_the_policy_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.agentcore import contract
+    from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
+
+    async def no_tokens(headers: Any) -> None:
+        return None
+
+    async def as_is(body: Any, uid: str, bearer: Any) -> Any:
+        return body
+
+    monkeypatch.setattr(contract, "tokens_of", no_tokens)
+    monkeypatch.setattr(contract, "resumed", as_is)
+    monkeypatch.setattr(contract, "_agent_app", lambda: object())
+    uid = "0123456789abcdef0123456789abcdef"
+    headers = {contract.SESSION_HEADER: session_uid_to_agentcore(uid)}
+    asyncio.run(contract._prepared({"prompt": "hello"}, headers))
+    assert policy_session().id == uid

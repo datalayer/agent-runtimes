@@ -78,13 +78,14 @@ When omitted, both templates default ai-inference routing to `DatalayerIamUrl`.
 
 [`agentcore-cross-account-role.yaml`](./agentcore-cross-account-role.yaml)
 lets Datalayer run your organization's agentspecs on Amazon Bedrock
-AgentCore Runtime in your own AWS account. It creates two IAM roles and
+AgentCore Runtime in your own AWS account. It creates three IAM roles and
 nothing else:
 
 | Role | Assumed by | Allows |
 |------|------------|--------|
-| `DatalayerRole` | Datalayer's AWS account, only with your organization's external id (`sts:ExternalId`) | Create, read, update, list and delete agent runtimes and their endpoints; invoke a session and stop it; create the workload identity of a deployment; `GetWorkloadAccessTokenForJWT` (a token for a person Datalayer signed in), with an explicit deny on `GetWorkloadAccessTokenForUserId`; the third-party credentials of AgentCore Identity; ECR pull; `iam:PassRole` on the execution role below and no other role. |
+| `DatalayerRole` | Datalayer's AWS account, only with your organization's external id (`sts:ExternalId`) | Create, read, update, list and delete agent runtimes and their endpoints; invoke a session and stop it; create the workload identity of a deployment; `GetWorkloadAccessTokenForJWT` (a token for a person Datalayer signed in), with an explicit deny on `GetWorkloadAccessTokenForUserId`; the third-party credentials of AgentCore Identity; ECR pull; your organization's policy engine and its policies (create, read, update, list, delete), attached to your Gateways (`GetGateway`, `UpdateGateway`, `ManageResourceScopedPolicy`), and their rate limits per user (`BatchPutGatewayRateLimits`, `ListGatewayRateLimits`, `DeleteGatewayRateLimit`); `iam:PassRole` on the execution role and the Gateway role below, and no other role. |
 | `ExecutionRole` | `bedrock-agentcore.amazonaws.com`, for this account | Pull the image; CloudWatch Logs under `/aws/bedrock-agentcore/runtimes/`, X-Ray and CloudWatch metrics; the third-party credentials of AgentCore Identity; Amazon Bedrock models only with `UseCustomerBedrock=true`. |
+| `GatewayRole` | `bedrock-agentcore.amazonaws.com`, for this account's Gateways | `AuthorizeAction`, `PartiallyAuthorizeActions` and `GetPolicyEngine`, so the policy engine attached to a Gateway decides each call; `GetWorkloadAccessToken`, which temporal policies need for their policy sessions. |
 
 The control plane's actions (`CreateAgentRuntime`, …) and the data plane's
 (`InvokeAgentRuntime`, …) share the IAM prefix `bedrock-agentcore`.
@@ -105,7 +106,10 @@ aws cloudformation deploy \
 ```
 
 Then copy the outputs (`DatalayerRoleArn`, `ExecutionRoleArn`, `ExternalId`,
-`Region`) into the same settings page:
+`Region`) into the same settings page, and give each AgentCore Gateway your
+organization registers the `GatewayRoleArn` output as its role. Datalayer
+re-sends a Gateway's role when it attaches your policy engine, and it may pass
+this role only:
 
 ```bash
 aws cloudformation describe-stacks --stack-name datalayer-agentcore \
