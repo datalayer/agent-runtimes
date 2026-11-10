@@ -1,0 +1,220 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# The image Amazon Bedrock AgentCore Runtime runs (AC-04), from
+# docker/Dockerfile.agentcore: agent-runtimes from PyPI, built natively for
+# linux/arm64 (ubuntu-24.04-arm) and linux/amd64 (ubuntu-latest), each one
+# smoke-tested (GET /ping answers {"status": "Healthy"}, no model called),
+# then pushed to Amazon ECR as one manifest list, <version> and latest.
+#
+# AWS is reached with GitHub's OIDC token, no stored key: the role in the
+# secret AGENTCORE_IMAGE_ROLE_ARN comes from aws/agentcore-image-push-role.yaml
+# (see aws/README.md).
+
+name: AgentCore image
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'agent-runtimes version on PyPI (empty: the one in package.json)'
+        required: false
+        default: ''
+
+concurrency:
+  group: agentcore-image-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 773842031886.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: datalayer/agent-runtimes-agentcore
+  # A catalogue agentspec with no MCP server and no skill: it configures at
+  # start without any credential, and /ping calls no model.
+  SMOKE_AGENT_SPEC_ID: example-agentic-chat
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the push role is configured
+        env:
+          ROLE_ARN: ${{ secrets.AGENTCORE_IMAGE_ROLE_ARN }}
+        run: |
+          if [ -z "${ROLE_ARN}" ]; then
+            echo "::error title=AGENTCORE_IMAGE_ROLE_ARN is not set::Deploy aws/agentcore-image-push-role.yaml in account 773842031886 (us-east-1), then set the repository secret AGENTCORE_IMAGE_ROLE_ARN to the stack's PushRoleArn output: gh secret set AGENTCORE_IMAGE_ROLE_ARN --repo datalayer/agent-runtimes --body <arn>. See aws/README.md."
+            exit 1
+          fi
+
+      - name: Resolve the version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -z "${INPUT_VERSION}" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          elif [ -n "${INPUT_VERSION}" ]; then
+            version="${INPUT_VERSION#v}"
+          else
+            version="$(jq -r .version package.json)"
+          fi
+          if ! printf '%s' "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([a-z0-9.]*)?$'; then
+            echo "::error::'${version}' is not a version."
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "agent-runtimes ${version}"
+
+      # On a tag, the Release workflow publishes to PyPI after its tests: the
+      # image waits for the version to be there (up to 100 minutes).
+      - name: Wait for agent-runtimes ${{ steps.version.outputs.version }} on PyPI
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          url="https://pypi.org/pypi/agent-runtimes/${VERSION}/json"
+          for attempt in $(seq 1 100); do
+            if curl -fsS -o /dev/null "${url}"; then
+              echo "agent-runtimes ${VERSION} is on PyPI."
+              exit 0
+            fi
+            echo "Not on PyPI yet (attempt ${attempt}); waiting a minute."
+            sleep 60
+          done
+          echo "::error::agent-runtimes ${VERSION} is not on PyPI after 100 minutes; is its Release run green?"
+          exit 1
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      LOCAL_IMAGE: agent-runtimes-agentcore:smoke
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          # PyPI's CDN can lag its JSON API by a few minutes after a release.
+          for attempt in 1 2 3; do
+            if docker buildx build \
+                --platform "${{ matrix.platform }}" \
+                --build-arg "AGENT_RUNTIMES_VERSION=${VERSION}" \
+                --cache-from "type=gha,scope=agentcore-${{ matrix.arch }}" \
+                --cache-to "type=gha,mode=max,scope=agentcore-${{ matrix.arch }}" \
+                --load \
+                -t "${LOCAL_IMAGE}" \
+                -f docker/Dockerfile.agentcore \
+                docker; then
+              exit 0
+            fi
+            echo "Build attempt ${attempt} failed; retrying in 60 s."
+            sleep 60
+          done
+          exit 1
+
+      - name: Smoke test (GET /ping)
+        run: |
+          set -euo pipefail
+          docker run -d --name agentcore-smoke -p 8080:8080 \
+            -e "AGENT_SPEC_ID=${SMOKE_AGENT_SPEC_ID}" \
+            "${LOCAL_IMAGE}"
+          answer=""
+          for attempt in $(seq 1 90); do
+            if answer="$(curl -fsS -m 3 http://127.0.0.1:8080/ping)"; then
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' agentcore-smoke)" != "true" ]; then
+              echo "::error::The container stopped before answering /ping."
+              docker logs agentcore-smoke
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "/ping answered: ${answer}"
+          if [ "$(printf '%s' "${answer}" | jq -r .status 2>/dev/null)" != "Healthy" ]; then
+            echo "::error::GET /ping did not answer {\"status\": \"Healthy\"} on ${{ matrix.platform }}."
+            docker logs agentcore-smoke
+            exit 1
+          fi
+          test "$(docker inspect -f '{{.Config.User}}' "${LOCAL_IMAGE}")" = "agent"
+          docker logs agentcore-smoke 2>&1 | tail -20
+          docker rm -f agentcore-smoke
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AGENTCORE_IMAGE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push ${{ env.VERSION }}-${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          target="${ECR_REGISTRY}/${ECR_REPOSITORY}:${VERSION}-${{ matrix.arch }}"
+          docker tag "${LOCAL_IMAGE}" "${target}"
+          docker push "${target}"
+
+  manifest:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AGENTCORE_IMAGE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push the manifest list (${{ env.VERSION }}, latest)
+        run: |
+          set -euo pipefail
+          repo="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          docker buildx imagetools create \
+            -t "${repo}:${VERSION}" \
+            -t "${repo}:latest" \
+            "${repo}:${VERSION}-amd64" \
+            "${repo}:${VERSION}-arm64"
+          docker buildx imagetools inspect "${repo}:${VERSION}"
+          {
+            echo "### AgentCore image"
+            echo
+            echo "DATALAYER_AGENTCORE_IMAGE_URI=\`${repo}:${VERSION}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"

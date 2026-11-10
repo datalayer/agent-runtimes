@@ -117,6 +117,75 @@ your agents run in. To stop Datalayer from acting in the account, delete the
 stack (`aws cloudformation delete-stack --stack-name datalayer-agentcore`);
 agent runtimes Datalayer created stay until you delete them.
 
+## The AgentCore image
+
+AgentCore Runtime runs one image for every agentspec: agent-runtimes from
+PyPI, started with `agent-runtimes serve --target agentcore` and the agentspec
+id in `AGENT_SPEC_ID` ([`docker/Dockerfile.agentcore`](../docker/Dockerfile.agentcore):
+Python 3.11 on Debian slim, wheels only, a non-root user, ports 8080 and
+9000; no Node.js, so no npm MCP server and no coding-agent harness). The
+GitHub Actions workflow
+[`agentcore-image.yml`](../.github/workflows/agentcore-image.yml) builds it
+natively for linux/arm64 (AgentCore's platform) and linux/amd64, checks on
+each that `GET /ping` answers `{"status": "Healthy"}`, and pushes one
+manifest list to Amazon ECR as `<version>` and `latest`. It runs on every
+`v*` tag (once the version is on PyPI) and by hand.
+
+[`agentcore-image-push-role.yaml`](./agentcore-image-push-role.yaml) creates,
+in the account that holds the image:
+
+| Resource | What |
+|----------|------|
+| ECR repository `datalayer/agent-runtimes-agentcore` | Scan on push; tags immutable except `latest` (`IMMUTABLE_WITH_EXCLUSION`), so a version tag always names the same image. `PullAccountIds` lets AgentCore runtimes in other accounts pull it. |
+| OIDC provider `token.actions.githubusercontent.com` | Only with `CreateOidcProvider=true`: an account holds one per URL, so pass `false` when it exists (`aws iam list-open-id-connect-providers`). |
+| `PushRole` | Assumed only by GitHub Actions of `datalayer/agent-runtimes` on a `v*` tag or on the branch `DispatchBranch` (`main` by default, for a manual run); allowed to push to that repository and nothing else. |
+
+1. Deploy the stack in the account and region of the image (Datalayer's
+   end-to-end account, `773842031886`, `us-east-1`):
+
+   ```bash
+   aws cloudformation deploy \
+     --template-file aws/agentcore-image-push-role.yaml \
+     --stack-name datalayer-agentcore-image \
+     --region us-east-1 \
+     --capabilities CAPABILITY_IAM \
+     --parameter-overrides CreateOidcProvider=true
+
+   aws cloudformation describe-stacks --stack-name datalayer-agentcore-image \
+     --region us-east-1 --query 'Stacks[0].Outputs'
+   ```
+
+2. Set the repository secret to the `PushRoleArn` output:
+
+   ```bash
+   gh secret set AGENTCORE_IMAGE_ROLE_ARN --repo datalayer/agent-runtimes \
+     --body "$(aws cloudformation describe-stacks --stack-name datalayer-agentcore-image \
+       --region us-east-1 --query "Stacks[0].Outputs[?OutputKey=='PushRoleArn'].OutputValue" --output text)"
+   ```
+
+   Without it the workflow stops at its first step and says so.
+
+3. Run the workflow: push a `v*` tag, or by hand on a tag (or on
+   `DispatchBranch`), optionally with a version already on PyPI:
+
+   ```bash
+   gh workflow run agentcore-image.yml --repo datalayer/agent-runtimes --ref v1.6.2
+   gh workflow run agentcore-image.yml --repo datalayer/agent-runtimes --ref main -f version=1.6.2
+   ```
+
+   Each architecture is pushed as `<version>-amd64` and `<version>-arm64`, then
+   the manifest list as `<version>` and `latest`. The tags being immutable, a
+   run for a version already pushed fails at its push.
+
+4. The image URI is what the Datalayer runtimes service is configured with:
+
+   ```bash
+   DATALAYER_AGENTCORE_IMAGE_URI=773842031886.dkr.ecr.us-east-1.amazonaws.com/datalayer/agent-runtimes-agentcore:1.6.2
+   ```
+
+   Name a version, not `latest`: an AgentCore runtime keeps the image it was
+   created or updated with.
+
 ## Cleanup
 
 ```bash
