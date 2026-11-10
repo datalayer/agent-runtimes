@@ -1102,6 +1102,8 @@ function toAgentSkillSpec(skill: SkillSpec) {
         tags: skill.tags,
         enabled: skill.enabled,
         requiredEnvVars: skill.requiredEnvVars,
+        icon: skill.icon,
+        emoji: skill.emoji,
     };
 }
 """
