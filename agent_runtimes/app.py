@@ -671,6 +671,8 @@ async def _create_and_register_cli_agent(
                         c if c.isalnum() or c == "_" else "_" for c in server.id
                     )
 
+                    from agent_runtimes.mcp.env_expansion import expand_env_vars
+
                     # Get env vars from environment
                     server_env: dict[str, str] = {}
                     for env_ref in server.required_env_vars:
@@ -685,7 +687,11 @@ async def _create_and_register_cli_agent(
                             name=normalized_name,
                             url=server.url if server.transport == "http" else "",
                             command=server.command or "",
-                            args=server.args or [],
+                            # ${VAR} and ${VAR:-default}, as the lifecycle manager expands them.
+                            args=[
+                                expand_env_vars(a) if isinstance(a, str) else a
+                                for a in (server.args or [])
+                            ],
                             env=server_env,
                             enabled=server.enabled,
                         )
