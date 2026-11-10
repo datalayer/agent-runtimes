@@ -388,14 +388,34 @@ async def my_login(*, access_token: str) -> str:
     return f"login with {access_token}"
 
 
-def test_a_decorated_skill_run_with_a_token(stubbed, monkeypatch) -> None:
+STATE = "state-issued-by-iam"
+
+
+@pytest.fixture()
+def consent(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    """IAM's binding page and a state, as `identity.consent` gets them."""
+    from agent_runtimes.identity import consent as consent_module
+
+    asked: list[Any] = []
+
+    async def consent_for(context: Any) -> Any:
+        asked.append(dict(context))
+        return consent_module.Consent(RETURN, STATE)
+
+    monkeypatch.setattr(consent_module, "consent_for", consent_for)
+    return asked
+
+
+def test_a_decorated_skill_run_with_a_token(stubbed, monkeypatch, consent) -> None:
     client, stub = stubbed
     monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "agentcore")
     monkeypatch.setattr(
         identity, "active_provider", lambda platform=None: _provider(client)
     )
     stub.add_response(
-        "get_resource_oauth2_token", {"accessToken": "gho_1"}, _oauth_params()
+        "get_resource_oauth2_token",
+        {"accessToken": "gho_1"},
+        _oauth_params(customState=STATE),
     )
 
     async def run() -> str:
@@ -405,7 +425,7 @@ def test_a_decorated_skill_run_with_a_token(stubbed, monkeypatch) -> None:
     assert asyncio.run(run()) == "login with gho_1"
 
 
-def test_a_decorated_skill_run_with_a_url(stubbed, monkeypatch) -> None:
+def test_a_decorated_skill_run_with_a_url(stubbed, monkeypatch, consent) -> None:
     from ag_ui.core import CustomEvent
 
     client, stub = stubbed
@@ -415,17 +435,17 @@ def test_a_decorated_skill_run_with_a_url(stubbed, monkeypatch) -> None:
     stub.add_response(
         "get_resource_oauth2_token",
         {"authorizationUrl": URL, "sessionUri": SESSION_URI},
-        _oauth_params(),
+        _oauth_params(customState=STATE),
     )
     stub.add_response(
         "get_resource_oauth2_token",
         {"accessToken": "gho_2"},
-        _oauth_params(sessionUri=SESSION_URI),
+        _oauth_params(customState=STATE, sessionUri=SESSION_URI),
     )
     stub.add_response(
         "get_resource_oauth2_token",
         {"authorizationUrl": URL, "sessionUri": SESSION_URI},
-        _oauth_params(),
+        _oauth_params(customState=STATE),
     )
     emitted: list[Any] = []
 

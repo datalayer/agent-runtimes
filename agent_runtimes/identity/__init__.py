@@ -18,6 +18,11 @@ every AgentCore deployment) uses ``agentcore``, any other ``datalayer``; it is
 read from the ``identity.provider`` contributions the seam accepted, and one
 missing is refused, never replaced.
 
+On AgentCore, a token asked for the person (``USER_FEDERATION``) names
+Datalayer IAM's binding page as the return URL and a state IAM issued to the
+person (:mod:`agent_runtimes.identity.consent`): AgentCore sends the person's
+browser there after the grant, and IAM binds the consent to who is signed in.
+
 When the person must grant access first, the authorization URL is emitted as
 an AG-UI custom event (``identity.authorization_required``, naming the
 authorization, the agent, the provider and the scopes) to the sink the run set
@@ -51,6 +56,9 @@ from agent_runtimes.plugins.points import (
     IdentityProvider,
     IdentityRefused,
 )
+
+#: The id of the ``agentcore`` provider, whose consents IAM binds.
+AGENTCORE_PROVIDER_ID = "agentcore"
 
 #: The AG-UI custom event's name for an authorization URL to show.
 AUTHORIZATION_EVENT = "identity.authorization_required"
@@ -170,7 +178,17 @@ async def oauth_token(
         )
     chosen = identity if identity is not None else active_provider()
     told = _CONTEXT.get() if context is None else context
-    extra = {"force_authentication": True} if force_authentication else {}
+    extra: dict[str, Any] = (
+        {"force_authentication": True} if force_authentication else {}
+    )
+    consent = None
+    if getattr(chosen, "id", "") == AGENTCORE_PROVIDER_ID and flow == "USER_FEDERATION":
+        # The person's browser comes back to IAM's page after the grant,
+        # with a state IAM issued to them: IAM binds the consent to them.
+        from agent_runtimes.identity.consent import consent_for
+
+        consent = await consent_for(told)
+        extra.update(return_url=consent.return_url, custom_state=consent.custom_state)
     sink = _SINK.get()
     if sink is None:
         return await chosen.oauth_token(
@@ -178,8 +196,10 @@ async def oauth_token(
         )
     authorization_id = uuid.uuid4().hex
     agent = str(told.get("agent_id") or "")
+    shown: list[str] = []
 
     def on_auth_url(url: str) -> Any:
+        shown.append(url)
         return sink(authorization_event(authorization_id, agent, provider, scopes, url))
 
     declined = asyncio.Event()
@@ -193,7 +213,12 @@ async def oauth_token(
     try:
         await asyncio.wait({asked, answered}, return_when=asyncio.FIRST_COMPLETED)
         if asked.done():
-            return asked.result()
+            token = asked.result()
+            if shown and consent is not None:
+                from agent_runtimes.identity.consent import used
+
+                used(told, consent)
+            return token
         asked.cancel()
         raise AuthorizationDeclined(
             f"Access to {provider} was declined: the tool call ends without it."

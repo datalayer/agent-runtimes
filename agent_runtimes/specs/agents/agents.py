@@ -10298,7 +10298,7 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
         "datalayer-memory-list:0.0.1",
         "datalayer-memory-delete:0.0.1",
     ],
-    backend_tools=[],
+    backend_tools=["github-repositories:0.0.1"],
     frontend_tools=[],
     environment_name="ai-agents-env",
     icon="megaphone",

@@ -319,6 +319,26 @@ export const GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '🌤️',
 };
 
+export const GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'github-repositories',
+  version: '0.0.1',
+  name: 'GitHub Repositories',
+  description:
+    "List the GitHub repositories of the person the agent works for, with the person's own GitHub grant; the first time, the person is asked to connect GitHub in the chat.",
+  tags: ['github', 'identity'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.github',
+    method: 'github_repositories',
+  },
+  icon: '@primer/octicons-react:mark-github',
+  emoji: '🐙',
+};
+
 export const RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'runtime-echo',
   version: '0.0.1',
@@ -419,6 +439,7 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'generate-haiku': GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
   'generate-task-steps': GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
   'get-weather': GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+  'github-repositories': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,

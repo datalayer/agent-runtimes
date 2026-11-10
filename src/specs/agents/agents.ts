@@ -54,6 +54,7 @@ import {
   EXAMPLE_GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
   EXAMPLE_RENDER_A2UI_SURFACE_BACKEND_TOOL_SPEC_0_0_1,
   EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
+  GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
   RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
   RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
@@ -180,6 +181,8 @@ const TOOL_MAP: Record<string, any> = {
   'example-update-plan-step:0.0.1':
     EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
   'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
+  'github-repositories:0.0.1': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
+  'github-repositories': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo:0.0.1': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
@@ -11390,7 +11393,7 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['datalayer-memory-delete:0.0.1'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  backendTools: [],
+  backendTools: [TOOL_MAP['github-repositories:0.0.1']],
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
