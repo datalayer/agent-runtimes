@@ -47,6 +47,7 @@ import logging
 import os
 import time
 import uuid
+from collections import OrderedDict
 from typing import Any, Awaitable, Callable, Iterator, Mapping, Optional
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -187,6 +188,7 @@ _HELD: set[str] = set()
 def forget_held() -> None:
     """Forget the sessions this process ran (a test: a fresh microVM)."""
     _HELD.clear()
+    _PROMPT_HISTORY.clear()
 
 
 def session_of_headers(headers: Mapping[str, str]) -> tuple[str, str]:
@@ -265,6 +267,38 @@ def _carries_history(body: Mapping[str, Any]) -> bool:
     """Whether a run brings its conversation so far: more than its new message."""
     messages = [m for m in body.get("messages") or [] if isinstance(m, dict)]
     return len(messages) > 1 or any(m.get("role") != "user" for m in messages)
+
+
+#: A plain-prompt session's turns, kept in this process: a ``{"prompt": ...}``
+#: caller (AWS's samples, ``loop``) sends only its new message, where an AG-UI
+#: client sends the whole conversation. Prepended to the session's next prompt;
+#: bounded per session and in sessions, the oldest dropped first.
+_PROMPT_HISTORY: "OrderedDict[str, list[dict[str, str]]]" = OrderedDict()
+PROMPT_HISTORY_MESSAGES = 50
+PROMPT_HISTORY_SESSIONS = 256
+
+
+def with_prompt_history(body: dict[str, Any], uid: str) -> dict[str, Any]:
+    """The prompt's run with the session's earlier turns before it, when this process kept them."""
+    history = _PROMPT_HISTORY.get(uid)
+    if not history:
+        return body
+    _PROMPT_HISTORY.move_to_end(uid)
+    return {**body, "messages": [*history, *(body.get("messages") or [])]}
+
+
+def remember_prompt_turn(uid: str, prompt: str, answer: str) -> None:
+    """Keep a plain-prompt turn of the session: its prompt and the agent's answer."""
+    if not answer:
+        return
+    history = _PROMPT_HISTORY.pop(uid, [])
+    history += [
+        {"id": str(uuid.uuid4()), "role": "user", "content": prompt},
+        {"id": str(uuid.uuid4()), "role": "assistant", "content": answer},
+    ]
+    _PROMPT_HISTORY[uid] = history[-PROMPT_HISTORY_MESSAGES:]
+    while len(_PROMPT_HISTORY) > PROMPT_HISTORY_SESSIONS:
+        _PROMPT_HISTORY.popitem(last=False)
 
 
 async def resumed(body: dict[str, Any], uid: str, bearer: str) -> dict[str, Any]:
@@ -443,7 +477,9 @@ class _Streamed(Response):
         headers: list[tuple[bytes, bytes]],
         tokens: Optional[PlatformTokens] = None,
         started: Optional[float] = None,
+        remember: Optional[tuple[str, str]] = None,
     ):
+        self.remember = remember
         self.agent_app = agent_app
         self.payload = json.dumps(body).encode()
         self.forwarded = headers
@@ -460,7 +496,20 @@ class _Streamed(Response):
             _workload_of(scope),
             _tokens_held(self.tokens),
         ):
-            await self.agent_app(inner, _receiver(self.payload, receive), send)
+            if self.remember is None:
+                await self.agent_app(inner, _receiver(self.payload, receive), send)
+                return
+            chunks: list[bytes] = []
+
+            async def sent(message: Any) -> None:
+                if message.get("type") == "http.response.body":
+                    chunks.append(message.get("body") or b"")
+                await send(message)
+
+            await self.agent_app(inner, _receiver(self.payload, receive), sent)
+            events, _ = _sse_events(b"".join(chunks).decode("utf-8", errors="replace"))
+            if not error_of(events):
+                remember_prompt_turn(*self.remember, answer_of(events))
 
 
 def _sse_events(buffer: str) -> tuple[list[dict[str, Any]], str]:
@@ -603,6 +652,8 @@ async def _prepared(
         if tokens is not None
         else bearer_of(headers.get("authorization"))
     )
+    if prompt_shape:
+        body = with_prompt_history(body, uid)
     body = await resumed(body, uid, bearer)
     return body, prompt_shape, uid, agent_app, tokens
 
@@ -618,7 +669,7 @@ async def invocations(request: Request) -> Response:
             raise ContractRefused(
                 400, 'An invocation is JSON: an AG-UI RunAgentInput or {"prompt": ...}.'
             ) from None
-        body, prompt_shape, _, agent_app, tokens = await _prepared(
+        body, prompt_shape, uid, agent_app, tokens = await _prepared(
             payload, request.headers
         )
     except ContractRefused as refused:
@@ -627,7 +678,8 @@ async def invocations(request: Request) -> Response:
         ) from None
     forwarded = _forwarded(request.headers, tokens)
     if not prompt_shape or _wants_events(request.headers.get("accept")):
-        return _Streamed(agent_app, body, forwarded, tokens, started)
+        remember = (uid, str(payload["prompt"])) if prompt_shape else None
+        return _Streamed(agent_app, body, forwarded, tokens, started, remember)
     status, events, raw = await collected(
         agent_app, request.scope, body, forwarded, tokens=tokens, started=started
     )
@@ -639,6 +691,7 @@ async def invocations(request: Request) -> Response:
             {"response": answer_of(events), "status": "error", "error": error},
             status_code=500,
         )
+    remember_prompt_turn(uid, str(payload["prompt"]), answer_of(events))
     return JSONResponse({"response": answer_of(events), "status": "success"})
 
 
@@ -671,7 +724,9 @@ async def invocations_ws(websocket: WebSocket) -> None:
                 raise ContractRefused(
                     400, 'A message is JSON: {"prompt": ..., "session_id": ...}.'
                 ) from None
-            body, _, _, agent_app, tokens = await _prepared(payload, websocket.headers)
+            body, prompt_shape, _, agent_app, tokens = await _prepared(
+                payload, websocket.headers
+            )
         except ContractRefused as refused:
             await said(
                 {"status": "error", "error": refused.sentence, "session_id": uid}
@@ -689,6 +744,8 @@ async def invocations_ws(websocket: WebSocket) -> None:
         error = error_of(events) or (
             "" if status == 200 else raw.decode("utf-8", errors="replace")
         )
+        if prompt_shape and not error:
+            remember_prompt_turn(uid, str(payload["prompt"]), answer_of(events))
         await said(
             {
                 "response": answer_of(events),

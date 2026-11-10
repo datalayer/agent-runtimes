@@ -284,6 +284,12 @@ class AgentCoreTarget:
             # Each invocation's bearer is exchanged at IAM inside the runtime
             # once it knows its own ARN: it must also know where IAM is, or it
             # refuses to start (10 November 2026: a deploy from `loop` failed so).
+            # AgentCore passes no header through unless it is allowlisted: the
+            # bearer it validated is what the runtime exchanges at IAM
+            # (10 November 2026: without it every invocation answered 401).
+            request["requestHeaderConfiguration"] = {
+                "requestHeaderAllowlist": ["Authorization"]
+            }
             iam = iam_url_of(settings.authorizer.discovery_url)
             if iam and IAM_URL_VARIABLE not in request["environmentVariables"]:
                 request["environmentVariables"][IAM_URL_VARIABLE] = iam

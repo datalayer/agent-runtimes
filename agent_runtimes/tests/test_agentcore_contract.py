@@ -336,6 +336,60 @@ def test_a_prompt_is_streamed_when_the_client_takes_events(
     assert events[0]["threadId"] == UID
 
 
+def test_a_sessions_prompts_carry_its_earlier_turns(
+    client: TestClient, model: Said
+) -> None:
+    # A {"prompt"} caller sends only its new message: the session's earlier
+    # turns, kept in this process, go before it (10 November 2026).
+    first = client.post(
+        "/invocations",
+        headers={SESSION_HEADER: SID},
+        json={"prompt": "Remember PELICAN"},
+    )
+    assert first.json()["response"] == "Heard 1: Remember PELICAN"
+    second = client.post(
+        "/invocations", headers={SESSION_HEADER: SID}, json={"prompt": "What word?"}
+    )
+    assert second.json()["response"] == "Heard 2: What word?"
+    assert model.prompts[-1] == ["Remember PELICAN", "What word?"]
+
+
+def test_a_streamed_prompt_is_remembered_too_and_sessions_stay_apart(
+    client: TestClient, model: Said
+) -> None:
+    events_of(
+        client.post(
+            "/invocations",
+            headers={SESSION_HEADER: SID, "Accept": "text/event-stream"},
+            json={"prompt": "One"},
+        )
+    )
+    again = client.post(
+        "/invocations", headers={SESSION_HEADER: SID}, json={"prompt": "Two"}
+    )
+    assert again.json()["response"] == "Heard 2: Two"
+    from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
+
+    alone = client.post(
+        "/invocations",
+        headers={SESSION_HEADER: session_uid_to_agentcore("session-0002")},
+        json={"prompt": "Fresh"},
+    )
+    assert alone.json()["response"] == "Heard 1: Fresh"
+
+
+def test_an_ag_ui_run_brings_its_own_conversation(
+    client: TestClient, model: Said
+) -> None:
+    client.post("/invocations", headers={SESSION_HEADER: SID}, json={"prompt": "Kept"})
+    events_of(
+        client.post(
+            "/invocations", headers={SESSION_HEADER: SID}, json=run_input("Alone")
+        )
+    )
+    assert model.prompts[-1] == ["Alone"]
+
+
 def test_a_run_naming_another_thread_is_refused_in_a_sentence(
     client: TestClient, model: Said
 ) -> None:

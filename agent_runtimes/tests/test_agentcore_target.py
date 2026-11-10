@@ -188,6 +188,8 @@ def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
                 "DATALAYER_IAM_URL": "https://prod1.datalayer.run",
             },
             "authorizerConfiguration": _authorizer(None),
+            # The validated bearer passed through to the runtime.
+            "requestHeaderConfiguration": {"requestHeaderAllowlist": ["Authorization"]},
             "clientToken": "deploy-crawler-0000000000000000000000",
         },
     )
@@ -212,6 +214,7 @@ def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
                 "AGENTCORE_RUNTIME_ARN": ARN,
             },
             "authorizerConfiguration": _authorizer([ARN]),
+            "requestHeaderConfiguration": {"requestHeaderAllowlist": ["Authorization"]},
         },
     )
     settings = _settings(

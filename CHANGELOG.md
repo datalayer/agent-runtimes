@@ -7,6 +7,11 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.6.9
+
+- **The bearer reaches the agent:** an agent runtime behind Datalayer's JWT authorizer allowlists the `Authorization` header (`requestHeaderConfiguration`). AgentCore passes no header through otherwise, and every invocation answered 401.
+- **A `{"prompt": ...}` session remembers its turns:** such a caller sends only its new message, so the runtime keeps the session's earlier turns in its process (at most 50 messages per session and 256 sessions) and puts them before the next prompt, whether answered as JSON, streamed or over the WebSocket. An AG-UI run brings its own conversation and is left as it is.
+
 ## 1.6.8
 
 An agent runtime deployed behind Datalayer's JWT authorizer is told where IAM is (`DATALAYER_IAM_URL`, read from the authorizer's discovery URL when not given): it exchanges each invocation's bearer at IAM, and without IAM's address it refused to start. A runtime deployed without an authorizer (invoked with SigV4) is not told its ARN, so it starts with the exchange off.
