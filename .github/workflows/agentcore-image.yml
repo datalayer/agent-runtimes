@@ -124,8 +124,9 @@ jobs:
       - name: Build for ${{ matrix.platform }}
         run: |
           set -euo pipefail
-          # PyPI's CDN can lag its JSON API by a few minutes after a release.
-          for attempt in 1 2 3; do
+          # PyPI's CDN can lag its JSON API by several minutes after a
+          # release (1.6.5: the JSON answered, pip's index did not yet).
+          for attempt in 1 2 3 4 5 6 7 8; do
             if docker buildx build \
                 --platform "${{ matrix.platform }}" \
                 --build-arg "AGENT_RUNTIMES_VERSION=${VERSION}" \
@@ -137,8 +138,8 @@ jobs:
                 docker; then
               exit 0
             fi
-            echo "Build attempt ${attempt} failed; retrying in 60 s."
-            sleep 60
+            echo "Build attempt ${attempt} failed; retrying in 90 s."
+            sleep 90
           done
           exit 1
 
@@ -147,6 +148,8 @@ jobs:
           set -euo pipefail
           docker run -d --name agentcore-smoke -p 8080:8080 \
             -e "AGENT_SPEC_ID=${SMOKE_AGENT_SPEC_ID}" \
+            -e "AWS_REGION=${AWS_REGION}" \
+            -e "AWS_DEFAULT_REGION=${AWS_REGION}" \
             "${LOCAL_IMAGE}"
           answer=""
           for attempt in $(seq 1 90); do
