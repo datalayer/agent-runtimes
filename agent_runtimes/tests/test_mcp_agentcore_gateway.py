@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import parse_qs
 
@@ -253,24 +254,42 @@ def test_the_last_invocation_s_token_is_kept_for_the_gateway() -> None:
 # --- the catalogue generated with it ---------------------------------------------
 
 
+#: agentspecs' mcp-servers/agentcore-gateway-example.yaml, the fields the
+#: generator reads.
+GATEWAY_SPEC_YAML = """\
+id: agentcore-gateway-example
+version: 0.0.1
+name: AgentCore Gateway (example)
+description: An Amazon Bedrock AgentCore Gateway, its targets as MCP tools
+transport: streamable-http
+url: "https://example-gateway-a1b2c3d4e5.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
+auth:
+  kind: agentcore-gateway
+  identity: aws-agentcore-gateway
+enabled: false
+envvars: []
+env: {}
+tags: [aws, agentcore, gateway]
+icon: "@primer/octicons-react:plug"
+emoji: "🔌"
+"""
+
+
 def test_the_generated_catalogue_carries_the_auth(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     import sys
-    from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
     monkeypatch.syspath_prepend(str(root / "scripts" / "codegen"))
     sys.modules.pop("generate_mcp_servers", None)
     import generate_mcp_servers as generator
 
-    specs = [
-        spec
-        for spec in generator.load_mcp_specs(
-            root / "agentspecs" / "agentspecs" / "mcp-servers"
-        )
-        if spec["id"] == "agentcore-gateway-example"
-    ]
+    # The example spec, written here: CI has no agentspecs clone (it is
+    # git-ignored), so the generator is given what the clone's file says.
+    (tmp_path / "agentcore-gateway-example.yaml").write_text(GATEWAY_SPEC_YAML)
+    specs = generator.load_mcp_specs(tmp_path)
     python = generator.generate_python_code(specs)
     assert "from agent_runtimes.types import MCPServer, MCPServerAuth" in python
     assert (
