@@ -283,7 +283,7 @@ export const TAVILY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   name: 'Tavily API Key',
   description:
     'API key for Tavily web search and research capabilities. Required for web crawling, content extraction, and search operations.',
-  registrationUrl: 'https://tavily.com/api-keys',
+  registrationUrl: 'https://app.tavily.com/home',
   tags: ['authentication', 'api-key', 'search', 'web', 'research'],
   icon: 'key',
   emoji: '🔑',
