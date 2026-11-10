@@ -145,7 +145,7 @@ def _sse(*events: dict[str, Any]) -> StreamingBody:
 
 def _authorizer(audience: list[str] | None) -> dict[str, Any]:
     authorizer: dict[str, Any] = {
-        "discoveryUrl": "https://prod1.datalayer.run/api/iam/v1/.well-known/openid-configuration",
+        "discoveryUrl": "https://prod1.datalayer.run/api/iam/v1/oauth/.well-known/openid-configuration",
     }
     if audience is not None:
         authorizer["allowedAudience"] = audience
@@ -184,6 +184,8 @@ def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
                 "LOG_LEVEL": "INFO",
                 "AGENT_SPEC_ID": "crawler",
                 "AGENT_RUNTIMES_TARGET": "agentcore",
+                # Told where IAM is, read from the authorizer's discovery URL.
+                "DATALAYER_IAM_URL": "https://prod1.datalayer.run",
             },
             "authorizerConfiguration": _authorizer(None),
             "clientToken": "deploy-crawler-0000000000000000000000",
@@ -205,8 +207,9 @@ def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
                 "LOG_LEVEL": "INFO",
                 "AGENT_SPEC_ID": "crawler",
                 "AGENT_RUNTIMES_TARGET": "agentcore",
-                "AGENTCORE_RUNTIME_ARN": ARN,
+                "DATALAYER_IAM_URL": "https://prod1.datalayer.run",
                 "AGENTCORE_RUNTIME_URL": RUNTIME_URL,
+                "AGENTCORE_RUNTIME_ARN": ARN,
             },
             "authorizerConfiguration": _authorizer([ARN]),
         },
@@ -215,7 +218,7 @@ def test_deploy_creates_an_agui_runtime_then_tells_it_its_arn_and_audience(
         description="The Crawler",
         environment={"LOG_LEVEL": "INFO"},
         authorizer=JwtAuthorizer(
-            discovery_url="https://prod1.datalayer.run/api/iam/v1/.well-known/openid-configuration",
+            discovery_url="https://prod1.datalayer.run/api/iam/v1/oauth/.well-known/openid-configuration",
             allowed_clients=("datalayer-platform",),
             custom_claims={"org_uid": "org-1"},
         ),
@@ -518,7 +521,7 @@ def test_loop_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
             "environmentVariables": {
                 "AGENT_SPEC_ID": spec,
                 "AGENT_RUNTIMES_TARGET": "agentcore",
-                "AGENTCORE_RUNTIME_ARN": ARN,
+                # No authorizer, no Datalayer token to exchange: no ARN.
                 "AGENTCORE_RUNTIME_URL": RUNTIME_URL,
             },
         },
@@ -651,3 +654,17 @@ def test_loop_agentcore_refuses_an_unknown_agentspec_and_a_lone_audience(cli) ->
         app, ["agentcore", "deploy", "example-simple", *base, "--audience", ARN]
     )
     assert lone.exit_code == 1 and "give its --discovery-url" in lone.output
+
+
+def test_iam_url_of_reads_only_datalayer_iams_discovery_document() -> None:
+    from agent_runtimes.agentcore.target import iam_url_of
+
+    assert (
+        iam_url_of(
+            "https://prod1.datalayer.run/api/iam/v1/oauth/.well-known/openid-configuration"
+        )
+        == "https://prod1.datalayer.run"
+    )
+    assert (
+        iam_url_of("https://login.example.com/.well-known/openid-configuration") == ""
+    )

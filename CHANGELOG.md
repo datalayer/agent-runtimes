@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.6.8
+
+An agent runtime deployed behind Datalayer's JWT authorizer is told where IAM is (`DATALAYER_IAM_URL`, read from the authorizer's discovery URL when not given): it exchanges each invocation's bearer at IAM, and without IAM's address it refused to start. A runtime deployed without an authorizer (invoked with SigV4) is not told its ARN, so it starts with the exchange off.
+
 ## 1.6.7
 
 **AgentCore invocation time in the record.** On the `agentcore` target, each run's `output` entry carries the invocation that called it: `invocation: {target: "agentcore", started_at, ended_at, seconds, microvm_started_at}`. `started_at` is when `POST /invocations` (or a `/ws` message) arrived, `ended_at` when the run ended, `seconds` the wall time between, and `microvm_started_at` when the runtime's process started. Measured, never estimated; the platform's AgentCore usage sums `seconds` per organization and month as invocation hours. Nothing changes on other targets.

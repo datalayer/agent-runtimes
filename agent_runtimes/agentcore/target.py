@@ -43,7 +43,7 @@ from typing import (
 from urllib.parse import quote
 
 from agent_runtimes.agentcore.a2a import RUNTIME_URL_VARIABLE
-from agent_runtimes.agentcore.exchange import RUNTIME_ARN_VARIABLE
+from agent_runtimes.agentcore.exchange import IAM_URL_VARIABLE, RUNTIME_ARN_VARIABLE
 from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
 from agent_runtimes.agentcore.settings import SPEC_VARIABLE, TARGET, TARGET_VARIABLE
 from agent_runtimes.plugins.points import Deployment, TargetCapabilities
@@ -64,6 +64,16 @@ RUNTIME_NAME = re.compile(r"[a-zA-Z][a-zA-Z0-9_]{0,47}")
 
 #: Where an OIDC issuer's discovery document is; AgentCore asks for it.
 DISCOVERY_SUFFIX = "/.well-known/openid-configuration"
+
+#: Where Datalayer IAM publishes its discovery document, under its base URL.
+IAM_DISCOVERY_PATH = "/api/iam/v1/oauth" + DISCOVERY_SUFFIX
+
+
+def iam_url_of(discovery_url: str) -> str:
+    """IAM's base URL when ``discovery_url`` is Datalayer IAM's discovery document, else ``""``."""
+    url = discovery_url.strip()
+    return url[: -len(IAM_DISCOVERY_PATH)] if url.endswith(IAM_DISCOVERY_PATH) else ""
+
 
 #: The variables a deployment sets itself once AgentCore names the runtime.
 RUNTIME_ENV = (RUNTIME_ARN_VARIABLE, RUNTIME_URL_VARIABLE)
@@ -271,6 +281,12 @@ class AgentCoreTarget:
             request["description"] = settings.description
         if settings.authorizer is not None:
             request["authorizerConfiguration"] = settings.authorizer.configuration()
+            # Each invocation's bearer is exchanged at IAM inside the runtime
+            # once it knows its own ARN: it must also know where IAM is, or it
+            # refuses to start (10 November 2026: a deploy from `loop` failed so).
+            iam = iam_url_of(settings.authorizer.discovery_url)
+            if iam and IAM_URL_VARIABLE not in request["environmentVariables"]:
+                request["environmentVariables"][IAM_URL_VARIABLE] = iam
         if settings.client_token:
             request["clientToken"] = settings.client_token
         return request
@@ -292,14 +308,18 @@ class AgentCoreTarget:
             if key not in ("agentRuntimeName", "clientToken")
         }
         update["agentRuntimeId"] = runtime_id
-        update["environmentVariables"] = {
-            **dict(request["environmentVariables"]),
-            RUNTIME_ARN_VARIABLE: arn,
-            RUNTIME_URL_VARIABLE: runtime_url_of(arn, region),
-        }
         authorizer = (request.get("authorizerConfiguration") or {}).get(
             "customJWTAuthorizer"
         )
+        update["environmentVariables"] = {
+            **dict(request["environmentVariables"]),
+            RUNTIME_URL_VARIABLE: runtime_url_of(arn, region),
+        }
+        if authorizer is not None:
+            # Its ARN turns on the exchange of each invocation's bearer at IAM:
+            # only a runtime behind Datalayer's JWT authorizer has one. A SigV4
+            # runtime has no Datalayer token to exchange, and starts without.
+            update["environmentVariables"][RUNTIME_ARN_VARIABLE] = arn
         if authorizer is not None:
             audience = list(authorizer.get("allowedAudience") or [])
             if arn not in audience:
