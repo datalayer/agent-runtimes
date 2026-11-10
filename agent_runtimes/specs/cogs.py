@@ -198,6 +198,7 @@ Check your output against every Guard before you hand it over, and say which you
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="web-bot-auth-agent",
 )
 
 COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
@@ -377,6 +378,7 @@ Check your output against every Guard before you hand it over, and say which you
         "required": ["research_goal"],
     },
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
@@ -523,6 +525,7 @@ Check your output against every Guard before you hand it over, and say which you
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 

@@ -202,7 +202,7 @@ export const PONG_STAGE_0_0_1: StageSpec = {
   version: '0.0.1',
   name: 'Pong',
   description:
-    "Two Players at the Pong arena, each with a paddle and the arena's tools. The arena keeps the score; the first to eleven wins.",
+    "Two players at the Pong arena, each with a paddle: Blue, a Player with the arena's tools; Red, played by Jev, a decision model choosing its moves. The arena keeps the score; the first to eleven wins.",
   scene: '',
   app: '',
   battle: 'pong:0.0.1',

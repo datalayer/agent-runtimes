@@ -76,6 +76,7 @@ tags:
 enabled: false
 model: "bedrock:us.anthropic.claude-sonnet-4-6"
 harness: pydantic-ai
+identity: datalayer-acting-agent
 
 sandbox_variant: {variant}
 memory: ephemeral

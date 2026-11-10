@@ -60,6 +60,8 @@ function toAgentSkillSpec(skill: SkillSpec) {
     tags: skill.tags,
     enabled: skill.enabled,
     requiredEnvVars: skill.requiredEnvVars,
+    icon: skill.icon,
+    emoji: skill.emoji,
   };
 }
 
@@ -278,6 +280,7 @@ Check your output against every Guard before you hand it over, and say which you
   toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
+  identity: 'web-bot-auth-agent',
 };
 
 const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
@@ -468,6 +471,7 @@ Check your output against every Guard before you hand it over, and say which you
     required: ['research_goal'],
   },
   subagents: undefined,
+  identity: 'datalayer-acting-agent',
 };
 
 const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
@@ -628,6 +632,7 @@ Check your output against every Guard before you hand it over, and say which you
   toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
+  identity: 'datalayer-acting-agent',
 };
 
 // ============================================================================
