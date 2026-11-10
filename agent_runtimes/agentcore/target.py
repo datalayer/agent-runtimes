@@ -73,7 +73,7 @@ IAM_DISCOVERY_PATH = "/api/iam/v1/oauth" + DISCOVERY_SUFFIX
 
 
 def iam_url_of(discovery_url: str) -> str:
-    """IAM's base URL when ``discovery_url`` is Datalayer IAM's discovery document, else ``""``."""
+    """Return IAM's base URL when ``discovery_url`` is Datalayer IAM's discovery document, else ``""``."""
     url = discovery_url.strip()
     return url[: -len(IAM_DISCOVERY_PATH)] if url.endswith(IAM_DISCOVERY_PATH) else ""
 
