@@ -671,3 +671,53 @@ def test_iam_url_of_reads_only_datalayer_iams_discovery_document() -> None:
     assert (
         iam_url_of("https://login.example.com/.well-known/openid-configuration") == ""
     )
+
+
+def test_invoke_with_a_bearer_calls_https_with_it_and_reads_the_stream(
+    monkeypatch,
+) -> None:
+    """A runtime behind a JWT authorizer is invoked over HTTPS with the token, never with SigV4."""
+    import httpx
+
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["headers"] = dict(request.headers)
+        seen["body"] = json.loads(request.content)
+        body = 'data: {"type": "RUN_STARTED"}\n\ndata: {"type": "TEXT_MESSAGE_CONTENT", "delta": "Hi"}\n\n'
+        return httpx.Response(
+            200, text=body, headers={"content-type": "text/event-stream"}
+        )
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kw: real(transport=httpx.MockTransport(handler), **kw),
+    )
+    deployment = Deployment(
+        target="agentcore",
+        agent_spec_id="crawler",
+        id=RUNTIME_ID,
+        arn=ARN,
+        region=REGION,
+    )
+
+    async def run() -> list[dict[str, Any]]:
+        return [
+            e
+            async for e in AgentCoreTarget().invoke(
+                deployment, "session-0001", {"prompt": "Hi"}, bearer="rs256"
+            )
+        ]
+
+    events = asyncio.run(run())
+    assert [e["type"] for e in events] == ["RUN_STARTED", "TEXT_MESSAGE_CONTENT"]
+    assert seen["headers"]["authorization"] == "Bearer rs256"
+    assert seen["headers"]["x-amzn-bedrock-agentcore-runtime-session-id"].startswith(
+        "datalayer-session-padded-"
+    )
+    assert "/invocations?qualifier=DEFAULT" in seen["url"] and seen["body"] == {
+        "prompt": "Hi"
+    }

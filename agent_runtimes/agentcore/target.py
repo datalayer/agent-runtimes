@@ -63,6 +63,9 @@ DEFAULT_ENDPOINT = "DEFAULT"
 RUNTIME_NAME = re.compile(r"[a-zA-Z][a-zA-Z0-9_]{0,47}")
 
 #: Where an OIDC issuer's discovery document is; AgentCore asks for it.
+#: The header AgentCore names an invocation's session in.
+SESSION_HEADER = "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id"
+
 DISCOVERY_SUFFIX = "/.well-known/openid-configuration"
 
 #: Where Datalayer IAM publishes its discovery document, under its base URL.
@@ -417,24 +420,51 @@ class AgentCoreTarget:
         }
 
     async def invoke(
-        self, deployment: Deployment, session_uid: str, run_input: Mapping[str, Any]
+        self,
+        deployment: Deployment,
+        session_uid: str,
+        run_input: Mapping[str, Any],
+        bearer: str = "",
     ) -> AsyncIterator[Dict[str, Any]]:
-        """``invoke_agent_runtime``: one turn of a session; its AG-UI events."""
+        """One turn of a session; its AG-UI events.
+
+        With ``bearer``, over HTTPS with that token, as a runtime behind a JWT
+        authorizer takes it (Datalayer's: a token IAM signed for this runtime);
+        otherwise ``invoke_agent_runtime``, signed with the caller's AWS
+        credentials (SigV4), which such a runtime refuses.
+        """
         if not deployment.arn:
             raise ValueError(
                 f"The deployment {deployment.id!r} has no agent runtime ARN: it is invoked by it."
             )
         runtime_session_id = session_uid_to_agentcore(session_uid)
+        if bearer:
+            async for event in self._invoke_with_bearer(
+                deployment, runtime_session_id, run_input, bearer
+            ):
+                yield event
+            return
         client = self._data(deployment.region)
-        answer = await asyncio.to_thread(
-            client.invoke_agent_runtime,
-            agentRuntimeArn=deployment.arn,
-            qualifier=deployment.endpoint or DEFAULT_ENDPOINT,
-            runtimeSessionId=runtime_session_id,
-            payload=json.dumps(dict(run_input)).encode("utf-8"),
-            contentType="application/json",
-            accept="text/event-stream",
-        )
+        try:
+            answer = await asyncio.to_thread(
+                client.invoke_agent_runtime,
+                agentRuntimeArn=deployment.arn,
+                qualifier=deployment.endpoint or DEFAULT_ENDPOINT,
+                runtimeSessionId=runtime_session_id,
+                payload=json.dumps(dict(run_input)).encode("utf-8"),
+                contentType="application/json",
+                accept="text/event-stream",
+            )
+        except Exception as error:  # botocore's ClientError, without importing it here
+            message = str(
+                getattr(error, "response", {}).get("Error", {}).get("Message") or error
+            )
+            if "authorization method mismatch" in message.lower():
+                raise AgentCoreError(
+                    f"The agent runtime {deployment.id} takes a bearer token, not AWS "
+                    "credentials: invoke it with one its JWT authorizer accepts (--bearer)."
+                ) from error
+            raise
         content_type = str(answer.get("contentType") or "")
         body = answer["response"]
         if content_type.startswith("application/json"):
@@ -461,6 +491,55 @@ class AgentCoreTarget:
                 data.append(text[5:].lstrip(" "))
         if data:
             yield _event("\n".join(data))
+
+    async def _invoke_with_bearer(
+        self,
+        deployment: Deployment,
+        runtime_session_id: str,
+        run_input: Mapping[str, Any],
+        bearer: str,
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """The turn over HTTPS with a bearer token: AgentCore's invocations route, its SSE read."""
+        import httpx  # noqa: PLC0415
+
+        url = (
+            f"https://bedrock-agentcore.{deployment.region}.amazonaws.com/runtimes/"
+            f"{quote(deployment.arn or '', safe='')}/invocations"
+        )
+        headers = {
+            "Authorization": f"Bearer {bearer}",
+            SESSION_HEADER: runtime_session_id,
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(900.0, connect=30.0)
+        ) as client:
+            async with client.stream(
+                "POST",
+                url,
+                params={"qualifier": deployment.endpoint or DEFAULT_ENDPOINT},
+                headers=headers,
+                json=dict(run_input),
+            ) as response:
+                if response.status_code != 200:
+                    said = (await response.aread()).decode("utf-8", errors="replace")[
+                        :300
+                    ]
+                    raise AgentCoreError(
+                        f"AgentCore refused the invocation ({response.status_code}): {said}"
+                    )
+                data: list[str] = []
+                async for text in response.aiter_lines():
+                    if not text:
+                        if data:
+                            yield _event("\n".join(data))
+                            data = []
+                        continue
+                    if text.startswith("data:"):
+                        data.append(text[5:].lstrip(" "))
+                if data:
+                    yield _event("\n".join(data))
 
     async def stop(self, deployment: Deployment, session_uid: str) -> None:
         """``stop_runtime_session``: one session's microVM stopped."""

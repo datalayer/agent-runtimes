@@ -7,6 +7,10 @@
 Each version names the boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+- **`loop agentcore invoke --bearer`** (or `AGENTCORE_BEARER_TOKEN`): a runtime behind a JWT authorizer is invoked over HTTPS with that token. Without one, AWS's refusal of SigV4 on such a runtime is said in a sentence pointing to it. The CLI sends `{"prompt", "session_id"}`, so the runtime keeps the session's earlier turns.
+
 ## 1.6.9
 
 - **The bearer reaches the agent:** an agent runtime behind Datalayer's JWT authorizer allowlists the `Authorization` header (`requestHeaderConfiguration`). AgentCore passes no header through otherwise, and every invocation answered 401.

@@ -203,24 +203,27 @@ def invoke(
         "", "--session", help="Carry on a session; a new one otherwise."
     ),
     raw: bool = typer.Option(False, "--json", help="Print each AG-UI event as JSON."),
+    bearer: str = typer.Option(
+        "",
+        "--bearer",
+        envvar="AGENTCORE_BEARER_TOKEN",
+        help="A token the runtime's JWT authorizer accepts; AWS credentials (SigV4) otherwise.",
+    ),
 ) -> None:
     """Run a turn of a session on the deployment."""
     state = _read_state()
     deployment = _deployment(state, agentspec)
     session_uid = session or uuid.uuid4().hex
-    run_input = {
-        "threadId": session_uid,
-        "runId": str(uuid.uuid4()),
-        "messages": [{"id": str(uuid.uuid4()), "role": "user", "content": prompt}],
-        "state": {},
-        "tools": [],
-        "context": [],
-        "forwardedProps": {},
-    }
+    # A prompt, not an AG-UI run carrying one message: the runtime keeps the
+    # session's earlier turns and puts them before it, where an AG-UI run
+    # brings its whole conversation itself.
+    run_input = {"prompt": prompt, "session_id": session_uid}
     errors: List[str] = []
 
     async def stream() -> None:
-        async for event in _target().invoke(deployment, session_uid, run_input):
+        async for event in _target().invoke(
+            deployment, session_uid, run_input, bearer=bearer
+        ):
             if raw:
                 console.print(json.dumps(event), markup=False)
             elif event.get("type") == "TEXT_MESSAGE_CONTENT":
