@@ -25,7 +25,6 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
-from pydantic_evals import Case
 
 from agent_runtimes.evals.adapters.agentcore import (
     NO_SOURCE,
@@ -35,6 +34,12 @@ from agent_runtimes.evals.adapters.agentcore import (
 )
 from agent_runtimes.evals.adapters.registry import adapter
 from agent_runtimes.otel.genai import SCOPE
+
+pydantic_evals = pytest.importorskip(
+    "pydantic_evals",
+    reason="the agentcore adapter runs its case through pydantic-evals (the evals extra)",
+)
+Case = pydantic_evals.Case
 
 SESSION = "session-judged-0001"
 EVALUATORS = ["Builtin.Helpfulness", "Builtin.ToolSelectionAccuracy"]
