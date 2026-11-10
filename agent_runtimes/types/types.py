@@ -44,6 +44,30 @@ class EnvvarSpec(BaseModel):
     )
 
 
+class InstallSpec(BaseModel):
+    """How an MCP server or a skill is installed where an agent runs it.
+
+    ``type`` says what is installed — an npm package, a Python package, a
+    Docker image, a repository built from source, a remote server (nothing
+    to install), or one the runtime image already carries — and ``command``
+    the shell command that installs it on a person's own machine ('' when
+    there is nothing to run). ``note`` says what the command cannot.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["npm", "python", "docker", "git", "remote", "built-in", "other"] = (
+        Field(..., description="What is installed")
+    )
+    command: str = Field(
+        default="",
+        description="The shell command that installs it; '' when nothing is run",
+    )
+    note: Optional[str] = Field(
+        default=None, description="What else to know, in a sentence"
+    )
+
+
 class SkillSpec(BaseModel):
     """
     Specification for a skill.
@@ -109,6 +133,9 @@ class SkillSpec(BaseModel):
     )
     dependencies: List[str] = Field(
         default_factory=list, description="Python package dependencies"
+    )
+    install: Optional[InstallSpec] = Field(
+        default=None, description="How it is installed where an agent runs it"
     )
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     icon: Optional[str] = Field(
@@ -1600,6 +1627,9 @@ class MCPServer(BaseModel):
     )
     setup: Optional[str] = Field(
         default=None, description="How it is set up, in a sentence"
+    )
+    install: Optional[InstallSpec] = Field(
+        default=None, description="How it is installed where an agent runs it"
     )
     actions: Optional[Dict[str, Any]] = Field(
         default=None,

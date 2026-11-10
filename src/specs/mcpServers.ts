@@ -18,6 +18,38 @@ import type { MCPServer } from '../types';
 // MCP Server Definitions
 // ============================================================================
 
+export const AGENTCORE_GATEWAY_EXAMPLE_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'agentcore-gateway-example',
+  version: '0.0.1',
+  name: 'AgentCore Gateway (example)',
+  description:
+    "An Amazon Bedrock AgentCore Gateway, its targets as MCP tools — copy it with your gateway's URL",
+  icon: '@primer/octicons-react:plug',
+  emoji: '🔌',
+  url: 'https://example-gateway-a1b2c3d4e5.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp',
+  args: [],
+  auth: { kind: 'agentcore-gateway', identity: 'aws-agentcore-gateway' },
+  transport: 'streamable-http',
+  enabled: false,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+  tags: ['aws', 'agentcore', 'gateway'],
+  documentationUrl:
+    'https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html',
+  setup:
+    "Copy this spec with your gateway's MCP URL. The gateway's inbound authorizer trusts Datalayer IAM ([the aws-agentcore-gateway identity](https://agentspecs.datalayer.tech/identities)): the runtime sends the token it obtains for the run as the bearer, and no key is written here.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: 'Nothing to install: an AgentCore Gateway in your AWS account, reached at its URL with a token Datalayer IAM signs.',
+  },
+  actions: {
+    tools: {},
+    note: "A gateway's tools are its targets, the organization's own: list them on the running gateway and class each one in your copy of this spec.",
+  },
+};
+
 export const ALPHAVANTAGE_MCP_SERVER_0_0_1: MCPServer = {
   id: 'alphavantage',
   version: '0.0.1',
@@ -40,6 +72,11 @@ export const ALPHAVANTAGE_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://www.alphavantage.co/support/#api-key',
   setup:
     "A free key, sent by email from [Alpha Vantage's support page](https://www.alphavantage.co/support/#api-key); put it in `ALPHAVANTAGE_API_KEY`. The API is documented [there](https://www.alphavantage.co/documentation/).",
+  install: {
+    type: 'python',
+    command: 'uv tool install av-mcp==0.2.1',
+    note: 'Needs uv (`pip install uv`); the runtime image installs it the same way. It starts as `uvx av-mcp==0.2.1`.',
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -56,7 +93,9 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '🦋',
   url: '',
   command: 'node',
-  args: ['/opt/mcp-servers/bsky-mcp-server/build/src/index.js'],
+  args: [
+    '${BLUESKY_MCP_SERVER_DIR:-/opt/mcp-servers/bsky-mcp-server}/build/src/index.js',
+  ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
@@ -77,6 +116,12 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://bsky.app/settings/app-passwords',
   setup:
     "Sign in to [Bluesky](https://bsky.app), make an [app password](https://bsky.app/settings/app-passwords) under Settings, Privacy and security, App passwords, and put the account's handle in `BLUESKY_IDENTIFIER`, the app password in `BLUESKY_APP_PASSWORD` and `https://bsky.social` in `BLUESKY_SERVICE_URL`; the server is built into the runtime image and runs with node.",
+  install: {
+    type: 'git',
+    command:
+      'git clone --depth 1 https://github.com/brianellin/bsky-mcp-server ~/.local/share/mcp-servers/bsky-mcp-server && cd ~/.local/share/mcp-servers/bsky-mcp-server && npm install && npm run build',
+    note: 'Not on npm: built from its repository with Node.js. Then `export BLUESKY_MCP_SERVER_DIR=~/.local/share/mcp-servers/bsky-mcp-server`; without it the server is looked for where the runtime image builds it, /opt/mcp-servers/bsky-mcp-server.',
+  },
   actions: {
     tools: {
       'get-pinned-feeds': 'read',
@@ -122,6 +167,11 @@ export const CHART_MCP_SERVER_0_0_1: MCPServer = {
   documentationUrl: 'https://github.com/antvis/mcp-server-chart',
   setup:
     'Runs with `npx`; no account and no key ([mcp-server-chart](https://github.com/antvis/mcp-server-chart)).',
+  install: {
+    type: 'npm',
+    command: 'npm install -g @antv/mcp-server-chart',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
+  },
   actions: {
     tools: {
       generate_area_chart: 'read',
@@ -179,6 +229,11 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
     "Datalayer's own gateway, reached at its url with your Datalayer API key as the bearer: create one under [Settings, API keys](https://datalayer.ai/settings/api-keys) and put it in `DATALAYER_API_KEY`.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway, reached at its URL with your DATALAYER_API_KEY.",
+  },
   actions: {
     tools: {
       read_notebook: 'read',
@@ -378,6 +433,11 @@ export const DISCORD_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://discord.com/developers/applications',
   setup:
     "Create an application in the [Discord Developer Portal](https://discord.com/developers/applications), add a bot, copy its token into `DISCORD_BOT_TOKEN`, invite the bot to the server with the permissions of what the agent may do (and the Message Content intent to read messages); put the server's id in `DISCORD_GUILD_ID`. The server runs in Docker, [saseq/discord-mcp](https://github.com/SaseQ/discord-mcp).",
+  install: {
+    type: 'docker',
+    command: 'docker pull saseq/discord-mcp:latest',
+    note: 'Needs Docker where the agent runs; the runtime image has none, so it stays off on the platform.',
+  },
   actions: {
     tools: {
       get_server_info: 'read',
@@ -489,6 +549,11 @@ export const EARTHDATA_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
     "Searching NASA's catalogue is anonymous, through Datalayer's gateway with your [Datalayer API key](https://datalayer.ai/settings/api-keys); a download runs in the code sandbox with an [Earthdata Login](https://urs.earthdata.nasa.gov/users/new) (`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`).",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway with its earthdata toolset, reached at its URL.",
+  },
   actions: {
     tools: {
       search_earth_datasets: 'read',
@@ -518,6 +583,11 @@ export const EURUS_MCP_SERVER_0_0_1: MCPServer = {
   tags: ['geospatial', 'climate', 'analysis'],
   setup:
     'Runs the `eurus-mcp` command where it is installed; no account and no key.',
+  install: {
+    type: 'other',
+    command: '',
+    note: 'Runs the `eurus-mcp` command, from a package that is not published: install it where the agent runs from its source.',
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -544,6 +614,11 @@ export const FILESYSTEM_MCP_SERVER_0_0_1: MCPServer = {
     'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem',
   setup:
     "Runs with `npx` on the runtime's own files; no account and no key ([the reference server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)).",
+  install: {
+    type: 'npm',
+    command: 'npm install -g @modelcontextprotocol/server-filesystem',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
+  },
   actions: {
     tools: {
       read_file: 'read',
@@ -595,6 +670,11 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://github.com/settings/tokens',
   setup:
     'A [personal access token](https://github.com/settings/tokens) with the scopes of what the agent may do, in `GITHUB_TOKEN`; the server runs in Docker, see [github-mcp-server](https://github.com/github/github-mcp-server).',
+  install: {
+    type: 'docker',
+    command: 'docker pull ghcr.io/github/github-mcp-server',
+    note: 'Needs Docker where the agent runs.',
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -636,6 +716,11 @@ export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://console.cloud.google.com/apis/credentials',
   setup:
     "An OAuth client in a Google Cloud project, from [APIs and services, Credentials](https://console.cloud.google.com/apis/credentials) (`GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`); Datalayer mints the person's token per call. See [workspace-mcp](https://github.com/taylorwilsdon/google_workspace_mcp).",
+  install: {
+    type: 'python',
+    command: 'uv tool install workspace-mcp',
+    note: 'Needs uv (`pip install uv`); the runtime image installs it the same way.',
+  },
   actions: {
     tools: {
       start_google_auth: 'write',
@@ -805,6 +890,11 @@ export const HUGGINGFACE_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://huggingface.co/settings/tokens',
   setup:
     "A read token from your [Hugging Face settings](https://huggingface.co/settings/tokens), in `HF_TOKEN`; the server is Hugging Face's own, reached at its url ([docs](https://huggingface.co/docs/hub/mcp)).",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Hugging Face's hosted MCP server, reached at its URL.",
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -832,6 +922,11 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://www.kaggle.com/settings/account',
   setup:
     "An API token from your [Kaggle account settings](https://www.kaggle.com/settings/account), in `KAGGLE_API_TOKEN`; the server is Kaggle's own, reached at its url ([docs](https://www.kaggle.com/docs/api)).",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Kaggle's hosted MCP server, reached at its URL.",
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -862,6 +957,11 @@ export const LINKEDIN_MCP_SERVER_0_0_1: MCPServer = {
     'https://github.com/stickerdaniel/linkedin-mcp-server#installation',
   setup:
     'No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under `~/.linkedin-mcp`; a runtime needs that directory mounted — see [its README](https://github.com/stickerdaniel/linkedin-mcp-server#installation). LinkedIn restricts automated access: use an account you can afford to see restricted.',
+  install: {
+    type: 'python',
+    command: 'uv tool install --python 3.12 mcp-server-linkedin',
+    note: 'Needs uv (`pip install uv`); the runtime image installs it the same way. It reads a signed-in browser session mounted at ~/.linkedin-mcp.',
+  },
   actions: {
     tools: {
       get_person_profile: 'read',
@@ -917,6 +1017,11 @@ export const ODOO_ACCOUNTING_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
     "Datalayer's gateway with its odoo-accounting toolset: your Datalayer API key as the bearer, made under [Settings, API keys](https://datalayer.ai/settings/api-keys) and put in `DATALAYER_API_KEY`; your Odoo in your Datalayer secrets (`DATALAYER_ODOO_URL`, `DATALAYER_ODOO_API_KEY`, and `DATALAYER_ODOO_DATABASE` when the host does not name it). One company per session: your default in Odoo, or the one the url names with `&odoo-company=<name or id>`.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway with its odoo-accounting toolset, reached at its URL.",
+  },
   actions: {
     tools: {
       odoo_accounting_list_invoices: 'read',
@@ -1008,6 +1113,11 @@ export const ODOO_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
   setup:
     "Datalayer's gateway with its generic odoo toolset: your Datalayer API key as the bearer, made under [Settings, API keys](https://datalayer.ai/settings/api-keys) and put in `DATALAYER_API_KEY`; your Odoo in your Datalayer secrets (`DATALAYER_ODOO_URL`, `DATALAYER_ODOO_API_KEY`, and `DATALAYER_ODOO_DATABASE` when the host does not name it). One company per session: your default in Odoo, or the one the url names with `&odoo-company=<name or id>`.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway with its odoo toolset, reached at its URL.",
+  },
   actions: {
     tools: {
       odoo_get_context: 'read',
@@ -1058,6 +1168,11 @@ export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
     'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/quickstart_oauth.htm',
   setup:
     'An access token and the instance url (`SALESFORCE_ACCESS_TOKEN`, `SALESFORCE_INSTANCE_URL`) from a [connected app](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/quickstart_oauth.htm) of your org; [sign up](https://developer.salesforce.com/signup) for a developer org if you have none.',
+  install: {
+    type: 'npm',
+    command: 'npm install -g @anthropic/salesforce-mcp-server',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
+  },
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
@@ -1094,6 +1209,11 @@ export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://api.slack.com/apps',
   setup:
     "A [Slack app](https://api.slack.com/apps) with a bot token (`SLACK_BOT_TOKEN`), the workspace id (`SLACK_TEAM_ID`) and the channels it may read (`SLACK_CHANNEL_IDS`); see [Slack's docs](https://api.slack.com/docs).",
+  install: {
+    type: 'npm',
+    command: 'npm install -g @datalayer/slack-mcp-server',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
+  },
   actions: {
     tools: {
       slack_list_channels: 'read',
@@ -1132,6 +1252,11 @@ export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://app.tavily.com/home',
   setup:
     'A key from the [Tavily dashboard](https://app.tavily.com/home), in `TAVILY_API_KEY`; the docs are at [docs.tavily.com](https://docs.tavily.com).',
+  install: {
+    type: 'npm',
+    command: 'npm install -g tavily-mcp',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
+  },
   actions: {
     tools: {
       tavily_search: 'read',
@@ -1167,6 +1292,11 @@ export const X_MCP_SERVER_0_0_1: MCPServer = {
   apiKeyUrl: 'https://developer.x.com/en/portal/dashboard',
   setup:
     "Create an app in the [X Developer Portal](https://developer.x.com/en/portal/dashboard), copy its App-only Bearer Token from **Keys and tokens** into `X_BEARER_TOKEN`; the runtime reaches [https://api.x.com/mcp](https://api.x.com/mcp) with it and reads. For bookmarks and articles, run the [xurl bridge](https://docs.x.com/tools/mcp) on a machine with a browser instead, with the app's `CLIENT_ID` and `CLIENT_SECRET`.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: X's hosted MCP server, reached at https://api.x.com/mcp with your X_BEARER_TOKEN.",
+  },
   actions: {
     tools: {},
     note: "Read off X's documentation, not the running server: posts, search, users, news and trends are reads; bookmarks are read and written; articles are drafted and published (`article_publish` is the one tool named there). A server not read off classes nothing: run it, list its tools, and class each one here.",
@@ -1178,6 +1308,7 @@ export const X_MCP_SERVER_0_0_1: MCPServer = {
 // ============================================================================
 
 export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
+  'agentcore-gateway-example': AGENTCORE_GATEWAY_EXAMPLE_MCP_SERVER_0_0_1,
   alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
   bluesky: BLUESKY_MCP_SERVER_0_0_1,
   chart: CHART_MCP_SERVER_0_0_1,

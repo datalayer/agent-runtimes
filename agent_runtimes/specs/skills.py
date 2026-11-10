@@ -12,7 +12,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 import os
 from typing import Dict, List
 
-from agent_runtimes.types import SkillSpec
+from agent_runtimes.types import InstallSpec, SkillSpec
 
 # ============================================================================
 # Skill Definitions
@@ -30,6 +30,11 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=["pandas>=2.0.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]"',
+        note="agent-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["accounting", "finance", "reconciliation", "close"],
     icon="@primer/octicons-react:book",
     emoji="🧮",
@@ -48,6 +53,11 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=["TAVILY_API_KEY:0.0.1"],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]"',
+        note="agent-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["web", "crawl", "scraping"],
     icon="@primer/octicons-react:globe",
     emoji="🌐",
@@ -66,6 +76,11 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=["httpx>=0.27.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]"',
+        note="agent-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["events", "orchestration", "automation"],
     icon="@primer/octicons-react:calendar",
     emoji="📅",
@@ -84,6 +99,11 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=["GITHUB_TOKEN:0.0.1"],
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]"',
+        note="agent-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["github", "git", "code"],
     icon="@datalayer/icons-react:github-mark",
     emoji="🐙",
@@ -102,6 +122,11 @@ IMAGE_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=["Pillow>=10.0", "playwright>=1.45"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]" && python -m playwright install chromium',
+        note="Chromium for its page snapshots; the runtime image carries it.",
+    ),
     tags=["image", "snapshot", "media"],
     icon="@primer/octicons-react:image",
     emoji="🖼️",
@@ -120,6 +145,11 @@ JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=[],
+    install=InstallSpec(
+        type="python",
+        command="pip install agent-skills",
+        note="No dependencies of its own.",
+    ),
     tags=["fun", "humor", "demo"],
     icon="@primer/octicons-react:smiley",
     emoji="😄",
@@ -137,7 +167,12 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     path=None,
     envvars=[],
     optional_env_vars=[],
-    dependencies=["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
+    dependencies=["pypdf>=4.0", "pdf2image>=1.17", "Pillow>=10.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]"',
+        note="agent-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["pdf", "documents", "extraction"],
     icon="@primer/octicons-react:file",
     emoji="📄",
@@ -156,6 +191,11 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=["agent-skills>=0.0.1"],
+    install=InstallSpec(
+        type="python",
+        command="pip install agent-skills",
+        note="No dependencies of its own.",
+    ),
     tags=["nlp", "summarization", "text-processing"],
     icon="@primer/octicons-react:note",
     emoji="📝",
@@ -174,6 +214,11 @@ VIDEO_SKILL_SPEC_0_0_1 = SkillSpec(
     envvars=[],
     optional_env_vars=[],
     dependencies=["imageio-ffmpeg>=0.5", "playwright>=1.45"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "agent-skills[skills]" && python -m playwright install chromium',
+        note="Chromium for its recordings, and ffmpeg (imageio-ffmpeg brings one); the runtime image carries both.",
+    ),
     tags=["video", "recording", "media"],
     icon="@primer/octicons-react:video",
     emoji="🎬",

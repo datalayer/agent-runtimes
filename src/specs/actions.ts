@@ -58,6 +58,12 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
  * names were read off the running server; absent when nobody looked.
  */
 export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
+  'agentcore-gateway-example': {
+    default: [],
+    tools: {},
+    conditions: {},
+    signs: {},
+  },
   alphavantage: {
     default: [],
     tools: {},

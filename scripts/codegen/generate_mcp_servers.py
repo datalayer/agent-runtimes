@@ -22,6 +22,40 @@ import yaml
 from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
+#: What an ``install`` says is installed (agentspecs: mcp-servers, skills).
+INSTALL_TYPES = ("npm", "python", "docker", "git", "remote", "built-in", "other")
+
+
+def install_of(spec: dict) -> dict | None:
+    """A spec's ``install``, checked: ``{type, command, note?}``; None when it has none.
+
+    Raises
+    ------
+    ValueError
+        When it is not of that shape, in a sentence naming the spec.
+    """
+    install = spec.get("install")
+    if install is None:
+        return None
+    where = f"{spec.get('id')}: install"
+    if not isinstance(install, dict) or set(install) - {"type", "command", "note"}:
+        raise ValueError(f"{where} is {{type, command, note}}, not {install!r}")
+    if install.get("type") not in INSTALL_TYPES:
+        raise ValueError(
+            f"{where}.type is one of {', '.join(INSTALL_TYPES)}, not {install.get('type')!r}"
+        )
+    command = install.get("command", "")
+    if not isinstance(command, str):
+        raise ValueError(f"{where}.command is a shell command, a string")
+    if not command.strip() and install["type"] not in ("remote", "built-in", "other"):
+        raise ValueError(
+            f"{where}.command says how a {install['type']} install is run: it is empty"
+        )
+    out = {"type": install["type"], "command": command.strip()}
+    if install.get("note"):
+        out["note"] = " ".join(str(install["note"]).split())
+    return out
+
 
 def load_mcp_specs(specs_dir: Path) -> list[dict[str, Any]]:
     """Load all MCP server YAML specifications from a directory."""
@@ -53,7 +87,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "import tempfile",
         "from typing import Dict",
         "",
-        "from agent_runtimes.types import MCPServer"
+        "from agent_runtimes.types import "
+        + ("InstallSpec, " if any(spec.get("install") for spec in specs) else "")
+        + "MCPServer"
         + (", MCPServerAuth" if any(spec.get("auth") for spec in specs) else ""),
         "",
         "# " + "=" * 76,
@@ -170,6 +206,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         for key in ("documentation_url", "signup_url", "api_key_url", "setup"):
             if spec.get(key):
                 lines.append(f"    {key}={str(spec[key])!r},")
+        install = install_of(spec)
+        if install:
+            lines.append(
+                "    install=InstallSpec("
+                + ", ".join(f"{k}={v!r}" for k, v in install.items())
+                + "),"
+            )
         if spec.get("actions"):
             lines.append(f"    actions={_actions_of(spec)!r},")
         lines.extend([")", ""])
@@ -379,6 +422,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                     )
                     if spec.get(key)
                 ],
+                *(
+                    [f"  install: {json.dumps(install_of(spec), ensure_ascii=False)},"]
+                    if spec.get("install")
+                    else []
+                ),
                 *(
                     [f"  actions: {json.dumps(_actions_of(spec), ensure_ascii=False)},"]
                     if spec.get("actions")

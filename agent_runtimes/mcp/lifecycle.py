@@ -308,6 +308,10 @@ class MCPLifecycleManager:
         """
         Expand environment variables in a string (${VAR_NAME} syntax).
 
+        ``${VAR_NAME:-default}`` is the default when the variable is unset or
+        empty, as in a shell: a server installed where the runtime image puts
+        it, or where a person's own machine has it (``install``).
+
         Args:
             value: The string containing ``${VAR_NAME}`` placeholders.
             lookup_env: Optional env dict to resolve variables from.
@@ -319,8 +323,10 @@ class MCPLifecycleManager:
         pattern = r"\$\{([^}]+)\}"
 
         def replace(match: re.Match[str]) -> str:
-            var_name = match.group(1)
-            env_value = env_source.get(var_name, "")
+            var_name, has_default, default = match.group(1).partition(":-")
+            env_value = env_source.get(var_name, "") or default
+            if has_default and env_value == default:
+                return default
             if not env_value:
                 logger.warning(
                     f"Environment variable '{var_name}' not found or empty during expansion"

@@ -1634,7 +1634,7 @@ def main_callback(
                         f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
                     )
                 if str(_sandbox_variant or "").lower() == "jupyter-server":
-                    _summary_parts.append("Jupyter sandbox")
+                    _summary_parts.append("Jupyter Code Sandbox")
                 if _codemode_on and not codemode_disabled:
                     _summary_parts.append("Codemode")
                 _summary_line = (

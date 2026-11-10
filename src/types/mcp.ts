@@ -6,6 +6,7 @@
 /**
  * A tool provided by an MCP server.
  */
+import type { InstallSpec } from './skills';
 export interface MCPServerTool {
   /** Tool name/identifier */
   name: string;
@@ -77,6 +78,8 @@ export interface MCPServer {
   apiKeyUrl?: string;
   /** How it is set up, in a sentence: which key, where it goes */
   setup?: string;
+  /** How it is installed where an agent runs it */
+  install?: InstallSpec;
   /** What each tool does to the world (agentspecs.actions): its class by tool name, when it was checked, and a note */
   actions?: MCPServerActions;
 }

@@ -288,6 +288,16 @@ export interface PolicySpec {
       authzen?: { url: string; headers?: Record<string, string> };
       opa?: { url: string; package?: string; headers?: Record<string, string> };
     } | null;
+    /**
+     * A Dogwood policy set deciding every classed action over the session's
+     * history (AgentCore Policy's language): `enforce` refuses what it denies,
+     * `log_only` records it and lets it through.
+     */
+    dogwood?: { policies: string; mode?: 'enforce' | 'log_only' } | null;
+    /** Per user, through the organization's AgentCore Gateways: requests, tokens and connections per second or minute. */
+    rate_limits?: Record<string, unknown> | null;
+    /** The Shield firewall's document, as agent-shield takes it. */
+    firewall?: Record<string, unknown> | null;
   };
 }
 
