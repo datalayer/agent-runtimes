@@ -33,6 +33,7 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'red',
@@ -44,6 +45,7 @@ export const DECK_RACE_BATTLE_0_0_1: BattleSpec = {
       overrides: {
         model: 'alibaba:qwen-max',
       },
+      decisionModel: '',
     },
   ],
   referee: {
@@ -86,7 +88,7 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
   version: '0.0.1',
   name: 'Space Invaders',
   description:
-    "Two Players at the Space Invaders arena, a cannon each under one wave. A hit scores the invader's row; the wave cleared, a cannon hit or the wave landed ends it, and the score decides.",
+    "Two players at the Space Invaders arena, a cannon each under one wave: Blue, a Player with the arena's tools; Red, played by Jev, a decision model choosing its moves. A hit scores the invader's row; the wave cleared, a cannon hit or the wave landed ends it, and the score decides.",
   variant: 'game',
   goal: 'You are playing Space Invaders. Call `arena_watch` once: the arena then tells you where the invaders are and which one is nearest your cannon. Each time it does, call `arena_invaders_move` with the `x` it names, then `arena_invaders_fire`; move away when it says a bomb is falling on you. The higher score when the wave is cleared, a cannon is hit or the wave lands wins.',
   clockSeconds: 180,
@@ -99,6 +101,7 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'right',
@@ -108,6 +111,7 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'red',
       overrides: {},
+      decisionModel: 'cloudflare:wrk/typesafe/jev',
     },
   ],
   referee: {
@@ -128,7 +132,7 @@ export const INVADERS_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.6,
         rubric:
-          'The player watched the arena (arena_watch or arena_read), moved its cannon under the invaders and fired, and its cannon was not hit by a bomb it had been warned of.',
+          'The player watched the arena (arena_watch or arena_read, or, played by a decision model, its decisions on what the arena showed), moved its cannon under the invaders and fired, and its cannon was not hit by a bomb it had been warned of.',
       },
       says: 'The player played the arena, not around it.',
     },
@@ -162,6 +166,7 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
       app: '',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'red',
@@ -172,6 +177,7 @@ export const INVOICE_RACE_BATTLE_0_0_1: BattleSpec = {
       overrides: {
         model: 'alibaba:qwen-max',
       },
+      decisionModel: '',
     },
   ],
   referee: {
@@ -213,7 +219,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
   version: '0.0.1',
   name: 'Pong',
   description:
-    "Two Players at the Pong arena, each with a paddle and the arena's tools. The arena keeps the score; the first to eleven wins.",
+    "Two players at the Pong arena, each with a paddle: Blue, a Player with the arena's tools; Red, played by Jev, a decision model choosing its moves. The arena keeps the score; the first to eleven wins.",
   variant: 'game',
   goal: 'You are playing Pong. Call `arena_watch` once: the arena then tells you where the ball is and where it arrives on your side. Each time it does, call `arena_pong_move` with that `y` at once; serve with `arena_pong_serve` when the serve is yours. First to eleven points wins.',
   clockSeconds: 180,
@@ -226,6 +232,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'right',
@@ -235,6 +242,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'red',
       overrides: {},
+      decisionModel: 'cloudflare:wrk/typesafe/jev',
     },
   ],
   referee: {
@@ -255,7 +263,7 @@ export const PONG_BATTLE_0_0_1: BattleSpec = {
       config: {
         threshold: 0.6,
         rubric:
-          'The player watched the arena (arena_watch or arena_read), moved its paddle as the ball came and served when the serve was its own; its tool calls and moves show it played rather than idled.',
+          'The player watched the arena (arena_watch or arena_read, or, played by a decision model, its decisions on what the arena showed), moved its paddle as the ball came and served when the serve was its own; its tool calls and moves show it played rather than idled.',
       },
       says: 'The player played the arena, not around it.',
     },
@@ -289,6 +297,7 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
       app: '',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'red',
@@ -299,6 +308,7 @@ export const REPORT_CHALLENGE_BATTLE_0_0_1: BattleSpec = {
       overrides: {
         model: 'alibaba:qwen-max',
       },
+      decisionModel: '',
     },
   ],
   referee: {
@@ -346,6 +356,7 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
       runsIn: 'browser',
       color: 'blue',
       overrides: {},
+      decisionModel: '',
     },
     {
       id: 'red',
@@ -357,6 +368,7 @@ export const SHEET_RACE_BATTLE_0_0_1: BattleSpec = {
       overrides: {
         model: 'alibaba:qwen-max',
       },
+      decisionModel: '',
     },
   ],
   referee: {

@@ -2485,6 +2485,10 @@ class BattleContestantSpec(BaseModel):
         default_factory=dict,
         description="What it plays differently of its application: model, instructions, skills, context",
     )
+    decision_model: str = Field(
+        default="",
+        description="A game's contestant played by a decision model: the page asks it a choice on what the arena shows and makes the move it chooses",
+    )
 
 
 class BattleRefereeSpec(BaseModel):

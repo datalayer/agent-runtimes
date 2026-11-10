@@ -110,6 +110,7 @@ CAMEL = {
     "clock_seconds": "clockSeconds",
     "decides_by": "decidesBy",
     "runs_in": "runsIn",
+    "decision_model": "decisionModel",
     "discovery_url": "discoveryUrl",
     "lifetime_seconds": "lifetimeSeconds",
     "hosted_by": "hostedBy",

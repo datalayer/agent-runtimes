@@ -654,6 +654,12 @@ export interface BattleContestantSpec {
   color: string;
   /** What it plays differently of its application; on a scene, of every member played in the page. Empty, or absent, for nothing. */
   overrides?: AppOverridesSpec;
+  /**
+   * A game's contestant played by a decision model, `provider:name` of one that answers typed decisions
+   * (`cloudflare:wrk/typesafe/jev`): the page asks it a choice on what the arena shows its side and makes
+   * the move it chooses; its application gives only the face. Empty, or absent, for an agent that plays.
+   */
+  decisionModel?: string;
 }
 
 /** How a Battle's winner is decided. */
