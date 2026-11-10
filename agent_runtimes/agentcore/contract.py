@@ -32,6 +32,15 @@ microvm_started_at}`` — when the invocation arrived, when its run ended, the
 wall time between (what the usage reads as invocation hours), and when this
 process, the microVM's, started.
 
+A runtime the platform deployed for an application (``AGENTCORE_DEPLOYMENT_UID``)
+runs the deployment's agent, made as a kept runtime's is (`apps.deployments.kept_payload`):
+its Appspec and the deployment as its instance, read from ai-agents with the first
+caller's token. Its runs go through the application's session routes — a session
+opened by its first run (``/api/v1/apps/agents/{agent}/ag-ui/``), resumed from its
+record when this process does not hold it (``/api/v1/apps/sessions/{uid}/resume``)
+— so each session is recorded under the deployment, where it runs said as
+``{kind: agentcore, arn}``.
+
 Behind Datalayer IAM's authorizer, the token AgentCore validated is exchanged
 for the platform's tokens before anything else (AC-06, `exchange`): the run
 is given the caller's platform token as its bearer, and its model calls the
@@ -48,14 +57,14 @@ import os
 import time
 import uuid
 from collections import OrderedDict
-from typing import Any, Awaitable, Callable, Iterator, Mapping, Optional
+from typing import Any, Awaitable, Callable, Iterator, Mapping, NamedTuple, Optional
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
 
 from .exchange import ExchangeRefused, PlatformTokens, runtime_exchange
 from .session_ids import agentcore_to_session_uid
-from .settings import AGENT_ID, agentcore_settings
+from .settings import AGENT_ID, agentcore_settings, deployment_of_runtime
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +329,20 @@ def remember_turn(uid: str, messages: list[Any], answer: str) -> None:
         _PROMPT_HISTORY.popitem(last=False)
 
 
+def remember_turns(uid: str, messages: list[Any]) -> None:
+    """Keep a session's conversation as it was resumed: its text turns."""
+    history = [
+        {"id": str(m.get("id") or uuid.uuid4()), "role": m["role"], "content": text}
+        for m in messages
+        if isinstance(m, dict)
+        and m.get("role") in ("user", "assistant")
+        and (text := _text_of(m.get("content")))
+    ]
+    _PROMPT_HISTORY.pop(uid, None)
+    if history:
+        _PROMPT_HISTORY[uid] = history[-PROMPT_HISTORY_MESSAGES:]
+
+
 async def resumed(body: dict[str, Any], uid: str, bearer: str) -> dict[str, Any]:
     """The run, with the session's conversation from its record when this process never held it.
 
@@ -376,6 +399,20 @@ async def resumed(body: dict[str, Any], uid: str, bearer: str) -> dict[str, Any]
 # --- the run, by the agent's AG-UI app --------------------------------------------------
 
 
+class Runner(NamedTuple):
+    """What runs an invocation: an ASGI app, the path it is posted to, and
+    whether the invocation's client address goes with it.
+
+    The agent's own AG-UI app at ``/``; on a runtime running a deployment, the
+    server itself at an application's session route, where the caller is who
+    their token says, never the address AgentCore called from.
+    """
+
+    app: Any
+    path: str = "/"
+    with_client: bool = True
+
+
 def _agent_app() -> Any:
     """The AG-UI app of the configured agent.
 
@@ -390,6 +427,179 @@ def _agent_app() -> Any:
     if app is None:
         raise ContractRefused(503, "No agent is configured on this runtime to invoke.")
     return app
+
+
+# --- a deployment's runtime -------------------------------------------------------------
+
+#: Where the server's routes are, as it said at start.
+_API_PREFIX = {"prefix": "/api/v1"}
+
+#: The deployment's agent, once made here: ``{"agent": <id>}``.
+_DEPLOYED: dict[str, str] = {}
+
+#: One making of the deployment's agent at a time.
+_MAKING: dict[str, asyncio.Lock] = {}
+
+
+async def _create_agent(server: Any, payload: dict[str, Any], bearer: str) -> None:
+    """Make the deployment's agent through the create route, in process, as the keeper's call would."""
+    from starlette.requests import Request as StarletteRequest
+
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+
+    scope = {
+        "type": "http",
+        "app": server,
+        "method": "POST",
+        "path": f"{_API_PREFIX['prefix']}/agents",
+        "headers": [(b"authorization", f"Bearer {bearer}".encode("latin-1"))],
+        "query_string": b"",
+        "scheme": "http",
+        "server": ("127.0.0.1", int(os.environ.get("AGENT_RUNTIMES_PORT") or 0)),
+    }
+    await create_agent(CreateAgentRequest(**payload), StarletteRequest(scope))
+
+
+#: Who makes the deployment's agent from its payload; replaced by a test.
+_maker: dict[str, Callable[[Any, dict[str, Any], str], Awaitable[None]]] = {
+    "make": _create_agent
+}
+
+
+def use_deployment_maker(
+    maker: Optional[Callable[[Any, dict[str, Any], str], Awaitable[None]]],
+) -> None:
+    """Who makes the deployment's agent: the create route, or a test; ``None`` for the route."""
+    _maker["make"] = maker or _create_agent
+
+
+def forget_deployment_agent() -> None:
+    """Forget the deployment's agent made here (a test: a fresh microVM)."""
+    _DEPLOYED.clear()
+
+
+async def deployment_agent(server: Any, bearer: str) -> str:
+    """The agent of the deployment this runtime runs, made at its first invocation.
+
+    Made as the keeper makes a kept deployment's (`kept_payload`): the version
+    ai-agents answers the caller (`principal.read_deployment`), its Appspec,
+    the deployment as its instance. Never from what the invocation sends.
+
+    Raises
+    ------
+    ContractRefused
+        With no token to ask with (401), when ai-agents does not say what the
+        deployment runs (502), or it cannot be made, in its sentence.
+    """
+    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.principal import DeploymentCodeUnread, read_deployment
+
+    if "agent" in _DEPLOYED:
+        return _DEPLOYED["agent"]
+    lock = _MAKING.setdefault("lock", asyncio.Lock())
+    async with lock:
+        if "agent" in _DEPLOYED:
+            return _DEPLOYED["agent"]
+        deployment = deployment_of_runtime()
+        if not bearer:
+            raise ContractRefused(
+                401,
+                f"This runtime runs deployment {deployment}: it is invoked with a Datalayer token.",
+            )
+        try:
+            answer = await read_deployment(deployment, None, bearer)
+        except DeploymentCodeUnread as unread:
+            raise ContractRefused(502, str(unread)) from None
+        try:
+            payload = kept_payload(
+                answer["spec"],
+                app_uid=str(answer["app_uid"]),
+                deployment_uid=deployment,
+                version=int(answer["version"]),
+                organization_uid=str(answer.get("organization_uid") or ""),
+                spend_limit=float(answer.get("spend_limit") or 0.0),
+                runs="on AWS AgentCore",
+            )
+        except AppNotRunnable as refused:
+            raise ContractRefused(
+                422,
+                f"Deployment {deployment} does not run: {'; '.join(map(str, refused.problems))}",
+            ) from None
+        except DeployRefused as refused:
+            raise ContractRefused(422, str(refused)) from None
+        try:
+            await _maker["make"](server, payload, bearer)
+        except HTTPException as refused:
+            raise ContractRefused(
+                refused.status_code,
+                f"The agent of deployment {deployment} was not made: {refused.detail}",
+            ) from None
+        agent = str(payload["name"]).lower().replace(" ", "-")
+        _DEPLOYED["agent"] = agent
+        logger.info("AgentCore: deployment %s runs as agent %s", deployment, agent)
+        return agent
+
+
+def _session_route(agent: str) -> str:
+    return f"{_API_PREFIX['prefix']}/apps/agents/{agent}/ag-ui/"
+
+
+async def opened_from_record(
+    server: Any,
+    scope: Mapping[str, Any],
+    uid: str,
+    agent: str,
+    headers: list[tuple[bytes, bytes]],
+    tokens: Optional[PlatformTokens],
+) -> None:
+    """The session, resumed from its record when this process does not hold it.
+
+    Through the application's resume route, as a page resumes one: its
+    turns, tool rows and Rules given back, a ``session`` entry saying it
+    resumed where it runs now. A session the record has no turn of (404) is a
+    first one, opened by its run; an application that keeps no conversations
+    has nothing to resume from. The conversation resumed is the session's
+    earlier turns for a ``{"prompt"}`` run.
+
+    Raises
+    ------
+    ContractRefused
+        When the record refuses it — an ended session, another person's — in its sentence.
+    """
+    from agent_runtimes.apps.sessions import agent_app, session_of
+
+    if session_of(uid) is not None:
+        return
+    app, _ = agent_app(agent)
+    include = {str(getattr(item, "value", item)) for item in app.record.include}
+    if "conversations" not in include:
+        return
+    status, _, raw = await collected(
+        Runner(server, f"{_API_PREFIX['prefix']}/apps/sessions/{uid}/resume", False),
+        scope,
+        {"agent": agent},
+        headers,
+        tokens=tokens,
+    )
+    if status == 404:
+        return
+    if status != 200:
+        raise ContractRefused(status, _detail_of(raw))
+    live = session_of(uid)
+    if live is not None:
+        remember_turns(uid, live.messages)
+    logger.info("AgentCore session %s resumed from its record", uid)
+
+
+def _detail_of(raw: bytes) -> str:
+    """A refusal's sentence, from its JSON ``detail`` or its text."""
+    text = raw.decode("utf-8", errors="replace")
+    with contextlib.suppress(ValueError):
+        detail = json.loads(text).get("detail")
+        if detail:
+            return detail if isinstance(detail, str) else json.dumps(detail)
+    return text
 
 
 def _forwarded(
@@ -422,13 +632,18 @@ def _tokens_held(tokens: Optional[PlatformTokens]) -> Iterator[None]:
 
 
 def _inner_scope(
-    scope: Mapping[str, Any], headers: list[tuple[bytes, bytes]], length: int
+    scope: Mapping[str, Any],
+    headers: list[tuple[bytes, bytes]],
+    length: int,
+    path: str = "/",
+    with_client: bool = True,
 ) -> dict[str, Any]:
-    """An HTTP ``POST /`` scope for the agent's AG-UI app, from the invocation's own."""
+    """An HTTP ``POST`` scope for the runner, from the invocation's own."""
+    kept = ("app", "client", "server", "state", "asgi")
     inner = {
         key: scope[key]
-        for key in ("app", "client", "server", "state", "asgi")
-        if key in scope
+        for key in kept
+        if key in scope and (with_client or key != "client")
     }
     inner.update(
         {
@@ -436,8 +651,8 @@ def _inner_scope(
             "http_version": "1.1",
             "method": "POST",
             "scheme": "https" if scope.get("scheme") in ("https", "wss") else "http",
-            "path": "/",
-            "raw_path": b"/",
+            "path": path,
+            "raw_path": path.encode("latin-1"),
             "root_path": "",
             "query_string": b"",
             "headers": [
@@ -491,7 +706,7 @@ class _Streamed(Response):
 
     def __init__(
         self,
-        agent_app: Any,
+        runner: Runner,
         body: dict[str, Any],
         headers: list[tuple[bytes, bytes]],
         tokens: Optional[PlatformTokens] = None,
@@ -499,7 +714,7 @@ class _Streamed(Response):
         remember: Optional[str] = None,
     ):
         self.remember = remember
-        self.agent_app = agent_app
+        self.runner = runner
         self.payload = json.dumps(body).encode()
         self.forwarded = headers
         self.tokens = tokens
@@ -508,7 +723,13 @@ class _Streamed(Response):
         self.background = None
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
-        inner = _inner_scope(scope, self.forwarded, len(self.payload))
+        inner = _inner_scope(
+            scope,
+            self.forwarded,
+            len(self.payload),
+            self.runner.path,
+            self.runner.with_client,
+        )
         with (
             LIVENESS.working(),
             _invoked(self.started),
@@ -516,7 +737,7 @@ class _Streamed(Response):
             _tokens_held(self.tokens),
         ):
             if self.remember is None:
-                await self.agent_app(inner, _receiver(self.payload, receive), send)
+                await self.runner.app(inner, _receiver(self.payload, receive), send)
                 return
             chunks: list[bytes] = []
 
@@ -525,7 +746,7 @@ class _Streamed(Response):
                     chunks.append(message.get("body") or b"")
                 await send(message)
 
-            await self.agent_app(inner, _receiver(self.payload, receive), sent)
+            await self.runner.app(inner, _receiver(self.payload, receive), sent)
             events, _ = _sse_events(b"".join(chunks).decode("utf-8", errors="replace"))
             if not error_of(events):
                 remember_turn(
@@ -552,7 +773,7 @@ def _sse_events(buffer: str) -> tuple[list[dict[str, Any]], str]:
 
 
 async def collected(
-    agent_app: Any,
+    runner: Any,
     scope: Mapping[str, Any],
     body: dict[str, Any],
     headers: list[tuple[bytes, bytes]],
@@ -560,10 +781,13 @@ async def collected(
     tokens: Optional[PlatformTokens] = None,
     started: Optional[float] = None,
 ) -> tuple[int, list[dict[str, Any]], bytes]:
-    """One run of the agent's AG-UI app, read whole: its status, its events, and a refusal's body.
+    """One run, read whole: its status, its events, and a refusal's body.
 
+    ``runner`` is a `Runner`, or the agent's AG-UI app itself (at ``/``).
     ``started`` is when the invocation arrived (``time.time()``), now when unsaid.
     """
+    if not isinstance(runner, Runner):
+        runner = Runner(runner)
     payload = json.dumps(body).encode()
     status = 500
     streamed = False
@@ -598,8 +822,10 @@ async def collected(
         _workload_of(scope),
         _tokens_held(tokens),
     ):
-        await agent_app(
-            _inner_scope(scope, headers, len(payload)), _receiver(payload, None), send
+        await runner.app(
+            _inner_scope(scope, headers, len(payload), runner.path, runner.with_client),
+            _receiver(payload, None),
+            send,
         )
     return status, events, bytes(raw)
 
@@ -659,9 +885,11 @@ async def tokens_of(headers: Mapping[str, str]) -> Optional[PlatformTokens]:
 
 
 async def _prepared(
-    payload: Any, headers: Mapping[str, str]
-) -> tuple[dict[str, Any], bool, str, Any, Optional[PlatformTokens]]:
-    """The run of an invocation, resumed when need be, the app that runs it, and its tokens."""
+    payload: Any,
+    headers: Mapping[str, str],
+    scope: Optional[Mapping[str, Any]] = None,
+) -> tuple[dict[str, Any], bool, str, Runner, Optional[PlatformTokens]]:
+    """The run of an invocation, resumed when need be, what runs it, and its tokens."""
     from agent_runtimes.apps.callers import bearer_of
     from agent_runtimes.mcp.agentcore_gateway import policy_session
 
@@ -669,16 +897,33 @@ async def _prepared(
     policy_session().use(uid)
     body, prompt_shape = run_input_of(payload, uid, sid)
     tokens = await tokens_of(headers)
-    agent_app = _agent_app()
     bearer = (
         tokens.platform
         if tokens is not None
         else bearer_of(headers.get("authorization"))
     )
+    if deployment_of_runtime():
+        server = (scope or {}).get("app")
+        if server is None:
+            raise ContractRefused(503, "This invocation reaches no server to run it.")
+        agent = await deployment_agent(server, bearer)
+        await opened_from_record(
+            server, scope or {}, uid, agent, _forwarded(headers, tokens), tokens
+        )
+        if prompt_shape:
+            body = with_prompt_history(body, uid)
+        return (
+            body,
+            prompt_shape,
+            uid,
+            Runner(server, _session_route(agent), False),
+            tokens,
+        )
+    agent_app = _agent_app()
     if prompt_shape:
         body = with_prompt_history(body, uid)
     body = await resumed(body, uid, bearer)
-    return body, prompt_shape, uid, agent_app, tokens
+    return body, prompt_shape, uid, Runner(agent_app), tokens
 
 
 @router.post("/invocations")
@@ -692,8 +937,8 @@ async def invocations(request: Request) -> Response:
             raise ContractRefused(
                 400, 'An invocation is JSON: an AG-UI RunAgentInput or {"prompt": ...}.'
             ) from None
-        body, prompt_shape, uid, agent_app, tokens = await _prepared(
-            payload, request.headers
+        body, prompt_shape, uid, runner, tokens = await _prepared(
+            payload, request.headers, request.scope
         )
     except ContractRefused as refused:
         raise HTTPException(
@@ -701,9 +946,9 @@ async def invocations(request: Request) -> Response:
         ) from None
     forwarded = _forwarded(request.headers, tokens)
     if not prompt_shape or _wants_events(request.headers.get("accept")):
-        return _Streamed(agent_app, body, forwarded, tokens, started, uid)
+        return _Streamed(runner, body, forwarded, tokens, started, uid)
     status, events, raw = await collected(
-        agent_app, request.scope, body, forwarded, tokens=tokens, started=started
+        runner, request.scope, body, forwarded, tokens=tokens, started=started
     )
     if status != 200:
         return Response(raw, status_code=status, media_type="application/json")
@@ -746,8 +991,8 @@ async def invocations_ws(websocket: WebSocket) -> None:
                 raise ContractRefused(
                     400, 'A message is JSON: {"prompt": ..., "session_id": ...}.'
                 ) from None
-            body, prompt_shape, _, agent_app, tokens = await _prepared(
-                payload, websocket.headers
+            body, prompt_shape, _, runner, tokens = await _prepared(
+                payload, websocket.headers, websocket.scope
             )
         except ContractRefused as refused:
             await said(
@@ -755,7 +1000,7 @@ async def invocations_ws(websocket: WebSocket) -> None:
             )
             continue
         status, events, raw = await collected(
-            agent_app,
+            runner,
             websocket.scope,
             body,
             _forwarded(websocket.headers, tokens),
@@ -783,7 +1028,9 @@ async def invocations_ws(websocket: WebSocket) -> None:
 
 async def configure_at_start(app: Any, api_prefix: str) -> None:
     """Configure the agent from ``AGENT_SPEC_ID`` as a pool pod's is: through
-    ``configure-from-spec``, in process, served over AG-UI.
+    ``configure-from-spec``, in process, served over AG-UI. A runtime that runs
+    a deployment (``AGENTCORE_DEPLOYMENT_UID``) makes the deployment's agent at
+    its first invocation instead (`deployment_agent`).
 
     Raises
     ------
@@ -802,6 +1049,16 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
     # The exchange's configuration, refused now rather than at the first
     # invocation (AC-06).
     runtime_exchange()
+    _API_PREFIX["prefix"] = api_prefix
+    deployment = deployment_of_runtime()
+    if deployment:
+        # The deployment's agent is made at its first invocation, with that
+        # caller's token: ai-agents says what the deployment runs to them.
+        logger.info(
+            "AgentCore: deployment %s, its agent made at the first invocation",
+            deployment,
+        )
+        return
     scope = {
         "type": "http",
         "app": app,
@@ -833,15 +1090,20 @@ __all__ = [
     "SESSION_HEADER",
     "ContractRefused",
     "Liveness",
+    "Runner",
     "answer_of",
     "collected",
     "configure_at_start",
+    "deployment_agent",
     "error_of",
+    "forget_deployment_agent",
     "forget_held",
+    "opened_from_record",
     "resumed",
     "router",
     "run_input_of",
     "session_of_headers",
     "tokens_of",
     "track_background",
+    "use_deployment_maker",
 ]

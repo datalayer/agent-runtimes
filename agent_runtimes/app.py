@@ -1485,9 +1485,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         )
 
         # AgentCore's A2A contract (AC-05): the configured agent as a team
-        # seat, on port 9000 at `/`, through the runtime's A2A transport.
+        # seat, on port 9000 at `/`, through the runtime's A2A transport. A
+        # runtime that runs a deployment serves its application's sessions,
+        # not a seat.
         _agentcore_seat = None
-        if _agentcore and not is_reload_parent:
+        from .agentcore.settings import deployment_of_runtime
+
+        if _agentcore and not is_reload_parent and not deployment_of_runtime():
             from .agentcore.a2a import start_seat
 
             _agentcore_seat = await start_seat()

@@ -515,8 +515,15 @@ KeepSound = Callable[..., Awaitable[None]]
 def runtime_runs_on() -> Dict[str, Any]:
     """Where a session of this runtime runs (MH-01): ``{kind: runtime, uid}``,
     the runtime's uid as the platform names it (``DATALAYER_RUNTIME_ID``),
-    ``local`` for a runtime started by hand.
+    ``local`` for a runtime started by hand; on Amazon Bedrock AgentCore,
+    ``{kind: agentcore, arn}``, the agent runtime it was told it is
+    (``AGENTCORE_RUNTIME_ARN``).
     """
+    from agent_runtimes.agentcore.settings import is_agentcore_target
+
+    arn = (os.environ.get("AGENTCORE_RUNTIME_ARN") or "").strip()
+    if arn and is_agentcore_target():
+        return {"kind": "agentcore", "arn": arn}
     return {
         "kind": "runtime",
         "uid": (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip() or "local",

@@ -409,6 +409,10 @@ _LENT_TOOLS = "/api/v1/mcp/lent/"
 _INFERENCE_RELAY = "/api/v1/inference/relay/"
 
 
+#: What Amazon Bedrock AgentCore Runtime calls a runtime started for it at.
+_AGENTCORE_CONTRACT = ("/invocations", "/ping", "/ws")
+
+
 def path_answered(method: str, path: str) -> bool:
     """Whether a request from anybody but the runtime itself is the application's own.
 
@@ -420,6 +424,12 @@ def path_answered(method: str, path: str) -> bool:
     """
     if path.rstrip("/") in _NOT_THE_APPLICATIONS:
         return False
+    if path in _AGENTCORE_CONTRACT:
+        # AgentCore Runtime's own calls, on a runtime started for it: each
+        # invocation is the caller's, by the token it exchanges.
+        from agent_runtimes.agentcore.settings import is_agentcore_target
+
+        return is_agentcore_target()
     if path.startswith("/api/v1/apps/") or path == "/api/v1/apps":
         return True
     if path.startswith(_A2A_AGENTS):

@@ -28,6 +28,10 @@ SPEC_VARIABLE = "AGENT_SPEC_ID"
 #: The port, when the runtime's ``protocolConfiguration`` changes it.
 PORT_VARIABLE = "AGENTCORE_PORT"
 
+#: The deployment the runtime runs, when the platform deployed an application
+#: on AgentCore: its agent is the deployment's, made as a kept runtime's is.
+DEPLOYMENT_VARIABLE = "AGENTCORE_DEPLOYMENT_UID"
+
 #: AgentCore's host: every interface.
 HOST = "0.0.0.0"
 
@@ -88,9 +92,16 @@ def is_agentcore_target(environ: Optional[Mapping[str, str]] = None) -> bool:
     return (env.get(TARGET_VARIABLE) or "").strip() == TARGET
 
 
+def deployment_of_runtime(environ: Optional[Mapping[str, str]] = None) -> str:
+    """The deployment this AgentCore runtime runs (``AGENTCORE_DEPLOYMENT_UID``), or ``""``."""
+    env = os.environ if environ is None else environ
+    return (env.get(DEPLOYMENT_VARIABLE) or "").strip()
+
+
 __all__ = [
     "AGENT_ID",
     "DEFAULT_PORT",
+    "DEPLOYMENT_VARIABLE",
     "HOST",
     "PORT_VARIABLE",
     "SPEC_VARIABLE",
@@ -98,5 +109,6 @@ __all__ = [
     "TARGET_VARIABLE",
     "AgentCoreSettings",
     "agentcore_settings",
+    "deployment_of_runtime",
     "is_agentcore_target",
 ]
