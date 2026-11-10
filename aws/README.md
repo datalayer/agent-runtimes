@@ -121,6 +121,31 @@ your agents run in. To stop Datalayer from acting in the account, delete the
 stack (`aws cloudformation delete-stack --stack-name datalayer-agentcore`);
 agent runtimes Datalayer created stay until you delete them.
 
+### Datalayer's side: the identity that assumes the role
+
+[`agentcore-datalayer-principal.yaml`](./agentcore-datalayer-principal.yaml)
+is deployed once, by Datalayer, in the account organizations name as
+`DatalayerAccountId`. It creates one IAM user, `datalayer-agentcore`, allowed
+only `sts:AssumeRole` on roles named `*DatalayerRole*` (and
+`sts:GetCallerIdentity`); each organization's role still requires its external
+id. Its access key is created by hand and kept in the services' configuration,
+never in a stack output:
+
+```bash
+aws cloudformation deploy \
+  --template-file aws/agentcore-datalayer-principal.yaml \
+  --stack-name datalayer-agentcore-principal \
+  --region us-east-1 \
+  --capabilities CAPABILITY_NAMED_IAM
+
+aws iam create-access-key --user-name datalayer-agentcore
+```
+
+The Datalayer IAM and Runtimes services read it as
+`DATALAYER_AGENTCORE_AWS_ACCESS_KEY_ID` and
+`DATALAYER_AGENTCORE_AWS_SECRET_ACCESS_KEY`, with the account id as
+`DATALAYER_AWS_ACCOUNT_ID`.
+
 ## The AgentCore image
 
 AgentCore Runtime runs one image for every agentspec: agent-runtimes from
