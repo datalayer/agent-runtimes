@@ -1292,7 +1292,7 @@ class TestConformanceAcrossFaces:
                         **{"class": class_of(kind)},
                         **fields,
                     ),
-                    count_as=face,
+                    key=face,
                 )
                 for face in FACES
             }

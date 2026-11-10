@@ -1536,7 +1536,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     # -- what was written for it is read-only to it (SH-21) ------------------------------
 
     def decide(
-        self, session: SessionState, action: Action, *, count_as: str | None = None
+        self, session: SessionState, action: Action, *, key: str | None = None
     ) -> Decision:
         """The policies' decision, after one of the runtime's: the lent files are not the agent's to write."""
         if (
@@ -1559,7 +1559,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 rule="lent files are read-only",
                 decided_by="rule",
             )
-        return ShieldProxy.decide(self, session, action, count_as=count_as)
+        return ShieldProxy.decide(self, session, action, key=key)
 
     # -- MCP lent (SH-14) ----------------------------------------------------------------
 
