@@ -390,6 +390,33 @@ def test_an_ag_ui_run_brings_its_own_conversation(
     assert model.prompts[-1] == ["Alone"]
 
 
+def test_a_prompt_after_ag_ui_runs_carries_their_conversation(
+    client: TestClient, model: Said
+) -> None:
+    # The Studio's turns (AG-UI, through ai-agents), then a `loop` prompt on the
+    # same session: the prompt goes after the conversation the last run had
+    # (the drill's step 2, 10 November 2026).
+    events_of(
+        client.post(
+            "/invocations",
+            headers={SESSION_HEADER: SID},
+            json=run_input("Remember HERON"),
+        )
+    )
+    second = run_input("And teal")
+    second["messages"] = [
+        {"id": "u1", "role": "user", "content": "Remember HERON"},
+        {"id": "a1", "role": "assistant", "content": "Heard 1: Remember HERON"},
+        {"id": "u2", "role": "user", "content": [{"type": "text", "text": "And teal"}]},
+    ]
+    events_of(client.post("/invocations", headers={SESSION_HEADER: SID}, json=second))
+    answer = client.post(
+        "/invocations", headers={SESSION_HEADER: SID}, json={"prompt": "Both?"}
+    )
+    assert answer.status_code == 200
+    assert model.prompts[-1] == ["Remember HERON", "And teal", "Both?"]
+
+
 def test_a_run_naming_another_thread_is_refused_in_a_sentence(
     client: TestClient, model: Said
 ) -> None:

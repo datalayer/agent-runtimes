@@ -269,10 +269,12 @@ def _carries_history(body: Mapping[str, Any]) -> bool:
     return len(messages) > 1 or any(m.get("role") != "user" for m in messages)
 
 
-#: A plain-prompt session's turns, kept in this process: a ``{"prompt": ...}``
-#: caller (AWS's samples, ``loop``) sends only its new message, where an AG-UI
-#: client sends the whole conversation. Prepended to the session's next prompt;
-#: bounded per session and in sessions, the oldest dropped first.
+#: A session's conversation, kept in this process: its text turns as the last
+#: run had them, with that run's answer. A ``{"prompt": ...}`` caller (AWS's
+#: samples, ``loop``) sends only its new message, where an AG-UI client (the
+#: Studio, through ai-agents) sends the whole conversation: whichever ran last,
+#: the next prompt goes after it. Bounded per session and in sessions, the
+#: oldest dropped first.
 _PROMPT_HISTORY: "OrderedDict[str, list[dict[str, str]]]" = OrderedDict()
 PROMPT_HISTORY_MESSAGES = 50
 PROMPT_HISTORY_SESSIONS = 256
@@ -287,15 +289,32 @@ def with_prompt_history(body: dict[str, Any], uid: str) -> dict[str, Any]:
     return {**body, "messages": [*history, *(body.get("messages") or [])]}
 
 
-def remember_prompt_turn(uid: str, prompt: str, answer: str) -> None:
-    """Keep a plain-prompt turn of the session: its prompt and the agent's answer."""
+def _text_of(content: Any) -> str:
+    """A message's text: its string, or its text parts joined."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            str(part.get("text") or "")
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+    return ""
+
+
+def remember_turn(uid: str, messages: list[Any], answer: str) -> None:
+    """Keep the session's conversation: the text turns a run was given, then its answer."""
     if not answer:
         return
-    history = _PROMPT_HISTORY.pop(uid, [])
-    history += [
-        {"id": str(uuid.uuid4()), "role": "user", "content": prompt},
-        {"id": str(uuid.uuid4()), "role": "assistant", "content": answer},
+    history = [
+        {"id": str(m.get("id") or uuid.uuid4()), "role": m["role"], "content": text}
+        for m in messages
+        if isinstance(m, dict)
+        and m.get("role") in ("user", "assistant")
+        and (text := _text_of(m.get("content")))
     ]
+    history.append({"id": str(uuid.uuid4()), "role": "assistant", "content": answer})
+    _PROMPT_HISTORY.pop(uid, None)
     _PROMPT_HISTORY[uid] = history[-PROMPT_HISTORY_MESSAGES:]
     while len(_PROMPT_HISTORY) > PROMPT_HISTORY_SESSIONS:
         _PROMPT_HISTORY.popitem(last=False)
@@ -477,7 +496,7 @@ class _Streamed(Response):
         headers: list[tuple[bytes, bytes]],
         tokens: Optional[PlatformTokens] = None,
         started: Optional[float] = None,
-        remember: Optional[tuple[str, str]] = None,
+        remember: Optional[str] = None,
     ):
         self.remember = remember
         self.agent_app = agent_app
@@ -509,7 +528,11 @@ class _Streamed(Response):
             await self.agent_app(inner, _receiver(self.payload, receive), sent)
             events, _ = _sse_events(b"".join(chunks).decode("utf-8", errors="replace"))
             if not error_of(events):
-                remember_prompt_turn(*self.remember, answer_of(events))
+                remember_turn(
+                    self.remember,
+                    json.loads(self.payload).get("messages") or [],
+                    answer_of(events),
+                )
 
 
 def _sse_events(buffer: str) -> tuple[list[dict[str, Any]], str]:
@@ -678,8 +701,7 @@ async def invocations(request: Request) -> Response:
         ) from None
     forwarded = _forwarded(request.headers, tokens)
     if not prompt_shape or _wants_events(request.headers.get("accept")):
-        remember = (uid, str(payload["prompt"])) if prompt_shape else None
-        return _Streamed(agent_app, body, forwarded, tokens, started, remember)
+        return _Streamed(agent_app, body, forwarded, tokens, started, uid)
     status, events, raw = await collected(
         agent_app, request.scope, body, forwarded, tokens=tokens, started=started
     )
@@ -691,7 +713,7 @@ async def invocations(request: Request) -> Response:
             {"response": answer_of(events), "status": "error", "error": error},
             status_code=500,
         )
-    remember_prompt_turn(uid, str(payload["prompt"]), answer_of(events))
+    remember_turn(uid, body.get("messages") or [], answer_of(events))
     return JSONResponse({"response": answer_of(events), "status": "success"})
 
 
@@ -744,8 +766,8 @@ async def invocations_ws(websocket: WebSocket) -> None:
         error = error_of(events) or (
             "" if status == 200 else raw.decode("utf-8", errors="replace")
         )
-        if prompt_shape and not error:
-            remember_prompt_turn(uid, str(payload["prompt"]), answer_of(events))
+        if not error:
+            remember_turn(uid, body.get("messages") or [], answer_of(events))
         await said(
             {
                 "response": answer_of(events),
