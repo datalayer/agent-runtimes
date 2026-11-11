@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.6.20",
+  "version": "1.6.21",
   "type": "module",
   "workspaces": [
     ".",
