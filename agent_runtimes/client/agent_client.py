@@ -1321,6 +1321,7 @@ class AgentClient(
                     started_at=runtime["started_at"],
                     expired_at=runtime["expired_at"],
                     unmetered=bool(runtime.get("unmetered", False)),
+                    deployment_uid=str(runtime.get("deployment_uid") or ""),
                 )
             )
         return runtime_services

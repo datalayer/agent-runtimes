@@ -65,6 +65,61 @@ LOOP_WORDMARK_VERB = "L\U0001f440PING"
 #: what is installed. (`agent_runtimes.__init__` does not import this package,
 #: so reading it here is no cycle.)
 LOOP_VERSION = __import__("agent_runtimes").__version__
+
+#: Datalayer's mark, before the wordmark in the prompt's header.
+DATALAYER_MARK = "\u2630"
+#: A glyph every terminal draws in one cell, standing for the mark while a
+#: line holding it is measured.
+DATALAYER_MARK_STAND_IN = "\u2261"
+
+_drawn_cells: dict[str, int] = {}
+
+
+def drawn_cells(glyph: str) -> int:
+    """How many cells this terminal draws a glyph in, asked of the terminal itself.
+
+    Terminals disagree with the Unicode tables on a few glyphs (the mark is
+    wide in the tables and drawn in one cell by most terminals), and a box's
+    corner is out of line by the difference. The glyph is written, the
+    cursor's column asked for and the line erased. Away from a terminal, or
+    when it does not answer in time, the answer is one cell.
+    """
+    if glyph in _drawn_cells:
+        return _drawn_cells[glyph]
+    cells = 1
+    try:
+        import os
+        import re
+        import select
+        import sys
+        import termios
+        import tty
+
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            fd = sys.stdin.fileno()
+            kept = termios.tcgetattr(fd)
+            try:
+                tty.setcbreak(fd)
+                sys.stdout.write(f"\r{glyph}\x1b[6n")
+                sys.stdout.flush()
+                answer = ""
+                while select.select([fd], [], [], 0.2)[0]:
+                    answer += os.read(fd, 32).decode(errors="replace")
+                    if answer.endswith("R"):
+                        break
+                found = re.search(r"\x1b\[\d+;(\d+)R", answer)
+                if found:
+                    cells = max(1, int(found.group(1)) - 1)
+            finally:
+                sys.stdout.write("\r\x1b[2K")
+                sys.stdout.flush()
+                termios.tcsetattr(fd, termios.TCSADRAIN, kept)
+    except Exception:  # noqa: BLE001 - no terminal to ask: one cell
+        cells = 1
+    _drawn_cells[glyph] = cells
+    return cells
+
+
 #: Which way the tokens went: up to the server, back down from it.
 TOKENS_UP = "\u25b2"
 TOKENS_DOWN = "\u25bc"

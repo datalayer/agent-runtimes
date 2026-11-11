@@ -73,6 +73,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         started_at: Optional[str] = None,
         expired_at: Optional[str] = None,
         unmetered: bool = False,
+        deployment_uid: str = "",
     ):
         """
         Initialize a runtime service.
@@ -136,6 +137,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             kernel_id=None,
             executing=False,
         )
+        #: The deployment the runtime was launched for, '' for none: such a
+        #: runtime serves that application's own routes only.
+        self.deployment_uid = deployment_uid
 
     @property
     def model(self) -> RuntimeModel:

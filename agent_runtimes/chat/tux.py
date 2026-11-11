@@ -27,7 +27,15 @@ from rich.text import Text
 from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
 from agent_runtimes.loop.session import is_session_agui_url
 
-from .banner import LOOP_VERSION, LOOP_WORDMARK, TOKENS_DOWN, TOKENS_UP
+from .banner import (
+    DATALAYER_MARK,
+    DATALAYER_MARK_STAND_IN,
+    LOOP_VERSION,
+    LOOP_WORDMARK,
+    TOKENS_DOWN,
+    TOKENS_UP,
+    drawn_cells,
+)
 from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
 from .markdown_stream import MarkdownStream
@@ -577,7 +585,14 @@ class CliTux:
         footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
 
         # Create the main panel
-        title = f" ☰ {LOOP_WORDMARK} {version} "
+        # The mark is measured as this terminal draws it: where the tables
+        # say two cells and the terminal draws one, the line is laid out with
+        # a one-cell stand-in and the mark put back, so the corner is in line.
+        from rich.cells import cell_len
+
+        stands_in = drawn_cells(DATALAYER_MARK) != cell_len(DATALAYER_MARK)
+        mark = DATALAYER_MARK_STAND_IN if stands_in else DATALAYER_MARK
+        title = f" {mark} {LOOP_WORDMARK} {version} by Datalayer "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -592,7 +607,15 @@ class CliTux:
             box=ROUNDED,
         )
 
-        self.console.print(main_panel)
+        if stands_in and self.console.is_terminal:
+            with self.console.capture() as drawn:
+                self.console.print(main_panel)
+            self.console.file.write(
+                drawn.get().replace(DATALAYER_MARK_STAND_IN, DATALAYER_MARK, 1)
+            )
+            self.console.file.flush()
+        else:
+            self.console.print(main_panel)
         # Current working directory, shown full-width beneath the box and
         # truncated (keeping both ends) only if it overflows the terminal.
         path_line = self._truncate_middle(cwd, max(10, self.console.width - 2))

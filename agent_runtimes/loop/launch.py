@@ -448,8 +448,17 @@ class CloudOffer:
 
     @property
     def agent_runtimes(self) -> list[Any]:
-        """The running runtimes that are agent runtimes."""
-        return [r for r in self.running if is_agent_runtime(r)]
+        """The running agent runtimes the prompt can go back to.
+
+        One launched for a deployment is left out: it serves that
+        application's own routes only, so going back to it waited for an
+        answer that never came.
+        """
+        return [
+            r
+            for r in self.running
+            if is_agent_runtime(r) and not getattr(r, "deployment_uid", "")
+        ]
 
 
 def read_credits(client: Any) -> Optional[float]:
