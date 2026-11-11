@@ -371,17 +371,21 @@ def perform(action: str, row: Any, token: str) -> str:
     raise SessionsRefused(f"There is no action {action!r}.")
 
 
+def _quiet() -> None:
+    """A reader's window: the requests behind an answer are not printed over it."""
+    import logging
+
+    logging.getLogger().setLevel(logging.ERROR)
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.ERROR)
+
+
 def run_picker(as_json: bool = False) -> None:
     """`loop sessions`: the picker in a terminal, the two groups printed otherwise."""
     from agent_runtimes.loop.launch import interactive
     from agent_runtimes.loop.picker import Picker, listing_json, listing_lines, pick
 
-    import logging
-
-    # A reader's window: the requests behind the list are not printed over it.
-    logging.getLogger().setLevel(logging.ERROR)
-    for name in ("httpx", "httpcore"):
-        logging.getLogger(name).setLevel(logging.ERROR)
+    _quiet()
     token = _token()
     said = ""
     while True:
@@ -462,6 +466,7 @@ def transfer_command(
     that is not of the catalogue, a uid the other place keeps as another
     session.
     """
+    _quiet()
     try:
         done = transfer_session(uid, to, _token(), yes=yes)
     except SessionsRefused as refused:
