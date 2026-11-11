@@ -69,6 +69,7 @@ SandboxVariant = Literal[
     "cloudflare",
     "coreweave",
     "e2b",
+    "agentcore",
 ]
 
 
@@ -374,7 +375,7 @@ class CodeSandboxManager:
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
         - docker, datalayer, google-colab, kaggle, monty, modal, daytona,
-            cloudflare, coreweave, e2b: Delegated to the code_sandboxes
+            cloudflare, coreweave, e2b, agentcore: Delegated to the code_sandboxes
             variant factory, which reaches each provider with the credentials
             that provider needs.
     """

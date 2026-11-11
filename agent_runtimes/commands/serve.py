@@ -371,7 +371,8 @@ def serve_server(
                            Jupyter server per agent via code_sandboxes, and
                            the name of a provider — 'docker', 'datalayer',
                            'google-colab', 'kaggle', 'monty', 'modal',
-                           'daytona', 'cloudflare', 'coreweave', 'e2b' — runs
+                           'daytona', 'cloudflare', 'coreweave', 'e2b',
+                           'agentcore' — runs
                            it there, under the credentials this machine holds
                            for that provider.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)

@@ -864,6 +864,13 @@ _SANDBOX_VARIANT_NOTES: dict[str, str] = {
         "The sandbox is a Daytona sandbox running a Python interpreter — "
         "variables, imports, and installed packages persist across calls."
     ),
+    "agentcore": (
+        "The sandbox is a session of an Amazon Bedrock AgentCore code "
+        "interpreter running a Python kernel — variables and imports persist "
+        "across calls. It reaches no internet unless its code interpreter was "
+        "created in PUBLIC network mode, and the value of a last expression "
+        "comes back printed in its output."
+    ),
     "cloudflare": (
         "The sandbox is a container on Cloudflare's edge and it is "
         "STATELESS: every snippet runs in a process of its own, so nothing "
@@ -1336,7 +1343,8 @@ class CreateAgentRequest(BaseModel):
             "code_sandboxes, or connects to an existing one when "
             "jupyter_sandbox names it), or a provider reached with its own "
             "credentials — 'docker', 'datalayer', 'google-colab', 'kaggle', "
-            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
+            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b', "
+            "'agentcore'."
         ),
     )
     mcp_servers_in_background: bool = Field(
@@ -4233,7 +4241,7 @@ class ConfigureSandboxRequest(BaseModel):
             "(Jupyter sandbox: managed local or existing URL), or a provider "
             "code_sandboxes reaches with its own credentials — 'docker', "
             "'datalayer', 'google-colab', 'kaggle', 'monty', 'modal', "
-            "'daytona', 'cloudflare', 'coreweave', 'e2b'."
+            "'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore'."
         ),
     )
     jupyter_url: str | None = Field(

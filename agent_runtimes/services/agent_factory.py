@@ -319,7 +319,8 @@ def create_codemode_toolset(
         enable_discovery_tools: Whether to enable discovery tools (default: True)
         sandbox_variant: Sandbox variant — 'eval', 'jupyter-server', or a
             provider: 'docker', 'datalayer', 'google-colab', 'kaggle',
-            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'.
+            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b',
+            'agentcore'.
             If None, reads from the CodeSandboxManager's current config.
 
     Returns:

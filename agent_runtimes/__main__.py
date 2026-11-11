@@ -800,7 +800,7 @@ def serve(
             "requires --jupyter-sandbox), or a provider reached with the "
             "credentials this machine holds for it — 'docker', 'datalayer', "
             "'google-colab', 'kaggle', 'monty', 'modal', 'daytona', "
-            "'cloudflare', 'coreweave', 'e2b'.",
+            "'cloudflare', 'coreweave', 'e2b', 'agentcore'.",
         ),
     ] = None,
     protocol: Annotated[

@@ -184,7 +184,7 @@ async def _create_and_register_cli_agent(
             process, 'jupyter-server' starts a per-agent Jupyter server via
             code_sandboxes, and the name of a provider — 'docker',
             'datalayer', 'google-colab', 'kaggle', 'monty', 'modal',
-            'daytona', 'cloudflare', 'coreweave', 'e2b' — runs it at that
+            'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore' — runs it at that
             provider, under the credentials this process holds for it.
 
     Returns:

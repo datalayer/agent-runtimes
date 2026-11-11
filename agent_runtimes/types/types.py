@@ -2269,7 +2269,7 @@ class Agentspec(BaseModel):
             "Accepted values: 'eval' (default), 'jupyter-server' (Jupyter "
             "server), or a provider reached with its own credentials — "
             "'docker', 'datalayer', 'google-colab', 'kaggle', 'monty', "
-            "'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
+            "'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore'."
         ),
         alias="sandboxVariant",
     )
