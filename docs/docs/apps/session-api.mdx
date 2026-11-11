@@ -515,9 +515,12 @@ an agent made on AG-UI, and returns the conversation in words.
 
 ## Stop and resume
 
-**Stop** cancels the turn and leaves the session stopped. A client that goes
-away before the turn ends stops the turn only: the session stays open, which
-is what the chat's stop button does.
+**Stop** cancels the turn and pauses the session: its record says `paused`,
+and it takes no turn until it is resumed. That is what the chat's button
+does while a turn runs; in a conversation whose threads are sessions the
+button says *Pause*, with the pause icon, and *Resume* is in the
+conversation's menu. A client that goes away before the turn ends stops the
+turn only: the session stays open.
 
 **Resume** of a stopped session streams the conversation so far as a
 `MESSAGES_SNAPSHOT`, runs a Python application's `resume`, and opens it again.

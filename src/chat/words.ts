@@ -35,6 +35,11 @@ export type ChatWords = {
   messageInput: string;
   send: string;
   stop: string;
+  /**
+   * What the stop button says in a conversation that is a session: there,
+   * stopping the turn pauses the session — it waits to be resumed.
+   */
+  pauseSession: string;
   pauseKernelBusy: string;
   /** The starters under the prompt, for a screen reader. */
   suggestedPrompts: string;
@@ -138,6 +143,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Message input',
     send: 'Send',
     stop: 'Stop',
+    pauseSession:
+      'Pause the session: what runs stops, and the conversation is kept to be resumed',
     pauseKernelBusy: 'Pause (kernel busy)',
     suggestedPrompts: 'Suggested prompts',
     demoKeyExpired:
@@ -220,6 +227,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Saisie du message',
     send: 'Envoyer',
     stop: 'Arrêter',
+    pauseSession:
+      'Mettre la session en pause : ce qui tourne s’arrête, et la conversation est gardée pour être reprise',
     pauseKernelBusy: 'Pause (noyau occupé)',
     suggestedPrompts: 'Suggestions de questions',
     demoKeyExpired:
@@ -305,6 +314,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Entrada del mensaje',
     send: 'Enviar',
     stop: 'Detener',
+    pauseSession:
+      'Pausar la sesión: lo que se ejecuta se detiene y la conversación se guarda para reanudarla',
     pauseKernelBusy: 'Pausa (kernel ocupado)',
     suggestedPrompts: 'Preguntas sugeridas',
     demoKeyExpired:
@@ -390,6 +401,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Nachrichteneingabe',
     send: 'Senden',
     stop: 'Stoppen',
+    pauseSession:
+      'Sitzung pausieren: was läuft, hält an, und das Gespräch bleibt zum Fortsetzen erhalten',
     pauseKernelBusy: 'Pause (Kernel beschäftigt)',
     suggestedPrompts: 'Vorgeschlagene Fragen',
     demoKeyExpired:
@@ -477,6 +490,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Campo del messaggio',
     send: 'Invia',
     stop: 'Interrompi',
+    pauseSession:
+      'Metti in pausa la sessione: ciò che è in corso si ferma e la conversazione resta da riprendere',
     pauseKernelBusy: 'Pausa (kernel occupato)',
     suggestedPrompts: 'Domande suggerite',
     demoKeyExpired:
@@ -564,6 +579,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Campo da mensagem',
     send: 'Enviar',
     stop: 'Parar',
+    pauseSession:
+      'Pausar a sessão: o que está em curso para e a conversa fica guardada para ser retomada',
     pauseKernelBusy: 'Pausar (kernel ocupado)',
     suggestedPrompts: 'Perguntas sugeridas',
     demoKeyExpired:

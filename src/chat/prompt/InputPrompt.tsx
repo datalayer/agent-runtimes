@@ -173,6 +173,8 @@ export interface InputPromptProps {
    */
   onSend: (message: string) => void;
   onStop: () => void;
+  /** Stopping the turn pauses the conversation's session: the button says so. */
+  stopPausesSession?: boolean;
   disableInputPrompt?: boolean;
   /**
    * Which editor the prompt uses.
@@ -351,6 +353,7 @@ export function InputPrompt({
   trailingPanel,
   onSend,
   onStop,
+  stopPausesSession = false,
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents,
@@ -533,6 +536,7 @@ export function InputPrompt({
         readOnly={!connectionConfirmed}
         onSend={onSend}
         onStop={onStop}
+        stopPausesSession={stopPausesSession}
         autoFocus={autoFocus}
         focusTrigger={(focusTrigger ?? 0) + pickedFocus}
         padding={padding}

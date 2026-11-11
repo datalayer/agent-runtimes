@@ -5286,6 +5286,9 @@ function ChatBaseInner({
       padding={padding}
       onSend={() => handleSend()}
       onStop={handleStop}
+      // Each thread a session (`appSessions`): its turn stopped is its
+      // session paused, until resumed.
+      stopPausesSession={Boolean(protocol?.appSessions)}
       disableInputPrompt={
         disableInputPrompt || disabled || !!overlay || launching
       }
