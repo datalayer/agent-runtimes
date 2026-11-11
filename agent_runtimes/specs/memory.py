@@ -22,6 +22,7 @@ from agent_runtimes.types import MemorySpec
 class Memories(str, Enum):
     """Enumeration of available memory backends."""
 
+    AGENTCORE = "agentcore"
     EPHEMERAL = "ephemeral"
     MEM0 = "mem0"
     MEMU = "memu"
@@ -31,6 +32,19 @@ class Memories(str, Enum):
 # ============================================================================
 # Memory Definitions
 # ============================================================================
+
+AGENTCORE_MEMORY_0_0_1 = MemorySpec(
+    id="agentcore",
+    version="0.0.1",
+    name="AgentCore Memory",
+    description="Amazon Bedrock AgentCore Memory, in your own AWS account. The agent's turns are kept as short-term events of the person (the actor) in the agent's own session; the memory's strategies (semantic facts, user preferences, session summaries) extract long-term records from them, which the agent searches by meaning. Names an existing memory resource (memory_config.memory_id and region, or AGENT_RUNTIMES_AGENTCORE_MEMORY_ID and AWS_REGION); never creates one.",
+    persistence="permanent",
+    scope="user",
+    backend="agentcore",
+    enabled=True,
+    icon="database",
+    emoji="🧠",
+)
 
 EPHEMERAL_MEMORY_0_0_1 = MemorySpec(
     id="ephemeral",
@@ -90,6 +104,7 @@ SIMPLEMEM_MEMORY_0_0_1 = MemorySpec(
 # ============================================================================
 
 MEMORY_CATALOGUE: dict[str, MemorySpec] = {
+    "agentcore": AGENTCORE_MEMORY_0_0_1,
     "ephemeral": EPHEMERAL_MEMORY_0_0_1,
     "mem0": MEM0_MEMORY_0_0_1,
     "memu": MEMU_MEMORY_0_0_1,

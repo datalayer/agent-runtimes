@@ -137,6 +137,28 @@ runtime behavior, and monitoring-friendly metadata (used by snapshots/streams).
 - `enable_codemode` and codemode config: Enables MCP-discovery + programmatic composition.
 - `skills` / `enable_skills`: Enables reusable skill execution.
 
+### Memory
+
+- `memory`: the agent's durable memory — `mem0` (on Datalayer, kept in
+  PostgreSQL under the person and the agent's id) or `agentcore` (Amazon
+  Bedrock AgentCore Memory in your own AWS account). `memory_config` gives the
+  backend what it needs; for `agentcore`, the memory resource to use:
+
+  ```yaml
+  memory: agentcore
+  memory_config:
+    memory_id: my_memory-AbCdEf1234   # or AGENT_RUNTIMES_AGENTCORE_MEMORY_ID
+    region: us-east-1                 # or AWS_REGION
+    namespaces: ["/facts/{actorId}"]  # optional: read from the memory's strategies
+  ```
+
+  The agent's turns are kept as events of the person (the actor, their account
+  id) in the agent's session (its spec's id); `search_memory` reads the
+  long-term records AgentCore's strategies extract, in namespaces with
+  `{actorId}` filled in. A memory that is not named is refused when the agent
+  is created, never replaced by another store; a namespace without `{actorId}`
+  is refused before anything is read from it.
+
 ### Outputs and Notifications
 
 For triggered workflows, specs can define delivery behavior:

@@ -68,8 +68,8 @@ def create_memory_backend(
     Parameters
     ----------
     memory_type : str | None
-        The memory backend type (``"mem0"``, ``"sqlite"``, ``"ephemeral"``, or
-        None). ``None`` and ``"ephemeral"`` both return ``EphemeralMemory``.
+        The memory backend type (``"mem0"``, ``"agentcore"``, ``"sqlite"``,
+        ``"ephemeral"``, or None). ``None`` and ``"ephemeral"`` both return ``EphemeralMemory``.
     user_id : str
         Effective user identifier (personal account) for memory isolation.
     agent_id : str | None
@@ -159,6 +159,15 @@ def create_memory_backend(
                 "This agent remembers with mem0, which is not installed here: "
                 "pip install 'agent-runtimes[memory]'."
             ) from None
+
+    if memory_type == "agentcore":
+        # Amazon Bedrock AgentCore Memory, in the person's own AWS account:
+        # the memory resource is configured (agentspec or environment), and
+        # one nobody named is refused here, never replaced by another store.
+        from .agentcore_backend import AgentCoreMemory
+
+        logger.info("Using AgentCore memory backend for user=%s", user_id)
+        return AgentCoreMemory(user_id=user_id, agent_id=agent_id, config=config)
 
     # Unknown backend types fall back to ephemeral
     logger.warning(
