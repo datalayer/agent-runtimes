@@ -53,7 +53,7 @@ async def github_repositories(limit: int = 30, sort: str = "updated") -> Any:
     Returns:
         ``{"login", "repositories": [{"full_name", "private", "description",
         "language", "stars", "updated_at", "url"}]}``, or a sentence when
-        GitHub access was not granted.
+        GitHub access was not granted or GitHub could not be reached.
     """
     from agent_runtimes import identity
 
@@ -69,17 +69,22 @@ async def github_repositories(limit: int = 30, sort: str = "updated") -> Any:
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    async with _client() as http:
-        user = await http.get(f"{API}/user", headers=headers)
-        if user.status_code != 200:
-            return f"GitHub refused the person's token ({user.status_code}): {user.text[:200]}"
-        repos = await http.get(
-            f"{API}/user/repos",
-            headers=headers,
-            params={"per_page": limit, "sort": sort, "affiliation": "owner"},
-        )
-        if repos.status_code != 200:
-            return f"GitHub did not list the repositories ({repos.status_code}): {repos.text[:200]}"
+    try:
+        async with _client() as http:
+            user = await http.get(f"{API}/user", headers=headers)
+            if user.status_code != 200:
+                return f"GitHub refused the person's token ({user.status_code}): {user.text[:200]}"
+            repos = await http.get(
+                f"{API}/user/repos",
+                headers=headers,
+                params={"per_page": limit, "sort": sort, "affiliation": "owner"},
+            )
+            if repos.status_code != 200:
+                return f"GitHub did not list the repositories ({repos.status_code}): {repos.text[:200]}"
+    except httpx.HTTPError as failed:
+        # A network failure (refused, unreachable, timed out) is said, not raised:
+        # an exception here ended the agent's turn instead of reaching the model.
+        return f"GitHub could not be reached ({type(failed).__name__}): {failed}"[:300]
     return {
         "login": user.json().get("login"),
         "repositories": [

@@ -82,6 +82,35 @@ def test_a_declined_grant_is_a_sentence(monkeypatch) -> None:
     assert asyncio.run(github.github_repositories()) == "Access to github was declined."
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        httpx.ConnectError("[Errno 111] Connection refused"),
+        httpx.ReadTimeout("timed out"),
+    ],
+)
+def test_github_unreachable_is_a_sentence(monkeypatch, error) -> None:
+    async def oauth_token(provider: str, *, scopes: list[str]) -> str:
+        return "gho_person"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise error
+
+    monkeypatch.setattr(identity, "oauth_token", oauth_token)
+    monkeypatch.setattr(
+        github,
+        "_client",
+        lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+
+    answer = asyncio.run(github.github_repositories())
+
+    assert isinstance(answer, str)
+    assert answer.startswith("GitHub could not be reached")
+    assert type(error).__name__ in answer
+    assert "gho_person" not in answer
+
+
 def test_an_unknown_sort_is_a_sentence() -> None:
     assert "not a sort" in asyncio.run(github.github_repositories(sort="stars"))
 
