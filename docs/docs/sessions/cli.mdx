@@ -31,8 +31,10 @@ On Datalayer (1)
 - **Ctrl-T** transfers it to the other place, under the same uid (see
   [Transfer](#transfer-between-this-machine-and-datalayer)); **Ctrl-X**
   writes it as a session file in the current folder; **Ctrl-E** ends a
-  paused session; **Ctrl-D** deletes a session of this machine, after
-  asking; **Ctrl-N** starts over: a new session of the same agent or
+  paused session; **Ctrl-D** deletes it for good, after asking: one on
+  this machine, its folder; one on Datalayer, from your account's record
+  (signed in, a session you opened; an open one is paused or ended first);
+  **Ctrl-N** starts over: a new session of the same agent or
   application, with nothing of this conversation, the old one left as it is.
 - An action that does not apply to the highlighted session says why, in a
   sentence, under the list.
@@ -61,7 +63,7 @@ theirs.
 | Made by | A runtime on this machine: `loop`, `loop -a <agent>`, `loop apps run` | A runtime on Datalayer: `loop --cloud`, an agent or an application opened on the web |
 | Seen from | This machine only | The web (`/sessions`), the desktop app, any machine signed in |
 | Resumed by | A runtime on this machine | A runtime Datalayer launches |
-| Kept | Until you delete it (`loop sessions delete <uid>`, Ctrl-D in the picker) | As your account keeps its record |
+| Kept | Until you delete it (`loop sessions delete <uid>`, Ctrl-D in the picker) | As your account keeps its record, or until you delete it: the same command and key, or *Delete* on its row of `/sessions` |
 | Signed out | Listed, resumed | Not listed |
 
 On this machine, `~/.datalayer/sessions/index.json` keeps what a listing
@@ -130,7 +132,7 @@ sentence and the command exits 1.
 | `loop sessions import <file> [--agent <spec>] [--format <id>]` | A new session, paused, you its author. |
 | `loop sessions end <uid>` | End it for good; its record stays. |
 | `loop sessions transfer <uid> --to cloud\|local [--yes]` | Move a paused session between this machine and Datalayer, under the same uid. No runtime is asked: the two places are read and written. |
-| `loop sessions delete <uid> [--yes]` | Delete a session kept on this machine, for good. |
+| `loop sessions delete <uid> [--yes]` | Delete a session for good: its folder on this machine, else, signed in, its record on Datalayer — one you opened, and not open (pause or end it first). Nothing else of its application's is deleted. |
 | `loop sessions feedback <uid>` | What people said of its answers. |
 
 `loop apps threads` and `loop apps feedback` are retired: each answers with

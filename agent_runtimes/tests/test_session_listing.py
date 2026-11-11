@@ -369,3 +369,62 @@ def test_a_harness_sessions_row_says_its_folder_and_a_model_agents_does_not(
         assert "workspace" not in rows["session-w003"]
     finally:
         use_protocol_state_store(None)
+
+
+def test_a_session_is_deleted_by_its_owner_alone_and_an_open_one_is_refused(
+    store: FileSessionStore,
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})
+    paused = {"kind": "paused", "summary": "paused", "payload": {"state": "paused"}}
+    _seed(store, "session-d001", [OPENED, _turn("a"), paused])
+    # A stranger's is a 404, and nothing is deleted.
+    assert (
+        remote.delete(
+            "/api/v1/apps/sessions/session-d001", headers=as_("bob")
+        ).status_code
+        == 404
+    )
+    assert (store.root / "session-d001").is_dir()
+    deleted = remote.delete("/api/v1/apps/sessions/session-d001", headers=as_("ada"))
+    assert deleted.status_code == 200 and deleted.json() == {
+        "uid": "session-d001",
+        "deleted": True,
+    }
+    assert not (store.root / "session-d001").exists()
+    assert (
+        remote.get("/api/v1/apps/sessions/session-d001", headers=as_("ada")).status_code
+        == 404
+    )
+    assert (
+        remote.delete(
+            "/api/v1/apps/sessions/session-d001", headers=as_("ada")
+        ).status_code
+        == 404
+    )
+    # One this runtime holds open: paused or ended first.
+    _open(remote, "session-d002")
+    refused = remote.delete("/api/v1/apps/sessions/session-d002", headers=as_("ada"))
+    assert refused.status_code == 409
+    assert (
+        refused.json()["detail"]
+        == "Session session-d002 is open: pause it or end it first, then delete it."
+    )
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-d002/stop", headers=as_("ada")
+        ).status_code
+        == 200
+    )
+    assert (
+        remote.delete(
+            "/api/v1/apps/sessions/session-d002", headers=as_("ada")
+        ).status_code
+        == 200
+    )
+    assert not (store.root / "session-d002").exists()
+    assert (
+        remote.get("/api/v1/apps/sessions/session-d002", headers=as_("ada")).status_code
+        == 404
+    )

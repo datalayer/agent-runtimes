@@ -2698,6 +2698,40 @@ async def end_session(uid: str, request: Request) -> Dict[str, Any]:
     return dict(live.describe())
 
 
+@router.delete("/sessions/{uid}")
+async def delete_session(uid: str, request: Request) -> Dict[str, Any]:
+    """Delete a session for good, where the session store keeps it: its
+    folder on this machine, or its opener's record on Datalayer. Only its
+    opener's; anybody else's is a 404. One this runtime holds open is
+    refused (409): pause or end it first. A paused one it holds is let go.
+    """
+    from agent_runtimes.apps import sessions
+    from agent_runtimes.apps.session_store import active_store
+    from agent_runtimes.context.identities import set_request_user_jwt
+
+    held = sessions.session_of(uid) is not None
+    if held:
+        live, _ = await _held(uid, request)
+        if live.state == "open":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Session {uid} is open: pause it or end it first, then delete it.",
+            )
+    else:
+        await _recorded(uid, request)
+    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
+    store = active_store()
+    if not hasattr(store, "remove"):
+        raise HTTPException(
+            status_code=501,
+            detail=f"The session store {getattr(store, 'name', '?')!r} does not delete a session.",
+        )
+    if not await _store_refused(store.remove(uid)) and not held:
+        raise HTTPException(status_code=404, detail=f"No session {uid} is kept.")
+    sessions._SESSIONS.pop(uid, None)
+    return {"uid": uid, "deleted": True}
+
+
 @router.post("/sessions/logout")
 async def logout_sessions(request: Request) -> Dict[str, Any]:
     """The caller signed out: each of their sessions here runs its ``logout``,

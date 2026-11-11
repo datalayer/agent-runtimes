@@ -290,8 +290,9 @@ def test_an_action_applies_or_says_why_not(files: FileSessionStore) -> None:
         "transfer",
         by_uid["cloud-deployed"].__class__(**{**deployed.__dict__, "state": "paused"}),
     )
-    # A session on Datalayer is not deleted from here; one of a deployment starts over at its address.
-    assert "Datalayer account's record" in why_not("delete", cloud)
+    # A session on Datalayer is deleted signed in; one of a deployment starts over at its address.
+    assert why_not("delete", cloud) == ""
+    assert "deleted signed in" in why_not("delete", cloud, signed_in=False)
     assert "opened at its address" in why_not("start_over", deployed)
     assert why_not("transfer", cloud) == "" and why_not("start_over", cloud) == ""
     # The model says why, and answers nothing to do.
@@ -562,3 +563,84 @@ def test_a_new_sessions_uid_is_a_ulid_wherever_it_is_minted() -> None:
     source = Path(__file__).parents[1].joinpath("apps", "sessions.py").read_text()
     # A session opened, a clone and an import each mint one.
     assert source.count("new_session_uid()") >= 4
+
+
+# --- delete, on this machine and on Datalayer ----------------------------------------
+
+
+def test_a_session_is_deleted_where_it_is_kept(
+    files: FileSessionStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+
+    from agent_runtimes.apps import session_store
+    from agent_runtimes.commands import sessions as command
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+
+    monkeypatch.setenv(session_store.SESSIONS_PATH_VARIABLE, str(files.root))
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "http://ai-agents.test")
+    _kept(files, "here-1")
+    asked: List[Any] = []
+
+    def ai_agents(request: httpx.Request) -> httpx.Response:
+        asked.append(
+            (request.method, request.url.path, request.headers["authorization"])
+        )
+        uid = request.url.path.rsplit("/", 1)[-1]
+        if uid == "cloud-open":
+            return httpx.Response(
+                409,
+                json={
+                    "detail": f"Session {uid} is open: a runtime holds it. Pause it or end it first, then delete it."
+                },
+            )
+        if uid == "somebody-elses":
+            return httpx.Response(404, json={"detail": f"You had no session {uid}."})
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "uid": uid,
+                "deleted": {"conversations": 1, "entries": 3},
+            },
+        )
+
+    session_store.use_record_transport(httpx.MockTransport(ai_agents))
+    try:
+        # This machine's: its folder, wherever the place is not named.
+        assert "from this machine" in command.delete_session("here-1", "the-token")
+        assert not (files.root / "here-1").exists() and asked == []
+        with pytest.raises(
+            command.SessionsRefused, match="no session here-1 on this machine"
+        ):
+            command.delete_session("here-1", "the-token", ON_THIS_MACHINE)
+        # Signed out, nothing on Datalayer is asked.
+        with pytest.raises(command.SessionsRefused, match="datalayer login"):
+            command.delete_session("cloud-1", "")
+        # On Datalayer: the record's route, as the person.
+        said = command.delete_session("cloud-1", "the-token", ON_DATALAYER)
+        assert said == "Deleted cloud-1 from your Datalayer account's record."
+        assert asked == [
+            ("DELETE", "/api/ai-agents/v1/apps/sessions/cloud-1", "Bearer the-token")
+        ]
+        # Its refusals, in ai-agents' sentence.
+        with pytest.raises(command.SessionsRefused, match="Pause it or end it first"):
+            command.delete_session("cloud-open", "the-token")
+        with pytest.raises(
+            command.SessionsRefused, match="You had no session somebody-elses"
+        ):
+            command.delete_session("somebody-elses", "the-token")
+        # The record store says it too, for a runtime's route.
+        removed = asyncio.run(
+            session_store.RecordSessionStore(
+                remover=lambda uid, bearer: _answer(uid)
+            ).remove("x")
+        )
+        assert removed is True
+        assert asyncio.run(files.remove("nothing-here")) is False
+    finally:
+        session_store.use_record_transport(None)
+
+
+async def _answer(uid: str) -> Dict[str, Any]:
+    return {"uid": uid}

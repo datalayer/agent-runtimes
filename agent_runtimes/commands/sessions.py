@@ -10,7 +10,7 @@ where it lives, pause, end, transfer, export, delete or start over
 same two groups printed. A session on this machine is a folder of
 ``~/.datalayer/sessions`` named by its uid; one on Datalayer is in the
 account's record. `transfer` moves one between the two under the same uid,
-`delete` deletes one kept on this machine.
+`delete` deletes one, on this machine or, signed in, on Datalayer.
 
 A session is one conversation of one person with one application's agent,
 kept in the application's record: one id a person lists, resumes, swaps,
@@ -300,17 +300,34 @@ def end_session(row: Any, token: str) -> str:
     return f"Ended {row.uid}: its record stays, and it is not resumed. Clone it to go on from it."
 
 
-def delete_session(uid: str) -> str:
-    """A session kept on this machine deleted, for good."""
-    from agent_runtimes.apps.session_store import FileSessionStore
+def delete_session(uid: str, token: str = "", where: str = "") -> str:
+    """A session deleted for good where it is kept: a folder of this machine,
+    or, signed in, the person's record on Datalayer (one session they opened;
+    an open one is refused there, in its sentence). ``where`` names the place
+    when it is known (the picker's row); otherwise this machine first."""
+    import asyncio
+
+    from agent_runtimes.apps.session_store import FileSessionStore, SessionStoreError
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.loop.transfer import OnDatalayer
 
     store = FileSessionStore()
-    if not store.delete(uid):
+    if where != ON_DATALAYER and store.delete(uid):
+        return f"Deleted {uid} from this machine ({store.root / uid})."
+    if where == ON_THIS_MACHINE:
         raise SessionsRefused(
-            f"There is no session {uid} on this machine ({store.root}). A session on Datalayer is not "
-            "deleted from here: the record deletes an application's conversations together, on the web."
+            f"There is no session {uid} on this machine ({store.root})."
         )
-    return f"Deleted {uid} from this machine ({store.root / uid})."
+    if not token:
+        raise SessionsRefused(
+            f"There is no session {uid} on this machine ({store.root}). A session on Datalayer is "
+            "deleted signed in: `datalayer login`."
+        )
+    try:
+        asyncio.run(OnDatalayer(token).remove(uid))
+    except SessionStoreError as refused:
+        raise SessionsRefused(refused.reason) from None
+    return f"Deleted {uid} from your Datalayer account's record."
 
 
 def transfer_session(
@@ -359,11 +376,12 @@ def perform(action: str, row: Any, token: str) -> str:
             return "Not ended."
         return end_session(row, token)
     if action == "delete":
+        place = "this machine" if row.where == ON_THIS_MACHINE else "Datalayer"
         if not _confirm(
-            f"Delete session {row.uid} from this machine, for good? Its conversation and its record go with it."
+            f"Delete session {row.uid} from {place}, for good? Its conversation and its record go with it."
         ):
             return "Not deleted."
-        return delete_session(row.uid)
+        return delete_session(row.uid, token, row.where)
     if action == "transfer":
         to = ON_DATALAYER if row.where == ON_THIS_MACHINE else ON_THIS_MACHINE
         done = transfer_session(row.uid, to, token, yes=False)
@@ -481,14 +499,18 @@ def delete_command(
     uid: str = typer.Argument(..., help="The session's uid."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask."),
 ) -> None:
-    """Delete a session kept on this machine, for good."""
+    """Delete a session for good: on this machine, else in your Datalayer account's record.
+
+    One on Datalayer is deleted signed in, and only one you opened; an open
+    one is refused: pause or end it first.
+    """
     try:
         if not yes and not _confirm(
-            f"Delete session {uid} from this machine, for good? Its conversation and its record go with it."
+            f"Delete session {uid} for good? Its conversation and its record go with it."
         ):
             console.print("Not deleted.")
             return
-        console.print(delete_session(uid), markup=False)
+        console.print(delete_session(uid, _token()), markup=False)
     except SessionsRefused as refused:
         _exit(refused)
 

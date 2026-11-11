@@ -284,6 +284,10 @@ class FileSessionStore:
         shutil.rmtree(folder)
         return True
 
+    async def remove(self, uid: str) -> bool:
+        """:meth:`delete`, as every store says it: whether it was kept."""
+        return self.delete(uid)
+
     async def append(
         self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
     ) -> None:
@@ -491,6 +495,45 @@ async def _copy_record(bearer: str, body: Dict[str, Any]) -> int:
     return int((response.json() or {}).get("copied") or 0)
 
 
+async def _delete_record(session_uid: str, bearer: str) -> Dict[str, Any]:
+    """One session the person opened deleted from their record on ai-agents,
+    for good (``DELETE /apps/sessions/{uid}``). A session they did not open
+    is a 404, an open one a 409, each in ai-agents' sentence.
+    """
+    if not bearer:
+        raise SessionStoreError(
+            401,
+            f"Session {session_uid} cannot be deleted: the record is written with your token, and none was sent.",
+        )
+    import httpx
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise SessionStoreError(
+            503, f"Session {session_uid} cannot be deleted: no ai-agents is configured."
+        )
+    async with httpx.AsyncClient(timeout=30.0, transport=_TRANSPORT) as client:
+        response = await client.delete(
+            f"{url.rstrip('/')}/api/ai-agents/v1/apps/sessions/{session_uid}",
+            headers={"Authorization": f"Bearer {bearer}"},
+        )
+    if response.status_code in (404, 409):
+        try:
+            said = str((response.json() or {}).get("detail") or "")
+        except ValueError:
+            said = ""
+        raise SessionStoreError(
+            response.status_code, said or f"Session {session_uid} was not deleted."
+        )
+    if response.status_code >= 300:
+        raise SessionStoreError(
+            502,
+            f"Session {session_uid} could not be deleted ({response.status_code}): {response.text[:200]}",
+        )
+    return dict(response.json() or {})
+
+
 def _bearer() -> str:
     from agent_runtimes.context.identities import get_request_user_jwt
 
@@ -509,6 +552,7 @@ class RecordSessionStore:
     reader: Reader = _read_record
     lister: Callable[[str, Dict[str, Any]], Awaitable[Dict[str, Any]]] = _list_sessions
     copier: Callable[[str, Dict[str, Any]], Awaitable[int]] = _copy_record
+    remover: Callable[[str, str], Awaitable[Dict[str, Any]]] = _delete_record
 
     async def list(
         self,
@@ -565,6 +609,12 @@ class RecordSessionStore:
         return await self.copier(
             _bearer(), {"from": uid, "to": to_uid, "up_to_turn": up_to_turn}
         )
+
+    async def remove(self, uid: str) -> bool:
+        """Delete one session of the caller's from the record, for good; an
+        open one, or one they did not open, refused in ai-agents' sentence."""
+        await self.remover(uid, _bearer())
+        return True
 
     async def lineage(self, uid: str) -> Dict[str, Any]:
         described = await self.get(uid)

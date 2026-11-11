@@ -86,6 +86,10 @@ class Place:
     ) -> None:
         raise NotImplementedError
 
+    async def remove(self, uid: str) -> bool:
+        """Delete a session kept here, for good: whether it was kept."""
+        raise NotImplementedError
+
 
 class ThisMachine(Place):
     """The files of ``~/.datalayer/sessions``."""
@@ -104,6 +108,9 @@ class ThisMachine(Place):
         self, uid: str, entries: Sequence[Mapping[str, Any]], facts: Mapping[str, Any]
     ) -> None:
         await self.store.append(uid, entries, **dict(facts))
+
+    async def remove(self, uid: str) -> bool:
+        return self.store.delete(uid)
 
 
 Reader = Callable[[str, str], Awaitable[List[Dict[str, Any]]]]
@@ -171,6 +178,12 @@ class OnDatalayer(Place):
             await self.writer(
                 self.token, {**body, "entries": listed[start : start + RECORD_WRITE]}
             )
+
+    async def remove(self, uid: str) -> bool:
+        from agent_runtimes.apps.session_store import _delete_record
+
+        await _delete_record(uid, self.token)
+        return True
 
 
 def _went(entries: Sequence[Mapping[str, Any]]) -> str:

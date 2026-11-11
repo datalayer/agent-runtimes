@@ -260,6 +260,7 @@ as `GET` says it — then the turn's events.
 | `POST /sessions/{uid}/stop` | **Stop**: what runs is cancelled, a Python application's `stop` runs, the session waits to be resumed. Answers the session, as JSON. |
 | `POST /sessions/{uid}/resume` | **Resume** a stopped session; or, with `{agent}`, one this runtime no longer holds, from its record. |
 | `POST /sessions/{uid}/end` | **End**: what runs is cancelled, a Python application's `end` runs, and the runtime no longer holds the session. Answers the session, `ended`, as JSON. Its record stays. |
+| `DELETE /sessions/{uid}` | **Delete**: the session for good, where the session store keeps it — its folder on this machine, or its opener's record on Datalayer. Its opener's alone (anybody else's is a 404); one the runtime holds open is refused (409): stop or end it first. Answers `{uid, deleted}`. |
 | `POST /sessions/logout` | **Sign out**: each of the caller's sessions here runs a Python application's `logout`, then ends. Answers `{ended: [uid, …]}`. |
 | `GET /sessions/{uid}` | What the session is. |
 | `GET /sessions/{uid}/messages` | **Its conversation**, as AG-UI messages: `{uid, messages}`. What a page that reloaded draws again. |

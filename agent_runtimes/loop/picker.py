@@ -123,10 +123,10 @@ def why_not(action: str, row: Paused, *, signed_in: bool = True) -> str:
             )
         return ""
     if action == "delete":
-        if not here:
+        if not here and not signed_in:
             return (
-                f"Session {row.uid} is in your Datalayer account's record, which deletes an application's "
-                "conversations together: on the web, in the application's *Your conversations*. End it here instead."
+                f"Session {row.uid} is in your Datalayer account's record: it is deleted signed in. "
+                "Sign in with `datalayer login`."
             )
         if row.state == "open":
             return f"Session {row.uid} is open: pause or end it first."
