@@ -252,18 +252,20 @@ class TestASeatPlacedOnAgentCore:
     def test_the_placement_is_read_from_the_roots_progress_events(self) -> None:
         from types import SimpleNamespace
 
+        from datalayer_core.orchestration import ExecutionEventType
+
         from agent_runtimes.orchestration.teams import (
             AGENTCORE_SEATS,
             agentcore_seats_of,
         )
 
         events = [
-            SimpleNamespace(type=SimpleNamespace(value="created"), data={}),
+            SimpleNamespace(type=ExecutionEventType.STATE_CHANGED, data={}),
             SimpleNamespace(
-                type=SimpleNamespace(value="progress"),
+                type=ExecutionEventType.PROGRESS,
                 data={AGENTCORE_SEATS: {"research": "01K9D", "write": ""}},
             ),
-            SimpleNamespace(type=SimpleNamespace(value="progress"), data={"other": 1}),
+            SimpleNamespace(type=ExecutionEventType.PROGRESS, data={"other": 1}),
         ]
         assert agentcore_seats_of(events) == {"research": "01K9D"}
         assert agentcore_seats_of(events[:1]) == {}

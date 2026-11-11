@@ -41,7 +41,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datalayer_core.orchestration import AgentBinding, AgentProtocol
+from datalayer_core.orchestration import AgentBinding, AgentProtocol, ExecutionEventType
 
 from ..types import TeamAgentspec, TeamSpec
 
@@ -82,11 +82,10 @@ def agentcore_seats_of(events: list[Any]) -> dict[str, str]:
     """
     for event in reversed(events):
         data = getattr(event, "data", None) or {}
-        kind = getattr(
-            getattr(event, "type", None), "value", getattr(event, "type", None)
-        )
         placed = data.get(AGENTCORE_SEATS) if isinstance(data, dict) else None
-        if kind == "progress" and isinstance(placed, dict):
+        if getattr(event, "type", None) is ExecutionEventType.PROGRESS and isinstance(
+            placed, dict
+        ):
             return {
                 str(seat): str(uid) for seat, uid in placed.items() if str(uid or "")
             }
