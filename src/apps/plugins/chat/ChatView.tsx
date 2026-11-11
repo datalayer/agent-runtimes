@@ -171,7 +171,7 @@ import {
   setEditorOptions,
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
-import { generateMessageId } from '../../../types/messages';
+import { generateMessageId, generateSessionUid } from '../../../types/messages';
 import {
   deploymentOfPayload,
   sessionOfSearch,
@@ -1712,7 +1712,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * A deployment's visit with no thread given opens a new one: its runtime's
    * agent holds every visitor's turns, never drawn as this person's.
    */
-  const [visitThreadId] = useState(generateMessageId);
+  const [visitThreadId] = useState(generateSessionUid);
   /*
    * The web's deep link (MH-27): `?session=<uid>` on the chat's URL opens
    * that session as the thread when the host gave none — a malformed one is

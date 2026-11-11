@@ -463,8 +463,16 @@ def _text_of(content: Any) -> str:
 
 
 def _new_id() -> str:
-    """A new uid."""
+    """A new id of a message, a run or a row."""
     return uuid.uuid4().hex
+
+
+def new_session_uid() -> str:
+    """A new session's uid: a ULID, wherever it is minted. A session keeps
+    the uid it was opened with, whatever its shape."""
+    from agent_runtimes.utils.ulid import new_ulid
+
+    return new_ulid()
 
 
 # --- Python applications on a runtime -----------------------------------------------
@@ -3172,7 +3180,7 @@ def new_session(
         raise SessionRefused(
             422, "A session's uid is 8 to 128 letters, digits, hyphens or underscores."
         )
-    uid = uid or _new_id()
+    uid = uid or new_session_uid()
     if uid in _SESSIONS:
         raise SessionRefused(409, f"Session {uid} is already open.")
     try:
@@ -3838,7 +3846,7 @@ async def clone_session(
             "capabilities": capabilities,
         },
     )
-    new_uid = _new_id()
+    new_uid = new_session_uid()
     await run_hooks(
         "clone",
         source,
@@ -4068,7 +4076,7 @@ async def import_session(
     spec = get_agent_spec(chosen)
     harness = HARNESS_CATALOGUE.get(str(getattr(spec, "harness", "") or ""))
     harness_id = harness.id if harness is not None else None
-    new_uid = _new_id()
+    new_uid = new_session_uid()
     digest = digest_of(lines)
     lineage: Dict[str, Any] = {
         "forked_from": None,

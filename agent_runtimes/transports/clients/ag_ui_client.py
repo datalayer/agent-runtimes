@@ -26,6 +26,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, AsyncIterator, Callable
 
+from agent_runtimes.utils.ulid import new_ulid
+
 try:
     import httpx
 
@@ -112,7 +114,8 @@ class AGUIConversation:
     """Manages conversation state for AG-UI client."""
 
     messages: list[Message] = field(default_factory=list)
-    thread_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    # Its thread is its session: a session's uid is a ULID.
+    thread_id: str = field(default_factory=new_ulid)
 
     def add_user_message(self, content: str) -> UserMessage:
         """Add a user message to the conversation."""
@@ -147,7 +150,7 @@ class AGUIConversation:
     def clear(self) -> None:
         """Clear conversation history."""
         self.messages.clear()
-        self.thread_id = str(uuid.uuid4())
+        self.thread_id = new_ulid()
 
 
 class AGUIClient:

@@ -64,7 +64,7 @@ import type {
   AppThemeVariant,
 } from '../../types/agentspecs';
 import type { ResumedThread, ThemeOverrides } from '../../types/chat';
-import { generateMessageId } from '../../types/messages';
+import { generateSessionUid } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import type { AssistantModel3D } from '../../chat/assistant/avatar3dModel';
@@ -231,7 +231,7 @@ export function useEmbedSession({
     const fresh = (said?: string) =>
       setFound({
         token: embedToken,
-        thread: { id: generateMessageId(), messages: [], onStarted },
+        thread: { id: generateSessionUid(), messages: [], onStarted },
         ...(said ? { said } : {}),
       });
     const kept = keeper.read(key);
@@ -301,7 +301,7 @@ export function useWindowPort({
   );
   // A thread of its own where the embed keeps none, so that its uid is known.
   const own = useMemo<ResumedThread>(
-    () => ({ id: generateMessageId(), messages: [] }),
+    () => ({ id: generateSessionUid(), messages: [] }),
     [],
   );
   const base = given ?? (serverUrl && session.ready ? own : undefined);
