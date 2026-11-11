@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelConfig } from '../../types/chat';
 import {
+  agentDecisionsGroup,
   initialModelId,
   isOffered,
   offeredModels,
@@ -220,5 +221,60 @@ describe('the typed-decision models, read apart', () => {
     });
     expect(waiting.models[0].isAvailable).toBe(false);
     expect(waiting.models[0].unavailableReason).toBe('No ai-inference token');
+  });
+});
+
+describe('the Decisions group of an agent’s model menu', () => {
+  const jev: ModelConfig = {
+    id: 'cloudflare:wrk/typesafe/jev',
+    name: 'Jev (Cloudflare Workers AI)',
+    isAvailable: true,
+  };
+  const other: ModelConfig = { id: 'other:decider', name: 'Other' };
+  const config = {
+    decisionModels: [other, jev],
+    decisionsNote: 'Answers a decision’s typed questions.',
+  };
+  const decides = {
+    spec: 'jev:0.0.1',
+    name: 'Jev',
+    model: 'cloudflare:wrk/typesafe/jev',
+    modelName: 'Jev (Cloudflare Workers AI)',
+    questions: ['noul' as const],
+    maxQuestions: 10,
+    maxTextLength: 20000,
+  };
+
+  it('is not there for an agent whose spec names no decisions', () => {
+    expect(agentDecisionsGroup(config)).toBeUndefined();
+    expect(
+      agentDecisionsGroup({ ...config, agentDecisions: null }),
+    ).toBeUndefined();
+  });
+
+  it('lists the model the agent decides with, and names its decisions spec', () => {
+    expect(agentDecisionsGroup({ ...config, agentDecisions: decides })).toEqual(
+      {
+        models: [jev],
+        note: 'This agent decides with Jev (jev:0.0.1). Answers a decision’s typed questions.',
+      },
+    );
+  });
+
+  it('names the model all the same when ai-inference did not list it', () => {
+    expect(
+      agentDecisionsGroup({
+        ...config,
+        decisionModels: [other],
+        agentDecisions: decides,
+      })?.models,
+    ).toEqual([
+      {
+        id: 'cloudflare:wrk/typesafe/jev',
+        name: 'Jev (Cloudflare Workers AI)',
+        builtinTools: [],
+        isAvailable: false,
+      },
+    ]);
   });
 });

@@ -177,6 +177,7 @@ import {
 } from '../tools/IdentityAuthorization';
 import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
 import {
+  agentDecisionsGroup,
   initialModelId,
   isOffered,
   offeredModels as offeredModelsFor,
@@ -5320,14 +5321,10 @@ function ChatBaseInner({
       configLoading={configQuery.isLoading}
       models={offeredModels}
       // Listed apart and read-only: a typed-decision model is never the
-      // agent's model.
+      // agent's model. Only for an agent that decides (its agentspec names
+      // decisions), and only the model it decides with.
       decisions={
-        configQuery.data
-          ? {
-              models: configQuery.data.decisionModels,
-              note: configQuery.data.decisionsNote,
-            }
-          : undefined
+        configQuery.data ? agentDecisionsGroup(configQuery.data) : undefined
       }
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}

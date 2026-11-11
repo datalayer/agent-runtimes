@@ -44,7 +44,8 @@ import {
   togglePagePanel,
 } from '@datalayer/primer-addons/lib/reactor';
 import { AssistantStage } from '../../../chat/assistant/AssistantStage';
-import { decisionsAskerAt } from '../../../chat/assistant/decisions';
+import { useDecisionAsker } from '../../../chat/assistant/DecisionAsk';
+import type { DecisionsTarget } from '../../../chat/assistant/decisions';
 import { peekLine } from '../../../chat/assistant/ConversationBalloon';
 import {
   assistantStateOf,
@@ -105,11 +106,13 @@ export type LoopAssistantConfig = {
   appId?: string;
   /**
    * The runtime decisions are asked at — its
-   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — and
-   * the token to ask with, if it needs one: the balloon offers *Ask a
-   * decision*. Without it, it does not.
+   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — the
+   * token to ask with, if it needs one, and the agent asking (the
+   * workspace's when unsaid): the balloon offers *Ask a decision* when that
+   * agent decides — its agentspec names decisions. Without it, or for an
+   * agent that does not decide, it does not.
    */
-  decisions?: { serverUrl: string; token?: string };
+  decisions?: DecisionsTarget;
   /**
    * How the balloon shows the conversation (T-23): a peek of the newest
    * words (`history`, the default), or only what is said or done now
@@ -348,12 +351,15 @@ export function LoopAssistant({
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });
-  const decide = useMemo(
-    () =>
-      decisions?.serverUrl
-        ? decisionsAskerAt(decisions.serverUrl, decisions.token)
-        : undefined,
-    [decisions?.serverUrl, decisions?.token],
+  // Offered only when the agent decides: the runtime says it.
+  const decide = useDecisionAsker(
+    decisions?.serverUrl
+      ? {
+          serverUrl: decisions.serverUrl,
+          token: decisions.token,
+          agentId: decisions.agentId ?? agentId,
+        }
+      : undefined,
   );
 
   if (away !== 'none') {

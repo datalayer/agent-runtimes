@@ -23,6 +23,7 @@
  */
 
 import type { ModelConfig } from '../../types/chat';
+import type { AgentDecisions } from '../../types/decisions';
 
 /** Whether a model can be picked: the flag says no, or says nothing. */
 export const isUsable = (model: ModelConfig): boolean =>
@@ -103,6 +104,40 @@ export type Decisions = {
   models: ModelConfig[];
   note: string;
 };
+
+/**
+ * The Decisions group of an agent's model menu: only for an agent that
+ * decides — its agentspec names decisions — and only the model its decisions
+ * spec asks, with the spec named. An agent that does not decide has no
+ * group: the menu says nothing of decisions.
+ */
+export function agentDecisionsGroup(config: {
+  decisionModels: ModelConfig[];
+  decisionsNote: string;
+  agentDecisions?: AgentDecisions | null;
+}): Decisions | undefined {
+  const decides = config.agentDecisions;
+  if (!decides) {
+    return undefined;
+  }
+  const listed = config.decisionModels.filter(
+    model => model.id === decides.model,
+  );
+  return {
+    // Its model, as ai-inference listed it; named all the same when it did not.
+    models: listed.length
+      ? listed
+      : [
+          {
+            id: decides.model,
+            name: decides.modelName,
+            builtinTools: [],
+            isAvailable: false,
+          },
+        ],
+    note: `This agent decides with ${decides.name} (${decides.spec}). ${config.decisionsNote}`,
+  };
+}
 
 /** The runtime's `/configure/models` answer, as far as the chat reads it. */
 export type ServerCatalogue = {

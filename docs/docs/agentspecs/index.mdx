@@ -65,6 +65,7 @@ The generated catalogs are written under `agent_runtimes/specs/` (Python) and
 - agent_runtimes/specs/envvars.py · src/specs/envvars.ts
 - agent_runtimes/specs/ui.py · src/specs/ui.ts (the UI plugins and the catalog of visual components) and agent_runtimes/specs/ui_renderers.py · src/specs/uiRenderers.ts (the UI renderers): see [UI plugins and Components](./ui.mdx)
 - agent_runtimes/mcp/catalog_mcp_servers.py · src/specs/mcpServers.ts
+- agent_runtimes/specs/decisions.py · src/specs/decisions.ts (how an agent decides: the model asked typed decisions, the question types, the limits; an agent names one with `decisions: jev:0.0.1`, which brings the `decide` tool)
 - plus models, memory, policies (which the Guards extend), evals, events,
   notifications, outputs, personas, strategies, triggers, benchmarks — one
   catalog each, same pattern

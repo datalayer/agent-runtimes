@@ -6,14 +6,17 @@
 /**
  * *Ask a decision* in the floating assistant's balloon: a small form — the
  * situation, the question, its type (yes or no; a choice with its options
- * listed; a score with its range) — asked of Jev through the runtime, and
- * the answer said back in the balloon in plain words with its confidence.
+ * listed; a score with its range) — asked of the agent's decision model
+ * through the runtime, and the answer said back in the balloon in plain words
+ * with its confidence. It is offered only for an agent that decides — one
+ * whose agentspec names decisions (`useDecisionAsker`) — and says which
+ * model decides.
  *
  * @module chat/assistant/DecisionAsk
  */
 
 import type { JSX } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   FormControl,
@@ -23,12 +26,17 @@ import {
   TextInput,
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import type { AgentDecisions } from '../../types/decisions';
 import {
   DEFAULT_SCORE_RANGE,
+  agentDecisionsAt,
+  decidedByWords,
   decisionAskProblem,
   decisionRequest,
   decisionResponseWords,
+  decisionsAskerAt,
   type DecisionAsker,
+  type DecisionsTarget,
   type DecisionType,
 } from './decisions';
 
@@ -39,12 +47,51 @@ export const DECISION_WORDS = {
   submit: 'Ask',
   cancel: 'Cancel',
   again: 'Ask another',
+  decidedBy: (who: string): string => `Decided by ${who}`,
   types: {
     noul: 'Yes or no',
     choice: 'A choice',
     score: 'A score',
   } satisfies Record<DecisionType, string>,
 } as const;
+
+/**
+ * The asker of *Ask a decision* for an agent of a runtime, when it decides.
+ *
+ * The runtime is asked whether the agent decides (its agentspec names
+ * decisions) and with which model. Undefined until it answered, and for an
+ * agent that does not decide: nothing is offered then.
+ */
+export function useDecisionAsker(
+  target?: DecisionsTarget,
+): DecisionAsker | undefined {
+  const serverUrl = target?.serverUrl;
+  const token = target?.token;
+  const agentId = target?.agentId;
+  const [decisions, setDecisions] = useState<AgentDecisions | undefined>();
+  useEffect(() => {
+    setDecisions(undefined);
+    if (!serverUrl) {
+      return undefined;
+    }
+    let current = true;
+    void agentDecisionsAt({ serverUrl, token, agentId }).then(said => {
+      if (current) {
+        setDecisions(said ?? undefined);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [serverUrl, token, agentId]);
+  return useMemo(
+    () =>
+      serverUrl && decisions
+        ? decisionsAskerAt(serverUrl, token, agentId, decisions)
+        : undefined,
+    [serverUrl, token, agentId, decisions],
+  );
+}
 
 export interface DecisionAskProps {
   /** Asks the runtime. */
@@ -72,7 +119,11 @@ export function DecisionAsk({
   const [situation, setSituation] = useState('');
   const [question, setQuestion] = useState('');
   const [name, setName] = useState('');
-  const [type, setType] = useState<DecisionType>('noul');
+  // The question types the agent's decisions answer; all three when unsaid.
+  const types = (Object.keys(DECISION_WORDS.types) as DecisionType[]).filter(
+    option => !ask.decisions || ask.decisions.questions.includes(option),
+  );
+  const [type, setType] = useState<DecisionType>(types[0] ?? 'noul');
   const [options, setOptions] = useState('');
   const [from, setFrom] = useState(String(DEFAULT_SCORE_RANGE.from));
   const [to, setTo] = useState(String(DEFAULT_SCORE_RANGE.to));
@@ -181,6 +232,15 @@ export function DecisionAsk({
       flexDirection="column"
       gap={2}
     >
+      {ask.decisions ? (
+        <Text
+          as="p"
+          data-decision-model={ask.decisions.model}
+          sx={{ m: 0, fontSize: 0, color: 'fg.muted' }}
+        >
+          {DECISION_WORDS.decidedBy(decidedByWords(ask.decisions))}
+        </Text>
+      ) : null}
       <FormControl>
         <FormControl.Label>Situation</FormControl.Label>
         <Textarea
@@ -214,13 +274,11 @@ export function DecisionAsk({
             value={type}
             onChange={event => setType(event.target.value as DecisionType)}
           >
-            {(Object.keys(DECISION_WORDS.types) as DecisionType[]).map(
-              option => (
-                <Select.Option key={option} value={option}>
-                  {DECISION_WORDS.types[option]}
-                </Select.Option>
-              ),
-            )}
+            {types.map(option => (
+              <Select.Option key={option} value={option}>
+                {DECISION_WORDS.types[option]}
+              </Select.Option>
+            ))}
           </Select>
         </FormControl>
         <FormControl sx={{ flex: 1 }}>

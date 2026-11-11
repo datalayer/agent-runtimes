@@ -17,9 +17,10 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import { AssistantStage } from '../assistant/AssistantStage';
-import { DECISION_WORDS } from '../assistant/DecisionAsk';
+import { DECISION_WORDS, useDecisionAsker } from '../assistant/DecisionAsk';
 import { BALLOON_GRACE_MS } from '../assistant/balloonHover';
 import {
+  agentDecisionsAt,
   decisionAnswerWords,
   decisionsAskerAt,
   type DecisionAnswer,
@@ -391,5 +392,148 @@ describe('a decision’s words', () => {
     expect((sent[0].init.headers as Record<string, string>).Authorization).toBe(
       'Bearer a-token',
     );
+  });
+});
+
+describe('an agent decides only when its agentspec names decisions', () => {
+  /** What the runtime's agent route says of an agent that decides with Jev. */
+  const JEV = {
+    spec: 'jev:0.0.1',
+    name: 'Jev',
+    model: 'cloudflare:wrk/typesafe/jev',
+    model_name: 'Jev (Cloudflare Workers AI)',
+    questions: ['noul', 'score'],
+    max_questions: 10,
+    max_text_length: 20000,
+  };
+
+  /** A runtime with two agents: `decider` names decisions, `plain` does not. */
+  function runtime() {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        const json = (body: unknown, status = 200) =>
+          new Response(JSON.stringify(body), { status });
+        if (url === `${SERVER}/api/v1/agents/decider`) {
+          return json({ id: 'decider', decisions: JEV });
+        }
+        if (url === `${SERVER}/api/v1/agents/plain`) {
+          return json({ id: 'plain', decisions: null });
+        }
+        if (url === `${SERVER}/api/v1/agents/older`) {
+          return json({ id: 'older' });
+        }
+        if (url === `${SERVER}/api/v1/agents`) {
+          return json({ agents: [{ id: 'decider', decisions: JEV }] });
+        }
+        if (url === ROUTE) {
+          return json({
+            model: JEV.model,
+            answers: { Answer: { type: 'noul', probability: 0.87 } },
+          });
+        }
+        return json({ detail: 'Not found' }, 404);
+      }),
+    );
+    return calls;
+  }
+
+  function Balloon({ agentId }: { agentId?: string }) {
+    const decide = useDecisionAsker({ serverUrl: SERVER, agentId });
+    return (
+      <AssistantStage
+        character="paperclip"
+        state="idle"
+        place={{ left: 10, top: 300 }}
+        stageRef={createRef<HTMLDivElement>()}
+        onDragStart={() => {}}
+        open={false}
+        onToggle={() => {}}
+        onDismiss={() => {}}
+        balloon={{ text: 'Click me to open the conversation.' }}
+        insist
+        decide={decide}
+      />
+    );
+  }
+
+  async function renderFor(agentId?: string) {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <Balloon agentId={agentId} />
+        </ThemeProvider>,
+      );
+    });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    mounted.push(() => act(() => root.unmount()));
+    return container;
+  }
+
+  it('reads what the runtime says of an agent: its decisions, none, or nothing said', async () => {
+    runtime();
+    expect(
+      await agentDecisionsAt({ serverUrl: `${SERVER}/`, agentId: 'decider' }),
+    ).toEqual({
+      spec: 'jev:0.0.1',
+      name: 'Jev',
+      model: 'cloudflare:wrk/typesafe/jev',
+      modelName: 'Jev (Cloudflare Workers AI)',
+      questions: ['noul', 'score'],
+      maxQuestions: 10,
+      maxTextLength: 20000,
+    });
+    expect(
+      await agentDecisionsAt({ serverUrl: SERVER, agentId: 'plain' }),
+    ).toBeNull();
+    // An older runtime does not say; one that cannot be read neither.
+    expect(
+      await agentDecisionsAt({ serverUrl: SERVER, agentId: 'older' }),
+    ).toBeUndefined();
+    expect(
+      await agentDecisionsAt({ serverUrl: SERVER, agentId: 'nobody' }),
+    ).toBeUndefined();
+    // No agent named: the runtime's only one.
+    expect((await agentDecisionsAt({ serverUrl: SERVER }))?.spec).toBe(
+      'jev:0.0.1',
+    );
+  });
+
+  it('offers Ask a decision for an agent that decides, says which model decides, and asks for that agent', async () => {
+    const calls = runtime();
+    const container = await renderFor('decider');
+    await openTheForm(container);
+    expect(container.querySelector('[data-decision-model]')?.textContent).toBe(
+      'Decided by Jev (cloudflare:wrk/typesafe/jev)',
+    );
+    // Only the question types its decisions spec answers.
+    expect(
+      Array.from(field(container, 'type').querySelectorAll('option')).map(
+        option => option.value,
+      ),
+    ).toEqual(['noul', 'score']);
+    await fill(container, 'situation', 'Payouts have failed for 3 days.');
+    await fill(container, 'question', 'Is it urgent?');
+    await ask(container);
+    const asked = calls.find(call => call.url === ROUTE)!;
+    expect(JSON.parse(String(asked.init!.body)).agent_id).toBe('decider');
+    expect(answerOf(container)).toBe('Answer: yes (0.87)');
+  });
+
+  it('offers nothing for an agent whose spec names no decisions', async () => {
+    const calls = runtime();
+    const container = await renderFor('plain');
+    expect(container.querySelector('[data-speech-balloon]')).not.toBeNull();
+    expect(container.querySelector('[data-balloon-ask-decision]')).toBeNull();
+    expect(calls.map(call => call.url)).toEqual([
+      `${SERVER}/api/v1/agents/plain`,
+    ]);
   });
 });

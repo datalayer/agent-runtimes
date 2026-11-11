@@ -118,18 +118,30 @@ A runtime on Datalayer calls its models **through datalayer-ai-inference, with y
 
 #### The decide tool
 
-An agent decides with Jev through its `decide` tool (agentspecs `tools/decide.yaml`). *A Simple Agent* (`example-simple`), the default cloud agent, has it, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+Not every agent decides. An agent has the capability only when its agentspec names a decisions spec, written as `memory` is:
+
+```yaml
+# agents/example-simple.yaml
+decisions: jev:0.0.1
+```
+
+A decisions spec (agentspecs `decisions/`, see [Decisions](https://agentspecs.datalayer.tech/agents/decisions)) says which model is asked, which question types it answers and the limits of one call. `jev` asks Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), answers the three question types, at most 10 questions about a text of at most 20 000 characters. The capability brings the `decide` tool: an agent that names `decisions` has it, asked of that spec's model, and it is not listed under `backend_tools`. An agentspec that lists `decide` without naming `decisions` is refused in a sentence (`The agent … lists the backend tool decide but its spec names no decisions: add decisions: jev:0.0.1 to its agentspec, which brings the tool.`). *A Simple Agent* (`example-simple`), the default cloud agent, names `decisions: jev:0.0.1`, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+
+For an agent that decides, the start of `loop` says so among its parts (`Decisions     jev:0.0.1 (cloudflare:wrk/typesafe/jev)`), `/agents` says it under the agent, and the runtime says it to its clients (`decisions` of `GET /api/v1/agents/{agent_id}`, `agentDecisions` of `/api/v1/configure?agent_id=`).
 
 - **What it asks.** A text, the *state*, and one or more named questions about it, each of a type: `noul` (does a statement hold — answered with its probability), `choice` (which of at least two options — a probability per option and a confidence) or `score` (which step of at least two, lowest first — a probability per step and a confidence). The agent reads the typed answers back and says what was decided.
-- **Where it goes.** To ai-inference's `POST /decisions`, model `cloudflare:wrk/typesafe/jev`, with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
+- **Where it goes.** To ai-inference's `POST /decisions`, to the model the agent's decisions spec names (`cloudflare:wrk/typesafe/jev` for `jev`), with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
+- **Its limits.** More questions than the spec's `max_questions`, a text longer than its `max_text_length`, or a question of a type it does not answer is refused before anything is asked, in a sentence (`Nothing was decided: Jev takes at most 10 questions in one call, not 11.`).
 - **It only reads.** Its action class is `read`: it reaches nothing but ai-inference and changes nothing.
 
-You can ask Jev yourself, without the agent, with `/decisions`: the text in quotes, then the questions — `--yes-no "<question>"`, `--choice "<question>" A,B,C` and `--score "<question>" 1-5` (a range, or named steps lowest first), as many as you want. The runtime asks them as the `decide` tool does (`POST /api/v1/configure/inference/decisions`), with its own ai-inference token, so it works the same on this machine and on Datalayer. Each answer is one line, named after its question. `/decisions` alone shows how to use it.
+With an agent that decides, you can ask its decision model yourself, without going through the agent, with `/decisions` (or `/decide`): the text in quotes, then the questions — `--yes-no "<question>"`, `--choice "<question>" A,B,C` and `--score "<question>" 1-5` (a range, or named steps lowest first), as many as you want. The runtime asks them as the `decide` tool does (`POST /api/v1/configure/inference/decisions`), with its own ai-inference token, so it works the same on this machine and on Datalayer. Each answer is one line, named after its question. `/decisions` alone shows how to use it.
+
+`/decisions` is offered only for an agent that decides: it is listed in `/help` and in the `/` menu only then, and it comes and goes as you switch agents. Typed for an agent whose spec names no decisions, it asks nothing and says so: `The agent NAME does not decide: its spec names no decisions. To give it the capability, add decisions: jev:0.0.1 to its agentspec.` The runtime's route refuses the same way, whoever asks.
 
 ```text
 /decisions "Payouts have failed for 3 days." --yes-no "Is it urgent?" --choice "Which team?" Billing,Tech,Sales
 
-● Decided by cloudflare:wrk/typesafe/jev
+● Decided by Jev (cloudflare:wrk/typesafe/jev)
   is_it_urgent: yes (0.93 that it holds)
   which_team: Billing (confidence 1.00)
 ```
@@ -724,7 +736,7 @@ An agent is paused through its session. Runtime checkpoints are switched off on 
 | `/mcp-servers` | `Esc M` | List MCP servers |
 | `/skills` | `Esc K` | List available skills |
 | `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer (through ai-inference, only those it serves), and apart, under Decisions, the typed-decision models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
-| `/decisions` | | Ask Jev typed questions about a text — `/decisions "<text>" --yes-no "<question>"`, `--choice "<question>" A,B,C`, `--score "<question>" 1-5` — through the runtime, with its ai-inference token; each answer in a line. See [The decide tool](#the-decide-tool) |
+| `/decisions` | `/decide` | For an agent whose spec names `decisions` only: ask its decision model typed questions about a text — `/decisions "<text>" --yes-no "<question>"`, `--choice "<question>" A,B,C`, `--score "<question>" 1-5` — through the runtime, with its ai-inference token; each answer in a line. See [The decide tool](#the-decide-tool) |
 | `/suggestions` | `Esc U` | The agentspec's suggestions, each as its summary and its text; the one chosen is sent. Under `--prompt`, listed and none sent |
 | `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
 | `/agents` | `Esc A` | List agents on the server |
