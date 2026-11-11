@@ -46,6 +46,14 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         thread = ask(tux, "GET", f"/{uid}/messages").json()
     except (RuntimeError, OSError) as refused:
         tux.console.print(f"[red]{refused}[/red]")
+        if "is not a session of" in str(refused):
+            # Another agent's or application's: `loop` starts what it is a
+            # session of when it is picked as it starts.
+            tux.console.print(
+                "Start `loop` with nothing else and pick it among your paused sessions: "
+                "its agent, or its application, is started and it is resumed there.",
+                markup=False,
+            )
         return None
     replayed = 0
     for block in response.text.split("\n\n"):

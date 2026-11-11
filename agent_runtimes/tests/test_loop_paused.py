@@ -57,8 +57,26 @@ def _kept(store: FileSessionStore, uid: str, app_uid: str, state: str) -> None:
     asyncio.run(store.append(uid, entries, app_uid=app_uid, opened_by=""))
 
 
-def _cloud(token: str) -> List[Dict[str, Any]]:
+NAMES = {"decide": "Decide"}
+
+
+def _cloud(token: str) -> Dict[str, Any]:
     assert token == "the-token"
+    return {
+        "deployments": [
+            {
+                "uid": "dep-1",
+                "app_uid": "app-1",
+                "app_name": "Exchange Desk",
+                "slug": "exchange-desk",
+                "target": "hosted",
+            }
+        ],
+        "sessions": _cloud_sessions(),
+    }
+
+
+def _cloud_sessions() -> List[Dict[str, Any]]:
     return [
         {
             "uid": "cloud-agent-1",
@@ -73,11 +91,29 @@ def _cloud(token: str) -> List[Dict[str, Any]]:
         {
             "uid": "cloud-app-1",
             "app_uid": "app-1",
+            "deployment_uid": "dep-1",
             "state": "paused",
             "agent": "cog-crawler",
             "title": "Hi",
             "runs_on": {"kind": "runtime", "uid": "01m6gfag"},
             "started_at": "2026-11-11T09:00:00+00:00",
+        },
+        {
+            "uid": "preview-1",
+            "app_uid": "decide",
+            "state": "paused",
+            "agent": "decide",
+            "title": "Reply with one word.",
+            "started_at": "2026-11-11T08:00:00+00:00",
+        },
+        {
+            "uid": "seat-1",
+            "app_uid": "team-coding-agents",
+            "state": "paused",
+            "agent": "coder",
+            "title": "Fix it",
+            "runs_on": {"kind": "team_run", "execution_id": "exec_400b", "seat": "c"},
+            "started_at": "2026-11-11T07:00:00+00:00",
         },
         {
             "uid": "own-machine-1",
@@ -104,7 +140,7 @@ def files(tmp_path: Path) -> FileSessionStore:
 def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) -> None:
     said: List[str] = []
     rows = paused_sessions(
-        token="the-token", store=files, asker=_cloud, say=said.append
+        token="the-token", store=files, asker=_cloud, say=said.append, names=NAMES
     )
     assert said == []
     by_uid = {row.uid: row for row in rows}
@@ -114,6 +150,8 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         "cloud-agent-1",
         "cloud-app-1",
         "own-machine-1",
+        "preview-1",
+        "seat-1",
     }
     assert by_uid["local-paused-1"] == Paused(
         uid="local-paused-1",
@@ -124,6 +162,7 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         store="file",
         started_at=by_uid["local-paused-1"].started_at,
         turns=1,
+        app_uid="agent:example-simple",
     )
     assert (by_uid["cloud-agent-1"].where, by_uid["cloud-agent-1"].store) == (
         "cloud",
@@ -134,8 +173,33 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         "local",
         "record",
     )
-    assert by_uid["cloud-app-1"].kind == "application"
-    assert not by_uid["cloud-app-1"].resumable and by_uid["cloud-agent-1"].resumable
+    assert by_uid["cloud-agent-1"].resumable
+    # A Preview of an application — a catalogue's, with no deployment — is
+    # resumed from the terminal, named as its application.
+    preview = by_uid["preview-1"]
+    assert (preview.kind, preview.resumable, preview.app_name, preview.where) == (
+        "application",
+        True,
+        "Decide",
+        "local",
+    )
+    # A deployment's session is not: it says why, and where it is opened.
+    deployed = by_uid["cloud-app-1"]
+    assert (deployed.kind, deployed.resumable, deployed.app_name) == (
+        "application",
+        False,
+        "Exchange Desk",
+    )
+    assert deployed.why_not == paused.DEPLOYMENT_WHY_NOT
+    assert (
+        deployed.address == "https://datalayer.ai/apps/exchange-desk?thread=cloud-app-1"
+    )
+    seat = by_uid["seat-1"]
+    assert (seat.resumable, seat.why_not, seat.address) == (
+        False,
+        paused.TEAM_WHY_NOT,
+        "https://datalayer.ai/executions/exec_400b",
+    )
     # Newest first.
     started = [row.started_at for row in rows]
     assert started == sorted(started, reverse=True)
@@ -154,14 +218,25 @@ def test_a_line_says_kind_agent_title_where_and_when() -> None:
     assert paused_line(row, NOW) == (
         "Agent session · worker-marketer · “The autumn campaign” · on Datalayer · started 3 hours ago"
     )
-    here = Paused("u", "application", "cog-crawler", "", "local", "file", "")
+    here = Paused(
+        "u",
+        "application",
+        "cog-crawler",
+        "",
+        "local",
+        "file",
+        "",
+        app_uid="app-1",
+        app_name="Exchange Desk",
+    )
+    # An application's session is named by its application, not its agent.
     assert paused_line(here, NOW) == (
-        "Application session · cog-crawler · “(no title)” · on this machine"
+        "Application session · Exchange Desk · “(no title)” · on this machine"
     )
 
 
 def test_not_signed_in_lists_this_machines_only(files: FileSessionStore) -> None:
-    def never(token: str) -> List[Dict[str, Any]]:
+    def never(token: str) -> Dict[str, Any]:
         raise AssertionError("Nobody signed in: Datalayer is not asked.")
 
     rows = paused_sessions(token="", store=files, asker=never, say=lambda line: None)
@@ -171,7 +246,7 @@ def test_not_signed_in_lists_this_machines_only(files: FileSessionStore) -> None
 def test_datalayer_failing_is_said_in_a_line_and_not_fatal(
     files: FileSessionStore,
 ) -> None:
-    def offline(token: str) -> List[Dict[str, Any]]:
+    def offline(token: str) -> Dict[str, Any]:
         raise OSError("Name or service not known")
 
     said: List[str] = []
@@ -197,7 +272,7 @@ def test_none_paused_asks_nobody(tmp_path: Path) -> None:
 
 def test_the_choice_and_enter(files: FileSessionStore) -> None:
     rows = paused_sessions(
-        token="the-token", store=files, asker=_cloud, say=lambda _: None
+        token="the-token", store=files, asker=_cloud, say=lambda _: None, names=NAMES
     )
     asked: List[Any] = []
 
@@ -211,19 +286,34 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
     # Enter: the first choice, a new session, and the usual questions follow.
     assert choose_paused(rows, ask=pick(""), now=NOW) is None
     question, choices, default = asked[0]
-    assert question == (
-        "You have 4 paused sessions (your agents' shown; 1 more: /sessions). "
-        "Go on with one, or start a new one?"
-    )
+    assert question == "You have 6 paused sessions. Go on with one, or start a new one?"
     assert choices[0] == (NEW_SESSION, "") and default == ""
-    # An application's is resumed at its address: counted, never offered as
-    # a choice that cannot be picked.
+    # What is resumed here first, newest first; then what is opened elsewhere.
     assert [choice[1] for choice in choices[1:]] == [
-        row.uid for row in rows if row.kind == "agent"
+        *[row.uid for row in rows if row.resumable],
+        *[row.uid for row in rows if not row.resumable],
     ]
-    assert all(
-        choice[0].startswith("Resume: Agent session · ") for choice in choices[1:]
+    picked = {choice[1]: choice for choice in choices[1:]}
+    assert picked["preview-1"][0].startswith(
+        "Resume: Application session · Decide · “Reply with one word.” · on this machine"
     )
+    assert len(picked["preview-1"]) == 2 and len(picked["cloud-agent-1"]) == 2
+    # One not resumed from a terminal is drawn, not to be picked, with why
+    # and its address: never only counted.
+    assert picked["cloud-app-1"][0].startswith("Application session · Exchange Desk")
+    assert picked["cloud-app-1"][2] == (
+        "a deployment's session: it runs in its application's name, at its address: "
+        "open https://datalayer.ai/apps/exchange-desk?thread=cloud-app-1"
+    )
+    assert picked["seat-1"][2].startswith(
+        "a seat of a team run: resumed with its run: open "
+    )
+
+    # An application's Preview is resumed by starting its application.
+    preview = choose_paused(rows, ask=pick("preview-1"))
+    assert preview is not None
+    plan = resume_plan(preview)
+    assert (plan.uid, plan.application, plan.cloud) == ("preview-1", "decide", False)
 
     # A cloud one is resumed on Datalayer, a local one on this machine,
     # each with its agent, nobody asked where.
@@ -236,6 +326,7 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
         True,
         "",
     )
+    assert plan.application == ""
     here = choose_paused(rows, ask=pick("local-paused-1"))
     assert here is not None
     plan = resume_plan(here)
@@ -254,12 +345,25 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
         choose_paused(rows, ask=lambda *args: None)
 
 
-def test_five_are_offered_and_the_rest_counted() -> None:
+def test_five_are_offered_three_opened_elsewhere_drawn_and_the_rest_counted() -> None:
     rows = [
         Paused(
             f"u{n}", "agent", "a", f"T{n}", "local", "file", f"2026-11-0{n}T00:00:00Z"
         )
         for n in range(1, 8)
+    ] + [
+        Paused(
+            f"d{n}",
+            "application",
+            "x",
+            "Hi",
+            "cloud",
+            "record",
+            "",
+            app_uid="app-1",
+            why_not=paused.DEPLOYMENT_WHY_NOT,
+        )
+        for n in range(1, 6)
     ]
     seen: List[Any] = []
 
@@ -270,10 +374,11 @@ def test_five_are_offered_and_the_rest_counted() -> None:
     choose_paused(rows, ask=ask)
     question, choices = seen[0]
     assert question == (
-        "You have 7 paused sessions (the 5 most recent of your agents'; 2 more: /sessions). "
+        "You have 12 paused sessions (8 shown; 4 more: /sessions). "
         "Go on with one, or start a new one?"
     )
-    assert len(choices) == 1 + paused.OFFERED
+    assert [len(choice) for choice in choices] == [2, 2, 2, 2, 2, 2, 3, 3, 3]
+    assert len(choices) == 1 + paused.OFFERED + paused.NOT_RESUMED_SHOWN
 
 
 def test_a_run_nobody_is_at_asks_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -307,9 +412,118 @@ def test_a_picked_session_is_resumed_before_the_first_prompt() -> None:
     )
 
 
-def test_only_applications_paused_asks_nobody() -> None:
-    def never(*args: Any) -> str:
-        raise AssertionError("Nothing here can be resumed: nothing is asked.")
+def test_only_sessions_opened_elsewhere_are_still_drawn() -> None:
+    seen: List[Any] = []
 
-    rows = [Paused("u1", "application", "cog-crawler", "Hi", "cloud", "record", "")]
-    assert choose_paused(rows, ask=never) is None
+    def ask(question: str, choices: List[tuple], default: str) -> str:
+        seen.append(choices)
+        return ""
+
+    rows = [
+        Paused(
+            "u1",
+            "application",
+            "cog-crawler",
+            "Hi",
+            "cloud",
+            "record",
+            "",
+            app_uid="app-1",
+            app_name="Exchange Desk",
+            why_not=paused.DEPLOYMENT_WHY_NOT,
+        )
+    ]
+    assert choose_paused(rows, ask=ask) is None
+    assert [choice[0] for choice in seen[0]] == [
+        NEW_SESSION,
+        "Application session · Exchange Desk · “Hi” · on Datalayer",
+    ]
+
+
+def test_the_application_of_a_session_is_read_to_start_it_again() -> None:
+    from agent_runtimes.commands.apps import ResumeRefused, resumed_application
+
+    catalogue = {
+        "decide": {"id": "decide", "name": "Decide", "kind": "chat"},
+        "coded": {"id": "coded", "name": "Coded", "code": {"file": "app.py"}},
+    }
+    # A catalogue's application, by its id: recorded under its id.
+    assert resumed_application("decide", catalogue) == (catalogue["decide"], "")
+    with pytest.raises(ResumeRefused, match="written in Python"):
+        resumed_application("coded", catalogue)
+
+    class Item:
+        name = "Notes"
+        version = 3
+
+        def __init__(self, model: Dict[str, Any]) -> None:
+            self.model = model
+
+    class Studio:
+        def __init__(self, model: Dict[str, Any]) -> None:
+            self.model = model
+
+        def item(self, uid: str) -> Any:
+            assert uid == "01M4APP"
+            return Item(self.model)
+
+    from agent_runtimes.apps.store import APP_ITEM_FORMAT
+
+    spec = {"schema": "loop.app/v1", "id": "notes", "name": "Notes", "kind": "chat"}
+    # One the person keeps in the Studio: recorded under the Studio's uid.
+    document, uid = resumed_application(
+        "01M4APP", catalogue, Studio({"format": APP_ITEM_FORMAT, "spec": spec})
+    )
+    assert (document, uid) == (spec, "01M4APP")
+    with pytest.raises(ResumeRefused, match="older form"):
+        resumed_application("01M4APP", catalogue, Studio({"format": "old"}))
+
+
+def test_an_application_picked_is_started_and_resumed() -> None:
+    """The start hands an application's session to what starts its application."""
+    from pathlib import Path as P
+
+    from agent_runtimes.chat import cli
+    from agent_runtimes.commands import apps
+
+    wiring = P(cli.__file__).read_text()
+    assert "if plan.application:" in wiring
+    assert "resume_application_session(" in wiring
+    source = P(apps.__file__).read_text()
+    assert "configure_on(base_url, document, app_uid=studio_uid or None)" in source
+    assert "resume=session_uid," in source
+    assert "session_agui_url(base_url, CLOUD_AGENT_NAME)" in source
+
+
+def test_an_application_kept_on_datalayer_is_configured_under_its_uid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Its sessions are recorded, and resumed, under the uid Datalayer knows it by."""
+    import httpx
+
+    from agent_runtimes.commands.apps import configure_on
+    from agent_runtimes.routes.apps import ConfigureAppRequest
+
+    sent: List[Dict[str, Any]] = []
+
+    class Answer:
+        status_code = 200
+
+        def json(self) -> Dict[str, Any]:
+            return {"setup": []}
+
+    def post(url: str, json: Dict[str, Any], timeout: float) -> Answer:
+        sent.append({"url": url, **json})
+        return Answer()
+
+    monkeypatch.setattr(httpx, "post", post)
+    configure_on("http://runtime", {"id": "notes"}, app_uid="01M4APP")
+    configure_on("http://runtime", {"id": "decide"})
+    assert sent[0] == {
+        "url": "http://runtime/api/v1/apps/configure",
+        "app": {"id": "notes"},
+        "app_uid": "01M4APP",
+    }
+    assert "app_uid" not in sent[1]
+    assert ConfigureAppRequest(app={}, app_uid="01M4APP").app_uid == "01M4APP"
+    assert ConfigureAppRequest(app={}).app_uid is None

@@ -1444,11 +1444,32 @@ def main_callback(
             raise typer.Exit(0)
         if paused is not None:
             plan = resume_plan(paused)
-            resume_uid, agent_id = plan.uid, plan.agent
-            cloud, local = plan.cloud, not plan.cloud
             if plan.session_store:
                 # Kept in files on this machine: its server reads them there.
                 os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+            if plan.application:
+                # An application's session: its application is started, as
+                # `loop apps run` starts it, and the session resumed on it.
+                from agent_runtimes.commands.apps import (
+                    ResumeRefused,
+                    resume_application_session,
+                )
+
+                try:
+                    resume_application_session(
+                        plan.application,
+                        plan.uid,
+                        cloud=plan.cloud,
+                        environment=environment,
+                        minutes=minutes,
+                        keep=keep,
+                    )
+                except ResumeRefused as refused:
+                    print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+                    raise typer.Exit(1)
+                raise typer.Exit(0)
+            resume_uid, agent_id = plan.uid, plan.agent
+            cloud, local = plan.cloud, not plan.cloud
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None

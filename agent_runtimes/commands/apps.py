@@ -1327,8 +1327,12 @@ def configure_on(
     a2a_url: Optional[str] = None,
     visitors: bool = False,
     visitors_key: Optional[str] = None,
+    app_uid: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Configure a runtime with an application; its refusal said in sentences.
+
+    ``app_uid`` is the application as Datalayer knows it, for one the person
+    keeps there: its sessions are recorded, and resumed, under it.
 
     With ``organization``, the runtime reads the plugins it turned off and the
     contexts its agent keeps to (C-12, U-31) with the caller's token.
@@ -1348,6 +1352,8 @@ def configure_on(
             "--visitors-key is for an application open to visitors: add --visitors."
         )
     body: Dict[str, Any] = {"app": document}
+    if app_uid:
+        body["app_uid"] = app_uid
     if a2a_url is not None:
         body["a2a"] = True
         body["public_url"] = a2a_url
@@ -2039,6 +2045,165 @@ def organization_plugins_off(organization: Optional[str]) -> PluginsOff:
     except NotSignedIn:
         return read_plugins_off(organization, iam_url="", token=None)
     return read_plugins_off(organization, iam_url=client.urls.iam_url, token=token)
+
+
+class ResumeRefused(RuntimeError):
+    """Why an application's session is not resumed from the terminal, in a sentence."""
+
+
+def resumed_application(app_uid: str, catalogue: Any = None, store: Any = None) -> Any:
+    """The application a paused session is a session of, to start it again:
+    the catalogue's by its id, else the one the person keeps in the Studio,
+    as ``(document, studio_uid)`` — ``studio_uid`` the uid its sessions are
+    recorded under on Datalayer, ``""`` for a catalogue's.
+
+    Raises
+    ------
+    ResumeRefused
+        When it is neither, or it is written in Python: its code reacts in
+        its own process, and the session of one is its page's.
+    """
+    import yaml
+
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import pull
+
+    if catalogue is None:
+        from agentspecs.apps import load_raw_apps
+
+        catalogue = load_raw_apps()
+    if app_uid in catalogue:
+        document = dict(catalogue[app_uid])
+        if (document.get("code") or {}).get("file"):
+            raise ResumeRefused(
+                f"{document.get('name') or app_uid} is written in Python: its code reacts "
+                "in its own process, and its session is gone on with on its page."
+            )
+        return document, ""
+    try:
+        text, _, code = pull(store if store is not None else _store(), app_uid)
+    except DeployRefused as refused:
+        raise ResumeRefused(str(refused)) from None
+    except Exception as refused:  # noqa: BLE001 - the Studio's refusal, said
+        raise ResumeRefused(
+            f"The application {app_uid} could not be read from the Studio: {str(refused)[:200]}"
+        ) from None
+    document = yaml.safe_load(text)
+    if not isinstance(document, dict):
+        raise ResumeRefused(f"The application {app_uid} holds no Appspec.")
+    if code:
+        raise ResumeRefused(
+            f"{document.get('name') or app_uid} is written in Python: its code reacts "
+            "in its own process, and its session is gone on with on its page."
+        )
+    return document, app_uid
+
+
+def resume_application_session(
+    app_uid: str,
+    session_uid: str,
+    *,
+    cloud: bool = False,
+    environment: Optional[str] = None,
+    minutes: Optional[int] = None,
+    keep: bool = False,
+) -> None:
+    """Go on with a paused session of an application from the terminal: the
+    application started as `loop apps run` starts it — on this machine, or on
+    Datalayer for a session that ran there — and the session resumed from its
+    record before the first prompt.
+
+    Raises
+    ------
+    ResumeRefused
+        When its application cannot be started here, in a sentence.
+    """
+    import asyncio
+    import logging
+
+    from agent_runtimes.apps.application import Application
+    from agent_runtimes.loop.launch import (
+        CLOUD_AGENT_NAME,
+        CloudRefused,
+        NotSignedIn,
+        finish_cloud,
+        launch_cloud,
+        speak_ag_ui,
+    )
+    from agent_runtimes.loop.session import session_agui_url
+
+    document, studio_uid = resumed_application(app_uid)
+    application = Application.from_spec(document).spec
+    if application.team:
+        raise ResumeRefused(
+            f"{application.name} is run by a team, which does not run in the terminal yet."
+        )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    cloud_launch = None
+    process = None
+    if cloud:
+        try:
+            cloud_launch = launch_cloud(
+                BOOTSTRAP_AGENT_SPEC_ID,
+                label=f"{application.emoji} {application.name}",
+                environment=environment,
+                minutes=minutes,
+                status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+                app_spec=dict(document),
+            )
+        except NotSignedIn:
+            raise ResumeRefused(
+                "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
+            ) from None
+        except CloudRefused as refused:
+            raise ResumeRefused(str(refused)) from None
+        base_url = cloud_launch.server_url
+    else:
+        from agent_runtimes.chat.cli import (
+            _start_agent_runtime_server,
+            _wait_for_server,
+        )
+
+        process, port = _start_agent_runtime_server(BOOTSTRAP_AGENT_SPEC_ID)
+        if not _wait_for_server("127.0.0.1", port, timeout=60.0):
+            process.terminate()
+            raise ResumeRefused("The local server did not start.")
+        base_url = f"http://127.0.0.1:{port}"
+    try:
+        try:
+            configure_on(base_url, document, app_uid=studio_uid or None)
+        except typer.BadParameter as refused:
+            raise ResumeRefused(refused.message) from None
+        if not speak_ag_ui(base_url):
+            raise ResumeRefused("The application's agent did not come up.")
+        from agent_runtimes.chat.tux import run_tux
+
+        where_said = (
+            f"on Datalayer ({cloud_launch.runtime_name})"
+            if cloud_launch
+            else "on this machine"
+        )
+        asyncio.run(
+            run_tux(
+                # Each thread of the prompt is a session of the application.
+                session_agui_url(base_url, CLOUD_AGENT_NAME),
+                base_url,
+                agent_id=CLOUD_AGENT_NAME,
+                extra_suggestions=[
+                    starter.message for starter in application.interface.starters
+                ],
+                startup_message=f"{application.emoji}  {application.name} is running {where_said}",
+                where=cloud_launch.label if cloud_launch else None,
+                cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
+                resume=session_uid,
+            )
+        )
+    finally:
+        if cloud_launch is not None:
+            finish_cloud(cloud_launch, keep=keep)
+        elif process is not None:
+            process.terminate()
+            process.join(timeout=5.0)
 
 
 def _store() -> Any:

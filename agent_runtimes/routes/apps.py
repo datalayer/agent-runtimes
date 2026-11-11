@@ -104,6 +104,13 @@ class ConfigureAppRequest(BaseModel):
     user_token: Optional[str] = None
     jupyter_sandbox: Optional[str] = None
     mcp_proxy_url: Optional[str] = None
+    app_uid: Optional[str] = Field(
+        None,
+        description=(
+            "The application as Datalayer knows it, when it is one the person "
+            "keeps there: its sessions are recorded, and resumed, under it"
+        ),
+    )
     organization_uid: Optional[str] = Field(
         None,
         description=(
@@ -562,9 +569,15 @@ async def configure_app(
             mcp_proxy_url=body.mcp_proxy_url,
             app_spec=body.app,
             app_instance=(
-                {"organization_uid": body.organization_uid}
-                if body.organization_uid
-                else None
+                {
+                    **(
+                        {"organization_uid": body.organization_uid}
+                        if body.organization_uid
+                        else {}
+                    ),
+                    **({"app_uid": body.app_uid} if body.app_uid else {}),
+                }
+                or None
             ),
             model=app.model or None,
             # An application is spoken to over AG-UI — by its page and by the
