@@ -41,13 +41,25 @@ URL = (
 )
 
 
+#: The ai-inference token each model call of a seat's task found.
+CALLED_WITH: list[Any] = []
+
+
+def _called_with() -> None:
+    from agent_runtimes.models.offered import inference_token
+
+    CALLED_WITH.append(inference_token())
+
+
 def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     """Answer the seat's task."""
+    _called_with()
     return ModelResponse(parts=[TextPart("The seat did the task.")])
 
 
 async def streamed(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
     """Stream the seat's answer, as the A2A worker asks it."""
+    _called_with()
     yield "The seat "
     yield "did the task."
 
@@ -205,6 +217,7 @@ async def test_a_seat_answers_a_task_routed_by_agentcore_on_the_runs_session(
 ) -> None:
     from agent_runtimes.agentcore.contract import SESSION_HEADER
     from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
+    from agent_runtimes.models.offered import forget_context_inference_tokens
 
     iam = FakeIAM()
     exchange.use_exchange(
@@ -214,6 +227,8 @@ async def test_a_seat_answers_a_task_routed_by_agentcore_on_the_runs_session(
             client=lambda: httpx.AsyncClient(transport=httpx.MockTransport(iam)),
         )
     )
+    forget_context_inference_tokens()
+    CALLED_WITH.clear()
     seat.register_seat({"AGENTCORE_RUNTIME_URL": URL})
     served = a2a_routes._a2a_agents[AGENT_ID].app
     # As AgentCore calls the container: the bearer its authorizer validated,
@@ -263,6 +278,9 @@ async def test_a_seat_answers_a_task_routed_by_agentcore_on_the_runs_session(
     assert {form["subject_token"] for form in iam.asked} == {"rs256-for-marketer"}
     assert refused.status_code == 400
     assert "a seat's A2A context is its session" in refused.json()["detail"]
+    # The task ran in the A2A worker, apart from the request, and its model
+    # calls held the caller's exchanged ai-inference token all the same.
+    assert CALLED_WITH and set(CALLED_WITH) == {"inference-of-rs256-for-marketer"}
 
 
 def test_a_call_naming_no_datalayer_session_is_refused() -> None:

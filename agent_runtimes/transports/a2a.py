@@ -15,7 +15,7 @@ import logging
 import re
 import traceback
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
@@ -821,8 +821,16 @@ class A2AWorker(_FastA2AWorker):
         from ..context.usage import TurnSpend
 
         turn = TurnSpend.begin(self.agent_id)
+        # The caller's ai-inference token for this context, when the request
+        # that sent the task had one (an AgentCore seat's call): the worker
+        # runs the task apart from that request, so it is held here.
+        from ..models.offered import context_inference_token, use_inference_token
+
+        token = context_inference_token(context_id)
+        held = use_inference_token(token) if token else nullcontext()
         try:
-            await self._run(task_id, context_id, params, turn)
+            with held:
+                await self._run(task_id, context_id, params, turn)
         except Exception as exc:
             # fasta2a marks the task failed and ends the stream, but says
             # nothing about why. Log it, and put the reason on the failed

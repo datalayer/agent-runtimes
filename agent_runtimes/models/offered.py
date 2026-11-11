@@ -255,6 +255,34 @@ def use_inference_token(token: str) -> Iterator[None]:
         _CALL_TOKEN.reset(reset)
 
 
+#: The caller's token for the tasks of one A2A context, by context id: what an
+#: A2A worker's task holds (`context_inference_token`), since the worker runs
+#: its tasks apart from the request that sent them, which held its own token.
+#: An AgentCore seat gives it for each call's context (its session). Bounded.
+_CONTEXT_TOKENS: "dict[str, str]" = {}
+_CONTEXT_TOKENS_MAX = 256
+
+
+def give_context_inference_token(context_id: str, token: str) -> None:
+    """Hold ``token`` as the ai-inference token of the tasks of ``context_id``."""
+    if not context_id or not (token or "").strip():
+        return
+    _CONTEXT_TOKENS.pop(context_id, None)
+    while len(_CONTEXT_TOKENS) >= _CONTEXT_TOKENS_MAX:
+        _CONTEXT_TOKENS.pop(next(iter(_CONTEXT_TOKENS)))
+    _CONTEXT_TOKENS[context_id] = token.strip()
+
+
+def context_inference_token(context_id: str | None) -> str | None:
+    """The ai-inference token given for the tasks of an A2A context, or ``None``."""
+    return _CONTEXT_TOKENS.get(context_id or "")
+
+
+def forget_context_inference_tokens() -> None:
+    """Forget every context's token (a test)."""
+    _CONTEXT_TOKENS.clear()
+
+
 def inference_token() -> str | None:
     """
     The token this runtime calls ai-inference with, or ``None``.

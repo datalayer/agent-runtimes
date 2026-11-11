@@ -238,7 +238,7 @@ class SeatApp:
         body = await read_body(receive) if scope.get("method") == "POST" else b""
         receive = replay(body, receive) if body else receive
         try:
-            session_of_call(headers, body)
+            context = session_of_call(headers, body)
             tokens = await tokens_of(headers)
         except ContractRefused as refused:
             await _answer(send, refused.status, {"detail": refused.sentence})
@@ -247,6 +247,11 @@ class SeatApp:
         # token, the token it carried, its session.
         held = _workload_of(scope)
         if tokens is not None:
+            # The task runs in the A2A worker, apart from this request: its
+            # model calls find the caller's inference token by its context.
+            from agent_runtimes.models.offered import give_context_inference_token
+
+            give_context_inference_token(context, tokens.inference)
             scope = {
                 **scope,
                 "headers": [
