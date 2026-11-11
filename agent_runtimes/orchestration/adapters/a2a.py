@@ -113,6 +113,7 @@ from agent_runtimes.subagents.a2a import (
     approval_request_of,
     cancel_remote_task,
     ensure_remote_agent,
+    fetch_agent_card,
     refusing_option,
     relay_a2a_task,
     spec_id_of,
@@ -398,6 +399,52 @@ class A2AWorkerAdapter(WorkerAdapter):
             else A2A_CAPABILITIES,
             endpoint=remote.url,
             # What the worker says about itself, shown and never followed.
+            details=remote.describe(),
+            handle=remote,
+        )
+
+    async def asked_with(self, worker: ResolvedWorker, token: str) -> ResolvedWorker:
+        """
+        The worker, asked with ``token`` from now on, as its card reads to it.
+
+        A worker behind a relay that answers only for whom it is asked on
+        behalf of — a team seat on AWS AgentCore, through ai-agents, which
+        exchanges the bearer for a token of the agent runtime — serves its
+        card to that token alone: resolved without it, it reads as serving
+        none, and its delegations would name no execution. Its card is read
+        again with the token, and its capabilities are what that card says.
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker, from ``resolve``.
+        token : str
+            The bearer it is asked with.
+
+        Returns
+        -------
+        ResolvedWorker
+            The same worker, its handle holding the token and the card.
+
+        Raises
+        ------
+        LookupError
+            When the worker serves no card to the token either, in a sentence.
+        """
+        remote = _remote(worker)
+        remote.token = token
+        card = await fetch_agent_card(remote.url, token)
+        if card is None:
+            raise LookupError(
+                f"The A2A worker at {remote.url} serves no agent card to the token it is asked with."
+            )
+        remote.card = card
+        return ResolvedWorker(
+            binding=worker.binding,
+            capabilities=A2A_EXTENDED_CAPABILITIES
+            if _extension_of(card) is not None
+            else A2A_CAPABILITIES,
+            endpoint=worker.endpoint,
             details=remote.describe(),
             handle=remote,
         )

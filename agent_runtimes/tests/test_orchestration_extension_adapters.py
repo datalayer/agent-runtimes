@@ -763,3 +763,42 @@ class TestAnACPAgentSpeakingTheExtension:
 
         assert channel.notifications == []
         assert all(isinstance(outcome, Unsupported) for outcome in outcomes)
+
+
+class TestAWorkerAskedWithAToken:
+    """A seat behind a relay serves its card only to the token it is asked
+    with: resolved without it, it read as serving none and its delegations
+    named no execution, so the seat recorded no session."""
+
+    @pytest.mark.asyncio
+    async def test_its_card_is_read_again_with_the_token_and_says_what_it_speaks(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        asked: list[tuple[str, str | None]] = []
+
+        async def card_for(url: str, token: str | None = None, **_: Any) -> Any:
+            asked.append((url, token))
+            return _card() if token == "the-persons" else None
+
+        monkeypatch.setattr(a2a_binding, "fetch_agent_card", card_for)
+        resolved = _a2a_worker(None)
+        assert EXTENSION_URI not in resolved.capabilities.extensions
+
+        worker = await A2AWorkerAdapter().asked_with(resolved, "the-persons")
+
+        assert asked == [(WORKER, "the-persons")]
+        assert EXTENSION_URI in worker.capabilities.extensions
+        assert worker.handle.token == "the-persons"
+        assert worker.handle.card == _card()
+        assert worker.endpoint == WORKER and worker.binding == resolved.binding
+
+    @pytest.mark.asyncio
+    async def test_a_worker_serving_no_card_to_the_token_is_said(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def no_card(url: str, token: str | None = None, **_: Any) -> Any:
+            return None
+
+        monkeypatch.setattr(a2a_binding, "fetch_agent_card", no_card)
+        with pytest.raises(LookupError, match="serves no agent card"):
+            await A2AWorkerAdapter().asked_with(_a2a_worker(None), "the-persons")
