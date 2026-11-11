@@ -1766,6 +1766,23 @@ def _owner_of(caller: Any) -> Dict[str, str]:
     return {"kind": str(caller.kind), "uid": str(caller.uid or "")}
 
 
+async def _record_owner(caller: Any, bearer: str) -> Dict[str, str]:
+    """Who the record's listing is for. The machine itself with a person's
+    token — a runtime on one's own machine keeping its sessions in the
+    platform's record — lists that person's: the record lists what a
+    person opened, and is asked in their name.
+    """
+    if caller.kind == "local" and bearer:
+        try:
+            person = await VERIFIER.verify(bearer, "")
+        except CallerRefused as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
+        return _owner_of(person)
+    return _owner_of(caller)
+
+
 async def _store_refused(call: Any) -> Any:
     """A store's answer, its refusal as the route's."""
     from agent_runtimes.apps.session_store import (
@@ -1818,7 +1835,8 @@ async def list_sessions(
     # The record is read as the caller: the store takes the bearer from the
     # request's context (found on r1, 21 October 2026: `loop sessions list
     # --cloud` on a kept runtime answered 401, "none was sent").
-    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
+    bearer = bearer_of(request.headers.get("authorization")) or ""
+    set_request_user_jwt(bearer or None)
     limit = max(1, min(int(limit or 50), 200))
     held_here = [
         live.describe()
@@ -1836,9 +1854,15 @@ async def list_sessions(
     ]
     if held:
         return {"sessions": await with_workspaces(held_here), "has_more": False}
+    store = active_store()
+    owner = (
+        await _record_owner(authorized.caller, bearer)
+        if str(getattr(store, "name", "")) == "record"
+        else _owner_of(authorized.caller)
+    )
     page = await _store_refused(
-        active_store().list(
-            _owner_of(authorized.caller),
+        store.list(
+            owner,
             app=app,
             after=after,
             limit=limit,
@@ -2639,6 +2663,9 @@ async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
         await live.stop()
     except SessionRefused as refused:
         raise _refused(refused) from None
+    # On the record before it is answered: whoever paused it may stop the
+    # runtime at once, and a listing from the record says the truth.
+    await live.recorder.settled(live.uid)
     # What its agent's memory was given first, when it has one.
     return {**live.describe(), "remembered": dict(live.remembered)}
 

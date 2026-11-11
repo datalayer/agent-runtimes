@@ -382,3 +382,74 @@ def test_a_thread_named_in_snake_case_is_the_same_session(
         )
     [only] = remote.get(SESSIONS, headers=as_("ada")).json()["sessions"]
     assert (only["uid"], only["turns"]) == ("3f6c2d1e-0000-4000-8000-00000000a006", 2)
+
+
+def test_the_machine_itself_lists_the_record_as_the_person_whose_token_it_sends(
+    marketer: Said,
+    local: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """A runtime on one's own machine that keeps its sessions in the
+    platform's record lists the sessions of the person whose token the
+    prompt signs its calls with: the record lists what a person opened.
+    """
+    from agent_runtimes.apps.session_store import RecordSessionStore
+
+    asked: List[Dict[str, Any]] = []
+
+    async def lister(bearer: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        asked.append({"bearer": bearer, **params})
+        return {
+            "sessions": [
+                {
+                    "uid": "session-a007",
+                    "app_uid": "agent:worker-marketer",
+                    "state": "paused",
+                    "agent": SPEC,
+                    "turns": 2,
+                },
+                {"uid": "session-a008", "app_uid": "app-1", "state": "open"},
+            ],
+            "has_more": False,
+        }
+
+    store = RecordSessionStore()
+    store.lister = lister  # type: ignore[method-assign]
+    use_session_store(store)
+    listed = local.get(SESSIONS, headers=as_("ada")).json()["sessions"]
+    assert (asked[0]["bearer"], asked[0]["opened_by"]) == ("ada", "ada")
+    # The record's rows say their kind too, from the application they name.
+    assert [(s["uid"], s["kind"], s["held"]) for s in listed] == [
+        ("session-a007", "agent", False),
+        ("session-a008", "application", False),
+    ]
+
+
+def test_a_cancelled_wait_does_not_cancel_the_sends_it_waits_for(
+    marketer: Said,
+) -> None:
+    """A turn whose client stopped reading is cancelled while it waits for
+    its record: the entries a send had taken are sent all the same.
+    """
+    import asyncio
+
+    from agent_runtimes.apps.record import AppRecorder, send_later
+
+    app, _ = sessions.session_app(AGENT)
+    sent: List[str] = []
+
+    async def scenario() -> None:
+        async def slow() -> None:
+            await asyncio.sleep(0.05)
+            sent.append("turn")
+
+        recorder = AppRecorder.in_memory(app)
+        sending = send_later("session-a009", slow())
+        waiting = asyncio.ensure_future(recorder.settled("session-a009"))
+        await asyncio.sleep(0.01)
+        waiting.cancel()
+        await asyncio.gather(waiting, return_exceptions=True)
+        assert not sending.cancelled()
+        await sending
+
+    asyncio.run(scenario())
+    assert sent == ["turn"]

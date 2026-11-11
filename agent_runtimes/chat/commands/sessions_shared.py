@@ -14,6 +14,7 @@ opens another here, its conversation loaded: ``/pause``, ``/swap``,
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
@@ -47,8 +48,7 @@ def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
         if session is not None
         else f"{tux.server_url.rstrip('/')}/api/v1"
     )
-    token: Optional[str] = getattr(session, "token", None)
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    headers = signing_headers(tux)
     response = httpx.request(
         method, f"{base}/apps/sessions{path}", headers=headers, timeout=120.0, **kwargs
     )
@@ -61,6 +61,19 @@ def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
             str(detail or f"The runtime answered {response.status_code}.")
         )
     return response
+
+
+def signing_headers(tux: "CliTux") -> Dict[str, str]:
+    """What the prompt signs its calls to its runtime with: the session's
+    token; else the key `datalayer login` left, as `loop sessions` signs
+    its calls — a runtime on this machine writes and reads the platform's
+    record with it, in the person's name. Nothing without either.
+    """
+    session = session_of(tux)
+    token: Optional[str] = getattr(session, "token", None) or (
+        os.environ.get("DATALAYER_API_KEY") or None
+    )
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 def current_uid(tux: "CliTux") -> Optional[str]:
@@ -88,7 +101,7 @@ async def load_conversation(
 
     client = getattr(tux, "_agui_client", None)
     if client is None:
-        client = AGUIClient(agent_url)
+        client = AGUIClient(agent_url, headers=signing_headers(tux))
         await client.connect()
         tux._agui_client = client
     conversation = client.conversation

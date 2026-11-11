@@ -121,6 +121,7 @@ from agent_runtimes.apps.record import (
     agent_app_uid,
     agent_recorder,
     runtime_runs_on,
+    send_later,
     session_kind,
 )
 from agent_runtimes.apps.session import (
@@ -2517,7 +2518,6 @@ class LiveSession:
         self.recorder.start(self.uid, facts=self.facts())
         self.messages = said
         answered_from = len(self.messages)
-        before = self.recorder.turns_of(self.uid)
         run = {
             "state": None,
             "tools": [],
@@ -2528,20 +2528,34 @@ class LiveSession:
             "messages": said,
             "forwardedProps": forwarded or None,
         }
+        completed = False
         try:
             await self.forward(run, bearer=bearer)
+            completed = True
         finally:
-            await self.recorder.settled(self.uid)
-            if self.recorder.turns_of(self.uid) == before:
+            answered = "\n\n".join(
+                str(m.get("content") or "")
+                for m in self.messages[answered_from:]
+                if m.get("role") == "assistant"
+            )
+            if completed or answered:
+                # Kept at once, with nothing awaited first, and sent in a
+                # task of its own: a prompt that has its answer stops
+                # reading — which cancels the turn — and may stop its
+                # runtime with it. A turn cut before its answer leaves none.
                 self.recorder.start(self.uid, facts=self.facts())
-                self.recorder.turned(
-                    asked,
-                    "\n\n".join(
-                        str(m.get("content") or "")
-                        for m in self.messages[answered_from:]
-                        if m.get("role") == "assistant"
-                    ),
-                )
+                self.recorder.turned(asked, answered)
+
+                async def sent() -> None:
+                    """The turn, sent in the name of whoever asked it."""
+                    from agent_runtimes.context.identities import (
+                        set_request_user_jwt,
+                    )
+
+                    set_request_user_jwt(bearer or None)
+                    await self.recorder.flush(self.uid)
+
+                send_later(self.uid, sent())
 
     def run_token(self, bearer: str) -> str:
         """The token a run of the session carries: the request's, but in a
@@ -2632,11 +2646,12 @@ class LiveSession:
         status = 0
         refused: List[bytes] = []
         buffer = ""
+        finished = False
         answers: Dict[str, List[str]] = {}
 
         async def send(message: Mapping[str, Any]) -> None:
             """Stream what the agent answers, and keep its text."""
-            nonlocal status, buffer
+            nonlocal status, buffer, finished
             if message["type"] == "http.response.start":
                 status = int(message["status"])
                 return
@@ -2658,23 +2673,37 @@ class LiveSession:
                     answers.setdefault(str(event.get("messageId")), []).append(
                         str(event.get("delta") or "")
                     )
+                elif event.get("type") == "RUN_FINISHED":
+                    finished = True
 
-        with (
-            run_instructions(instructions),
-            persons_own_token(persons if bearer != persons else None),
-        ):
-            await app(scope, receive, send)
+        def keep() -> None:
+            """What it answered, in the conversation."""
+            for message_id, pieces in answers.items():
+                text = "".join(pieces)
+                if text:
+                    self.messages.append(
+                        {"id": message_id, "role": "assistant", "content": text}
+                    )
+
+        try:
+            with (
+                run_instructions(instructions),
+                persons_own_token(persons if bearer != persons else None),
+            ):
+                await app(scope, receive, send)
+        except asyncio.CancelledError:
+            # A client that has the whole answer stops reading, which
+            # cancels the turn while its agent's run winds up: the answer
+            # of an agent run as such is the conversation's all the same.
+            if finished and self.kind == "agent":
+                keep()
+            raise
         if status >= 300:
             said = b"".join(refused).decode("utf-8", errors="replace")[:500]
             raise SessionRefused(
                 status, f"The agent refused the turn ({status}): {said}"
             )
-        for message_id, pieces in answers.items():
-            text = "".join(pieces)
-            if text:
-                self.messages.append(
-                    {"id": message_id, "role": "assistant", "content": text}
-                )
+        keep()
 
     def run_agui(
         self, body: Dict[str, Any], *, loop: Mapping[str, Any], bearer: str

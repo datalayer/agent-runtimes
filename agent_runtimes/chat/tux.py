@@ -1035,7 +1035,14 @@ class CliTux:
         try:
             # Create or reuse the AG-UI client for conversation history
             if self._agui_client is None:
-                self._agui_client = AGUIClient(self.agent_url)
+                headers: dict[str, str] = {}
+                if is_session_agui_url(self.agent_url):
+                    # A session's turns are signed as the session commands
+                    # are: its record is written in the person's name.
+                    from .commands.sessions_shared import signing_headers
+
+                    headers = signing_headers(self)
+                self._agui_client = AGUIClient(self.agent_url, headers=headers)
                 await self._agui_client.connect()
 
             client = self._agui_client

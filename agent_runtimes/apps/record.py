@@ -1201,7 +1201,13 @@ class AppRecorder:
         the stream ends. Never fails: a record is never worth a run.
         """
         while _SENDING.get(session):
-            await asyncio.gather(*list(_SENDING[session]), return_exceptions=True)
+            # Shielded: whoever waits may be cancelled — a turn whose client
+            # stopped reading — and a cancelled gather cancels what it
+            # gathers, which lost the entries a send had taken to send.
+            await asyncio.gather(
+                *(asyncio.shield(sending) for sending in list(_SENDING[session])),
+                return_exceptions=True,
+            )
             # Sends that are done leave the set in their callbacks, which a
             # gather of done tasks does not wait for: let them run.
             await asyncio.sleep(0)
