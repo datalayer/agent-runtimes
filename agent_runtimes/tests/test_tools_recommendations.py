@@ -339,7 +339,7 @@ async def test_the_record_keeps_the_press_before_the_agent_reads_the_turn(
         prompt=_submission(rec_id, "approved"),
         messages=[],
     )
-    await capability.before_run(ctx)  # type: ignore[arg-type]
+    await capability.before_run(ctx)
 
     assert [kind for kind, _, _ in session.added] == ["approval", "output"]
     assert recommendations.list_recommendations(state="approved")["count"] == 1
