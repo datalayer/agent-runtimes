@@ -582,6 +582,132 @@ class AgentCoreTarget:
         )
         deployment.status = answer["status"]
 
+    # --- online evaluation (AgentCore Evaluations) ---------------------------------
+
+    @staticmethod
+    def runtime_name_of(deployment: Deployment) -> str:
+        """The agent runtime's name: its id without AgentCore's ten-character suffix."""
+        return deployment.id.rsplit("-", 1)[0]
+
+    @classmethod
+    def online_evaluation_name(cls, deployment: Deployment) -> str:
+        """The online evaluation configuration of an agent runtime, one per runtime
+        (AgentCore allows 48 characters)."""
+        return f"{cls.runtime_name_of(deployment)[:37]}_evaluation"
+
+    async def evaluate_online(
+        self,
+        deployment: Deployment,
+        *,
+        evaluators: Sequence[str],
+        sampling_percentage: float,
+        role_arn: str,
+    ) -> Dict[str, Any]:
+        """Judge a sample of the agent runtime's sessions as they end (online evaluation).
+
+        Creates the runtime's online evaluation configuration, or updates it:
+        its spans selected by its service name (``<agent runtime name>.DEFAULT``)
+        in ``aws/spans``, the chosen evaluators, the share of sessions judged,
+        run by the organization's evaluation role; enabled at once. Results
+        land in CloudWatch (``/aws/bedrock-agentcore/evaluations/…``).
+
+        Raises
+        ------
+        AgentCoreError
+            With no evaluator, a share outside (0, 100], or no role, in a sentence.
+        """
+        chosen = [str(e).strip() for e in evaluators if str(e).strip()]
+        if not chosen:
+            raise AgentCoreError("Choose the evaluators an online evaluation runs.")
+        if not 0 < float(sampling_percentage) <= 100:
+            raise AgentCoreError(
+                "The share of sessions judged is a percentage above 0, at most 100."
+            )
+        if not role_arn:
+            raise AgentCoreError(
+                "An online evaluation runs with the organization's evaluation role "
+                "(EvaluationRoleArn of its stack), and none is given."
+            )
+        client = self._control(deployment.region)
+        name = self.online_evaluation_name(deployment)
+        service = f"{self.runtime_name_of(deployment)}.{deployment.endpoint or DEFAULT_ENDPOINT}"
+        rule = {
+            "samplingConfig": {"samplingPercentage": float(sampling_percentage)},
+            "sessionConfig": {"sessionTimeoutMinutes": 15},
+        }
+        source = {
+            "cloudWatchLogs": {
+                "logGroupNames": ["aws/spans"],
+                "serviceNames": [service],
+            }
+        }
+        found = await self.online_evaluation(deployment)
+        if found is None:
+            answer = await asyncio.to_thread(
+                client.create_online_evaluation_config,
+                onlineEvaluationConfigName=name,
+                description=f"Datalayer: sessions of {deployment.id}",
+                rule=rule,
+                dataSourceConfig=source,
+                evaluators=[{"evaluatorId": e} for e in chosen],
+                evaluationExecutionRoleArn=role_arn,
+                enableOnCreate=True,
+            )
+        else:
+            answer = await asyncio.to_thread(
+                client.update_online_evaluation_config,
+                onlineEvaluationConfigId=found["onlineEvaluationConfigId"],
+                rule=rule,
+                dataSourceConfig=source,
+                evaluators=[{"evaluatorId": e} for e in chosen],
+                evaluationExecutionRoleArn=role_arn,
+                executionStatus="ENABLED",
+            )
+        return {
+            key: answer.get(key)
+            for key in (
+                "onlineEvaluationConfigId",
+                "onlineEvaluationConfigArn",
+                "status",
+                "executionStatus",
+                "outputConfig",
+            )
+            if key in answer
+        }
+
+    async def online_evaluation(
+        self, deployment: Deployment
+    ) -> Optional[Dict[str, Any]]:
+        """The agent runtime's online evaluation configuration, or ``None``."""
+        client = self._control(deployment.region)
+        name = self.online_evaluation_name(deployment)
+        token: Optional[str] = None
+        while True:
+            page = await asyncio.to_thread(
+                client.list_online_evaluation_configs,
+                **({"nextToken": token} if token else {}),
+            )
+            for summary in page.get("onlineEvaluationConfigs") or []:
+                if summary.get("onlineEvaluationConfigName") == name:
+                    return await asyncio.to_thread(
+                        client.get_online_evaluation_config,
+                        onlineEvaluationConfigId=summary["onlineEvaluationConfigId"],
+                    )
+            token = page.get("nextToken")
+            if not token:
+                return None
+
+    async def stop_online_evaluation(self, deployment: Deployment) -> bool:
+        """Delete the agent runtime's online evaluation; ``False`` when it had none."""
+        found = await self.online_evaluation(deployment)
+        if found is None:
+            return False
+        await asyncio.to_thread(
+            self._control(deployment.region).delete_online_evaluation_config,
+            onlineEvaluationConfigId=found["onlineEvaluationConfigId"],
+        )
+        return True
+
 
 def _event(data: str) -> Dict[str, Any]:
     try:

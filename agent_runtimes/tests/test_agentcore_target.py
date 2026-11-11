@@ -782,3 +782,159 @@ def test_invoke_with_a_bearer_calls_https_with_it_and_reads_the_stream(
     assert "/invocations?qualifier=DEFAULT" in seen["url"] and seen["body"] == {
         "prompt": "Hi"
     }
+
+
+# --- online evaluation ---------------------------------------------------------------
+
+EVALUATION_ROLE = "arn:aws:iam::123456789012:role/org-EvaluationRole-x"
+
+
+def _online(config_id: str = "oe-1") -> dict[str, Any]:
+    from datetime import datetime, timezone
+
+    return {
+        "onlineEvaluationConfigArn": f"arn:aws:bedrock-agentcore:us-east-1:123456789012:online-evaluation-config/{config_id}",
+        "onlineEvaluationConfigId": config_id,
+        "createdAt": datetime(2026, 11, 11, tzinfo=timezone.utc),
+        "status": "ACTIVE",
+        "executionStatus": "ENABLED",
+    }
+
+
+def test_an_online_evaluation_is_created_then_updated_then_stopped(control) -> None:
+    client, stub = control
+    target = AgentCoreTarget(control_client=client)
+    deployment = _deployment()
+    name = AgentCoreTarget.online_evaluation_name(deployment)
+    runtime_name = RUNTIME_ID.rsplit("-", 1)[0]
+    assert len(name) <= 48 and name.endswith("_evaluation")
+    source = {
+        "cloudWatchLogs": {
+            "logGroupNames": ["aws/spans"],
+            "serviceNames": [f"{runtime_name}.DEFAULT"],
+        }
+    }
+    stub.add_response(
+        "list_online_evaluation_configs", {"onlineEvaluationConfigs": []}, {}
+    )
+    stub.add_response(
+        "create_online_evaluation_config",
+        _online(),
+        {
+            "onlineEvaluationConfigName": name,
+            "description": f"Datalayer: sessions of {RUNTIME_ID}",
+            "rule": {
+                "samplingConfig": {"samplingPercentage": 25.0},
+                "sessionConfig": {"sessionTimeoutMinutes": 15},
+            },
+            "dataSourceConfig": source,
+            "evaluators": [{"evaluatorId": "Builtin.GoalSuccessRate"}],
+            "evaluationExecutionRoleArn": EVALUATION_ROLE,
+            "enableOnCreate": True,
+        },
+    )
+    created = asyncio.run(
+        target.evaluate_online(
+            deployment,
+            evaluators=["Builtin.GoalSuccessRate"],
+            sampling_percentage=25,
+            role_arn=EVALUATION_ROLE,
+        )
+    )
+    assert (
+        created["onlineEvaluationConfigId"] == "oe-1"
+        and created["executionStatus"] == "ENABLED"
+    )
+
+    summary = {k: v for k, v in _online().items() if k != "outputConfig"}
+    summary["onlineEvaluationConfigName"] = name
+    summary["updatedAt"] = summary["createdAt"]
+    stub.add_response(
+        "list_online_evaluation_configs", {"onlineEvaluationConfigs": [summary]}, {}
+    )
+    stub.add_response(
+        "get_online_evaluation_config",
+        {
+            **_online(),
+            "onlineEvaluationConfigName": name,
+            "rule": {"samplingConfig": {"samplingPercentage": 25.0}},
+            "dataSourceConfig": source,
+            "updatedAt": _online()["createdAt"],
+            "evaluationExecutionRoleArn": EVALUATION_ROLE,
+        },
+        {"onlineEvaluationConfigId": "oe-1"},
+    )
+    stub.add_response(
+        "update_online_evaluation_config",
+        {k: v for k, v in _online().items() if k not in ("createdAt",)}
+        | {"updatedAt": _online()["createdAt"]},
+        {
+            "onlineEvaluationConfigId": "oe-1",
+            "rule": {
+                "samplingConfig": {"samplingPercentage": 100.0},
+                "sessionConfig": {"sessionTimeoutMinutes": 15},
+            },
+            "dataSourceConfig": source,
+            "evaluators": [{"evaluatorId": "Builtin.Helpfulness"}],
+            "evaluationExecutionRoleArn": EVALUATION_ROLE,
+            "executionStatus": "ENABLED",
+        },
+    )
+    asyncio.run(
+        target.evaluate_online(
+            deployment,
+            evaluators=["Builtin.Helpfulness"],
+            sampling_percentage=100,
+            role_arn=EVALUATION_ROLE,
+        )
+    )
+
+    stub.add_response(
+        "list_online_evaluation_configs", {"onlineEvaluationConfigs": [summary]}, {}
+    )
+    stub.add_response(
+        "get_online_evaluation_config",
+        {
+            **_online(),
+            "onlineEvaluationConfigName": name,
+            "rule": {"samplingConfig": {"samplingPercentage": 25.0}},
+            "dataSourceConfig": source,
+            "updatedAt": _online()["createdAt"],
+            "evaluationExecutionRoleArn": EVALUATION_ROLE,
+        },
+        {"onlineEvaluationConfigId": "oe-1"},
+    )
+    stub.add_response(
+        "delete_online_evaluation_config",
+        {
+            "onlineEvaluationConfigId": "oe-1",
+            "onlineEvaluationConfigArn": _online()["onlineEvaluationConfigArn"],
+            "status": "DELETING",
+        },
+        {"onlineEvaluationConfigId": "oe-1"},
+    )
+    assert asyncio.run(target.stop_online_evaluation(deployment)) is True
+
+
+@pytest.mark.parametrize(
+    "evaluators, share, role, said",
+    [
+        ([], 10, EVALUATION_ROLE, "Choose the evaluators"),
+        (["Builtin.Helpfulness"], 0, EVALUATION_ROLE, "above 0, at most 100"),
+        (["Builtin.Helpfulness"], 101, EVALUATION_ROLE, "above 0, at most 100"),
+        (["Builtin.Helpfulness"], 10, "", "evaluation role"),
+    ],
+)
+def test_an_online_evaluation_is_refused_in_a_sentence(
+    control, evaluators, share, role, said
+) -> None:
+    client, _ = control
+    with pytest.raises(AgentCoreError, match=said):
+        asyncio.run(
+            AgentCoreTarget(control_client=client).evaluate_online(
+                _deployment(),
+                evaluators=evaluators,
+                sampling_percentage=share,
+                role_arn=role,
+            )
+        )

@@ -398,6 +398,29 @@ class ToGlobalProcessor(SpanProcessor):
         return True if target is None else bool(target.force_flush(timeout_millis))
 
 
+#: The endpoint AgentCore Runtime serves an agent runtime's sessions on.
+AGENTCORE_ENDPOINT = "DEFAULT"
+
+
+def agentcore_resource(environ: Mapping[str, str]) -> dict[str, str]:
+    """The resource attributes of the spans of an AgentCore agent runtime.
+
+    ``service.name`` is ``<agent runtime name>.DEFAULT``, AgentCore's own
+    naming, which an online evaluation's data source selects a runtime's
+    spans by; read from ``AGENTCORE_RUNTIME_ARN`` (its id is the name and a
+    ten-character suffix). ``OTEL_SERVICE_NAME`` or a runtime told no ARN
+    leaves the SDK's own.
+    """
+    from agent_runtimes.agentcore.exchange import RUNTIME_ARN_VARIABLE
+
+    arn = str(environ.get(RUNTIME_ARN_VARIABLE) or "")
+    if environ.get("OTEL_SERVICE_NAME") or "/" not in arn:
+        return {}
+    runtime_id = arn.rsplit("/", 1)[1]
+    name = runtime_id.rsplit("-", 1)[0] if "-" in runtime_id else runtime_id
+    return {"service.name": f"{name}.{AGENTCORE_ENDPOINT}"}
+
+
 def genai_tracer_provider(
     environ: Optional[Mapping[str, str]] = None,
     exporter: Optional[SpanExporter] = None,
@@ -434,7 +457,7 @@ def genai_tracer_provider(
             "AgentCore gave no OTLP endpoint: the GenAI spans go to Datalayer only."
         )
         return None
-    provider = SDKTracerProvider(resource=Resource.create())
+    provider = SDKTracerProvider(resource=Resource.create(agentcore_resource(env)))
     provider.add_span_processor(SessionIdProcessor())
     provider.add_span_processor(
         BatchSpanProcessor(exporter or agentcore_span_exporter(export))
@@ -460,6 +483,7 @@ __all__ = [
     "SESSION_ID_ATTRIBUTE",
     "ScopedTracerProvider",
     "SessionIdProcessor",
+    "agentcore_resource",
     "ToGlobalProcessor",
     "agentcore_export_from_env",
     "agentcore_span_exporter",

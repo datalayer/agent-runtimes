@@ -328,6 +328,20 @@ def test_on_agentcore_every_span_of_an_invocation_carries_its_session() -> None:
     provider.shutdown()
 
 
+def test_an_agentcore_runtime_s_spans_name_it_as_agentcore_does() -> None:
+    arn = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/datalayer_38ce5d78_4093-FlAk8GCPY1"
+    assert genai.agentcore_resource({"AGENTCORE_RUNTIME_ARN": arn}) == {
+        "service.name": "datalayer_38ce5d78_4093.DEFAULT"
+    }
+    assert (
+        genai.agentcore_resource(
+            {"AGENTCORE_RUNTIME_ARN": arn, "OTEL_SERVICE_NAME": "mine"}
+        )
+        == {}
+    )
+    assert genai.agentcore_resource({}) == {}
+
+
 def test_without_an_endpoint_on_agentcore_there_is_one_exporter() -> None:
     assert genai_tracer_provider({"AGENT_RUNTIMES_TARGET": "agentcore"}) is None
     assert genai.content_setting({}) is True

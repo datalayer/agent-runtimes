@@ -25,7 +25,9 @@ sandbox: a source-reading boundary refuses in a sentence.
 
 from __future__ import annotations
 
+import json
 import os
+import time
 import uuid
 from dataclasses import asdict
 from typing import Any, Awaitable, Callable, Mapping, Optional, Sequence
@@ -377,6 +379,141 @@ class AgentCoreAdapter(ExternalAdapter):
         )
 
 
+#: Where AgentCore Observability keeps the spans (CloudWatch Transaction Search).
+SPANS_LOG_GROUP = "aws/spans"
+
+#: At most this many spans of one session are read.
+MAX_SESSION_SPANS = 1000
+
+
+def session_spans(
+    logs: Any,
+    session_id: str,
+    *,
+    start: int,
+    end: int,
+    sleep: Callable[[float], None] = time.sleep,
+    attempts: int = 60,
+) -> list[dict[str, Any]]:
+    """Read the spans of one AgentCore session from ``aws/spans``, oldest first.
+
+    The spans AgentCore Observability keeps, as the OpenTelemetry documents
+    ``Evaluate`` takes in ``sessionSpans``: every span carrying the session's
+    ``session.id`` (on AgentCore, the runtime session id), between two
+    instants, with a Logs Insights query.
+
+    Parameters
+    ----------
+    logs : Any
+        A ``logs`` client in the account and region of the runtime.
+    session_id : str
+        The runtime session id (``X-Amzn-Bedrock-AgentCore-Runtime-Session-Id``).
+    start, end : int
+        The window, in epoch seconds.
+    sleep : Callable, optional
+        How to wait between polls of the query (a test's).
+    attempts : int, optional
+        How many polls of a second before giving up.
+
+    Returns
+    -------
+    list[dict]
+        The span documents.
+
+    Raises
+    ------
+    AgentCoreEvaluationFailed
+        When the query fails or does not finish, in a sentence.
+    """
+    escaped = session_id.replace("\\", "\\\\").replace('"', '\\"')
+    query = (
+        "fields @message"
+        f' | filter attributes.session.id = "{escaped}"'
+        " | sort startTimeUnixNano asc"
+        f" | limit {MAX_SESSION_SPANS}"
+    )
+    started = logs.start_query(
+        logGroupName=SPANS_LOG_GROUP,
+        startTime=int(start),
+        endTime=int(end),
+        queryString=query,
+        limit=MAX_SESSION_SPANS,
+    )
+    for _ in range(attempts):
+        answer = logs.get_query_results(queryId=started["queryId"])
+        status = answer.get("status")
+        if status == "Complete":
+            break
+        if status in ("Failed", "Cancelled", "Timeout", "Unknown"):
+            raise AgentCoreEvaluationFailed(
+                f"The spans of session {session_id} could not be read from "
+                f"{SPANS_LOG_GROUP}: the query ended {status}."
+            )
+        sleep(1.0)
+    else:
+        raise AgentCoreEvaluationFailed(
+            f"The spans of session {session_id} were not read from {SPANS_LOG_GROUP} "
+            f"within {attempts} seconds."
+        )
+
+    documents: list[dict[str, Any]] = []
+    for row in answer.get("results") or []:
+        message = next(
+            (field["value"] for field in row if field.get("field") == "@message"), ""
+        )
+        try:
+            document = json.loads(message)
+        except ValueError:
+            continue
+        if isinstance(document, dict):
+            documents.append(document)
+    return documents
+
+
+def evaluate_session(
+    *,
+    agentcore: Any,
+    logs: Any,
+    session_id: str,
+    evaluators: Sequence[str],
+    start: int,
+    end: int,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict[str, Any]:
+    """Judge a recorded AgentCore session with AgentCore's evaluators.
+
+    Its spans are read from ``aws/spans`` (`session_spans`) and given to
+    ``Evaluate`` once per evaluator (`AgentCoreAdapter.evaluate`).
+
+    Returns
+    -------
+    dict
+        ``{"session_id", "spans", "evaluations": [{evaluatorId, value,
+        label, explanation…}]}``.
+
+    Raises
+    ------
+    AgentCoreEvaluationFailed
+        When the session left no span there — AgentCore Observability did
+        not receive them (CloudWatch Transaction Search off, or the export
+        refused) — or an evaluator fails, in a sentence.
+    """
+    chosen = evaluator_ids(evaluators)
+    documents = session_spans(logs, session_id, start=start, end=end, sleep=sleep)
+    if not documents:
+        raise AgentCoreEvaluationFailed(
+            f"Session {session_id} left no span in {SPANS_LOG_GROUP}: AgentCore "
+            "Observability received none of its spans (is CloudWatch Transaction "
+            "Search on in the account?), or they are not indexed yet."
+        )
+    evaluations = AgentCoreAdapter(client=agentcore).evaluate(documents, chosen)
+    return {
+        "session_id": session_id,
+        "spans": len(documents),
+        "evaluations": evaluations,
+    }
+
+
 def evaluator_ids(value: Any) -> list[str]:
     """Read the chosen evaluator ids, refusing none chosen or an empty one.
 
@@ -412,6 +549,10 @@ __all__ = [
     "SERVICE",
     "AgentCoreAdapter",
     "AgentCoreEvaluationFailed",
+    "MAX_SESSION_SPANS",
+    "SPANS_LOG_GROUP",
+    "evaluate_session",
     "evaluator_ids",
+    "session_spans",
     "span_documents",
 ]
