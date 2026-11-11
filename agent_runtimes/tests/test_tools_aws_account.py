@@ -289,3 +289,66 @@ def test_the_assumed_session_is_reused(stubs: _Stubs) -> None:
     asyncio.run(aws_account.aws_cost_explorer(view="savings_plans_utilization"))
     # One assume_role response was stubbed: a second would have failed.
     stubs.done()
+
+
+# ---------------------------------------------------------------------------
+# The agent's firewall egress: the exact hosts the tools reach.
+# ---------------------------------------------------------------------------
+
+
+def _spec_egress() -> List[str]:
+    from agent_runtimes.specs.agents import get_agent_spec
+
+    spec = get_agent_spec("worker-aws-account")
+    assert spec is not None
+    return list(spec.policy["shield"]["egress"])
+
+
+def test_the_agentspec_names_no_wildcard_host() -> None:
+    egress = _spec_egress()
+    assert egress and not any("*" in entry for entry in egress), egress
+
+
+def test_the_agentspec_egress_is_what_the_tools_reach() -> None:
+    platform = ["r1.datalayer.run:443", "prod1.datalayer.run:443"]
+    assert _spec_egress() == aws_account.egress_hosts() + platform
+
+
+def test_every_endpoint_boto3_calls_is_in_the_egress() -> None:
+    allowed = {entry.rsplit(":", 1)[0] for entry in aws_account.egress_hosts()}
+    calls = [
+        ("ce", aws_account.GLOBAL_REGION),
+        ("cost-optimization-hub", aws_account.GLOBAL_REGION),
+    ]
+    for region in aws_account.ACCOUNT_REGIONS:
+        calls += [("sts", region), ("compute-optimizer", region)]
+    for service, region in calls:
+        client = boto3.client(
+            service,
+            region_name=region,
+            aws_access_key_id="fake",
+            aws_secret_access_key="fake",
+        )
+        host = client.meta.endpoint_url.removeprefix("https://")
+        assert host in allowed, (service, region, host)
+
+
+def test_the_shields_firewall_takes_the_egress() -> None:
+    firewall = pytest.importorskip("agent_shield.firewall.model")
+    rules = firewall.FirewallRules(egress=_spec_egress())
+    assert not rules.open_egress
+
+
+def test_compute_optimizer_refuses_a_region_outside_the_egress(stubs: _Stubs) -> None:
+    answer = asyncio.run(
+        aws_account.aws_compute_optimizer(resource="ec2", region="me-central-1")
+    )
+    assert "not a region this agent reads" in answer and stubs.made == []
+
+
+def test_the_role_is_not_assumed_from_a_region_outside_the_egress(
+    monkeypatch: pytest.MonkeyPatch, stubs: _Stubs
+) -> None:
+    monkeypatch.setenv("AWS_REGION", "af-south-1")
+    answer = asyncio.run(aws_account.aws_cost_optimization_hub())
+    assert "af-south-1 is not a region this agent reads" in answer and stubs.made == []

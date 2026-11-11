@@ -63,6 +63,33 @@ MAX_ITEMS = 500
 #: Cost Optimization Hub and Cost Explorer answer from us-east-1 only.
 GLOBAL_REGION = "us-east-1"
 
+#: The regions the tools read and assume the role in: AWS's commercial regions
+#: enabled by default. Compute Optimizer is read in one of them, STS is asked
+#: in the runtime's own; another region is refused in a sentence, because the
+#: agent's firewall allows these regions' endpoints only (`egress_hosts`).
+ACCOUNT_REGIONS: Tuple[str, ...] = (
+    "us-east-1",
+    "us-east-2",
+    "us-west-1",
+    "us-west-2",
+    "ca-central-1",
+    "sa-east-1",
+    "eu-central-1",
+    "eu-west-1",
+    "eu-west-2",
+    "eu-west-3",
+    "eu-north-1",
+    "ap-south-1",
+    "ap-northeast-1",
+    "ap-northeast-2",
+    "ap-northeast-3",
+    "ap-southeast-1",
+    "ap-southeast-2",
+)
+
+#: The port every AWS API endpoint is called on.
+HTTPS_PORT = 443
+
 
 class WriteRefused(ValueError):
     """A reader declared with an operation that is not a read."""
@@ -70,6 +97,28 @@ class WriteRefused(ValueError):
 
 class NotConnected(RuntimeError):
     """The read role is not configured for this runtime."""
+
+
+class RegionRefused(ValueError):
+    """A region the tools do not read: its endpoints are outside the agent's egress."""
+
+
+def egress_hosts(regions: Sequence[str] = ACCOUNT_REGIONS) -> List[str]:
+    """The ``host:443`` entries the tools reach, for the agentspec's firewall egress.
+
+    Cost Explorer and Cost Optimization Hub in us-east-1; STS and Compute
+    Optimizer in each region of ``regions``. The agentspec
+    ``worker-aws-account`` lists exactly these (and the platform's own hosts);
+    a test holds the two together.
+    """
+    hosts = [
+        f"ce.{GLOBAL_REGION}.amazonaws.com",
+        f"cost-optimization-hub.{GLOBAL_REGION}.amazonaws.com",
+    ]
+    for region in regions:
+        hosts.append(f"sts.{region}.amazonaws.com")
+        hosts.append(f"compute-optimizer.{region}.amazonaws.com")
+    return [f"{host}:{HTTPS_PORT}" for host in hosts]
 
 
 @dataclass(frozen=True)
@@ -209,7 +258,7 @@ def _credentials() -> Dict[str, str]:
         held = _cached.get(arn)
         if held and held["expires"] - 60 > time.time():
             return held["credentials"]
-        sts = _boto_client("sts", os.environ.get("AWS_REGION") or GLOBAL_REGION)
+        sts = _boto_client("sts", _region(""))
         answer = sts.assume_role(
             RoleArn=arn,
             RoleSessionName=SESSION_NAME,
@@ -337,7 +386,14 @@ def _bounded(max_items: int) -> int:
 
 
 def _region(region: str) -> str:
-    return (region or os.environ.get("AWS_REGION") or GLOBAL_REGION).strip()
+    """The region asked, else the runtime's, else us-east-1; one of `ACCOUNT_REGIONS` or refused."""
+    chosen = (region or os.environ.get("AWS_REGION") or GLOBAL_REGION).strip()
+    if chosen not in ACCOUNT_REGIONS:
+        raise RegionRefused(
+            f"{chosen} is not a region this agent reads: {', '.join(ACCOUNT_REGIONS)} "
+            "(its firewall allows those regions' AWS endpoints only)."
+        )
+    return chosen
 
 
 async def _answer(work: Callable[[], Dict[str, Any]]) -> Any:
@@ -346,7 +402,7 @@ async def _answer(work: Callable[[], Dict[str, Any]]) -> Any:
 
     try:
         return await asyncio.to_thread(work)
-    except (NotConnected, WriteRefused) as refused:
+    except (NotConnected, WriteRefused, RegionRefused) as refused:
         return str(refused)
     except ClientError as error:
         info = error.response.get("Error", {})
@@ -435,7 +491,8 @@ async def aws_compute_optimizer(
         resource: ``ec2``, ``asg`` (Auto Scaling groups), ``ebs``, ``lambda``,
             ``ecs`` (ECS services on Fargate), ``rds`` or ``idle`` (idle
             resources of any kind).
-        region: The AWS region to read (default: the runtime's region).
+        region: The AWS region to read (default: the runtime's region); one
+            of AWS's commercial regions enabled by default.
         max_items: How many recommendations to read, 1 to 500 (default 100).
 
     Returns:
@@ -448,6 +505,10 @@ async def aws_compute_optimizer(
             f"{', '.join(COMPUTE_OPTIMIZER_RESOURCES)}."
         )
     operation, items_key = COMPUTE_OPTIMIZER_RESOURCES[resource]
+    try:
+        where = _region(region)
+    except RegionRefused as refused:
+        return str(refused)
     return await _answer(
         lambda: read(
             COMPUTE_OPTIMIZER,
@@ -455,7 +516,7 @@ async def aws_compute_optimizer(
             {"maxResults": 100} if resource != "lambda" else {"maxResults": 50},
             items_key,
             ("nextToken", "nextToken"),
-            region=_region(region),
+            region=where,
             max_items=_bounded(max_items),
         )
     )
