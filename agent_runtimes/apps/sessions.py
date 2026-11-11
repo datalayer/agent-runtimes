@@ -116,7 +116,13 @@ from agent_runtimes.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.apps.forms import field_title, form_fields
 from agent_runtimes.apps.host_user import HostUser, reads_user, signed_host_context
 from agent_runtimes.apps.pages import LOOP_PAGE, page_values
-from agent_runtimes.apps.record import AppRecorder, agent_recorder, runtime_runs_on
+from agent_runtimes.apps.record import (
+    AppRecorder,
+    agent_app_uid,
+    agent_recorder,
+    runtime_runs_on,
+    session_kind,
+)
 from agent_runtimes.apps.session import (
     ChoiceQuestion,
     Closed,
@@ -150,7 +156,7 @@ from agent_runtimes.apps.uploads import (
 )
 from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.guardrails.credentials import redact
-from agent_runtimes.types import AppSpec
+from agent_runtimes.types import AppRecordSpec, AppSpec
 from agent_runtimes.voice import VOICE_INTERRUPTED_EVENT, VOICE_SAY_EVENT
 from agent_runtimes.voice import heard as heard_input
 
@@ -721,6 +727,10 @@ class LiveSession:
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     resumed: bool = False
+    remembered: Dict[str, Any] = field(default_factory=dict)
+    """What its last pause gave its agent's memory: ``{saved, turns}``, with ``refused`` when it took nothing, or ``{}`` without memory."""
+    remembered_turns: int = 0
+    """How many of its turns its agent's memory was given already."""
 
     # The code's, for an application written in Python.
     host: Any = None
@@ -756,6 +766,11 @@ class LiveSession:
     def deployment_uid(self) -> str:
         """The deployment it runs as, or ``""`` for a Preview."""
         return str(self.instance.get("deployment_uid") or "")
+
+    @property
+    def kind(self) -> str:
+        """What it is a session of: an ``application``, or an ``agent`` run as such."""
+        return session_kind(self.instance.get("app_uid"))
 
     @property
     def user_id(self) -> Optional[str]:
@@ -1042,6 +1057,7 @@ class LiveSession:
         """The session as the API says it."""
         return {
             "uid": self.uid,
+            "kind": self.kind,
             "agent": self.agent_spec,
             "app": {
                 "id": self.app.id,
@@ -2305,14 +2321,65 @@ class LiveSession:
             )
         cancelled = {"turn": self.turn == "running", "question": self.turn == "waiting"}
         await self._close()
+        # What the conversation holds is given to its agent's memory first,
+        # when it has one: a session resumed, or a new one, has it.
+        self.remembered = await self._remember()
         self.state = "paused"
         self.turn = "idle"
         self.recorder.start(self.uid, facts=self.facts())
-        self.recorder.paused(self.uid, cancelled=cancelled)
+        self.recorder.paused(self.uid, cancelled=cancelled, remembered=self.remembered)
         if self.host is not None and self.session is not None:
             # Its own `stop` has nothing left to cancel: it runs, and what it
             # shows is kept in the conversation for whoever resumes it.
             await self.host.stop(self.session)
+
+    async def _remember(self) -> Dict[str, Any]:
+        """Give the turns of the conversation not given yet to its agent's
+        memory, as the session is paused: ``{saved: <messages given>, turns:
+        <turns given so far>}``, ``{}`` for an agent without memory, and
+        ``refused: <why>`` beside them when its memory refuses — said, and the session paused all the same
+        (its record is what a resume reads). Nothing of a conversation
+        nobody signed in for.
+        """
+        from agent_runtimes.apps.memory import remember_for, withheld
+        from agent_runtimes.memory import get_memory_backend
+
+        backend = get_memory_backend(self.agent_id)
+        if backend is None:
+            return {}
+        remember_for(self.opened_by, get_request_user_jwt() or "")
+        why = withheld()
+        if why:
+            return {"saved": 0, "turns": self.remembered_turns, "refused": why}
+        turns = [
+            {"role": str(m.get("role")), "content": _text_of(m.get("content"))}
+            for m in self.messages
+            if m.get("role") in ("user", "assistant") and not m.get("shows")
+        ]
+        turns = [turn for turn in turns if turn["content"]]
+        asked = [i for i, turn in enumerate(turns) if turn["role"] == "user"]
+        fresh = (
+            turns[asked[self.remembered_turns] :]
+            if len(asked) > self.remembered_turns
+            else []
+        )
+        if not fresh:
+            return {"saved": 0, "turns": self.remembered_turns}
+        try:
+            await backend.add(fresh, metadata={"session": self.uid, "on": "pause"})
+        except Exception as error:  # noqa: BLE001 - said; the session is paused all the same
+            logger.warning(
+                "Session %s: its memory took nothing on pause: %s",
+                self.uid,
+                redact(str(error)),
+            )
+            return {
+                "saved": 0,
+                "turns": self.remembered_turns,
+                "refused": redact(str(error))[:300],
+            }
+        self.remembered_turns = len(asked)
+        return {"saved": len(fresh), "turns": self.remembered_turns}
 
     async def end(self) -> None:
         """End: what runs is cancelled, the code's ``end`` runs, and the
@@ -2434,6 +2501,48 @@ class LiveSession:
         }
         await self.forward(body, bearer=bearer)
 
+    async def _agent_turn(self, asked: str, body: Dict[str, Any], bearer: str) -> None:
+        """A turn of an agent run as such: the run is its agent's, as the
+        chat sent it, and the session keeps the turn — what was asked and
+        what it answered — since its agent was made with no record of an
+        application.
+        """
+        forwarded = body.get("forwardedProps")
+        if isinstance(forwarded, Mapping):
+            forwarded = {
+                key: value for key, value in forwarded.items() if key != "loop"
+            }
+        said = [dict(m) for m in body.get("messages") or [] if isinstance(m, Mapping)]
+        self._title_from_turn(asked)
+        self.recorder.start(self.uid, facts=self.facts())
+        self.messages = said
+        answered_from = len(self.messages)
+        before = self.recorder.turns_of(self.uid)
+        run = {
+            "state": None,
+            "tools": [],
+            "context": [],
+            **body,
+            "threadId": self.uid,
+            "runId": self._run_id,
+            "messages": said,
+            "forwardedProps": forwarded or None,
+        }
+        try:
+            await self.forward(run, bearer=bearer)
+        finally:
+            await self.recorder.settled(self.uid)
+            if self.recorder.turns_of(self.uid) == before:
+                self.recorder.start(self.uid, facts=self.facts())
+                self.recorder.turned(
+                    asked,
+                    "\n\n".join(
+                        str(m.get("content") or "")
+                        for m in self.messages[answered_from:]
+                        if m.get("role") == "assistant"
+                    ),
+                )
+
     def run_token(self, bearer: str) -> str:
         """The token a run of the session carries: the request's, but in a
         Preview a person opened (R-25) theirs narrowed to the Spaces and
@@ -2443,6 +2552,10 @@ class LiveSession:
         """
         person = str(self.acts_as.get("uid") or "")
         if self.acts_as.get("kind") != "person" or not person:
+            return bearer
+        if self.kind == "agent":
+            # An agent run as such is no Preview: the person's own token, as
+            # their agent always ran with.
             return bearer
         from agent_runtimes.apps.principal import (
             preview_grants,
@@ -2670,6 +2783,9 @@ class LiveSession:
 
         async def work() -> None:
             """The turn."""
+            if self.kind == "agent":
+                await self._agent_turn(text, body, bearer)
+                return
             words, parts = await asyncio.to_thread(self._files_for_agent, files)
             content: Any = f"{text}\n\n{words}" if words else text
             if parts:
@@ -2923,6 +3039,44 @@ def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
     return load_app(spec), dict(stored.get("app_instance") or {})
 
 
+def session_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
+    """What a session opened on an agent of this runtime is a session of: the
+    application the agent runs (`agent_app`), or, for an agent made without
+    an Appspec, the application of that one agent (`agent_as_app`).
+
+    Raises
+    ------
+    SessionRefused
+        When there is no such agent.
+    """
+    from agent_runtimes.routes.agents import get_stored_agent_spec
+
+    stored = get_stored_agent_spec(agent_id)
+    if stored and not stored.get("app_spec"):
+        return agent_as_app(agent_id, stored)
+    return agent_app(agent_id)
+
+
+def agent_as_app(
+    agent_id: str, stored: Mapping[str, Any]
+) -> Tuple[AppSpec, Dict[str, Any]]:
+    """An agent made without an Appspec, as the application of that one
+    agent: a chat with it, its conversations and actions kept, named in the
+    record ``agent:<agentspec id>`` — so its conversations are sessions as
+    an application's are: listed, paused, resumed and ended the same way.
+    """
+    spec_id = str(stored.get("agent_spec_id") or agent_id)
+    app = AppSpec(
+        id=spec_id,
+        name=str(stored.get("name") or spec_id),
+        kind="chat",
+        description=str(stored.get("description") or ""),
+        agent=spec_id,
+        record=AppRecordSpec(include=["conversations", "actions"]),
+    )
+    return app, {"app_uid": agent_app_uid(spec_id)}
+
+
 def _agent_maker(agent_id: str) -> Callable[[Session], AppAgent]:
     """The agent a Python application's code calls: the one the runtime made for it."""
 
@@ -3149,6 +3303,8 @@ class Rebuilt:
     #: Who opened it, as the record says: the uid, ``""`` when nobody (a
     #: session woken for an event). A resume is theirs alone.
     opened_by: str = ""
+    #: How many of its turns its agent's memory was given, as its pauses said.
+    remembered: int = 0
 
 
 def opener_may(opened_by: str, caller: Caller) -> bool:
@@ -3298,9 +3454,13 @@ async def rebuilt_from_record(
     messages: List[Dict[str, Any]] = []
     files: List[Dict[str, Any]] = []
     rules: Dict[str, Dict[str, Any]] = {}
+    remembered = 0
     for entry in entries:
         kind = entry.get("kind")
         payload = entry.get("payload") or {}
+        if kind == "paused":
+            said_kept = (payload.get("remembered") or {}).get("turns")
+            remembered = int(said_kept) if said_kept is not None else remembered
         if kind == "turn":
             asked, answered = (
                 str(payload.get("asked") or ""),
@@ -3382,6 +3542,7 @@ async def rebuilt_from_record(
         agent=str(described["agent"] if described else ""),
         turns=sum(1 for m in messages if m.get("role") == "user"),
         opened_by=str((described["opened_by"] if described else {}).get("uid") or ""),
+        remembered=remembered,
     )
 
 

@@ -1109,6 +1109,18 @@ def launch_cloud(
     return launch
 
 
+#: The runtimes whose session was paused from the prompt: given back as the
+#: prompt ends, without asking.
+_GIVEN_BACK: set[str] = set()
+
+
+def give_back(runtime_name: str) -> None:
+    """Have a runtime stopped as its prompt ends, without asking: its session
+    is paused, kept in the record, and resumed on another runtime.
+    """
+    _GIVEN_BACK.add(runtime_name)
+
+
 def finish_cloud(
     launch: CloudLaunch,
     *,
@@ -1117,7 +1129,20 @@ def finish_cloud(
     ask: Optional[Callable[..., Optional[bool]]] = None,
     say: Callable[[str], None] = print,
 ) -> None:
-    """At the end of a session: stop the runtime, unless the person keeps it."""
+    """At the end of a session: stop the runtime, unless the person keeps it.
+
+    A runtime whose session was paused from the prompt (`give_back`) is
+    stopped without asking: the session is in the record.
+    """
+    if launch.runtime_name in _GIVEN_BACK:
+        _GIVEN_BACK.discard(launch.runtime_name)
+        if launch.stop():
+            say(f"Runtime {launch.runtime_name} given back: its session is paused.")
+        else:
+            say(
+                f"Could not stop {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
+            )
+        return
     asking = interactive() if can_ask is None else can_ask
     # A runtime this session went back to was running before it: without
     # somebody to ask, it is left as it was found.

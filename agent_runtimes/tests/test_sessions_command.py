@@ -94,13 +94,13 @@ def test_list_and_show(fake: Runtime, remote: TestClient) -> None:  # noqa: F811
     lines = result.output.strip().splitlines()
     assert any(
         line.startswith(
-            "session-k001  paused  notes-assistant  1 turn  on runtime local  — Refactor the billing module"
+            "session-k001  paused  app    notes-assistant  1 turn  on runtime local  — Refactor the billing module"
         )
         for line in lines
     )
     assert any(
         line.startswith(
-            "session-k002  open    notes-assistant  1 turn  on runtime local  — Two"
+            "session-k002  open    app    notes-assistant  1 turn  on runtime local  — Two"
         )
         for line in lines
     )

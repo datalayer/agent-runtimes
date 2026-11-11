@@ -40,8 +40,9 @@ class LoopSession:
     sandbox: dict[str, Any] = field(default_factory=dict)
     #: Free-form extras a front-end wants to carry without subclassing.
     extras: dict[str, Any] = field(default_factory=dict)
-    #: The application session this conversation is (MH-07): what `/swap`,
-    #: `/clone` and `/export` act on; none for a conversation that is no session.
+    #: The session this conversation is — an application's, or the session of
+    #: an agent run as such, from its first message: what `/pause`, `/swap`,
+    #: `/clone` and `/export` act on; none before the first message.
     session_uid: Optional[str] = None
     #: What the last swap said to the new agent.
     said: str = ""
@@ -52,6 +53,13 @@ class LoopSession:
     def api_base(self) -> str:
         """Versioned API root for this session's server."""
         return f"{self.server_url.rstrip('/')}/api/v1"
+
+    @property
+    def session_agui_url(self) -> str:
+        """Where this conversation's turns are sent: its agent over AG-UI, each
+        thread a session of it — recorded, listed, paused and resumed.
+        """
+        return session_agui_url(self.server_url, self.agent_id)
 
     @property
     def sandbox_variant(self) -> str:
@@ -111,6 +119,20 @@ class LoopSession:
         self.agent_id = str(answer.get("agent") or agent_id)
         self.said = str(answer.get("said") or "")
         return self
+
+
+#: The path of an agent's AG-UI endpoint whose threads are sessions.
+SESSION_AGUI_PATH = "/api/v1/apps/agents/"
+
+
+def session_agui_url(server_url: str, agent: str) -> str:
+    """An agent's AG-UI endpoint on a runtime, each thread a session of it."""
+    return f"{server_url.rstrip('/')}{SESSION_AGUI_PATH}{agent}/ag-ui/"
+
+
+def is_session_agui_url(url: str) -> bool:
+    """Whether an AG-UI address is one whose threads are sessions."""
+    return SESSION_AGUI_PATH in url
 
 
 class LoopRefused(RuntimeError):

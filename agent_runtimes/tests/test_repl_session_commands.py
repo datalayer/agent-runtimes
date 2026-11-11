@@ -137,16 +137,16 @@ def test_the_commands_act_on_the_session_this_conversation_is(
         # Not a session yet: /swap, /clone and /export say so.
         for command, argv in ((swap, HARNESS_AGENT), (clone, ""), (export, "")):
             [said] = _run(command, tux, argv)
-            assert "This conversation is not an application session" in said
+            assert "This conversation is not a session yet" in said
         listed = _run(sessions_command, tux)
         assert any(
-            line.startswith("session-r101  paused  notes-assistant  1 turn")
+            line.startswith("session-r101  paused  app    notes-assistant  1 turn")
             for line in listed
         )
         [resumed] = _run(resume, tux, "session-r101")
         assert (
-            resumed
-            == "Resumed session-r101 (notes-assistant): 1 turn replayed. /swap, /clone and /export act on it now."
+            resumed == "Resumed session-r101 (notes-assistant): 1 turn replayed. "
+            "Your next message goes on with it; /pause, /swap, /clone and /export act on it."
         )
         assert (
             tux.session.session_uid == "session-r101"

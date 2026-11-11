@@ -34,7 +34,11 @@ the deployment's principal's token is held) and runs that agent's sessions
 with it; a request carrying code of its own (`app_code`) is refused (422). The agent's capabilities are the same as in a terminal —
 its rules, checks and record, its documents, saving and learning tools.
 The session API does not make agents; it refuses, in a sentence, an agent that
-is not there or runs no application.
+is not there. An agent made **without** an Appspec answers as the application
+of that one agent: its conversations are sessions too, named in the record
+`agent:<agentspec id>` and said `kind: agent` wherever a session is
+described (an application's says `kind: application`). Such a session runs
+as the person, with their own token, never as a Preview.
 
 ## In whose name it runs
 

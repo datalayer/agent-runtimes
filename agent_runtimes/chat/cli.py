@@ -1119,10 +1119,14 @@ def run_prompts(
             server_url = f"http://127.0.0.1:{actual_port}"
             agent_name = DEFAULT_RUNTIME_AGENT_NAME
 
+        from agent_runtimes.loop.session import session_agui_url
+
         from .tux import CliTux
 
         tux = CliTux(
-            agent_url=f"{server_url}/api/v1/ag-ui/{agent_name}/",
+            # Each thread of the prompt is a session of its agent: recorded,
+            # listed, paused and resumed.
+            agent_url=session_agui_url(server_url, agent_name),
             server_url=server_url,
             agent_id=agent_name,
             eggs=eggs,
@@ -1670,10 +1674,12 @@ def main_callback(
                         if jupyter_token:
                             jupyter_url = f"{jupyter_url}?token={jupyter_token}"
 
-                url = (
-                    f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{runtime_agent_name}/"
-                )
+                from agent_runtimes.loop.session import session_agui_url
+
                 server_url = f"http://127.0.0.1:{actual_port}"
+                # Each thread of the prompt is a session of its agent:
+                # recorded, listed, paused and resumed.
+                url = session_agui_url(server_url, runtime_agent_name)
 
                 try:
                     # Use Rich-based TUX

@@ -62,6 +62,7 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "exit",
             "suggestions",
             "sessions",
+            "pause",
             "resume",
             "swap",
             "clone",
@@ -134,6 +135,7 @@ def build_registry(
         help,
         mcp_servers,
         models,
+        pause,
         resume,
         sessions,
         skills,
@@ -173,6 +175,7 @@ def build_registry(
         voice,
         # The session's verbs (MH-18): this conversation as a session.
         sessions,
+        pause,
         resume,
         swap,
         clone,

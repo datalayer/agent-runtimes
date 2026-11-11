@@ -138,6 +138,24 @@ SESSION_KINDS = (
 #: `stopped` is not one: it is refused wherever a state is read or written.
 SESSION_STATES = ("open", "paused", "ended")
 
+#: What the record names as the application of a session of an agent run as
+#: such, before its agentspec's id: an agent made without an Appspec is the
+#: application of that one agent, and its sessions say so by this.
+AGENT_APP_PREFIX = "agent:"
+
+
+def agent_app_uid(agent_spec: str) -> str:
+    """The application uid of the sessions of an agent run as such."""
+    return f"{AGENT_APP_PREFIX}{agent_spec}"
+
+
+def session_kind(app_uid: Any) -> str:
+    """Whether a session is an ``agent``'s, run as such, or an
+    ``application``'s: said by the application uid its record names.
+    """
+    return "agent" if str(app_uid or "").startswith(AGENT_APP_PREFIX) else "application"
+
+
 #: Kept whatever `record.include` says: a session's start, a run's start
 #: (what Activity reads as in progress, R-15), what its channels were
 #: sent (R-37), and that it asked the person and waits (`asked`, what
@@ -570,6 +588,7 @@ def session_from_entries(
     payload = opened.get("payload") or {}
     described: Dict[str, Any] = {
         "uid": uid,
+        "kind": session_kind(opened.get("app_uid")),
         "agent": facts["agent"],
         "harness": facts["harness"],
         "app": {
@@ -944,10 +963,16 @@ class AppRecorder:
         send_later(session, self.flush(session))
 
     def paused(
-        self, session: str, *, cancelled: Optional[Dict[str, bool]] = None
+        self,
+        session: str,
+        *,
+        cancelled: Optional[Dict[str, bool]] = None,
+        remembered: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """The session is paused: nothing runs, held or not. ``cancelled``
-        says what the pause cut short — a running turn, a question asked.
+        says what the pause cut short — a running turn, a question asked;
+        ``remembered`` what its agent's memory was given first, when it has
+        one (``{saved, turns}``, with ``refused`` when it took nothing).
         """
         cut = {k: bool(v) for k, v in (cancelled or {}).items() if v}
         self._session_entry(
@@ -959,7 +984,11 @@ class AppRecorder:
                 if cut
                 else ""
             ),
-            {"state": "paused", "cancelled": cut},
+            {
+                "state": "paused",
+                "cancelled": cut,
+                **({"remembered": dict(remembered)} if remembered else {}),
+            },
         )
 
     def session_ended(self, session: str, *, by: str) -> None:
@@ -1720,6 +1749,7 @@ class AppRecordCapability(AbstractCapability[Any]):
 
 
 __all__ = [
+    "AGENT_APP_PREFIX",
     "ALWAYS_KEPT",
     "invocation_of",
     "invoked",
@@ -1736,9 +1766,11 @@ __all__ = [
     "send_to_store",
     "session_facts",
     "session_from_entries",
+    "session_kind",
     "session_state_of",
     "RecordNotSent",
     "TURN_LIMIT",
+    "agent_app_uid",
     "agent_recorder",
     "current_session",
     "keep_agent_recorder",

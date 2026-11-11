@@ -25,6 +25,7 @@ from rich.style import Style
 from rich.text import Text
 
 from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
+from agent_runtimes.loop.session import is_session_agui_url
 
 from .banner import LOOP_VERSION, LOOP_WORDMARK, TOKENS_DOWN, TOKENS_UP
 from .commands import SlashCommand, build_registry
@@ -1038,6 +1039,11 @@ class CliTux:
                 await self._agui_client.connect()
 
             client = self._agui_client
+            if is_session_agui_url(self.agent_url):
+                # The thread is a session of the agent from this message on:
+                # what `/pause`, `/swap`, `/clone` and `/export` act on.
+                self.session.session_uid = client.thread_id
+                self.session.conversation_id = client.thread_id
 
             # Show thinking indicator: on a terminal only, nothing animates
             # into a pipe.

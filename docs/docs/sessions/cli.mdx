@@ -16,6 +16,7 @@ sentence and the command exits 1.
 | --- | --- |
 | `loop sessions list [--app <id>] [--all] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--all` includes the archived. |
 | `loop sessions show <uid>` | What a session is: state, turn, agent and harness, turns, lineage, where it runs, its harness row with the vendor's session id when the adapter exposes it. |
+| `loop sessions pause <uid>` | Pause a session its runtime holds: what its conversation holds is given to its agent's memory first, when the agent has one, and its record says `paused`. |
 | `loop sessions resume <uid> [--agent <id>]` | Resume a paused session — held, or from its record on a runtime of its application (`--agent` names the application's agent there). |
 | `loop sessions swap <uid> --agent <spec>` | Swap the session's agent in place; the new agent is told in a sentence, printed. |
 | `loop sessions clone <uid> [--at <turn>] [--agent <spec>] [--title <t>]` | A new session, paused, cut at the turn, the same or another agent. |
@@ -31,8 +32,8 @@ A session from the terminal, in words:
 
 ```text
 $ loop sessions list --app shield-mvp
-e67a52b2  open    shield-mvp-codex        5 turns  on runtime 01m5d3e8  — The refactor
-c1a9f0e3  paused  shield-mvp-claude-code  2 turns  not running  cloned from e67a52b2 at turn 2  — Before the refactor
+e67a52b2  open    app    shield-mvp-codex        5 turns  on runtime 01m5d3e8  — The refactor
+c1a9f0e3  paused  app    shield-mvp-claude-code  2 turns  not running  cloned from e67a52b2 at turn 2  — Before the refactor
 $ loop sessions resume c1a9f0e3 --agent shield-mvp-claude-code
 Resuming c1a9f0e3 on runtime 01m5d3e8 (shield-mvp-claude-code): 2 turns replayed.
 $ loop sessions swap c1a9f0e3 --agent shield-mvp-codex
@@ -49,13 +50,43 @@ $ loop sessions clone e67a52b2 --at 7
 
 ## In the REPL
 
-In `loop`'s prompt the same verbs act on the session this conversation is:
-`/sessions` lists yours, `/resume <uid>` opens one here, then `/swap <agent>`
-(the sentence shown), `/clone [turn]` and `/export [file]` act on it. Before
-a `/resume`, each says *This conversation is not an application session*.
-`/browser` keeps handing the conversation to the browser; the prompt's own
-turns still go to its agent's endpoint, and `/context-export` exports the
+Each line of a listing says what the session is a session of: `app`, an
+application's, or `agent`, the session of an agent run as such (`loop -a
+<agentspec>`, an agent launched from the Agent Gallery). An agent made
+without an Appspec is the application of that one agent, so its
+conversations are sessions of the same model: the same record, the same
+states, the same verbs.
+
+In `loop`'s prompt the conversation **is** a session, from its first
+message: the prompt sends its turns to its agent's endpoint whose threads
+are sessions (`/api/v1/apps/agents/<agent>/ag-ui/`).
+
+| In the prompt | What it does |
+| --- | --- |
+| `/sessions [<app>]` | Your sessions, held and recorded, each with its kind and state. |
+| `/pause` | Pause this session and leave. What the conversation holds is given to the agent's memory first, when its agentspec has one; the record says `paused`. On Datalayer (`loop --cloud`) the runtime is given back without asking; on your machine the server stops with the prompt. It says how to resume. |
+| `/resume <uid> [<agent>]` | Go on with a session here: rebuilt from its record on this prompt's agent when the runtime no longer holds it, its conversation loaded, so your next message is its next turn. |
+| `/swap <agent>`, `/clone [turn]`, `/export [file]` | Act on this session (the swap's sentence shown). |
+
+Before the first message, `/pause`, `/swap`, `/clone` and `/export` say
+*This conversation is not a session yet*. `/clear` starts a new session at
+the next message; the one cleared stays in the record. `/browser` keeps
+handing the conversation to the browser, and `/context-export` exports the
 context (it was `/export` before).
+
+```text
+$ loop -a worker-marketer
+> My name is Ada and I sell tea.
+…
+> /pause
+Paused 3f6c… (worker-marketer, 1 turn): it is kept in the record.
+Its memory was given 2 messages of the conversation.
+Resume it: `loop -a worker-marketer`, then `/resume 3f6c…`.
+$ loop -a worker-marketer
+> /resume 3f6c…
+Resumed 3f6c… (worker-marketer): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
+> What do I sell?
+```
 
 ## `loop plugins`
 

@@ -151,6 +151,8 @@ def session_line(session: Dict[str, Any]) -> str:
         for part in (
             str(session.get("uid") or ""),
             f"{session.get('state', ''):<6}",
+            # What it is a session of: an application, or an agent run as such.
+            f"{'agent' if session.get('kind') == 'agent' else 'app':<5}",
             str(session.get("agent") or ""),
             f"{turns} turn{'s' if turns != 1 else ''}",
             where,
@@ -298,6 +300,31 @@ def resume(
         + (f" {''.join(said).strip()}" if said else ""),
         markup=False,
     )
+
+
+@app.command(name="pause")
+def pause(
+    uid: str = typer.Argument(..., help="The session's id."),
+    server: Optional[str] = _server_option(),
+    cloud: bool = _cloud_option(),
+) -> None:
+    """Pause a session its runtime holds: its conversation is given to its agent's memory first, when it has one."""
+    from agent_runtimes.chat.commands.pause import remembered_line
+
+    try:
+        answer = _ask(_client(server, cloud), "POST", f"/{uid}/stop").json()
+    except SessionsRefused as refused:
+        _exit(refused)
+        return
+    turns = int(answer.get("turns") or 0)
+    console.print(
+        f"Paused {answer.get('uid')} ({answer.get('agent')}, {turns} turn{'s' if turns != 1 else ''}).",
+        markup=False,
+    )
+    said = remembered_line(answer.get("remembered") or {})
+    if said:
+        console.print(said, markup=False)
+    console.print(f"Resume it: loop sessions resume {answer.get('uid')}", markup=False)
 
 
 @app.command(name="swap")

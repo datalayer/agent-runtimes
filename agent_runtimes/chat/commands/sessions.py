@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /sessions - List your sessions on this runtime (MH-18)."""
+"""Slash command: /sessions - List your sessions on this runtime: an
+application's and an agent's, each saying its kind and its state."""
 
 from __future__ import annotations
 
