@@ -3521,6 +3521,11 @@ async def rebuilt_from_record(
             409,
             f"Session {session_uid} ended; an ended session is not resumed — clone it to go on from it.",
         )
+    # The recommendations it recorded, with their states as decided, held
+    # again: a card decided on after the resume is this session's.
+    from agent_runtimes.tools.recommendations import restore_recommendations
+
+    restore_recommendations(session_uid, entries)
     messages: List[Dict[str, Any]] = []
     files: List[Dict[str, Any]] = []
     rules: Dict[str, Dict[str, Any]] = {}

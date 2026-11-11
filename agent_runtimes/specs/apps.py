@@ -340,7 +340,7 @@ AWS_ACCOUNT_AGENT_APP_0_0_1 = AppSpec.model_validate(
         },
         "record": {
             "keep_for": "1_years",
-            "include": ["conversations", "outputs"],
+            "include": ["conversations", "outputs", "approvals"],
             "suggest_tests": False,
             "retention_days": 365,
         },

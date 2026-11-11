@@ -339,7 +339,7 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
     capability = AppRecordCapability(
         recorder=AppRecorder(app=app(["outputs"]), send=send)
     )
-    ctx: Any = SimpleNamespace(run_id="r-1", conversation_id="t-1")
+    ctx: Any = SimpleNamespace(run_id="r-1", conversation_id="t-1", prompt=None, messages=[])
     await capability.before_run(ctx)
 
     class Stream:

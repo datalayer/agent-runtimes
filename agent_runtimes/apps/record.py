@@ -1620,6 +1620,13 @@ class AppRecordCapability(AbstractCapability[Any]):
             self._spoken[self._key(ctx)] = spoken.as_payload()
         self.recorder.start(session)
         self.recorder.ran(session)
+        # A person's Approve or Dismiss on a recommendation's card arrives as
+        # their turn: kept in the record before the agent reads it.
+        asked = self._asked(ctx)
+        if "a2ui-submission" in asked:
+            from agent_runtimes.tools.recommendations import decided_in
+
+            decided_in(asked, session)
 
     async def after_tool_execute(
         self,

@@ -13,14 +13,27 @@ calls and the numbers read, with when they were read), when its estimate does
 not say how it was computed, or when its fix cannot be reviewed as it is
 (no change, no rollback). The refusal is a sentence naming what is missing,
 so the agent reads again or says it does not know.
+
+Each recommendation recorded is shown as a card (an A2UI surface, drawn where
+the tool's result lands when the agentspec binds ``record_recommendation`` to
+the ``a2ui-surface`` renderer): the finding, its evidence, its estimate, the
+change and its rollback, and two buttons, *Approve* and *Dismiss*. A press is
+the A2UI form submission the transcript sends back as the person's next turn;
+read from that turn (``decided_in``), it sets the recommendation's state and
+is kept in the session's record — an ``approval`` entry, and the
+recommendation again among its outputs with its new state. No tool writes to
+the account: *Approve* means the person accepts it and is handed the change to
+apply, as the card says.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import json
+import re
 import threading
 import uuid
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -193,7 +206,11 @@ def record_recommendation(
             f"Recommendation: {recommendation.finding}",
             {"recommendation": kept},
         )
-    return {"recorded": recommendation.id, "recommendation": kept}
+    return {
+        "recorded": recommendation.id,
+        "recommendation": kept,
+        **recommendation_card(kept),
+    }
 
 
 def list_recommendations(kind: str = "", state: str = "") -> Any:
@@ -224,6 +241,223 @@ def list_recommendations(kind: str = "", state: str = "") -> Any:
     }
 
 
+#: What the card says *Approve* means: no tool of the agent writes to the account.
+APPROVE_MEANS = (
+    "Approve accepts it: you are handed the change and its rollback to apply "
+    "yourself. This agent has no write access and changes nothing in your account."
+)
+#: The action a card's buttons press: the A2UI form submission the transcript
+#: sends back as the person's next turn.
+SUBMIT_ACTION = "submit_a2ui_form"
+#: The fence a form submission is sent in (the transcript's `a2ui-submission`).
+_SUBMISSION = re.compile(r"```a2ui-submission\s*\n([\s\S]*?)\n```")
+#: A person's decision, as a card's button says it, and as the record's
+#: approvals say an answer.
+DECISIONS = {"approved": "approved", "dismissed": "declined"}
+
+
+def _money(value: Optional[float]) -> str:
+    return f"${value:,.2f}" if value is not None else ""
+
+
+def recommendation_card(recommendation: Mapping[str, Any]) -> Dict[str, Any]:
+    """A recommendation as the card a person decides on: an A2UI surface.
+
+    Returns:
+        ``{surfaceId, catalogId, title, messages}``, the surface's id the
+        recommendation's.
+    """
+    from agent_runtimes.apps.components import answer_components, answer_surface
+
+    rec_id = str(recommendation["id"])
+    resource = recommendation.get("resource") or {}
+    estimate = recommendation.get("estimate") or {}
+    fix = recommendation.get("fix") or {}
+    saving = _money(estimate.get("monthly_saving_usd"))
+    by = "AWS's estimate" if estimate.get("by") == "aws" else "Datalayer's estimate"
+    where = " · ".join(
+        str(part)
+        for part in (
+            recommendation.get("kind"),
+            recommendation.get("category"),
+            resource.get("service"),
+            resource.get("region"),
+            resource.get("arn"),
+        )
+        if part
+    )
+    texts = [
+        ("finding", "h3", str(recommendation.get("finding") or "")),
+        ("where", "caption", where),
+        (
+            "estimate",
+            None,
+            (f"Estimated saving: {saving} a month" if saving else "")
+            + (f" — risk: {estimate['risk']}" if estimate.get("risk") else "")
+            + f" ({by}: {estimate.get('method') or ''}). "
+            + f"Confidence: {recommendation.get('confidence') or ''}.",
+        ),
+        *(
+            (
+                f"evidence-{index}",
+                "caption",
+                f"{item.get('source')} {item.get('call')}, read {item.get('read_at')}: "
+                + json.dumps(item.get("values") or {}, default=str)[:300],
+            )
+            for index, item in enumerate(recommendation.get("evidence") or [])
+        ),
+        (
+            "change",
+            None,
+            f"The change ({fix.get('form') or ''}): {fix.get('change') or ''}",
+        ),
+        ("rollback", None, f"Rollback: {fix.get('rollback') or ''}"),
+        ("means", "caption", APPROVE_MEANS),
+    ]
+    nodes: List[Dict[str, Any]] = [
+        {
+            "id": node_id,
+            "component": "Text",
+            "text": text,
+            **({"variant": variant} if variant else {}),
+        }
+        for node_id, variant, text in texts
+        if text
+    ]
+    for decision, label, variant in (
+        ("approved", "Approve", "primary"),
+        ("dismissed", "Dismiss", "default"),
+    ):
+        nodes.append({"id": f"{decision}-label", "component": "Text", "text": label})
+        nodes.append(
+            {
+                "id": f"{decision}-button",
+                "component": "Button",
+                "variant": variant,
+                "child": f"{decision}-label",
+                "action": {
+                    "event": {
+                        "name": SUBMIT_ACTION,
+                        "context": {"recommendation": rec_id, "decision": decision},
+                    }
+                },
+            }
+        )
+    nodes.append(
+        {
+            "id": "decide",
+            "component": "Row",
+            "children": ["approved-button", "dismissed-button"],
+        }
+    )
+    nodes.append(
+        {
+            "id": "body",
+            "component": "Column",
+            "children": [
+                node["id"]
+                for node in nodes
+                if node["component"] == "Text" and not node["id"].endswith("-label")
+            ]
+            + ["decide"],
+        }
+    )
+    nodes.insert(0, {"id": "root", "component": "Card", "child": "body"})
+    title = f"Recommendation: {recommendation.get('finding') or rec_id}"[:200]
+    # Checked as any answer's components are: the catalog's, each by its schema.
+    return answer_surface(rec_id, title, answer_components(nodes))
+
+
+def _submission_of(text: str) -> Optional[Dict[str, Any]]:
+    match = _SUBMISSION.search(text or "")
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group(1))
+    except ValueError:
+        return None
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("values"), dict):
+        return None
+    return parsed
+
+
+def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
+    """A person's decision on a recommendation's card, read from their turn.
+
+    The turn is the form submission the card's *Approve* or *Dismiss* sends:
+    its values name the recommendation and the decision. A recommendation of
+    this session gets the decision as its state, and the session's record
+    keeps it: an ``approval`` entry (approved, or declined for a dismissal)
+    and the recommendation among its outputs with its new state. The same
+    decision twice is kept once.
+
+    Returns:
+        The recommendation as decided, or ``None`` when the turn decides
+        nothing of this session's — any other turn, a recommendation it does
+        not hold, a decision that is neither.
+    """
+    submission = _submission_of(text)
+    if submission is None:
+        return None
+    values = submission["values"]
+    rec_id = str(values.get("recommendation") or "")
+    decision = str(values.get("decision") or "")
+    if decision not in DECISIONS or not rec_id:
+        return None
+    session = session or _session()
+    with _lock:
+        held = next(
+            (item for item in _kept.get(session, []) if item["id"] == rec_id), None
+        )
+        if held is None:
+            return None
+        if held["state"] == decision:
+            return dict(held)
+        held["state"] = decision
+        held["decided_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+        decided = dict(held)
+    from agent_runtimes.apps.record import recorder_of
+
+    recorder = recorder_of(session)
+    if recorder is not None:
+        recorder.add(
+            "approval",
+            f"{rec_id}: {DECISIONS[decision]} — {decided['finding']}",
+            {
+                "tool": "record_recommendation",
+                "recommendation": rec_id,
+                "outcome": DECISIONS[decision],
+                "asked_under": "the recommendation's card",
+                "note": "",
+            },
+        )
+        recorder.add(
+            "output",
+            f"Recommendation {decision}: {decided['finding']}",
+            {"recommendation": decided},
+        )
+    return decided
+
+
+def restore_recommendations(session: str, entries: Iterable[Mapping[str, Any]]) -> int:
+    """A session's recommendations given back from its record, as resumed on a
+    runtime that did not hold it: each the last time its outputs kept it (its
+    state as decided). How many.
+    """
+    restored: Dict[str, Dict[str, Any]] = {}
+    for entry in entries:
+        payload = entry.get("payload") or {}
+        if entry.get("kind") != "output" or not isinstance(payload, Mapping):
+            continue
+        recommendation = payload.get("recommendation")
+        if isinstance(recommendation, Mapping) and recommendation.get("id"):
+            restored[str(recommendation["id"])] = dict(recommendation)
+    if restored:
+        with _lock:
+            _kept[session] = list(restored.values())
+    return len(restored)
+
+
 def forget_recommendations() -> None:
     """Drop every session's list (a test's)."""
     with _lock:
@@ -231,8 +465,12 @@ def forget_recommendations() -> None:
 
 
 __all__ = [
+    "APPROVE_MEANS",
     "Recommendation",
+    "decided_in",
     "forget_recommendations",
     "list_recommendations",
+    "recommendation_card",
     "record_recommendation",
+    "restore_recommendations",
 ]
