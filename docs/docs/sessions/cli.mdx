@@ -114,6 +114,7 @@ $ loop
   Resume: Agent session · example-simple · “My name is Ada and I sell tea.” · on this machine · started 2 days ago
   Resume: Application session · Decide · “Reply with one word.” · on this machine · started 5 days ago
   Resume: Application session · Exchange Desk · “Hi” · on Datalayer · started 6 days ago
+  Resume its team run exec_400b: Application session · team-coding-agents · “Fix it” · on Datalayer · started 6 days ago
   Application session · Shared Desk · “Hello” · on Datalayer · started 7 days ago (a session of somebody else's deployment: a terminal starts a runtime for a deployment of its owner's only)
 ```
 
@@ -133,12 +134,16 @@ $ loop
     Datalayer for the deployment, its agent made as its page makes it, so it
     runs in the application's name as it does at its address. The deployment
     must run the version the Studio keeps; otherwise the prompt says so and
-    names its address.
+    names its address;
+  - **a seat of a team run** goes on with its run: picked, its paused run is
+    let go on, and each seat's session with it — what `agent-teams sessions
+    resume <run>` does, run for you. Nothing is started on this machine. A
+    run that is not paused, or that ended, says so in the command's own
+    sentence (an ended run is cloned to go on: `agent-teams sessions clone`).
 - What a terminal does not resume is drawn too, not to be picked, with why
   and where to open it (the three most recent; the rest are counted):
   - **a session of somebody else's deployment**: a terminal starts a runtime
     for a deployment of its owner's only; go on with it at its address;
-  - **a seat of a team run** is resumed with its run: `loop teams resume`;
   - a Preview of an application **written in Python** is said so when
     picked: its code reacts in its own process (`loop apps run app.py`
     starts a new conversation with it).

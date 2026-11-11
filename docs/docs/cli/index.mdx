@@ -689,11 +689,28 @@ agent-runtimes chat agents
 agent-runtimes chat agents --server https://agents.datalayer.ai
 ```
 
+### Sessions: list, pause, resume
+
+In `loop`'s prompt the conversation is a **session** from its first message:
+it is kept in the record, listed, paused and resumed — on this machine and on
+Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sessions/cli.mdx) page; in short:
+
+- **As `loop` starts**, with nothing on the command line that says what to run, it lists your paused sessions before asking where a new agent should run — those kept on this machine and, signed in, those on Datalayer. Pick one and it is resumed where it lives, its conversation loaded; *Start a new session*, which Enter picks, goes on to the usual questions. With none paused, nothing is printed.
+- **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
+- **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
+- **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
+- **Outside the prompt**: `loop sessions list`, `loop sessions pause <uid>` and `loop sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer.
+
+An agent is paused through its session. Runtime checkpoints are switched off on Datalayer: no checkpoint is taken by a pause, and none is needed to resume.
+
 ### Slash Commands
 
 | Command | Shortcut | Description |
 |---------|----------|-------------|
-| `/help` | `Esc H` | Show available commands |
+| `/help` | `Esc H` | Show available commands, the session's under **Sessions** |
+| `/sessions` | | Your sessions, held and recorded, numbered, each with its kind and state. See [Sessions](#sessions-list-pause-resume) |
+| `/pause` | | Pause this session and leave: the conversation is kept in the record, what it holds is given to the agent's memory first; on Datalayer the runtime is given back |
+| `/resume <n or uid>` | | Go on with a session, by its number in the last `/sessions` or by its id |
 | `/status` | `Esc S` | Model, tokens, and connectivity |
 | `/context` | `Esc X` | Visualize context usage grid |
 | `/clear` | `Esc C` | Clear conversation history |
@@ -709,7 +726,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/context-export` | `Esc E` | Export context to CSV |
 | `/notebook` | `Esc N` | Open the agent's notebook page in your browser, on the session's Jupyter server: locally, the local server's; on Datalayer, through the relay, with the runtime's Jupyter server. See [Slash commands on a cloud runtime](#slash-commands-on-a-cloud-runtime) |
 | `/document` | `Esc F` | Open the agent's document page in your browser, the same way as `/notebook` |
-| `/exit` | `Esc Q` | Exit the interactive session |
+| `/exit` | `Esc Q` | Exit the interactive session; with a session open, it says the session is kept, paused as its runtime stops |
 
 ### Banner and Animations
 
@@ -851,7 +868,8 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
 | `benchmarks` | Benchmarking commands |
-| `checkpoints` | Runtime checkpoint commands |
+| `sessions` | A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`; `--cloud` for a runtime on Datalayer. See [`loop sessions`](../sessions/cli.mdx) |
+| `checkpoints` | Runtime checkpoint commands. Checkpoints are switched off on Datalayer: an agent is paused and resumed through its session (`sessions pause`, `sessions resume`) |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
 | `evals` | Benchmarks: `evals run <spec\|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls\|get\|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
@@ -876,6 +894,10 @@ one on a goal, follow, steer, pause, resume, cancel or terminate its run — are
 the `agent-teams` package's, not this one's: `agent-teams …` as its own
 executable, and `datalayer agent-teams …` wherever it is installed beside the
 Datalayer CLI. See the [agent-teams CLI](https://agent-teams.datalayer.tech/cli).
+
+One of them is run from `loop`: a paused session that is a seat of a team run,
+picked in the list `loop` shows as it starts, lets its run go on as
+`agent-teams sessions resume <run>` does.
 
 ## Extending, and Being an Extension
 

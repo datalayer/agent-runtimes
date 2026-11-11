@@ -209,13 +209,14 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
     # Somebody else's deployment is not: it says why.
     others = by_uid["others-app-1"]
     assert (others.resumable, others.why_not) == (False, paused.DEPLOYMENT_WHY_NOT)
+    # A seat of a team run is resumed with its run, which `loop` lets go on.
     seat = by_uid["seat-1"]
-    assert (seat.resumable, seat.why_not, seat.address) == (
-        False,
-        paused.TEAM_WHY_NOT,
+    assert (seat.resumable, seat.why_not, seat.team_run, seat.address) == (
+        True,
+        "",
+        "exec_400b",
         "https://datalayer.ai/executions/exec_400b",
     )
-    assert "loop teams resume" in paused.TEAM_WHY_NOT
     # Newest first.
     started = [row.started_at for row in rows]
     assert started == sorted(started, reverse=True)
@@ -302,11 +303,16 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
     # Enter: the first choice, a new session, and the usual questions follow.
     assert choose_paused(rows, ask=pick(""), now=NOW) is None
     question, choices, default = asked[0]
-    assert question == "You have 7 paused sessions. Go on with one, or start a new one?"
+    # Six are resumed from here, a seat of a team run among them: the five
+    # most recent are offered, the sixth counted.
+    assert (
+        question
+        == "You have 7 paused sessions (6 shown; 1 more: /sessions). Go on with one, or start a new one?"
+    )
     assert choices[0] == (NEW_SESSION, "") and default == ""
     # What is resumed here first, newest first; then what is opened elsewhere.
     assert [choice[1] for choice in choices[1:]] == [
-        *[row.uid for row in rows if row.resumable],
+        *[row.uid for row in rows if row.resumable][:5],
         *[row.uid for row in rows if not row.resumable],
     ]
     picked = {choice[1]: choice for choice in choices[1:]}
@@ -323,9 +329,17 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
     assert picked["others-app-1"][2].startswith(
         "a session of somebody else's deployment"
     )
-    assert picked["seat-1"][2].startswith(
-        "a seat of a team run, resumed with its run: loop teams resume: open "
+    # A seat of a team run is picked: its run is what is resumed.
+    fewer = [row for row in rows if row.uid != "cloud-agent-1"]
+    seat = choose_paused(fewer, ask=pick("seat-1"), now=NOW)
+    assert seat is not None
+    seat_choice = next(choice for choice in asked[-1][1] if choice[1] == "seat-1")
+    assert len(seat_choice) == 2
+    assert seat_choice[0].startswith(
+        "Resume its team run exec_400b: Application session · "
     )
+    plan = resume_plan(seat)
+    assert (plan.team_run, plan.application, plan.uid) == ("exec_400b", "", "seat-1")
 
     # A deployment's session is resumed on a runtime launched for it.
     own = choose_paused(rows, ask=pick("cloud-app-1"))
@@ -591,3 +605,59 @@ def test_a_deployment_of_the_persons_is_read_to_start_its_agent_again() -> None:
         ResumeRefused, match="runs version 3 and the Studio keeps version 4"
     ):
         deployed_application("dep-1", Studio(4))
+
+
+def test_a_seat_whose_run_is_not_named_is_drawn_with_why() -> None:
+    rows = paused.paused_of(
+        [
+            {
+                "uid": "seat-2",
+                "app_uid": "team-coding-agents",
+                "state": "paused",
+                "agent": "coder",
+                "runs_on": {"kind": "team_run", "seat": "c"},
+                "started_at": "2026-11-11T07:00:00+00:00",
+            }
+        ],
+        paused.RECORD,
+        None,
+        {},
+    )
+    assert (rows[0].resumable, rows[0].team_run, rows[0].why_not) == (
+        False,
+        "",
+        paused.TEAM_WHY_NOT,
+    )
+    assert "agent-teams sessions resume <run>" in paused.TEAM_WHY_NOT
+
+
+def test_a_team_run_is_resumed_with_the_team_command() -> None:
+    import click
+
+    asked: List[List[str]] = []
+    assert paused.team_resume_command("exec_400b") == (
+        "agent-teams sessions resume exec_400b"
+    )
+    # The command is run with the run's id, and its exit code answered.
+    assert paused.resume_team_run("exec_400b", run=asked.append) == 0
+    assert asked == [["resume", "exec_400b"]]
+
+    # A refusal — a run that is open, or ended — is the command's own
+    # sentence and exit code.
+    def refused(arguments: List[str]) -> None:
+        raise click.exceptions.Exit(1)
+
+    assert paused.resume_team_run("exec_400b", run=refused) == 1
+    # Run in process, a command that exits answers its code.
+    assert paused.resume_team_run("exec_400b", run=lambda arguments: 1) == 1
+
+
+def test_the_team_command_is_the_real_one() -> None:
+    # `agent-teams sessions resume <execution>` exists where the team
+    # commands are installed: the group `loop` runs has that verb.
+    sessions_commands = pytest.importorskip("agent_teams.sessions_commands")
+    names = {
+        command.name or command.callback.__name__
+        for command in sessions_commands.sessions_app.registered_commands
+    }
+    assert "resume" in names

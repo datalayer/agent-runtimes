@@ -1452,6 +1452,19 @@ def main_callback(
             raise typer.Exit(0)
         if paused is not None:
             plan = resume_plan(paused)
+            if plan.team_run:
+                # A seat of a team run: its run is let go on, and each
+                # seat's session with it; nothing is started here.
+                from agent_runtimes.loop.paused import (
+                    TeamResumeUnavailable,
+                    resume_team_run,
+                )
+
+                try:
+                    raise typer.Exit(resume_team_run(plan.team_run))
+                except TeamResumeUnavailable as unavailable:
+                    print(f"{GREEN_DARK}[ERROR]{RESET} {unavailable}", file=sys.stderr)
+                    raise typer.Exit(1)
             if plan.session_store:
                 # Kept in files on this machine: its server reads them there.
                 os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store

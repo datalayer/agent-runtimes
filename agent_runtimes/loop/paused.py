@@ -19,11 +19,15 @@ What `loop` resumes from a terminal:
   the application is started as `loop apps run` starts it, from the
   catalogue's Appspec or the one the Studio keeps, and the session resumed.
 
+A **seat of a team run** is offered too: its session goes on with its run,
+so picking it lets the paused run go on, as `agent-teams sessions resume
+<run>` does (`resume_team_run`), and each seat's session with it. A run that
+is not paused, or ended, says so in the command's own sentence.
+
 What it does not, listed all the same with the reason and where to open it:
 
 - **a session of somebody else's deployment**: a terminal starts a runtime
-  for a deployment of its owner's only; it is gone on with at its address;
-- **a seat of a team run**: resumed with its run (`loop teams resume`).
+  for a deployment of its owner's only; it is gone on with at its address.
 
 A session of **one of the person's own deployments** is resumed from here
 too: a runtime is launched on Datalayer for the deployment, its agent made
@@ -89,12 +93,14 @@ class Paused:
     """Why `loop` does not resume it, in a sentence; ``""`` when it does."""
     address: str = ""
     """Where one `loop` does not resume is opened instead."""
+    team_run: str = ""
+    """For a seat of a team run, its run (the root execution): resumed with it."""
 
     @property
     def resumable(self) -> bool:
         """Whether `loop` resumes it from the terminal."""
         return not self.why_not and bool(
-            self.agent if self.kind == "agent" else self.app_uid
+            self.team_run or (self.agent if self.kind == "agent" else self.app_uid)
         )
 
 
@@ -116,6 +122,8 @@ class ResumePlan:
     the record); ``""`` for an agent's, whose agentspec is started."""
     deployment: str = ""
     """For a deployment's session, the deployment a runtime is launched for."""
+    team_run: str = ""
+    """For a seat of a team run, the run that is let go on: nothing is started here."""
 
 
 def resume_plan(row: Paused) -> ResumePlan:
@@ -125,9 +133,63 @@ def resume_plan(row: Paused) -> ResumePlan:
         agent=row.agent,
         cloud=row.where == ON_DATALAYER,
         session_store=FILE if row.store == FILE else "",
-        application=row.app_uid if row.kind == "application" else "",
+        application=row.app_uid
+        if row.kind == "application" and not row.team_run
+        else "",
         deployment=row.deployment_uid,
+        team_run=row.team_run,
     )
+
+
+def team_resume_command(execution_id: str) -> str:
+    """The command that lets a paused team run go on."""
+    return f"agent-teams sessions resume {execution_id}"
+
+
+class TeamResumeUnavailable(Exception):
+    """The team commands are not installed here: said with the command to run where they are."""
+
+
+def resume_team_run(
+    execution_id: str, run: Optional[Callable[[List[str]], Any]] = None
+) -> int:
+    """Let a paused team run go on, and each seat's session with it: what
+    `agent-teams sessions resume <execution>` does, run here. The command
+    says what it did, or why not (a run that is open, or ended) in its own
+    sentence; its exit code is answered.
+
+    Raises
+    ------
+    TeamResumeUnavailable
+        The team commands, or what they ask Datalayer with, are not installed.
+    """
+    import click
+
+    if run is None:
+        try:
+            from agent_teams.sessions_commands import sessions_app
+        except ImportError as missing:
+            raise TeamResumeUnavailable(
+                f"The team commands are not installed here ({missing}): install "
+                f"agent-teams[datalayer], or run `{team_resume_command(execution_id)}` where they are."
+            ) from None
+
+        def run(arguments: List[str]) -> Any:
+            return sessions_app(
+                args=arguments,
+                prog_name="agent-teams sessions",
+                standalone_mode=False,
+            )
+
+    try:
+        # Not standalone, a command that exits answers its code.
+        code = run(["resume", execution_id])
+    except click.exceptions.Exit as done:
+        return int(done.exit_code or 0)
+    except click.ClickException as refused:
+        refused.show()
+        return int(refused.exit_code or 1)
+    return code if isinstance(code, int) else 0
 
 
 #: Where Datalayer serves an application's address.
@@ -137,7 +199,10 @@ DEPLOYMENT_WHY_NOT = (
     "a session of somebody else's deployment: a terminal starts a runtime for a "
     "deployment of its owner's only"
 )
-TEAM_WHY_NOT = "a seat of a team run, resumed with its run: loop teams resume"
+TEAM_WHY_NOT = (
+    "a seat of a team run whose run the record does not name: it is resumed "
+    "with its run, agent-teams sessions resume <run>"
+)
 
 
 def _where_of(session: Mapping[str, Any]) -> str:
@@ -181,10 +246,15 @@ def paused_of(
         kind = session_kind(app_uid)
         runs_on = session.get("runs_on") or {}
         deployment = deployments.get(deployment_uid) or {}
-        why_not = address = ""
+        why_not = address = team_run = ""
         if runs_on.get("kind") == "team_run":
-            why_not = TEAM_WHY_NOT
-            address = f"{SITE}/executions/{runs_on.get('execution_id') or ''}"
+            # Resumed with its run, which `loop` lets go on; a seat whose
+            # run is not named cannot be.
+            team_run = str(runs_on.get("execution_id") or "")
+            if team_run:
+                address = f"{SITE}/executions/{team_run}"
+            else:
+                why_not = TEAM_WHY_NOT
         elif kind == "application" and deployment_uid:
             # One of the person's own is resumed from here, on a runtime
             # launched for it; somebody else's at its address.
@@ -221,6 +291,7 @@ def paused_of(
                 deployment_uid=deployment_uid,
                 why_not=why_not,
                 address=address,
+                team_run=team_run,
             )
         )
     return rows
@@ -376,7 +447,10 @@ def choose_paused(
     choices: List[Tuple[Any, ...]] = [(NEW_SESSION, "")]
     for row in offered:
         line = paused_line(row, now)
-        if row.resumable:
+        if row.team_run and row.resumable:
+            # A seat goes on with its run: the run is what is resumed.
+            choices.append((f"Resume its team run {row.team_run}: {line}", row.uid))
+        elif row.resumable:
             choices.append((f"Resume: {line}", row.uid))
         else:
             where = f": open {row.address}" if row.address else ""
@@ -407,6 +481,9 @@ __all__ = [
     "record_paused",
     "DEPLOYMENT_WHY_NOT",
     "TEAM_WHY_NOT",
+    "TeamResumeUnavailable",
     "catalogue_names",
     "resume_plan",
+    "resume_team_run",
+    "team_resume_command",
 ]
