@@ -420,6 +420,26 @@ export const LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '📋',
 };
 
+export const RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'recommendations-report',
+  version: '0.0.1',
+  name: 'Recommendations Report',
+  description:
+    "Report the deployment's recommendations of the last days — how many were approved, dismissed and are still open, the estimated monthly savings of each and the largest open ones — read from its record, and send it through the application's notification channels.",
+  tags: ['recommendations', 'account-agent'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.recommendations',
+    method: 'recommendations_report',
+  },
+  icon: '@primer/octicons-react:graph',
+  emoji: '📈',
+};
+
 export const RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'record-recommendation',
   version: '0.0.1',
@@ -546,6 +566,7 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'get-weather': GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
   'github-repositories': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
   'list-recommendations': LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1,
+  'recommendations-report': RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1,
   'record-recommendation': RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,

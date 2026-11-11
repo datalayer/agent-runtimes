@@ -8,6 +8,7 @@ its estimate's method or without a reviewable fix refused and never kept."""
 from __future__ import annotations
 
 import copy
+import json
 from typing import Any, Dict
 
 import pytest
@@ -60,11 +61,11 @@ def _fresh():
 
 
 def test_a_recommendation_with_its_evidence_is_kept_and_listed() -> None:
-    answer = recommendations.record_recommendation(**_valid())
+    answer = recommendations.keep_recommendation(**_valid())
     assert answer["recorded"].startswith("rec-")
     kept = answer["recommendation"]
     assert kept["state"] == "open" and kept["recorded_at"]
-    recommendations.record_recommendation(
+    recommendations.keep_recommendation(
         **_valid(
             kind="cost",
             category="oversized",
@@ -75,7 +76,7 @@ def test_a_recommendation_with_its_evidence_is_kept_and_listed() -> None:
             },
         )
     )
-    recommendations.record_recommendation(
+    recommendations.keep_recommendation(
         **_valid(
             kind="fix",
             category="security",
@@ -114,7 +115,7 @@ def test_a_recommendation_missing_what_it_rests_on_is_refused_and_not_kept(
 ) -> None:
     given = copy.deepcopy(_valid())
     change(given)
-    answer = recommendations.record_recommendation(**given)
+    answer = recommendations.keep_recommendation(**given)
     assert isinstance(answer, str) and answer.startswith("Refused, not recorded")
     assert said in answer
     assert recommendations.list_recommendations()["count"] == 0
@@ -135,7 +136,7 @@ def test_the_application_record_keeps_it_under_outputs(
         "recorder_of",
         lambda session: Recorder() if session == "session-1" else None,
     )
-    answer = recommendations.record_recommendation(**_valid())
+    answer = recommendations.keep_recommendation(**_valid())
     assert added == [
         (
             "output",
@@ -194,7 +195,7 @@ def _components(answer: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def test_a_recorded_recommendation_is_shown_as_a_card_with_approve_and_dismiss() -> (
     None
 ):
-    answer = recommendations.record_recommendation(**_valid())
+    answer = recommendations.keep_recommendation(**_valid())
     rec_id = answer["recorded"]
     # What the a2ui-surface renderer reads: a surface of the recommendation's id.
     assert answer["surfaceId"] == rec_id
@@ -224,11 +225,14 @@ def test_a_recorded_recommendation_is_shown_as_a_card_with_approve_and_dismiss()
         }
 
 
-def test_approve_on_the_card_is_kept_in_the_session(session: _Recorder) -> None:
-    rec_id = recommendations.record_recommendation(**_valid())["recorded"]
+@pytest.mark.asyncio
+async def test_approve_on_the_card_is_kept_in_the_session(session: _Recorder) -> None:
+    rec_id = recommendations.keep_recommendation(**_valid())["recorded"]
     session.added.clear()
 
-    decided = recommendations.decided_in(_submission(rec_id, "approved"), "session-1")
+    decided = await recommendations.decided_in(
+        _submission(rec_id, "approved"), "session-1"
+    )
 
     assert (
         decided is not None and decided["state"] == "approved" and decided["decided_at"]
@@ -242,15 +246,16 @@ def test_approve_on_the_card_is_kept_in_the_session(session: _Recorder) -> None:
     assert output[0] == "output" and output[2]["recommendation"]["state"] == "approved"
     assert recommendations.list_recommendations(state="approved")["count"] == 1
     # The same press twice is kept once.
-    recommendations.decided_in(_submission(rec_id, "approved"), "session-1")
+    await recommendations.decided_in(_submission(rec_id, "approved"), "session-1")
     assert len(session.added) == 2
 
 
-def test_dismiss_is_kept_as_declined(session: _Recorder) -> None:
-    rec_id = recommendations.record_recommendation(**_valid())["recorded"]
+@pytest.mark.asyncio
+async def test_dismiss_is_kept_as_declined(session: _Recorder) -> None:
+    rec_id = recommendations.keep_recommendation(**_valid())["recorded"]
     session.added.clear()
 
-    recommendations.decided_in(_submission(rec_id, "dismissed"), "session-1")
+    await recommendations.decided_in(_submission(rec_id, "dismissed"), "session-1")
 
     assert session.added[0][2]["outcome"] == "declined"
     assert recommendations.list_recommendations(state="dismissed")["count"] == 1
@@ -264,34 +269,41 @@ def test_dismiss_is_kept_as_declined(session: _Recorder) -> None:
         "```a2ui-submission\nnot json\n```",
     ],
 )
-def test_a_turn_that_is_no_press_on_a_card_of_this_session_decides_nothing(
+@pytest.mark.asyncio
+async def test_a_turn_that_is_no_press_on_a_card_of_this_session_decides_nothing(
     session: _Recorder, text: str
 ) -> None:
-    recommendations.record_recommendation(**_valid())
+    recommendations.keep_recommendation(**_valid())
     session.added.clear()
 
-    assert recommendations.decided_in(text, "session-1") is None
+    assert await recommendations.decided_in(text, "session-1") is None
     assert session.added == []
     assert recommendations.list_recommendations(state="open")["count"] == 1
 
 
-def test_a_decision_that_is_neither_decides_nothing(session: _Recorder) -> None:
-    rec_id = recommendations.record_recommendation(**_valid())["recorded"]
+@pytest.mark.asyncio
+async def test_a_decision_that_is_neither_decides_nothing(session: _Recorder) -> None:
+    rec_id = recommendations.keep_recommendation(**_valid())["recorded"]
     assert (
-        recommendations.decided_in(_submission(rec_id, "applied"), "session-1") is None
+        await recommendations.decided_in(_submission(rec_id, "applied"), "session-1")
+        is None
     )
     # Another session's press does not reach this one.
     assert (
-        recommendations.decided_in(_submission(rec_id, "approved"), "session-2") is None
+        await recommendations.decided_in(_submission(rec_id, "approved"), "session-2")
+        is None
     )
 
 
-def test_a_resumed_session_holds_its_recommendations_as_decided(
+@pytest.mark.asyncio
+async def test_a_resumed_session_holds_its_recommendations_as_decided(
     session: _Recorder,
 ) -> None:
-    first = recommendations.record_recommendation(**_valid())
-    second = recommendations.record_recommendation(**_valid(category="idle"))
-    recommendations.decided_in(_submission(first["recorded"], "approved"), "session-1")
+    first = recommendations.keep_recommendation(**_valid())
+    second = recommendations.keep_recommendation(**_valid(category="idle"))
+    await recommendations.decided_in(
+        _submission(first["recorded"], "approved"), "session-1"
+    )
     entries = [
         {"kind": kind, "summary": summary, "payload": payload}
         for kind, summary, payload in session.added
@@ -307,7 +319,7 @@ def test_a_resumed_session_holds_its_recommendations_as_decided(
     }
     assert states == {first["recorded"]: "approved", second["recorded"]: "open"}
     # And a press after the resume is this session's.
-    assert recommendations.decided_in(
+    assert await recommendations.decided_in(
         _submission(second["recorded"], "dismissed"), "session-1"
     )
 
@@ -320,7 +332,7 @@ async def test_the_record_keeps_the_press_before_the_agent_reads_the_turn(
     starts: a press on a card is kept then, whatever the agent does after."""
     from types import SimpleNamespace
 
-    rec_id = recommendations.record_recommendation(**_valid())["recorded"]
+    rec_id = recommendations.keep_recommendation(**_valid())["recorded"]
     session.added.clear()
 
     class Recorder(_Recorder):
@@ -359,3 +371,245 @@ def test_the_page_fixture_is_the_card_this_tool_draws() -> None:
     )
     card = recommendations.recommendation_card(fixture["recommendation"])
     assert {key: fixture[key] for key in card} == card
+
+
+# --- Waiting for you, the high-severity notification, the week's report -------------------
+
+
+class _AppRecorder(_Recorder):
+    """A recorder of a deployed application that names its notifications."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        from types import SimpleNamespace
+
+        self.app = SimpleNamespace(
+            id="aws-account-agent",
+            name="AWS Account Agent",
+            emoji="",
+            notifications=["email"],
+        )
+        self.app_uid = "app-1"
+        self.deployment_uid = "dep-1"
+
+
+@pytest.fixture
+def deployed(monkeypatch: pytest.MonkeyPatch) -> dict:
+    """A deployment's session: its recorder, the token it writes with, ai-agents' answers."""
+    from agent_runtimes.apps import notifications
+    from agent_runtimes.routes import tool_approvals
+
+    world: dict = {"recorder": _AppRecorder(), "forwarded": [], "sent": []}
+    monkeypatch.setattr(record, "current_session", lambda: "session-1")
+    monkeypatch.setattr(
+        record,
+        "recorder_of",
+        lambda uid: world["recorder"] if uid == "session-1" else None,
+    )
+    monkeypatch.setattr(
+        record,
+        "token_for",
+        lambda dep: ("principal-token", "") if dep == "dep-1" else (None, "no token."),
+    )
+
+    async def forward(approval: Any, token: Any) -> str:
+        world["forwarded"].append((approval, token))
+        return "approval-1"
+
+    monkeypatch.setattr(tool_approvals, "forward_approval_to_ai_agents", forward)
+
+    async def sent(body: dict) -> list:
+        world["sent"].append(body)
+        return [
+            {"channel": channel, "delivery": "sent", "detail": ""}
+            for channel in body["channels"]
+        ]
+
+    monkeypatch.setattr(notifications, "send_to_ai_agents", sent)
+    return world
+
+
+@pytest.mark.asyncio
+async def test_a_recorded_recommendation_waits_for_you_among_your_approvals(
+    deployed: dict,
+) -> None:
+    answer = await recommendations.record_recommendation(**_valid())
+
+    assert answer["waiting"] == {"asked": True, "approval": "approval-1"}
+    [(approval, token)] = deployed["forwarded"]
+    # As the deployment writes its record: its principal's token.
+    assert token == "principal-token"
+    assert approval.tool_name == recommendations.APPROVAL_TOOL
+    assert approval.tool_args["recommendation"]["id"] == answer["recorded"]
+    assert approval.tool_args["approve_means"] == recommendations.APPROVE_MEANS
+    # Kept with the approval it waits under, so a resumed session still decides it.
+    [(kind, _, payload)] = deployed["recorder"].added
+    assert kind == "output" and payload["recommendation"]["approval"] == "approval-1"
+    # A medium one tells nobody.
+    assert "notified" not in answer and deployed["sent"] == []
+
+
+@pytest.mark.asyncio
+async def test_without_a_token_it_is_kept_and_said_not_asked(deployed: dict) -> None:
+    deployed["recorder"].deployment_uid = "dep-unknown"
+    answer = await recommendations.record_recommendation(**_valid())
+    assert answer["waiting"]["asked"] is False
+    assert "no token" in answer["waiting"]["why"]
+    assert recommendations.list_recommendations()["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_a_high_severity_recommendation_is_told_through_the_applications_channels(
+    deployed: dict,
+) -> None:
+    answer = await recommendations.record_recommendation(**_valid(severity="high"))
+
+    assert answer["notified"]["notified"] is True
+    [body] = deployed["sent"]
+    assert body["event"] == recommendations.HIGH_SEVERITY
+    assert body["channels"] == ["email"] and body["deployment_uid"] == "dep-1"
+    assert (
+        _valid()["finding"] in body["message"] and "$40.00 a month" in body["message"]
+    )
+    # Each channel's outcome in the record, as every notification's.
+    assert any(kind == "notification" for kind, _, _ in deployed["recorder"].added)
+
+
+@pytest.mark.asyncio
+async def test_a_severity_that_is_none_of_three_is_refused(deployed: dict) -> None:
+    refused = await recommendations.record_recommendation(**_valid(severity="urgent"))
+    assert (
+        isinstance(refused, str)
+        and refused.startswith("Refused")
+        and "severity" in refused
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_press_on_the_card_decides_its_approval_at_ai_agents_which_keeps_it(
+    deployed: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rec_id = (await recommendations.record_recommendation(**_valid()))["recorded"]
+    deployed["recorder"].added.clear()
+    decided_at: list = []
+
+    async def at_ai_agents(session: str, rec: str, decision: str) -> bool:
+        decided_at.append((session, rec, decision))
+        return True
+
+    monkeypatch.setattr(recommendations, "_decided_at_ai_agents", at_ai_agents)
+    decided = await recommendations.decided_in(
+        _submission(rec_id, "approved"), "session-1"
+    )
+
+    assert decided["state"] == "approved"
+    assert decided_at == [("session-1", rec_id, "approved")]
+    # ai-agents keeps the decision in the record: nothing written twice here.
+    assert deployed["recorder"].added == []
+
+
+@pytest.mark.asyncio
+async def test_the_card_press_decides_the_approval_with_the_persons_token(
+    deployed: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+
+    from agent_runtimes.context import identities
+
+    rec_id = (await recommendations.record_recommendation(**_valid()))["recorded"]
+    asked: list = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        asked.append(
+            (
+                str(request.url),
+                request.headers["authorization"],
+                json.loads(request.content),
+            )
+        )
+        return httpx.Response(200, json={"success": True})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kw: real(transport=httpx.MockTransport(answer), **kw),
+    )
+    monkeypatch.setattr(identities, "get_request_user_jwt", lambda: "persons-token")
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://agents.test")
+
+    assert await recommendations._decided_at_ai_agents("session-1", rec_id, "dismissed")
+    [(url, authorization, body)] = asked
+    assert (
+        url == "https://agents.test/api/ai-agents/v1/tool-approvals/approval-1/reject"
+    )
+    assert authorization == "Bearer persons-token"
+    assert body == {"note": "Decided on the recommendation's card."}
+    # Decided once: a second press finds no approval waiting.
+    assert not await recommendations._decided_at_ai_agents(
+        "session-1", rec_id, "dismissed"
+    )
+
+
+def test_the_weeks_summary_counts_decided_and_open() -> None:
+    def item(rec_id: str, state: str, saving: float) -> dict:
+        return {
+            "id": rec_id,
+            "state": state,
+            "finding": f"{rec_id} wastes",
+            "estimate": {"monthly_saving_usd": saving},
+        }
+
+    summary = recommendations.weekly_summary(
+        [
+            item("a", "approved", 40.0),
+            item("b", "open", 3.07),
+            item("c", "open", 89.06),
+            item("d", "dismissed", 1.0),
+        ]
+    )
+    assert summary["count"] == 4
+    assert summary["by_state"] == {"approved": 1, "dismissed": 1, "open": 2}
+    assert summary["approved_monthly_saving_usd"] == 40.0
+    assert summary["open_monthly_saving_usd"] == 92.13
+    assert [i["id"] for i in summary["largest_open"]] == ["c", "b"]
+
+
+@pytest.mark.asyncio
+async def test_the_weeks_report_is_read_from_the_deployment_and_sent(
+    deployed: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    read: list = []
+
+    async def of_deployment(deployment: str, days: int) -> list:
+        read.append((deployment, days))
+        return [
+            {
+                "id": "a",
+                "state": "approved",
+                "finding": "An idle instance.",
+                "estimate": {"monthly_saving_usd": 3.07},
+            }
+        ]
+
+    monkeypatch.setattr(recommendations, "_deployment_recommendations", of_deployment)
+    report = await recommendations.recommendations_report()
+
+    assert read == [("dep-1", 7)]
+    assert report["report"]["by_state"] == {"approved": 1}
+    assert "1 approved, 0 dismissed, 0 open" in report["text"]
+    assert "nothing was changed in your account" in report["text"]
+    [body] = deployed["sent"]
+    assert (
+        body["event"] == recommendations.WEEKLY_REPORT
+        and body["message"] == report["text"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_report_of_a_session_no_deployment_runs_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(record, "recorder_of", lambda uid: None)
+    said = await recommendations.recommendations_report()
+    assert isinstance(said, str) and "deployment" in said

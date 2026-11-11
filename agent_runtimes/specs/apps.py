@@ -212,7 +212,11 @@ AWS_ACCOUNT_AGENT_APP_0_0_1 = AppSpec.model_validate(
             },
             {
                 "action": "Record and list recommendations",
-                "applies_to": ["record-recommendation", "list-recommendations"],
+                "applies_to": [
+                    "record-recommendation",
+                    "list-recommendations",
+                    "recommendations-report",
+                ],
                 "behaviour": "do_it",
             },
             {
@@ -358,10 +362,18 @@ AWS_ACCOUNT_AGENT_APP_0_0_1 = AppSpec.model_validate(
                 "at": "",
                 "description": "Every day at 7:00",
                 "prompt": "Scan the account: read Cost Optimization Hub's recommendations, Compute Optimizer's findings for EC2, EBS, RDS and idle resources, last month's spend by service and the Savings Plans coverage. Record each saving with its evidence, then list the recommendations and summarize: how many, the estimated monthly saving, the three largest.",
-            }
+            },
+            {
+                "type": "schedule",
+                "cron": "0 8 * * 1",
+                "event": "",
+                "at": "",
+                "description": "Every Monday at 8:00",
+                "prompt": "Write the week's report: call recommendations_report for the last 7 days, which sends it, and say in a few lines how many recommendations were approved, dismissed and are still open, and their estimated monthly savings.",
+            },
         ],
         "memory": "",
-        "notifications": [],
+        "notifications": ["email"],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": True,

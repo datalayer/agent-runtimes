@@ -33,7 +33,7 @@ import json
 import re
 import threading
 import uuid
-from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional
+from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -116,6 +116,9 @@ class Recommendation(BaseModel):
     evidence: List[Evidence] = Field(min_length=1)
     estimate: Estimate
     confidence: Literal["high", "medium", "low"]
+    #: How soon the person should see it: ``high`` is told through the
+    #: application's channels as it is recorded.
+    severity: Literal["high", "medium", "low"] = "medium"
     fix: Fix
     state: Literal["open", "approved", "applied", "dismissed", "expired"] = "open"
     recorded_at: str
@@ -140,7 +143,7 @@ def _refusal(error: ValidationError) -> str:
     return "Refused, not recorded — " + "; ".join(missing[:8]) + "."
 
 
-def record_recommendation(
+def keep_recommendation(
     kind: str,
     category: str,
     resource: Dict[str, Any],
@@ -149,8 +152,14 @@ def record_recommendation(
     estimate: Dict[str, Any],
     confidence: str,
     fix: Dict[str, Any],
+    severity: str = "medium",
+    *,
+    written: bool = True,
 ) -> Any:
-    """Record one recommendation, with the evidence it rests on.
+    """Keep one recommendation in the session and its record, with its card.
+
+    What `record_recommendation` does before it asks the person and tells
+    the channels: refused in a sentence when anything it rests on is missing.
 
     Args:
         kind: ``cost`` (a saving) or ``fix`` (a technical fix).
@@ -188,6 +197,7 @@ def record_recommendation(
             evidence=evidence,
             estimate=estimate,
             confidence=confidence,
+            severity=severity,
             fix=fix,
             recorded_at=dt.datetime.now(dt.timezone.utc).isoformat(),
         )
@@ -200,7 +210,7 @@ def record_recommendation(
     from agent_runtimes.apps.record import recorder_of
 
     recorder = recorder_of(session)
-    if recorder is not None:
+    if recorder is not None and written:
         recorder.add(
             "output",
             f"Recommendation: {recommendation.finding}",
@@ -211,6 +221,188 @@ def record_recommendation(
         "recommendation": kept,
         **recommendation_card(kept),
     }
+
+
+async def record_recommendation(
+    kind: str,
+    category: str,
+    resource: Dict[str, Any],
+    finding: str,
+    evidence: List[Dict[str, Any]],
+    estimate: Dict[str, Any],
+    confidence: str,
+    fix: Dict[str, Any],
+    severity: str = "medium",
+) -> Any:
+    """Record one recommendation, with the evidence it rests on.
+
+    Args:
+        kind: ``cost`` (a saving) or ``fix`` (a technical fix).
+        category: ``idle``, ``oversized``, ``unattached``, ``pricing-model``,
+            ``commitment``, ``security``, ``reliability``, ``quota`` or
+            ``upgrade``.
+        resource: ``{service, arn, account, region, tags}`` — at least the
+            service.
+        finding: One sentence: what is wrong.
+        evidence: At least one read: ``{source, call, read_at, values}``,
+            exactly as the reading tool answered (its source, call and
+            read_at) and the values it gave. Never a number you did not read.
+        estimate: ``{monthly_saving_usd, risk, by, method}`` — ``by`` is
+            ``aws`` when the number is AWS's own estimate, ``datalayer``
+            when you computed it; ``method`` says how.
+        confidence: ``high``, ``medium`` or ``low``.
+        fix: ``{form, change, rollback, needs}`` — ``form`` is
+            ``cloudformation-change-set``, ``cli``, ``manifest-diff``,
+            ``pull-request`` or ``console-steps``; ``change`` the change as a
+            person reviews it; ``rollback`` how to undo it; ``needs`` is
+            ``write-role``, ``cluster-write`` or ``none``.
+        severity: ``high`` for what the person should see today (a security
+            or reliability risk, a large waste), told through the
+            application's channels as it is recorded; ``medium`` (default)
+            or ``low`` otherwise.
+
+    Returns:
+        ``{"recorded": <id>, "recommendation": {...}, "waiting": {...}}`` —
+        ``waiting`` says whether it waits for the person under *Waiting for
+        you* — with ``notified`` for a high-severity one; or a sentence
+        starting ``Refused`` naming what is missing: a refused recommendation
+        is not kept and must not be shown.
+    """
+    answer = keep_recommendation(
+        kind,
+        category,
+        resource,
+        finding,
+        evidence,
+        estimate,
+        confidence,
+        fix,
+        severity,
+        written=False,
+    )
+    if isinstance(answer, str):
+        return answer
+    kept = answer["recommendation"]
+    session = _session()
+    answer["waiting"] = await ask_the_person(kept, session)
+    if answer["waiting"].get("approval"):
+        # Kept with it, so a session resumed elsewhere still decides that approval.
+        with _lock:
+            for item in _kept.get(session, []):
+                if item["id"] == kept["id"]:
+                    item["approval"] = answer["waiting"]["approval"]
+                    kept = dict(item)
+        answer["recommendation"] = kept
+    from agent_runtimes.apps.record import recorder_of
+
+    recorder = recorder_of(session)
+    if recorder is not None:
+        recorder.add(
+            "output", f"Recommendation: {kept['finding']}", {"recommendation": kept}
+        )
+    if kept["severity"] == "high":
+        answer["notified"] = await tell_high_severity(kept, session)
+    return answer
+
+
+#: The tool a recommendation waits under, among the person's approvals.
+APPROVAL_TOOL = "approve_recommendation"
+#: The pending approval each recommendation waits under at ai-agents, by session and id.
+_approvals: Dict[Tuple[str, str], str] = {}
+
+
+async def ask_the_person(
+    recommendation: Mapping[str, Any], session: str
+) -> Dict[str, Any]:
+    """Put the recommendation where the person's other approvals wait (*Waiting for you*).
+
+    Through the tool-approval path every question of an application goes
+    through: a pending approval of `APPROVAL_TOOL` at ai-agents, naming the
+    session, carrying the recommendation; decided there or on the card, the
+    decision is kept in the session's record. Asked with the token the
+    application writes its record with. Never raised: whether it was asked,
+    and why not, is answered.
+    """
+    import datetime as _dt
+
+    from agent_runtimes.apps.record import recorder_of, token_for
+    from agent_runtimes.routes.tool_approvals import (
+        ToolApprovalRecord,
+        forward_approval_to_ai_agents,
+    )
+
+    recorder = recorder_of(session)
+    token, why = token_for(recorder.deployment_uid if recorder is not None else "")
+    if not token:
+        return {"asked": False, "why": f"Not put among your approvals: {why}"}
+    now = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    record = ToolApprovalRecord(
+        id=str(uuid.uuid4()),
+        agent_id=(recorder.app.id if recorder is not None else "") or "recommendations",
+        tool_name=APPROVAL_TOOL,
+        tool_args={
+            "recommendation": dict(recommendation),
+            "finding": recommendation.get("finding"),
+            "monthly_saving_usd": (recommendation.get("estimate") or {}).get(
+                "monthly_saving_usd"
+            ),
+            "change": (recommendation.get("fix") or {}).get("change"),
+            "approve_means": APPROVE_MEANS,
+        },
+        tool_call_id=str(recommendation["id"]),
+        created_at=now,
+        updated_at=now,
+    )
+    remote = await forward_approval_to_ai_agents(record, token)
+    if not remote:
+        return {
+            "asked": False,
+            "why": "Not put among your approvals: ai-agents did not take it.",
+        }
+    with _lock:
+        _approvals[(session, str(recommendation["id"]))] = remote
+    return {"asked": True, "approval": remote}
+
+
+async def tell_high_severity(recommendation: Mapping[str, Any], session: str) -> Any:
+    """Tell the application's channels of a high-severity recommendation, as it asks before it acts."""
+    from agent_runtimes.apps import notifications
+    from agent_runtimes.apps.notifications import AppNotifier
+    from agent_runtimes.apps.record import recorder_of
+
+    recorder = recorder_of(session)
+    if recorder is None:
+        return {
+            "notified": False,
+            "why": "No application records this session: nobody to tell.",
+        }
+    app = recorder.app.name.strip() or "The AWS Account Agent"
+    saving = _money((recommendation.get("estimate") or {}).get("monthly_saving_usd"))
+    outcomes = await AppNotifier(
+        app=recorder.app,
+        recorder=recorder,
+        app_uid=recorder.app_uid,
+        deployment_uid=recorder.deployment_uid,
+        send=notifications.send_to_ai_agents,
+    ).notify(
+        HIGH_SEVERITY,
+        title=f"{app}: {recommendation.get('finding')}"[:200],
+        message=(
+            f"{recommendation.get('finding')}"
+            + (f" Estimated saving: {saving} a month." if saving else "")
+            + " It waits for you under Tool Approvals, on Datalayer: approve it to be handed the change."
+        ),
+    )
+    return {
+        "notified": any(o.get("delivery") == "sent" for o in outcomes),
+        "channels": outcomes,
+    }
+
+
+#: The event a high-severity recommendation is told as, through the application's channels.
+HIGH_SEVERITY = "recommendation.high_severity"
+#: The event the week's report is sent as.
+WEEKLY_REPORT = "recommendations.weekly"
 
 
 def list_recommendations(kind: str = "", state: str = "") -> Any:
@@ -381,7 +573,7 @@ def _submission_of(text: str) -> Optional[Dict[str, Any]]:
     return parsed
 
 
-def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
+async def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
     """A person's decision on a recommendation's card, read from their turn.
 
     The turn is the form submission the card's *Approve* or *Dismiss* sends:
@@ -416,6 +608,10 @@ def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
         held["state"] = decision
         held["decided_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
         decided = dict(held)
+    # Where it waits among the person's approvals, decided there too: ai-agents
+    # keeps the decision in the session's record, once.
+    if await _decided_at_ai_agents(session, rec_id, decision):
+        return decided
     from agent_runtimes.apps.record import recorder_of
 
     recorder = recorder_of(session)
@@ -439,6 +635,39 @@ def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
     return decided
 
 
+async def _decided_at_ai_agents(session: str, rec_id: str, decision: str) -> bool:
+    """The approval the recommendation waits under, decided at ai-agents with
+    the person's own token (the turn's); whether it was."""
+    with _lock:
+        approval = _approvals.get((session, rec_id))
+    if not approval:
+        return False
+    try:
+        import httpx
+        from datalayer_core.utils.urls import DatalayerURLs
+
+        from agent_runtimes.context.identities import get_request_user_jwt
+
+        token = get_request_user_jwt()
+        url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+        if not token or not url:
+            return False
+        verb = "approve" if decision == "approved" else "reject"
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            answered = await client.post(
+                f"{url.rstrip('/')}/api/ai-agents/v1/tool-approvals/{approval}/{verb}",
+                json={"note": "Decided on the recommendation's card."},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+    except Exception:  # noqa: BLE001 - kept here instead, below
+        return False
+    if answered.status_code >= 300:
+        return False
+    with _lock:
+        _approvals.pop((session, rec_id), None)
+    return True
+
+
 def restore_recommendations(session: str, entries: Iterable[Mapping[str, Any]]) -> int:
     """A session's recommendations given back from its record, as resumed on a
     runtime that did not hold it: each the last time its outputs kept it (its
@@ -455,19 +684,152 @@ def restore_recommendations(session: str, entries: Iterable[Mapping[str, Any]]) 
     if restored:
         with _lock:
             _kept[session] = list(restored.values())
+            for rec_id, item in restored.items():
+                if item.get("approval") and item.get("state") == "open":
+                    _approvals[(session, rec_id)] = str(item["approval"])
     return len(restored)
+
+
+async def _deployment_recommendations(
+    deployment_uid: str, days: int
+) -> List[Dict[str, Any]]:
+    """The deployment's recommendations of the last ``days``, each as its record last kept it."""
+    import httpx
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    from agent_runtimes.apps.record import token_for
+
+    token, why = token_for(deployment_uid)
+    if not token:
+        raise LookupError(f"The week's recommendations are not read: {why}")
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise LookupError(
+            "The week's recommendations are not read: no ai-agents to read them from."
+        )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        answered = await client.get(
+            f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/recommendations",
+            params={"days": days},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    if answered.status_code >= 300:
+        raise LookupError(
+            f"The week's recommendations are not read: ai-agents answered "
+            f"{answered.status_code}: {answered.text[:200]}"
+        )
+    return list(answered.json().get("recommendations") or [])
+
+
+def weekly_summary(listed: List[Mapping[str, Any]], days: int = 7) -> Dict[str, Any]:
+    """The report of a period's recommendations: counted by state, their savings, the largest open."""
+
+    def saving(item: Mapping[str, Any]) -> float:
+        return float((item.get("estimate") or {}).get("monthly_saving_usd") or 0.0)
+
+    by_state: Dict[str, List[Mapping[str, Any]]] = {}
+    for item in listed:
+        by_state.setdefault(str(item.get("state") or "open"), []).append(item)
+    open_ones = sorted(by_state.get("open", []), key=lambda item: -saving(item))
+    return {
+        "days": days,
+        "count": len(listed),
+        "by_state": {state: len(items) for state, items in sorted(by_state.items())},
+        "approved_monthly_saving_usd": round(
+            sum(saving(i) for i in by_state.get("approved", [])), 2
+        ),
+        "open_monthly_saving_usd": round(sum(saving(i) for i in open_ones), 2),
+        "dismissed_monthly_saving_usd": round(
+            sum(saving(i) for i in by_state.get("dismissed", [])), 2
+        ),
+        "largest_open": [
+            {
+                "id": i.get("id"),
+                "finding": i.get("finding"),
+                "monthly_saving_usd": saving(i),
+            }
+            for i in open_ones[:5]
+        ],
+    }
+
+
+def _report_text(summary: Mapping[str, Any]) -> str:
+    states = summary["by_state"]
+    lines = [
+        f"{summary['count']} recommendation(s) in the last {summary['days']} days: "
+        f"{states.get('approved', 0)} approved, {states.get('dismissed', 0)} dismissed, "
+        f"{states.get('open', 0)} open.",
+        f"Approved: {_money(summary['approved_monthly_saving_usd']) or '$0.00'} a month estimated; "
+        f"still open: {_money(summary['open_monthly_saving_usd']) or '$0.00'} a month.",
+    ]
+    for item in summary["largest_open"]:
+        lines.append(
+            f"- {item['finding']} ({_money(item['monthly_saving_usd'])} a month)"
+        )
+    lines.append(
+        "Approving hands you the change to apply; nothing was changed in your account."
+    )
+    return "\n".join(lines)
+
+
+async def recommendations_report(days: int = 7, send: bool = True) -> Any:
+    """Report the deployment's recommendations of the last days — decided and open — and send it.
+
+    Read from the deployment's record, every session of the period (each
+    recommendation as last kept: open, approved or dismissed), counted by
+    state with the estimated monthly savings approved and still open and the
+    largest open ones; sent through the application's channels when ``send``.
+
+    Args:
+        days: The period, in days (default 7: the week).
+        send: Send it through the application's channels (default true).
+
+    Returns:
+        ``{report, text, sent}``, or a sentence saying why it could not be read.
+    """
+    from agent_runtimes.apps import notifications
+    from agent_runtimes.apps.notifications import AppNotifier
+    from agent_runtimes.apps.record import recorder_of
+
+    recorder = recorder_of(_session())
+    if recorder is None or not recorder.deployment_uid:
+        return "The report reads a deployment's record: this session is not a deployment's."
+    period = max(1, min(int(days), 31))
+    try:
+        listed = await _deployment_recommendations(recorder.deployment_uid, period)
+    except LookupError as refused:
+        return str(refused)
+    summary = weekly_summary(listed, period)
+    text = _report_text(summary)
+    sent: List[Dict[str, Any]] = []
+    if send:
+        app = recorder.app.name.strip() or "The AWS Account Agent"
+        sent = await AppNotifier(
+            app=recorder.app,
+            recorder=recorder,
+            app_uid=recorder.app_uid,
+            deployment_uid=recorder.deployment_uid,
+            send=notifications.send_to_ai_agents,
+        ).notify(WEEKLY_REPORT, title=f"{app}: the last {period} days", message=text)
+    return {"report": summary, "text": text, "sent": sent}
 
 
 def forget_recommendations() -> None:
     """Drop every session's list (a test's)."""
     with _lock:
         _kept.clear()
+        _approvals.clear()
 
 
 __all__ = [
     "APPROVE_MEANS",
     "Recommendation",
+    "ask_the_person",
     "decided_in",
+    "keep_recommendation",
+    "recommendations_report",
+    "weekly_summary",
+    "tell_high_severity",
     "forget_recommendations",
     "list_recommendations",
     "recommendation_card",

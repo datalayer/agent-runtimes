@@ -1626,7 +1626,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         if "a2ui-submission" in asked:
             from agent_runtimes.tools.recommendations import decided_in
 
-            decided_in(asked, session)
+            await decided_in(asked, session)
 
     async def after_tool_execute(
         self,
