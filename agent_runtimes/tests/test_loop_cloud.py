@@ -472,6 +472,12 @@ class FakeRuntime:
                 return JSONResponse(
                     {"agent_spec_id": runtime.spec_id, "skills": ["pdf"]}
                 )
+            if path == "/api/v1/runtime/status":
+                # What the prompt asks first: this one keeps no agent sessions,
+                # so its turns go to the plain AG-UI endpoint the fake serves.
+                return JSONResponse(
+                    {"status": "ready", "version": "1.5.128", "agent_sessions": False}
+                )
             if path == "/api/v1/agents":
                 return JSONResponse({"agents": [{"id": "default"}]})
             if path == "/api/v1/agents/default":
