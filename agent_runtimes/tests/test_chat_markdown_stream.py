@@ -52,3 +52,16 @@ def test_an_empty_segment_draws_nothing():
     stream.write("")
     stream.end()
     assert out.getvalue() == ""
+
+
+def test_the_welcome_is_drawn_once_in_a_process(monkeypatch):
+    from agent_runtimes.chat.tux import CliTux
+
+    drawn: list[int] = []
+    monkeypatch.setattr(CliTux, "_welcome_drawn", False)
+    monkeypatch.setattr(CliTux, "_draw_welcome", lambda self: drawn.append(1))
+    first, second = object.__new__(CliTux), object.__new__(CliTux)
+    first.show_welcome()
+    second.show_welcome()
+    first.show_welcome()
+    assert drawn == [1]

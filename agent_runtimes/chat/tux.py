@@ -507,8 +507,24 @@ class CliTux:
         except Exception:
             return None
 
+    #: Whether the welcome was drawn in this process: the start draws it
+    #: before its questions, and neither the launch nor the prompt draws it
+    #: again below what was said since.
+    _welcome_drawn = False
+
     def show_welcome(self) -> None:
-        """Display the welcome banner."""
+        """Display the welcome banner, once in this process.
+
+        The start draws it before its questions, again before a launch and
+        again as the prompt opens: only the first is drawn.
+        """
+        if CliTux._welcome_drawn:
+            return
+        CliTux._welcome_drawn = True
+        self._draw_welcome()
+
+    def _draw_welcome(self) -> None:
+        """Draw the welcome banner."""
         display_name = self._get_display_name()
         cwd = self._get_cwd()
 
