@@ -30,6 +30,7 @@ from agent_runtimes.loop.session import is_session_agui_url
 from .banner import LOOP_VERSION, LOOP_WORDMARK, TOKENS_DOWN, TOKENS_UP
 from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
+from .markdown_stream import MarkdownStream
 
 # Rich styles matching Datalayer brand
 # Brand color reference (from BRAND_MANUAL.md):
@@ -207,6 +208,8 @@ class CliTux:
         self._voice_session: Any = None
         # How the next message was said, sent with it (VO-15, VO-27).
         self._spoken_line: Optional[Dict[str, str]] = None
+        # The answer being drawn, when a turn is under way (`MarkdownStream`).
+        self._answer: Optional[MarkdownStream] = None
 
         # Initialize slash commands. The registry is the source of truth —
         # built-ins plus whatever the installed plugins contributed — and
@@ -1102,6 +1105,9 @@ class CliTux:
                 else self._watch_approvals(approval_stop)
             )
 
+            # The answer's text, drawn as Markdown while it streams; held on
+            # the instance so that whatever ends the turn closes it.
+            answer = self._answer = MarkdownStream(self.console)
             spoken, self._spoken_line = self._spoken_line, None
             async for event in client.run(
                 message,
@@ -1126,10 +1132,12 @@ class CliTux:
                     await _clear_waiting_indicator(show_bullet=False)
                     content = event.delta or ""
                     response_text += content
-                    self.console.print(content, end="", markup=False)
+                    # Markdown on a terminal, the text as it comes elsewhere.
+                    answer.write(content)
 
                 elif event.type == EventType.TOOL_CALL_START:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     # Start of a new tool call
                     # Use event properties which handle both camelCase and snake_case
                     tool_call_id = event.tool_call_id or ""
@@ -1196,6 +1204,7 @@ class CliTux:
 
                 elif event.type == EventType.RUN_FINISHED:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     # Do not break immediately: the server emits a trailing
                     # ``usage`` event (authoritative pydantic-ai
                     # ``result.usage()``) right after RUN_FINISHED. Mark the run
@@ -1207,6 +1216,7 @@ class CliTux:
 
                 elif event.type == EventType.RUN_ERROR:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     if current_tool_call:
                         current_tool_call.status = "error"
                     self.console.print()
@@ -1214,6 +1224,7 @@ class CliTux:
                     break
 
             await _clear_waiting_indicator(show_bullet=False)
+            answer.end()
 
             # Stop the approval watcher now that the run is complete.
             approval_stop.set()
@@ -1345,6 +1356,10 @@ class CliTux:
         except Exception as e:
             self._failed(f"Error: {e}")
         finally:
+            # An answer cut short (an error, an interrupt) is still closed and drawn.
+            if self._answer is not None:
+                self._answer.end()
+                self._answer = None
             # Ensure the approval watcher is always torn down.
             _appr_task = locals().get("approval_task")
             _appr_stop = locals().get("approval_stop")
