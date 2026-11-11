@@ -32,6 +32,9 @@ export const ACTION_CLASSES: ActionClass[] = [
 
 /** What each tool of the tools catalogue does, by id. */
 export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
+  'aws-compute-optimizer': ['read'],
+  'aws-cost-explorer': ['read'],
+  'aws-cost-optimization-hub': ['read'],
   'create-plan': ['read'],
   'current-time': ['read'],
   decide: ['read'],
@@ -48,6 +51,8 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'generate-task-steps': ['read'],
   'get-weather': ['read'],
   'github-repositories': ['read'],
+  'list-recommendations': ['read'],
+  'record-recommendation': ['read'],
   'runtime-echo': ['read'],
   'runtime-send-mail': ['send'],
   'runtime-sensitive-echo': ['read'],
@@ -1020,6 +1025,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'odoo-accounting.odoo_accounting_unreconcile_lines': 'leave_to_me',
     'odoo-accounting.odoo_accounting_vat_close_check': 'do_it',
   },
+  'aws-account-agent': {},
   'bookkeeping-desk': {},
   'change-detection': {
     'earthdata.download_earth_data_granules': 'leave_to_me',
@@ -1394,6 +1400,7 @@ export const APP_ESCALATIONS: Record<
   Record<string, AppEscalation[]>
 > = {
   accounting: {},
+  'aws-account-agent': {},
   'bookkeeping-desk': {},
   'change-detection': {},
   'code-explainer': {},

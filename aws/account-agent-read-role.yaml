@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  The AWS Account Agent's read role. Datalayer's AWS Account Agent, running
+  in Amazon Bedrock AgentCore in your account, assumes it (from its
+  AgentCore execution role, with your organization's external id) to read
+  the account's cost recommendations, spend, utilization, findings and
+  inventory. It reads only: AWS's managed ViewOnlyAccess and SecurityAudit
+  policies, plus the read actions of the cost and health services they do
+  not grant. No action of this role creates, changes or deletes anything.
+  Deploy it in each account the agent reads, or in each member account of
+  an AWS Organization with a CloudFormation StackSet.
+
+Parameters:
+
+  ExecutionRoleArn:
+    Type: String
+    AllowedPattern: '^arn:aws[a-z-]*:iam::\d{12}:role/.+$'
+    ConstraintDescription: An IAM role ARN.
+    Description: >
+      The role the agent runs with: the ExecutionRoleArn output of the
+      Datalayer AgentCore stack (agentcore-cross-account-role.yaml). In a
+      StackSet, the execution role of the account the agent runs in.
+
+  ExternalId:
+    Type: String
+    MinLength: 16
+    MaxLength: 1224
+    AllowedPattern: '^[\w+=,.@:/-]+$'
+    ConstraintDescription: >
+      16 to 1224 characters: letters, digits and +=,.@:/-_ (IAM's rule for
+      sts:ExternalId).
+    Description: >
+      Your organization's external id, as shown in your organization's AWS
+      settings on Datalayer.
+
+  CurBucketName:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
+    Description: >
+      The S3 bucket your Cost and Usage Report (Data Exports) is delivered
+      to, read object by object; empty when there is none.
+
+Conditions:
+
+  HasCurBucket: !Not [!Equals [!Ref CurBucketName, '']]
+
+Resources:
+
+  ReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DatalayerAccountAgentRead
+      Description: Read-only access for Datalayer's AWS Account Agent.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: TheAgentsExecutionRole
+            Effect: Allow
+            Principal:
+              AWS: !Ref ExecutionRoleArn
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/job-function/ViewOnlyAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/SecurityAudit'
+      Policies:
+        - PolicyName: datalayer-account-agent-read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CostExplorer
+                Effect: Allow
+                Action:
+                  - ce:Get*
+                  - ce:Describe*
+                  - ce:List*
+                Resource: '*'
+              - Sid: CostOptimizationHub
+                Effect: Allow
+                Action:
+                  - cost-optimization-hub:Get*
+                  - cost-optimization-hub:List*
+                Resource: '*'
+              - Sid: ComputeOptimizer
+                Effect: Allow
+                Action:
+                  - compute-optimizer:Get*
+                  - compute-optimizer:Describe*
+                Resource: '*'
+              - Sid: WhatComputeOptimizerJudgesFrom
+                Effect: Allow
+                Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeAutoScalingInstances
+                  - ec2:DescribeInstances
+                  - ec2:DescribeVolumes
+                  - ecs:DescribeServices
+                  - ecs:ListServices
+                  - ecs:ListClusters
+                  - lambda:ListFunctions
+                  - lambda:ListProvisionedConcurrencyConfigs
+                  - rds:DescribeDBInstances
+                  - rds:DescribeDBClusters
+                  - cloudwatch:GetMetricData
+                Resource: '*'
+              - Sid: TrustedAdvisor
+                Effect: Allow
+                Action:
+                  - trustedadvisor:Describe*
+                  - trustedadvisor:List*
+                  - support:DescribeTrustedAdvisorChecks
+                  - support:DescribeTrustedAdvisorCheckResult
+                  - support:DescribeTrustedAdvisorCheckSummaries
+                Resource: '*'
+              - Sid: Health
+                Effect: Allow
+                Action: health:Describe*
+                Resource: '*'
+              - Sid: ServiceQuotas
+                Effect: Allow
+                Action:
+                  - servicequotas:Get*
+                  - servicequotas:List*
+                Resource: '*'
+              - Sid: Eks
+                Effect: Allow
+                Action:
+                  - eks:Describe*
+                  - eks:List*
+                Resource: '*'
+              - !If
+                - HasCurBucket
+                - Sid: CostAndUsageReport
+                  Effect: Allow
+                  Action:
+                    - s3:GetObject
+                    - s3:ListBucket
+                  Resource:
+                    - !Sub 'arn:${AWS::Partition}:s3:::${CurBucketName}'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${CurBucketName}/*'
+                - !Ref AWS::NoValue
+
+Outputs:
+
+  ReadRoleArn:
+    Description: >
+      The read role; Datalayer passes it to the agent as
+      DATALAYER_AWS_ACCOUNT_READ_ROLE_ARN.
+    Value: !GetAtt ReadRole.Arn
+
+  ExternalId:
+    Description: >
+      The external id the role requires; passed to the agent as
+      DATALAYER_AWS_ACCOUNT_EXTERNAL_ID.
+    Value: !Ref ExternalId

@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  The AWS Account Agent's change role, optional and separate from its read
+  role. Create it only if you want the agent to apply fixes a person
+  approved. It grants only the kinds of change you turn on below, under a
+  permissions boundary that never allows IAM, KMS, AWS Organizations,
+  account or billing actions. It is assumed for one approved change at a
+  time, with a session tag naming the recommendation, so CloudTrail shows
+  which recommendation each change came from.
+
+Parameters:
+
+  ExecutionRoleArn:
+    Type: String
+    AllowedPattern: '^arn:aws[a-z-]*:iam::\d{12}:role/.+$'
+    ConstraintDescription: An IAM role ARN.
+    Description: >
+      The role the agent runs with: the ExecutionRoleArn output of the
+      Datalayer AgentCore stack (agentcore-cross-account-role.yaml).
+
+  ExternalId:
+    Type: String
+    MinLength: 16
+    MaxLength: 1224
+    AllowedPattern: '^[\w+=,.@:/-]+$'
+    ConstraintDescription: >
+      16 to 1224 characters: letters, digits and +=,.@:/-_ (IAM's rule for
+      sts:ExternalId).
+    Description: >
+      Your organization's external id, as shown in your organization's AWS
+      settings on Datalayer.
+
+  AllowStopInstances:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: "'true' lets an approved fix stop an idle EC2 instance."
+
+  AllowResizeInstances:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: >
+      'true' lets an approved fix change an EC2 instance's type (stop it,
+      change its type, start it again).
+
+  AllowDeleteUnattachedVolumes:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: >
+      'true' lets an approved fix snapshot an unattached EBS volume and
+      delete it.
+
+  AllowDeleteOldSnapshots:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: "'true' lets an approved fix delete an EBS snapshot."
+
+  AllowStorageClassChanges:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: >
+      'true' lets an approved fix set an S3 bucket's lifecycle rules (move
+      objects to a cheaper storage class, expire old versions).
+
+  AllowResizeDatabases:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: "'true' lets an approved fix change an RDS instance's class or storage."
+
+Conditions:
+
+  StopInstances: !Equals [!Ref AllowStopInstances, 'true']
+  ResizeInstances: !Equals [!Ref AllowResizeInstances, 'true']
+  DeleteUnattachedVolumes: !Equals [!Ref AllowDeleteUnattachedVolumes, 'true']
+  DeleteOldSnapshots: !Equals [!Ref AllowDeleteOldSnapshots, 'true']
+  StorageClassChanges: !Equals [!Ref AllowStorageClassChanges, 'true']
+  ResizeDatabases: !Equals [!Ref AllowResizeDatabases, 'true']
+
+Resources:
+
+  # The most the role can ever do, whatever is attached to it later.
+  Boundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: The most Datalayer's AWS Account Agent may ever change.
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: TheKindsOfChangeOffered
+            Effect: Allow
+            Action:
+              - ec2:Describe*
+              - ec2:StopInstances
+              - ec2:StartInstances
+              - ec2:ModifyInstanceAttribute
+              - ec2:CreateSnapshot
+              - ec2:CreateTags
+              - ec2:DeleteVolume
+              - ec2:DeleteSnapshot
+              - s3:GetLifecycleConfiguration
+              - s3:PutLifecycleConfiguration
+              - rds:DescribeDBInstances
+              - rds:ModifyDBInstance
+            Resource: '*'
+          - Sid: NeverIdentityKeysOrganizationsOrBilling
+            Effect: Deny
+            Action:
+              - iam:*
+              - kms:*
+              - organizations:*
+              - account:*
+              - billing:*
+              - aws-portal:*
+              - payments:*
+              - sts:*
+            Resource: '*'
+
+  ChangeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DatalayerAccountAgentChange
+      Description: Approved fixes by Datalayer's AWS Account Agent, one at a time.
+      MaxSessionDuration: 3600
+      PermissionsBoundary: !Ref Boundary
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: OneApprovedRecommendationAtATime
+            Effect: Allow
+            Principal:
+              AWS: !Ref ExecutionRoleArn
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+              'Null':
+                aws:RequestTag/datalayer-recommendation: 'false'
+          - Sid: TheRecommendationsTag
+            Effect: Allow
+            Principal:
+              AWS: !Ref ExecutionRoleArn
+            Action: sts:TagSession
+            Condition:
+              ForAllValues:StringEquals:
+                aws:TagKeys:
+                  - datalayer-recommendation
+      Policies:
+        - PolicyName: datalayer-account-agent-change
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadBeforeChanging
+                Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                  - s3:GetLifecycleConfiguration
+                  - rds:DescribeDBInstances
+                Resource: '*'
+              - !If
+                - StopInstances
+                - Sid: StopAnIdleInstance
+                  Effect: Allow
+                  Action: ec2:StopInstances
+                  Resource: !Sub 'arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:instance/*'
+                - !Ref AWS::NoValue
+              - !If
+                - ResizeInstances
+                - Sid: ResizeAnInstance
+                  Effect: Allow
+                  Action:
+                    - ec2:StopInstances
+                    - ec2:StartInstances
+                    - ec2:ModifyInstanceAttribute
+                  Resource: !Sub 'arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:instance/*'
+                - !Ref AWS::NoValue
+              - !If
+                - DeleteUnattachedVolumes
+                - Sid: SnapshotThenDeleteAnUnattachedVolume
+                  Effect: Allow
+                  Action:
+                    - ec2:CreateSnapshot
+                    - ec2:CreateTags
+                    - ec2:DeleteVolume
+                  Resource:
+                    - !Sub 'arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:volume/*'
+                    - !Sub 'arn:${AWS::Partition}:ec2:*::snapshot/*'
+                - !Ref AWS::NoValue
+              - !If
+                - DeleteOldSnapshots
+                - Sid: DeleteASnapshot
+                  Effect: Allow
+                  Action: ec2:DeleteSnapshot
+                  Resource: !Sub 'arn:${AWS::Partition}:ec2:*::snapshot/*'
+                - !Ref AWS::NoValue
+              - !If
+                - StorageClassChanges
+                - Sid: SetABucketsLifecycle
+                  Effect: Allow
+                  Action: s3:PutLifecycleConfiguration
+                  Resource: !Sub 'arn:${AWS::Partition}:s3:::*'
+                - !Ref AWS::NoValue
+              - !If
+                - ResizeDatabases
+                - Sid: ResizeADatabase
+                  Effect: Allow
+                  Action: rds:ModifyDBInstance
+                  Resource: !Sub 'arn:${AWS::Partition}:rds:*:${AWS::AccountId}:db:*'
+                - !Ref AWS::NoValue
+
+Outputs:
+
+  ChangeRoleArn:
+    Description: The change role, assumed for one approved change at a time.
+    Value: !GetAtt ChangeRole.Arn
+
+  BoundaryArn:
+    Description: The permissions boundary of the change role.
+    Value: !Ref Boundary

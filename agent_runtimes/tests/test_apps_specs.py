@@ -103,6 +103,7 @@ class TestTheCatalogue:
             "worker",
         }
         assert [found.id for found in list_apps("worker")] == [
+            "aws-account-agent",
             "inbox-triage",
             "pipeline-report",
         ]

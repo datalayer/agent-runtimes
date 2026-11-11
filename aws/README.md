@@ -146,6 +146,54 @@ The Datalayer IAM and Runtimes services read it as
 `DATALAYER_AGENTCORE_AWS_SECRET_ACCESS_KEY`, with the account id as
 `DATALAYER_AWS_ACCOUNT_ID`.
 
+## The AWS Account Agent's roles
+
+The AWS Account Agent (the agentspec `worker-aws-account`) runs in AgentCore
+in your account and reads the account's cost recommendations and spend. It
+reads with a role of its own, never with its execution role's permissions.
+
+[`account-agent-read-role.yaml`](./account-agent-read-role.yaml) creates one
+role, `DatalayerAccountAgentRead`, assumed only by the AgentCore execution
+role (the `ExecutionRoleArn` output above) with your organization's external
+id. It carries AWS's managed `ViewOnlyAccess` and `SecurityAudit` policies and
+the read actions of Cost Explorer, Cost Optimization Hub, Compute Optimizer,
+Trusted Advisor, AWS Health, Service Quotas and Amazon EKS; with
+`CurBucketName`, `s3:GetObject` and `s3:ListBucket` on your Cost and Usage
+Report bucket and no other. It allows no action that creates, changes or
+deletes anything: a test reads the template and fails on any action that is
+not a `Get`, `List` or `Describe`.
+
+```bash
+aws cloudformation deploy \
+  --template-file aws/account-agent-read-role.yaml \
+  --stack-name datalayer-account-agent-read \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides \
+      ExecutionRoleArn=$EXECUTION_ROLE_ARN \
+      ExternalId=$DATALAYER_EXTERNAL_ID
+```
+
+The agent is given the `ReadRoleArn` and `ExternalId` outputs as
+`DATALAYER_AWS_ACCOUNT_READ_ROLE_ARN` and `DATALAYER_AWS_ACCOUNT_EXTERNAL_ID`
+(its deployment's environment); without them it reads nothing and says so.
+Cost Optimization Hub and Compute Optimizer must be opted in to in the account
+(each console's *Enable*), or they answer that the account is not enrolled.
+
+For an AWS Organization, deploy the same template in each member account with
+a StackSet (`aws cloudformation create-stack-set … --capabilities
+CAPABILITY_NAMED_IAM`, then `create-stack-instances`); the execution role then
+also needs `sts:AssumeRole` on `arn:aws:iam::*:role/DatalayerAccountAgentRead`.
+
+[`account-agent-change-role.yaml`](./account-agent-change-role.yaml) is
+optional and separate: the role an approved fix would be applied with,
+`DatalayerAccountAgentChange`. Each kind of change is off until its parameter
+is `true` (stop an instance, resize an instance, snapshot and delete an
+unattached volume, delete a snapshot, set a bucket's lifecycle, resize a
+database); a permissions boundary denies every IAM, KMS, AWS Organizations,
+account, billing and STS action; the role is assumed only with a
+`datalayer-recommendation` session tag naming the recommendation. The agent
+does not use it yet: it recommends, and a person applies the fix.
+
 ## The AgentCore image
 
 AgentCore Runtime runs one image for every agentspec: agent-runtimes from

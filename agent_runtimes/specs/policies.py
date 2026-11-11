@@ -136,6 +136,23 @@ DEFAULT_POLICY_0_0_1 = PolicySpec(
     },
 )
 
+DOGWOOD_APPROVAL_BEFORE_ACCOUNT_CHANGE_POLICY_0_0_1 = PolicySpec(
+    id="dogwood-approval-before-account-change",
+    version="0.0.1",
+    name="Approval before an AWS account change",
+    description="An example of a Dogwood set an administrator writes for an AWS account agent: a change to the account (a fix applied with the change role) is permitted only when a person approved the same recommendation in the session within the hour before it; every other action is left to the rules. Deny by default: without the approval, the change is refused, by the Shield in the runtime and, when the change tool is reached through an AgentCore Gateway, by AgentCore Policy there.",
+    enabled=False,
+    tags=["policy", "organization", "dogwood", "example", "aws"],
+    policy={
+        "scope": "organization",
+        "version": 1,
+        "dogwood": {
+            "mode": "enforce",
+            "policies": '@id("everything but an account change")\npermit (principal, action, resource)\nunless { action == Datalayer::Action::"aws_account___apply_fix" };\n\n@id("an account change needs its recommendation approved within the hour")\npermit (principal, action == Datalayer::Action::"aws_account___apply_fix", resource)\nwhen temporal {\n    formerly within 1h Datalayer::Action::"aws_account___approve_recommendation"::response{\n        eventResource: resource,\n        input.recommendation: context.input.recommendation\n    }\n};\n',
+        },
+    },
+)
+
 DOGWOOD_APPROVAL_BEFORE_PAYMENT_POLICY_0_0_1 = PolicySpec(
     id="dogwood-approval-before-payment",
     version="0.0.1",
@@ -279,6 +296,7 @@ ORGANIZATION_BASELINE_POLICY_0_0_1 = PolicySpec(
 
 POLICY_CATALOGUE: Dict[str, PolicySpec] = {
     "default": DEFAULT_POLICY_0_0_1,
+    "dogwood-approval-before-account-change": DOGWOOD_APPROVAL_BEFORE_ACCOUNT_CHANGE_POLICY_0_0_1,
     "dogwood-approval-before-payment": DOGWOOD_APPROVAL_BEFORE_PAYMENT_POLICY_0_0_1,
     "dogwood-distinct-payees": DOGWOOD_DISTINCT_PAYEES_POLICY_0_0_1,
     "dogwood-running-total": DOGWOOD_RUNNING_TOTAL_POLICY_0_0_1,
