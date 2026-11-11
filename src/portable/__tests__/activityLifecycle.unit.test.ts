@@ -99,6 +99,22 @@ describe('activity (M-015b)', () => {
       '',
     );
     // Fail fast: no reader maps `stopped` to anything.
+    // A session of a deployment that runs on AWS AgentCore (11 November 2026).
+    const onAgentCore = sessionRowOf({
+      uid: 'c',
+      state: 'open',
+      runs_on: {
+        kind: 'agentcore',
+        arn: 'arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/r-1',
+      },
+    });
+    expect(onAgentCore.runsOn).toEqual({
+      kind: 'agentcore',
+      arn: 'arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/r-1',
+    });
+    expect(() =>
+      sessionRowOf({ uid: 'd', state: 'open', runs_on: { kind: 'moon' } }),
+    ).toThrow(/AWS AgentCore/);
     expect(() => sessionRowOf({ uid: 'a', state: 'stopped' })).toThrow(
       'There is no session state "stopped" (session a): one of open, paused, ended.',
     );

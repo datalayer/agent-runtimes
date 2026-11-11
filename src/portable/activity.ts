@@ -136,10 +136,15 @@ export type SessionState = (typeof SESSION_STATES)[number];
 export const SESSION_TURNS = ['idle', 'running', 'waiting'] as const;
 export type SessionTurn = (typeof SESSION_TURNS)[number];
 
-/** Where an open session runs: a runtime, or a seat of a team run; nothing while paused or ended. */
+/**
+ * Where an open session runs: a runtime of Datalayer's, a seat of a team
+ * run, or an AWS AgentCore agent runtime in its organization's account;
+ * nothing while paused or ended.
+ */
 export type SessionRunsOn =
   | { kind: 'runtime'; uid: string }
   | { kind: 'team_run'; executionId: string; seat: string }
+  | { kind: 'agentcore'; arn: string }
   | null;
 
 /** Where a session comes from: cloned from another at a turn, or imported from a file. */
@@ -203,8 +208,11 @@ const runsOnOf = (raw: unknown): SessionRunsOn => {
       seat: said(raw.seat),
     };
   }
+  if (raw.kind === 'agentcore') {
+    return { kind: 'agentcore', arn: said(raw.arn) };
+  }
   throw new Error(
-    `A session runs on a runtime or a team run, not on ${JSON.stringify(raw.kind)}.`,
+    `A session runs on a runtime, a team run or AWS AgentCore, not on ${JSON.stringify(raw.kind)}.`,
   );
 };
 
