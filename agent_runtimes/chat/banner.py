@@ -148,7 +148,7 @@ def print_goodbye(console: Any = None) -> None:
     if console is not None:
         console.print()
         console.print(
-            f"[#2ECC71]{GOODBYE_MESSAGE}[/#2ECC71]  "
+            f"[#2ECC71]{GOODBYE_MESSAGE}[/#2ECC71] "
             f"[#59595C]· [link={GOODBYE_URL}]{GOODBYE_URL}[/link][/#59595C]"
         )
         console.print()
