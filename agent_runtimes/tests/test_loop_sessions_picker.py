@@ -644,3 +644,82 @@ def test_a_session_is_deleted_where_it_is_kept(
 
 async def _answer(uid: str) -> Dict[str, Any]:
     return {"uid": uid}
+
+
+# --- delete with no uid: every session, asked of in turn ---------------------------
+
+
+def test_delete_without_a_uid_goes_through_every_session_and_asks_each() -> None:
+    from agent_runtimes.commands import sessions as command
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+
+    rows = [
+        Paused("01-a", "agent", "example-simple", "A", ON_THIS_MACHINE, "file", ""),
+        Paused("01-b", "agent", "example-simple", "B", ON_DATALAYER, "record", ""),
+        Paused("01-c", "agent", "example-simple", "C", ON_DATALAYER, "record", ""),
+        Paused("01-d", "agent", "example-simple", "D", ON_THIS_MACHINE, "file", ""),
+    ]
+    answers = {
+        "01-a": command.DELETE_YES,
+        "01-b": command.DELETE_KEEP,
+        "01-c": command.DELETE_YES,
+        "01-d": command.DELETE_YES,
+    }
+    asked: List[str] = []
+    deleted: List[Any] = []
+    said: List[str] = []
+
+    def ask(row: Paused) -> str:
+        asked.append(row.uid)
+        return answers[row.uid]
+
+    def delete(uid: str, token: str, where: str) -> str:
+        if uid == "01-c":
+            raise command.SessionsRefused(
+                f"Session {uid} is open: pause it or end it first."
+            )
+        deleted.append((uid, token, where))
+        return f"Deleted {uid}."
+
+    counts = command.delete_across(rows, "the-token", ask, said.append, delete)
+    # Every session is asked of; each is deleted where it is kept.
+    assert asked == ["01-a", "01-b", "01-c", "01-d"]
+    assert deleted == [
+        ("01-a", "the-token", ON_THIS_MACHINE),
+        ("01-d", "the-token", ON_THIS_MACHINE),
+    ]
+    # A refused delete is said, and the walk goes on.
+    assert any(line.startswith("Not deleted: Session 01-c is open") for line in said)
+    assert counts == (2, 2)
+
+
+def test_stop_ends_the_walk_and_deletes_nothing_more() -> None:
+    from agent_runtimes.commands import sessions as command
+    from agent_runtimes.loop.paused import ON_THIS_MACHINE
+
+    rows = [
+        Paused(f"01-{n}", "agent", "example-simple", "T", ON_THIS_MACHINE, "file", "")
+        for n in range(3)
+    ]
+    replies = iter([command.DELETE_YES, command.DELETE_STOP, command.DELETE_YES])
+    deleted: List[str] = []
+    counts = command.delete_across(
+        rows,
+        "",
+        lambda row: next(replies),
+        lambda line: None,
+        lambda uid, token, where: deleted.append(uid) or "ok",
+    )
+    assert deleted == ["01-0"] and counts == (1, 0)
+
+
+def test_yes_without_a_uid_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    from typer.testing import CliRunner
+
+    from agent_runtimes.commands import sessions as command
+
+    walked: List[bool] = []
+    monkeypatch.setattr(command, "_delete_each", lambda: walked.append(True))
+    result = CliRunner().invoke(command.app, ["delete", "--yes"])
+    assert result.exit_code != 0 and walked == []
+    assert "never all" in result.output

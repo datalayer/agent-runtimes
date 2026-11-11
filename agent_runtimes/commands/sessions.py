@@ -32,7 +32,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from rich.console import Console
@@ -330,6 +330,42 @@ def delete_session(uid: str, token: str = "", where: str = "") -> str:
     return f"Deleted {uid} from your Datalayer account's record."
 
 
+#: The answers `delete_across` takes for each session.
+DELETE_KEEP, DELETE_YES, DELETE_STOP = "keep", "delete", "stop"
+
+
+def delete_across(
+    rows: List[Any],
+    token: str,
+    ask: Any,
+    say: Any,
+    delete: Any = None,
+) -> Tuple[int, int]:
+    """Go through every session, asking of each whether to delete it.
+
+    ``ask(row)`` answers ``DELETE_YES``, ``DELETE_KEEP`` or ``DELETE_STOP``
+    (nothing more is asked); a refused delete (an open session on Datalayer, one
+    nobody may delete) is said and the walk goes on. Returns how many were
+    deleted and how many kept.
+    """
+    delete = delete or delete_session
+    deleted = kept = 0
+    for row in rows:
+        answer = ask(row)
+        if answer == DELETE_STOP:
+            break
+        if answer != DELETE_YES:
+            kept += 1
+            continue
+        try:
+            say(delete(row.uid, token, row.where))
+            deleted += 1
+        except SessionsRefused as refused:
+            say(f"Not deleted: {refused}")
+            kept += 1
+    return deleted, kept
+
+
 def transfer_session(
     uid: str, to: str, token: str, *, yes: bool, ask: Any = None
 ) -> Any:
@@ -496,14 +532,31 @@ def transfer_command(
 
 @app.command(name="delete")
 def delete_command(
-    uid: str = typer.Argument(..., help="The session's uid."),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask."),
+    uid: str = typer.Argument(
+        "",
+        help="The session's uid. Without one, every session is gone through, each asked of in turn.",
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Do not ask (one named session only)."
+    ),
 ) -> None:
     """Delete a session for good: on this machine, else in your Datalayer account's record.
 
     One on Datalayer is deleted signed in, and only one you opened; an open
-    one is refused: pause or end it first.
+    one is refused: pause or end it first. Without a uid, every session (this
+    machine's and, signed in, Datalayer's) is gone through, newest first, and
+    you are asked of each: delete it, keep it, or stop.
     """
+    if not uid:
+        if yes:
+            _exit(
+                SessionsRefused(
+                    "Name the session to delete without asking: `--yes` deletes one session, never all."
+                )
+            )
+            return
+        _delete_each()
+        return
     try:
         if not yes and not _confirm(
             f"Delete session {uid} for good? Its conversation and its record go with it."
@@ -513,6 +566,42 @@ def delete_command(
         console.print(delete_session(uid, _token()), markup=False)
     except SessionsRefused as refused:
         _exit(refused)
+
+
+def _delete_each() -> None:
+    """`loop sessions delete` with no uid: every session, asked of in turn."""
+    import questionary
+
+    from agent_runtimes.loop.paused import ON_THIS_MACHINE, paused_line
+
+    token = _token()
+    rows = every_session(token)
+    if not rows:
+        console.print("You have no session to delete.")
+        return
+    console.print(
+        f"{len(rows)} session{'s' if len(rows) != 1 else ''}, newest first: for each, delete it, keep it, or stop.",
+        markup=False,
+    )
+
+    def ask(row: Any) -> str:
+        place = "this machine" if row.where == ON_THIS_MACHINE else "Datalayer"
+        answer = questionary.select(
+            f"{paused_line(row)} — {row.state}, on {place}",
+            choices=[
+                questionary.Choice("Keep it", DELETE_KEEP),
+                questionary.Choice("Delete it for good", DELETE_YES),
+                questionary.Choice("Stop", DELETE_STOP),
+            ],
+            default=DELETE_KEEP,
+        ).ask()
+        # Ctrl-C or Escape stops, deleting nothing more.
+        return answer or DELETE_STOP
+
+    deleted, kept = delete_across(
+        rows, token, ask, lambda line: console.print(line, markup=False)
+    )
+    console.print(f"Deleted {deleted}, kept {kept}.", markup=False)
 
 
 @app.command(name="list")
