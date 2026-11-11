@@ -78,8 +78,9 @@ dependencies = [
     # agentspecs 0.0.140: the minimal and orb backdrops.
     # 1.6.17 with agentspecs 0.0.174: the example agent github-repositories, which an application may name.
     # 1.6.24 with agentspecs 0.0.176: worker-aws-account and AgentCore Memory in the catalogue it validates against.
-    # 1.6.25 with agentspecs 0.0.177: record_recommendation drawn as its card; aws-account-agent keeps approvals.
-    "agentspecs>=0.0.177",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.25 with agentspecs 0.0.178: record_recommendation drawn as its card; aws-account-agent keeps approvals,
+    # its week's report (recommendations-report, every Monday) and its email channel.
+    "agentspecs>=0.0.178",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
