@@ -110,6 +110,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert set(reports) == {
         "accounting",
+        # The AWS Account Agent (agentspecs 0.0.176).
+        "aws-account-agent",
         # The scenes' members (agentspecs 0.0.60, A-04).
         "change-detection",
         "crop-monitoring",

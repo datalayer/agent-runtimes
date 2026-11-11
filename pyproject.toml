@@ -77,7 +77,8 @@ dependencies = [
     # agentspecs 0.0.139: colours by palette name.
     # agentspecs 0.0.140: the minimal and orb backdrops.
     # 1.6.17 with agentspecs 0.0.174: the example agent github-repositories, which an application may name.
-    "agentspecs>=0.0.174",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.24 with agentspecs 0.0.176: worker-aws-account and AgentCore Memory in the catalogue it validates against.
+    "agentspecs>=0.0.176",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

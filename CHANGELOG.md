@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **agentspecs 0.0.176.** The floor rises to 0.0.176, the catalogue with `worker-aws-account` (its exact egress hosts) and the `agentcore` memory spec, which the specs regenerated from it equal.
 - **A team seat on AgentCore calls its models.** The A2A worker runs a task apart from the request that sent it, so the caller's exchanged ai-inference token never reached the task's model calls; the seat gives it for the call's context and the worker holds it for that context's tasks.
 - **A team's seats start again.** A seat defined in the team spec hands its tools to the runtime as `backend_tools`; it still sent `tools`, which the create route refuses, so every such seat failed at its start (422).
 - **AgentCore Observability takes the spans.** Every span of an AgentCore invocation carries its runtime session id (`session.id`), and an agent runtime's spans are named as AgentCore names them (`service.name` `<agent runtime name>.DEFAULT`). The organization's template turns on CloudWatch Transaction Search (`EnableTransactionSearch`): without it X-Ray's OTLP endpoint refused every export (400), so nothing reached AgentCore Observability.
