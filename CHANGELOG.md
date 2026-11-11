@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **A team's seats start again.** A seat defined in the team spec hands its tools to the runtime as `backend_tools`; it still sent `tools`, which the create route refuses, so every such seat failed at its start (422).
 - **AgentCore Observability takes the spans.** Every span of an AgentCore invocation carries its runtime session id (`session.id`), and an agent runtime's spans are named as AgentCore names them (`service.name` `<agent runtime name>.DEFAULT`). The organization's template turns on CloudWatch Transaction Search (`EnableTransactionSearch`): without it X-Ray's OTLP endpoint refused every export (400), so nothing reached AgentCore Observability.
 - **A recorded session judged by AgentCore's evaluators**: `evaluate_session` reads a session's spans from `aws/spans` and asks `Evaluate` once per evaluator (`Builtin.GoalSuccessRate`, `Builtin.ToolSelectionAccuracy`…).
 - **Online evaluation of an agent runtime**: `AgentCoreTarget.evaluate_online` creates or updates the runtime's online evaluation configuration (the evaluators, the share of sessions judged), run by the organization's evaluation role (the template's new `EvaluationRoleArn`); `stop_online_evaluation` deletes it.
