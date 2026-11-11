@@ -967,6 +967,11 @@ async def invocations(request: Request) -> Response:
             payload, request.headers, request.scope
         )
     except ContractRefused as refused:
+        # Said in the runtime's own log too: AgentCore answers its caller a
+        # status, not the sentence.
+        logger.warning(
+            "AgentCore invocation refused (%d): %s", refused.status, refused.sentence
+        )
         raise HTTPException(
             status_code=refused.status, detail=refused.sentence
         ) from None
