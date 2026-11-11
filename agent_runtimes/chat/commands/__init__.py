@@ -61,14 +61,10 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "cls",
             "exit",
             "suggestions",
-            "sessions",
-            "pause",
-            "resume",
-            "swap",
-            "clone",
-            "export",
         ),
     ),
+    # List, pause, resume: the three verbs of a session, together.
+    ("Sessions", ("sessions", "pause", "resume", "swap", "clone", "export")),
     ("Context", ("context", "context_export")),
     (
         "Agents",

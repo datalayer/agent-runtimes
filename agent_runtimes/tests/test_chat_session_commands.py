@@ -93,6 +93,9 @@ def wired(
         )
 
     monkeypatch.setattr(httpx, "request", request)
+    # No key of the person's in the test's environment: the prompt signs as
+    # the fixture says, and its sessions are in files, not on the platform.
+    monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     yield remote
 
 
@@ -147,9 +150,11 @@ def test_the_prompt_sends_its_turns_to_its_agents_sessions() -> None:
 
 def test_pause_is_one_of_the_prompts_commands() -> None:
     groups = dict(_BUILTIN_GROUPS)
-    assert "pause" in groups["Session"]
-    assert groups["Session"].index("sessions") < groups["Session"].index("pause")
-    assert pause.NAME == "pause" and pause.GROUP == "Session"
+    # List, pause, resume: together, under one heading of /help.
+    assert groups["Sessions"][:3] == ("sessions", "pause", "resume")
+    assert "pause" not in groups["Session"]
+    assert pause.NAME == "pause" and pause.GROUP == "Sessions"
+    assert resume.GROUP == "Sessions" and sessions_command.GROUP == "Sessions"
     assert "Pause" in pause.DESCRIPTION
 
 
@@ -172,13 +177,15 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     uid = tux.session.session_uid
 
     [line] = _run(sessions_command, tux)
-    assert line.startswith(f"{uid}  open    agent  {SPEC}  2 turns  on runtime local")
+    assert line.startswith(
+        f" 1  {uid}  open    agent  {SPEC}  2 turns  on runtime local"
+    )
 
     said = _run(pause, tux)
     assert said == [
         f"Paused {uid} ({SPEC}, 2 turns): it is kept in the record.",
         "Its memory was given 4 messages of the conversation.",
-        f"Resume it: `loop -a {SPEC}`, then `/resume {uid}`.",
+        f"Resume it: `loop` lists it as it starts; or `loop -a {SPEC}`, then `/resume {uid}`.",
     ]
     # The prompt ends; nothing is given back on this machine.
     assert tux.running is False and tux._agui_client is None
@@ -194,8 +201,11 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     sessions._SESSIONS.clear()
     again = _prompt()
     [listed] = _run(sessions_command, again)
-    assert listed.startswith(f"{uid}  paused  agent  {SPEC}  2 turns")
-    [resumed] = _run(resume, again, uid)
+    assert listed.startswith(f" 1  {uid}  paused  agent  {SPEC}  2 turns")
+    # By its number in the list, as well as by its id.
+    [no_such] = _run(resume, again, "7")
+    assert no_such.startswith("There is no session 7 in the last /sessions")
+    [resumed] = _run(resume, again, "1")
     assert resumed == (
         f"Resumed {uid} ({SPEC}): 2 turns replayed. "
         "Your next message goes on with it; /pause, /swap, /clone and /export act on it."
@@ -233,7 +243,13 @@ def test_on_datalayer_pause_gives_the_runtime_back_without_asking(
     _say(wired, tux, "One")
     uid = tux.session.session_uid
     said = _run(pause, tux)
-    assert said[-1] == f"Resume it: `loop --cloud -a {SPEC}`, then `/resume {uid}`."
+    assert said[-2] == (
+        f"Resume it: `loop` lists it as it starts; or `loop --cloud -a {SPEC}`, then `/resume {uid}`."
+    )
+    # Kept in the platform's record: where it is on the web.
+    assert (
+        said[-1] == "On the web: https://datalayer.ai/sessions, under Paused sessions."
+    )
     assert launch._GIVEN_BACK == {"runtime-1"}
 
     client = FakeClient()

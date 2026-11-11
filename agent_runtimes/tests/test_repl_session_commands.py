@@ -140,7 +140,7 @@ def test_the_commands_act_on_the_session_this_conversation_is(
             assert "This conversation is not a session yet" in said
         listed = _run(sessions_command, tux)
         assert any(
-            line.startswith("session-r101  paused  app    notes-assistant  1 turn")
+            line.startswith(" 1  session-r101  paused  app    notes-assistant  1 turn")
             for line in listed
         )
         [resumed] = _run(resume, tux, "session-r101")

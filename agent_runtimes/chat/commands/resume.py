@@ -17,11 +17,13 @@ if TYPE_CHECKING:
 
 NAME = "resume"
 ALIASES: list[str] = []
-DESCRIPTION = "Resume a session here, its conversation loaded: go on where it stopped"
+DESCRIPTION = "Resume a paused session here, by its number in /sessions or its id"
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 ARGS = (
-    CommandArgSpec(name="uid", description="The session's id (/sessions)"),
+    CommandArgSpec(
+        name="uid", description="The session's number in /sessions, or its id"
+    ),
     CommandArgSpec(
         name="agent",
         description="The agent that runs it here, when it is not this prompt's",
@@ -39,6 +41,19 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     # A session this runtime no longer holds is rebuilt from its record on
     # the agent named: this prompt's, unless another is.
     uid = parts[0]
+    # Its number in the last `/sessions`, as well as its id.
+    listed = (
+        list(session.extras.get("listed_sessions") or []) if session is not None else []
+    )
+    if uid.isdigit() and len(uid) < 8:
+        if not 1 <= int(uid) <= len(listed):
+            tux.console.print(
+                f"There is no session {uid} in the last /sessions: list them first, "
+                "or give the session's id.",
+                markup=False,
+            )
+            return None
+        uid = listed[int(uid) - 1]
     agent = parts[1] if len(parts) > 1 else str(getattr(tux, "agent_id", "") or "")
     try:
         response = ask(tux, "POST", f"/{uid}/resume", json={"agent": agent})

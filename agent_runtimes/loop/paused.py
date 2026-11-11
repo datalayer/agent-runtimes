@@ -21,12 +21,14 @@ What `loop` resumes from a terminal:
 
 What it does not, listed all the same with the reason and where to open it:
 
-- **a deployment's session**: it runs in its application's name (its
-  principal), on a runtime the platform launches for the deployment, and its
-  record is the deployment's; a terminal starts runtimes as the person, so
-  going on from here would go on under another identity. It is resumed at
-  its application's address;
-- **a seat of a team run**: resumed with its run.
+- **a session of somebody else's deployment**: a terminal starts a runtime
+  for a deployment of its owner's only; it is gone on with at its address;
+- **a seat of a team run**: resumed with its run (`loop teams resume`).
+
+A session of **one of the person's own deployments** is resumed from here
+too: a runtime is launched on Datalayer for the deployment, its agent made
+as its page makes it (its Appspec and the instance it runs), so the runtime
+lets the person in as the deployment decides and acts as its principal.
 
 The platform's list failing — offline, a key
 refused — is said in one line and never blocks the start.
@@ -81,6 +83,8 @@ class Paused:
     """The application its record names: a catalogue's id, the Studio's uid, or ``agent:<agentspec>``."""
     app_name: str = ""
     """An application's name, when the catalogue or the person's deployments say it."""
+    deployment_uid: str = ""
+    """The deployment it is a session of, or ``""`` for a Preview and an agent's."""
     why_not: str = ""
     """Why `loop` does not resume it, in a sentence; ``""`` when it does."""
     address: str = ""
@@ -110,6 +114,8 @@ class ResumePlan:
     application: str = ""
     """For an application's session, the application to start (its uid in
     the record); ``""`` for an agent's, whose agentspec is started."""
+    deployment: str = ""
+    """For a deployment's session, the deployment a runtime is launched for."""
 
 
 def resume_plan(row: Paused) -> ResumePlan:
@@ -120,6 +126,7 @@ def resume_plan(row: Paused) -> ResumePlan:
         cloud=row.where == ON_DATALAYER,
         session_store=FILE if row.store == FILE else "",
         application=row.app_uid if row.kind == "application" else "",
+        deployment=row.deployment_uid,
     )
 
 
@@ -127,9 +134,10 @@ def resume_plan(row: Paused) -> ResumePlan:
 SITE = "https://datalayer.ai"
 
 DEPLOYMENT_WHY_NOT = (
-    "a deployment's session: it runs in its application's name, at its address"
+    "a session of somebody else's deployment: a terminal starts a runtime for a "
+    "deployment of its owner's only"
 )
-TEAM_WHY_NOT = "a seat of a team run: resumed with its run"
+TEAM_WHY_NOT = "a seat of a team run, resumed with its run: loop teams resume"
 
 
 def _where_of(session: Mapping[str, Any]) -> str:
@@ -178,7 +186,10 @@ def paused_of(
             why_not = TEAM_WHY_NOT
             address = f"{SITE}/executions/{runs_on.get('execution_id') or ''}"
         elif kind == "application" and deployment_uid:
-            why_not = DEPLOYMENT_WHY_NOT
+            # One of the person's own is resumed from here, on a runtime
+            # launched for it; somebody else's at its address.
+            if not deployment:
+                why_not = DEPLOYMENT_WHY_NOT
             slug = str(deployment.get("slug") or "")
             if slug and deployment.get("target") == "hosted":
                 address = f"{SITE}/apps/{slug}?thread={session.get('uid') or ''}"
@@ -196,12 +207,18 @@ def paused_of(
                 agent=str(session.get("agent") or ""),
                 title=str(session.get("title") or ""),
                 # What is kept in files on this machine ran on this machine.
-                where=ON_THIS_MACHINE if store == FILE else _where_of(session),
+                # A deployment's lives on Datalayer, whatever ran it last.
+                where=ON_THIS_MACHINE
+                if store == FILE
+                else ON_DATALAYER
+                if deployment_uid
+                else _where_of(session),
                 store=store,
                 started_at=str(session.get("started_at") or ""),
                 turns=int(session.get("turns") or 0),
                 app_uid=app_uid,
                 app_name=app_name,
+                deployment_uid=deployment_uid,
                 why_not=why_not,
                 address=address,
             )

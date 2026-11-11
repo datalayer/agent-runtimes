@@ -1468,6 +1468,7 @@ def main_callback(
                         plan.application,
                         plan.uid,
                         cloud=plan.cloud,
+                        deployment_uid=plan.deployment,
                         environment=environment,
                         minutes=minutes,
                         keep=keep,

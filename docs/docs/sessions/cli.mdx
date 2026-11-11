@@ -63,9 +63,9 @@ are sessions (`/api/v1/apps/agents/<agent>/ag-ui/`).
 
 | In the prompt | What it does |
 | --- | --- |
-| `/sessions [<app>]` | Your sessions, held and recorded, each with its kind and state. |
+| `/sessions [<app>]` | Your sessions, held and recorded, numbered, each with its kind and state. |
 | `/pause` | Pause this session and leave. What the conversation holds is given to the agent's memory first, when its agentspec has one; the record says `paused`. On Datalayer (`loop --cloud`) the runtime is given back without asking; on your machine the server stops with the prompt. It says how to resume. |
-| `/resume <uid> [<agent>]` | Go on with a session here: rebuilt from its record on this prompt's agent when the runtime no longer holds it, its conversation loaded, so your next message is its next turn. |
+| `/resume <number or uid> [<agent>]` | Go on with a session here, by its number in the last `/sessions` or by its id: rebuilt from its record on this prompt's agent when the runtime no longer holds it, its conversation loaded, so your next message is its next turn. |
 | `/swap <agent>`, `/clone [turn]`, `/export [file]` | Act on this session (the swap's sentence shown). |
 
 The prompt asks its runtime what it can do first (`GET
@@ -73,6 +73,13 @@ The prompt asks its runtime what it can do first (`GET
 keeps agent sessions — an older one, on a pool not updated yet — is talked to
 on its plain endpoint as before, and one line says the conversation is not
 listed, paused or resumed there.
+
+`/help` lists these under one heading, **Sessions**. After `/pause` the
+prompt says the way back — `loop` lists it as it starts, the command, and,
+for a session kept on Datalayer, `https://datalayer.ai/sessions` — and on
+`/exit` with a session open it says the session is kept, paused as its
+runtime stops. In `loop apps run` the conversation with the application is
+a session too: `/pause` pauses it.
 
 Before the first message, `/pause`, `/swap`, `/clone` and `/export` say
 *This conversation is not a session yet*. `/clear` starts a new session at
@@ -106,7 +113,8 @@ $ loop
   Resume: Agent session · worker-marketer · “The autumn campaign” · on Datalayer · started 3 hours ago
   Resume: Agent session · example-simple · “My name is Ada and I sell tea.” · on this machine · started 2 days ago
   Resume: Application session · Decide · “Reply with one word.” · on this machine · started 5 days ago
-  Application session · Exchange Desk · “Hi” · on Datalayer · started 6 days ago (a deployment's session: it runs in its application's name, at its address: open https://datalayer.ai/apps/exchange-desk?thread=…)
+  Resume: Application session · Exchange Desk · “Hi” · on Datalayer · started 6 days ago
+  Application session · Shared Desk · “Hello” · on Datalayer · started 7 days ago (a session of somebody else's deployment: a terminal starts a runtime for a deployment of its owner's only)
 ```
 
 - The sessions kept **on this machine** are always listed; signed in to
@@ -119,17 +127,21 @@ $ loop
     cloud runtime;
   - **an application's session that is a Preview** — you trying an
     application, a catalogue's or one you keep in the Studio: the
-    application is started as `loop apps run` starts it, from the
-    catalogue's Appspec or the one the Studio keeps, and the session is
-    resumed on it.
+    application is started as `loop apps run` starts it, and the session is
+    resumed on it;
+  - **a session of one of your deployments**: a runtime is launched on
+    Datalayer for the deployment, its agent made as its page makes it, so it
+    runs in the application's name as it does at its address. The deployment
+    must run the version the Studio keeps; otherwise the prompt says so and
+    names its address.
 - What a terminal does not resume is drawn too, not to be picked, with why
   and where to open it (the three most recent; the rest are counted):
-  - **a deployment's session** runs in its application's name, on a runtime
-    the platform launches for the deployment; a terminal starts runtimes as
-    you, so it is resumed at its application's address;
-  - **a seat of a team run** is resumed with its run;
-  - an application **written in Python** is said so when picked: its code
-    reacts in its own process, and its session is gone on with on its page.
+  - **a session of somebody else's deployment**: a terminal starts a runtime
+    for a deployment of its owner's only; go on with it at its address;
+  - **a seat of a team run** is resumed with its run: `loop teams resume`;
+  - a Preview of an application **written in Python** is said so when
+    picked: its code reacts in its own process (`loop apps run app.py`
+    starts a new conversation with it).
 - Up to five resumable sessions are offered, then *N more: /sessions*.
 - *Start a new session*, the first choice and what Enter picks, goes on to
   the usual questions.

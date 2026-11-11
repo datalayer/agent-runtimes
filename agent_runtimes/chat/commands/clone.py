@@ -18,7 +18,7 @@ NAME = "clone"
 ALIASES: list[str] = []
 DESCRIPTION = "Clone this session from a turn: a new session, paused"
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 ARGS = (
     CommandArgSpec(name="turn", description="The turn to cut at; the last one unsaid"),
 )

@@ -99,6 +99,15 @@ def _cloud_sessions() -> List[Dict[str, Any]]:
             "started_at": "2026-11-11T09:00:00+00:00",
         },
         {
+            "uid": "others-app-1",
+            "app_uid": "app-9",
+            "deployment_uid": "dep-of-somebody-else",
+            "state": "paused",
+            "agent": "cog-crawler",
+            "title": "Shared with me",
+            "started_at": "2026-11-11T06:00:00+00:00",
+        },
+        {
             "uid": "preview-1",
             "app_uid": "decide",
             "state": "paused",
@@ -152,6 +161,7 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         "own-machine-1",
         "preview-1",
         "seat-1",
+        "others-app-1",
     }
     assert by_uid["local-paused-1"] == Paused(
         uid="local-paused-1",
@@ -183,23 +193,29 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         "Decide",
         "local",
     )
-    # A deployment's session is not: it says why, and where it is opened.
+    # A session of one of the person's own deployments is resumed from the
+    # terminal too, on Datalayer, where it lives; its address is kept.
     deployed = by_uid["cloud-app-1"]
-    assert (deployed.kind, deployed.resumable, deployed.app_name) == (
+    assert (deployed.kind, deployed.resumable, deployed.app_name, deployed.where) == (
         "application",
-        False,
+        True,
         "Exchange Desk",
+        "cloud",
     )
-    assert deployed.why_not == paused.DEPLOYMENT_WHY_NOT
+    assert deployed.deployment_uid == "dep-1"
     assert (
         deployed.address == "https://datalayer.ai/apps/exchange-desk?thread=cloud-app-1"
     )
+    # Somebody else's deployment is not: it says why.
+    others = by_uid["others-app-1"]
+    assert (others.resumable, others.why_not) == (False, paused.DEPLOYMENT_WHY_NOT)
     seat = by_uid["seat-1"]
     assert (seat.resumable, seat.why_not, seat.address) == (
         False,
         paused.TEAM_WHY_NOT,
         "https://datalayer.ai/executions/exec_400b",
     )
+    assert "loop teams resume" in paused.TEAM_WHY_NOT
     # Newest first.
     started = [row.started_at for row in rows]
     assert started == sorted(started, reverse=True)
@@ -286,7 +302,7 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
     # Enter: the first choice, a new session, and the usual questions follow.
     assert choose_paused(rows, ask=pick(""), now=NOW) is None
     question, choices, default = asked[0]
-    assert question == "You have 6 paused sessions. Go on with one, or start a new one?"
+    assert question == "You have 7 paused sessions. Go on with one, or start a new one?"
     assert choices[0] == (NEW_SESSION, "") and default == ""
     # What is resumed here first, newest first; then what is opened elsewhere.
     assert [choice[1] for choice in choices[1:]] == [
@@ -298,22 +314,31 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
         "Resume: Application session · Decide · “Reply with one word.” · on this machine"
     )
     assert len(picked["preview-1"]) == 2 and len(picked["cloud-agent-1"]) == 2
-    # One not resumed from a terminal is drawn, not to be picked, with why
-    # and its address: never only counted.
-    assert picked["cloud-app-1"][0].startswith("Application session · Exchange Desk")
-    assert picked["cloud-app-1"][2] == (
-        "a deployment's session: it runs in its application's name, at its address: "
-        "open https://datalayer.ai/apps/exchange-desk?thread=cloud-app-1"
+    assert picked["cloud-app-1"][0].startswith(
+        "Resume: Application session · Exchange Desk"
+    )
+    # One not resumed from a terminal is drawn, not to be picked, with why:
+    # never only counted.
+    assert picked["others-app-1"][0].startswith("Application session · ")
+    assert picked["others-app-1"][2].startswith(
+        "a session of somebody else's deployment"
     )
     assert picked["seat-1"][2].startswith(
-        "a seat of a team run: resumed with its run: open "
+        "a seat of a team run, resumed with its run: loop teams resume: open "
     )
+
+    # A deployment's session is resumed on a runtime launched for it.
+    own = choose_paused(rows, ask=pick("cloud-app-1"))
+    assert own is not None
+    plan = resume_plan(own)
+    assert (plan.application, plan.deployment, plan.cloud) == ("app-1", "dep-1", True)
 
     # An application's Preview is resumed by starting its application.
     preview = choose_paused(rows, ask=pick("preview-1"))
     assert preview is not None
     plan = resume_plan(preview)
     assert (plan.uid, plan.application, plan.cloud) == ("preview-1", "decide", False)
+    assert plan.deployment == ""
 
     # A cloud one is resumed on Datalayer, a local one on this machine,
     # each with its agent, nobody asked where.
@@ -492,7 +517,8 @@ def test_an_application_picked_is_started_and_resumed() -> None:
     source = P(apps.__file__).read_text()
     assert "configure_on(base_url, document, app_uid=studio_uid or None)" in source
     assert "resume=session_uid," in source
-    assert "session_agui_url(base_url, CLOUD_AGENT_NAME)" in source
+    assert "session_agui_url(base_url, agent_name)" in source
+    assert "deployment_uid=plan.deployment," in wiring
 
 
 def test_an_application_kept_on_datalayer_is_configured_under_its_uid(
@@ -527,3 +553,41 @@ def test_an_application_kept_on_datalayer_is_configured_under_its_uid(
     assert "app_uid" not in sent[1]
     assert ConfigureAppRequest(app={}, app_uid="01M4APP").app_uid == "01M4APP"
     assert ConfigureAppRequest(app={}).app_uid is None
+
+
+def test_a_deployment_of_the_persons_is_read_to_start_its_agent_again() -> None:
+    from agent_runtimes.apps.deployments import Deployment
+    from agent_runtimes.apps.store import APP_ITEM_FORMAT
+    from agent_runtimes.commands.apps import ResumeRefused, deployed_application
+
+    spec = {"schema": "loop.app/v1", "id": "notes", "name": "Notes", "kind": "chat"}
+
+    class Item:
+        name = "Notes"
+
+        def __init__(self, version: int) -> None:
+            self.version = version
+            self.model = {"format": APP_ITEM_FORMAT, "spec": spec}
+
+    class Studio:
+        def __init__(self, kept: int) -> None:
+            self.kept = kept
+
+        def list(self) -> List[Deployment]:
+            return [Deployment(uid="dep-1", app_uid="01M4APP", version=3, slug="notes")]
+
+        def item(self, uid: str) -> Any:
+            assert uid == "01M4APP"
+            return Item(self.kept)
+
+    # The instance its page gives a runtime: the runtime acts as its principal.
+    assert deployed_application("dep-1", Studio(3)) == (
+        spec,
+        {"app_uid": "01M4APP", "deployment_uid": "dep-1", "version": 3},
+    )
+    with pytest.raises(ResumeRefused, match="not one of yours"):
+        deployed_application("dep-of-somebody-else", Studio(3))
+    with pytest.raises(
+        ResumeRefused, match="runs version 3 and the Studio keeps version 4"
+    ):
+        deployed_application("dep-1", Studio(4))

@@ -19,7 +19,7 @@ NAME = "swap"
 ALIASES: list[str] = []
 DESCRIPTION = "Swap this session's agent in place; the new agent is told in a sentence"
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 ARGS = (CommandArgSpec(name="agent", description="The agentspec to go on with"),)
 
 

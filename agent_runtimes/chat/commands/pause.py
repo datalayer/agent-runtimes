@@ -21,9 +21,11 @@ if TYPE_CHECKING:
 
 NAME = "pause"
 ALIASES: list[str] = []
-DESCRIPTION = "Pause this session and leave: /resume <uid> goes on with it later"
+DESCRIPTION = (
+    "Pause this session and leave: its conversation is kept, /resume goes on with it"
+)
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 
 NOTHING_TO_PAUSE = (
     "Nothing to pause: this conversation has no message yet. `/sessions` lists "
@@ -47,7 +49,23 @@ def resume_line(tux: "CliTux", uid: str, agent: str) -> str:
     """How the session is gone on with, in a sentence."""
     on_datalayer = bool(getattr(tux, "cloud_runtime", None))
     start = f"loop{' --cloud' if on_datalayer else ''} -a {agent}"
-    return f"Resume it: `{start}`, then `/resume {uid}`."
+    return (
+        f"Resume it: `loop` lists it as it starts; or `{start}`, then `/resume {uid}`."
+    )
+
+
+#: Where a session kept in the platform's record is listed on the web.
+WEB_SESSIONS = "https://datalayer.ai/sessions"
+
+
+def web_line(tux: "CliTux") -> str:
+    """Where it is on the web, when it is kept in the platform's record; '' in files."""
+    import os
+
+    on_platform = bool(getattr(tux, "cloud_runtime", None)) or bool(
+        os.environ.get("DATALAYER_API_KEY")
+    )
+    return f"On the web: {WEB_SESSIONS}, under Paused sessions." if on_platform else ""
 
 
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
@@ -71,6 +89,9 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     if said:
         tux.console.print(said, markup=False)
     tux.console.print(resume_line(tux, uid, agent), markup=False)
+    web = web_line(tux)
+    if web:
+        tux.console.print(web, markup=False)
     runtime = getattr(tux, "cloud_runtime", None)
     if runtime:
         # Its runtime is given back as the prompt ends, without asking.

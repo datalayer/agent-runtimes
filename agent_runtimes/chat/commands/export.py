@@ -20,7 +20,7 @@ NAME = "export"
 ALIASES: list[str] = []
 DESCRIPTION = "Export this session as a datalayer-session/1 file"
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 ARGS = (
     CommandArgSpec(
         name="file", description="Where to write it; <uid>.session.jsonl unsaid"
