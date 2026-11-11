@@ -275,3 +275,45 @@ def test_loop_sessions_pause(wired: TestClient, marketer: Said) -> None:  # noqa
         assert again.exit_code == 1 and "is paused already" in again.output
     finally:
         command.use_client(None)
+
+
+def test_an_older_runtime_is_talked_to_as_before_and_said() -> None:
+    """Found on r1, 11 November 2026: the pool ran 1.5.128, and the prompt's
+    first turn answered 404 *The agent default runs no application*. A
+    runtime says whether it keeps agent sessions; its version is no proof (a
+    checkout says a stale one).
+    """
+    from agent_runtimes.loop.session import LoopRefused, conversation_url
+
+    class Answer:
+        def __init__(self, status: int, body: Dict[str, Any]) -> None:
+            self.status_code, self.body = status, body
+
+        def json(self) -> Dict[str, Any]:
+            return self.body
+
+    def says(status: int, body: Dict[str, Any]) -> Any:
+        return lambda url, timeout: Answer(status, body)
+
+    url, said = conversation_url(
+        "http://runtime/",
+        "default",
+        get=says(200, {"version": "1.5.120", "agent_sessions": True}),
+    )
+    assert (url, said) == ("http://runtime/api/v1/apps/agents/default/ag-ui/", "")
+    url, said = conversation_url(
+        "http://runtime", "default", get=says(200, {"version": "1.5.128"})
+    )
+    assert url == "http://runtime/api/v1/ag-ui/default/"
+    assert said == (
+        "This runtime (agent-runtimes 1.5.128) keeps no session of an agent: the "
+        "conversation goes on as before, and is not listed, paused or resumed."
+    )
+    # Nothing is guessed of a runtime that does not answer.
+    with pytest.raises(LoopRefused, match="did not say what it runs"):
+        conversation_url("http://runtime", "default", get=says(503, {}))
+
+
+def test_this_runtime_says_it_keeps_agent_sessions(wired: TestClient) -> None:
+    said = wired.get("/api/v1/runtime/status").json()
+    assert said["agent_sessions"] is True and said["version"]

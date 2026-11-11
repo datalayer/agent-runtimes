@@ -1729,6 +1729,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "status": "ok",
             "service": config.title,
             "version": config.version,
+            # What this runtime can do, said for who talks to it: an agent
+            # made without an Appspec has its conversations kept as
+            # sessions (listed, paused, resumed). A runtime that does not
+            # say it does not.
+            "agent_sessions": True,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "api_prefix": config.api_prefix,
             "startup": startup_info,

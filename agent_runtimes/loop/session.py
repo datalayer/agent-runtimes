@@ -130,6 +130,50 @@ def session_agui_url(server_url: str, agent: str) -> str:
     return f"{server_url.rstrip('/')}{SESSION_AGUI_PATH}{agent}/ag-ui/"
 
 
+def older_runtime_said(version: str) -> str:
+    """What is said of a runtime that keeps no session of an agent."""
+    return (
+        f"This runtime (agent-runtimes {version or 'of an earlier release'}) keeps no "
+        "session of an agent: the conversation goes on as before, and is not listed, "
+        "paused or resumed."
+    )
+
+
+def conversation_url(
+    server_url: str, agent: str, *, get: Any = None
+) -> tuple[str, str]:
+    """Where the prompt sends its turns, and what to say of it, if anything.
+
+    The runtime says what it can do (``GET /api/v1/runtime/status``,
+    ``agent_sessions``): one that keeps an agent's conversations as sessions
+    is talked to on its agent's endpoint whose threads are sessions; one
+    that does not say so — an older one, a pool not updated yet — on its
+    plain AG-UI endpoint, as before, with a sentence saying so.
+
+    Raises
+    ------
+    LoopRefused
+        When the runtime does not answer what it is: nothing is guessed.
+    """
+    import httpx
+
+    base = server_url.rstrip("/")
+    try:
+        answered = (get or httpx.get)(f"{base}/api/v1/runtime/status", timeout=30.0)
+    except httpx.HTTPError as refused:
+        raise LoopRefused(f"The runtime did not say what it runs: {refused}") from None
+    if answered.status_code >= 300:
+        raise LoopRefused(
+            f"The runtime did not say what it runs ({answered.status_code})."
+        )
+    said = answered.json() or {}
+    if said.get("agent_sessions") is True:
+        return session_agui_url(base, agent), ""
+    return f"{base}/api/v1/ag-ui/{agent}/", older_runtime_said(
+        str(said.get("version") or "")
+    )
+
+
 def is_session_agui_url(url: str) -> bool:
     """Whether an AG-UI address is one whose threads are sessions."""
     return SESSION_AGUI_PATH in url

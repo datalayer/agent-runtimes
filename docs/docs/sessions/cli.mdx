@@ -68,6 +68,12 @@ are sessions (`/api/v1/apps/agents/<agent>/ag-ui/`).
 | `/resume <uid> [<agent>]` | Go on with a session here: rebuilt from its record on this prompt's agent when the runtime no longer holds it, its conversation loaded, so your next message is its next turn. |
 | `/swap <agent>`, `/clone [turn]`, `/export [file]` | Act on this session (the swap's sentence shown). |
 
+The prompt asks its runtime what it can do first (`GET
+/api/v1/runtime/status`, `agent_sessions`). A runtime that does not say it
+keeps agent sessions — an older one, on a pool not updated yet — is talked to
+on its plain endpoint as before, and one line says the conversation is not
+listed, paused or resumed there.
+
 Before the first message, `/pause`, `/swap`, `/clone` and `/export` say
 *This conversation is not a session yet*. `/clear` starts a new session at
 the next message; the one cleared stays in the record. `/browser` keeps
