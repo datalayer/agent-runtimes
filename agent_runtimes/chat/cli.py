@@ -563,6 +563,12 @@ def _format_startup_info(
         if skills:
             add_row("Skills", ", ".join(skills))
 
+        from .commands.decisions import header_value as decisions_header_value
+
+        decisions = decisions_header_value(agent_info.get("decisions"))
+        if decisions:
+            add_row("Decisions", decisions)
+
         mcp_servers = agent_info.get("mcp_servers", [])
         if mcp_servers:
             add_row("MCP", ", ".join(mcp_servers))

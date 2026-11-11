@@ -1,7 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``decide`` tool: typed questions asked of Jev through ai-inference.
+"""The ``decide`` tool: typed questions asked of an agent's decision model.
+
+An agent has it when its spec names decisions (``decisions: jev:0.0.1``): the
+tool asks that spec's model, within its limits.
 
 ai-inference is mocked: what the tool sends to ``POST /decisions``, with which
 token, and what it gives the agent back — the typed answers, or a sentence
@@ -22,8 +25,20 @@ from agent_runtimes.services.runtime_tools import register_agent_tools
 from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS
 from agent_runtimes.specs.agents import get_agent_spec
 from agent_runtimes.specs.backend_tools import get_backend_tool_spec
+from agent_runtimes.specs.decisions import get_decisions
 from agent_runtimes.tools import decisions
-from agent_runtimes.tools.decisions import DecisionQuestion, decide
+from agent_runtimes.tools.decisions import (
+    DecisionQuestion,
+    NoDecisions,
+    decide_tool,
+    tools_with_decisions,
+)
+from agent_runtimes.tools.decisions import decide as undecided
+
+#: The shipped decisions spec, and the tool of an agent that names it.
+JEV = get_decisions("jev:0.0.1")
+assert JEV is not None
+decide = decide_tool(JEV)
 
 #: httpx's own client, kept before any test replaces it.
 REAL_CLIENT = httpx.AsyncClient
@@ -191,24 +206,81 @@ def test_a_refusal_of_ai_inference_is_said_with_its_words(
     )
 
 
-def test_the_tool_is_a_reader_and_the_simple_agent_has_it() -> None:
+def test_the_tool_is_a_reader_and_the_simple_agent_has_it_through_its_decisions() -> (
+    None
+):
     spec = get_backend_tool_spec("decide:0.0.1")
     assert spec is not None and spec.approval == "auto"
     assert spec.runtime.package == "agent_runtimes.tools.decisions"
     assert BACKEND_TOOL_ACTIONS["decide"] == ["read"]
     simple = get_agent_spec("example-simple")
-    assert simple is not None and "decide:0.0.1" in simple.backend_tools
+    assert simple is not None and simple.decisions == "jev:0.0.1"
+    assert "decide:0.0.1" in simple.backend_tools
     assert any("urgent" in s.text for s in simple.suggestions)
 
 
-def test_it_registers_on_an_agent_as_decide() -> None:
-    class Agent:
-        def __init__(self) -> None:
-            self.tools: list[Any] = []
+class _Agent:
+    """What ``register_agent_tools`` registers on."""
 
-        def tool_plain(self, fn: Any, requires_approval: bool = False) -> None:
-            self.tools.append((fn, requires_approval))
+    def __init__(self) -> None:
+        self.tools: list[Any] = []
 
-    agent = Agent()
-    assert register_agent_tools(agent, ["decide:0.0.1"]) == ["decide"]
-    assert agent.tools[0][1] is False
+    def tool_plain(self, fn: Any, requires_approval: bool = False) -> None:
+        self.tools.append((fn, requires_approval))
+
+
+def test_decisions_bring_decide_asked_of_the_specs_model(
+    inference: list[httpx.Request],
+) -> None:
+    agent = _Agent()
+    assert register_agent_tools(agent, [], agent_id="a", decisions="jev:0.0.1") == [
+        "decide"
+    ]
+    tool, approval = agent.tools[0]
+    assert approval is False
+    assert "Ask Jev typed questions" in tool.__doc__
+    asyncio.run(
+        tool(TICKET, [DecisionQuestion(name="u", type="noul", instructions="Urgent.")])
+    )
+    assert json.loads(inference[0].content)["model"] == JEV.model
+
+
+def test_decide_without_decisions_is_refused_in_a_sentence_naming_the_agent() -> None:
+    with pytest.raises(NoDecisions) as refused:
+        register_agent_tools(_Agent(), ["decide:0.0.1"], agent_id="plain")
+    assert str(refused.value) == (
+        "The agent plain lists the backend tool `decide` but its spec names no "
+        "decisions: add `decisions: jev:0.0.1` to its agentspec, which brings the tool."
+    )
+    assert tools_with_decisions(["runtime-echo:0.0.1"], None, "plain") == [
+        "runtime-echo:0.0.1"
+    ]
+    assert tools_with_decisions(["decide:0.0.1"], "jev", "a") == ["decide:0.0.1"]
+    with pytest.raises(NoDecisions, match="has no 'oracle:0.0.1'"):
+        tools_with_decisions([], "oracle:0.0.1", "a")
+
+
+def test_the_catalogues_binding_decides_nothing_alone() -> None:
+    said = asyncio.run(undecided(TICKET, []))
+    assert said.startswith("Nothing was decided: an agent decides only when")
+
+
+def test_the_specs_limits_and_question_types_are_kept(
+    inference: list[httpx.Request],
+) -> None:
+    noul = DecisionQuestion(name="u", type="noul", instructions="Urgent.")
+    many = [noul.model_copy(update={"name": f"q{i}"}) for i in range(11)]
+    assert asyncio.run(decide(TICKET, many)) == (
+        "Nothing was decided: Jev takes at most 10 questions in one call, not 11."
+    )
+    assert asyncio.run(decide("x" * 20001, [noul])) == (
+        "Nothing was decided: Jev takes a text of at most 20000 characters, not 20001."
+    )
+    yes_no_only = decide_tool(JEV.model_copy(update={"questions": ["noul"]}))
+    team = DecisionQuestion(
+        name="team", type="choice", instructions="Which?", options=["A", "B"]
+    )
+    assert asyncio.run(yes_no_only(TICKET, [team])) == (
+        "Nothing was decided: Jev answers no choice question ('team'): noul."
+    )
+    assert inference == []

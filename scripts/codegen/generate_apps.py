@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any
 
 from agentspecs_clone import import_from_clone
+from generate_decisions import check_app_decisions
 from versioning import ensure_spec_version, version_suffix
 
 #: The keys of an Appspec, as TypeScript spells them. Keys inside a surface's
@@ -255,6 +256,8 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "built": built,
         "python": python,
     }
+    # An application that lists `decide` runs an agent that names decisions.
+    check_app_decisions(specs, specs_dir)
     return specs, actions
 
 

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 from agent_runtimes.loop.commands import CommandArgSpec
 
+from .decisions import header_value
+
 NAME = "agents"
 ALIASES: list[str] = ["agent"]
 DESCRIPTION = "List agents, and switch the one this session is using"
@@ -118,6 +120,11 @@ async def _list(tux: "CliTux") -> Optional[str]:
 
         # Model
         tux.console.print(f"    Model: {model}", style=STYLE_MUTED)
+
+        # Decisions: only an agent whose spec names them decides.
+        decisions = header_value(agent.get("decisions"))
+        if decisions:
+            tux.console.print(f"    Decisions: {decisions}", style=STYLE_MUTED)
 
         # Codemode
         codemode = toolsets.get("codemode", False)

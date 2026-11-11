@@ -90,6 +90,7 @@ from .routes import (
 from .routes.agents import set_api_prefix
 from .routes.computer import router as computer_router
 from .specs.agents import get_agent_spec
+from .tools.decisions import decisions_info, decisions_spec
 
 # Load environment variables from .env file
 load_dotenv()
@@ -594,6 +595,7 @@ async def _create_and_register_cli_agent(
         tool_ids,
         agent_id=agent_id,
         disable_tool_approvals=tool_approvals_disabled,
+        decisions=agent_spec.decisions,
     )
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)
@@ -882,6 +884,7 @@ async def _create_and_register_cli_agent(
         "backend_tools": list(agent_spec.backend_tools)
         if agent_spec.backend_tools
         else [],
+        "decisions": agent_spec.decisions,
         "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
         "icon": getattr(agent_spec, "icon", None),
         "emoji": getattr(agent_spec, "emoji", None),
@@ -1009,6 +1012,10 @@ async def _create_and_register_cli_agent(
             "codemode": enable_codemode,
             "tool_approvals_disabled": tool_approvals_disabled,
             "skills": list(skills) if skills else [],
+            # How it decides, when its spec names decisions; None when it does not.
+            "decisions": decisions_info(
+                decisions_spec(agent_spec.decisions) if agent_spec.decisions else None
+            ),
             "tools": registered_tools,
             "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],
         },

@@ -10,6 +10,9 @@ Each command module exports:
     SHORTCUT: Optional[str] - keyboard shortcut (e.g., "escape x")
     GROUP: Optional[str] - grouping for /help (defaults to "General")
     ARGS: Optional[tuple[CommandArgSpec, ...]] - arguments, for completion
+    OFFERED: Optional[Callable[[CliTux], bool]] - whether the command is offered
+        now (listed in /help and the / menu); a command without it always is.
+        One that is not offered still answers when typed, to say why.
     execute(tux) -> Optional[str] - async handler, returns optional next prompt
 
 The modules are the built-in commands. They are no longer the *only* commands:
@@ -20,7 +23,8 @@ repository can ship a slash command without editing this file.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeAlias
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, TypeAlias
 
 from agent_runtimes.loop.commands import (
     CommandArgSpec,
@@ -87,6 +91,31 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     ("Fun", ("rain", "about", "gif")),
 )
+
+
+class SessionCommands(SlashCommandRegistry):
+    """A session's commands: every one answers, only those offered now are listed.
+
+    A command module may say ``OFFERED(tux)`` — ``/decisions`` is offered only
+    for an agent whose spec names decisions. `/help` and the `/` menu read the
+    registry by iterating it, so what is not offered now is left out of both,
+    while its name still resolves: typed, it says why it is not offered.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._offered: dict[str, Callable[[], bool]] = {}
+
+    def offer_when(self, name: str, offered: Callable[[], bool]) -> None:
+        """List the command ``name`` only while ``offered()`` holds."""
+        self._offered[name] = offered
+
+    def __iter__(self) -> Iterator[SlashCommandSpec]:
+        return iter(
+            spec
+            for spec in super().__iter__()
+            if spec.name not in self._offered or self._offered[spec.name]()
+        )
 
 
 def _group_for(module_name: str) -> str:
@@ -195,7 +224,7 @@ def build_registry(
 
         modules.append(jupyter)
 
-    registry = SlashCommandRegistry()
+    registry = SessionCommands()
 
     for mod in modules:
         module_name = mod.__name__.rsplit(".", 1)[-1]
@@ -205,6 +234,9 @@ def build_registry(
         # A built-in colliding with a built-in is a bug in this file, so it is
         # allowed to raise; a plugin colliding is handled below.
         registry.register(spec)
+        offered = getattr(mod, "OFFERED", None)
+        if offered is not None:
+            registry.offer_when(spec.name, partial(offered, tux))
 
     if discover:
         discover_slash_commands(registry)

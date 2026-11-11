@@ -195,6 +195,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
+	agent_runtimes/specs/decisions.py \
 	agent_runtimes/specs/strategies.py \
 	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
@@ -643,6 +644,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
+	$(call step,Generating decisions specifications)
+	python scripts/codegen/generate_decisions.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/decisions \
+	  --python-output agent_runtimes/specs/decisions.py \
+	  --typescript-output src/specs/decisions.ts
 	$(call step,Generating strategy specifications)
 	python scripts/codegen/generate_strategies.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/strategies \

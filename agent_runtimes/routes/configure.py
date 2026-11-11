@@ -30,8 +30,15 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
-from agent_runtimes.tools.decisions import DecisionQuestion, decide
-from agent_runtimes.types import AgentSuggestion, FrontendConfig
+from agent_runtimes.tools import decisions as decisions_tool
+from agent_runtimes.tools.decisions import (
+    DecisionQuestion,
+    NoDecisions,
+    agent_decisions,
+    decisions_info,
+    no_decisions,
+)
+from agent_runtimes.types import AgentDecisions, AgentSuggestion, FrontendConfig
 
 logger = logging.getLogger(__name__)
 
@@ -435,20 +442,36 @@ class DecisionsRequest(BaseModel):
 
     state: str
     questions: list[DecisionQuestion]
+    #: The agent asking: its spec says whether it decides, and with which model.
+    agent_id: str | None = None
+
+
+def _deciding_agent(agent_id: str | None) -> str | None:
+    """The agent a decision is asked for: the one named, or the runtime's only one."""
+    from .acp import _agents
+
+    if agent_id:
+        return agent_id if agent_id in _agents else None
+    running = list(_agents)
+    return running[0] if len(running) == 1 else None
 
 
 @router.post("/inference/decisions")
 async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
-    """Ask Jev typed questions about a text, as the ``decide`` tool does.
+    """Ask an agent's decision model typed questions about a text, as its ``decide`` tool does.
 
-    Through this runtime's ai-inference, with the token its models are called
-    with: on Datalayer the user's, narrowed to ai-inference. ``loop``'s
-    ``/decisions`` asks here.
+    The model is the one the agent's decisions spec names (its agentspec's
+    ``decisions``); an agent whose spec names none does not decide, and is
+    refused in a sentence. Through this runtime's ai-inference, with the
+    token its models are called with: on Datalayer the user's, narrowed to
+    ai-inference. ``loop``'s ``/decisions`` and the chat's *Ask a decision*
+    ask here.
 
     Parameters
     ----------
     body : DecisionsRequest
-        The text (``state``) and the questions, each named and typed.
+        The text (``state``), the questions, each named and typed, and the
+        agent asking (``agent_id``; the runtime's only agent when unsaid).
 
     Returns
     -------
@@ -456,7 +479,23 @@ async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
         ``model`` and ``answers`` by question name; or ``refusal``, the
         sentence saying why nothing was decided.
     """
-    answer = await decide(body.state, body.questions)
+    agent_id = _deciding_agent(body.agent_id)
+    if agent_id is None:
+        return {
+            "refusal": (
+                f"Nothing was decided: no agent '{body.agent_id}' runs on this runtime."
+                if body.agent_id
+                else "Nothing was decided: say which agent asks (agent_id), "
+                "this runtime runs several or none."
+            )
+        }
+    try:
+        spec = agent_decisions(agent_id)
+    except NoDecisions as refused:
+        return {"refusal": str(refused)}
+    if spec is None:
+        return {"refusal": no_decisions(agent_id)}
+    answer = await decisions_tool.ask_decisions(spec, body.state, body.questions)
     if isinstance(answer, str):
         return {"refusal": answer}
     return answer
@@ -771,6 +810,11 @@ async def get_configuration(
             from .agents import get_stored_agent_spec
 
             spec = get_stored_agent_spec(agent_id)
+            # Whether this agent decides, and with which model: its spec's decisions.
+            decisions = decisions_info(agent_decisions(agent_id))
+            config.agent_decisions = (
+                AgentDecisions.model_validate(decisions) if decisions else None
+            )
             spec_model = spec.get("model") if isinstance(spec, dict) else None
             if isinstance(spec_model, str) and spec_model.strip():
                 config.default_model = spec_model

@@ -2084,6 +2084,12 @@ export interface Agentspec {
   notifications?: AgentNotificationConfig;
   /** Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem') */
   memory?: string;
+  /**
+   * How the agent decides: a decisions spec of the catalogue, `id:version`
+   * (e.g. 'jev:0.0.1'). Only an agent that names one decides; it brings the
+   * `decide` backend tool, asked of that spec's model.
+   */
+  decisions?: string;
   /** Pre-launch hooks (package installs and sandbox code). */
   preHooks?: {
     packages?: string[];

@@ -84,6 +84,12 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
     EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
+from ..tools.decisions import (
+    NoDecisions,
+    agent_decisions,
+    decisions_info,
+    tools_with_decisions,
+)
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import (
     BUILTIN_HARNESSES,
@@ -1390,6 +1396,14 @@ class CreateAgentRequest(BaseModel):
         alias="memoryConfig",
         description="Optional memory backend configuration override.",
     )
+    decisions: str | None = Field(
+        default=None,
+        description=(
+            "How the agent decides: a decisions spec of the catalogue, `id:version` "
+            "(for example 'jev:0.0.1'). Taken from the agent's spec when unsaid. "
+            "Only an agent that names one decides; it brings the `decide` tool."
+        ),
+    )
     pre_hooks: dict[str, Any] | None = Field(
         default=None,
         alias="preHooks",
@@ -1785,6 +1799,8 @@ async def create_agent(
                 library_spec, "memory_config", None
             ):
                 request.memory_config = library_spec.memory_config
+            if request.decisions is None and getattr(library_spec, "decisions", None):
+                request.decisions = library_spec.decisions
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1893,6 +1909,10 @@ async def create_agent(
                 memory_cfg_from_spec = _spec_value("memoryConfig", "memory_config")
                 if isinstance(memory_cfg_from_spec, dict):
                     request.memory_config = memory_cfg_from_spec
+            if request.decisions is None:
+                decisions_from_spec = _spec_value("decisions")
+                if isinstance(decisions_from_spec, str) and decisions_from_spec:
+                    request.decisions = decisions_from_spec
             if request.transport == "ag-ui":
                 protocol = _spec_value("protocol")
                 if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
@@ -2748,7 +2768,14 @@ async def create_agent(
             # NOTE: We don't pass MCP toolsets here. They will be dynamically
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
-            tool_ids = list(request.backend_tools or [])
+            # Decisions bring `decide`; `decide` without decisions is refused.
+            try:
+                request.backend_tools = tools_with_decisions(
+                    list(request.backend_tools or []), request.decisions, agent_id
+                )
+            except NoDecisions as refused:
+                raise HTTPException(status_code=422, detail=str(refused)) from None
+            tool_ids = list(request.backend_tools)
             capabilities = None
             usage_limits = None
 
@@ -3019,6 +3046,7 @@ async def create_agent(
                 disable_tool_approvals=not _catalogue_tools_deferred(
                     tool_approvals_disabled, running_app
                 ),
+                decisions=request.decisions,
             )
 
             # Wrap with DBOS durable execution if enabled
@@ -3569,6 +3597,8 @@ def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
         "system_prompt": system_prompt,
         "capabilities": info.capabilities.model_dump() if info.capabilities else {},
         "toolsets": toolsets_info,
+        # How it decides, when its spec names decisions; None when it does not.
+        "decisions": decisions_info(agent_decisions(agent_id)),
     }
 
 

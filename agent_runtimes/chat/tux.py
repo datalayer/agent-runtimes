@@ -226,6 +226,12 @@ class CliTux:
             self, eggs=eggs, jupyter_url=jupyter_url
         )
         self.commands: dict[str, SlashCommand] = self.command_registry.as_mapping()
+        # Whether the session's agent decides, as its runtime said it: the
+        # runtime and agent it was read for, and its decisions or None
+        # (`commands.decisions.refresh`). /decisions is offered only then.
+        self.decisions: Optional[tuple[tuple[str, str], Optional[Dict[str, Any]]]] = (
+            None
+        )
 
         # What a command is allowed to know about the session it runs in, so a
         # command can be written against the session rather than against this
@@ -675,6 +681,10 @@ class CliTux:
 
     async def show_prompt(self) -> str:
         """Display the prompt and get user input with slash command completion."""
+        # Whether this agent decides: /decisions is offered only when it does.
+        from .commands import decisions as _decisions_cmd
+
+        await _decisions_cmd.refresh(self)
         # Initialize prompt session lazily (after commands are registered)
         if self.prompt_session is None:
             # The reactor's REPL machinery, over the same registry: the slash

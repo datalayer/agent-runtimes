@@ -16,6 +16,7 @@ export * from './evals';
 export * from './strategies';
 export * from './mcpServers';
 export * from './memory';
+export * from './decisions';
 export * from './models';
 export * from './modelProviders';
 export * from './notifications';
