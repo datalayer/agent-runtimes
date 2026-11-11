@@ -12,9 +12,15 @@ AgentCore for a token on the person's behalf, the runtime asks IAM for that
 state with the person's own platform token, and names IAM's page as the
 return URL.
 
+AgentCore completes a consent only with the very token it made the run's
+workload token from — the token the invocation carried; another token of the
+same person is refused as an invalid session. So that token goes to IAM with
+the request for the state, and IAM presents it at the bind.
+
 A state is single use and lives ten minutes; one not used yet is kept per
-person and runtime and given again, so a turn that needed no consent costs
-IAM nothing more. One that was used (the person granted) is forgotten.
+invocation token and runtime and given again, so a turn that needed no
+consent costs IAM nothing more. One that was used (the person granted) is
+forgotten.
 
 On a runtime with no token exchange (no ``AGENTCORE_RUNTIME_ARN``, so no
 IAM in its path) there is no page to come back to: refused in a sentence.
@@ -51,7 +57,7 @@ class Consent:
     custom_state: str
 
 
-#: States issued and not used yet, by (person's token, runtime).
+#: States issued and not used yet, by (the invocation's token, runtime).
 _STATES: Dict[Tuple[str, str], Tuple[str, float]] = {}
 
 
@@ -103,13 +109,21 @@ async def consent_for(
         With no person's token, no IAM in the runtime's path, or IAM's refusal,
         in a sentence.
     """
+    from agent_runtimes.agentcore.identity import invocation_token
+
     iam_url, runtime_arn = _runtime()
     bearer = str(context.get("bearer") or "").strip()
     if not bearer:
         raise IdentityRefused(
             "No token of the person: a consent is asked for the person the run acts for."
         )
-    key = (bearer, runtime_arn)
+    carried = invocation_token()
+    if not carried:
+        raise IdentityRefused(
+            "The invocation carried no token: AgentCore binds a consent only to the "
+            "token it made the workload token from."
+        )
+    key = (carried, runtime_arn)
     now = clock()
     kept = _STATES.get(key)
     if kept is not None and kept[1] - EXPIRY_MARGIN > now:
@@ -119,7 +133,7 @@ async def consent_for(
         async with make() as http:
             response = await http.post(
                 f"{iam_url}{NONCE_PATH}",
-                json={"resource": runtime_arn},
+                json={"resource": runtime_arn, "user_token": carried},
                 headers={"Authorization": f"Bearer {bearer}"},
             )
     except httpx.HTTPError as error:

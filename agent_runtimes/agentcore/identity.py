@@ -86,6 +86,39 @@ def use_workload_token(token: str) -> Iterator[None]:
         _WORKLOAD_TOKEN.reset(reset)
 
 
+#: The token the invocation being served carried (``Authorization``): the one
+#: AgentCore Runtime made its workload token from. A consent is bound with
+#: that very token and no other (``CompleteResourceTokenAuth``), so IAM is
+#: given it with the consent's state (:mod:`agent_runtimes.identity.consent`).
+_INVOCATION_TOKEN: ContextVar[str] = ContextVar(
+    "agentcore_invocation_token", default=""
+)
+
+
+def invocation_token_from_headers(headers: Mapping[str, str]) -> str:
+    """The bearer token an AgentCore invocation's headers carry, or ``""``."""
+    for name, value in headers.items():
+        if str(name).lower() == "authorization":
+            scheme, _, token = str(value or "").strip().partition(" ")
+            return token.strip() if scheme.lower() == "bearer" else ""
+    return ""
+
+
+@contextmanager
+def use_invocation_token(token: str) -> Iterator[None]:
+    """Hold the token an invocation carried while its turn runs."""
+    reset = _INVOCATION_TOKEN.set(token)
+    try:
+        yield
+    finally:
+        _INVOCATION_TOKEN.reset(reset)
+
+
+def invocation_token() -> str:
+    """The token the invocation being served carried, or ``""``."""
+    return _INVOCATION_TOKEN.get()
+
+
 #: The workload token a Datalayer pod was given by its companion (ID-06), the
 #: workload it is for and its region: outside AgentCore Runtime, the token
 #: the provider uses when no invocation carries one.
@@ -382,6 +415,9 @@ __all__ = [
     "forget_given_workload",
     "give_workload_token",
     "given_workload",
+    "invocation_token",
+    "invocation_token_from_headers",
+    "use_invocation_token",
     "use_workload_token",
     "workload_token_from_headers",
 ]

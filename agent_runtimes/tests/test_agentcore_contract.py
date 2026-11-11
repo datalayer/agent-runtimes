@@ -734,18 +734,24 @@ def test_a_run_holds_the_workload_token_agentcore_sent():
     from agent_runtimes.agentcore import identity
     from agent_runtimes.agentcore.contract import collected
 
-    seen: list[str] = []
+    seen: list[tuple[str, str]] = []
 
     async def agent_app(scope, receive, send):
-        seen.append(identity._WORKLOAD_TOKEN.get())
+        seen.append((identity._WORKLOAD_TOKEN.get(), identity.invocation_token()))
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await send({"type": "http.response.body", "body": b"{}"})
 
     scope = {
         "type": "http",
-        "headers": [(b"workloadaccesstoken", b"wat-123"), (b"host", b"x")],
+        "headers": [
+            (b"workloadaccesstoken", b"wat-123"),
+            (b"authorization", b"Bearer inbound-rs256"),
+            (b"host", b"x"),
+        ],
     }
     status, _, _ = asyncio.run(collected(agent_app, scope, {"messages": []}, []))
     assert status == 200
-    assert seen == ["wat-123"]
+    # And the token the invocation carried, which a consent is bound with.
+    assert seen == [("wat-123", "inbound-rs256")]
     assert identity._WORKLOAD_TOKEN.get() == ""
+    assert identity.invocation_token() == ""

@@ -2,8 +2,9 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A consent on AgentCore comes back to Datalayer IAM's binding page with a
-state IAM issued to the person: asked once per person and runtime while it
-stands, forgotten once used, refused in a sentence without IAM in the path."""
+state IAM issued to the person: asked once per invocation token and runtime
+while it stands, with that token (AgentCore binds a consent to it alone),
+forgotten once used, refused in a sentence without IAM in the path."""
 
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ import httpx
 import pytest
 
 from agent_runtimes.agentcore.exchange import TokenExchange, use_exchange
+from agent_runtimes.agentcore.identity import use_invocation_token
 from agent_runtimes.identity import consent as consent_module
 from agent_runtimes.plugins.points import IdentityRefused
 
@@ -22,10 +24,15 @@ IAM = "https://iam.example"
 RUNTIME = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/marketer-AbC"
 
 
+#: The token the invocation carried: what AgentCore made the workload token from.
+CARRIED = "invocation-rs256"
+
+
 @pytest.fixture(autouse=True)
 def fresh() -> Any:
     consent_module.forget_states()
-    yield
+    with use_invocation_token(CARRIED):
+        yield
     consent_module.forget_states()
     use_exchange(None)
 
@@ -53,7 +60,7 @@ def test_iam_s_page_and_a_state_asked_with_the_person_s_token() -> None:
     [request] = seen
     assert str(request.url) == f"{IAM}/api/iam/v1/identity/agentcore/bind/nonce"
     assert request.headers["authorization"] == "Bearer platform-jwt"
-    assert json.loads(request.content) == {"resource": RUNTIME}
+    assert json.loads(request.content) == {"resource": RUNTIME, "user_token": CARRIED}
 
 
 def test_a_state_not_used_is_given_again_until_it_nearly_expires() -> None:
@@ -130,6 +137,33 @@ def test_without_iam_in_the_path_or_a_person_it_is_refused() -> None:
     use_exchange(TokenExchange(IAM, RUNTIME))
     with pytest.raises(IdentityRefused, match="No token of the person"):
         asyncio.run(consent_module.consent_for({}))
+
+
+def test_without_the_invocation_s_token_it_is_refused() -> None:
+    use_exchange(TokenExchange(IAM, RUNTIME))
+    with use_invocation_token(""):
+        with pytest.raises(IdentityRefused, match="carried no token"):
+            asyncio.run(consent_module.consent_for({"bearer": "jwt"}))
+
+
+def test_another_invocation_s_token_asks_a_state_of_its_own() -> None:
+    use_exchange(TokenExchange(IAM, RUNTIME))
+    seen: list[httpx.Request] = []
+    client = _iam(
+        [
+            httpx.Response(200, json={"state": "s-1", "expires_in": 600}),
+            httpx.Response(200, json={"state": "s-2", "expires_in": 600}),
+        ],
+        seen,
+    )
+    first = asyncio.run(consent_module.consent_for({"bearer": "jwt"}, client=client))
+    with use_invocation_token("another-invocation"):
+        second = asyncio.run(
+            consent_module.consent_for({"bearer": "jwt"}, client=client)
+        )
+
+    assert (first.custom_state, second.custom_state) == ("s-1", "s-2")
+    assert json.loads(seen[1].content)["user_token"] == "another-invocation"
 
 
 def test_only_the_agentcore_provider_asks_for_a_consent(monkeypatch) -> None:

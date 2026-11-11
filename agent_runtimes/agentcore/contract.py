@@ -709,13 +709,15 @@ def _receiver(payload: bytes, receive: Optional[Callable[[], Awaitable[Any]]]) -
 
 
 def _workload_of(scope: Mapping[str, Any]) -> Any:
-    """Hold, for the run, the workload token AgentCore Runtime sent with the invocation.
+    """Hold, for the run, the workload token AgentCore Runtime sent with the invocation, and its bearer.
 
     The ``agentcore`` identity provider reads it to reach AgentCore's token
     vault for the person (ID-21); an invocation without one runs
     with none held.
     """
     from agent_runtimes.agentcore.identity import (
+        invocation_token_from_headers,
+        use_invocation_token,
         use_workload_token,
         workload_token_from_headers,
     )
@@ -724,7 +726,12 @@ def _workload_of(scope: Mapping[str, Any]) -> Any:
         bytes(name).decode("latin-1"): bytes(value).decode("latin-1")
         for name, value in scope.get("headers") or []
     }
-    return use_workload_token(workload_token_from_headers(headers))
+    # And the token the invocation carried, which AgentCore made the workload
+    # token from: a consent asked in this turn is bound with it alone.
+    held = contextlib.ExitStack()
+    held.enter_context(use_workload_token(workload_token_from_headers(headers)))
+    held.enter_context(use_invocation_token(invocation_token_from_headers(headers)))
+    return held
 
 
 class _Streamed(Response):
