@@ -553,43 +553,55 @@ async def opened_from_record(
     headers: list[tuple[bytes, bytes]],
     tokens: Optional[PlatformTokens],
 ) -> None:
-    """The session, resumed from its record when this process does not hold it.
+    """The session, held by this process: resumed from its record, or started.
 
-    Through the application's resume route, as a page resumes one: its
-    turns, tool rows and Rules given back, a ``session`` entry saying it
-    resumed where it runs now. A session the record has no turn of (404) is a
-    first one, opened by its run; an application that keeps no conversations
-    has nothing to resume from. The conversation resumed is the session's
-    earlier turns for a ``{"prompt"}`` run.
+    Through the application's own routes, as a page does: resumed
+    (``/apps/sessions/{uid}/resume``) — its turns, tool rows and Rules given
+    back, a ``session`` entry saying it resumed where it runs now, its earlier
+    turns the conversation of a ``{"prompt"}`` run; or, the record holding no
+    turn of it (404) or the application keeping no conversations, started
+    (``/apps/sessions``) as the deployment's, its opening saying its agent and
+    where it runs.
 
     Raises
     ------
     ContractRefused
-        When the record refuses it — an ended session, another person's — in its sentence.
+        When the record refuses it — an ended session — or the session is not
+        started, in its sentence.
     """
+    from agent_runtimes.apps.principal import deployment_of
     from agent_runtimes.apps.sessions import agent_app, session_of
 
     if session_of(uid) is not None:
         return
-    app, _ = agent_app(agent)
+    app, instance = agent_app(agent)
     include = {str(getattr(item, "value", item)) for item in app.record.include}
-    if "conversations" not in include:
-        return
+    sessions = f"{_API_PREFIX['prefix']}/apps/sessions"
+    if "conversations" in include:
+        status, _, raw = await collected(
+            Runner(server, f"{sessions}/{uid}/resume", False),
+            scope,
+            {"agent": agent},
+            headers,
+            tokens=tokens,
+        )
+        if status == 200:
+            live = session_of(uid)
+            if live is not None:
+                remember_turns(uid, live.messages)
+            logger.info("AgentCore session %s resumed from its record", uid)
+            return
+        if status != 404:
+            raise ContractRefused(status, _detail_of(raw))
     status, _, raw = await collected(
-        Runner(server, f"{_API_PREFIX['prefix']}/apps/sessions/{uid}/resume", False),
+        Runner(server, sessions, False),
         scope,
-        {"agent": agent},
+        {"agent": agent, "deployment_uid": deployment_of(instance), "session": uid},
         headers,
         tokens=tokens,
     )
-    if status == 404:
-        return
     if status != 200:
         raise ContractRefused(status, _detail_of(raw))
-    live = session_of(uid)
-    if live is not None:
-        remember_turns(uid, live.messages)
-    logger.info("AgentCore session %s resumed from its record", uid)
 
 
 def _detail_of(raw: bytes) -> str:

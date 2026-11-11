@@ -202,6 +202,8 @@ def test_the_deployments_agent_is_made_at_the_first_invocation_and_its_session_r
     assert {b["opened_by"] for b in bodies} == {"ada"}
     [opened] = runtime.entries("session")
     assert opened["payload"]["runs_on"] == {"kind": "agentcore", "arn": ARN}
+    # Its opening names its agent: what lists it as the person's session.
+    assert opened["payload"]["agent"] == "notes-assistant"
     assert [e["payload"]["asked"] for e in runtime.entries("turn")][-1] == "Three"
     ends = [e["payload"] for e in runtime.entries("output")]
     assert ends and all(e["invocation"]["target"] == "agentcore" for e in ends)
@@ -227,6 +229,7 @@ def test_a_session_is_resumed_from_its_record_on_a_new_microvm(
     assert len(resumed) == 1
     assert resumed[0]["payload"]["runs_on"] == {"kind": "agentcore", "arn": ARN}
     assert resumed[0]["payload"]["state"] == "open"
+    assert resumed[0]["payload"]["agent"] == "notes-assistant"
 
 
 def test_another_person_is_not_given_a_recorded_session(
