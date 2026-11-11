@@ -26,7 +26,13 @@ its arguments, its result) and ``chat`` per model request, each with its
   ``OTEL_EXPORTER_OTLP_*`` variables (:func:`agentcore_export_from_env`);
   without one, and with ``AGENT_OBSERVABILITY_ENABLED=true``, X-Ray's OTLP
   endpoint of ``AWS_REGION``, signed with SigV4. Nothing here listens: the
-  ports 4317 and 4318 are AgentCore's own collector's.
+  ports 4317 and 4318 are AgentCore's own collector's. X-Ray's OTLP endpoint
+  takes spans only once the account sends trace segments to CloudWatch Logs
+  (CloudWatch Transaction Search); before, it answers every export 400.
+- **The session.** AgentCore Evaluations judges a session from the spans
+  carrying its ``session.id``: on AgentCore every span of an invocation
+  carries the runtime session id it was invoked with
+  (:func:`use_session_id`, :class:`SessionIdProcessor`).
 """
 
 from __future__ import annotations
@@ -34,8 +40,10 @@ from __future__ import annotations
 import logging
 import os
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Iterator, Mapping, Optional
 from urllib.parse import urlparse
 
 from opentelemetry import trace
@@ -333,6 +341,33 @@ def agentcore_span_exporter(export: AgentCoreExport) -> SpanExporter:
     return OTLPSpanExporter(endpoint=export.endpoint, session=session)
 
 
+#: The span attribute AgentCore Evaluations groups a session's spans by.
+SESSION_ID_ATTRIBUTE = "session.id"
+
+#: The AgentCore runtime session of the invocation being served.
+_SESSION_ID: ContextVar[str] = ContextVar("agentcore_span_session_id", default="")
+
+
+@contextmanager
+def use_session_id(session_id: str) -> Iterator[None]:
+    """Stamp every span started while an invocation runs with its session id."""
+    reset = _SESSION_ID.set(session_id)
+    try:
+        yield
+    finally:
+        _SESSION_ID.reset(reset)
+
+
+class SessionIdProcessor(SpanProcessor):
+    """Write the invocation's session id on each span as it starts (``session.id``)."""
+
+    def on_start(self, span: Any, parent_context: Any = None) -> None:
+        """Stamp the span, when an invocation names its session."""
+        session_id = _SESSION_ID.get()
+        if session_id:
+            span.set_attribute(SESSION_ID_ATTRIBUTE, session_id)
+
+
 @dataclass
 class ToGlobalProcessor(SpanProcessor):
     """Hand each ended span to the process's own provider's processors too.
@@ -400,6 +435,7 @@ def genai_tracer_provider(
         )
         return None
     provider = SDKTracerProvider(resource=Resource.create())
+    provider.add_span_processor(SessionIdProcessor())
     provider.add_span_processor(
         BatchSpanProcessor(exporter or agentcore_span_exporter(export))
     )
@@ -421,12 +457,15 @@ __all__ = [
     "SCOPE",
     "AgentCoreExport",
     "GenAIInstrumentationSettings",
+    "SESSION_ID_ATTRIBUTE",
     "ScopedTracerProvider",
+    "SessionIdProcessor",
     "ToGlobalProcessor",
     "agentcore_export_from_env",
     "agentcore_span_exporter",
     "content_setting",
     "enable_genai_instrumentation",
     "genai_tracer_provider",
+    "use_session_id",
     "instrumentation_settings",
 ]

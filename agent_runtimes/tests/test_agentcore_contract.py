@@ -737,7 +737,15 @@ def test_a_run_holds_the_workload_token_agentcore_sent():
     seen: list[tuple[str, str]] = []
 
     async def agent_app(scope, receive, send):
-        seen.append((identity._WORKLOAD_TOKEN.get(), identity.invocation_token()))
+        from agent_runtimes.otel import genai
+
+        seen.append(
+            (
+                identity._WORKLOAD_TOKEN.get(),
+                identity.invocation_token(),
+                genai._SESSION_ID.get(),
+            )
+        )
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await send({"type": "http.response.body", "body": b"{}"})
 
@@ -746,12 +754,16 @@ def test_a_run_holds_the_workload_token_agentcore_sent():
         "headers": [
             (b"workloadaccesstoken", b"wat-123"),
             (b"authorization", b"Bearer inbound-rs256"),
+            (
+                b"x-amzn-bedrock-agentcore-runtime-session-id",
+                b"datalayer-session-padded-s1",
+            ),
             (b"host", b"x"),
         ],
     }
     status, _, _ = asyncio.run(collected(agent_app, scope, {"messages": []}, []))
     assert status == 200
     # And the token the invocation carried, which a consent is bound with.
-    assert seen == [("wat-123", "inbound-rs256")]
+    assert seen == [("wat-123", "inbound-rs256", "datalayer-session-padded-s1")]
     assert identity._WORKLOAD_TOKEN.get() == ""
     assert identity.invocation_token() == ""

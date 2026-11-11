@@ -731,6 +731,16 @@ def _workload_of(scope: Mapping[str, Any]) -> Any:
     held = contextlib.ExitStack()
     held.enter_context(use_workload_token(workload_token_from_headers(headers)))
     held.enter_context(use_invocation_token(invocation_token_from_headers(headers)))
+    # And its session, on every span the run writes: what AgentCore
+    # Evaluations judges a session by.
+    from agent_runtimes.otel.genai import use_session_id
+
+    wanted = SESSION_HEADER.lower()
+    held.enter_context(
+        use_session_id(
+            next((v.strip() for k, v in headers.items() if k.lower() == wanted), "")
+        )
+    )
     return held
 
 

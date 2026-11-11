@@ -94,6 +94,8 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/interrupt"),
     ("POST", "/api/v1/apps/sessions/{uid}/stop"),
     ("POST", "/api/v1/apps/sessions/{uid}/end"),
+    # A session the person opened, deleted for good (an open one refused).
+    ("DELETE", "/api/v1/apps/sessions/{uid}"),
     ("POST", "/api/v1/apps/sessions/logout"),
     ("POST", "/api/v1/apps/sessions/{uid}/resume"),
     # A person's rules on their running session (SH-54).
