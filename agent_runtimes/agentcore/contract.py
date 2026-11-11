@@ -1052,6 +1052,15 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
     _API_PREFIX["prefix"] = api_prefix
     deployment = deployment_of_runtime()
     if deployment:
+        from agent_runtimes.apps.session_store import configured_store_name
+
+        if configured_store_name() != "record":
+            # A microVM's files go with it: a session kept there is never
+            # resumed on the next one, nor recorded under the deployment.
+            raise RuntimeError(
+                f"Deployment {deployment} keeps its sessions in the platform's record: "
+                "set DATALAYER_AI_AGENTS_URL (the record store), not a file store."
+            )
         # The deployment's agent is made at its first invocation, with that
         # caller's token: ai-agents says what the deployment runs to them.
         logger.info(

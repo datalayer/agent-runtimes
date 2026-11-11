@@ -58,6 +58,7 @@ def deployed(
     monkeypatch.setenv("AGENT_SPEC_ID", "cog-crawler")
     monkeypatch.setenv("AGENTCORE_DEPLOYMENT_UID", DEPLOYMENT)
     monkeypatch.setenv("AGENTCORE_RUNTIME_ARN", ARN)
+    monkeypatch.setenv("AGENT_RUNTIMES_SESSION_STORE", "record")
     monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     monkeypatch.setattr(routes, "VERIFIER", Verifier())
     monkeypatch.setattr(contract, "runtime_exchange", lambda: Exchange())
@@ -248,3 +249,19 @@ def test_a_deployments_runtime_is_invoked_with_a_token(
     )
     assert refused.status_code == 401
     assert f"runs deployment {DEPLOYMENT}" in refused.json()["detail"]
+
+
+def test_a_deployments_runtime_refuses_to_keep_sessions_in_its_files(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A microVM's files go with it: the record store, or the runtime does not start."""
+    import asyncio
+
+    from fastapi import FastAPI
+
+    monkeypatch.setenv("AGENT_SPEC_ID", "cog-crawler")
+    monkeypatch.setenv("AGENTCORE_DEPLOYMENT_UID", DEPLOYMENT)
+    monkeypatch.setenv("AGENT_RUNTIMES_SESSION_STORE", "file")
+    with pytest.raises(RuntimeError) as refused:
+        asyncio.run(contract.configure_at_start(FastAPI(), "/api/v1"))
+    assert "DATALAYER_AI_AGENTS_URL" in str(refused.value)
