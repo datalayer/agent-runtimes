@@ -198,6 +198,8 @@ class CliTux:
         )
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
+        #: A paused session to resume before the first prompt, by its uid.
+        self.resume_at_start: Optional[str] = None
         # Voice at the terminal (VO-15): the microphone on Ctrl+T,
         # the answers said with --speak; made on first use.
         self.voice = voice
@@ -1487,6 +1489,10 @@ class CliTux:
             # renders the colors instead of printing the escape sequences.
             self.console.print(Text.from_ansi(self.startup_message))
             self.console.print()
+        if self.resume_at_start:
+            # The paused session picked at the start: its conversation
+            # loaded, so the first message goes on with it.
+            await self.run_line(f"/resume {self.resume_at_start}")
 
         while self.running:
             try:
@@ -1520,6 +1526,7 @@ async def run_tux(
     voice: bool = False,
     speak: bool = False,
     cloud_runtime: Optional[str] = None,
+    resume: Optional[str] = None,
 ) -> None:
     """Run theLoop assistant TUX.
 
@@ -1546,4 +1553,6 @@ async def run_tux(
         speak=speak,
         cloud_runtime=cloud_runtime,
     )
+    # A paused session picked as `loop` started: resumed before the first prompt.
+    tux.resume_at_start = resume
     await tux.run()

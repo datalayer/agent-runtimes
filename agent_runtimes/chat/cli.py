@@ -831,6 +831,26 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
+def _offer_paused() -> Any:
+    """The paused session the person goes on with as `loop` starts, or
+    ``None``: nobody at the terminal, none paused, or a new one chosen.
+
+    Those on this machine and, signed in, those on Datalayer; the
+    platform's list failing is said in a line and the start goes on.
+    """
+    from agent_runtimes.loop.launch import interactive, make_client
+    from agent_runtimes.loop.paused import choose_paused, paused_sessions
+
+    if not interactive():
+        return None
+    try:
+        _, token = make_client()
+    except Exception:  # noqa: BLE001 - not signed in: the local ones only
+        token = ""
+    rows = paused_sessions(token=token, say=lambda line: print(f"{GRAY}{line}{RESET}"))
+    return choose_paused(rows)
+
+
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
     """Here or on Datalayer, asked before the agentspec (L-01).
 
@@ -1409,6 +1429,27 @@ def main_callback(
     # shown.
     from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
 
+    # The paused sessions that can be gone on with, offered first when
+    # nothing on the command line says what to run: one picked is resumed
+    # where it lives, without asking where; a new one goes on to the
+    # questions below.
+    resume_uid: Optional[str] = None
+    if agent_id is None and not query and not runtime:
+        from agent_runtimes.loop.paused import resume_plan
+
+        try:
+            paused = _offer_paused()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            raise typer.Exit(0)
+        if paused is not None:
+            plan = resume_plan(paused)
+            resume_uid, agent_id = plan.uid, plan.agent
+            cloud, local = plan.cloud, not plan.cloud
+            if plan.session_store:
+                # Kept in files on this machine: its server reads them there.
+                os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
     if where == CLOUD:
@@ -1700,6 +1741,7 @@ def main_callback(
                             else None,
                             voice=voice,
                             speak=speak,
+                            resume=resume_uid,
                         )
                     )
                 finally:

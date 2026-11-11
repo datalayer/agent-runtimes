@@ -88,6 +88,38 @@ Resumed 3f6c… (worker-marketer): 1 turn replayed. Your next message goes on wi
 > What do I sell?
 ```
 
+## As `loop` starts
+
+Started with nothing on the command line that says what to run, `loop` first
+lists your **paused sessions** you can go on with, before asking where a new
+agent should run:
+
+```text
+$ loop
+? You have 3 paused sessions (your agents' shown; 1 more: /sessions). Go on with one, or start a new one?
+❯ Start a new session
+  Resume: Agent session · worker-marketer · “The autumn campaign” · on Datalayer · started 3 hours ago
+  Resume: Agent session · example-simple · “My name is Ada and I sell tea.” · on this machine · started 2 days ago
+```
+
+- The sessions kept **on this machine** are always listed; signed in to
+  Datalayer (`datalayer login`, or `DATALAYER_API_KEY`), those **on
+  Datalayer** too. Each says its kind, its agent, its title, where it lives
+  and when it started, newest first: the five most recent, then *N more:
+  /sessions*.
+- Pick one and it is resumed **where it lives** — a session of this machine
+  on a local server, one of Datalayer on a cloud runtime — with its
+  conversation loaded, and nobody asks where to run. What is offered is
+  what `loop` resumes: your **agents'** sessions. An application's paused
+  session is resumed at its application's address; it is counted in *N
+  more*, and listed by `/sessions`.
+- *Start a new session*, the first choice and what Enter picks, goes on to
+  the usual questions.
+- With no paused session of an agent nothing is printed. If Datalayer cannot be asked —
+  offline, a key refused — one line says so and the start goes on.
+- A run nobody is at is unchanged: `--prompt`, piped input, an agentspec
+  named with `-a`, a runtime named with `--runtime`.
+
 ## `loop plugins`
 
 `loop plugins [<name>]` lists every reactor extension the runtime holds, its
