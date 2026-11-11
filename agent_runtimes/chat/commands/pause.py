@@ -62,8 +62,10 @@ def web_line(tux: "CliTux") -> str:
     """Where it is on the web, when it is kept in the platform's record; '' in files."""
     import os
 
-    on_platform = bool(getattr(tux, "cloud_runtime", None)) or bool(
-        os.environ.get("DATALAYER_API_KEY")
+    # Kept on Datalayer by a runtime there, or by one here told to keep the
+    # platform's record; a runtime on this machine keeps files otherwise.
+    on_platform = bool(getattr(tux, "cloud_runtime", None)) or (
+        os.environ.get("AGENT_RUNTIMES_SESSION_STORE") == "record"
     )
     return f"On the web: {WEB_SESSIONS}, under Paused sessions." if on_platform else ""
 

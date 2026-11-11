@@ -64,7 +64,10 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     # List, pause, resume: the three verbs of a session, together.
-    ("Sessions", ("sessions", "pause", "resume", "swap", "clone", "export")),
+    (
+        "Sessions",
+        ("sessions", "pause", "resume", "transfer", "swap", "clone", "export"),
+    ),
     ("Context", ("context", "context_export")),
     (
         "Agents",
@@ -141,6 +144,7 @@ def build_registry(
         swap,
         tools,
         tools_last,
+        transfer,
         voice,
     )
 
@@ -173,6 +177,7 @@ def build_registry(
         sessions,
         pause,
         resume,
+        transfer,
         swap,
         clone,
         export,

@@ -57,9 +57,13 @@ def _cleanup_subprocess() -> None:
         _subprocess_ref = None
 
 
-def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> None:
-    """Clean up subprocess while showing a transient spinner when interactive."""
+def _cleanup_subprocess_with_spinner(app: bool = False) -> None:
+    """Stop the local runtime, saying where and what it is while it stops
+    and once it has: a local agent runtime, or a local app runtime."""
+    from agent_runtimes.loop.launch import stopped_said, stopping_said
+
     global _subprocess_ref
+    message = stopping_said(cloud=False, app=app)
     if (
         _subprocess_ref is None
         or not _subprocess_ref.is_alive()
@@ -81,6 +85,7 @@ def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> N
             refresh_per_second=12,
         ):
             _cleanup_subprocess()
+        console.print(stopped_said(cloud=False, app=app), style="dim")
     except Exception:
         _cleanup_subprocess()
 
@@ -417,6 +422,14 @@ def _start_agent_runtime_server(
         import os
 
         os.environ["AG_CHAT_DEBUG"] = "1"
+
+    # A runtime on this machine keeps its sessions on this machine, in the
+    # files of ~/.datalayer/sessions, unless the environment names the store.
+    import os as _os
+
+    from agent_runtimes.apps.session_store import STORE_VARIABLE
+
+    _os.environ.setdefault(STORE_VARIABLE, "file")
 
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value("i", 0)
@@ -851,6 +864,73 @@ def _offer_paused() -> Any:
     return choose_paused(rows)
 
 
+def _session_named(
+    uid: Optional[str],
+    continue_last: bool,
+    agent_id: Optional[str],
+    *,
+    local: bool,
+    cloud: bool,
+) -> Any:
+    """The session `--resume <uid>` names, or the one `--continue` goes on
+    with: the most recent that is not ended. `--resume` alone opens the
+    picker. Every refusal is one sentence and the exit.
+    """
+    from agent_runtimes.commands.sessions import _token, every_session, run_picker
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.loop.picker import why_not
+
+    if uid is not None and not uid.strip():
+        run_picker()
+        raise typer.Exit(0)
+    token = _token()
+    rows = every_session(token)
+    if uid is not None:
+        named = [row for row in rows if row.uid == uid.strip()]
+        if not named:
+            print(
+                f"{GREEN_DARK}[ERROR]{RESET} There is no session {uid} on this machine"
+                + (
+                    " or on Datalayer"
+                    if token
+                    else "; not signed in, those on Datalayer are not read"
+                )
+                + ": `loop sessions` lists yours.",
+                file=sys.stderr,
+            )
+            raise typer.Exit(1)
+        # Transferred, it is ended where it was and lives where it went.
+        live = [row for row in named if row.state != "ended"]
+        chosen = (live or named)[0]
+    else:
+        place = ON_THIS_MACHINE if local else ON_DATALAYER if cloud else ""
+        candidates = [
+            row
+            for row in rows
+            if row.state != "ended"
+            and row.resumable
+            and (not place or row.where == place)
+            and (
+                not agent_id
+                or agent_id in (row.agent, row.app_uid, row.app_uid[len("agent:") :])
+            )
+        ]
+        if not candidates:
+            print(
+                f"{GREEN_DARK}[ERROR]{RESET} There is no session to continue"
+                + (f" of {agent_id}" if agent_id else "")
+                + ": `loop sessions` lists yours.",
+                file=sys.stderr,
+            )
+            raise typer.Exit(1)
+        chosen = candidates[0]
+    refused = why_not("resume", chosen, signed_in=bool(token))
+    if refused:
+        print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+        raise typer.Exit(1)
+    return chosen
+
+
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
     """Here or on Datalayer, asked before the agentspec (L-01).
 
@@ -1279,6 +1359,17 @@ def main_callback(
             "is made that agentspec's."
         ),
     ),
+    continue_last: bool = typer.Option(
+        False,
+        "--continue",
+        "-c",
+        help="Go on with your most recent session that is not ended, without asking: of the agent named with -a, on this machine with --local or on Datalayer with --cloud, when they are said.",
+    ),
+    resume: Optional[str] = typer.Option(
+        None,
+        "--resume",
+        help="Go on with the session of this uid, where it lives (on this machine, or on Datalayer). With no uid: pick one, as `loop sessions` does.",
+    ),
     show_version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
     ),
@@ -1442,56 +1533,63 @@ def main_callback(
     # where it lives, without asking where; a new one goes on to the
     # questions below.
     resume_uid: Optional[str] = None
-    if agent_id is None and not query and not runtime:
-        from agent_runtimes.loop.paused import resume_plan
-
+    paused: Any = None
+    if resume is not None or continue_last:
+        # A session named by its uid, or the most recent one: gone on with
+        # where it lives, nobody asked.
+        paused = _session_named(
+            resume, continue_last, agent_id, local=local, cloud=cloud
+        )
+    elif agent_id is None and not query and not runtime:
         try:
             paused = _offer_paused()
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
-        if paused is not None:
-            plan = resume_plan(paused)
-            if plan.team_run:
-                # A seat of a team run: its run is let go on, and each
-                # seat's session with it; nothing is started here.
-                from agent_runtimes.loop.paused import (
-                    TeamResumeUnavailable,
-                    resume_team_run,
-                )
+    if paused is not None:
+        from agent_runtimes.loop.paused import resume_plan
 
-                try:
-                    raise typer.Exit(resume_team_run(plan.team_run))
-                except TeamResumeUnavailable as unavailable:
-                    print(f"{GREEN_DARK}[ERROR]{RESET} {unavailable}", file=sys.stderr)
-                    raise typer.Exit(1)
-            if plan.session_store:
-                # Kept in files on this machine: its server reads them there.
-                os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
-            if plan.application:
-                # An application's session: its application is started, as
-                # `loop apps run` starts it, and the session resumed on it.
-                from agent_runtimes.commands.apps import (
-                    ResumeRefused,
-                    resume_application_session,
-                )
+        plan = resume_plan(paused)
+        if plan.team_run:
+            # A seat of a team run: its run is let go on, and each
+            # seat's session with it; nothing is started here.
+            from agent_runtimes.loop.paused import (
+                TeamResumeUnavailable,
+                resume_team_run,
+            )
 
-                try:
-                    resume_application_session(
-                        plan.application,
-                        plan.uid,
-                        cloud=plan.cloud,
-                        deployment_uid=plan.deployment,
-                        environment=environment,
-                        minutes=minutes,
-                        keep=keep,
-                    )
-                except ResumeRefused as refused:
-                    print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
-                    raise typer.Exit(1)
-                raise typer.Exit(0)
-            resume_uid, agent_id = plan.uid, plan.agent
-            cloud, local = plan.cloud, not plan.cloud
+            try:
+                raise typer.Exit(resume_team_run(plan.team_run))
+            except TeamResumeUnavailable as unavailable:
+                print(f"{GREEN_DARK}[ERROR]{RESET} {unavailable}", file=sys.stderr)
+                raise typer.Exit(1)
+        if plan.session_store:
+            # Kept in files on this machine: its server reads them there.
+            os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+        if plan.application:
+            # An application's session: its application is started, as
+            # `loop apps run` starts it, and the session resumed on it.
+            from agent_runtimes.commands.apps import (
+                ResumeRefused,
+                resume_application_session,
+            )
+
+            try:
+                resume_application_session(
+                    plan.application,
+                    plan.uid,
+                    cloud=plan.cloud,
+                    deployment_uid=plan.deployment,
+                    environment=environment,
+                    minutes=minutes,
+                    keep=keep,
+                )
+            except ResumeRefused as refused:
+                print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+                raise typer.Exit(1)
+            raise typer.Exit(0)
+        resume_uid, agent_id = plan.uid, plan.agent
+        cloud, local = plan.cloud, not plan.cloud
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
@@ -1796,7 +1894,7 @@ def main_callback(
 
                         finish_cloud(cloud_launch, keep=keep)
                     else:
-                        _cleanup_subprocess_with_spinner("Terminating agent...")
+                        _cleanup_subprocess_with_spinner()
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name="agent-runtimes chat")

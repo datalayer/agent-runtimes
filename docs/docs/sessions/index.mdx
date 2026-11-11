@@ -104,7 +104,10 @@ question answered from any surface first wins; the second answer is a `409`.
 
 Through the `session.store` point (see [Plugins](./plugins.mdx)): the
 platform's record when `DATALAYER_AI_AGENTS_URL` or `DATALAYER_API_KEY` is
-set, a file store (`~/.datalayer/sessions/<uid>/entries.jsonl`) otherwise;
+set, a file store (`~/.datalayer/sessions/<uid>/entries.jsonl`, with an
+`index.json` of what a listing says) otherwise; a runtime `loop` starts on
+this machine keeps the file store, signed in or not (see
+[Where a session lives](./cli.mdx#where-a-session-lives));
 `AGENT_RUNTIMES_SESSION_STORE` names one (`record` or `file`). Naming two,
 or one nothing contributes, refuses the runtime at start. The harness's own
 rows — the ACP session id and the vendor's own session id per (session,

@@ -134,10 +134,15 @@ def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:
     """
     import questionary
 
+    from agent_runtimes.loop.paused import SEPARATOR
+
     return questionary.select(
         question,
         choices=[
-            questionary.Choice(
+            # A group's title: drawn, never picked.
+            questionary.Separator(f"  {choice[0]}")
+            if choice[1] == SEPARATOR
+            else questionary.Choice(
                 title=choice[0],
                 value=choice[1],
                 disabled=choice[2] if len(choice) > 2 and choice[2] else None,
@@ -317,6 +322,24 @@ class CloudRefused(Exception):
     """
 
 
+def runtime_said(*, cloud: bool, app: bool) -> str:
+    """What `loop` runs, said with where and what: ``cloud agent runtime``,
+    ``cloud app runtime``, ``local agent runtime``, ``local app runtime``.
+    Every message about stopping it, or having stopped it, says it so.
+    """
+    return f"{'cloud' if cloud else 'local'} {'app' if app else 'agent'} runtime"
+
+
+def stopping_said(*, cloud: bool, app: bool) -> str:
+    """Said while it is being stopped."""
+    return f"Stopping {runtime_said(cloud=cloud, app=app)}…"
+
+
+def stopped_said(*, cloud: bool, app: bool, name: str = "") -> str:
+    """Said once it is stopped."""
+    return f"Stopped {runtime_said(cloud=cloud, app=app)}{' ' + name if name else ''}."
+
+
 @dataclass
 class CloudLaunch:
     """A cloud runtime launched for this session, and the relay that reaches it."""
@@ -335,6 +358,16 @@ class CloudLaunch:
     attached: bool = False
     #: The agentspec the runtime's agent was created from, when known.
     agent_spec_id: Optional[str] = None
+    #: Whether it runs an application (`loop apps run --cloud`, an
+    #: application's session resumed, a deployment's) rather than an agent.
+    app: bool = False
+    #: Whether it is not billed: an unmetered launch.
+    unmetered: bool = False
+
+    @property
+    def said(self) -> str:
+        """What it is, in words: ``cloud agent runtime`` or ``cloud app runtime``."""
+        return runtime_said(cloud=True, app=self.app)
 
     @property
     def server_url(self) -> str:
@@ -1087,6 +1120,8 @@ def launch_cloud(
         jupyter_token=str(created.jupyter_token),
         credits=0.0 if unmetered else credits_for(chosen, reserved),
         agent_spec_id=agent_id,
+        app=bool(app_spec),
+        unmetered=bool(unmetered),
     )
     status(f"Waiting for runtime {launch.runtime_name}…")
     if not wait_until_ready(relay.url):
@@ -1146,10 +1181,12 @@ def finish_cloud(
     if launch.runtime_name in _GIVEN_BACK:
         _GIVEN_BACK.discard(launch.runtime_name)
         if launch.stop():
-            say(f"Runtime {launch.runtime_name} given back: its session is paused.")
+            say(
+                f"{launch.said.capitalize()} {launch.runtime_name} given back: its session is paused."
+            )
         else:
             say(
-                f"Could not stop {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
+                f"Could not stop {launch.said} {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
             )
         return
     asking = interactive() if can_ask is None else can_ask
@@ -1158,13 +1195,18 @@ def finish_cloud(
     if keep or (launch.attached and not asking):
         launch.relay.stop()
         say(
-            f"The runtime {launch.runtime_name} keeps running until its reservation ends. Stop it with `loop agents terminate {launch.runtime_name}`."
+            f"The {launch.said} {launch.runtime_name} keeps running until its reservation ends. Stop it with `loop agents terminate {launch.runtime_name}`."
         )
         return
     stop = True
     if asking:
         answer = (ask or _confirm)(
-            f"Stop the cloud runtime {launch.runtime_name}? It is billed until you do.",
+            f"Stop the {launch.said} {launch.runtime_name}? "
+            + (
+                "It is not billed: it runs until its reservation ends."
+                if launch.unmetered
+                else "It is billed until you do."
+            ),
             True,
         )
         stop = answer is not False
@@ -1175,10 +1217,10 @@ def finish_cloud(
         )
         return
     if launch.stop():
-        say(f"Stopped {launch.runtime_name}.")
+        say(stopped_said(cloud=True, app=launch.app, name=launch.runtime_name))
     else:
         say(
-            f"Could not stop {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
+            f"Could not stop {launch.said} {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
         )
 
 

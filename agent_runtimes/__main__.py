@@ -362,6 +362,20 @@ def main_callback(
             "(implies --cloud; nothing is launched)."
         ),
     ),
+    continue_last: bool = typer.Option(
+        False,
+        "--continue",
+        "-c",
+        help="Go on with your most recent session that is not ended, without asking (chat mode).",
+    ),
+    resume: str | None = typer.Option(
+        None,
+        "--resume",
+        help=(
+            "Go on with the session of this uid, where it lives — on this machine "
+            "or on Datalayer; with no uid, pick one, as `loop sessions` does."
+        ),
+    ),
     environment: str | None = typer.Option(
         None,
         "--environment",
@@ -533,6 +547,10 @@ def main_callback(
             chat_args.append("--cloud")
         if runtime:
             chat_args.extend(["--runtime", runtime])
+        if continue_last:
+            chat_args.append("--continue")
+        if resume is not None:
+            chat_args.extend(["--resume", resume])
         if environment:
             chat_args.extend(["--environment", environment])
         if minutes is not None:

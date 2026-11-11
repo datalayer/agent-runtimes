@@ -1722,10 +1722,16 @@ def apps_run(
             )
     finally:
         if cloud_launch is not None:
+            # It runs an application: its stop says so.
+            cloud_launch.app = True
             finish_cloud(cloud_launch, keep=keep, can_ask=None if not ask else False)
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+            if ask:
+                from agent_runtimes.loop.launch import stopped_said
+
+                console.print(stopped_said(cloud=False, app=True), style="dim")
 
 
 def _serve_web(
@@ -2290,10 +2296,15 @@ def resume_application_session(
         )
     finally:
         if cloud_launch is not None:
+            # It runs an application: its stop says so.
+            cloud_launch.app = True
             finish_cloud(cloud_launch, keep=keep)
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+            from agent_runtimes.loop.launch import stopped_said
+
+            console.print(stopped_said(cloud=False, app=True), style="dim")
 
 
 def _store() -> Any:

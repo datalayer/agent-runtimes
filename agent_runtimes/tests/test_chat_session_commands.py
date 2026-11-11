@@ -176,7 +176,10 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     second = _say(wired, tux, "And I sell tea.")
     uid = tux.session.session_uid
 
-    [line] = _run(sessions_command, tux)
+    managed, line = _run(sessions_command, tux)
+    assert managed.startswith(
+        "On this machine: a session is a folder of ~/.datalayer/sessions"
+    )
     assert line.startswith(
         f" 1  {uid}  open    agent  {SPEC}  2 turns  on runtime local"
     )
@@ -200,7 +203,7 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     # A new process: a new prompt of the agent, a runtime that holds nothing.
     sessions._SESSIONS.clear()
     again = _prompt()
-    [listed] = _run(sessions_command, again)
+    _, listed = _run(sessions_command, again)
     assert listed.startswith(f" 1  {uid}  paused  agent  {SPEC}  2 turns")
     # By its number in the list, as well as by its id.
     [no_such] = _run(resume, again, "7")
@@ -262,7 +265,7 @@ def test_on_datalayer_pause_gives_the_runtime_back_without_asking(
         _launched(client), keep=True, can_ask=True, ask=never, say=told.append
     )
     assert client.stopped == ["runtime-1"]
-    assert told == ["Runtime runtime-1 given back: its session is paused."]
+    assert told == ["Cloud agent runtime runtime-1 given back: its session is paused."]
     assert launch._GIVEN_BACK == set()
 
 
@@ -333,3 +336,96 @@ def test_an_older_runtime_is_talked_to_as_before_and_said() -> None:
 def test_this_runtime_says_it_keeps_agent_sessions(wired: TestClient) -> None:
     said = wired.get("/api/v1/runtime/status").json()
     assert said["agent_sessions"] is True and said["version"]
+
+
+def test_sessions_with_a_number_or_a_uid_switches_the_prompt(
+    wired: TestClient,
+    marketer: Said,  # noqa: F811 - the fixture
+) -> None:
+    tux = _prompt()
+    _say(wired, tux, "My name is Ada.")
+    first_uid = tux.session.session_uid
+    _run(pause, tux)
+
+    # A new prompt of the agent, on a session of its own.
+    sessions._SESSIONS.clear()
+    again = _prompt()
+    _say(wired, again, "Another conversation.")
+    other = again.session.session_uid
+    assert other != first_uid
+    listed = _run(sessions_command, again)
+    number = next(
+        line.split()[0] for line in listed if f"  {first_uid}  " in f"  {line}"
+    )
+    # `/sessions <n>`: the prompt goes on with that session, and says which
+    # it is on; the one it was on is left as it is.
+    said = _run(sessions_command, again, number)
+    assert said[0].startswith(f"Resumed {first_uid} ({SPEC}): 1 turn replayed.")
+    assert said[-1] == (
+        f"This prompt is on session {first_uid} now; {other} is left as it is: "
+        f"`/sessions {other}` comes back to it."
+    )
+    assert again.session.session_uid == first_uid
+    left = wired.get(f"{SESSIONS}/{other}", headers=as_("ada")).json()
+    assert left["state"] == "open"
+    # By its uid as well; `--app` still lists one application's.
+    assert _run(sessions_command, again, "--app no-such-app") == [
+        "No session of no-such-app yet."
+    ]
+    asyncio.run(again._agui_client.disconnect())
+
+
+def test_transfer_pauses_moves_and_goes_on_where_it_was_sent(
+    wired: TestClient,
+    marketer: Said,  # noqa: F811 - the fixture
+) -> None:
+    from agent_runtimes.chat.commands import transfer as transfer_command
+    from agent_runtimes.loop.transfer import Transferred
+
+    assert "transfer" in dict(_BUILTIN_GROUPS)["Sessions"]
+    tux = _prompt()
+    _say(wired, tux, "My name is Ada.")
+    uid = tux.session.session_uid
+    moved: List[Any] = []
+    went: List[List[str]] = []
+    asked: List[str] = []
+
+    async def mover(session_uid: str, *, source: Any, destination: Any) -> Any:
+        # Paused before it moves: nothing runs while it is carried.
+        state = wired.get(f"{SESSIONS}/{session_uid}", headers=as_("ada")).json()
+        moved.append((session_uid, source.where, destination.where, state["state"]))
+        return Transferred(
+            session_uid, destination.where, SPEC, "agent", 1, 3, 0, False
+        )
+
+    def run(argv: str, **more: Any) -> List[str]:
+        tux.console.lines.clear()
+        asyncio.run(
+            transfer_command.execute(
+                tux, argv, mover=mover, token="the-token", go_on=went.append, **more
+            )
+        )
+        return list(tux.console.lines)
+
+    # Not the place it is in.
+    assert run("local") == [
+        "This session is on this machine: it is transferred to Datalayer (`/transfer cloud`)."
+    ]
+    # Asked first, naming what is sent; declined, nothing is paused or sent.
+    assert run("", confirm=lambda question: asked.append(question) or False) == [
+        "Not transferred: nothing was sent."
+    ]
+    assert f"Transfer this session ({uid}) to Datalayer?" in asked[0] and moved == []
+    said = run("--yes")
+    assert moved == [(uid, "local", "cloud", "paused")]
+    assert said[-2:] == [
+        f"Transferred {uid} to Datalayer: 1 turn, 3 entries. It lives on Datalayer now, "
+        "under the same uid, and is ended where it was.",
+        f"Going on with it on Datalayer: `loop --resume {uid}`.",
+    ]
+    # The prompt ends, and `loop --resume <uid>` goes on with it there.
+    assert tux.running is False and went == [["--resume", uid]]
+    # Signed out, it says so.
+    tux.running = True
+    asyncio.run(transfer_command.execute(tux, "--yes", token=""))
+    assert "You are not signed in" in tux.console.lines[-1]

@@ -92,7 +92,7 @@ Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credi
 - **Running runtimes**: if you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
 - **Unmetered**: with `DATALAYER_MAGIC_API_KEY` set in the environment (the platform's magic key, a secret), every runtime the client creates is sent it (`magic_api_key` on `POST /runtimes`), and the platform starts it unmetered: it consumes no credits and never expires. No minutes are asked and no credit is checked; `--minutes` is still validated and sent, and ignored. Unset, nothing is sent. The key is never printed or logged.
-- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found.
+- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found. Every such line says where it runs and what it is: `Stop the cloud agent runtime <name>? It is billed until you do.`, then `Stopped cloud agent runtime <name>.`; `cloud app runtime` when `loop` runs an application; an unmetered runtime is said not billed. A runtime on this machine says `Stopped local agent runtime.`, or `Stopped local app runtime.` for an application.
 
 Each refusal is one sentence, and nothing is launched: not signed in, no credits (or not enough for the reservation), an environment that cannot hold an agent, a runtime that is not running, the launch refused by the platform, or an agentspec the runtime's library does not have.
 
@@ -699,7 +699,12 @@ Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sess
 - **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
 - **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
 - **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
-- **Outside the prompt**: `loop sessions list`, `loop sessions pause <uid>` and `loop sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer.
+- **`/sessions <n or uid>`** switches the prompt to that session, as `/resume` does; the one it was on is left as it is.
+- **`/transfer`** moves this session to the other place — from this machine to Datalayer, or back — under the same uid, and goes on with it there.
+- **`loop sessions`**, alone, is the picker: your sessions in two groups, *On this machine* and *On Datalayer*, one to choose and resume, pause, end, transfer, export, delete or start over. **`loop --continue`** (`-c`) goes on with the most recent one without asking, **`loop --resume <uid>`** with the one named, and `loop --resume` alone opens the picker.
+- **Outside the prompt**: `loop sessions list`, `loop sessions pause <uid>` and `loop sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer. `loop sessions transfer <uid> --to cloud|local` and `loop sessions delete <uid>` need no runtime.
+
+A session on this machine is a folder of `~/.datalayer/sessions`, named by its uid, kept until you delete it and seen only here. A session on Datalayer is in your account's record, seen on the web, in the desktop app and from any machine signed in. Signed out, only those on this machine are listed. A session keeps its uid for its whole life, wherever it lives.
 
 An agent is paused through its session. Runtime checkpoints are switched off on Datalayer: no checkpoint is taken by a pause, and none is needed to resume.
 
@@ -708,7 +713,8 @@ An agent is paused through its session. Runtime checkpoints are switched off on 
 | Command | Shortcut | Description |
 |---------|----------|-------------|
 | `/help` | `Esc H` | Show available commands, the session's under **Sessions** |
-| `/sessions` | | Your sessions, held and recorded, numbered, each with its kind and state. See [Sessions](#sessions-list-pause-resume) |
+| `/sessions` | | Your sessions, held and recorded, numbered, each with its kind and state; `/sessions <n or uid>` switches the prompt to that one. See [Sessions](#sessions-list-pause-resume) |
+| `/transfer` | | Move this session to Datalayer, or from Datalayer to this machine, under the same uid, and go on with it there |
 | `/pause` | | Pause this session and leave: the conversation is kept in the record, what it holds is given to the agent's memory first; on Datalayer the runtime is given back |
 | `/resume <n or uid>` | | Go on with a session, by its number in the last `/sessions` or by its id |
 | `/status` | `Esc S` | Model, tokens, and connectivity |
@@ -749,6 +755,8 @@ agent-runtimes chat --eggs
 | `--eggs` | | off | Enable Easter egg slash commands |
 | `--local` | | asked | Run the agent on this machine, without asking where |
 | `--cloud` | | asked | Run the agent on Datalayer, in a new or running cloud runtime |
+| `--continue` | `-c` | | Go on with your most recent session that is not ended, without asking |
+| `--resume` | | | Go on with the session of the uid given, where it lives; alone, pick one (`loop sessions`) |
 | `--runtime` | `-r` | | Attach to an agent runtime running on Datalayer, by name (implies `--cloud`) |
 | `--environment` | `-e` | first agent-capable | Environment of a new cloud runtime, without asking |
 | `--minutes` | `-m` | `30` | How long to reserve a new cloud runtime for |
@@ -868,7 +876,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
 | `benchmarks` | Benchmarking commands |
-| `sessions` | A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`; `--cloud` for a runtime on Datalayer. See [`loop sessions`](../sessions/cli.mdx) |
+| `sessions` | Alone, the picker of your sessions on this machine and on Datalayer. A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`, `transfer`, `delete`; `--cloud` for a runtime on Datalayer. See [`loop sessions`](../sessions/cli.mdx) |
 | `checkpoints` | Runtime checkpoint commands. Checkpoints are switched off on Datalayer: an agent is paused and resumed through its session (`sessions pause`, `sessions resume`) |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
