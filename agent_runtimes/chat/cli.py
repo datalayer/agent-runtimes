@@ -937,6 +937,50 @@ def _session_named(
     return chosen
 
 
+def _prompt_session(
+    uid: Optional[str],
+    continue_last: bool,
+    agent_id: Optional[str],
+    *,
+    local: bool,
+    cloud: bool,
+    runtime: Optional[str],
+) -> Any:
+    """How ``--prompt`` goes on with the session ``--resume <uid>`` names, or
+    the most recent one ``--continue`` finds: its plan, its agent started
+    where it lives. What ``--prompt`` cannot go on with is refused in one
+    sentence (exit 2): ``--resume`` with no uid (the picker asks), and an
+    application's session or a team run's seat (their application or run is
+    started by ``loop --resume <uid>`` without ``--prompt``).
+    """
+    from agent_runtimes.loop.paused import resume_plan
+
+    if uid is not None and not uid.strip():
+        _say(
+            "--resume with --prompt needs the session's uid: `loop sessions` lists yours."
+        )
+        raise typer.Exit(2)
+    plan = resume_plan(
+        _session_named(uid, continue_last, agent_id, local=local, cloud=cloud)
+    )
+    if plan.team_run or plan.application:
+        what = "a team run's seat" if plan.team_run else "an application's session"
+        _say(
+            f"Session {plan.uid} is {what}: --prompt goes on with an agent's session only; "
+            f"`loop --resume {plan.uid}` without --prompt starts what it is a session of."
+        )
+        raise typer.Exit(2)
+    if runtime and not plan.cloud:
+        _say(
+            f"Session {plan.uid} lives on this machine: drop --runtime, which attaches on Datalayer."
+        )
+        raise typer.Exit(2)
+    if plan.session_store:
+        # Kept in files on this machine: its server reads them there.
+        os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+    return plan
+
+
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
     """Here or on Datalayer, asked before the agentspec (L-01).
 
@@ -1099,6 +1143,7 @@ def run_prompts(
     debug: bool = False,
     eggs: bool = False,
     agent_setup: Optional[dict] = None,
+    resume: Optional[str] = None,
 ) -> int:
     """``loop --prompt``: launch the agent, run each line in one session, stop it.
 
@@ -1140,6 +1185,10 @@ def run_prompts(
     agent_setup : dict or None
         How a cloud runtime's agent is configured (``--without-mcp-servers``,
         ``--without-skill``).
+    resume : str or None
+        A session to go on with (``--resume <uid>``, ``--continue``): resumed
+        first, as ``/resume <uid>`` would be, so the lines continue its
+        conversation; a refused resume stops before any line runs.
 
     Returns
     -------
@@ -1248,7 +1297,8 @@ def run_prompts(
             where=cloud_launch.label if cloud_launch else None,
             cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
         )
-        return asyncio.run(_run_lines(tux, prompts))
+        lines = ([f"/resume {resume}"] if resume else []) + list(prompts)
+        return asyncio.run(_run_lines(tux, lines))
     except KeyboardInterrupt:
         _say("Interrupted.")
         return 130
@@ -1470,6 +1520,19 @@ def main_callback(
             raise typer.BadParameter(
                 "Give the lines with --prompt only, not as arguments as well."
             )
+        resumed: Optional[str] = None
+        if resume is not None or continue_last:
+            # The lines go on with the session named, where it lives.
+            plan = _prompt_session(
+                resume,
+                continue_last,
+                agentspec_id,
+                local=local,
+                cloud=cloud,
+                runtime=runtime,
+            )
+            resumed, agentspec_id = plan.uid, plan.agent
+            cloud, local = plan.cloud, not plan.cloud
         raise typer.Exit(
             run_prompts(
                 prompts,
@@ -1485,6 +1548,7 @@ def main_callback(
                 debug=debug,
                 eggs=eggs,
                 agent_setup=_agent_setup(without_mcp_servers, without_skills),
+                resume=resumed,
             )
         )
     if without_mcp_servers or without_skills:
@@ -1540,6 +1604,13 @@ def main_callback(
     # questions below.
     resume_uid: Optional[str] = None
     paused: Any = None
+    if query and (resume is not None or continue_last):
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} A message given as an argument starts a new conversation: "
+            'to go on with a session, give it with --prompt (`loop --resume <uid> --prompt "…"`).',
+            file=sys.stderr,
+        )
+        raise typer.Exit(2)
     if resume is not None or continue_last:
         # A session named by its uid, or the most recent one: gone on with
         # where it lives, nobody asked.

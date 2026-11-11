@@ -188,7 +188,8 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     assert said == [
         f"Paused {uid} ({SPEC}, 2 turns): it is kept in the record.",
         "Its memory was given 4 messages of the conversation.",
-        f"Resume it: `loop` lists it as it starts; or `loop -a {SPEC}`, then `/resume {uid}`.",
+        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
+        f"or `loop -a {SPEC}`, then `/resume {uid}`.",
     ]
     # The prompt ends; nothing is given back on this machine.
     assert tux.running is False and tux._agui_client is None
@@ -247,7 +248,8 @@ def test_on_datalayer_pause_gives_the_runtime_back_without_asking(
     uid = tux.session.session_uid
     said = _run(pause, tux)
     assert said[-2] == (
-        f"Resume it: `loop` lists it as it starts; or `loop --cloud -a {SPEC}`, then `/resume {uid}`."
+        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
+        f"or `loop --cloud -a {SPEC}`, then `/resume {uid}`."
     )
     # Kept in the platform's record: where it is on the web.
     assert (

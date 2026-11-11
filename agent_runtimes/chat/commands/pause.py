@@ -50,7 +50,8 @@ def resume_line(tux: "CliTux", uid: str, agent: str) -> str:
     on_datalayer = bool(getattr(tux, "cloud_runtime", None))
     start = f"loop{' --cloud' if on_datalayer else ''} -a {agent}"
     return (
-        f"Resume it: `loop` lists it as it starts; or `{start}`, then `/resume {uid}`."
+        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
+        f"or `{start}`, then `/resume {uid}`."
     )
 
 

@@ -49,6 +49,7 @@ Two shortcuts, as you start `loop`:
 | `loop --continue`, `loop -c` | Go on with your most recent session that is not ended, without asking. With `-a <agent>`, that agent's; with `--local` or `--cloud`, in that place. The record says when a session started, not the folder it was started from: the most recent is by start. |
 | `loop --resume <uid>` | Go on with the session of that uid, where it lives. |
 | `loop --resume` | Pick one: the same as `loop sessions`. (`-r` is `--runtime`, as before.) |
+| `loop --resume <uid> --prompt "…"`, `loop -c --prompt "…"` | Go on with that session (or the most recent) for the lines given, then stop: the session is resumed first, where it lives (on Datalayer, a new runtime rebuilds it from the record), and each line is its next turn. Add `--prompt /pause` to pause it again, its runtime given back. An application's session or a team run's seat is refused in a sentence (start `loop --resume <uid>` without `--prompt`), as is `--resume` without a uid; a refused resume runs none of the lines. A message given as an argument instead of `--prompt` is refused too: it would start a new conversation. |
 
 ## Where a session lives
 
@@ -206,12 +207,31 @@ $ loop -a worker-marketer
 > /pause
 Paused 3f6c… (worker-marketer, 1 turn): it is kept in the record.
 Its memory was given 2 messages of the conversation.
-Resume it: `loop -a worker-marketer`, then `/resume 3f6c…`.
+Resume it: `loop` lists it as it starts; or `loop --resume 3f6c…`; or `loop -a worker-marketer`, then `/resume 3f6c…`.
 $ loop -a worker-marketer
 > /resume 3f6c…
 Resumed 3f6c… (worker-marketer): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
 > What do I sell?
 ```
+
+On Datalayer (`loop --cloud`) it is the same, and `/pause` gives the runtime
+back as well: nothing runs, or is billed, while the session is paused. A
+later `loop --resume <uid>`, or the session picked as `loop` starts,
+launches a new runtime, which rebuilds the conversation from the record:
+
+```text
+$ loop --cloud -a example-simple --prompt "Please remember the word tangerine. Reply with just OK." --prompt /pause
+OK
+Paused 01M74Z… (example-simple, 1 turn): it is kept in the record.
+Resume it: `loop` lists it as it starts; or `loop --resume 01M74Z…`; or `loop --cloud -a example-simple`, then `/resume 01M74Z…`.
+On the web: https://datalayer.ai/sessions, under Paused sessions.
+$ loop --resume 01M74Z… --prompt "Which word did I ask you to remember? The word only." --prompt /pause
+Resumed 01M74Z… (example-simple): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
+tangerine
+Paused 01M74Z… (example-simple, 2 turns): it is kept in the record.
+```
+
+The runtime's lines (launched, given back) go to standard error.
 
 ## As `loop` starts
 

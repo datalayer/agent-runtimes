@@ -47,11 +47,13 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     )
     if uid.isdigit() and len(uid) < 8:
         if not 1 <= int(uid) <= len(listed):
-            tux.console.print(
+            said = (
                 f"There is no session {uid} in the last /sessions: list them first, "
-                "or give the session's id.",
-                markup=False,
+                "or give the session's id."
             )
+            tux.console.print(said, markup=False)
+            # Lines run after it (`loop --prompt`) would start afresh: stopped.
+            tux.last_error = said
             return None
         uid = listed[int(uid) - 1]
     agent = parts[1] if len(parts) > 1 else str(getattr(tux, "agent_id", "") or "")
@@ -61,6 +63,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         thread = ask(tux, "GET", f"/{uid}/messages").json()
     except (RuntimeError, OSError) as refused:
         tux.console.print(f"[red]{refused}[/red]")
+        tux.last_error = str(refused)
         if "is not a session of" in str(refused):
             # Another agent's or application's: `loop` starts what it is a
             # session of when it is picked as it starts.
