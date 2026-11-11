@@ -224,3 +224,46 @@ class TestASeatIsRegisteredFromWhatItNames:
             "### A (contributor)\n\nFound three facts." in said
             and "### B (contributor)\n\n(nothing)" in said
         )
+
+
+class TestASeatPlacedOnAgentCore:
+    """A member placed on AWS AgentCore for one run: its binding names the agent's endpoint."""
+
+    RELAY = "https://ai-agents.test/api/ai-agents/v1/apps/deployments/01K9D/agentcore/a2a/sessions/exec_1"
+
+    def test_its_binding_names_the_endpoint_and_no_worker_is_brought_up(self) -> None:
+        team = _team(research=(), write=("research",))
+        member = team.agents[0]
+        placed = member_binding(team, member, endpoint=self.RELAY)
+        assert placed.agent_id == seat_agent_id("t", "research")
+        assert placed.protocol is AgentProtocol.A2A
+        assert placed.endpoint == self.RELAY
+        assert member_binding(team, member).endpoint is None
+
+    def test_a_harness_or_a_server_is_not_placed(self) -> None:
+        team = _team(research=())
+        harness = team.agents[0].model_copy(update={"harness": "codex"})
+        with pytest.raises(ValueError, match="is a harness"):
+            member_binding(team, harness, endpoint=self.RELAY)
+        server = team.agents[0].model_copy(update={"server": "github"})
+        with pytest.raises(ValueError, match="is a server"):
+            member_binding(team, server, endpoint=self.RELAY)
+
+    def test_the_placement_is_read_from_the_roots_progress_events(self) -> None:
+        from types import SimpleNamespace
+
+        from agent_runtimes.orchestration.teams import (
+            AGENTCORE_SEATS,
+            agentcore_seats_of,
+        )
+
+        events = [
+            SimpleNamespace(type=SimpleNamespace(value="created"), data={}),
+            SimpleNamespace(
+                type=SimpleNamespace(value="progress"),
+                data={AGENTCORE_SEATS: {"research": "01K9D", "write": ""}},
+            ),
+            SimpleNamespace(type=SimpleNamespace(value="progress"), data={"other": 1}),
+        ]
+        assert agentcore_seats_of(events) == {"research": "01K9D"}
+        assert agentcore_seats_of(events[:1]) == {}

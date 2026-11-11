@@ -332,6 +332,67 @@ def test_deploy_refuses_what_agentcore_would_and_what_the_deployment_sets_itself
     assert len(runtime_name_for("x" * 80)) == 48
 
 
+def test_deploy_as_a_team_seat_creates_an_a2a_runtime(control) -> None:
+    """A seat is created in AgentCore's A2A protocol, and told it is one."""
+    client, stub = control
+    stub.add_response(
+        "create_agent_runtime",
+        _created(),
+        {
+            "agentRuntimeName": "datalayer_crawler",
+            "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
+            "roleArn": ROLE,
+            "networkConfiguration": {"networkMode": "PUBLIC"},
+            # JSON-RPC 2.0 at `/` of port 9000, AgentCore's A2A contract.
+            "protocolConfiguration": {"serverProtocol": "A2A"},
+            "environmentVariables": {
+                "AGENT_SPEC_ID": "crawler",
+                "AGENT_RUNTIMES_TARGET": "agentcore",
+                "AGENTCORE_PROTOCOL": "A2A",
+            },
+        },
+    )
+    stub.add_response(
+        "get_agent_runtime", _got("READY"), {"agentRuntimeId": RUNTIME_ID}
+    )
+    stub.add_response(
+        "update_agent_runtime",
+        _updated(),
+        {
+            "agentRuntimeId": RUNTIME_ID,
+            "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
+            "roleArn": ROLE,
+            "networkConfiguration": {"networkMode": "PUBLIC"},
+            "protocolConfiguration": {"serverProtocol": "A2A"},
+            "environmentVariables": {
+                "AGENT_SPEC_ID": "crawler",
+                "AGENT_RUNTIMES_TARGET": "agentcore",
+                "AGENTCORE_PROTOCOL": "A2A",
+                "AGENTCORE_RUNTIME_URL": RUNTIME_URL,
+            },
+        },
+    )
+
+    async def sleep(seconds: float) -> None:
+        return None
+
+    deployment = asyncio.run(
+        AgentCoreTarget(control_client=client, sleep=sleep).deploy(
+            "crawler", _settings(protocol="A2A")
+        )
+    )
+    assert deployment.arn == ARN
+    target = AgentCoreTarget()
+    with pytest.raises(ValueError, match="speaks AGUI or A2A, not 'MCP'"):
+        target.create_request("crawler", _settings(protocol="MCP"))
+    with pytest.raises(
+        ValueError, match="AGENTCORE_PROTOCOL is set by the deployment itself"
+    ):
+        target.create_request(
+            "crawler", _settings(environment={"AGENTCORE_PROTOCOL": "A2A"})
+        )
+
+
 def test_status_reads_the_runtime(control) -> None:
     client, stub = control
     stub.add_response(

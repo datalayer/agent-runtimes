@@ -67,7 +67,7 @@ from fastapi.responses import JSONResponse, Response
 from .exchange import ExchangeRefused, PlatformTokens, runtime_exchange
 from .secrets import SecretsRefused, give_declared
 from .session_ids import agentcore_to_session_uid
-from .settings import AGENT_ID, agentcore_settings, deployment_of_runtime
+from .settings import AGENT_ID, agentcore_settings, deployment_of_runtime, serves_seat
 
 logger = logging.getLogger(__name__)
 
@@ -1099,6 +1099,7 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
                 f"Deployment {deployment} keeps its sessions in the platform's record: "
                 "set DATALAYER_AI_AGENTS_URL (the record store), not a file store."
             )
+    if deployment and not serves_seat():
         # The deployment's agent is made at its first invocation, with that
         # caller's token: ai-agents says what the deployment runs to them.
         logger.info(
@@ -1106,6 +1107,9 @@ async def configure_at_start(app: Any, api_prefix: str) -> None:
             deployment,
         )
         return
+    # A team seat (`AGENTCORE_PROTOCOL=A2A`), a deployment's or not, serves its
+    # agentspec over A2A: configured now, its tasks recorded as the seat's
+    # session of the team run (`orchestration.seat_sessions`).
     scope = {
         "type": "http",
         "app": app,

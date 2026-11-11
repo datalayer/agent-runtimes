@@ -22,6 +22,15 @@ server here.
   answers 401 in IAM's sentence.
 - **Busy.** ``/ping`` answers on this port too, and a request in flight
   (a streamed task) keeps the runtime ``HealthyBusy``.
+- **The session.** AgentCore routes a call to a microVM by its
+  ``X-Amzn-Bedrock-AgentCore-Runtime-Session-Id``: a session uid behind its
+  padding (`session_ids`). A message is of the A2A context that session is
+  (``contextId``, the session uid); a message naming another context is
+  refused in a sentence. What the task does is recorded as any team seat's
+  is: a turn of the seat's session of the team run (`orchestration.seat_sessions`).
+- **The run** holds the workload token AgentCore sent with the call, the
+  token the call carried, and the session on its spans, as an invocation's
+  run does (`contract`).
 """
 
 from __future__ import annotations
@@ -33,7 +42,8 @@ import logging
 import os
 from typing import Any, Iterator, Mapping, Optional
 
-from .contract import LIVENESS, ContractRefused, tokens_of
+from .contract import LIVENESS, SESSION_HEADER, ContractRefused, _workload_of, tokens_of
+from .session_ids import agentcore_to_session_uid
 from .settings import AGENT_ID, HOST
 
 logger = logging.getLogger(__name__)
@@ -141,6 +151,58 @@ async def _answer(send: Any, status: int, body: Mapping[str, Any]) -> None:
     await send({"type": "http.response.body", "body": payload})
 
 
+def context_of(body: bytes) -> str:
+    """The A2A context a JSON-RPC call's message names (``params.message.contextId``), or ``""``."""
+    try:
+        call = json.loads(body or b"{}")
+    except ValueError:
+        return ""
+    params = call.get("params") if isinstance(call, dict) else None
+    message = params.get("message") if isinstance(params, dict) else None
+    if not isinstance(message, dict):
+        return ""
+    return str(message.get("contextId") or message.get("context_id") or "").strip()
+
+
+def session_of_call(headers: Mapping[str, str], body: bytes) -> str:
+    """The session uid of a call AgentCore routed here, its message's context checked against it.
+
+    Parameters
+    ----------
+    headers : Mapping[str, str]
+        The call's headers, lower-cased.
+    body : bytes
+        The JSON-RPC call.
+
+    Returns
+    -------
+    str
+        The session uid behind the AgentCore session id; ``""`` for a call
+        that names no AgentCore session (one made to the listener itself).
+
+    Raises
+    ------
+    ContractRefused
+        When the AgentCore session id is not a Datalayer session, or the
+        message names another context (400), in a sentence.
+    """
+    sid = (headers.get(SESSION_HEADER.lower()) or "").strip()
+    if not sid:
+        return ""
+    try:
+        uid = agentcore_to_session_uid(sid)
+    except ValueError as refused:
+        raise ContractRefused(400, str(refused)) from None
+    context = context_of(body)
+    if context and context != uid:
+        raise ContractRefused(
+            400,
+            f"The message is of context {context!r}, and the call of AgentCore session "
+            f"{uid!r}: a seat's A2A context is its session.",
+        )
+    return uid
+
+
 class SeatApp:
     """Serve the agent's A2A application at the root, with ``/ping`` beside it."""
 
@@ -171,11 +233,19 @@ class SeatApp:
             bytes(k).decode("latin-1").lower(): bytes(v).decode("latin-1")
             for k, v in scope.get("headers") or []
         }
+        from agent_runtimes.apps.a2a import read_body, replay
+
+        body = await read_body(receive) if scope.get("method") == "POST" else b""
+        receive = replay(body, receive) if body else receive
         try:
+            session_of_call(headers, body)
             tokens = await tokens_of(headers)
         except ContractRefused as refused:
             await _answer(send, refused.status, {"detail": refused.sentence})
             return
+        # What the run holds, from the call as AgentCore made it: its workload
+        # token, the token it carried, its session.
+        held = _workload_of(scope)
         if tokens is not None:
             scope = {
                 **scope,
@@ -186,7 +256,7 @@ class SeatApp:
                 ]
                 + [(b"authorization", f"Bearer {tokens.platform}".encode())],
             }
-        with LIVENESS.working():
+        with LIVENESS.working(), held:
             await served(scope, receive, send)
 
 
@@ -242,7 +312,9 @@ __all__ = [
     "A2A_PORT",
     "RUNTIME_URL_VARIABLE",
     "SeatApp",
+    "context_of",
     "register_seat",
     "seat_card",
+    "session_of_call",
     "start_seat",
 ]

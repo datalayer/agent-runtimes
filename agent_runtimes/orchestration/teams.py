@@ -24,6 +24,16 @@ its own, its MCP lent. It is bound over ACP when a member of the team talks
 to it ``over: acp`` (the runtime's ACP route, its plan and diffs coming back
 on the session), else over A2A like any seat (its diffs as ``text/x-diff``
 artifacts); either way with the execution's budget, deadline and manifest.
+
+A member may be **placed on AWS AgentCore** for one run: an agent launched
+there as a team seat (a deployment of the platform's, its agent runtime
+speaking A2A) sits in the seat instead of a worker brought up for it. Where a
+seat runs is the run's, not the team's: the catalogue names no deployment.
+The run's root carries ``{seat: deployment uid}`` on a ``progress`` event
+(:data:`AGENTCORE_SEATS`, read by :func:`agentcore_seats_of`), and the
+member's binding then names the endpoint that reaches that agent runtime
+(:func:`member_binding`), so no worker is brought up for it. Its tasks are
+recorded as any seat's are: turns of the seat's session of the run.
 """
 
 from __future__ import annotations
@@ -49,6 +59,38 @@ SUPERVISOR_MODE = "supervisor"
 
 #: The modes a team runs in.
 RUNNABLE_MODES = SCHEDULED_MODES | {SUPERVISOR_MODE}
+
+#: The key under which a team run's root carries, on a ``progress`` event, the
+#: seats placed on AWS AgentCore for the run: ``{seat: deployment uid}``.
+AGENTCORE_SEATS = "datalayer.agentcore_seats"
+
+
+def agentcore_seats_of(events: list[Any]) -> dict[str, str]:
+    """
+    The seats a team run placed on AWS AgentCore, as its root's events carry them.
+
+    Parameters
+    ----------
+    events : list
+        The root execution's events (each with ``type`` and ``data``).
+
+    Returns
+    -------
+    dict[str, str]
+        ``{seat: deployment uid}``, the latest placement winning; empty when
+        the run placed none.
+    """
+    for event in reversed(events):
+        data = getattr(event, "data", None) or {}
+        kind = getattr(
+            getattr(event, "type", None), "value", getattr(event, "type", None)
+        )
+        placed = data.get(AGENTCORE_SEATS) if isinstance(data, dict) else None
+        if kind == "progress" and isinstance(placed, dict):
+            return {
+                str(seat): str(uid) for seat, uid in placed.items() if str(uid or "")
+            }
+    return {}
 
 
 def seat_agent_id(team_id: str, seat: str) -> str:
@@ -157,12 +199,49 @@ def member_protocol(team: TeamSpec, member: TeamAgentspec) -> AgentProtocol:
     return AgentProtocol.A2A
 
 
-def member_binding(team: TeamSpec, member: TeamAgentspec) -> AgentBinding:
-    """The binding of a member's execution, brought up for it."""
+def member_binding(
+    team: TeamSpec, member: TeamAgentspec, endpoint: str | None = None
+) -> AgentBinding:
+    """
+    The binding of a member's execution: brought up for it, or at ``endpoint``.
+
+    Parameters
+    ----------
+    team : TeamSpec
+        The team.
+    member : TeamAgentspec
+        The member.
+    endpoint : str, optional
+        Where the agent sitting in the seat answers over A2A, when it is not
+        brought up for it: an agent on AWS AgentCore, through its relay.
+
+    Returns
+    -------
+    AgentBinding
+        The seat, over A2A at ``endpoint`` when one is given.
+
+    Raises
+    ------
+    ValueError
+        When an endpoint is given for a harness or a server member, in a sentence.
+    """
+    if endpoint is None:
+        return AgentBinding(
+            agent_id=seat_agent_id(team.id, member.id),
+            capability=member.role or member.id,
+            protocol=member_protocol(team, member),
+        )
+    if member.harness or member.server:
+        raise ValueError(
+            f"Member '{member.id}' of team '{team.id}' is "
+            + ("a harness" if member.harness else "a server")
+            + ": it is not placed on another agent's endpoint."
+        )
     return AgentBinding(
         agent_id=seat_agent_id(team.id, member.id),
         capability=member.role or member.id,
-        protocol=member_protocol(team, member),
+        protocol=AgentProtocol.A2A,
+        endpoint=endpoint,
     )
 
 

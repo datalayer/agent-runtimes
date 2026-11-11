@@ -32,6 +32,14 @@ PORT_VARIABLE = "AGENTCORE_PORT"
 #: on AgentCore: its agent is the deployment's, made as a kept runtime's is.
 DEPLOYMENT_VARIABLE = "AGENTCORE_DEPLOYMENT_UID"
 
+#: The protocol AgentCore calls the runtime in, when it is not AG-UI: ``A2A``,
+#: a team seat (JSON-RPC 2.0 at ``/`` of port 9000), set by the target when it
+#: creates the agent runtime with ``serverProtocol: A2A``.
+PROTOCOL_VARIABLE = "AGENTCORE_PROTOCOL"
+
+#: The one protocol said in ``AGENTCORE_PROTOCOL``: a team seat.
+SEAT_PROTOCOL = "A2A"
+
 #: AgentCore's host: every interface.
 HOST = "0.0.0.0"
 
@@ -98,12 +106,37 @@ def deployment_of_runtime(environ: Optional[Mapping[str, str]] = None) -> str:
     return (env.get(DEPLOYMENT_VARIABLE) or "").strip()
 
 
+def serves_seat(environ: Optional[Mapping[str, str]] = None) -> bool:
+    """Whether the runtime was created as a team seat (``AGENTCORE_PROTOCOL=A2A``).
+
+    AgentCore calls an agent runtime in one protocol: a seat's is A2A, so it
+    is never invoked at ``/invocations``; it serves its agent over A2A at
+    ``/`` of port 9000, configured from its agentspec at start.
+
+    Raises
+    ------
+    ValueError
+        When ``AGENTCORE_PROTOCOL`` says another protocol, in a sentence.
+    """
+    env = os.environ if environ is None else environ
+    said = (env.get(PROTOCOL_VARIABLE) or "").strip()
+    if not said:
+        return False
+    if said != SEAT_PROTOCOL:
+        raise ValueError(
+            f"{PROTOCOL_VARIABLE} is {SEAT_PROTOCOL} (a team seat) or unset (AG-UI), not {said!r}."
+        )
+    return True
+
+
 __all__ = [
     "AGENT_ID",
     "DEFAULT_PORT",
     "DEPLOYMENT_VARIABLE",
     "HOST",
     "PORT_VARIABLE",
+    "PROTOCOL_VARIABLE",
+    "SEAT_PROTOCOL",
     "SPEC_VARIABLE",
     "TARGET",
     "TARGET_VARIABLE",
@@ -111,4 +144,5 @@ __all__ = [
     "agentcore_settings",
     "deployment_of_runtime",
     "is_agentcore_target",
+    "serves_seat",
 ]

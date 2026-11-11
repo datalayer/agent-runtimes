@@ -45,7 +45,13 @@ from urllib.parse import quote
 from agent_runtimes.agentcore.a2a import RUNTIME_URL_VARIABLE
 from agent_runtimes.agentcore.exchange import IAM_URL_VARIABLE, RUNTIME_ARN_VARIABLE
 from agent_runtimes.agentcore.session_ids import session_uid_to_agentcore
-from agent_runtimes.agentcore.settings import SPEC_VARIABLE, TARGET, TARGET_VARIABLE
+from agent_runtimes.agentcore.settings import (
+    PROTOCOL_VARIABLE,
+    SEAT_PROTOCOL,
+    SPEC_VARIABLE,
+    TARGET,
+    TARGET_VARIABLE,
+)
 from agent_runtimes.plugins.points import Deployment, TargetCapabilities
 
 #: The target's id, as ``runtime.target`` knows it (``serve --target``'s name).
@@ -80,6 +86,9 @@ def iam_url_of(discovery_url: str) -> str:
 
 #: The variables a deployment sets itself once AgentCore names the runtime.
 RUNTIME_ENV = (RUNTIME_ARN_VARIABLE, RUNTIME_URL_VARIABLE)
+
+#: The protocols a runtime is created in: AG-UI (its sessions) or A2A (a team seat).
+SERVER_PROTOCOLS = ("AGUI", SEAT_PROTOCOL)
 
 #: How long a created runtime is waited for before it is told its ARN.
 READY_TIMEOUT_SECONDS = 600.0
@@ -179,6 +188,9 @@ class AgentCoreDeploySettings:
     endpoint: str = DEFAULT_ENDPOINT
     #: Makes a retried create idempotent, when given.
     client_token: str = ""
+    #: The protocol AgentCore calls it in: ``AGUI`` (its sessions, at
+    #: ``/invocations``), or ``A2A`` (a team seat, JSON-RPC at ``/`` of port 9000).
+    protocol: str = "AGUI"
 
 
 def spec_id_of(spec: Any) -> str:
@@ -259,8 +271,14 @@ class AgentCoreTarget:
                 f"{name!r} is not an agent runtime name: a letter, then up to 47 "
                 "letters, digits or underscores."
             )
+        if settings.protocol not in SERVER_PROTOCOLS:
+            raise ValueError(
+                f"An agent runtime of Datalayer's speaks {' or '.join(SERVER_PROTOCOLS)}, "
+                f"not {settings.protocol!r}."
+            )
         overridden = sorted(
-            {SPEC_ENV, TARGET_ENV, *RUNTIME_ENV} & set(settings.environment)
+            {SPEC_ENV, TARGET_ENV, PROTOCOL_VARIABLE, *RUNTIME_ENV}
+            & set(settings.environment)
         )
         if overridden:
             raise ValueError(
@@ -273,13 +291,17 @@ class AgentCoreTarget:
             },
             "roleArn": settings.role_arn,
             "networkConfiguration": {"networkMode": settings.network_mode},
-            "protocolConfiguration": {"serverProtocol": "AGUI"},
+            "protocolConfiguration": {"serverProtocol": settings.protocol},
             "environmentVariables": {
                 **dict(settings.environment),
                 SPEC_ENV: spec_id,
                 TARGET_ENV: AGENTCORE_TARGET_ID,
             },
         }
+        if settings.protocol == SEAT_PROTOCOL:
+            # A team seat: the runtime serves its agent over A2A on port 9000
+            # and AgentCore calls nothing else of it.
+            request["environmentVariables"][PROTOCOL_VARIABLE] = SEAT_PROTOCOL
         if settings.description:
             request["description"] = settings.description
         if settings.authorizer is not None:
