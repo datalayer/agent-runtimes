@@ -13,6 +13,7 @@ the person's earlier turns in context, whether they talk in AG-UI runs or in
 ``{"prompt"}``s.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -33,6 +34,9 @@ from agent_runtimes.tests.test_app_sessions import (
     answer_of,
     events_of,
 )
+
+#: The secrets the assistant's agent (cog-crawler) declares.
+DECLARED = ("TAVILY_API_KEY", "GITHUB_TOKEN")
 
 ARN = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/chat_check-Ab12Cd34Ef"
 DEPLOYMENT = "dep-ac-1"
@@ -99,6 +103,17 @@ def deployed(
     contract.forget_deployment_agent()
     contract.forget_held()
 
+    # The person's secrets at IAM: what the assistant's agent declares.
+    async def from_iam(bearer: str) -> Dict[str, str]:
+        return {"TAVILY_API_KEY": "tvly-test", "GITHUB_TOKEN": "ghp-test"}
+
+    from agent_runtimes.agentcore import secrets as agent_secrets
+    from agent_runtimes.guardrails.declared_secrets import forget_given
+
+    for name in DECLARED:
+        monkeypatch.delenv(name, raising=False)
+    agent_secrets.use_secrets_reader(from_iam)
+
     async def reader(uid: str, bearer: str) -> List[Dict[str, Any]]:
         return [
             {
@@ -114,6 +129,10 @@ def deployed(
 
     sessions.use_record_reader(reader)
     yield runtime, made
+    agent_secrets.use_secrets_reader(None)
+    forget_given(DECLARED)
+    for name in DECLARED:
+        os.environ.pop(name, None)
     from agent_runtimes.apps.record import keep_agent_recorder
     from agent_runtimes.routes import agents
     from agent_runtimes.routes.agui import unregister_agui_agent
@@ -268,3 +287,81 @@ def test_a_deployments_runtime_refuses_to_keep_sessions_in_its_files(
     with pytest.raises(RuntimeError) as refused:
         asyncio.run(contract.configure_at_start(FastAPI(), "/api/v1"))
     assert "DATALAYER_AI_AGENTS_URL" in str(refused.value)
+
+
+# --- the secrets the agent needs, read at IAM as the caller ------------------------------
+
+NEEDS_A_SECRET = {
+    **ASSISTANT,
+    "id": "scout",
+    "name": "Scout",
+    "agent": "example-mcp:0.0.1",
+}
+
+
+def test_the_declared_secrets_are_read_as_the_caller_and_held_by_the_process(
+    monkeypatch: pytest.MonkeyPatch, deployed: Any, agentcore: TestClient
+) -> None:
+    from agent_runtimes.agentcore import secrets
+    from agent_runtimes.guardrails.declared_secrets import forget_given, given_names
+
+    runtime, made = deployed
+    asked: List[str] = []
+    held: Dict[str, str] = {"OTHER_SECRET": "not-declared"}
+
+    async def from_iam(bearer: str) -> Dict[str, str]:
+        asked.append(bearer)
+        return dict(held)
+
+    async def needs_tavily(
+        deployment: str, version: Optional[int], bearer: Optional[str]
+    ) -> Dict[str, Any]:
+        return {"spec": NEEDS_A_SECRET, "code": None, "version": 1, "app_uid": "app-2"}
+
+    monkeypatch.setattr(principal, "_read_from_ai_agents", needs_tavily)
+    monkeypatch.delenv("OTHER_SECRET", raising=False)
+    secrets.use_secrets_reader(from_iam)
+    try:
+        # Missing: the invocation is refused in a sentence, and no agent is made.
+        refused = agentcore.post(
+            "/invocations", headers=as_("ada"), json={"prompt": "Hi"}
+        )
+        assert refused.status_code == 422
+        assert "the MCP server tavily needs TAVILY_API_KEY" in refused.json()["detail"]
+        assert made == [] and asked == ["ada"]
+        # Present: given to this process, and nothing it did not declare.
+        held["TAVILY_API_KEY"] = "tvly-test"
+        answered = agentcore.post(
+            "/invocations", headers=as_("ada"), json={"prompt": "Hi"}
+        )
+        assert answered.json() == {"response": "Heard 1: Hi", "status": "success"}
+        assert os.environ["TAVILY_API_KEY"] == "tvly-test"
+        assert "OTHER_SECRET" not in os.environ
+        assert "TAVILY_API_KEY" in given_names()
+        assert len(made) == 1 and asked == ["ada", "ada"]
+    finally:
+        secrets.use_secrets_reader(None)
+        forget_given(["TAVILY_API_KEY"])
+
+
+def test_an_agent_that_declares_no_secret_asks_iam_for_none(
+    monkeypatch: pytest.MonkeyPatch, deployed: Any, agentcore: TestClient
+) -> None:
+    from agent_runtimes.agentcore import secrets
+
+    async def never(bearer: str) -> Dict[str, str]:
+        raise AssertionError("IAM is asked for no secret")
+
+    async def plain_chat(
+        deployment: str, version: Optional[int], bearer: Optional[str]
+    ) -> Dict[str, Any]:
+        spec = {**ASSISTANT, "id": "chat", "agent": "example-agentic-chat:0.0.1"}
+        return {"spec": spec, "code": None, "version": 1, "app_uid": "app-3"}
+
+    monkeypatch.setattr(principal, "_read_from_ai_agents", plain_chat)
+    secrets.use_secrets_reader(never)
+    try:
+        said = agentcore.post("/invocations", headers=as_("ada"), json={"prompt": "Hi"})
+        assert said.json()["status"] == "success"
+    finally:
+        secrets.use_secrets_reader(None)

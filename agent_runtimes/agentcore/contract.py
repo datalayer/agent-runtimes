@@ -35,7 +35,9 @@ process, the microVM's, started.
 A runtime the platform deployed for an application (``AGENTCORE_DEPLOYMENT_UID``)
 runs the deployment's agent, made as a kept runtime's is (`apps.deployments.kept_payload`):
 its Appspec and the deployment as its instance, read from ai-agents with the first
-caller's token. Its runs go through the application's session routes — a session
+caller's token, once the secrets its MCP servers and skills declare were read
+at IAM as the caller and given to this process (`secrets`: never in the image,
+never in the agent runtime's environment at AWS). Its runs go through the application's session routes — a session
 opened by its first run (``/api/v1/apps/agents/{agent}/ag-ui/``), resumed from its
 record when this process does not hold it (``/api/v1/apps/sessions/{uid}/resume``)
 — so each session is recorded under the deployment, where it runs said as
@@ -63,6 +65,7 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisco
 from fastapi.responses import JSONResponse, Response
 
 from .exchange import ExchangeRefused, PlatformTokens, runtime_exchange
+from .secrets import SecretsRefused, give_declared
 from .session_ids import agentcore_to_session_uid
 from .settings import AGENT_ID, agentcore_settings, deployment_of_runtime
 
@@ -528,6 +531,17 @@ async def deployment_agent(server: Any, bearer: str) -> str:
             ) from None
         except DeployRefused as refused:
             raise ContractRefused(422, str(refused)) from None
+        # What its MCP servers and skills need of the caller's secrets, read at
+        # IAM as them and held by this process alone (`secrets`).
+        try:
+            await give_declared(payload, bearer)
+        except SecretsRefused as refused:
+            raise ContractRefused(refused.status, refused.sentence) from None
+        except HTTPException as refused:
+            raise ContractRefused(
+                refused.status_code,
+                f"The agent of deployment {deployment} was not made: {refused.detail}",
+            ) from None
         try:
             await _maker["make"](server, payload, bearer)
         except HTTPException as refused:
