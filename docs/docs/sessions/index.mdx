@@ -36,6 +36,7 @@ listing of sessions the runtime no longer holds says the truth.
 | Operation | Route | What carries | What does not |
 | --- | --- | --- | --- |
 | **open** | `POST /api/v1/apps/sessions` | — | — |
+| **pause** | `POST /sessions/{uid}/stop` → the session, `paused`, with `remembered` | The whole conversation, in the record; what it holds is given to the agent's memory first, when the agent has one (`remembered: {saved, turns}`) | The turn that was running and the question waited on, both cancelled and said |
 | **resume** | `POST /sessions/{uid}/resume` | The whole conversation from the record: turns, tool rows with their displays, the files given (their places in the sandbox re-stated), the session's Rules; then the harness's own session when it can load it (the replay compared with the record, a difference said), else a start-over said in a sentence | A turn that was running (cancelled, said) |
 | **swap** | `POST /sessions/{uid}/agent {agent}` | The conversation, the files, the Rules, the settings, the workspace; the new agent is told in a sentence | The harness's own state (kept for a swap back when it can be loaded again), model and effort picks, *always* answers given to the old harness's tools |
 | **clone** | `POST /sessions/{uid}/clone {up_to_turn?, agent?, title?}` → `201`, a new uid, `paused` | The conversation up to the turn, the files, the Rules | The harness's own session, what came after the turn, the mode (reset to the application's default) |
@@ -43,6 +44,16 @@ listing of sessions the runtime no longer holds says the truth.
 | **import** | `POST /sessions/import` (the file as the body) → `201`, always a new uid, `paused` | The entries, validated one by one | The source's uid, owner, runtime; an agent the runtime lacks (refused unless `?agent=` names one it has) |
 | **list** | `GET /sessions` | The caller's sessions, held and recorded, paged (`?limit=`, `?after=`, `has_more`), filtered (`?app=`, `?agent=`, `?state=`, `?q=`, `?archived=true`) | — |
 | **end** | `POST /sessions/{uid}/end` | — | — |
+
+**An agent's sessions.** An agent made without an Appspec (`loop -a
+<agentspec>`, an agent launched from the Agent Gallery) is the application
+of that one agent: its conversations are sessions of the same model, under
+the same routes. Its record names its application `agent:<agentspec id>`,
+and every described session says `kind: agent` or `kind: application`. A
+runtime that keeps agent sessions says so in `GET /api/v1/runtime/status`
+(`agent_sessions: true`); a client asks before it sends an agent's turns to
+`/api/v1/apps/agents/<agent>/ag-ui/`, and talks to an older runtime on its
+plain endpoint.
 
 Every refusal is a sentence that says what to do instead; none falls back to
 a default the caller did not ask for:
