@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **An AgentCore runtime deployed for an application** (`AGENTCORE_DEPLOYMENT_UID`, set by the platform's launch) runs the deployment's agent, made at its first invocation from what the platform says the deployment runs. Each invocation goes through the application's session routes, so its sessions are recorded (`runs_on: {kind: agentcore, arn}`) and resumed from the record on a new microVM. Such a runtime needs `DATALAYER_AI_AGENTS_URL` (the record store) and refuses to start with a file session store.
+- **Its secrets.** The secrets the deployment's agent declares (what its MCP servers and skills require) are read at IAM (`GET {DATALAYER_IAM_URL}/api/iam/v1/secrets/values`) with the caller's exchanged platform token as the agent is made, and held by the process alone: never in the image, never in the agent runtime's `environmentVariables` at AWS. A required one that is missing refuses the invocation (422) naming it and what needs it.
 - **`loop agentcore invoke --bearer`** (or `AGENTCORE_BEARER_TOKEN`): a runtime behind a JWT authorizer is invoked over HTTPS with that token. Without one, AWS's refusal of SigV4 on such a runtime is said in a sentence pointing to it. The CLI sends `{"prompt", "session_id"}`, so the runtime keeps the session's earlier turns.
 
 ## 1.6.9
