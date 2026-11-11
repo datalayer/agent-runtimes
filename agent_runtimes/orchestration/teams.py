@@ -371,7 +371,9 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
                 ) or ""
             fields["system_prompt"] = f"{base}\n\n{team.routing_instructions}".strip()
     if member is not None and member.tools:
-        fields["tools"] = list(member.tools)
+        # The tools that run on the runtime: what the create route takes as
+        # `backend_tools` (it refuses `tools`, the field's former name).
+        fields["backend_tools"] = list(member.tools)
     if member is not None and member.mcp_server:
         fields["selected_mcp_servers"] = [
             {"id": member.mcp_server, "origin": "catalog"}

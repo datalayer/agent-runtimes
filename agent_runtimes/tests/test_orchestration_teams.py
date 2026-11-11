@@ -26,6 +26,7 @@ from agent_runtimes.orchestration.teams import (
     supervisor_binding,
     team_seat,
 )
+from agent_runtimes.routes.agents import CreateAgentRequest
 from agent_runtimes.specs.teams import get_team_spec, list_team_specs
 from agent_runtimes.types import TeamAgentspec, TeamSpec, TeamSupervisorSpec
 
@@ -151,8 +152,11 @@ class TestASeatIsRegisteredFromWhatItNames:
                 "agent_spec_id" not in fields and member.goal in fields["system_prompt"]
             )
             assert fields.get("model", "") == member.model and fields.get(
-                "tools", []
+                "backend_tools", []
             ) == list(member.tools)
+            # What the create route accepts: `tools` is refused there.
+            assert "tools" not in fields
+            CreateAgentRequest(name=f"seat-{member.id}", **fields)
             if member.mcp_server:
                 assert fields["selected_mcp_servers"] == [
                     {"id": member.mcp_server, "origin": "catalog"}
