@@ -147,35 +147,6 @@ Resources:
                 Effect: Deny
                 Action: bedrock-agentcore:GetWorkloadAccessTokenForUserId
                 Resource: '*'
-              # AgentCore Evaluations: a session judged on demand from its
-              # spans (read from aws/spans), and online evaluation of a
-              # deployment, run by the evaluation role below.
-              - Sid: Evaluations
-                Effect: Allow
-                Action:
-                  - bedrock-agentcore:Evaluate
-                  - bedrock-agentcore:GetEvaluator
-                  - bedrock-agentcore:ListEvaluators
-                  - bedrock-agentcore:CreateOnlineEvaluationConfig
-                  - bedrock-agentcore:GetOnlineEvaluationConfig
-                  - bedrock-agentcore:ListOnlineEvaluationConfigs
-                  - bedrock-agentcore:UpdateOnlineEvaluationConfig
-                  - bedrock-agentcore:DeleteOnlineEvaluationConfig
-                Resource: '*'
-              - Sid: ReadTheSpans
-                Effect: Allow
-                Action:
-                  - logs:StartQuery
-                  - logs:GetQueryResults
-                  - logs:StopQuery
-                Resource: '*'
-              - Sid: PassTheEvaluationRole
-                Effect: Allow
-                Action: iam:PassRole
-                Resource: !GetAtt EvaluationRole.Arn
-                Condition:
-                  StringEquals:
-                    iam:PassedToService: bedrock-agentcore.amazonaws.com
 
   ExecutionRoleBedrock:
     Type: AWS::IAM::RolePolicy
@@ -344,6 +315,35 @@ Resources:
                 Effect: Deny
                 Action: bedrock-agentcore:GetWorkloadAccessTokenForUserId
                 Resource: '*'
+              # AgentCore Evaluations: a session judged on demand from its
+              # spans (read from aws/spans), and online evaluation of a
+              # deployment, run by the evaluation role below.
+              - Sid: Evaluations
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:Evaluate
+                  - bedrock-agentcore:GetEvaluator
+                  - bedrock-agentcore:ListEvaluators
+                  - bedrock-agentcore:CreateOnlineEvaluationConfig
+                  - bedrock-agentcore:GetOnlineEvaluationConfig
+                  - bedrock-agentcore:ListOnlineEvaluationConfigs
+                  - bedrock-agentcore:UpdateOnlineEvaluationConfig
+                  - bedrock-agentcore:DeleteOnlineEvaluationConfig
+                Resource: '*'
+              - Sid: ReadTheSpans
+                Effect: Allow
+                Action:
+                  - logs:StartQuery
+                  - logs:GetQueryResults
+                  - logs:StopQuery
+                Resource: '*'
+              - Sid: PassTheEvaluationRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt EvaluationRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: bedrock-agentcore.amazonaws.com
               # The image the agent runtime is created from.
               - Sid: PullTheImage
                 Effect: Allow
