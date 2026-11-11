@@ -34,6 +34,7 @@ def test_every_cli_verb_has_its_row_on_the_page() -> None:
     assert set(verbs) == {
         "list",
         "show",
+        "pause",
         "resume",
         "swap",
         "clone",
