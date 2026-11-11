@@ -28,7 +28,6 @@ from __future__ import annotations
 import json
 import os
 import time
-import uuid
 from dataclasses import asdict
 from typing import Any, Awaitable, Callable, Mapping, Optional, Sequence
 
@@ -332,7 +331,9 @@ class AgentCoreAdapter(ExternalAdapter):
         from agent_runtimes.otel.genai import instrumentation_settings
 
         chosen = evaluator_ids(evaluators)
-        session = session_id or str(uuid.uuid4())
+        from agent_runtimes.apps.sessions import new_session_uid
+
+        session = session_id or new_session_uid()
         memory = InMemorySpanExporter()
         provider = SDKTracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(memory))

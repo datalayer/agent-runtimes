@@ -21,7 +21,6 @@ import asyncio
 import json
 import os
 import time
-import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -33,6 +32,7 @@ from agent_runtimes.agentcore.target import (
     AgentCoreTarget,
     JwtAuthorizer,
 )
+from agent_runtimes.apps.sessions import new_session_uid
 from agent_runtimes.plugins.points import Deployment
 
 app = typer.Typer(
@@ -213,7 +213,9 @@ def invoke(
     """Run a turn of a session on the deployment."""
     state = _read_state()
     deployment = _deployment(state, agentspec)
-    session_uid = session or uuid.uuid4().hex
+    # A ULID, as every session the platform opens (padded for AgentCore's
+    # runtimeSessionId where it is sent).
+    session_uid = session or new_session_uid()
     # A prompt, not an AG-UI run carrying one message: the runtime keeps the
     # session's earlier turns and puts them before it, where an AG-UI run
     # brings its whole conversation itself.
