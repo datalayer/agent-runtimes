@@ -337,6 +337,16 @@ Resources:
                   - logs:GetQueryResults
                   - logs:StopQuery
                 Resource: '*'
+              # Creating an online evaluation, AgentCore reads and sets the
+              # field index of aws/spans with the caller's own permissions.
+              - Sid: IndexTheSpans
+                Effect: Allow
+                Action:
+                  - logs:DescribeIndexPolicies
+                  - logs:PutIndexPolicy
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans:*'
               - Sid: PassTheEvaluationRole
                 Effect: Allow
                 Action: iam:PassRole

@@ -33,6 +33,11 @@ its arguments, its result) and ``chat`` per model request, each with its
   carrying its ``session.id``: on AgentCore every span of an invocation
   carries the runtime session id it was invoked with
   (:func:`use_session_id`, :class:`SessionIdProcessor`).
+- **The agent.** An online evaluation finds a runtime's sessions only among
+  spans whose resource says ``aws.service.type`` ``gen_ai_agent`` (what
+  ADOT sets when AgentCore's observability is on) and whose ``service.name``
+  is the runtime's (:func:`agentcore_resource`); a judgement asked on demand
+  is given the spans and needs neither.
 """
 
 from __future__ import annotations
@@ -402,23 +407,35 @@ class ToGlobalProcessor(SpanProcessor):
 AGENTCORE_ENDPOINT = "DEFAULT"
 
 
+#: The resource attribute an online evaluation selects agents' spans by.
+SERVICE_TYPE_ATTRIBUTE = "aws.service.type"
+
+#: Its value for an agent, as ADOT sets it when agent observability is on.
+GENAI_AGENT_SERVICE_TYPE = "gen_ai_agent"
+
+
 def agentcore_resource(environ: Mapping[str, str]) -> dict[str, str]:
     """The resource attributes of the spans of an AgentCore agent runtime.
 
-    ``service.name`` is ``<agent runtime name>.DEFAULT``, AgentCore's own
-    naming, which an online evaluation's data source selects a runtime's
-    spans by; read from ``AGENTCORE_RUNTIME_ARN`` (its id is the name and a
-    ten-character suffix). ``OTEL_SERVICE_NAME`` or a runtime told no ARN
-    leaves the SDK's own.
+    ``aws.service.type`` is ``gen_ai_agent``: AgentCore's online evaluation
+    looks for a runtime's sessions only among such spans (its query filters
+    ``resource.attributes.aws.service.type = "gen_ai_agent"``), as ADOT marks
+    an agent's. ``service.name`` is ``<agent runtime name>.DEFAULT``,
+    AgentCore's own naming, which an online evaluation's data source selects
+    a runtime's spans by; read from ``AGENTCORE_RUNTIME_ARN`` (its id is the
+    name and a ten-character suffix). ``OTEL_SERVICE_NAME`` or a runtime told
+    no ARN leaves the SDK's own service name.
     """
     from agent_runtimes.agentcore.exchange import RUNTIME_ARN_VARIABLE
 
+    attributes = {SERVICE_TYPE_ATTRIBUTE: GENAI_AGENT_SERVICE_TYPE}
     arn = str(environ.get(RUNTIME_ARN_VARIABLE) or "")
     if environ.get("OTEL_SERVICE_NAME") or "/" not in arn:
-        return {}
+        return attributes
     runtime_id = arn.rsplit("/", 1)[1]
     name = runtime_id.rsplit("-", 1)[0] if "-" in runtime_id else runtime_id
-    return {"service.name": f"{name}.{AGENTCORE_ENDPOINT}"}
+    attributes["service.name"] = f"{name}.{AGENTCORE_ENDPOINT}"
+    return attributes
 
 
 def genai_tracer_provider(
@@ -476,10 +493,12 @@ def genai_tracer_provider(
 
 __all__ = [
     "CONTENT_VARIABLE",
+    "GENAI_AGENT_SERVICE_TYPE",
     "INSTRUMENTATION_VERSION",
     "SCOPE",
     "AgentCoreExport",
     "GenAIInstrumentationSettings",
+    "SERVICE_TYPE_ATTRIBUTE",
     "SESSION_ID_ATTRIBUTE",
     "ScopedTracerProvider",
     "SessionIdProcessor",

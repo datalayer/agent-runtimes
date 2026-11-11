@@ -300,6 +300,10 @@ def test_on_agentcore_the_spans_reach_both_exporters() -> None:
     assert {s.name for s in to_agentcore} == {s.name for s in to_datalayer}
     assert len(to_agentcore) == len(to_datalayer) == 4
     assert {s.instrumentation_scope.name for s in to_agentcore} == {SCOPE}
+    # What an online evaluation selects an agent's spans by.
+    assert {s.resource.attributes.get("aws.service.type") for s in to_agentcore} == {
+        "gen_ai_agent"
+    }
     provider.shutdown()
 
 
@@ -330,16 +334,19 @@ def test_on_agentcore_every_span_of_an_invocation_carries_its_session() -> None:
 
 def test_an_agentcore_runtime_s_spans_name_it_as_agentcore_does() -> None:
     arn = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/datalayer_38ce5d78_4093-FlAk8GCPY1"
+    # An online evaluation finds sessions only among gen_ai_agent spans.
+    agent = {"aws.service.type": "gen_ai_agent"}
     assert genai.agentcore_resource({"AGENTCORE_RUNTIME_ARN": arn}) == {
-        "service.name": "datalayer_38ce5d78_4093.DEFAULT"
+        **agent,
+        "service.name": "datalayer_38ce5d78_4093.DEFAULT",
     }
     assert (
         genai.agentcore_resource(
             {"AGENTCORE_RUNTIME_ARN": arn, "OTEL_SERVICE_NAME": "mine"}
         )
-        == {}
+        == agent
     )
-    assert genai.agentcore_resource({}) == {}
+    assert genai.agentcore_resource({}) == agent
 
 
 def test_without_an_endpoint_on_agentcore_there_is_one_exporter() -> None:
