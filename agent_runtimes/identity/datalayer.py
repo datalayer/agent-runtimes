@@ -7,10 +7,16 @@ behind the ``identity.provider`` point, with no change of behaviour.
 - ``inbound_token`` — the platform JWT the caller carries, unchanged.
 - ``workload_token`` — the deployment's acting token: its application's
   principal's (:func:`agent_runtimes.apps.principal.principal_token`).
-- ``oauth_token`` — IAM's held secret minted per call: Gmail through
+- ``oauth_token`` — IAM's held secret, answered per call: Gmail through
   ``google-workspace`` (:func:`agent_runtimes.mcp.google_workspace.gmail_access_token`),
   narrowed by IAM to the connection's level (the scopes asked are not IAM's
-  to widen); any other provider is refused, IAM holds no grant for it.
+  to widen); the person's GitHub through ``github``
+  (:mod:`agent_runtimes.identity.github_connection`), on a runtime of theirs.
+  When the person has not connected GitHub, the start link of GitHub's
+  consent goes to ``on_auth_url`` and IAM is asked again until the grant is
+  there (bounded, a sentence on timeout); without ``on_auth_url``,
+  :class:`AuthorizationRequired` carries the link. Any other provider is
+  refused, IAM holds no grant for it.
 - ``api_key`` — the secret of that name the runtime was given: on a
   deployment only what its specs declare (R-19), set in this process's
   environment by the configure (``guardrails.declared_secrets``).
@@ -19,10 +25,17 @@ behind the ``identity.provider`` point, with no change of behaviour.
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import os
-from typing import Any, Callable, Mapping, Optional, Sequence
+import time
+from typing import Any, Awaitable, Callable, Mapping, Optional, Sequence
 
-from agent_runtimes.plugins.points import IdentityRefused
+from agent_runtimes.plugins.points import (
+    AuthorizationRequired,
+    AuthorizationTimedOut,
+    IdentityRefused,
+)
 
 #: The provider's id, as ``identity.provider`` knows it.
 DATALAYER_IDENTITY_ID = "datalayer"
@@ -32,6 +45,29 @@ class DatalayerIdentity:
     """The ``datalayer`` identity provider: Datalayer IAM, as the runtime reaches it today."""
 
     id = DATALAYER_IDENTITY_ID
+
+    def __init__(
+        self,
+        *,
+        wait_seconds: Optional[float] = None,
+        poll_seconds: Optional[float] = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
+    ) -> None:
+        from agent_runtimes.agentcore.identity import (
+            DEFAULT_POLL_SECONDS,
+            DEFAULT_WAIT_SECONDS,
+        )
+
+        # The grant is waited for as AgentCore's is: as long, as often.
+        self.wait_seconds = (
+            DEFAULT_WAIT_SECONDS if wait_seconds is None else wait_seconds
+        )
+        self.poll_seconds = (
+            DEFAULT_POLL_SECONDS if poll_seconds is None else poll_seconds
+        )
+        self.clock = clock
+        self.sleep = sleep
 
     async def inbound_token(self, caller: Mapping[str, Any], audience: str) -> str:
         """The platform JWT the caller carries; the platform's services all accept it."""
@@ -70,19 +106,22 @@ class DatalayerIdentity:
         context: Optional[Mapping[str, Any]] = None,
         force_authentication: bool = False,
     ) -> str:
-        """An access token IAM mints from the person's held grant (Gmail today)."""
+        """An access token IAM answers from the person's held grant (Gmail, GitHub)."""
+        from agent_runtimes.identity.github_connection import GITHUB_PROVIDER
         from agent_runtimes.mcp.google_workspace import (
             GOOGLE_WORKSPACE_SERVER,
             GmailRefused,
             gmail_access_token,
         )
 
+        context = context or {}
+        if provider == GITHUB_PROVIDER:
+            return await self._github_token(scopes, on_auth_url, context)
         if provider != GOOGLE_WORKSPACE_SERVER:
             raise IdentityRefused(
-                f"Datalayer IAM holds no OAuth grant for {provider}: it mints tokens for "
-                f"{GOOGLE_WORKSPACE_SERVER} alone."
+                f"Datalayer IAM holds no OAuth grant for {provider}: it holds grants for "
+                f"{GOOGLE_WORKSPACE_SERVER} and {GITHUB_PROVIDER} alone."
             )
-        context = context or {}
         agent_id = str(context.get("agent_id") or "")
         if not agent_id:
             raise IdentityRefused(
@@ -92,6 +131,37 @@ class DatalayerIdentity:
             return await gmail_access_token(agent_id, context.get("bearer"))
         except GmailRefused as why:
             raise IdentityRefused(str(why)) from None
+
+    async def _github_token(
+        self,
+        scopes: Sequence[str],
+        on_auth_url: Optional[Callable[[str], Any]],
+        context: Mapping[str, Any],
+    ) -> str:
+        """The person's GitHub token from IAM, asking them to connect first when they have not."""
+        from agent_runtimes.identity import github_connection as github
+
+        try:
+            return await github.ask_token(context, scopes)
+        except github.NotConnected as why:
+            not_connected = str(why)
+        url = await github.connect_url(context, scopes)
+        if on_auth_url is None:
+            raise AuthorizationRequired(github.GITHUB_PROVIDER, url)
+        shown = on_auth_url(url)
+        if inspect.isawaitable(shown):
+            await shown
+        deadline = self.clock() + self.wait_seconds
+        while self.clock() < deadline:
+            await self.sleep(self.poll_seconds)
+            try:
+                return await github.ask_token(context, scopes)
+            except github.NotConnected as why:
+                not_connected = str(why)
+        raise AuthorizationTimedOut(
+            f"Access to {github.GITHUB_PROVIDER} was not granted within "
+            f"{int(self.wait_seconds)} seconds ({not_connected}): ask again when it is."
+        )
 
     async def api_key(
         self, provider: str, *, context: Optional[Mapping[str, Any]] = None

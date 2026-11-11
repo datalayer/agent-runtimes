@@ -6,8 +6,11 @@
 No ``GITHUB_TOKEN`` is configured: the token is the person's, asked of the
 runtime's identity provider (``identity.oauth_token("github", …)``). On
 AgentCore it comes from AgentCore Identity's token vault, through the
-organization's credential provider named ``github``; the first time, the
-person is asked in the chat to connect GitHub. A grant declined, or not
+organization's credential provider named ``github``; on a Datalayer
+runtime, from the grant Datalayer IAM holds for the person (on a runtime of
+theirs). The first time, the person is asked in the chat to connect GitHub.
+With ``read:user`` the list has the person's public repositories; connected
+for private repositories too (in Settings), it has those as well. A grant declined, or not
 given in time, ends the call with a sentence the agent reads.
 """
 

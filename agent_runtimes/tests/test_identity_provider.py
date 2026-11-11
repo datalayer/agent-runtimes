@@ -181,10 +181,10 @@ def test_a_tools_oauth_token_through_the_builtin_provider(gmail) -> None:
                 context={"agent_id": "preview"},
             )
         )
-    with pytest.raises(IdentityRefused, match="holds no OAuth grant for github"):
+    with pytest.raises(IdentityRefused, match="holds no OAuth grant for salesforce"):
         asyncio.run(
             DATALAYER_IDENTITY.oauth_token(
-                "github", ["read:user"], "USER_FEDERATION", None
+                "salesforce", ["api"], "USER_FEDERATION", None
             )
         )
     with pytest.raises(IdentityRefused, match="No agent"):
