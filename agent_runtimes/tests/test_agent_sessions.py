@@ -453,3 +453,33 @@ def test_a_cancelled_wait_does_not_cancel_the_sends_it_waits_for(
 
     asyncio.run(scenario())
     assert sent == ["turn"]
+
+
+def test_an_agent_talked_to_over_another_transport_runs_its_sessions_all_the_same(
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+    tmp_path: Path,
+) -> None:
+    """The web's agent page makes its agent with Vercel AI: no AG-UI app is
+    registered for it, and the session path makes one for its turns."""
+    from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from agent_runtimes.routes.acp import _agents
+    from agent_runtimes.routes.agui import get_agui_app
+
+    use_session_store(FileSessionStore(root=tmp_path / "sessions"))
+    model = Said()
+    agent = Agent(FunctionModel(model, stream_function=model.stream))
+    _agents[AGENT] = (PydanticAIAdapter(agent, agent_id=AGENT), object())
+    agents._agentspecs[AGENT] = {"agent_spec_id": SPEC, "name": "The Marketer"}
+    try:
+        assert get_agui_app(AGENT) is None
+        answer = answer_of(_run(remote, "session-v001", ["My name is Ada."], []))
+        assert answer == "Heard 1: My name is Ada."
+        assert get_agui_app(AGENT) is not None
+        # Not an agent of this runtime: nothing is made, the turn is refused.
+        assert sessions.agui_app_of("nobody") is None
+    finally:
+        _agents.pop(AGENT, None)
+        unregister_agui_agent(AGENT)
+        agents._agentspecs.pop(AGENT, None)
+        use_session_store(None)

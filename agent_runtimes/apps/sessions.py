@@ -2610,10 +2610,9 @@ class LiveSession:
         reading the application's documents (`record.own_token_for`).
         """
         from agent_runtimes.apps.record import persons_own_token
-        from agent_runtimes.routes.agui import get_agui_app
         from agent_runtimes.transports.agui import run_instructions
 
-        app = get_agui_app(self.agent_id)
+        app = agui_app_of(self.agent_id)
         if app is None:
             raise SessionRefused(
                 410, f"The agent of {self.app.name} is no longer on this runtime."
@@ -3074,6 +3073,40 @@ def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
     if not spec:
         raise SessionRefused(404, f"The agent {agent_id} runs no application.")
     return load_app(spec), dict(stored.get("app_instance") or {})
+
+
+def agui_app_of(agent_id: str) -> Any:
+    """The AG-UI app a session's turns run through, made for the agent when
+    it has none: an agent whose page talks to it over another transport
+    (the web's agent page uses Vercel AI) runs its sessions over AG-UI all
+    the same. Its tools that ask for an approval ask for it here too.
+    ``None`` when the runtime holds no such agent.
+    """
+    from agent_runtimes.routes.acp import _agents
+    from agent_runtimes.routes.agents import (
+        _is_tool_approvals_disabled,
+        get_stored_agent_spec,
+    )
+    from agent_runtimes.routes.agui import get_agui_app, register_agui_agent
+    from agent_runtimes.services.runtime_tools import tools_requiring_approval_ids
+    from agent_runtimes.transports import AGUITransport
+
+    app = get_agui_app(agent_id)
+    if app is not None or agent_id not in _agents:
+        return app
+    stored = get_stored_agent_spec(agent_id) or {}
+    approvals = (
+        []
+        if _is_tool_approvals_disabled(stored.get("disable_tool_approvals"))
+        else tools_requiring_approval_ids(stored.get("backend_tools") or [])
+    )
+    register_agui_agent(
+        agent_id,
+        AGUITransport(
+            _agents[agent_id][0], agent_id=agent_id, approval_tool_ids=approvals
+        ),
+    )
+    return get_agui_app(agent_id)
 
 
 def session_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
