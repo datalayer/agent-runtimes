@@ -220,8 +220,8 @@ export class DeliveryRenewal {
     return renewed;
   }
 
-  /** A pass now, then one every `intervalSeconds`. */
-  start(intervalSeconds: number): void {
+  /** A pass now, then one every `intervalSeconds` (an hour by default). */
+  start(intervalSeconds = 3600): void {
     if (intervalSeconds <= 0 || this.#timer) {
       return;
     }
