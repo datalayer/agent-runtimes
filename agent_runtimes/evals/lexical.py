@@ -29,6 +29,11 @@ import logging
 from typing import Any
 
 from agent_runtimes.evals.common import as_dict
+from agent_runtimes.utils.lexical import BOLD, CODE, ITALIC
+from agent_runtimes.utils.lexical import bullets as _bullets
+from agent_runtimes.utils.lexical import heading as _heading
+from agent_runtimes.utils.lexical import paragraph as _paragraph
+from agent_runtimes.utils.lexical import table as _table
 
 __all__ = [
     "ANALYSIS_MIME",
@@ -59,25 +64,15 @@ REPORT_SECTIONS: tuple[tuple[str, str], ...] = (
     ("reproduction", "Reproduction"),
 )
 
-IS_ITALIC = 2
-IS_CODE = 16
-
-
 # ---------------------------------------------------------------------------
-# Nodes, by hand: the same shapes the editor writes.
+# Nodes: the shapes the editor writes, shared with every document the runtime
+# writes (`agent_runtimes.utils.lexical`). Every block here is marked with its
+# provenance, which the report editor locks (B4-04).
 # ---------------------------------------------------------------------------
 
-
-def _text(content: str, fmt: int = 0) -> dict[str, Any]:
-    return {
-        "detail": 0,
-        "format": fmt,
-        "mode": "normal",
-        "style": "",
-        "text": content,
-        "type": "text",
-        "version": 1,
-    }
+IS_BOLD = BOLD
+IS_ITALIC = ITALIC
+IS_CODE = CODE
 
 
 def _evidence(provenance: dict[str, Any]) -> dict[str, Any]:
@@ -90,68 +85,6 @@ def _evidence(provenance: dict[str, Any]) -> dict[str, Any]:
     document is opened.
     """
     return {"evidence": provenance}
-
-
-def _block(
-    kind: str, children: list[dict[str, Any]], provenance: dict[str, Any], **extra: Any
-) -> dict[str, Any]:
-    return {
-        "children": children,
-        "direction": "ltr",
-        "format": "",
-        "indent": 0,
-        "type": kind,
-        "version": 1,
-        "$": _evidence(provenance),
-        **extra,
-    }
-
-
-def _heading(words: str, tag: str, provenance: dict[str, Any]) -> dict[str, Any]:
-    return _block("heading", [_text(words)], provenance, tag=tag)
-
-
-def _paragraph(words: str, provenance: dict[str, Any], fmt: int = 0) -> dict[str, Any]:
-    return _block(
-        "paragraph", [_text(words, fmt)], provenance, textFormat=fmt, textStyle=""
-    )
-
-
-def _bullets(lines: list[str], provenance: dict[str, Any]) -> dict[str, Any]:
-    items = [
-        _block("listitem", [_text(line)], provenance, value=index)
-        for index, line in enumerate(lines, start=1)
-    ]
-    return _block("list", items, provenance, listType="bullet", start=1, tag="ul")
-
-
-def _cell(words: str, header: bool, provenance: dict[str, Any]) -> dict[str, Any]:
-    return _block(
-        "tablecell",
-        [_paragraph(words, provenance)],
-        provenance,
-        headerState=1 if header else 0,
-        colSpan=1,
-        rowSpan=1,
-        backgroundColor=None,
-    )
-
-
-def _table(
-    head: list[str], rows: list[list[str]], provenance: dict[str, Any]
-) -> dict[str, Any]:
-    body = [
-        _block(
-            "tablerow", [_cell(words, True, provenance) for words in head], provenance
-        )
-    ]
-    body += [
-        _block(
-            "tablerow", [_cell(words, False, provenance) for words in row], provenance
-        )
-        for row in rows
-    ]
-    return _block("table", body, provenance)
 
 
 def _analysis_output(
@@ -764,8 +697,6 @@ def build_eval_report_lexical(
 # ---------------------------------------------------------------------------
 # The document back out (B4-08)
 # ---------------------------------------------------------------------------
-
-IS_BOLD = 1
 
 
 def _cell_markdown(value: str) -> str:

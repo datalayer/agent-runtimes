@@ -24,6 +24,18 @@ is kept in the session's record — an ``approval`` entry, and the
 recommendation again among its outputs with its new state. No tool writes to
 the account: *Approve* means the person accepts it and is handed the change to
 apply, as the card says.
+
+``recommendations_report`` counts a period's recommendations — the week's —
+from the deployment's record, writes the report as a document of the
+Datalayer editor (`recommendations_report_document`: a serialized Lexical
+state, a page of the Space the application is granted to write, the same page
+when the same period is reported again) and sends it through the
+application's channels with the page's link. The page is the application's
+own report, built here from its record and not by its model, written as
+itself and signed (`apps.saving`'s authorship and signature); the tool says
+that it writes, so an application does it alone only under a rule naming the
+tool. With no Space granted to write, the report is text only and its answer
+says so.
 """
 
 from __future__ import annotations
@@ -753,6 +765,20 @@ def weekly_summary(listed: List[Mapping[str, Any]], days: int = 7) -> Dict[str, 
     }
 
 
+#: The report's last sentence, in the text sent and in the document.
+REPORT_CLOSING = (
+    "Approving hands you the change to apply; nothing was changed in your account."
+)
+#: What the report is about, in its title.
+REPORT_SUBJECT = "Your AWS account"
+#: The most rows the report's table shows.
+REPORT_ROWS = 5
+#: The states whose recommendation is still to be acted on: open, or approved
+#: and handed over — not yet applied, dismissed or expired.
+_STILL_TO_DO = ("open", "approved")
+_SEVERITIES = ("high", "medium", "low")
+
+
 def _report_text(summary: Mapping[str, Any]) -> str:
     states = summary["by_state"]
     lines = [
@@ -766,26 +792,293 @@ def _report_text(summary: Mapping[str, Any]) -> str:
         lines.append(
             f"- {item['finding']} ({_money(item['monthly_saving_usd'])} a month)"
         )
-    lines.append(
-        "Approving hands you the change to apply; nothing was changed in your account."
-    )
+    lines.append(REPORT_CLOSING)
     return "\n".join(lines)
 
 
+def _amount(value: Any) -> str:
+    """An amount as a document says it: whole dollars without cents."""
+    amount = float(value or 0.0)
+    return f"${amount:,.0f}" if amount == int(amount) else f"${amount:,.2f}"
+
+
+def _clipped(words: str, limit: int) -> str:
+    return words if len(words) <= limit else words[: limit - 1].rstrip() + "…"
+
+
+def _evidence_words(recommendation: Mapping[str, Any]) -> str:
+    """What a recommendation rests on, as it recorded it: each read's source
+    and call with the values it read — nothing that is not in its evidence."""
+    reads = []
+    for read in recommendation.get("evidence") or []:
+        if not isinstance(read, Mapping):
+            continue
+        values = read.get("values")
+        said = (
+            ", ".join(
+                f"{name} {value if isinstance(value, (str, int, float, bool)) else json.dumps(value, default=str)}"
+                for name, value in values.items()
+            )
+            if isinstance(values, Mapping)
+            else ""
+        )
+        where = ", ".join(
+            str(part) for part in (read.get("source"), read.get("call")) if part
+        )
+        reads.append(
+            _clipped(f"{where}: {said}" if where and said else where or said, 160)
+        )
+    return "; ".join(read for read in reads if read)
+
+
+def _sources(recommendation: Mapping[str, Any]) -> List[str]:
+    found: List[str] = []
+    for read in recommendation.get("evidence") or []:
+        source = str(read.get("source") or "") if isinstance(read, Mapping) else ""
+        if source and source not in found:
+            found.append(source)
+    return found
+
+
+def report_period(days: int, today: Optional[dt.date] = None) -> Tuple[dt.date, str]:
+    """The period a report of ``days`` made today covers: its first day, and
+    its words — *the week of 9 November* for seven days."""
+    today = today or dt.datetime.now(dt.timezone.utc).date()
+    start = today - dt.timedelta(days=days)
+    day = f"{start.day} {start:%B}"
+    return start, (f"the week of {day}" if days == 7 else f"the {days} days from {day}")
+
+
+def report_title(days: int, start: dt.date, subject: str = REPORT_SUBJECT) -> str:
+    """The report's title, and its page's name: what it is about and its period."""
+    return f"{subject}: {report_period(days, start + dt.timedelta(days=days))[1]}"
+
+
+def recommendations_report_document(
+    listed: List[Mapping[str, Any]],
+    *,
+    start: dt.date,
+    days: int = 7,
+    signed: str = "",
+    subject: str = REPORT_SUBJECT,
+) -> Dict[str, Any]:
+    """The report of a period's recommendations as a document of the Datalayer
+    editor: a serialized Lexical state, in the node shapes the editor writes.
+
+    Its title with the period; a summary — how many, by state, the estimated
+    monthly savings approved and still open; *Largest savings still open*, a
+    table of the cost recommendations still to act on (open, or approved and
+    not yet applied), largest first, each with the evidence it recorded, its
+    estimate a month and its state; *Fixes to plan*, the technical fixes still
+    to act on, most severe first, each with its evidence's sources; and the
+    closing sentence with who wrote it (``signed``, the application's
+    signature). A section with nothing in it says so in a sentence. Every word
+    of a row is the recommendation's own: no value is computed but the sums.
+
+    Its blocks carry no mark: the page is its readers' to edit.
+
+    Args:
+        listed: The period's recommendations, each as last kept.
+        start: The period's first day.
+        days: The period, in days.
+        signed: Who wrote it, in a sentence; none when empty.
+        subject: What the report is about, in its title.
+
+    Returns:
+        The serialized Lexical editor state.
+    """
+    from agent_runtimes.utils import lexical
+
+    summary = weekly_summary(listed, days)
+    states = summary["by_state"]
+    when = "this week" if days == 7 else f"in the last {days} days"
+    count = summary["count"]
+    others = "".join(
+        f", {states[state]} {state}"
+        for state in sorted(states)
+        if state not in ("approved", "dismissed", "open")
+    )
+
+    def saving(item: Mapping[str, Any]) -> Optional[float]:
+        return (item.get("estimate") or {}).get("monthly_saving_usd")
+
+    def to_do(kind: str) -> List[Mapping[str, Any]]:
+        return [
+            item
+            for item in listed
+            if str(item.get("state") or "open") in _STILL_TO_DO
+            and (item.get("kind") == "fix") == (kind == "fix")
+        ]
+
+    savings = sorted(to_do("cost"), key=lambda item: -float(saving(item) or 0.0))
+    fixes = sorted(
+        to_do("fix"),
+        key=lambda item: _SEVERITIES.index(
+            item.get("severity") if item.get("severity") in _SEVERITIES else "medium"
+        ),
+    )
+    children: List[Dict[str, Any]] = [
+        lexical.heading(report_title(days, start, subject), "h1"),
+        lexical.paragraph(
+            [
+                lexical.text(
+                    f"{count} recommendation{'' if count == 1 else 's'}", lexical.BOLD
+                ),
+                lexical.text(
+                    f" {when}: {states.get('approved', 0)} approved, "
+                    f"{states.get('dismissed', 0)} dismissed, {states.get('open', 0)} open"
+                    f"{others}. Approved: "
+                ),
+                lexical.text(
+                    f"{_amount(summary['approved_monthly_saving_usd'])} a month",
+                    lexical.BOLD,
+                ),
+                lexical.text(" estimated; still open: "),
+                lexical.text(
+                    f"{_amount(summary['open_monthly_saving_usd'])} a month",
+                    lexical.BOLD,
+                ),
+                lexical.text("."),
+            ]
+        ),
+        lexical.heading("Largest savings still open", "h2"),
+    ]
+    if savings:
+        children.append(
+            lexical.table(
+                ["Finding", "Evidence", "A month", "State"],
+                [
+                    [
+                        str(item.get("finding") or ""),
+                        _evidence_words(item),
+                        _amount(saving(item)) if saving(item) is not None else "",
+                        str(item.get("state") or "open").capitalize(),
+                    ]
+                    for item in savings[:REPORT_ROWS]
+                ],
+            )
+        )
+    else:
+        children.append(lexical.paragraph(f"No saving is open {when}."))
+    children.append(lexical.heading("Fixes to plan", "h2"))
+    if fixes:
+        children.append(
+            lexical.bullets(
+                [
+                    f"{str(item.get('finding') or '').rstrip('. ')} "
+                    f"({', '.join([*_sources(item), str(item.get('severity') or 'medium')])})"
+                    for item in fixes
+                ]
+            )
+        )
+    else:
+        children.append(lexical.paragraph(f"No fix is to plan {when}."))
+    children.append(
+        lexical.paragraph(f"{REPORT_CLOSING} {signed}".strip(), fmt=lexical.ITALIC)
+    )
+    return lexical.document(children)
+
+
+#: Why the report was sent as text only: no Space to write its document in.
+NO_SPACE = (
+    "No Space is granted to this application to write the report in: it is "
+    "text only. Its owner grants it a Space to write (its permissions) for a document."
+)
+
+
+async def _write_report(
+    recorder: Any, listed: List[Mapping[str, Any]], period: int
+) -> Dict[str, Any]:
+    """Write the period's report as a page of the first Space the application
+    may write, as itself; ``{"document": {uid, link}}`` or ``{"no_document": why}``.
+
+    The application's own report, of its own record, built here and not by
+    its model: written without asking, only where its Appspec grants a Space
+    to write, and only by the tool its rules class as writing. One page per
+    deployment, Space and period: a rerun is answered the page the first made.
+    """
+    from agent_runtimes.apps import saving
+    from agent_runtimes.apps.record import token_for
+
+    app = recorder.app
+    spaces = saving.writable_spaces(app)
+    if not spaces:
+        return {"no_document": NO_SPACE}
+    token, why = token_for(recorder.deployment_uid)
+    if not token:
+        return {"no_document": f"The report was not written as a document: {why}"}
+    session = _session()
+    on_its_own = bool(recorder.woken(session))
+    start, _ = report_period(period)
+    title = report_title(period, start)
+    about = saving.authorship(
+        app,
+        app_uid=recorder.app_uid,
+        deployment_uid=recorder.deployment_uid,
+        person_uid=recorder.opener(session),
+        on_its_own=on_its_own,
+        session=session,
+        user=recorder.signed_user(session),
+    )
+    about["report"] = {
+        "event": WEEKLY_REPORT,
+        "from": start.isoformat(),
+        "days": period,
+    }
+    state = recommendations_report_document(
+        listed,
+        start=start,
+        days=period,
+        signed=saving.signature(
+            app,
+            on_its_own=on_its_own,
+            for_name="" if on_its_own else recorder.acts_for(session),
+        ),
+    )
+    # Not what is written, which a rerun may count differently: the period.
+    key = saving.idempotency_key(
+        recorder.app_uid or app.id,
+        f"report:{recorder.deployment_uid}",
+        spaces[0],
+        WEEKLY_REPORT,
+        f"{start.isoformat()}/{period}",
+    )
+    try:
+        written = await saving.write_on_spacer(
+            spaces[0], title, state, key, about, token=token
+        )
+    except saving.NotSaved as error:
+        return {"no_document": f"The report was not written as a document: {error}"}
+    uid = str(written["document"]["uid"])
+    return {
+        "document": {
+            "uid": uid,
+            "link": saving.link_of(written.get("space") or {}, uid),
+        }
+    }
+
+
 async def recommendations_report(days: int = 7, send: bool = True) -> Any:
-    """Report the deployment's recommendations of the last days — decided and open — and send it.
+    """Report the deployment's recommendations of the last days — decided and open — write it and send it.
 
     Read from the deployment's record, every session of the period (each
     recommendation as last kept: open, approved or dismissed), counted by
     state with the estimated monthly savings approved and still open and the
-    largest open ones; sent through the application's channels when ``send``.
+    largest open ones. When ``send``: written as a document — a page of the
+    Space the application is granted to write, the same page when the same
+    period is reported again — and sent through the application's channels
+    with the page's link. With no Space granted to write, it is sent as text
+    only, and the answer says so.
 
     Args:
         days: The period, in days (default 7: the week).
-        send: Send it through the application's channels (default true).
+        send: Write its document and send it through the application's
+            channels (default true); false only counts.
 
     Returns:
-        ``{report, text, sent}``, or a sentence saying why it could not be read.
+        ``{report, text, sent}`` — with ``document: {uid, link}``, the page
+        written, or ``no_document``, why none was — or a sentence saying why
+        it could not be read.
     """
     from agent_runtimes.apps import notifications
     from agent_runtimes.apps.notifications import AppNotifier
@@ -801,17 +1094,27 @@ async def recommendations_report(days: int = 7, send: bool = True) -> Any:
         return str(refused)
     summary = weekly_summary(listed, period)
     text = _report_text(summary)
-    sent: List[Dict[str, Any]] = []
+    answer: Dict[str, Any] = {"report": summary, "text": text, "sent": []}
     if send:
+        answer.update(await _write_report(recorder, listed, period))
+        link = (answer.get("document") or {}).get("link")
         app = recorder.app.name.strip() or "Datalayer Steward for AWS"
-        sent = await AppNotifier(
+        answer["sent"] = await AppNotifier(
             app=recorder.app,
             recorder=recorder,
             app_uid=recorder.app_uid,
             deployment_uid=recorder.deployment_uid,
             send=notifications.send_to_ai_agents,
-        ).notify(WEEKLY_REPORT, title=f"{app}: the last {period} days", message=text)
-    return {"report": summary, "text": text, "sent": sent}
+        ).notify(
+            WEEKLY_REPORT,
+            title=f"{app}: the last {period} days",
+            message=(
+                f"{text}\nThe report, a document you can edit, on Datalayer: {link}"
+                if link
+                else text
+            ),
+        )
+    return answer
 
 
 def forget_recommendations() -> None:
@@ -828,6 +1131,9 @@ __all__ = [
     "decided_in",
     "keep_recommendation",
     "recommendations_report",
+    "recommendations_report_document",
+    "report_period",
+    "report_title",
     "weekly_summary",
     "tell_high_severity",
     "forget_recommendations",

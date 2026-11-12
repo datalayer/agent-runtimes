@@ -39,7 +39,7 @@ BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
     "get-weather": ["read"],
     "github-repositories": ["read"],
     "list-recommendations": ["read"],
-    "recommendations-report": ["read"],
+    "recommendations-report": ["read", "write"],
     "record-recommendation": ["read"],
     "runtime-echo": ["read"],
     "runtime-send-mail": ["send"],

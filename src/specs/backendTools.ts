@@ -425,7 +425,7 @@ export const RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   version: '0.0.1',
   name: 'Recommendations Report',
   description:
-    "Report the deployment's recommendations of the last days — how many were approved, dismissed and are still open, the estimated monthly savings of each and the largest open ones — read from its record, and send it through the application's notification channels.",
+    "Report the deployment's recommendations of the last days — how many were approved, dismissed and are still open, the estimated monthly savings of each and the largest open ones — read from its record, write it as a document in the Space the application may write, and send it through the application's notification channels with the document's link.",
   tags: ['recommendations', 'steward'],
   enabled: true,
   approval: 'auto',

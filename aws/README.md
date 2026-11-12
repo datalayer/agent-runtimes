@@ -195,6 +195,38 @@ account, billing and STS action; the role is assumed only with a
 `datalayer-recommendation` session tag naming the recommendation. The agent
 does not use it yet: it recommends, and a person applies the fix.
 
+### The week's report
+
+Every Monday at 8:00 the application **Datalayer Steward for AWS** reports the
+week (`recommendations_report`): how many recommendations were approved,
+dismissed and are still open, the estimated monthly savings approved and
+still open, the largest savings still to act on with the evidence each rests
+on, and the technical fixes to plan.
+
+The report is a **document** on Datalayer, a page of the rich editor, written
+in the Space you grant the application to write — add it to the application's
+permissions before you deploy it:
+
+```yaml
+permissions:
+  spaces:
+    - space: <your space>   # its handle or uid
+      access: write
+```
+
+The Space is shared with the application as it is deployed, and the page
+lands there named after the week (*Your AWS account: the week of 9
+November*), signed by the Steward — *on its own* when its schedule woke it.
+It is an ordinary page of that Space: whoever may write in the Space edits
+it, comments on it and shares it, and whoever may read the Space reads it.
+The same week reported again answers the same page, never a second one, and
+keeps what was edited. The notification (email, by default) carries the
+counts and the page's link.
+
+Without a Space granted to write, the report is sent as text only and says
+so. The page is the only thing the Steward writes, and it is on Datalayer:
+nothing is written in your AWS account.
+
 ## The AgentCore image
 
 AgentCore Runtime runs one image for every agentspec: agent-runtimes from

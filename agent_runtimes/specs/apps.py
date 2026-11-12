@@ -5744,7 +5744,7 @@ STEWARD_AWS_APP_0_0_1 = AppSpec.model_validate(
                 "behaviour": "do_it",
             },
             {
-                "action": "Record and list recommendations",
+                "action": "Record and list recommendations, and write the week's report",
                 "applies_to": [
                     "record-recommendation",
                     "list-recommendations",
@@ -5902,7 +5902,7 @@ STEWARD_AWS_APP_0_0_1 = AppSpec.model_validate(
                 "event": "",
                 "at": "",
                 "description": "Every Monday at 8:00",
-                "prompt": "Write the week's report: call recommendations_report for the last 7 days, which sends it, and say in a few lines how many recommendations were approved, dismissed and are still open, and their estimated monthly savings.",
+                "prompt": "Write the week's report: call recommendations_report for the last 7 days, which writes it as a document and sends it, and say in a few lines how many recommendations were approved, dismissed and are still open, their estimated monthly savings, and where the document is — or that none was written, and why.",
             },
         ],
         "memory": "",

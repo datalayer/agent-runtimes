@@ -1,0 +1,1022 @@
+{
+  "_": "The week's report of Datalayer Steward for AWS on made-up recommendations: `document` is what agent_runtimes.tools.recommendations.recommendations_report_document writes of `recommendations` (test_tools_recommendations keeps it so). The landing's deck draws it.",
+  "start": "2026-11-09",
+  "days": 7,
+  "signed": "Written by ☁️ Datalayer Steward for AWS, on its own.",
+  "recommendations": [
+    {
+      "id": "rec-example-0",
+      "kind": "cost",
+      "category": "idle",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "service": "rds",
+        "tags": {}
+      },
+      "finding": "Two idle RDS instances, eu-west-1",
+      "evidence": [
+        {
+          "source": "cloudwatch",
+          "call": "DatabaseConnections",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "maximum": 0,
+            "days": 30
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": 920.0,
+        "risk": "",
+        "by": "datalayer",
+        "method": "The two instances' on-demand price for a month"
+      },
+      "confidence": "high",
+      "severity": "medium",
+      "fix": {
+        "form": "cli",
+        "change": "aws rds stop-db-instance for each, after a final snapshot",
+        "rollback": "aws rds start-db-instance for each",
+        "needs": "write-role"
+      },
+      "state": "open",
+      "recorded_at": "2026-11-10T07:00:30+00:00"
+    },
+    {
+      "id": "rec-example-1",
+      "kind": "cost",
+      "category": "oversized",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "service": "ec2",
+        "tags": {}
+      },
+      "finding": "Oversized m6i.4xlarge, team data",
+      "evidence": [
+        {
+          "source": "compute-optimizer",
+          "call": "GetEC2InstanceRecommendations",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "cpu_peak_percent": 9
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": 610.0,
+        "risk": "",
+        "by": "aws",
+        "method": "Compute Optimizer's estimate for m6i.2xlarge"
+      },
+      "confidence": "high",
+      "severity": "medium",
+      "fix": {
+        "form": "cli",
+        "change": "aws ec2 modify-instance-attribute --instance-type m6i.2xlarge, stopped first",
+        "rollback": "Set the instance type back to m6i.4xlarge",
+        "needs": "write-role"
+      },
+      "state": "open",
+      "recorded_at": "2026-11-11T07:00:30+00:00"
+    },
+    {
+      "id": "rec-example-2",
+      "kind": "cost",
+      "category": "unattached",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "service": "ec2",
+        "tags": {}
+      },
+      "finding": "Unattached EBS volume vol-0abc…",
+      "evidence": [
+        {
+          "source": "cost-optimization-hub",
+          "call": "ListRecommendations",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "actionType": "Delete",
+            "estimatedMonthlySavings": 84
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": 84.0,
+        "risk": "",
+        "by": "aws",
+        "method": "Cost Optimization Hub's estimate"
+      },
+      "confidence": "high",
+      "severity": "low",
+      "fix": {
+        "form": "cli",
+        "change": "aws ec2 create-snapshot, then aws ec2 delete-volume",
+        "rollback": "Restore the volume from the snapshot taken first",
+        "needs": "write-role"
+      },
+      "state": "approved",
+      "recorded_at": "2026-11-12T07:00:30+00:00"
+    },
+    {
+      "id": "rec-example-3",
+      "kind": "cost",
+      "category": "pricing-model",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "us-east-1",
+        "service": "ec2",
+        "tags": {}
+      },
+      "finding": "Previous-generation gp2 volumes, team web",
+      "evidence": [
+        {
+          "source": "compute-optimizer",
+          "call": "GetEBSVolumeRecommendations",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "volumes": 14
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": 150.0,
+        "risk": "",
+        "by": "aws",
+        "method": "Compute Optimizer's estimate for gp3"
+      },
+      "confidence": "high",
+      "severity": "low",
+      "fix": {
+        "form": "cli",
+        "change": "aws ec2 modify-volume --volume-type gp3 for each",
+        "rollback": "aws ec2 modify-volume --volume-type gp2 for each",
+        "needs": "write-role"
+      },
+      "state": "dismissed",
+      "recorded_at": "2026-11-13T07:00:30+00:00"
+    },
+    {
+      "id": "rec-example-4",
+      "kind": "fix",
+      "category": "quota",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "service": "ec2",
+        "tags": {}
+      },
+      "finding": "Elastic IPs at 85% of their quota in eu-west-1",
+      "evidence": [
+        {
+          "source": "service-quotas",
+          "call": "GetServiceQuota",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "quota": 20,
+            "used": 17
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": null,
+        "risk": "",
+        "by": "datalayer",
+        "method": "No saving: a limit to raise before it is reached"
+      },
+      "confidence": "high",
+      "severity": "medium",
+      "fix": {
+        "form": "console-steps",
+        "change": "Service Quotas, Amazon EC2, EC2-VPC Elastic IPs: request 40",
+        "rollback": "Nothing to undo: a quota is not lowered",
+        "needs": "none"
+      },
+      "state": "open",
+      "recorded_at": "2026-11-14T07:00:30+00:00"
+    },
+    {
+      "id": "rec-example-5",
+      "kind": "fix",
+      "category": "security",
+      "resource": {
+        "arn": "",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "service": "ec2",
+        "tags": {}
+      },
+      "finding": "A security group open to the internet on port 22",
+      "evidence": [
+        {
+          "source": "security-hub",
+          "call": "GetFindings",
+          "read_at": "2026-11-10T07:00:12+00:00",
+          "values": {
+            "control": "EC2.13",
+            "severity": "HIGH"
+          }
+        }
+      ],
+      "estimate": {
+        "monthly_saving_usd": null,
+        "risk": "",
+        "by": "datalayer",
+        "method": "No saving: a risk to close"
+      },
+      "confidence": "high",
+      "severity": "high",
+      "fix": {
+        "form": "cli",
+        "change": "aws ec2 revoke-security-group-ingress --protocol tcp --port 22 --cidr 0.0.0.0/0",
+        "rollback": "aws ec2 authorize-security-group-ingress with the same rule",
+        "needs": "write-role"
+      },
+      "state": "open",
+      "recorded_at": "2026-11-15T07:00:30+00:00"
+    }
+  ],
+  "document": {
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": "Your AWS account: the week of 9 November",
+              "type": "text",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "heading",
+          "version": 1,
+          "tag": "h1"
+        },
+        {
+          "children": [
+            {
+              "detail": 0,
+              "format": 1,
+              "mode": "normal",
+              "style": "",
+              "text": "6 recommendations",
+              "type": "text",
+              "version": 1
+            },
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": " this week: 1 approved, 1 dismissed, 4 open. Approved: ",
+              "type": "text",
+              "version": 1
+            },
+            {
+              "detail": 0,
+              "format": 1,
+              "mode": "normal",
+              "style": "",
+              "text": "$84 a month",
+              "type": "text",
+              "version": 1
+            },
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": " estimated; still open: ",
+              "type": "text",
+              "version": 1
+            },
+            {
+              "detail": 0,
+              "format": 1,
+              "mode": "normal",
+              "style": "",
+              "text": "$1,530 a month",
+              "type": "text",
+              "version": 1
+            },
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": ".",
+              "type": "text",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "paragraph",
+          "version": 1,
+          "textFormat": 0,
+          "textStyle": ""
+        },
+        {
+          "children": [
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": "Largest savings still open",
+              "type": "text",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "heading",
+          "version": 1,
+          "tag": "h2"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Finding",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 1,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Evidence",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 1,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "A month",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 1,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "State",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 1,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "tablerow",
+              "version": 1
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Two idle RDS instances, eu-west-1",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "cloudwatch, DatabaseConnections: maximum 0, days 30",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "$920",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Open",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "tablerow",
+              "version": 1
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Oversized m6i.4xlarge, team data",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "compute-optimizer, GetEC2InstanceRecommendations: cpu_peak_percent 9",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "$610",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Open",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "tablerow",
+              "version": 1
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Unattached EBS volume vol-0abc…",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "cost-optimization-hub, ListRecommendations: actionType Delete, estimatedMonthlySavings 84",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "$84",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "detail": 0,
+                          "format": 0,
+                          "mode": "normal",
+                          "style": "",
+                          "text": "Approved",
+                          "type": "text",
+                          "version": 1
+                        }
+                      ],
+                      "direction": "ltr",
+                      "format": "",
+                      "indent": 0,
+                      "type": "paragraph",
+                      "version": 1,
+                      "textFormat": 0,
+                      "textStyle": ""
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "tablecell",
+                  "version": 1,
+                  "headerState": 0,
+                  "colSpan": 1,
+                  "rowSpan": 1,
+                  "backgroundColor": null
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "tablerow",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "table",
+          "version": 1
+        },
+        {
+          "children": [
+            {
+              "detail": 0,
+              "format": 0,
+              "mode": "normal",
+              "style": "",
+              "text": "Fixes to plan",
+              "type": "text",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "heading",
+          "version": 1,
+          "tag": "h2"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "detail": 0,
+                  "format": 0,
+                  "mode": "normal",
+                  "style": "",
+                  "text": "A security group open to the internet on port 22 (security-hub, high)",
+                  "type": "text",
+                  "version": 1
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "listitem",
+              "version": 1,
+              "value": 1
+            },
+            {
+              "children": [
+                {
+                  "detail": 0,
+                  "format": 0,
+                  "mode": "normal",
+                  "style": "",
+                  "text": "Elastic IPs at 85% of their quota in eu-west-1 (service-quotas, medium)",
+                  "type": "text",
+                  "version": 1
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "listitem",
+              "version": 1,
+              "value": 2
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "list",
+          "version": 1,
+          "listType": "bullet",
+          "start": 1,
+          "tag": "ul"
+        },
+        {
+          "children": [
+            {
+              "detail": 0,
+              "format": 2,
+              "mode": "normal",
+              "style": "",
+              "text": "Approving hands you the change to apply; nothing was changed in your account. Written by ☁️ Datalayer Steward for AWS, on its own.",
+              "type": "text",
+              "version": 1
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "paragraph",
+          "version": 1,
+          "textFormat": 2,
+          "textStyle": ""
+        }
+      ],
+      "direction": "ltr",
+      "format": "",
+      "indent": 0,
+      "type": "root",
+      "version": 1
+    }
+  }
+}

@@ -381,16 +381,34 @@ class _AppRecorder(_Recorder):
 
     def __init__(self) -> None:
         super().__init__()
-        from types import SimpleNamespace
+        from agent_runtimes.types import AppSpec
 
-        self.app = SimpleNamespace(
-            id="steward-aws",
-            name="Datalayer Steward for AWS",
-            emoji="",
-            notifications=["email"],
+        self.app = AppSpec.model_validate(
+            {
+                "id": "steward-aws",
+                "name": "Datalayer Steward for AWS",
+                "kind": "worker",
+                "agent": "worker-steward-aws:0.0.1",
+                "emoji": "☁️",
+                "notifications": ["email"],
+            }
         )
         self.app_uid = "app-1"
         self.deployment_uid = "dep-1"
+        #: What woke the session; empty when a person opened it.
+        self.woken_by: Dict[str, Any] = {}
+
+    def woken(self, session: str) -> Dict[str, Any]:
+        return self.woken_by
+
+    def opener(self, session: str) -> str:
+        return "" if self.woken_by else "user-1"
+
+    def signed_user(self, session: str) -> Dict[str, Any]:
+        return {}
+
+    def acts_for(self, session: str) -> str:
+        return "" if self.woken_by else "Ana Lopez"
 
 
 @pytest.fixture
@@ -613,3 +631,420 @@ async def test_the_report_of_a_session_no_deployment_runs_is_refused(
     monkeypatch.setattr(record, "recorder_of", lambda uid: None)
     said = await recommendations.recommendations_report()
     assert isinstance(said, str) and "deployment" in said
+
+
+# --- The week's report as a document of the editor --------------------------------------------
+
+
+def _example() -> Dict[str, Any]:
+    from pathlib import Path
+
+    return json.loads(
+        (
+            Path(__file__).resolve().parents[2]
+            / "src/apps/__tests__/fixtures/stewardReport.json"
+        ).read_text()
+    )
+
+
+def _document(listed: list, **given: Any) -> list:
+    import datetime as dt
+
+    given.setdefault("start", dt.date(2026, 11, 9))
+    state = recommendations.recommendations_report_document(listed, **given)
+    assert set(state) == {"root"} and state["root"]["type"] == "root"
+    return state["root"]["children"]
+
+
+def _words(node: Dict[str, Any]) -> str:
+    if node["type"] == "text":
+        return node["text"]
+    return "".join(_words(child) for child in node["children"])
+
+
+def test_the_report_document_is_the_editors_nodes_in_reading_order() -> None:
+    example = _example()
+    title, summary, savings, table, fixes, bullets, closing = _document(
+        example["recommendations"], signed=example["signed"]
+    )
+
+    assert (title["type"], title["tag"]) == ("heading", "h1")
+    assert _words(title) == "Your AWS account: the week of 9 November"
+    # The counts and the two sums in bold, the rest plain.
+    assert summary["type"] == "paragraph"
+    assert [(run["text"], run["format"]) for run in summary["children"]] == [
+        ("6 recommendations", 1),
+        (" this week: 1 approved, 1 dismissed, 4 open. Approved: ", 0),
+        ("$84 a month", 1),
+        (" estimated; still open: ", 0),
+        ("$1,530 a month", 1),
+        (".", 0),
+    ]
+    assert (savings["tag"], _words(savings)) == ("h2", "Largest savings still open")
+    assert table["type"] == "table"
+    head, *rows = table["children"]
+    assert all(row["type"] == "tablerow" for row in table["children"])
+    assert [(cell["type"], cell["headerState"]) for cell in head["children"]] == [
+        ("tablecell", 1)
+    ] * 4
+    assert [_words(cell) for cell in head["children"]] == [
+        "Finding",
+        "Evidence",
+        "A month",
+        "State",
+    ]
+    assert all(cell["headerState"] == 0 for row in rows for cell in row["children"])
+    # Still to act on — open, or approved and not applied — largest first; the
+    # dismissed one and the fixes are not savings to list.
+    assert [[_words(cell) for cell in row["children"]][2:] for row in rows] == [
+        ["$920", "Open"],
+        ["$610", "Open"],
+        ["$84", "Approved"],
+    ]
+    # A cell holds a paragraph, as the editor writes a table.
+    assert rows[0]["children"][0]["children"][0]["type"] == "paragraph"
+    assert (fixes["tag"], _words(fixes)) == ("h2", "Fixes to plan")
+    assert (bullets["type"], bullets["listType"], bullets["tag"]) == (
+        "list",
+        "bullet",
+        "ul",
+    )
+    # Most severe first, each with its evidence's sources and its severity.
+    assert [_words(item) for item in bullets["children"]] == [
+        "A security group open to the internet on port 22 (security-hub, high)",
+        "Elastic IPs at 85% of their quota in eu-west-1 (service-quotas, medium)",
+    ]
+    [last] = closing["children"]
+    assert closing["type"] == "paragraph" and last["format"] == 2
+    assert last["text"] == (
+        "Approving hands you the change to apply; nothing was changed in your "
+        "account. Written by ☁️ Datalayer Steward for AWS, on its own."
+    )
+    # Nobody's blocks are locked: the page is its readers' to edit.
+    assert all("$" not in block for block in (title, summary, table, bullets, closing))
+
+
+def test_the_reports_evidence_is_each_recommendations_own() -> None:
+    kept = recommendations.keep_recommendation(**_valid())["recommendation"]
+    _, _, _, table, *_ = _document([kept])
+    [finding, evidence, amount, state] = [
+        _words(cell) for cell in table["children"][1]["children"]
+    ]
+    assert finding == kept["finding"]
+    assert evidence == (
+        "cost-optimization-hub, ListRecommendations: "
+        "actionType Delete, estimatedMonthlySavings 40.0"
+    )
+    assert (amount, state) == ("$40", "Open")
+    # Two reads are both said; a long one is cut, never rewritten.
+    twice = copy.deepcopy(kept)
+    twice["evidence"].append(
+        {
+            "source": "cloudwatch",
+            "call": "GetMetricStatistics",
+            "read_at": "2026-11-11T07:00:13+00:00",
+            "values": {"note": "x" * 400, "points": [1, 2]},
+        }
+    )
+    _, _, _, table, *_ = _document([twice])
+    said = _words(table["children"][1]["children"][1])
+    first, second = said.split("; ")
+    assert first == evidence
+    assert second.startswith("cloudwatch, GetMetricStatistics: note xxx")
+    assert len(second) == 160 and second.endswith("…")
+    # No estimate, no amount: none is made up.
+    unknown = copy.deepcopy(kept)
+    unknown["estimate"]["monthly_saving_usd"] = None
+    _, _, _, table, *_ = _document([unknown])
+    assert _words(table["children"][1]["children"][2]) == ""
+
+
+def test_an_empty_section_says_so_in_a_sentence() -> None:
+    title, summary, _, savings, _, fixes, closing = _document([], days=14)
+    assert _words(title) == "Your AWS account: the 14 days from 9 November"
+    assert _words(summary) == (
+        "0 recommendations in the last 14 days: 0 approved, 0 dismissed, 0 open. "
+        "Approved: $0 a month estimated; still open: $0 a month."
+    )
+    assert (savings["type"], _words(savings)) == (
+        "paragraph",
+        "No saving is open in the last 14 days.",
+    )
+    assert (fixes["type"], _words(fixes)) == (
+        "paragraph",
+        "No fix is to plan in the last 14 days.",
+    )
+    # Unsigned, it closes with the sentence alone.
+    assert _words(closing) == recommendations.REPORT_CLOSING
+    # Decided and gone, a recommendation is counted and not listed.
+    done = recommendations.keep_recommendation(**_valid())["recommendation"]
+    done["state"] = "applied"
+    _, summary, _, savings, *_ = _document([done])
+    assert "0 open, 1 applied." in _words(summary)
+    assert savings["type"] == "paragraph"
+
+
+def test_the_deck_example_is_the_document_this_tool_builds() -> None:
+    """The landing's deck draws `document` (its `stewardReportExample.ts`):
+    kept to what `recommendations_report_document` writes of `recommendations`."""
+    import datetime as dt
+
+    example = _example()
+    assert (
+        recommendations.recommendations_report_document(
+            example["recommendations"],
+            start=dt.date.fromisoformat(example["start"]),
+            days=example["days"],
+            signed=example["signed"],
+        )
+        == example["document"]
+    )
+    # Each of them one the tool would keep: nothing here it would refuse.
+    for item in example["recommendations"]:
+        recommendations.Recommendation.model_validate(item)
+
+
+class _Spacer:
+    """Spacer as the report writes to it: one page per idempotency key."""
+
+    def __init__(self) -> None:
+        self.calls: list = []
+        self.pages: Dict[str, str] = {}
+        self.refuses = ""
+
+    async def __call__(
+        self,
+        space: str,
+        title: str,
+        state: Dict[str, Any],
+        key: str,
+        about: Dict[str, Any],
+        *,
+        token: str,
+    ) -> Dict[str, Any]:
+        from agent_runtimes.apps.saving import NotSaved
+
+        self.calls.append(
+            {
+                "space": space,
+                "title": title,
+                "state": state,
+                "key": key,
+                "about": about,
+                "token": token,
+            }
+        )
+        if self.refuses:
+            raise NotSaved(self.refuses)
+        uid = self.pages.setdefault(key, f"doc-{len(self.pages) + 1}")
+        return {
+            "document": {"uid": uid},
+            "space": {"uid": space, "handle_s": "finops", "owner_handle_s": "acme"},
+        }
+
+
+@pytest.fixture
+def reporting(deployed: dict, monkeypatch: pytest.MonkeyPatch) -> dict:
+    """A deployment granted a Space to write, a week of recommendations, Spacer."""
+    import datetime as dt
+
+    from agent_runtimes.apps import saving
+    from agent_runtimes.types import AppSpaceGrantSpec
+
+    deployed["recorder"].app.permissions.spaces = [
+        AppSpaceGrantSpec(space="sp-wiki", access="read"),
+        AppSpaceGrantSpec(space="sp-finops", access="write"),
+    ]
+    deployed["recorder"].woken_by = {"kind": "schedule"}
+    deployed["spacer"] = _Spacer()
+    monkeypatch.setattr(saving, "write_on_spacer", deployed["spacer"])
+    deployed["today"] = dt.date(2026, 11, 16)
+    monkeypatch.setattr(
+        recommendations,
+        "report_period",
+        lambda days, today=None, real=recommendations.report_period: real(
+            days, today or deployed["today"]
+        ),
+    )
+
+    async def of_deployment(deployment: str, days: int) -> list:
+        return _example()["recommendations"]
+
+    monkeypatch.setattr(recommendations, "_deployment_recommendations", of_deployment)
+    return deployed
+
+
+@pytest.mark.asyncio
+async def test_the_weeks_report_is_written_as_a_page_of_the_space_it_may_write(
+    reporting: dict,
+) -> None:
+    report = await recommendations.recommendations_report()
+
+    [written] = reporting["spacer"].calls
+    # In the Space granted to write, never the one it only reads; as itself.
+    assert written["space"] == "sp-finops" and written["token"] == "principal-token"
+    assert written["title"] == "Your AWS account: the week of 9 November"
+    assert written["state"] == _example()["document"]
+    # Who wrote it: the application, on its own, for nobody — and which report.
+    about = written["about"]
+    assert about["saved_by"] == "loop.app" and about["app"]["id"] == "steward-aws"
+    assert (about["deployment"], about["on_its_own"], about["for"]) == (
+        "dep-1",
+        True,
+        "",
+    )
+    assert about["report"] == {
+        "event": recommendations.WEEKLY_REPORT,
+        "from": "2026-11-09",
+        "days": 7,
+    }
+    assert report["document"] == {
+        "uid": "doc-1",
+        "link": "/acme/finops/documents/doc-1",
+    }
+    assert "no_document" not in report
+    # The channels are told where it is.
+    [body] = reporting["sent"]
+    assert body["message"].startswith(report["text"])
+    assert body["message"].endswith(": /acme/finops/documents/doc-1")
+
+
+@pytest.mark.asyncio
+async def test_the_same_week_reported_again_is_the_same_page(reporting: dict) -> None:
+    first = await recommendations.recommendations_report()
+    again = await recommendations.recommendations_report()
+    one, two = reporting["spacer"].calls
+    assert one["key"] == two["key"] and one["key"].startswith(
+        "loop:app-1:report:dep-1:"
+    )
+    assert again["document"] == first["document"]
+    # Another week is another page.
+    reporting["today"] += __import__("datetime").timedelta(days=7)
+    later = await recommendations.recommendations_report()
+    assert reporting["spacer"].calls[-1]["key"] != one["key"]
+    assert reporting["spacer"].calls[-1]["title"].endswith("the week of 16 November")
+    assert later["document"]["uid"] == "doc-2"
+
+
+@pytest.mark.asyncio
+async def test_opened_by_a_person_the_report_is_signed_for_them(
+    reporting: dict,
+) -> None:
+    reporting["recorder"].woken_by = {}
+    await recommendations.recommendations_report()
+    [written] = reporting["spacer"].calls
+    assert (written["about"]["on_its_own"], written["about"]["for"]) == (
+        False,
+        "user-1",
+    )
+    closing = written["state"]["root"]["children"][-1]
+    assert _words(closing).endswith(
+        "Written by ☁️ Datalayer Steward for AWS, for Ana Lopez."
+    )
+
+
+@pytest.mark.asyncio
+async def test_with_no_space_to_write_the_report_is_text_and_says_so(
+    reporting: dict,
+) -> None:
+    reporting["recorder"].app.permissions.spaces = [
+        reporting["recorder"].app.permissions.spaces[0]
+    ]
+    report = await recommendations.recommendations_report()
+
+    assert reporting["spacer"].calls == []
+    assert "document" not in report
+    assert report["no_document"] == recommendations.NO_SPACE
+    assert "No Space is granted" in report["no_document"]
+    # Sent as it was before there was a document.
+    [body] = reporting["sent"]
+    assert body["message"] == report["text"]
+
+
+@pytest.mark.asyncio
+async def test_a_report_spacer_refuses_is_sent_as_text_and_said(
+    reporting: dict,
+) -> None:
+    reporting["spacer"].refuses = "the Space sp-finops cannot be reached: 403."
+    report = await recommendations.recommendations_report()
+    assert "document" not in report
+    assert report["no_document"] == (
+        "The report was not written as a document: "
+        "the Space sp-finops cannot be reached: 403."
+    )
+    assert reporting["sent"][0]["message"] == report["text"]
+    # Without a token, nothing is tried.
+    reporting["spacer"].calls.clear()
+    reporting["recorder"].deployment_uid = "dep-unknown"
+    report = await recommendations.recommendations_report()
+    assert reporting["spacer"].calls == [] and "no token" in report["no_document"]
+
+
+@pytest.mark.asyncio
+async def test_only_counting_writes_and_sends_nothing(reporting: dict) -> None:
+    report = await recommendations.recommendations_report(send=False)
+    assert report["report"]["count"] == 6 and report["sent"] == []
+    assert reporting["spacer"].calls == [] and reporting["sent"] == []
+    assert "document" not in report and "no_document" not in report
+
+
+def test_writing_the_report_is_what_the_tool_says_it_does_and_its_rule_decides() -> (
+    None
+):
+    """The report's page is written without asking only by the tool that says
+    it writes, under a rule naming it; `save_to_space` is asked whatever the
+    rules say, as before."""
+    from agent_runtimes.apps.plugins import rules_for
+    from agent_runtimes.apps.rules import (
+        ASK_FIRST,
+        DO_IT,
+        LEAVE_TO_ME,
+        RULE_ON_TOOL,
+        classes_of,
+    )
+    from agent_runtimes.apps.saving import APPROVE_AND_SAVE, SAVE_TOOL
+    from agent_runtimes.specs.apps import get_app
+    from agent_runtimes.types import AppSpec
+
+    assert classes_of("recommendations-report") == ["read", "write"]
+    # The Steward's own rule names the tool: done alone, by that rule.
+    steward = get_app("steward-aws")
+    assert steward is not None
+    decided = rules_for(steward).decide("recommendations_report", {}).decision
+    assert (decided.behaviour, decided.because) == (DO_IT, RULE_ON_TOOL)
+    assert "write" in decided.classes
+
+    def app(rules: list) -> AppSpec:
+        return AppSpec.model_validate(
+            {
+                "id": "another",
+                "name": "Another",
+                "kind": "worker",
+                "agent": "worker-steward-aws:0.0.1",
+                "permissions": {"spaces": [{"space": "sp-1", "access": "write"}]},
+                "rules": rules,
+            }
+        )
+
+    # No rule names it: it writes, so the person is asked first — by default,
+    # or as its rule on writing says.
+    unnamed = rules_for(app([])).decide("recommendations_report", {}).decision
+    assert unnamed.behaviour == ASK_FIRST
+    never = [{"action": "Write", "applies_to": ["write"], "behaviour": "leave_to_me"}]
+    assert (
+        rules_for(app(never)).decide("recommendations_report", {}).decision.behaviour
+        == LEAVE_TO_ME
+    )
+    # Naming the report's tool lets nothing else write alone: a save is still shown first.
+    named = [
+        {
+            "action": "Report",
+            "applies_to": ["recommendations-report"],
+            "behaviour": "do_it",
+        }
+    ]
+    saved = rules_for(app(named)).decide(SAVE_TOOL, {"title": "t", "content": "c"})
+    assert (saved.decision.behaviour, saved.decision.because) == (
+        ASK_FIRST,
+        APPROVE_AND_SAVE,
+    )
