@@ -62,14 +62,14 @@ For several lines in one session, slash commands among them, see [Run without in
 
 ### Here, or on Datalayer
 
-`loop` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `loop` starts](../sessions/cli.mdx#as-loop-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
+`loop` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `loop` starts](../sessions/cli.mdx#as-loop-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the second). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
 
 On this machine, `loop` then lists the agentspecs your local model keys allow, as before. On Datalayer it lists **no agentspecs**. Launching an agent in the cloud needs an environment that supports it, so you pick an environment instead. The list is read through the Datalayer SDK (`AgentClient.list_environments`):
 
 ```text
 ? Where should the agent run?
     On this machine — a local server, with your own model keys
-  ❯ On Datalayer — a cloud runtime with Datalayer's models, billed by the minute
+  ❯ On Datalayer — a cloud runtime with Datalayer's models, billed by the second
 
 Credits: 12,808.98 left.
 31 of your environments say nothing about agents and are not listed: --environment <name> to try one.

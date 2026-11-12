@@ -124,7 +124,7 @@ PLACES = {LOCAL: "On this machine", CLOUD: "On Datalayer"}
 #: What each place is, in a few words.
 WHERE_SAID = {
     LOCAL: "a local server, with your own model keys",
-    CLOUD: "a cloud runtime with Datalayer's models, billed by the minute",
+    CLOUD: "a cloud runtime with Datalayer's models, billed by the second",
 }
 
 #: The launch row that starts a new session with where it runs already said

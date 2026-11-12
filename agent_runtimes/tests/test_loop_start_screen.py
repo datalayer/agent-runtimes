@@ -86,7 +86,7 @@ def test_the_launch_rows_come_first_and_the_sessions_part_is_the_same(
     assert drawn[1] == (
         "row",
         "  Start a new session on Datalayer — a cloud runtime with Datalayer's models, "
-        "billed by the minute",
+        "billed by the second",
     )
     assert start.highlighted() is None and start.highlighted_launch() is not None
     # Under them, byte for byte what `loop sessions` draws, the same session

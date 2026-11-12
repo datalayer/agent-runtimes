@@ -1494,7 +1494,7 @@ def main_callback(
 
         loop -a crawler "Search for AI trends"  # Single query with specific agent
 
-        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the minute
+        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the second
 
         loop --runtime <name>       # Back to an agent runtime running on Datalayer
 
