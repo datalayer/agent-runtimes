@@ -407,6 +407,9 @@ class CloudLaunch:
     app: bool = False
     #: Whether it is not billed: an unmetered launch.
     unmetered: bool = False
+    #: Whether it was joined to go on with an open session it runs: left
+    #: running as it was found when the prompt ends, nobody asked.
+    joined: bool = False
 
     @property
     def said(self) -> str:
@@ -1222,6 +1225,14 @@ def finish_cloud(
     A runtime whose session was paused from the prompt (`give_back`) is
     stopped without asking: the session is in the record.
     """
+    if launch.joined and launch.runtime_name not in _GIVEN_BACK:
+        # Joined for a session it was running: not this prompt's to stop.
+        launch.relay.stop()
+        say(
+            f"Left {launch.runtime_name}: it keeps running its session, as it was "
+            "before you joined."
+        )
+        return
     if launch.runtime_name in _GIVEN_BACK:
         _GIVEN_BACK.discard(launch.runtime_name)
         if launch.stop():
@@ -1266,6 +1277,34 @@ def finish_cloud(
         say(
             f"Could not stop {launch.said} {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
         )
+
+
+def running_runtimes(client: Any = None) -> list[str]:
+    """The names and uids of the person's running runtimes on Datalayer."""
+    client = client or make_client()[0]
+    return [
+        str(getattr(runtime, attr, "") or "")
+        for runtime in read_offer(client).running
+        for attr in ("runtime_name", "uid", "name")
+        if getattr(runtime, attr, "")
+    ]
+
+
+def join_runtime(
+    runtime: str, *, status: Callable[[str], None] = lambda message: None
+) -> CloudLaunch:
+    """Reach the running runtime an open session runs on, to go on with it
+    there: attached as ``--runtime`` attaches (`launch_cloud`), its agent
+    left as it is, nothing launched, and left running when the prompt ends.
+
+    Raises
+    ------
+    CloudRefused
+        It is no longer running, or does not answer.
+    """
+    joined = launch_cloud(None, runtime=runtime, status=status)
+    joined.joined = True
+    return joined
 
 
 def build_url(launch: CloudLaunch) -> str:

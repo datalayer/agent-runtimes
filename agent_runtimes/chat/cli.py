@@ -886,6 +886,28 @@ def _offer_paused(*, local: bool = False, cloud: bool = False) -> Tuple[Any, str
     return None, picked
 
 
+def _joined_runtime(row: Any) -> str:
+    """The runtime an open session is joined on (`joined_runtime`), or
+    ``""`` to resume it as a paused one. What a terminal cannot join, and
+    the runtimes that cannot be listed, are said in a sentence and the exit.
+    """
+    from agent_runtimes.loop.launch import running_runtimes
+    from agent_runtimes.loop.paused import RunsElsewhere, joined_runtime
+
+    try:
+        return joined_runtime(row, running_runtimes)
+    except RunsElsewhere as elsewhere:
+        print(f"{GREEN_DARK}[ERROR]{RESET} {elsewhere}", file=sys.stderr)
+        raise typer.Exit(1)
+    except Exception as refused:  # noqa: BLE001 - said, and nothing launched
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} Session {row.uid} is open, and your runtimes on "
+            f"Datalayer could not be listed to join it ({str(refused)[:160]}): nothing was launched.",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
+
+
 def _session_named(
     uid: Optional[str],
     continue_last: bool,
@@ -1642,10 +1664,13 @@ def main_callback(
         # A launch row that said where it runs answers the question.
         if where_picked:
             local, cloud = where_picked == LOCAL, where_picked == CLOUD
+    joined = ""
     if paused is not None:
         from agent_runtimes.loop.paused import resume_plan
 
         plan = resume_plan(paused)
+        # Open on a runtime that still runs it: joined there, nothing launched.
+        joined = _joined_runtime(paused)
         if plan.team_run:
             # A seat of a team run: its run is let go on, and each
             # seat's session with it; nothing is started here.
@@ -1679,6 +1704,7 @@ def main_callback(
                     environment=environment,
                     minutes=minutes,
                     keep=keep,
+                    runtime=joined,
                 )
             except ResumeRefused as refused:
                 print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
@@ -1686,6 +1712,9 @@ def main_callback(
             raise typer.Exit(0)
         resume_uid, agent_id = plan.uid, plan.agent
         cloud, local = plan.cloud, not plan.cloud
+        if joined:
+            # Its runtime's agent is left as it is: no agentspec is set on it.
+            runtime, agent_id = joined, None
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
@@ -1696,6 +1725,8 @@ def main_callback(
         if cloud_launch is None:
             where = "local"
         else:
+            # Joined for the open session it runs: left running at the end.
+            cloud_launch.joined = bool(joined)
             # A runtime gone back to may not say its agentspec: its agent is `default`.
             agent_id = cloud_launch.agent_spec_id or agent_id or CLOUD_AGENT_NAME
     if cloud_launch is None and agent_id is None:

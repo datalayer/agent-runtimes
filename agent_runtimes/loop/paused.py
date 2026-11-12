@@ -105,6 +105,10 @@ class Paused:
     """Whether it is a session of one of the person's own deployments that is
     paused: resuming it asks first to resume the deployment. Not shown in a
     listing, whose State says the session's state alone."""
+    runs_on: str = ""
+    """What its record says it runs on: ``runtime``, ``agentcore``, ``team_run``, or ``""``."""
+    runs_on_id: str = ""
+    """The runtime's uid (``local`` for one started by hand), or AgentCore's ARN."""
 
     @property
     def resumable(self) -> bool:
@@ -353,6 +357,8 @@ def paused_of(
                 address=address,
                 state=str(session.get("state") or ""),
                 team_run=team_run,
+                runs_on=str(runs_on.get("kind") or ""),
+                runs_on_id=str(runs_on.get("uid") or runs_on.get("arn") or ""),
                 # One of the person's own, paused: its owner resumes it, so
                 # the session stays listed, and resuming it asks first.
                 deployment_paused=bool(deployment)
@@ -520,6 +526,44 @@ def listed(rows: Sequence[Paused]) -> List[Paused]:
     return kept
 
 
+class RunsElsewhere(Exception):
+    """An open session that a terminal cannot join where it runs: said in a sentence."""
+
+
+def joined_runtime(row: Paused, running: Callable[[], Sequence[str]]) -> str:
+    """The runtime an open session runs on, to be joined rather than resumed:
+    its uid, when it runs on a runtime on Datalayer that ``running`` (the
+    names and uids of the person's running runtimes) still lists. ``""``
+    for a session that is resumed as a paused one is — not open, kept on
+    this machine, or open on a runtime that is gone (the record's rule: an
+    open session whose runtime no longer exists is paused).
+
+    Raises
+    ------
+    RunsElsewhere
+        An open session that runs where a terminal cannot join it: a seat of
+        a running team run, or a run in AgentCore.
+    """
+    if row.state != "open" or row.where != ON_DATALAYER:
+        return ""
+    if row.team_run:
+        raise RunsElsewhere(
+            f"Session {row.uid} is a seat of team run {row.team_run}, which is running: "
+            f"follow it with `agent-teams sessions show {row.team_run}` or at {row.address}; "
+            f"once it is paused, `{team_resume_command(row.team_run)}` goes on with it."
+        )
+    if row.runs_on == "agentcore":
+        where = f": open it at {row.address}" if row.address else ""
+        raise RunsElsewhere(
+            f"Session {row.uid} is running now in AgentCore, where a terminal cannot "
+            f"join a run{where}. Once its run ends it is paused, and resumed from here."
+        )
+    if row.runs_on == "runtime" and row.runs_on_id not in ("", "local"):
+        if row.runs_on_id in set(running()):
+            return row.runs_on_id
+    return ""
+
+
 def clone_command(row: Paused) -> str:
     """The command that clones a session to go on from it: a team run's
     seat is cloned with its run, any other session by its uid.
@@ -595,6 +639,8 @@ __all__ = [
     "STATES",
     "TEAM_WHY_NOT",
     "clone_command",
+    "joined_runtime",
+    "RunsElsewhere",
     "is_listed",
     "listed",
     "grouped",

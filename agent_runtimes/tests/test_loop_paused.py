@@ -171,6 +171,8 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         started_at=by_uid["local-paused-1"].started_at,
         turns=1,
         app_uid="agent:example-simple",
+        runs_on="runtime",
+        runs_on_id="local",
     )
     assert (by_uid["cloud-agent-1"].where, by_uid["cloud-agent-1"].store) == (
         "cloud",

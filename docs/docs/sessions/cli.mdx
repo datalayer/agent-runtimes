@@ -399,6 +399,16 @@ On Datalayer (2)
   - **a seat of a team run** goes on with its run: its paused run is let go
     on, and each seat's session with it — what `agent-teams sessions resume
     <run>` does, run for you. Nothing is started on this machine.
+- **Enter on an open session** joins it where it runs, rather than resuming
+  it: on a runtime on Datalayer that still runs it, the prompt connects to
+  that runtime and that session — no environment asked, nothing launched,
+  `--minutes` unused — and leaving says the runtime keeps running its
+  session (nothing is stopped: you did not start it). Its runtime gone, it
+  is resumed as a paused session is. A run in AgentCore (a scheduled run of
+  a deployment there) cannot be joined from a terminal: one sentence says
+  so, with its address, and nothing is launched; once its run ends it is
+  paused, and resumed from here. A seat of a team run that is running is
+  followed with `agent-teams sessions show <run>`, or at its address.
 - The other keys act on the highlighted session as in `loop sessions`
   (pause, end, transfer, export, delete, start over), and the screen is
   drawn again. On a launch row they say that Enter starts it.
