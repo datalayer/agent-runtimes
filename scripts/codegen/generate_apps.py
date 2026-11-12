@@ -76,6 +76,11 @@ CAMEL = {
 #: and a sample's metrics by name.
 VERBATIM = ("components", "weights", "metrics")
 
+#: The keys whose value is a JSON Schema, kept whole as the Appspec's readers
+#: keep it: its keys as written and its nulls too (`default: null` says
+#: something there).
+WHOLE = ("settings", "settings_ui")
+
 
 def _flat(text: Any) -> str:
     """A text on one line."""
@@ -271,8 +276,10 @@ def _typescript_value(value: Any, verbatim: bool = False) -> Any:
     """An application as the TypeScript interfaces read it; nulls left out."""
     if isinstance(value, dict):
         return {
-            (key if verbatim else CAMEL.get(key, key)): _typescript_value(
-                item, verbatim or key in VERBATIM
+            (key if verbatim else CAMEL.get(key, key)): (
+                item
+                if key in WHOLE and not verbatim
+                else _typescript_value(item, verbatim or key in VERBATIM)
             )
             for key, item in value.items()
             if item is not None

@@ -105,8 +105,9 @@ export const APP_ACCENTS: AppAccent[] = [
 ];
 
 /**
- * The themes an application may run in: Appearance's, as
- * primer-addons lists them (`themeVariants`), in its order.
+ * The themes an application may run in: the Appspec's (`ThemeVariant` in
+ * agentspecs), each one of Appearance's as primer-addons lists them
+ * (`themeVariants`).
  */
 export const APP_THEME_VARIANTS: AppThemeVariant[] = [
   'datalayer',

@@ -10,6 +10,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
+import { APPSPEC_SCHEMA } from '../../specs/appspecSchema';
 import { themeVariants } from '@datalayer/primer-addons';
 import { APP_THEME_VARIANTS, dumpAppspec, parseAppspec } from '../apps/appspec';
 import {
@@ -63,11 +64,14 @@ describe('the instant checks', () => {
     }
     expect(checks['web-research'].verdict).toBe(PASSES);
     expect(checks['web-research'].setup).toEqual([]);
-    // Offered since agentspecs 0.0.128 (W-02): nothing left to set up.
-    expect(checks['inbox-triage'].setup).toEqual([]);
+    // Its agent is out of the picker since agentspecs 0.0.164: it still runs
+    // it, and names it as setup.
+    expect(checks['inbox-triage'].setup).toEqual([
+      'The agent “worker-mail-triage:0.0.1” is not enabled.',
+    ]);
+    // Its MCP server is on since agentspecs 0.0.162; its agent is not.
     expect(checks['accounting'].setup).toEqual([
       'The agent “worker-accountant:0.0.1” is not enabled.',
-      'The MCP server “odoo-accounting:0.0.1” is not enabled.',
     ]);
   });
 
@@ -598,7 +602,12 @@ describe('the instant checks', () => {
   });
 
   it('reads the theme it runs in, and refuses one Appearance does not have (T-30)', () => {
-    expect(APP_THEME_VARIANTS).toEqual(themeVariants);
+    // The themes the Appspec accepts (agentspecs' `ThemeVariant`), each one
+    // of Appearance's. Appearance's `metal` is not an Appspec theme yet.
+    expect(APP_THEME_VARIANTS).toEqual(
+      APPSPEC_SCHEMA.$defs?.ThemeVariant?.enum,
+    );
+    expect(themeVariants).toEqual(expect.arrayContaining(APP_THEME_VARIANTS));
     for (const theme of [
       { variant: 'earth' },
       { variant: 'matrix', mode: 'dark' },

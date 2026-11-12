@@ -2962,7 +2962,9 @@ export const MARKETER_APP_0_0_1: AppSpec = {
         voice: {
           type: 'string',
           title: "The brand's voice",
+          'in a sentence': null,
           default: 'Plain',
+          'warm and specific; never hype.': null,
         },
         networks: {
           type: 'string',
