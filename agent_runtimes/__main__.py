@@ -878,7 +878,9 @@ def serve(
             "AgentCore Runtime's /invocations, /ping and /ws on 0.0.0.0:8080 "
             "(AGENTCORE_PORT), the agentspec of AGENT_SPEC_ID configured at start; "
             "'kagent' serves the agentspec of AGENT_SPEC_ID over A2A on loopback for "
-            "the kagent bridge, with the model and MCP servers kagent configured",
+            "the kagent bridge, with the model and MCP servers kagent configured; "
+            "'ate' answers Agent Substrate's actor contract on 0.0.0.0:80 (ATE_PORT): "
+            "the wakeup probe and the actor's identity, read at each wake",
         ),
     ] = None,
 ) -> None:
@@ -947,6 +949,9 @@ def serve(
 
         # Serve a kagent BYO actor's agent, for the bridge beside it
         AGENT_SPEC_ID=crawler agent-runtimes serve --target kagent
+
+        # Run as an Agent Substrate actor (port 80, the wakeup probe at /ate/wakeup)
+        AGENT_SPEC_ID=crawler agent-runtimes serve --target ate
     """
     try:
         serve_server(

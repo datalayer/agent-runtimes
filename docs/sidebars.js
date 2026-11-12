@@ -117,7 +117,14 @@ const sidebars = {
       type: 'category',
       label: 'Integrations',
       link: { type: 'doc', id: 'integrations/index' },
-      items: [{ type: 'doc', id: 'integrations/kagent', label: 'kagent' }],
+      items: [
+        { type: 'doc', id: 'integrations/kagent', label: 'kagent' },
+        {
+          type: 'doc',
+          id: 'integrations/agent-substrate',
+          label: 'Agent Substrate',
+        },
+      ],
     },
     { type: 'doc', id: 'hooks/index', label: 'Hooks' },
     { type: 'doc', id: 'agent-nodes/index', label: 'Nodes' },

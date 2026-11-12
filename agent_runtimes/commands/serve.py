@@ -59,6 +59,7 @@ class Target(str, Enum):
 
     agentcore = "agentcore"
     kagent = "kagent"
+    ate = "ate"
 
 
 def is_port_free(host: str, port: int) -> bool:
@@ -392,6 +393,10 @@ def serve_server(
                 (``AGENT_RUNTIMES_KAGENT_PORT``, 8765), for the kagent bridge
                 beside it, with the model and MCP servers of kagent's
                 configuration (``/config/config.json``).
+                ``ate`` answers Agent Substrate's actor contract: on
+                ``0.0.0.0``, port 80 (``ATE_PORT``), the wakeup probe at
+                ``/ate/wakeup`` and the actor's identity at ``/ate/identity``,
+                the agentspec of ``AGENT_SPEC_ID`` when set.
 
     Returns:
         The actual port the server is running on
@@ -457,6 +462,37 @@ def serve_server(
             f"kagent target: agentspec {kagent.spec_id} on {host}:{port}, "
             f"model {kagent.model.model_id if kagent.model else 'of the agentspec'}, "
             f"{len(kagent.mcp_servers)} kagent MCP server(s)"
+        )
+
+    if target == Target.ate:
+        from agent_runtimes.ate.settings import TARGET_VARIABLE as ATE_TARGET
+        from agent_runtimes.ate.settings import ate_settings
+
+        try:
+            ate = ate_settings()
+        except ValueError as refused:
+            raise ServeError(str(refused)) from None
+        if agent_id and ate.spec_id and agent_id != ate.spec_id:
+            raise ServeError(
+                f"--target ate serves the agentspec of AGENT_SPEC_ID ({ate.spec_id!r}), "
+                f"not --agent-id {agent_id!r}."
+            )
+        agent_id = agent_id or ate.spec_id or None
+        if agent_id:
+            from agent_runtimes.specs.agents import get_agent_spec
+
+            if not get_agent_spec(agent_id):
+                raise ServeError(
+                    f"AGENT_SPEC_ID names {agent_id!r}, which the library does not have."
+                )
+        # Agent Substrate routes an actor's traffic to port 80 of its private
+        # interface; identity and runtime id are bound at each wake, never here
+        # (the golden snapshot is every actor's start).
+        host, port, find_free_port_flag = ate.host, ate.port, False
+        os.environ[ATE_TARGET] = target.value
+        logger.info(
+            f"ate target: {f'agentspec {agent_id}' if agent_id else 'no agent at start'} "
+            f"on {host}:{port}, actor metadata in {ate.system_info_dir}"
         )
 
     # Resolve the effective port:

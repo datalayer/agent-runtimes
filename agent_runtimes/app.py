@@ -1132,6 +1132,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     _node_enabled = is_node_enabled()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
     from .agentcore.settings import is_agentcore_target
+    from .ate.settings import is_ate_target
 
     _agentcore = is_agentcore_target()
 
@@ -1713,6 +1714,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         from .agentcore.contract import router as agentcore_router
 
         app.include_router(agentcore_router)
+    if is_ate_target():
+        # Agent Substrate's actor contract, at the root: the wakeup probe and
+        # the actor's identity (read at each wake, never at start).
+        from .ate.contract import router as ate_router
+
+        app.include_router(ate_router)
 
     # Note: AG-UI mounts and example mounts are added dynamically during lifespan startup
 
