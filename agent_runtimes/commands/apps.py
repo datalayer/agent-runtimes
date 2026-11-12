@@ -2308,11 +2308,17 @@ def resume_application_session(
     environment: Optional[str] = None,
     minutes: Optional[int] = None,
     keep: bool = False,
+    runtime: str = "",
 ) -> None:
     """Go on with a paused session of an application from the terminal: the
     application started as `loop apps run` starts it — on this machine, or on
     Datalayer for a session that ran there — and the session resumed from its
     record before the first prompt.
+
+    ``runtime`` names the running runtime an open session runs on: it is
+    joined (`join_runtime`), nothing launched, no environment asked, the
+    application's agent there used as it is, and it is left running when
+    the prompt ends.
 
     Raises
     ------
@@ -2327,6 +2333,7 @@ def resume_application_session(
         CLOUD_AGENT_NAME,
         CloudRefused,
         NotSignedIn,
+        join_runtime,
         launch_cloud,
         speak_ag_ui,
     )
@@ -2348,16 +2355,22 @@ def resume_application_session(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     cloud_launch = None
     process = None
-    if cloud:
+    if cloud or runtime:
         try:
-            cloud_launch = launch_cloud(
-                BOOTSTRAP_AGENT_SPEC_ID,
-                label=f"{application.emoji} {application.name}",
-                environment=environment,
-                minutes=minutes,
-                status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
-                app_spec=dict(document),
-            )
+            if runtime:
+                cloud_launch = join_runtime(
+                    runtime,
+                    status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+                )
+            else:
+                cloud_launch = launch_cloud(
+                    BOOTSTRAP_AGENT_SPEC_ID,
+                    label=f"{application.emoji} {application.name}",
+                    environment=environment,
+                    minutes=minutes,
+                    status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+                    app_spec=dict(document),
+                )
         except NotSignedIn:
             raise ResumeRefused(
                 "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
@@ -2382,7 +2395,14 @@ def resume_application_session(
     started = False
     try:
         if instance:
+            # Made as its page makes it; one made already is used as it is.
             agent_name = start_deployment_agent(base_url, document, instance)
+        elif runtime:
+            # Joined: the application is configured there already.
+            if not speak_ag_ui(base_url):
+                raise ResumeRefused(
+                    f"The application's agent on {runtime} does not answer."
+                )
         else:
             try:
                 configure_on(base_url, document, app_uid=studio_uid or None)

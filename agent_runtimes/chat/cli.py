@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import typer
 from pydantic_ai import Agent
@@ -851,24 +851,61 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
-def _offer_paused() -> Any:
-    """The paused session the person goes on with as `loop` starts, or
-    ``None``: nobody at the terminal, none paused, or a new one chosen.
+def _offer_paused(*, local: bool = False, cloud: bool = False) -> Tuple[Any, str]:
+    """What the person starts with as `loop` starts: ``(session, "")`` for
+    a session to go on with, ``(None, where)`` for a new one — `LOCAL` or
+    `CLOUD` when the start's launch rows asked where it runs, ``""`` when
+    the usual questions still follow.
 
-    Those on this machine and, signed in, those on Datalayer; the
-    platform's list failing is said in a line and the start goes on.
+    The screen is `loop sessions`' (`run_picker`), its launch rows above
+    the sessions; nobody at the terminal, or no session listed, it is not
+    drawn. Esc or Ctrl-C leaves `loop` (KeyboardInterrupt).
     """
-    from agent_runtimes.loop.launch import interactive, make_client
-    from agent_runtimes.loop.paused import choose_paused, paused_sessions
+    from agent_runtimes.commands.sessions import _token, run_picker
+    from agent_runtimes.loop.launch import (
+        NEW_SESSION,
+        interactive,
+        remember_where,
+        start_choices,
+    )
 
     if not interactive():
-        return None
+        return None, ""
+    launch, highlighted = start_choices(
+        local=local, cloud=cloud, cloud_offered=local or cloud or bool(_token())
+    )
+    chosen = run_picker(launch=launch, highlighted=highlighted)
+    if chosen is None:
+        raise KeyboardInterrupt
+    picked, session = chosen
+    if session is not None:
+        return session, ""
+    if picked == NEW_SESSION:
+        return None, ""
+    remember_where(picked)
+    return None, picked
+
+
+def _joined_runtime(row: Any) -> str:
+    """The runtime an open session is joined on (`joined_runtime`), or
+    ``""`` to resume it as a paused one. What a terminal cannot join, and
+    the runtimes that cannot be listed, are said in a sentence and the exit.
+    """
+    from agent_runtimes.loop.launch import running_runtimes
+    from agent_runtimes.loop.paused import RunsElsewhere, joined_runtime
+
     try:
-        _, token = make_client()
-    except Exception:  # noqa: BLE001 - not signed in: the local ones only
-        token = ""
-    rows = paused_sessions(token=token, say=lambda line: print(f"{GRAY}{line}{RESET}"))
-    return choose_paused(rows)
+        return joined_runtime(row, running_runtimes)
+    except RunsElsewhere as elsewhere:
+        print(f"{GREEN_DARK}[ERROR]{RESET} {elsewhere}", file=sys.stderr)
+        raise typer.Exit(1)
+    except Exception as refused:  # noqa: BLE001 - said, and nothing launched
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} Session {row.uid} is open, and your runtimes on "
+            f"Datalayer could not be listed to join it ({str(refused)[:160]}): nothing was launched.",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
 
 
 def _session_named(
@@ -1479,7 +1516,7 @@ def main_callback(
 
         loop -a crawler "Search for AI trends"  # Single query with specific agent
 
-        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the minute
+        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the second
 
         loop --runtime <name>       # Back to an agent runtime running on Datalayer
 
@@ -1597,7 +1634,7 @@ def main_callback(
     # agentspec is picked from the list this machine's keys allow; on
     # Datalayer the environment is picked instead, and no agentspec list is
     # shown.
-    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
+    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME, LOCAL
 
     # The paused sessions that can be gone on with, offered first when
     # nothing on the command line says what to run: one picked is resumed
@@ -1620,14 +1657,20 @@ def main_callback(
         )
     elif agent_id is None and not query and not runtime:
         try:
-            paused = _offer_paused()
+            paused, where_picked = _offer_paused(local=local, cloud=cloud)
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
+        # A launch row that said where it runs answers the question.
+        if where_picked:
+            local, cloud = where_picked == LOCAL, where_picked == CLOUD
+    joined = ""
     if paused is not None:
         from agent_runtimes.loop.paused import resume_plan
 
         plan = resume_plan(paused)
+        # Open on a runtime that still runs it: joined there, nothing launched.
+        joined = _joined_runtime(paused)
         if plan.team_run:
             # A seat of a team run: its run is let go on, and each
             # seat's session with it; nothing is started here.
@@ -1661,6 +1704,7 @@ def main_callback(
                     environment=environment,
                     minutes=minutes,
                     keep=keep,
+                    runtime=joined,
                 )
             except ResumeRefused as refused:
                 print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
@@ -1668,6 +1712,9 @@ def main_callback(
             raise typer.Exit(0)
         resume_uid, agent_id = plan.uid, plan.agent
         cloud, local = plan.cloud, not plan.cloud
+        if joined:
+            # Its runtime's agent is left as it is: no agentspec is set on it.
+            runtime, agent_id = joined, None
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
@@ -1678,6 +1725,8 @@ def main_callback(
         if cloud_launch is None:
             where = "local"
         else:
+            # Joined for the open session it runs: left running at the end.
+            cloud_launch.joined = bool(joined)
             # A runtime gone back to may not say its agentspec: its agent is `default`.
             agent_id = cloud_launch.agent_spec_id or agent_id or CLOUD_AGENT_NAME
     if cloud_launch is None and agent_id is None:

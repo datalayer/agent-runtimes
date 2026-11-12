@@ -107,23 +107,67 @@ def choose_where(
         return LOCAL
     if not (interactive() if can_ask is None else can_ask):
         return LOCAL
-    last = _read_preferences(preferences).get("where")
-    default = last if last in (LOCAL, CLOUD) else LOCAL
     answer = (ask or _select)(
         "Where should the agent run?",
-        [
-            ("On this machine — a local server, with your own model keys", LOCAL),
-            (
-                "On Datalayer — a cloud runtime with Datalayer's models, billed by the minute",
-                CLOUD,
-            ),
-        ],
-        default,
+        [(f"{PLACES[place]} — {WHERE_SAID[place]}", place) for place in (LOCAL, CLOUD)],
+        last_where(preferences),
     )
     if answer is None:
         raise KeyboardInterrupt
-    _write_preferences({"where": answer}, preferences)
+    remember_where(answer, preferences)
     return answer
+
+
+#: The two places, as the question and the start's launch rows name them.
+PLACES = {LOCAL: "On this machine", CLOUD: "On Datalayer"}
+
+#: What each place is, in a few words.
+WHERE_SAID = {
+    LOCAL: "a local server, with your own model keys",
+    CLOUD: "a cloud runtime with Datalayer's models, billed by the second",
+}
+
+#: The launch row that starts a new session with where it runs already said
+#: (by a flag) or not to be asked (signed out): the questions follow as ever.
+NEW_SESSION = "new"
+
+
+def last_where(preferences: Path = PREFERENCES) -> str:
+    """The last answer to *where?*, offered first: on this machine when none."""
+    last = _read_preferences(preferences).get("where")
+    return last if last in (LOCAL, CLOUD) else LOCAL
+
+
+def remember_where(where: str, preferences: Path = PREFERENCES) -> None:
+    """Keep the answer to *where?*, to offer it first next time."""
+    _write_preferences({"where": where}, preferences)
+
+
+def start_choices(
+    *,
+    local: bool = False,
+    cloud: bool = False,
+    cloud_offered: bool = True,
+    preferences: Path = PREFERENCES,
+) -> tuple[list[tuple[str, str]], str]:
+    """The launch rows `loop` draws above the sessions as it starts, as
+    ``(id, label)``, and the one highlighted.
+
+    Where it runs still to be asked — no flag says it, and Datalayer is
+    offered — the question is the rows: *Start a new session on this
+    machine* and *on Datalayer*, the last answer highlighted, and their ids
+    are `LOCAL` and `CLOUD`. Otherwise one row, *Start a new session*
+    (`NEW_SESSION`), and what the flags say, or this machine, follows.
+    """
+    if local or cloud or not cloud_offered:
+        return [(NEW_SESSION, "Start a new session")], NEW_SESSION
+    return [
+        (
+            place,
+            f"Start a new session {PLACES[place][0].lower()}{PLACES[place][1:]} — {WHERE_SAID[place]}",
+        )
+        for place in (LOCAL, CLOUD)
+    ], last_where(preferences)
 
 
 def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:
@@ -363,6 +407,9 @@ class CloudLaunch:
     app: bool = False
     #: Whether it is not billed: an unmetered launch.
     unmetered: bool = False
+    #: Whether it was joined to go on with an open session it runs: left
+    #: running as it was found when the prompt ends, nobody asked.
+    joined: bool = False
 
     @property
     def said(self) -> str:
@@ -1178,6 +1225,14 @@ def finish_cloud(
     A runtime whose session was paused from the prompt (`give_back`) is
     stopped without asking: the session is in the record.
     """
+    if launch.joined and launch.runtime_name not in _GIVEN_BACK:
+        # Joined for a session it was running: not this prompt's to stop.
+        launch.relay.stop()
+        say(
+            f"Left {launch.runtime_name}: it keeps running its session, as it was "
+            "before you joined."
+        )
+        return
     if launch.runtime_name in _GIVEN_BACK:
         _GIVEN_BACK.discard(launch.runtime_name)
         if launch.stop():
@@ -1222,6 +1277,34 @@ def finish_cloud(
         say(
             f"Could not stop {launch.said} {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
         )
+
+
+def running_runtimes(client: Any = None) -> list[str]:
+    """The names and uids of the person's running runtimes on Datalayer."""
+    client = client or make_client()[0]
+    return [
+        str(getattr(runtime, attr, "") or "")
+        for runtime in read_offer(client).running
+        for attr in ("runtime_name", "uid", "name")
+        if getattr(runtime, attr, "")
+    ]
+
+
+def join_runtime(
+    runtime: str, *, status: Callable[[str], None] = lambda message: None
+) -> CloudLaunch:
+    """Reach the running runtime an open session runs on, to go on with it
+    there: attached as ``--runtime`` attaches (`launch_cloud`), its agent
+    left as it is, nothing launched, and left running when the prompt ends.
+
+    Raises
+    ------
+    CloudRefused
+        It is no longer running, or does not answer.
+    """
+    joined = launch_cloud(None, runtime=runtime, status=status)
+    joined.joined = True
+    return joined
 
 
 def build_url(launch: CloudLaunch) -> str:

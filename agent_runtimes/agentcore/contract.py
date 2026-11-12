@@ -59,7 +59,16 @@ import os
 import time
 import uuid
 from collections import OrderedDict
-from typing import Any, Awaitable, Callable, Iterator, Mapping, NamedTuple, Optional
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterator,
+    Mapping,
+    NamedTuple,
+    Optional,
+)
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
@@ -566,6 +575,7 @@ async def opened_from_record(
     agent: str,
     headers: list[tuple[bytes, bytes]],
     tokens: Optional[PlatformTokens],
+    woken_by: Optional[Mapping[str, Any]] = None,
 ) -> None:
     """The session, held by this process: resumed from its record, or started.
 
@@ -575,7 +585,9 @@ async def opened_from_record(
     turns the conversation of a ``{"prompt"}`` run; or, the record holding no
     turn of it (404) or the application keeping no conversations, started
     (``/apps/sessions``) as the deployment's, its opening saying its agent and
-    where it runs.
+    where it runs — and what woke it, when a trigger did (``woken_by``, the
+    scheduler's tick relayed by ai-agents, AC-67): the session route takes it
+    from the deployment's owner alone, as it does on a Datalayer runtime.
 
     Raises
     ------
@@ -610,7 +622,12 @@ async def opened_from_record(
     status, _, raw = await collected(
         Runner(server, sessions, False),
         scope,
-        {"agent": agent, "deployment_uid": deployment_of(instance), "session": uid},
+        {
+            "agent": agent,
+            "deployment_uid": deployment_of(instance),
+            "session": uid,
+            **({"woken_by": dict(woken_by)} if woken_by else {}),
+        },
         headers,
         tokens=tokens,
     )
@@ -938,6 +955,16 @@ async def _prepared(
 
     uid, sid = session_of_headers(headers)
     policy_session().use(uid)
+    # What woke the session, when a trigger did: said beside the run, not in it.
+    woken_by: Optional[Dict[str, Any]] = None
+    if isinstance(payload, dict) and "woken_by" in payload:
+        payload = dict(payload)
+        given = payload.pop("woken_by")
+        if given is not None and not isinstance(given, dict):
+            raise ContractRefused(
+                400, "What woke a session (woken_by) is a JSON object."
+            )
+        woken_by = given or None
     body, prompt_shape = run_input_of(payload, uid, sid)
     tokens = await tokens_of(headers)
     bearer = (
@@ -951,7 +978,13 @@ async def _prepared(
             raise ContractRefused(503, "This invocation reaches no server to run it.")
         agent = await deployment_agent(server, bearer)
         await opened_from_record(
-            server, scope or {}, uid, agent, _forwarded(headers, tokens), tokens
+            server,
+            scope or {},
+            uid,
+            agent,
+            _forwarded(headers, tokens),
+            tokens,
+            woken_by=woken_by,
         )
         if prompt_shape:
             body = with_prompt_history(body, uid)

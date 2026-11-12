@@ -193,8 +193,18 @@ def signed(text: str, sentence: str) -> str:
 
 
 def link_of(space: Mapping[str, Any], document_uid: str) -> str:
-    """Where the saved page is opened on the site: under its Space's owner and handle."""
-    owner = str(space.get("owner_handle_s") or space.get("owner_handle") or "")
+    """Where the saved page is opened on the site: under its Space's account and handle.
+
+    An organization's Space is addressed by the organization's handle, as the
+    site addresses it (`resolveSpaceAccountHandle`), not by who created it.
+    """
+    owner = str(
+        space.get("organization_handle_s")
+        or space.get("organization_handle")
+        or space.get("owner_handle_s")
+        or space.get("owner_handle")
+        or ""
+    )
     handle = str(space.get("handle_s") or space.get("handle") or "")
     if not owner or not handle:
         return f"/documents/{quote(document_uid, safe='')}"
