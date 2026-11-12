@@ -21,4 +21,14 @@ kubectl apply -k deploy/kagent
 kubectl get agents.api.kagent.dev -n kagent
 ```
 
+`deploy/kagent-datalayer` is the overlay of the bridge's Datalayer mode: the
+Agent served by a Datalayer runtime (launched through the platform's Runtimes
+API for the Agent, kept across the session's tasks, ended with the actor),
+the Datalayer API key put in each request by kagent's egress gateway through
+an `EgressPolicy`:
+
+```bash
+kubectl apply -k deploy/kagent-datalayer
+```
+
 See the kagent page of the documentation (`docs/docs/integrations/kagent.mdx`).

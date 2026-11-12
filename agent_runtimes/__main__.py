@@ -58,6 +58,7 @@ from agent_runtimes.commands.events import app as events_app
 from agent_runtimes.commands.events import events_list, events_ls
 from agent_runtimes.commands.exec import main as exec_main
 from agent_runtimes.commands.executions import app as executions_app
+from agent_runtimes.commands.kagent import app as kagent_app
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
@@ -650,6 +651,7 @@ app.add_typer(schedules_app)
 app.add_typer(apps_app)
 app.add_typer(plugins_app)
 app.add_typer(agentcore_app)
+app.add_typer(kagent_app)
 app.add_typer(sessions_app)
 app.add_typer(scenes_app)
 app.command("events-list")(events_list)

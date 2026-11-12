@@ -1,0 +1,63 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# The bridge's Datalayer mode: the Agent served by a Datalayer runtime instead
+# of an agent-runtimes process in the actor. On its first task the bridge
+# launches a runtime for the Agent through the platform's Runtimes API
+# (client_id kagent, agent_uid <namespace>/<agent>), forwards every task of
+# the session to it, and ends it when kagent stops the actor.
+#
+# Before applying: the Secret with your Datalayer API key (the one the
+# datalayer-ai-inference ModelConfig reads), your plane in DATALAYER_RUN_URL
+# below and in egresspolicy.yaml, and the image digest and AGENT_SPEC_ID of
+# ../kagent/harness.yaml.
+#
+#   kubectl create secret generic datalayer-api-key -n kagent \
+#     --from-literal=api-key="$DATALAYER_API_KEY"
+#   kubectl apply -k deploy/kagent-datalayer
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kagent
+resources:
+  - ../kagent
+  - egresspolicy.yaml
+patches:
+  - target:
+      group: api.kagent.dev
+      version: v1alpha3
+      kind: Harness
+      name: agent-runtimes
+    patch: |-
+      - op: add
+        path: /spec/env/-
+        value:
+          name: DATALAYER_RUNTIME_ENVIRONMENT
+          value: ai-agents-env
+      - op: add
+        path: /spec/env/-
+        value:
+          name: DATALAYER_RUN_URL
+          value: https://datalayer.example.com
+      - op: add
+        path: /spec/env/-
+        value:
+          name: DATALAYER_RUNTIME_MINUTES
+          value: "30"
+      # kagent mounts no Secret in an actor: the egress gateway puts the key
+      # in each request to the plane (egresspolicy.yaml); the bridge sends
+      # kagent's placeholder.
+      - op: add
+        path: /spec/env/-
+        value:
+          name: DATALAYER_API_KEY_INJECTED
+          value: "true"
+  - target:
+      group: api.kagent.dev
+      version: v1alpha3
+      kind: Agent
+      name: agent-runtimes
+    patch: |-
+      - op: add
+        path: /spec/egressPolicyRefs
+        value:
+          - name: datalayer-plane

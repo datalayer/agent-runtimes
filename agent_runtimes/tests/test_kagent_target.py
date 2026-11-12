@@ -393,7 +393,7 @@ def test_executor_relays_the_upstream_task() -> None:
     )
     forward = bridge.executor("http://upstream", poll=0)
 
-    async def call(body: Any) -> Any:
+    async def call(body: Any, target: Any) -> Any:
         return next(answers)
 
     forward._call = call  # type: ignore[method-assign]

@@ -170,6 +170,8 @@ class RuntimesClient:
         deployment_uid: Optional[str] = None,
         app_spec: Optional[dict[str, Any]] = None,
         agent_setup: Optional[dict[str, Any]] = None,
+        client_id: Optional[str] = None,
+        agent_uid: Optional[str] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -220,6 +222,13 @@ class RuntimesClient:
             ``without_mcp_servers`` (bool) and ``without_skills`` (ids) leave
             the spec's MCP servers or those skills out, their secrets not
             asked for.
+        client_id : Optional[str]
+            What asked for the runtime (``kagent`` for a kagent Agent's
+            bridge). With ``agent_uid`` it reaches the runtime's reservation
+            as its agent dimensions; neither changes who pays.
+        agent_uid : Optional[str]
+            The agent the runtime runs for, in the client's own naming
+            (``<namespace>/<agent>`` for a kagent Agent).
 
         Returns
         -------
@@ -322,6 +331,10 @@ class RuntimesClient:
                 body["app_spec"] = dict(app_spec)
             if agent_setup:
                 body["agent_setup"] = dict(agent_setup)
+            if client_id:
+                body["client_id"] = client_id
+            if agent_uid:
+                body["agent_uid"] = agent_uid
 
             if runtime_name:
                 body["runtime_name"] = runtime_name

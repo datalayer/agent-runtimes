@@ -114,6 +114,54 @@ and SSE servers.
      -d '{"jsonrpc":"2.0","id":"1","method":"SendMessage","params":{"message":{"messageId":"m1","role":"ROLE_USER","parts":[{"text":"Hello"}]}}}'
    ```
 
+## Datalayer mode: the agent on a Datalayer runtime
+
+By default the agent runs in the actor, beside the bridge. In the bridge's
+**Datalayer mode** it runs on a Datalayer runtime instead, with the
+runtime's metering and identity: the bridge starts no agent-runtimes, and
+
+1. on the first task of the actor's session, it launches a runtime for its
+   Agent through the platform's Runtimes API, as any Datalayer client does
+   (`agent-runtimes kagent launch-runtime`: the environment, the agentspec,
+   `client_id: kagent`, `agent_uid: <namespace>/<agent>`). The runtime comes
+   from the platform's pools with its credits reservation, and is known by
+   its uid; the agentspec is served on it over A2A;
+2. it forwards every task of the session to that runtime's A2A endpoint, in
+   the session's context, and keeps the runtime: its uid is written in the
+   actor's durable `/data`, so a restarted bridge goes on with it. Once the
+   runtime has expired, the next task launches another;
+3. when kagent stops the actor, the bridge ends the runtime
+   (`agent-runtimes kagent end-runtime`), which closes its reservation. A
+   runtime the bridge could not end ends with its reservation
+   (`DATALAYER_RUNTIME_MINUTES`, 30 by default).
+
+The key's owner pays for the runtime, as for any launch; on a Datalayer plane
+whose operator watches kagent Agents, deleting the Agent also ends its
+runtimes.
+
+**The key.** kagent mounts no Secret in an actor: the Datalayer API key is put
+in each request by Substrate's egress gateway, through an `EgressPolicy` that
+binds the Secret to the plane's origin, and the bridge sends kagent's
+placeholder (`DATALAYER_API_KEY_INJECTED=true`). Run elsewhere, the bridge
+reads the key from a mounted Secret's file (`DATALAYER_API_KEY_FILE`).
+Exactly one of the two; a `DATALAYER_API_KEY` in the environment is refused.
+
+**Fail fast.** Datalayer mode never falls back to the local server: a missing
+plane, agentspec, Agent or key stops the bridge at start, in a sentence. A
+launch the platform refuses (no credits, an unknown environment) fails the
+task, in a sentence.
+
+The overlay `deploy/kagent-datalayer` sets it up on top of `deploy/kagent`:
+the Harness's environment, the `EgressPolicy` (`datalayer-plane`) and the
+Agent's `egressPolicyRefs`. Set your plane in both places, and add the host
+your runtimes are served under to the policy when it is not the plane's:
+
+```bash
+kubectl create secret generic datalayer-api-key -n kagent \
+  --from-literal=api-key="$DATALAYER_API_KEY"
+kubectl apply -k deploy/kagent-datalayer
+```
+
 ## Running the pair without kagent
 
 The bridge runs outside kagent with its tasks in memory
@@ -144,3 +192,9 @@ calling any model. The bridge then answers A2A v1 over gRPC on 50051.
 | `KAGENT_BRIDGE_LOCAL` | bridge | `true`: tasks in memory, outside kagent. |
 | `KAGENT_BRIDGE_TASK_TIMEOUT` | bridge | Seconds one task may take, 600. |
 | `AGENT_RUNTIMES_COMMAND` | bridge | The agent-runtimes executable, set in the image. |
+| `DATALAYER_RUNTIME_ENVIRONMENT` | bridge | Set: Datalayer mode, the runtime launched in this environment. |
+| `DATALAYER_RUN_URL` | bridge | Datalayer mode: the plane. Required. |
+| `DATALAYER_API_KEY_INJECTED` | bridge | Datalayer mode: `true`, the key put in each request by kagent's egress gateway. |
+| `DATALAYER_API_KEY_FILE` | bridge | Datalayer mode: the file of a mounted Secret holding the key (outside kagent). |
+| `DATALAYER_RUNTIME_MINUTES` | bridge | Datalayer mode: the runtime's reservation, 30 minutes. |
+| `DATALAYER_RUNTIME_STATE_DIR` | bridge | Datalayer mode: where the runtime's uid is kept, `/data/datalayer`. |

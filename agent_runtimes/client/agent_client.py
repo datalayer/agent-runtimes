@@ -1096,6 +1096,8 @@ class AgentClient(
         version: Optional[Union[int, str]] = None,
         app_spec: Optional[dict[str, Any]] = None,
         agent_setup: Optional[dict[str, Any]] = None,
+        client_id: Optional[str] = None,
+        agent_uid: Optional[str] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -1136,6 +1138,13 @@ class AgentClient(
         agent_setup : Optional[dict[str, Any]], optional
             How its agent is configured at launch: ``without_mcp_servers``,
             ``without_skills`` (``loop --without-mcp-servers``).
+        client_id : Optional[str], optional
+            What asked for the runtime, and ``agent_uid`` the agent it runs
+            for in that client's naming (``kagent`` and
+            ``<namespace>/<agent>`` for a kagent Agent): the reservation's
+            agent dimensions. Neither changes who pays.
+        agent_uid : Optional[str], optional
+            See ``client_id``.
 
         Returns
         -------
@@ -1183,6 +1192,10 @@ class AgentClient(
 
         # Named only when given: a client that does not know it is not told.
         setup: Dict[str, Any] = {"agent_setup": agent_setup} if agent_setup else {}
+        if client_id:
+            setup["client_id"] = client_id
+        if agent_uid:
+            setup["agent_uid"] = agent_uid
 
         if snapshot_name is not None or from_snapshot_uid:
             snapshot_uid = from_snapshot_uid or None
