@@ -244,7 +244,8 @@ def validate_file(
         The plugins its organization has turned off; none when not given.
     frames : OrganizationFrames, FramesUnread or None
         Its organization's contexts, or why they were not read; with none, a
-        context of an organization's own is refused (U-32).
+        context of an organization's own is refused (U-32). One it disabled
+        needs attention, and is no problem: it runs without it.
 
     Returns
     -------
@@ -300,6 +301,10 @@ def validate_file(
         attention += code_notes(application)
     else:
         attention += code_agent_notes(path)
+    if frames is not None and not isinstance(frames, FramesUnread):
+        from agent_runtimes.apps.frames import frames_left_out
+
+        attention += frames_left_out(application.context, frames)
     return Report(
         str(path),
         NEEDS_ATTENTION if attention else PASSES,
@@ -1322,8 +1327,12 @@ def configure_on(
     a2a_url: Optional[str] = None,
     visitors: bool = False,
     visitors_key: Optional[str] = None,
+    app_uid: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Configure a runtime with an application; its refusal said in sentences.
+
+    ``app_uid`` is the application as Datalayer knows it, for one the person
+    keeps there: its sessions are recorded, and resumed, under it.
 
     With ``organization``, the runtime reads the plugins it turned off and the
     contexts its agent keeps to (C-12, U-31) with the caller's token.
@@ -1343,6 +1352,8 @@ def configure_on(
             "--visitors-key is for an application open to visitors: add --visitors."
         )
     body: Dict[str, Any] = {"app": document}
+    if app_uid:
+        body["app_uid"] = app_uid
     if a2a_url is not None:
         body["a2a"] = True
         body["public_url"] = a2a_url
@@ -1659,7 +1670,11 @@ def apps_run(
             *plugins_off_setup_notes(application.interface, plugins_off.plugins),
         ]:
             console.print(f"[yellow]•[/yellow] {note}")
-        agent_url = f"{base_url}/api/v1/ag-ui/{CLOUD_AGENT_NAME}/"
+        from agent_runtimes.loop.session import session_agui_url
+
+        # The terminal's conversation with an application is a session of
+        # it — listed, paused with /pause, resumed — as its page's is.
+        agent_url = session_agui_url(base_url, CLOUD_AGENT_NAME)
         starters = [starter.message for starter in application.interface.starters]
         where_said = (
             f"on Datalayer ({cloud_launch.runtime_name})"
@@ -1707,10 +1722,16 @@ def apps_run(
             )
     finally:
         if cloud_launch is not None:
+            # It runs an application: its stop says so.
+            cloud_launch.app = True
             finish_cloud(cloud_launch, keep=keep, can_ask=None if not ask else False)
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+            if ask:
+                from agent_runtimes.loop.launch import stopped_said
+
+                console.print(stopped_said(cloud=False, app=True), style="dim")
 
 
 def _serve_web(
@@ -2036,6 +2057,375 @@ def organization_plugins_off(organization: Optional[str]) -> PluginsOff:
     return read_plugins_off(organization, iam_url=client.urls.iam_url, token=token)
 
 
+class ResumeRefused(RuntimeError):
+    """Why an application's session is not resumed from the terminal, in a sentence."""
+
+
+def resumed_application(app_uid: str, catalogue: Any = None, store: Any = None) -> Any:
+    """The application a paused session is a session of, to start it again:
+    the catalogue's by its id, else the one the person keeps in the Studio,
+    as ``(document, studio_uid)`` — ``studio_uid`` the uid its sessions are
+    recorded under on Datalayer, ``""`` for a catalogue's.
+
+    Raises
+    ------
+    ResumeRefused
+        When it is neither, or it is written in Python: its code reacts in
+        its own process, and the session of one is its page's.
+    """
+    import yaml
+
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import pull
+
+    if catalogue is None:
+        from agentspecs.apps import load_raw_apps
+
+        catalogue = load_raw_apps()
+    if app_uid in catalogue:
+        document = dict(catalogue[app_uid])
+        if (document.get("code") or {}).get("file"):
+            raise ResumeRefused(
+                f"{document.get('name') or app_uid} is written in Python: its code reacts "
+                "in its own process, and its session is gone on with on its page."
+            )
+        return document, ""
+    try:
+        text, _, code = pull(store if store is not None else _store(), app_uid)
+    except DeployRefused as refused:
+        raise ResumeRefused(str(refused)) from None
+    except Exception as refused:  # noqa: BLE001 - the Studio's refusal, said
+        raise ResumeRefused(
+            f"The application {app_uid} could not be read from the Studio: {str(refused)[:200]}"
+        ) from None
+    document = yaml.safe_load(text)
+    if not isinstance(document, dict):
+        raise ResumeRefused(f"The application {app_uid} holds no Appspec.")
+    if code:
+        raise ResumeRefused(
+            f"{document.get('name') or app_uid} is written in Python: its code reacts "
+            "in its own process, and its session is gone on with on its page."
+        )
+    return document, app_uid
+
+
+#: What is asked before anything is launched for a session of a paused deployment.
+RESUME_DEPLOYMENT_QUESTION = (
+    "Its deployment is paused. Resume the deployment and go on?"
+)
+
+
+def _ask_to_resume_deployment() -> Optional[bool]:
+    """The person's answer to `RESUME_DEPLOYMENT_QUESTION`, or ``None`` where nobody can be asked."""
+    from agent_runtimes.loop.launch import interactive
+
+    if not interactive():
+        return None
+    import questionary
+
+    return bool(questionary.confirm(RESUME_DEPLOYMENT_QUESTION, default=True).ask())
+
+
+def deployment_preflight(deployment: Any, store: Any, confirm: Any = None) -> Any:
+    """What must hold of a deployment before a runtime is launched for it,
+    checked on what the person's own list already says of it — so that no
+    environment is asked for and no runtime launched for a session that
+    cannot go on. The deployment, live.
+
+    A **paused** deployment gives its principal's token to nobody: its owner
+    is asked first whether to resume it (``confirm``, a question in a
+    terminal); *yes* resumes it through its route (``PATCH`` with ``state:
+    live``) and goes on, *no* stops there.
+
+    Raises
+    ------
+    ResumeRefused
+        Not resumed — the person said no, nobody could be asked, or
+        ai-agents refused to resume it (its sentence: a spend limit reached,
+        a rule that paused it) — with nothing launched.
+    """
+    from agent_runtimes.apps.deployments import DeployRefused
+
+    if str(deployment.state or "live") == "live":
+        return deployment
+    if deployment.state != "paused":
+        raise ResumeRefused(
+            f"Its deployment is {deployment.state}, not live: nothing was launched."
+        )
+    answer = (confirm or _ask_to_resume_deployment)()
+    if answer is None:
+        raise ResumeRefused(
+            "Its deployment is paused, and a paused deployment's session is not gone on with: "
+            "nothing was launched. Resume the deployment — on its page, or by answering yes to "
+            "`loop --resume <uid>` in a terminal — then go on."
+        )
+    if not answer:
+        raise ResumeRefused(
+            "Not resumed: its deployment stays paused, and nothing was launched."
+        )
+    try:
+        store.change(deployment.uid, state="live")
+    except DeployRefused as refused:
+        raise ResumeRefused(
+            f"Its deployment was not resumed: {_sentence(str(refused))} Nothing was launched."
+        ) from None
+    console.print("The deployment is live again.", style="dim")
+    return deployment
+
+
+def _sentence(text: str) -> str:
+    """A refusal as one sentence: the ``detail`` of a JSON answer when it is
+    one, on one line, ending with one full stop.
+    """
+    said = str(text or "").strip()
+    try:
+        body = json.loads(said)
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and body.get("detail"):
+        detail = body["detail"]
+        said = (
+            "; ".join(str(part) for part in detail.get("problems") or [detail])
+            if isinstance(detail, dict)
+            else str(detail)
+        )
+    said = " ".join(said.split()).rstrip(".")
+    return f"{said}." if said else ""
+
+
+def deployed_application(
+    deployment_uid: str, store: Any = None, confirm: Any = None
+) -> Any:
+    """A deployment of the person's, to go on with a session of it from the
+    terminal: ``(document, instance)`` — the Appspec of the version it runs
+    and the instance its agent is made for (``app_uid``, ``deployment_uid``,
+    ``version``), as its page gives a runtime. Checked first, before
+    anything is launched (`deployment_preflight`): a paused deployment is
+    resumed when its owner says yes (``confirm``).
+
+    Raises
+    ------
+    ResumeRefused
+        When the deployment is not the person's (a terminal starts a runtime
+        for its owner's only), it is paused and stays so, or it runs another
+        version than the one the Studio keeps (the terminal reads the latest).
+    """
+    import yaml
+
+    from agent_runtimes.apps.deployments import DeployRefused
+    from agent_runtimes.apps.store import pull
+
+    store = store if store is not None else _store()
+    try:
+        deployment = next(
+            (each for each in store.list() if each.uid == deployment_uid), None
+        )
+        if deployment is None:
+            raise ResumeRefused(
+                "This deployment is not one of yours: a terminal starts a runtime for a "
+                "deployment of its owner's only. Go on with the session at its address."
+            )
+        deployment_preflight(deployment, store, confirm)
+        text, version, _ = pull(store, deployment.app_uid)
+    except DeployRefused as refused:
+        raise ResumeRefused(str(refused)) from None
+    if version != deployment.version:
+        raise ResumeRefused(
+            f"The deployment runs version {deployment.version} and the Studio keeps version "
+            f"{version}: a terminal reads the latest only. Go on with the session at its address."
+        )
+    document = yaml.safe_load(text)
+    if not isinstance(document, dict):
+        raise ResumeRefused(f"The application {deployment.app_uid} holds no Appspec.")
+    return document, {
+        "app_uid": deployment.app_uid,
+        "deployment_uid": deployment.uid,
+        "version": deployment.version,
+    }
+
+
+def start_deployment_agent(
+    base_url: str, document: Dict[str, Any], instance: Dict[str, Any]
+) -> str:
+    """Make a deployment's agent on a runtime, as its page does (``POST
+    /api/v1/agents`` with its Appspec and the instance it runs): the runtime
+    then lets the caller in as the deployment decides and acts as its
+    principal. The agent's name on the runtime.
+
+    Raises
+    ------
+    ResumeRefused
+        The runtime's refusal, in its sentence.
+    """
+    import httpx
+
+    from agent_runtimes.apps.application import Application
+    from agent_runtimes.apps.mounting import create_payload
+
+    payload = create_payload(Application.from_spec(document))
+    payload["app_instance"] = dict(instance)
+    made = httpx.post(f"{base_url}/api/v1/agents", json=payload, timeout=180.0)
+    if made.status_code not in (200, 201, 409):
+        raise ResumeRefused(
+            f"The deployment's agent was not made: {_sentence(made.text[:600])}"
+        )
+    return str(payload["name"])
+
+
+def stop_or_finish(
+    launch: Any, *, started: bool, keep: bool = False, say: Any = None
+) -> None:
+    """Let go of the runtime a resume launched. One the application ran on
+    is finished as any session's (the person is asked, `finish_cloud`). One
+    this command launched and the application never came up on is stopped
+    without asking — billed or not, it can do nothing for anybody — unless
+    the person asked to keep it (``--keep``) or it was running before
+    (attached): then it is finished as usual.
+    """
+    from agent_runtimes.loop.launch import finish_cloud
+
+    say = say or (lambda line: console.print(line, style="dim", markup=False))
+    if started or keep or getattr(launch, "attached", False):
+        finish_cloud(launch, keep=keep)
+        return
+    if launch.stop():
+        say(
+            f"Stopped {launch.said} {launch.runtime_name}: the application never ran on it."
+        )
+    else:
+        say(
+            f"Could not stop {launch.said} {launch.runtime_name}: stop it with "
+            f"`loop agents terminate {launch.runtime_name}`."
+        )
+
+
+def resume_application_session(
+    app_uid: str,
+    session_uid: str,
+    *,
+    cloud: bool = False,
+    deployment_uid: str = "",
+    environment: Optional[str] = None,
+    minutes: Optional[int] = None,
+    keep: bool = False,
+) -> None:
+    """Go on with a paused session of an application from the terminal: the
+    application started as `loop apps run` starts it — on this machine, or on
+    Datalayer for a session that ran there — and the session resumed from its
+    record before the first prompt.
+
+    Raises
+    ------
+    ResumeRefused
+        When its application cannot be started here, in a sentence.
+    """
+    import asyncio
+    import logging
+
+    from agent_runtimes.apps.application import Application
+    from agent_runtimes.loop.launch import (
+        CLOUD_AGENT_NAME,
+        CloudRefused,
+        NotSignedIn,
+        launch_cloud,
+        speak_ag_ui,
+    )
+    from agent_runtimes.loop.session import session_agui_url
+
+    instance: Dict[str, Any] = {}
+    if deployment_uid:
+        # A deployment's session lives on Datalayer: resumed there, on a
+        # runtime launched for the deployment, acting as its principal.
+        document, instance = deployed_application(deployment_uid)
+        studio_uid, cloud = "", True
+    else:
+        document, studio_uid = resumed_application(app_uid)
+    application = Application.from_spec(document).spec
+    if application.team:
+        raise ResumeRefused(
+            f"{application.name} is run by a team, which does not run in the terminal yet."
+        )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    cloud_launch = None
+    process = None
+    if cloud:
+        try:
+            cloud_launch = launch_cloud(
+                BOOTSTRAP_AGENT_SPEC_ID,
+                label=f"{application.emoji} {application.name}",
+                environment=environment,
+                minutes=minutes,
+                status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+                app_spec=dict(document),
+            )
+        except NotSignedIn:
+            raise ResumeRefused(
+                "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
+            ) from None
+        except CloudRefused as refused:
+            raise ResumeRefused(str(refused)) from None
+        base_url = cloud_launch.server_url
+    else:
+        from agent_runtimes.chat.cli import (
+            _start_agent_runtime_server,
+            _wait_for_server,
+        )
+
+        process, port = _start_agent_runtime_server(BOOTSTRAP_AGENT_SPEC_ID)
+        if not _wait_for_server("127.0.0.1", port, timeout=60.0):
+            process.terminate()
+            raise ResumeRefused("The local server did not start.")
+        base_url = f"http://127.0.0.1:{port}"
+    agent_name = CLOUD_AGENT_NAME
+    # Whether the application came up on what was started for it: a runtime
+    # launched by this command that never ran it is stopped without asking.
+    started = False
+    try:
+        if instance:
+            agent_name = start_deployment_agent(base_url, document, instance)
+        else:
+            try:
+                configure_on(base_url, document, app_uid=studio_uid or None)
+            except typer.BadParameter as refused:
+                raise ResumeRefused(refused.message) from None
+            if not speak_ag_ui(base_url):
+                raise ResumeRefused("The application's agent did not come up.")
+        from agent_runtimes.chat.tux import run_tux
+
+        started = True
+        where_said = (
+            f"on Datalayer ({cloud_launch.runtime_name})"
+            if cloud_launch
+            else "on this machine"
+        )
+        asyncio.run(
+            run_tux(
+                # Each thread of the prompt is a session of the application.
+                session_agui_url(base_url, agent_name),
+                base_url,
+                agent_id=agent_name,
+                extra_suggestions=[
+                    starter.message for starter in application.interface.starters
+                ],
+                startup_message=f"{application.emoji}  {application.name} is running {where_said}",
+                where=cloud_launch.label if cloud_launch else None,
+                cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
+                resume=session_uid,
+            )
+        )
+    finally:
+        if cloud_launch is not None:
+            # It runs an application: its stop says so.
+            cloud_launch.app = True
+            stop_or_finish(cloud_launch, started=started, keep=keep)
+        elif process is not None:
+            process.terminate()
+            process.join(timeout=5.0)
+            from agent_runtimes.loop.launch import stopped_said
+
+            console.print(stopped_said(cloud=False, app=True), style="dim")
+
+
 def _store() -> Any:
     """The caller's applications on the Spacer, or a said exit."""
     import logging
@@ -2049,7 +2439,12 @@ def _store() -> Any:
     except NotSignedIn as refused:
         console.print(f"[red]✗[/red] {refused} Sign in with `datalayer login`.")
         raise typer.Exit(1)
-    return AppStore(client.urls.spacer_url, token)
+    # Its deployments are ai-agents', which does not live where the Spacer does.
+    return AppStore(
+        client.urls.spacer_url,
+        token,
+        ai_agents_url=getattr(client.urls, "ai_agents_url", "") or "",
+    )
 
 
 @app.command(name="pull")

@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 from typing import Any, Callable, cast
 
+from agent_runtimes.mcp.env_expansion import expand_env_vars
+
 logger = logging.getLogger(__name__)
 
 
@@ -317,7 +319,8 @@ def create_codemode_toolset(
         enable_discovery_tools: Whether to enable discovery tools (default: True)
         sandbox_variant: Sandbox variant — 'eval', 'jupyter-server', or a
             provider: 'docker', 'datalayer', 'google-colab', 'kaggle',
-            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'.
+            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b',
+            'agentcore'.
             If None, reads from the CodeSandboxManager's current config.
 
     Returns:
@@ -363,19 +366,10 @@ def create_codemode_toolset(
 
             # Add any custom env from mcp_server.env (with expansion)
             if mcp_server.env:
-                import re
-
                 for env_key, env_value in mcp_server.env.items():
                     # Expand ${VAR} syntax
                     if isinstance(env_value, str) and "${" in env_value:
-                        pattern = r"\$\{([^}]+)\}"
-
-                        def replace(match: re.Match[str]) -> str:
-                            var_name = match.group(1)
-                            return os.environ.get(var_name, "")
-
-                        expanded_value = re.sub(pattern, replace, env_value)
-                        server_env[env_key] = expanded_value
+                        server_env[env_key] = expand_env_vars(env_value)
                     else:
                         server_env[env_key] = env_value
 
@@ -384,7 +378,11 @@ def create_codemode_toolset(
                     name=normalized_name,
                     url=mcp_server.url if mcp_server.transport == "http" else "",
                     command=mcp_server.command or "",
-                    args=mcp_server.args or [],
+                    # ${VAR} and ${VAR:-default}, as the lifecycle manager expands them.
+                    args=[
+                        expand_env_vars(a) if isinstance(a, str) else a
+                        for a in (mcp_server.args or [])
+                    ],
                     env=server_env,
                     enabled=mcp_server.enabled,
                 )

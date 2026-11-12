@@ -272,7 +272,8 @@ def test_the_end_of_a_session_stops_the_runtime_unless_it_is_kept() -> None:
     said: List[str] = []
     client = FakeClient()
     finish_cloud(_launched(client), can_ask=False, say=said.append)
-    assert client.stopped == ["runtime-1"] and said[-1] == "Stopped runtime-1."
+    assert client.stopped == ["runtime-1"]
+    assert said[-1] == "Stopped cloud agent runtime runtime-1."
 
     client = FakeClient()
     finish_cloud(_launched(client), keep=True, say=said.append)
@@ -292,7 +293,7 @@ def test_the_end_of_a_session_stops_the_runtime_unless_it_is_kept() -> None:
     finish_cloud(
         _launched(client), can_ask=True, ask=lambda q, d: True, say=said.append
     )
-    assert said[-1].startswith("Could not stop runtime-1")
+    assert said[-1].startswith("Could not stop cloud agent runtime runtime-1")
 
 
 def test_an_application_is_configured_on_the_runtime_or_refused_in_sentences(
@@ -458,3 +459,54 @@ def test_a_runtime_datalayer_never_sets_up_is_stopped_in_a_sentence(
     with pytest.raises(RuntimeError, match="did not set up runtime-1 in time.*stopped"):
         launch.launch_cloud("crawler", can_ask=False)
     assert client.stopped == ["runtime-1"]
+
+
+def test_a_stop_says_where_and_what_it_stops() -> None:
+    from agent_runtimes.loop.launch import runtime_said, stopped_said, stopping_said
+
+    # The four: cloud or local, an agent or an application.
+    assert [
+        runtime_said(cloud=cloud, app=app)
+        for cloud in (True, False)
+        for app in (False, True)
+    ] == [
+        "cloud agent runtime",
+        "cloud app runtime",
+        "local agent runtime",
+        "local app runtime",
+    ]
+    assert stopping_said(cloud=False, app=True) == "Stopping local app runtime…"
+    assert stopped_said(cloud=False, app=False) == "Stopped local agent runtime."
+    assert stopped_said(cloud=True, app=True, name="r-1") == (
+        "Stopped cloud app runtime r-1."
+    )
+
+    # Asked before a cloud runtime is stopped: an agent's, billed.
+    asked: List[str] = []
+
+    def ask(question: str, default: bool) -> bool:
+        asked.append(question)
+        return True
+
+    said: List[str] = []
+    finish_cloud(_launched(FakeClient()), can_ask=True, ask=ask, say=said.append)
+    assert asked == [
+        "Stop the cloud agent runtime runtime-1? It is billed until you do."
+    ]
+    assert said == ["Stopped cloud agent runtime runtime-1."]
+    # An application's, not billed: both are said.
+    launch = _launched(FakeClient())
+    launch.app, launch.unmetered = True, True
+    asked.clear()
+    said.clear()
+    finish_cloud(launch, can_ask=True, ask=ask, say=said.append)
+    assert asked == [
+        "Stop the cloud app runtime runtime-1? It is not billed: it runs until its reservation ends."
+    ]
+    assert said == ["Stopped cloud app runtime runtime-1."]
+    # Kept, and given back after a pause: the same words.
+    kept: List[str] = []
+    finish_cloud(launch, keep=True, say=kept.append)
+    assert kept[0].startswith(
+        "The cloud app runtime runtime-1 keeps running until its reservation ends."
+    )

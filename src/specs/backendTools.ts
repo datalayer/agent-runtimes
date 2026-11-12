@@ -18,6 +18,67 @@ import type { BackendToolSpec } from '../types';
 // Backend Tool Definitions
 // ============================================================================
 
+export const AWS_COMPUTE_OPTIMIZER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'aws-compute-optimizer',
+  version: '0.0.1',
+  name: 'AWS Compute Optimizer',
+  description:
+    "Read AWS Compute Optimizer's findings for EC2 instances, Auto Scaling groups, EBS volumes, Lambda functions, ECS services on Fargate, RDS databases or idle resources in a region — over- and under-provisioned, with the utilization they were judged on and the savings of each option — with the read role; answered as evidence.",
+  tags: ['aws', 'cost', 'steward'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.aws_account',
+    method: 'aws_compute_optimizer',
+  },
+  icon: '@primer/octicons-react:cpu',
+  emoji: '📏',
+};
+
+export const AWS_COST_EXPLORER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'aws-cost-explorer',
+  version: '0.0.1',
+  name: 'AWS Cost Explorer',
+  description:
+    "Read the account's spend from AWS Cost Explorer — by service, account, region, usage type or tag — its Savings Plans and Reserved Instance coverage and utilization, AWS's Savings Plans purchase recommendation and Cost Anomaly Detection's anomalies, with the read role; answered as evidence.",
+  tags: ['aws', 'cost', 'steward'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.aws_account',
+    method: 'aws_cost_explorer',
+  },
+  icon: '@primer/octicons-react:credit-card',
+  emoji: '📊',
+};
+
+export const AWS_COST_OPTIMIZATION_HUB_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'aws-cost-optimization-hub',
+    version: '0.0.1',
+    name: 'AWS Cost Optimization Hub',
+    description:
+      "Read AWS Cost Optimization Hub's cost recommendations for the account — rightsize, stop, delete, Savings Plans and Reserved Instances, Graviton — each with AWS's estimated monthly saving, highest first, with the read role; answered as evidence (source, call, read time, items).",
+    tags: ['aws', 'cost', 'steward'],
+    enabled: true,
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.aws_account',
+      method: 'aws_cost_optimization_hub',
+    },
+    icon: '@primer/octicons-react:graph',
+    emoji: '💰',
+  };
+
 export const CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'create-plan',
   version: '0.0.1',
@@ -62,7 +123,7 @@ export const DECIDE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   version: '0.0.1',
   name: 'Decide',
   description:
-    'Ask Jev typed questions about a text — noul (does a statement hold, with its probability), choice (one of named options) or score (a step on a rubric) — and get the typed answers back, through datalayer-ai-inference.',
+    "Ask the agent's decision model typed questions about a text — noul (does a statement hold, with its probability), choice (one of named options) or score (a step on a rubric) — and get the typed answers back, through datalayer-ai-inference. An agent has it when its spec names decisions.",
   tags: ['runtime', 'decisions', 'jev'],
   enabled: true,
   approval: 'auto',
@@ -319,6 +380,86 @@ export const GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '🌤️',
 };
 
+export const GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'github-repositories',
+  version: '0.0.1',
+  name: 'GitHub Repositories',
+  description:
+    "List the GitHub repositories of the person the agent works for, with the person's own GitHub grant; the first time, the person is asked to connect GitHub in the chat.",
+  tags: ['github', 'identity'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.github',
+    method: 'github_repositories',
+  },
+  icon: '@primer/octicons-react:mark-github',
+  emoji: '🐙',
+};
+
+export const LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'list-recommendations',
+  version: '0.0.1',
+  name: 'List Recommendations',
+  description:
+    'List the recommendations recorded in this session, highest estimated saving first, by kind (cost or fix) and state, with the sum of their estimated monthly savings.',
+  tags: ['recommendations', 'steward'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.recommendations',
+    method: 'list_recommendations',
+  },
+  icon: '@primer/octicons-react:list-ordered',
+  emoji: '📋',
+};
+
+export const RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'recommendations-report',
+  version: '0.0.1',
+  name: 'Recommendations Report',
+  description:
+    "Report the deployment's recommendations of the last days — how many were approved, dismissed and are still open, the estimated monthly savings of each and the largest open ones — read from its record, write it as a document in the Space the application may write, and send it through the application's notification channels with the document's link.",
+  tags: ['recommendations', 'steward'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.recommendations',
+    method: 'recommendations_report',
+  },
+  icon: '@primer/octicons-react:graph',
+  emoji: '📈',
+};
+
+export const RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'record-recommendation',
+  version: '0.0.1',
+  name: 'Record Recommendation',
+  description:
+    "Record one recommendation — a cost saving or a technical fix — with the evidence it rests on (each read's source, call, time and values), its estimate and how it was computed, its confidence and its fix as a reviewable change with its rollback; refused when any of them is missing.",
+  tags: ['recommendations', 'steward'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.recommendations',
+    method: 'record_recommendation',
+  },
+  icon: '@primer/octicons-react:light-bulb',
+  emoji: '💡',
+};
+
 export const RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'runtime-echo',
   version: '0.0.1',
@@ -402,6 +543,10 @@ export const UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
 // ============================================================================
 
 export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
+  'aws-compute-optimizer': AWS_COMPUTE_OPTIMIZER_BACKEND_TOOL_SPEC_0_0_1,
+  'aws-cost-explorer': AWS_COST_EXPLORER_BACKEND_TOOL_SPEC_0_0_1,
+  'aws-cost-optimization-hub':
+    AWS_COST_OPTIMIZATION_HUB_BACKEND_TOOL_SPEC_0_0_1,
   'create-plan': CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
   'current-time': CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
   decide: DECIDE_BACKEND_TOOL_SPEC_0_0_1,
@@ -419,6 +564,10 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'generate-haiku': GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
   'generate-task-steps': GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
   'get-weather': GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+  'github-repositories': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
+  'list-recommendations': LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1,
+  'recommendations-report': RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1,
+  'record-recommendation': RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,

@@ -15,7 +15,7 @@ from agent_runtimes.console.consoleapp import RuntimesConsoleApp
 # Create a Typer app for console commands
 app = typer.Typer(
     name="console",
-    help="Agent console commands",
+    help="Open the agent console.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

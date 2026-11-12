@@ -124,19 +124,24 @@ def register_vercel_agent(
     logger.info(f"Registered Vercel AI agent: {agent_id}")
 
 
-def unregister_vercel_agent(agent_id: str) -> None:
+def unregister_vercel_agent(agent_id: str, *, keep_state: bool = False) -> None:
     """
     Unregister a Vercel AI adapter.
 
     Args:
         agent_id: The agent identifier.
+        keep_state: Keep the agent's skills, MCP tool selection and approvals:
+            a transport switch keeps the agent, so it keeps what it was given
+            (its spec's skills read "available" after one, and every skill
+            call was refused as "disabled by user selection").
     """
     if agent_id in _vercel_adapters:
         del _vercel_adapters[agent_id]
     try:
         from ..streams.loop import purge_agent_stream_state
 
-        purge_agent_stream_state(agent_id)
+        if not keep_state:
+            purge_agent_stream_state(agent_id)
     except Exception as e:
         logger.debug("Could not purge stream state for %s: %s", agent_id, e)
     logger.info(f"Unregistered Vercel AI agent: {agent_id}")

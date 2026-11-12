@@ -40,8 +40,10 @@ import json
 import logging
 import os
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping
+from typing import Any, Iterator, Literal, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +108,7 @@ DECISIONS_NOTE = (
 
 def _catalogue_ids(names: list[Any], decisions: bool) -> list[str]:
     """The catalogue ids of ``names``: its chat models, or its decision models."""
-    from agent_runtimes.specs.models import get_model, is_chat_model
+    from agent_runtimes.specs.models import get_model, is_chat_model, is_decision_model
 
     ids: list[str] = []
     for name in names:
@@ -119,7 +121,9 @@ def _catalogue_ids(names: list[Any], decisions: bool) -> list[str]:
             )
             continue
         spec = get_model(model_id)
-        if spec is None or is_chat_model(spec) == decisions:
+        if spec is None:
+            continue
+        if not (is_decision_model(spec) if decisions else is_chat_model(spec)):
             continue
         if model_id not in ids:
             ids.append(model_id)
@@ -221,6 +225,64 @@ def give_inference_token(token: str | None) -> float | None:
     return _given["expires_at"]
 
 
+#: The token of the calls under way, when the request that started them
+#: brought its own (an AgentCore invocation's exchanged token, AC-06): it wins
+#: over the one the runtime was given, for those calls only.
+_CALL_TOKEN: ContextVar[Optional[str]] = ContextVar(
+    "agent_runtimes_call_inference_token", default=None
+)
+
+
+@contextmanager
+def use_inference_token(token: str) -> Iterator[None]:
+    """
+    Hold ``token`` as the ai-inference token of the calls made in the block.
+
+    Parameters
+    ----------
+    token : str
+        The caller's own token for ai-inference.
+
+    Yields
+    ------
+    None
+        Control, with the token held for the block's calls.
+    """
+    reset = _CALL_TOKEN.set((token or "").strip() or None)
+    try:
+        yield
+    finally:
+        _CALL_TOKEN.reset(reset)
+
+
+#: The caller's token for the tasks of one A2A context, by context id: what an
+#: A2A worker's task holds (`context_inference_token`), since the worker runs
+#: its tasks apart from the request that sent them, which held its own token.
+#: An AgentCore seat gives it for each call's context (its session). Bounded.
+_CONTEXT_TOKENS: "dict[str, str]" = {}
+_CONTEXT_TOKENS_MAX = 256
+
+
+def give_context_inference_token(context_id: str, token: str) -> None:
+    """Hold ``token`` as the ai-inference token of the tasks of ``context_id``."""
+    if not context_id or not (token or "").strip():
+        return
+    _CONTEXT_TOKENS.pop(context_id, None)
+    while len(_CONTEXT_TOKENS) >= _CONTEXT_TOKENS_MAX:
+        _CONTEXT_TOKENS.pop(next(iter(_CONTEXT_TOKENS)))
+    _CONTEXT_TOKENS[context_id] = token.strip()
+
+
+def context_inference_token(context_id: str | None) -> str | None:
+    """The ai-inference token given for the tasks of an A2A context, or ``None``."""
+    return _CONTEXT_TOKENS.get(context_id or "")
+
+
+def forget_context_inference_tokens() -> None:
+    """Forget every context's token (a test)."""
+    _CONTEXT_TOKENS.clear()
+
+
 def inference_token() -> str | None:
     """
     The token this runtime calls ai-inference with, or ``None``.
@@ -228,9 +290,13 @@ def inference_token() -> str | None:
     Returns
     -------
     str | None
-        The one the platform gave it, else ``DATALAYER_AI_INFERENCE_API_KEY``,
+        The one held for the calls under way (`use_inference_token`), else
+        the one the platform gave it, else ``DATALAYER_AI_INFERENCE_API_KEY``,
         else ``DATALAYER_API_KEY``.
     """
+    call = _CALL_TOKEN.get()
+    if call:
+        return call
     given = _given["token"]
     if given:
         return str(given)
@@ -248,6 +314,12 @@ def inference_token_refusal() -> str | None:
     """
     if not inference_token():
         return NO_TOKEN_NOTE
+    call = _CALL_TOKEN.get()
+    if call:
+        call_expiry = _expiry_of(call)
+        if call_expiry is not None and call_expiry <= time.time():
+            return "The caller's ai-inference token expired: invoke again."
+        return None
     expires_at = _given["expires_at"]
     if _given["token"] and expires_at is not None and expires_at <= time.time():
         when = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(expires_at))
@@ -426,6 +498,7 @@ def availability(
 ) -> tuple[bool, str | None]:
     """Whether a model can be used here, and why not when it cannot."""
     from agent_runtimes.models.models import (
+        called_directly,
         credentials_ready,
         effective_inference_provider,
     )
@@ -435,12 +508,21 @@ def availability(
     if spec is None:
         return False, "Not in the models catalogue"
     provider = inference_provider or effective_inference_provider()
-    if provider == "datalayer" and not spec.local and inference_token_refusal():
+    # A direct provider's model (OpenRouter…) never goes through ai-inference:
+    # neither its token nor its list decides; the person's key does, below.
+    direct = called_directly(model_id)
+    if (
+        provider == "datalayer"
+        and not spec.local
+        and not direct
+        and inference_token_refusal()
+    ):
         return False, "No ai-inference token"
     state = _state
     if (
         provider == "datalayer"
         and not spec.local
+        and not direct
         and state is not None
         and state.served is not None
     ):
@@ -471,9 +553,11 @@ def listed(model_id: str, inference_provider: str | None = None) -> bool:
     bool
         When ai-inference decides, only the models it serves: never a local
         one, and none it said it does not serve; before it answered (a runtime
-        waiting for its token), every hosted model, each marked. Otherwise
-        every model.
+        waiting for its token), every hosted model, each marked. A direct
+        provider's model (OpenRouter…) is listed whatever it serves: the agent
+        calls it itself. Otherwise every model.
     """
+    from agent_runtimes.models.models import called_directly
     from agent_runtimes.specs.models import get_model
 
     source, _ = models_source(inference_provider)
@@ -482,6 +566,10 @@ def listed(model_id: str, inference_provider: str | None = None) -> bool:
     spec = get_model(model_id)
     if spec is None or spec.local:
         return False
+    if called_directly(model_id):
+        # Listed wherever the agent may call it, when the catalogue offers it;
+        # `availability` says whether the person's key is there.
+        return bool(getattr(spec, "available", True))
     _, reason = availability(model_id, inference_provider)
     return reason != "Not served by ai-inference"
 
@@ -503,10 +591,10 @@ def decision_refusal(model_id: str, *, switch: bool) -> str | None:
     str | None
         The sentence, for a typed-decision model (Jev); ``None`` for any other.
     """
-    from agent_runtimes.specs.models import get_model, is_chat_model
+    from agent_runtimes.specs.models import get_model, is_decision_model
 
     spec = get_model(model_id)
-    if spec is None or is_chat_model(spec):
+    if spec is None or not is_decision_model(spec):
         return None
     outcome = ", so nothing was switched" if switch else ""
     return (
@@ -532,14 +620,14 @@ def decision_model_ids(inference_provider: str | None = None) -> list[str]:
         none usable. Otherwise none: only ai-inference serves them.
     """
     from agent_runtimes.models.models import effective_inference_provider
-    from agent_runtimes.specs.models import is_chat_model, list_models
+    from agent_runtimes.specs.models import is_decision_model, list_models
 
     state = _state
     if state is not None and state.decisions is not None:
         return list(state.decisions)
     provider = inference_provider or effective_inference_provider()
     if provider == "datalayer" and inference_token_refusal():
-        return [model.id for model in list_models() if not is_chat_model(model)]
+        return [model.id for model in list_models() if is_decision_model(model)]
     return []
 
 
@@ -762,7 +850,8 @@ def model_rows(
             continue
         spec = get_model(model_id)
         if spec is not None and not is_chat_model(spec):
-            # A typed-decision model is listed apart (``decision_rows``).
+            # A typed-decision model is listed apart (``decision_rows``); an
+            # embedding model is no model an agent runs on.
             continue
         usable, reason = availability(model_id, inference_provider)
         rows.append(

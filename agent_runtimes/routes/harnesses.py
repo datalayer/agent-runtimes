@@ -33,6 +33,7 @@ def _described(contribution: Any) -> Dict[str, Any]:
 
 def served_harnesses() -> List[Dict[str, Any]]:
     """The harnesses served to everybody, in the point's order (what ``loop harnesses`` prints)."""
+    from agent_runtimes.adapters import harness_inference
     from agent_runtimes.plugins.host import accepted, session_platform
     from agent_runtimes.plugins.points import HARNESSES
 
@@ -40,6 +41,9 @@ def served_harnesses() -> List[Dict[str, Any]]:
     for contribution in accepted(session_platform(), HARNESSES):
         value = contribution.value
         if value.spec.acp is None or value.organization or not value.spec.enabled:
+            continue
+        # On Datalayer, only what goes through ai-inference is offered.
+        if harness_inference.refusal(value.spec):
             continue
         listed.append(_described(contribution))
     return listed
@@ -59,9 +63,14 @@ async def get_harness(harness_id: str) -> Dict[str, Any]:
             return harness
     from agentspecs.harnesses import listed_refusal, offered_refusal
 
+    from agent_runtimes.adapters import harness_inference
+    from agent_runtimes.specs.harnesses import get_harness as harness_of
+
+    spec = harness_of(harness_id)
     # Described and not offered: its own sentence, 404 as a listed one is.
     detail = (
         offered_refusal(harness_id)
+        or (harness_inference.refusal(spec) if spec else None)
         or listed_refusal(harness_id)
         or (
             f"There is no harness named {harness_id!r} on this runtime: "

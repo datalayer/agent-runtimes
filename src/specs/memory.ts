@@ -19,6 +19,7 @@ import type { MemorySpec } from '../types';
 // ============================================================================
 
 export const Memories = {
+  AGENTCORE: 'agentcore',
   EPHEMERAL: 'ephemeral',
   MEM0: 'mem0',
   MEMU: 'memu',
@@ -30,6 +31,20 @@ export type MemoryId = (typeof Memories)[keyof typeof Memories];
 // ============================================================================
 // Memory Definitions
 // ============================================================================
+
+export const AGENTCORE_MEMORY_0_0_1: MemorySpec = {
+  id: 'agentcore',
+  version: '0.0.1',
+  name: 'AgentCore Memory',
+  description:
+    "Amazon Bedrock AgentCore Memory, in your own AWS account. The agent's turns are kept as short-term events of the person (the actor) in the agent's own session; the memory's strategies (semantic facts, user preferences, session summaries) extract long-term records from them, which the agent searches by meaning. Names an existing memory resource (memory_config.memory_id and region, or AGENT_RUNTIMES_AGENTCORE_MEMORY_ID and AWS_REGION); never creates one.",
+  persistence: 'permanent',
+  scope: 'user',
+  backend: 'agentcore',
+  enabled: true,
+  icon: 'database',
+  emoji: '🧠',
+};
 
 export const EPHEMERAL_MEMORY_0_0_1: MemorySpec = {
   id: 'ephemeral',
@@ -92,6 +107,7 @@ export const SIMPLEMEM_MEMORY_0_0_1: MemorySpec = {
 // ============================================================================
 
 export const MEMORY_CATALOGUE: Record<string, MemorySpec> = {
+  agentcore: AGENTCORE_MEMORY_0_0_1,
   ephemeral: EPHEMERAL_MEMORY_0_0_1,
   mem0: MEM0_MEMORY_0_0_1,
   memu: MEMU_MEMORY_0_0_1,

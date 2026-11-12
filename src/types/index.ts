@@ -28,6 +28,7 @@ export * from './inference';
 export * from './strategies';
 export * from './mcp';
 export * from './memory';
+export * from './decisions';
 export * from './messages';
 export * from './middleware';
 export * from './models';

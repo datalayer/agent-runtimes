@@ -33,6 +33,7 @@ DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
     "example-agent-critic-loop-for-analysis",
     "example-ai-explains-notebook-output",
     "example-replace-excel-pivot-work",
+    "worker-marketer",
 )
 
 
@@ -56,9 +57,14 @@ def _cleanup_subprocess() -> None:
         _subprocess_ref = None
 
 
-def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> None:
-    """Clean up subprocess while showing a transient spinner when interactive."""
+def _cleanup_subprocess_with_spinner(app: bool = False) -> None:
+    """Stop the local runtime, saying where and what it is while it stops
+    and once it has: a local agent runtime, or a local app runtime.
+    """
+    from agent_runtimes.loop.launch import stopped_said, stopping_said
+
     global _subprocess_ref
+    message = stopping_said(cloud=False, app=app)
     if (
         _subprocess_ref is None
         or not _subprocess_ref.is_alive()
@@ -80,6 +86,7 @@ def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> N
             refresh_per_second=12,
         ):
             _cleanup_subprocess()
+        console.print(stopped_said(cloud=False, app=app), style="dim")
     except Exception:
         _cleanup_subprocess()
 
@@ -417,6 +424,14 @@ def _start_agent_runtime_server(
 
         os.environ["AG_CHAT_DEBUG"] = "1"
 
+    # A runtime on this machine keeps its sessions on this machine, in the
+    # files of ~/.datalayer/sessions, unless the environment names the store.
+    import os as _os
+
+    from agent_runtimes.apps.session_store import STORE_VARIABLE
+
+    _os.environ.setdefault(STORE_VARIABLE, "file")
+
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value("i", 0)
 
@@ -549,6 +564,12 @@ def _format_startup_info(
         if skills:
             add_row("Skills", ", ".join(skills))
 
+        from .commands.decisions import header_value as decisions_header_value
+
+        decisions = decisions_header_value(agent_info.get("decisions"))
+        if decisions:
+            add_row("Decisions", decisions)
+
         mcp_servers = agent_info.get("mcp_servers", [])
         if mcp_servers:
             add_row("MCP", ", ".join(mcp_servers))
@@ -586,21 +607,24 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
     return available_ids, available_lines, len(models)
 
 
+def _env_var_name(reference: str) -> str:
+    """An env var's name from its reference, versioned (``NAME:0.0.1``) or not."""
+    return str(reference).rsplit(":", 1)[0] if ":" in str(reference) else str(reference)
+
+
 def _spec_has_valid_env(spec: Any, available_model_ids: set[str] | None = None) -> bool:
-    """Return True when a spec is enabled and all required env vars are set.
+    """Return True when a spec is enabled and its model can be reached.
 
     Validation includes:
     - spec is enabled
-    - MCP server required env vars are present
     - model required env vars are present (when model exists in catalog)
+
+    An MCP server whose env vars are missing does not hold the agent back:
+    it is listed in red, and the agent runs without its tools (the server
+    fails to start, and says why).
     """
     if not spec.enabled:
         return False
-
-    for mcp in spec.mcp_servers:
-        for var in mcp.required_env_vars:
-            if not os.environ.get(var):
-                return False
 
     if available_model_ids is not None and getattr(spec, "model", None):
         try:
@@ -688,7 +712,7 @@ def _pick_agentspec_interactive() -> str:
                 f"{GRAY}Only agents whose model requirements are available are selectable.{RESET}"
             )
 
-        # Partition into valid (enabled + MCP/model env vars) and the rest, each sorted by id.
+        # Partition into valid (enabled, its model reachable) and the rest, each sorted by id.
         # Display invalid first, then valid, while keeping selection restricted to valid.
         valid_specs = sorted(
             [s for s in specs if _spec_has_valid_env(s, available_model_ids)],
@@ -704,9 +728,7 @@ def _pick_agentspec_interactive() -> str:
 
         if valid_count == 0:
             print(f"\n{RED}No valid agent specs available.{RESET}")
-            print(
-                f"{GRAY}Enable a spec and/or set the required MCP/model environment variables.{RESET}"
-            )
+            print(f"{GRAY}Enable a spec and/or set the env vars of its model.{RESET}")
             raise typer.Exit(1)
 
         # Default preference: example-simple when valid, otherwise first valid spec.
@@ -740,7 +762,7 @@ def _pick_agentspec_interactive() -> str:
                 env_vars.update(mcp.required_env_vars)
             if env_vars:
                 env_parts: list[str] = []
-                for var in sorted(env_vars):
+                for var in sorted({_env_var_name(v) for v in env_vars}):
                     if os.environ.get(var):
                         env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
                     else:
@@ -827,6 +849,137 @@ def _pick_agentspec_interactive() -> str:
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
+
+
+def _offer_paused() -> Any:
+    """The paused session the person goes on with as `loop` starts, or
+    ``None``: nobody at the terminal, none paused, or a new one chosen.
+
+    Those on this machine and, signed in, those on Datalayer; the
+    platform's list failing is said in a line and the start goes on.
+    """
+    from agent_runtimes.loop.launch import interactive, make_client
+    from agent_runtimes.loop.paused import choose_paused, paused_sessions
+
+    if not interactive():
+        return None
+    try:
+        _, token = make_client()
+    except Exception:  # noqa: BLE001 - not signed in: the local ones only
+        token = ""
+    rows = paused_sessions(token=token, say=lambda line: print(f"{GRAY}{line}{RESET}"))
+    return choose_paused(rows)
+
+
+def _session_named(
+    uid: Optional[str],
+    continue_last: bool,
+    agent_id: Optional[str],
+    *,
+    local: bool,
+    cloud: bool,
+) -> Any:
+    """The session `--resume <uid>` names, or the one `--continue` goes on
+    with: the most recent that is not ended. `--resume` alone opens the
+    picker. Every refusal is one sentence and the exit.
+    """
+    from agent_runtimes.commands.sessions import _token, every_session, run_picker
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.loop.picker import why_not
+
+    if uid is not None and not uid.strip():
+        run_picker()
+        raise typer.Exit(0)
+    token = _token()
+    rows = every_session(token)
+    if uid is not None:
+        named = [row for row in rows if row.uid == uid.strip()]
+        if not named:
+            print(
+                f"{GREEN_DARK}[ERROR]{RESET} There is no session {uid} on this machine"
+                + (
+                    " or on Datalayer"
+                    if token
+                    else "; not signed in, those on Datalayer are not read"
+                )
+                + ": `loop sessions` lists yours.",
+                file=sys.stderr,
+            )
+            raise typer.Exit(1)
+        # Transferred, it is ended where it was and lives where it went.
+        live = [row for row in named if row.state != "ended"]
+        chosen = (live or named)[0]
+    else:
+        place = ON_THIS_MACHINE if local else ON_DATALAYER if cloud else ""
+        candidates = [
+            row
+            for row in rows
+            if row.state != "ended"
+            and row.resumable
+            and (not place or row.where == place)
+            and (
+                not agent_id
+                or agent_id in (row.agent, row.app_uid, row.app_uid[len("agent:") :])
+            )
+        ]
+        if not candidates:
+            print(
+                f"{GREEN_DARK}[ERROR]{RESET} There is no session to continue"
+                + (f" of {agent_id}" if agent_id else "")
+                + ": `loop sessions` lists yours.",
+                file=sys.stderr,
+            )
+            raise typer.Exit(1)
+        chosen = candidates[0]
+    refused = why_not("resume", chosen, signed_in=bool(token))
+    if refused:
+        print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+        raise typer.Exit(1)
+    return chosen
+
+
+def _prompt_session(
+    uid: Optional[str],
+    continue_last: bool,
+    agent_id: Optional[str],
+    *,
+    local: bool,
+    cloud: bool,
+    runtime: Optional[str],
+) -> Any:
+    """How ``--prompt`` goes on with the session ``--resume <uid>`` names, or
+    the most recent one ``--continue`` finds: its plan, its agent started
+    where it lives. What ``--prompt`` cannot go on with is refused in one
+    sentence (exit 2): ``--resume`` with no uid (the picker asks), and an
+    application's session or a team run's seat (their application or run is
+    started by ``loop --resume <uid>`` without ``--prompt``).
+    """
+    from agent_runtimes.loop.paused import resume_plan
+
+    if uid is not None and not uid.strip():
+        _say(
+            "--resume with --prompt needs the session's uid: `loop sessions` lists yours."
+        )
+        raise typer.Exit(2)
+    plan = resume_plan(
+        _session_named(uid, continue_last, agent_id, local=local, cloud=cloud)
+    )
+    if plan.team_run or plan.application:
+        what = "a team run's seat" if plan.team_run else "an application's session"
+        _say(
+            f"Session {plan.uid} is {what}: --prompt goes on with an agent's session only; "
+            f"`loop --resume {plan.uid}` without --prompt starts what it is a session of."
+        )
+        raise typer.Exit(2)
+    if runtime and not plan.cloud:
+        _say(
+            f"Session {plan.uid} lives on this machine: drop --runtime, which attaches on Datalayer."
+        )
+        raise typer.Exit(2)
+    if plan.session_store:
+        # Kept in files on this machine: its server reads them there.
+        os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+    return plan
 
 
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
@@ -964,6 +1117,18 @@ async def _run_lines(tux: Any, lines: List[str]) -> int:
             tux._agui_client = None
 
 
+def _agent_setup(
+    without_mcp_servers: bool, without_skills: Optional[List[str]]
+) -> Optional[dict]:
+    """How a cloud runtime's agent is configured, from the options; ``None`` as its spec says."""
+    setup: dict = {}
+    if without_mcp_servers:
+        setup["without_mcp_servers"] = True
+    if without_skills:
+        setup["without_skills"] = list(without_skills)
+    return setup or None
+
+
 def run_prompts(
     prompts: List[str],
     *,
@@ -978,6 +1143,8 @@ def run_prompts(
     codemode: bool = True,
     debug: bool = False,
     eggs: bool = False,
+    agent_setup: Optional[dict] = None,
+    resume: Optional[str] = None,
 ) -> int:
     """``loop --prompt``: launch the agent, run each line in one session, stop it.
 
@@ -1016,6 +1183,13 @@ def run_prompts(
         Whether the local server logs.
     eggs : bool
         Whether the Easter egg commands are registered.
+    agent_setup : dict or None
+        How a cloud runtime's agent is configured (``--without-mcp-servers``,
+        ``--without-skill``).
+    resume : str or None
+        A session to go on with (``--resume <uid>``, ``--continue``): resumed
+        first, as ``/resume <uid>`` would be, so the lines continue its
+        conversation; a refused resume stops before any line runs.
 
     Returns
     -------
@@ -1063,6 +1237,7 @@ def run_prompts(
                     can_ask=False,
                     status=_say,
                     note=_say,
+                    agent_setup=agent_setup,
                 )
             except NotSignedIn:
                 _say(
@@ -1100,17 +1275,31 @@ def run_prompts(
             server_url = f"http://127.0.0.1:{actual_port}"
             agent_name = DEFAULT_RUNTIME_AGENT_NAME
 
+        from agent_runtimes.loop.session import LoopRefused, conversation_url
+
         from .tux import CliTux
 
+        # Each thread of the prompt is a session of its agent — recorded,
+        # listed, paused and resumed — on a runtime that keeps them; an
+        # older one is talked to as before, and said.
+        try:
+            agent_url, older = conversation_url(server_url, agent_name)
+        except LoopRefused as refused:
+            _say(str(refused))
+            return 1
+        if older:
+            _say(older)
         tux = CliTux(
-            agent_url=f"{server_url}/api/v1/ag-ui/{agent_name}/",
+            agent_url=agent_url,
             server_url=server_url,
             agent_id=agent_name,
             eggs=eggs,
             jupyter_url=cloud_launch.jupyter_url if cloud_launch else None,
             where=cloud_launch.label if cloud_launch else None,
+            cloud_runtime=cloud_launch.runtime_name if cloud_launch else None,
         )
-        return asyncio.run(_run_lines(tux, prompts))
+        lines = ([f"/resume {resume}"] if resume else []) + list(prompts)
+        return asyncio.run(_run_lines(tux, lines))
     except KeyboardInterrupt:
         _say("Interrupted.")
         return 130
@@ -1201,6 +1390,22 @@ def main_callback(
         "--keep",
         help="Leave the cloud runtime running when the session ends (with --cloud).",
     ),
+    without_mcp_servers: bool = typer.Option(
+        False,
+        "--without-mcp-servers",
+        help=(
+            "Configure the cloud runtime's agent with none of its MCP servers: "
+            "their secrets are not asked for (with --cloud and --prompt)."
+        ),
+    ),
+    without_skills: Optional[List[str]] = typer.Option(
+        None,
+        "--without-skill",
+        help=(
+            "Leave this skill of the agent out, by id, its secrets not asked for; "
+            "repeat it for each (with --cloud and --prompt)."
+        ),
+    ),
     runtime: Optional[str] = typer.Option(
         None,
         "--runtime",
@@ -1210,6 +1415,17 @@ def main_callback(
             "(implies --cloud; nothing is launched). With --agentspec-id, its agent "
             "is made that agentspec's."
         ),
+    ),
+    continue_last: bool = typer.Option(
+        False,
+        "--continue",
+        "-c",
+        help="Go on with your most recent session that is not ended, without asking: of the agent named with -a, on this machine with --local or on Datalayer with --cloud, when they are said.",
+    ),
+    resume: Optional[str] = typer.Option(
+        None,
+        "--resume",
+        help="Go on with the session of this uid, where it lives (on this machine, or on Datalayer). With no uid: pick one, as `loop sessions` does.",
     ),
     show_version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
@@ -1305,6 +1521,19 @@ def main_callback(
             raise typer.BadParameter(
                 "Give the lines with --prompt only, not as arguments as well."
             )
+        resumed: Optional[str] = None
+        if resume is not None or continue_last:
+            # The lines go on with the session named, where it lives.
+            plan = _prompt_session(
+                resume,
+                continue_last,
+                agentspec_id,
+                local=local,
+                cloud=cloud,
+                runtime=runtime,
+            )
+            resumed, agentspec_id = plan.uid, plan.agent
+            cloud, local = plan.cloud, not plan.cloud
         raise typer.Exit(
             run_prompts(
                 prompts,
@@ -1319,7 +1548,14 @@ def main_callback(
                 codemode=not codemode_disabled,
                 debug=debug,
                 eggs=eggs,
+                agent_setup=_agent_setup(without_mcp_servers, without_skills),
+                resume=resumed,
             )
+        )
+    if without_mcp_servers or without_skills:
+        raise typer.BadParameter(
+            "--without-mcp-servers and --without-skill configure a cloud runtime "
+            "with --prompt: give the lines with --prompt."
         )
 
     global _subprocess_ref
@@ -1362,6 +1598,76 @@ def main_callback(
     # Datalayer the environment is picked instead, and no agentspec list is
     # shown.
     from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
+
+    # The paused sessions that can be gone on with, offered first when
+    # nothing on the command line says what to run: one picked is resumed
+    # where it lives, without asking where; a new one goes on to the
+    # questions below.
+    resume_uid: Optional[str] = None
+    paused: Any = None
+    if query and (resume is not None or continue_last):
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} A message given as an argument starts a new conversation: "
+            'to go on with a session, give it with --prompt (`loop --resume <uid> --prompt "…"`).',
+            file=sys.stderr,
+        )
+        raise typer.Exit(2)
+    if resume is not None or continue_last:
+        # A session named by its uid, or the most recent one: gone on with
+        # where it lives, nobody asked.
+        paused = _session_named(
+            resume, continue_last, agent_id, local=local, cloud=cloud
+        )
+    elif agent_id is None and not query and not runtime:
+        try:
+            paused = _offer_paused()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            raise typer.Exit(0)
+    if paused is not None:
+        from agent_runtimes.loop.paused import resume_plan
+
+        plan = resume_plan(paused)
+        if plan.team_run:
+            # A seat of a team run: its run is let go on, and each
+            # seat's session with it; nothing is started here.
+            from agent_runtimes.loop.paused import (
+                TeamResumeUnavailable,
+                resume_team_run,
+            )
+
+            try:
+                raise typer.Exit(resume_team_run(plan.team_run))
+            except TeamResumeUnavailable as unavailable:
+                print(f"{GREEN_DARK}[ERROR]{RESET} {unavailable}", file=sys.stderr)
+                raise typer.Exit(1)
+        if plan.session_store:
+            # Kept in files on this machine: its server reads them there.
+            os.environ["AGENT_RUNTIMES_SESSION_STORE"] = plan.session_store
+        if plan.application:
+            # An application's session: its application is started, as
+            # `loop apps run` starts it, and the session resumed on it.
+            from agent_runtimes.commands.apps import (
+                ResumeRefused,
+                resume_application_session,
+            )
+
+            try:
+                resume_application_session(
+                    plan.application,
+                    plan.uid,
+                    cloud=plan.cloud,
+                    deployment_uid=plan.deployment,
+                    environment=environment,
+                    minutes=minutes,
+                    keep=keep,
+                )
+            except ResumeRefused as refused:
+                print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+                raise typer.Exit(1)
+            raise typer.Exit(0)
+        resume_uid, agent_id = plan.uid, plan.agent
+        cloud, local = plan.cloud, not plan.cloud
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
@@ -1592,7 +1898,7 @@ def main_callback(
                         f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
                     )
                 if str(_sandbox_variant or "").lower() == "jupyter-server":
-                    _summary_parts.append("Jupyter sandbox")
+                    _summary_parts.append("Jupyter Code Sandbox")
                 if _codemode_on and not codemode_disabled:
                     _summary_parts.append("Codemode")
                 _summary_line = (
@@ -1628,10 +1934,15 @@ def main_callback(
                         if jupyter_token:
                             jupyter_url = f"{jupyter_url}?token={jupyter_token}"
 
-                url = (
-                    f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{runtime_agent_name}/"
-                )
+                from agent_runtimes.loop.session import conversation_url
+
                 server_url = f"http://127.0.0.1:{actual_port}"
+                # Each thread of the prompt is a session of its agent —
+                # recorded, listed, paused and resumed — on a runtime that
+                # keeps them; an older one is talked to as before, and said.
+                url, older = conversation_url(server_url, runtime_agent_name)
+                if older:
+                    startup_message = f"{startup_message}\n{GRAY}{older}{RESET}"
 
                 try:
                     # Use Rich-based TUX
@@ -1647,8 +1958,12 @@ def main_callback(
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
                             where=cloud_launch.label if cloud_launch else None,
+                            cloud_runtime=cloud_launch.runtime_name
+                            if cloud_launch
+                            else None,
                             voice=voice,
                             speak=speak,
+                            resume=resume_uid,
                         )
                     )
                 finally:
@@ -1657,7 +1972,7 @@ def main_callback(
 
                         finish_cloud(cloud_launch, keep=keep)
                     else:
-                        _cleanup_subprocess_with_spinner("Terminating agent...")
+                        _cleanup_subprocess_with_spinner()
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name="agent-runtimes chat")

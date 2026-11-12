@@ -115,6 +115,25 @@ def effective_inference_provider() -> str:
         return configured if configured in {"local", "datalayer"} else "local"
 
 
+def called_directly(model_id: str) -> bool:
+    """Whether a model's provider is called by the agent itself (the provider's
+    ``via: direct`` in the catalogue — OpenRouter, Anthropic, OpenAI, Ollama),
+    wherever this runtime routes its inference: ai-inference holds no account
+    with it, so the call goes from the agent to the provider with the
+    person's own key, the model's ``required_env_vars`` (the user, 7 November
+    2026). A provider that says ``ai-inference`` (Bedrock, Azure OpenAI,
+    Alibaba, Cloudflare) is reached through the service on Datalayer.
+    """
+    from agent_runtimes.specs.model_providers import get_model_provider
+    from agent_runtimes.specs.models import get_model
+
+    spec = get_model(model_id)
+    if spec is None:
+        return False
+    provider = get_model_provider(str(spec.provider))
+    return provider is not None and provider.via == "direct"
+
+
 def credentials_ready(spec_model: Any, inference_provider: str | None = None) -> bool:
     """Whether this model can be called right now, credentials-wise.
 
@@ -126,8 +145,10 @@ def credentials_ready(spec_model: Any, inference_provider: str | None = None) ->
     if not check_env_vars_available(list(getattr(spec_model, "required_env_vars", ()))):
         return False
     provider = inference_provider or effective_inference_provider()
-    if provider == "datalayer":
-        # The inference service holds the keys; this process needs none.
+    if provider == "datalayer" and not called_directly(getattr(spec_model, "id", "")):
+        # The inference service holds the keys; this process needs none. A
+        # direct provider's model is the exception: the agent calls it with
+        # the person's key, checked above as the spec's required_env_vars.
         return True
     if is_local_model(getattr(spec_model, "id", "")):
         return True
@@ -413,6 +434,31 @@ def create_model_with_provider(
             provider=provider,
             settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
+    elif model_provider.lower() == "openrouter":
+        # OpenRouter speaks the OpenAI wire format at its own address, with the
+        # person's key: a direct call from the agent (the provider's `via:
+        # direct`), never through ai-inference. The key is read here so that a
+        # missing one is said in a sentence, not by the provider's 401.
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+        key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        if not key:
+            raise RuntimeError(
+                f"{model_name} is called on OpenRouter directly, with your own key, "
+                "and this runtime has no OPENROUTER_API_KEY: nothing was asked."
+            )
+        provider = OpenRouterProvider(
+            api_key=key,
+            http_client=_create_inference_http_client(
+                http_timeout, source="openrouter"
+            ),
+        )
+        return OpenAIChatModel(
+            model_name,
+            provider=provider,
+            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+        )
     elif model_provider.lower() in LOCAL_PROVIDERS:
         # Ollama, LM Studio, vLLM and llama.cpp all speak OpenAI-compatible
         # HTTP, so one branch serves every local runtime.
@@ -448,7 +494,22 @@ def resolve_model_for_inference_provider(
         if local_model is not None:
             return local_model
 
-    provider = (inference_provider or "local").strip().lower()
+    # This process's setting wins over the agentspec: the specs say `local`, and
+    # on Datalayer every call goes through ai-inference, so a member played in a
+    # job or the CLI must not call the provider directly. Unsaid, the same.
+    from agent_runtimes.routes.configure import (  # noqa: PLC0415
+        configured_inference_provider_override,
+    )
+
+    provider = (
+        (
+            configured_inference_provider_override()
+            or inference_provider
+            or effective_inference_provider()
+        )
+        .strip()
+        .lower()
+    )
     if provider in {"", "local"}:
         logger.info(
             "Routing model '%s' with local inference provider (direct model backend; no datalayer-ai-inference endpoint).",
@@ -466,6 +527,17 @@ def resolve_model_for_inference_provider(
             model,
         )
         return model
+
+    # A direct provider's model (OpenRouter…) is called by the agent itself
+    # here too: ai-inference holds no account with it (`called_directly`).
+    if called_directly(model):
+        provider_id, _, name = model.partition(":")
+        logger.info(
+            "Routing model '%s' directly to %s: its provider is called by the agent, never through datalayer-ai-inference.",
+            model,
+            provider_id,
+        )
+        return create_model_with_provider(provider_id, name, timeout=timeout)
 
     import httpx
     from openai import AsyncOpenAI

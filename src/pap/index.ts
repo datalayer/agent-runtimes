@@ -6,7 +6,10 @@
 import {
   AgentIdentityClient,
   discoverCompany,
+  mediatedSignIn,
+  negotiateExtensions,
   offersDevice,
+  SUPPORTED_EXTENSIONS,
   offersDirect,
   type DiscoveredCompany,
   type DiscoveryOptions,
@@ -23,7 +26,7 @@ export interface PapCompanySummary {
   readonly issuer: string | null;
   /**
    * Direct and Device as the issuer's `grant_types_supported` offers them,
-   * Mediated as `poppy.json` describes it (PAP draft 0.3 §3.2, §4.4).
+   * Mediated when the company offers that extension and its grant.
    */
   readonly signIn: readonly string[];
   /** The company's own scopes and what each allows (`auth.scopes`). */
@@ -38,6 +41,10 @@ export interface PapCompanySummary {
   /** The domains whose `poppy.json` names this issuer (`protected_resources`). */
   readonly protectedResources: readonly string[];
   readonly interfaces: readonly string[];
+  /**
+   * The extensions a Session with it declares, one version each (`Poppy-Extensions`, PAP draft
+   * 0.4 §3.3, §3.4): each it lists at a version this agent implements.
+   */
   readonly extensions: Readonly<Record<string, string>>;
 }
 
@@ -47,6 +54,10 @@ export interface PapAgentIdentitySummary {
   readonly clientName: string;
   readonly redirectCount: number;
   readonly signingAlgorithms: readonly string[];
+  /**
+   * The extensions this personal agent implements, one version each, declared per Session (PAP
+   * draft 0.4 §3.3): client metadata lists none any more.
+   */
   readonly extensions: Readonly<Record<string, string>>;
 }
 
@@ -69,16 +80,6 @@ interface IdentityClient {
 export interface PapPersonalAgentCapabilityOptions {
   readonly discover?: DiscoverCompany;
   readonly identity?: IdentityClient;
-}
-
-function extensionVersions(
-  extensions: Readonly<Record<string, { readonly version: string }>>,
-): Readonly<Record<string, string>> {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(extensions).map(([name, value]) => [name, value.version]),
-    ),
-  );
 }
 
 /**
@@ -107,7 +108,7 @@ export class PapPersonalAgentCapability {
     const signIn = [
       ...(oauthMetadata && offersDirect(oauthMetadata) ? ['direct'] : []),
       ...(oauthMetadata && offersDevice(oauthMetadata) ? ['device'] : []),
-      ...(auth?.mediated !== undefined ? ['mediated'] : []),
+      ...(mediatedSignIn(company) === undefined ? [] : ['mediated']),
     ];
     const interfaces = [
       ...(document.agent?.protocols.map(protocol => `agent:${protocol.type}`) ??
@@ -119,7 +120,7 @@ export class PapPersonalAgentCapability {
       organization: document.organization.name,
       domain: document.organization.domain,
       protocolVersion: document.protocol_version,
-      issuer: document.auth?.issuer ?? null,
+      issuer: oauthMetadata?.issuer ?? null,
       signIn: Object.freeze(signIn),
       scopes: Object.freeze({ ...(auth?.scopes ?? {}) }),
       scopeHints: Object.freeze(
@@ -137,7 +138,7 @@ export class PapPersonalAgentCapability {
         ...(oauthMetadata?.protected_resources ?? []),
       ]),
       interfaces: Object.freeze(interfaces),
-      extensions: extensionVersions(document.extensions),
+      extensions: Object.freeze(negotiateExtensions(document.extensions)),
     });
   }
 
@@ -157,7 +158,7 @@ export class PapPersonalAgentCapability {
       clientName: metadata.client_name,
       redirectCount: metadata.redirect_uris.length,
       signingAlgorithms: Object.freeze(signingAlgorithms),
-      extensions: extensionVersions(metadata.extensions),
+      extensions: Object.freeze({ ...SUPPORTED_EXTENSIONS }),
     });
   }
 }

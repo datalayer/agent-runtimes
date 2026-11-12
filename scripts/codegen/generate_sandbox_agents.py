@@ -76,6 +76,7 @@ tags:
 enabled: false
 model: "bedrock:us.anthropic.claude-sonnet-4-6"
 harness: pydantic-ai
+identity: datalayer-acting-agent
 
 sandbox_variant: {variant}
 memory: ephemeral
@@ -92,7 +93,7 @@ environment_name: ai-agents-env
 
 icon: package
 emoji: "📦"
-color: "#1F6FEB"
+color: blue
 
 suggestions:
   # First: proof of where the code runs — the point of a variant.
@@ -126,6 +127,11 @@ welcome_notebook: null
 welcome_document: null
 
 trigger: null
+
+policy:
+  shield:
+    # Any public address: the MCP servers and tools it runs call out (agent-shield's firewall).
+    egress: ["*"]
 """
 
 

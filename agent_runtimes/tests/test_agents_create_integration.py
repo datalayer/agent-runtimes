@@ -225,7 +225,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
-    assert pydantic_kwargs.get("instructions") == "Forwarded prompt"
+    assert pydantic_kwargs["instructions"][0] == "Forwarded prompt"
 
     # Ensure model actually changed from request default.
     assert creation_spy["pydantic_model"] != DEFAULT_MODEL.value

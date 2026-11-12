@@ -6,15 +6,22 @@
 /**
  * A decision asked from the floating assistant's balloon: a situation, a
  * question about it and its type — yes or no, a choice among options, a score
- * on a range — asked of Jev, the typed-decision model, through the runtime's
+ * on a range — asked of the agent's decision model through the runtime's
  * `POST /api/v1/configure/inference/decisions`: the route that asks as the
  * `decide` tool does, with the token the runtime calls its models with.
+ *
+ * Not every agent decides: only one whose agentspec names a decisions spec
+ * (`decisions: jev:0.0.1`). The runtime says it of each agent
+ * (`agentDecisionsAt`), and *Ask a decision* is offered only then, saying
+ * which model decides.
  *
  * The answer comes back in plain words with its confidence: "Urgent: yes
  * (0.87)", "Team: Billing (0.94)", "Score: 4 of 5 (0.5)".
  *
  * @module chat/assistant/decisions
  */
+
+import type { AgentDecisions } from '../../types/decisions';
 
 /** The three types of a question, as ai-inference names them. */
 export type DecisionType = 'noul' | 'choice' | 'score';
@@ -47,6 +54,8 @@ export interface DecisionQuestionBody {
 export interface DecisionsRequestBody {
   state: string;
   questions: DecisionQuestionBody[];
+  /** The agent asking: its spec says whether it decides, and with which model. */
+  agent_id?: string;
 }
 
 /** One typed answer, as ai-inference gives it. */
@@ -71,10 +80,86 @@ export interface DecisionsResponseBody {
   refusal?: string;
 }
 
-/** The balloon's asker: a request in, the route's answer out. */
-export type DecisionAsker = (
+/**
+ * The balloon's asker: a request in, the route's answer out. It carries the
+ * decisions of the agent it asks for, when the runtime said them: the form
+ * says which model decides and offers the question types it answers.
+ */
+export type DecisionAsker = ((
   body: DecisionsRequestBody,
-) => Promise<DecisionsResponseBody>;
+) => Promise<DecisionsResponseBody>) & { decisions?: AgentDecisions };
+
+/** Where decisions are asked: a runtime, the token to ask with, the agent asking. */
+export interface DecisionsTarget {
+  serverUrl: string;
+  token?: string;
+  /** The agent asking; unsaid, the runtime's only agent. */
+  agentId?: string;
+}
+
+/** Who decides, in a line: "Jev (cloudflare:wrk/typesafe/jev)". */
+export function decidedByWords(decisions: AgentDecisions): string {
+  return `${decisions.name} (${decisions.model})`;
+}
+
+/** What a runtime says of an agent's decisions (`decisions` of its agent route), read. */
+function readAgentDecisions(said: unknown): AgentDecisions | null {
+  if (!said || typeof said !== 'object') {
+    return null;
+  }
+  const row = said as Record<string, unknown>;
+  return {
+    spec: String(row.spec),
+    name: String(row.name),
+    model: String(row.model),
+    modelName: String(row.model_name ?? row.model),
+    questions: (Array.isArray(row.questions)
+      ? row.questions
+      : []) as DecisionType[],
+    maxQuestions: Number(row.max_questions),
+    maxTextLength: Number(row.max_text_length),
+  };
+}
+
+/**
+ * Whether an agent of a runtime decides, and with which model: the
+ * `decisions` of `GET {serverUrl}/api/v1/agents/{agentId}` — of the runtime's
+ * only agent when none is named. `null`: its spec names no decisions, it
+ * does not decide. `undefined`: the runtime could not be read, or does not
+ * say (it is older).
+ */
+export async function agentDecisionsAt(
+  target: DecisionsTarget,
+): Promise<AgentDecisions | null | undefined> {
+  const base = target.serverUrl.replace(/\/+$/, '');
+  const headers = target.token
+    ? { Authorization: `Bearer ${target.token}` }
+    : undefined;
+  try {
+    const response = await fetch(
+      target.agentId
+        ? `${base}/api/v1/agents/${encodeURIComponent(target.agentId)}`
+        : `${base}/api/v1/agents`,
+      { headers },
+    );
+    if (!response.ok) {
+      return undefined;
+    }
+    const body = (await response.json()) as Record<string, unknown>;
+    const agents = body.agents as Record<string, unknown>[] | undefined;
+    const agent = target.agentId
+      ? body
+      : agents?.length === 1
+        ? agents[0]
+        : undefined;
+    if (!agent || !('decisions' in agent)) {
+      return undefined;
+    }
+    return readAgentDecisions(agent.decisions);
+  } catch {
+    return undefined;
+  }
+}
 
 /** The name an answer is said under when the form gave none. */
 export const DEFAULT_DECISION_NAME = 'Answer';
@@ -218,15 +303,20 @@ export function decisionResponseWords(
 
 /**
  * Ask at a runtime: `POST {serverUrl}/api/v1/configure/inference/decisions`,
- * with the person's token when there is one. A refusal of the route itself
- * comes back as a sentence, never a throw.
+ * with the person's token when there is one, for the agent named (`agentId`;
+ * the runtime's only agent when unsaid). A refusal of the route itself comes
+ * back as a sentence, never a throw. `decisions` is what the runtime said of
+ * that agent's decisions, carried for the form.
  */
 export function decisionsAskerAt(
   serverUrl: string,
   token?: string,
+  agentId?: string,
+  decisions?: AgentDecisions,
 ): DecisionAsker {
   const base = serverUrl.replace(/\/+$/, '');
-  return async body => {
+  const ask: DecisionAsker = async asked => {
+    const body = agentId ? { ...asked, agent_id: agentId } : asked;
     let response: Response;
     try {
       response = await fetch(`${base}/api/v1/configure/inference/decisions`, {
@@ -258,4 +348,6 @@ export function decisionsAskerAt(
     }
     return (await response.json()) as DecisionsResponseBody;
   };
+  ask.decisions = decisions;
+  return ask;
 }

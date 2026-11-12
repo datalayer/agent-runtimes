@@ -164,21 +164,23 @@ def test_the_file_store_lists_the_owners_sessions_paged_and_filtered(
     )
     _seed(store, "session-f014", [OPENED], owner="bob")
     ada = {"kind": "person", "uid": "ada"}
-    page = _run(store.list(ada, limit=2))
-    assert len(page.sessions) == 2 and page.has_more
+    # Unsaid, the sessions that run and those that can be gone on with: the
+    # ended one (session-f011) is listed when its state is asked.
+    page = _run(store.list(ada, limit=1))
+    assert len(page.sessions) == 1 and page.has_more
     rest = _run(store.list(ada, limit=2, after=page.sessions[-1]["uid"]))
     assert len(rest.sessions) == 1 and not rest.has_more
     assert {s["uid"] for s in page.sessions} | {s["uid"] for s in rest.sessions} == {
         "session-f010",
-        "session-f011",
         "session-f012",
     }
     assert [s["uid"] for s in _run(store.list(ada, state="ended")).sessions] == [
         "session-f011"
     ]
-    assert [s["uid"] for s in _run(store.list(ada, agent="other-agent")).sessions] == [
-        "session-f011"
-    ]
+    assert [
+        s["uid"]
+        for s in _run(store.list(ada, agent="other-agent", state="ended")).sessions
+    ] == ["session-f011"]
     assert [s["uid"] for s in _run(store.list(ada, query="refactor")).sessions] == [
         "session-f012"
     ]
@@ -188,7 +190,7 @@ def test_the_file_store_lists_the_owners_sessions_paged_and_filtered(
     assert [
         s["uid"] for s in _run(store.list({"kind": "person", "uid": "bob"})).sessions
     ] == ["session-f014"]
-    assert len(_run(store.list({"kind": "local", "uid": ""})).sessions) == 4
+    assert len(_run(store.list({"kind": "local", "uid": ""})).sessions) == 3
     assert _run(store.list(ada, app="nope")).sessions == []
 
 

@@ -1,0 +1,3 @@
+{"id": "sum-small", "input": "What is 2 + 3?", "target": "5", "metadata": {"difficulty": "easy"}}
+{"id": "sum-large", "input": "What is 40 + 2?", "target": "42", "metadata": {"difficulty": "easy"}}
+{"id": "sum-wrong-target", "input": "What is 1 + 1?", "target": "3", "metadata": {"difficulty": "trick"}}

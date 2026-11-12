@@ -138,8 +138,8 @@ SCRIPT = {
     "Hello": "Hello there.",
     # A credential, again and again: the built-in check asks once, then the model gives up.
     "What is the key?": f"The key is {AWS}.",
-    # A tool call carrying a denied field: the Gate stops it.
-    "Look up Ana": ("lookup", {"record": {"IBAN": "BE00"}}),
+    # A tool call carrying personal data, a bank account number: the Gate stops it.
+    "Look up Ana": ("lookup", {"record": {"IBAN": "BE68 5390 0754 7034"}}),
     "Decide": "I choose nothing.",
 }
 
@@ -203,13 +203,15 @@ def test_a_guard_named_that_this_runtime_does_not_run_is_said_and_runs_on_the_an
         tests={"cases": [{"ask": "Hello", "expect": "It greets back."}]},
     )
     report = _run(
-        app, {"Hello": '{"name": "Ana", "IBAN": "BE00 0000"}'}, judge_saying({})
+        app,
+        {"Hello": '{"name": "Ana", "IBAN": "BE68 5390 0754 7034"}'},
+        judge_saying({}),
     )
-    # No Gate: the Guard's signal on the answer — its fields, when it is JSON — fails the case by itself.
+    # No Gate: the Guard's signal on the answer — the personal data in it, an IBAN — fails the case by itself.
     assert [(case.state, case.check) for case in report.cases] == [
         (FAILED, "sensitive-data-guard")
     ]
-    assert report.cases[0].says == "Sensitive Data Guard: the field `IBAN`."
+    assert report.cases[0].says == "Sensitive Data Guard: an IBAN."
     assert any("Consensus Guard" in said for said in report.unexecuted)
 
 

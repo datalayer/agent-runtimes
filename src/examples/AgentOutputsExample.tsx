@@ -23,7 +23,9 @@
  * A spreadsheet (a ```csv block) is also drawn in the chat message itself, by
  * the `AgentOutputsSheetsPlugin` renderer the chat reads from its
  * `ChatCodeBlock` point; the message's grid and the Sheet tab's are one
- * workbook. The Cells agent tools (`AgentOutputsSheetToolsPlugin`, the
+ * workbook. An XLSX (a ```xlsx block, or a `# filename:` ending in .xlsx, of
+ * base64) is drawn read-only in Cells, in the message and in the Files tab.
+ * The Cells agent tools (`AgentOutputsSheetToolsPlugin`, the
  * `cells` bundle the spec's `frontend_tools` names) act on the last one, so
  * "Chart the spreadsheet" inserts a chart that appears on both grids.
  */
@@ -55,6 +57,7 @@ import {
   useSheetModel,
 } from '../apps/plugins/agent-outputs/sheets';
 import { AGENT_OUTPUTS_LOOP_PLUGINS } from './utils/agentOutputsPlugins';
+import { SpreadsheetPreview } from '../components/outputs/SpreadsheetPreview';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
@@ -109,6 +112,7 @@ const EXT_LIKE_INFOS = new Set([
   'log',
   'ini',
   'toml',
+  'xlsx',
 ]);
 
 const messageText = (m: ChatMessage): string => {
@@ -645,7 +649,16 @@ const AgentOutputsInner: React.FC = () => {
                       </Box>
                     </>
                   )}
-                  {d.tab === 'files' && (
+                  {d.tab === 'files' && d.extension === 'xlsx' && (
+                    // An XLSX: the workbook, read-only in Cells (loaded
+                    // when one is drawn), with its own download.
+                    <SpreadsheetPreview
+                      data={d.payload}
+                      name={d.filename ?? 'output.xlsx'}
+                      maxHeight={360}
+                    />
+                  )}
+                  {d.tab === 'files' && d.extension !== 'xlsx' && (
                     <>
                       <Box
                         as="pre"

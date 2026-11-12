@@ -92,7 +92,7 @@ Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credi
 - **Running runtimes**: if you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
 - **Unmetered**: with `DATALAYER_MAGIC_API_KEY` set in the environment (the platform's magic key, a secret), every runtime the client creates is sent it (`magic_api_key` on `POST /runtimes`), and the platform starts it unmetered: it consumes no credits and never expires. No minutes are asked and no credit is checked; `--minutes` is still validated and sent, and ignored. Unset, nothing is sent. The key is never printed or logged.
-- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found.
+- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found. Every such line says where it runs and what it is: `Stop the cloud agent runtime <name>? It is billed until you do.`, then `Stopped cloud agent runtime <name>.`; `cloud app runtime` when `loop` runs an application; an unmetered runtime is said not billed. A runtime on this machine says `Stopped local agent runtime.`, or `Stopped local app runtime.` for an application.
 
 Each refusal is one sentence, and nothing is launched: not signed in, no credits (or not enough for the reservation), an environment that cannot hold an agent, a runtime that is not running, the launch refused by the platform, or an agentspec the runtime's library does not have.
 
@@ -118,18 +118,30 @@ A runtime on Datalayer calls its models **through datalayer-ai-inference, with y
 
 #### The decide tool
 
-An agent decides with Jev through its `decide` tool (agentspecs `tools/decide.yaml`). *A Simple Agent* (`example-simple`), the default cloud agent, has it, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+Not every agent decides. An agent has the capability only when its agentspec names a decisions spec, written as `memory` is:
+
+```yaml
+# agents/example-simple.yaml
+decisions: jev:0.0.1
+```
+
+A decisions spec (agentspecs `decisions/`, see [Decisions](https://agentspecs.datalayer.tech/agents/decisions)) says which model is asked, which question types it answers and the limits of one call. `jev` asks Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), answers the three question types, at most 10 questions about a text of at most 20 000 characters. The capability brings the `decide` tool: an agent that names `decisions` has it, asked of that spec's model, and it is not listed under `backend_tools`. An agentspec that lists `decide` without naming `decisions` is refused in a sentence (`The agent … lists the backend tool decide but its spec names no decisions: add decisions: jev:0.0.1 to its agentspec, which brings the tool.`). *A Simple Agent* (`example-simple`), the default cloud agent, names `decisions: jev:0.0.1`, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+
+For an agent that decides, the start of `loop` says so among its parts (`Decisions     jev:0.0.1 (cloudflare:wrk/typesafe/jev)`), `/agents` says it under the agent, and the runtime says it to its clients (`decisions` of `GET /api/v1/agents/{agent_id}`, `agentDecisions` of `/api/v1/configure?agent_id=`).
 
 - **What it asks.** A text, the *state*, and one or more named questions about it, each of a type: `noul` (does a statement hold — answered with its probability), `choice` (which of at least two options — a probability per option and a confidence) or `score` (which step of at least two, lowest first — a probability per step and a confidence). The agent reads the typed answers back and says what was decided.
-- **Where it goes.** To ai-inference's `POST /decisions`, model `cloudflare:wrk/typesafe/jev`, with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
+- **Where it goes.** To ai-inference's `POST /decisions`, to the model the agent's decisions spec names (`cloudflare:wrk/typesafe/jev` for `jev`), with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
+- **Its limits.** More questions than the spec's `max_questions`, a text longer than its `max_text_length`, or a question of a type it does not answer is refused before anything is asked, in a sentence (`Nothing was decided: Jev takes at most 10 questions in one call, not 11.`).
 - **It only reads.** Its action class is `read`: it reaches nothing but ai-inference and changes nothing.
 
-You can ask Jev yourself, without the agent, with `/decisions`: the text in quotes, then the questions — `--yes-no "<question>"`, `--choice "<question>" A,B,C` and `--score "<question>" 1-5` (a range, or named steps lowest first), as many as you want. The runtime asks them as the `decide` tool does (`POST /api/v1/configure/inference/decisions`), with its own ai-inference token, so it works the same on this machine and on Datalayer. Each answer is one line, named after its question. `/decisions` alone shows how to use it.
+With an agent that decides, you can ask its decision model yourself, without going through the agent, with `/decisions` (or `/decide`): the text in quotes, then the questions — `--yes-no "<question>"`, `--choice "<question>" A,B,C` and `--score "<question>" 1-5` (a range, or named steps lowest first), as many as you want. The runtime asks them as the `decide` tool does (`POST /api/v1/configure/inference/decisions`), with its own ai-inference token, so it works the same on this machine and on Datalayer. Each answer is one line, named after its question. `/decisions` alone shows how to use it.
+
+`/decisions` is offered only for an agent that decides: it is listed in `/help` and in the `/` menu only then, and it comes and goes as you switch agents. Typed for an agent whose spec names no decisions, it asks nothing and says so: `The agent NAME does not decide: its spec names no decisions. To give it the capability, add decisions: jev:0.0.1 to its agentspec.` The runtime's route refuses the same way, whoever asks.
 
 ```text
 /decisions "Payouts have failed for 3 days." --yes-no "Is it urgent?" --choice "Which team?" Billing,Tech,Sales
 
-● Decided by cloudflare:wrk/typesafe/jev
+● Decided by Jev (cloudflare:wrk/typesafe/jev)
   is_it_urgent: yes (0.93 that it holds)
   which_team: Billing (confidence 1.00)
 ```
@@ -241,6 +253,35 @@ grep -qi "ready" answers.txt
 ```
 
 Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `loop --local -a example-simple -q "/models"`.
+
+### Tool calls waiting on your approval
+
+When an agent's tool call needs your approval, its run waits until you decide. Decide from the terminal, from another shell while the run waits, or after it:
+
+```bash
+loop tool-approvals list                       # the calls waiting on you
+loop tool-approvals list --status all --tool tavily_search
+loop tool-approvals approve 01M6Y0SQ --note "ok for this search"
+loop tool-approvals reject 01M6Y1AA --note "not this file"
+```
+
+| Command | What it does |
+| --- | --- |
+| `list` | Lists your pending approvals: id, tool, agent, runtime, when it was asked, and its arguments. `--status` takes `approved`, `rejected`, `expired` or `all`; `--agent` and `--tool` filter; `--json` prints the records. |
+| `approve <id>` | Approves the call; the waiting run goes on with it. |
+| `reject <id>` | Rejects the call; the waiting run is refused it, and the agent is told your `--note`. |
+
+While a run waits on your approval, `loop` says so instead of giving up on a silent run. In the chat it asks you (`Approve?`), and your answer goes to the run. On `--prompt` lines, which ask nothing, it prints the call and how to decide it on standard error, then waits for the decision and prints it:
+
+```text
+  🔒 skill:datalayer-memory-add waits on your approval (01M6Y475W1Q8ATP6WHNN00ZX3D)
+    (skill=datalayer-memory-add)
+    Approve: loop tool-approvals approve 01M6Y475W1Q8ATP6WHNN00ZX3D   Reject: loop tool-approvals reject 01M6Y475W1Q8ATP6WHNN00ZX3D
+    Waiting for your decision…
+    ✓ skill:datalayer-memory-add approved
+```
+
+An id can be given whole or by its start, as long as it names a single pending approval. Only you decide the approvals that wait on you: one that is already decided says so, and nothing changes. These are the same approvals as on the approvals page of datalayer.ai.
 
 ### A new application
 
@@ -553,7 +594,16 @@ loop scenes rehearse scenes/my-scene.yaml --json
 loop scenes rehearse scene.py                    # a scene written in Python (loop.scene, loop.stage)
 loop scenes build scene.py --out scene.yaml      # the scene spec it writes, loop.scene/v1
 loop scenes push scene.py --space <space id>     # kept in your Space, where the Studio opens it
+loop scenes rehearse sales-and-accounting --cloud --transcript run.json   # also save what was played
+loop scenes record sales-and-accounting --from run.json                   # keep a passing rehearsal as the scene's recording
 ```
+
+`record` keeps the transcript of a rehearsal that passed every beat as the
+scene's recording, `<id>/recording.json` beside its spec, and names it in the
+spec (`rehearsal.recording`, with `--taken` and `--note`); a transcript that
+did not pass, misses a beat or is another scene's is refused in a sentence.
+`--specs-dir` says which folder of scene specs to write to. See
+[Stages](/scenes/stages#recordings).
 
 A scene written in Python — `loop.scene(...)` and `loop.stage(...)`, see
 [A scene and its stage, in
@@ -651,11 +701,34 @@ agent-runtimes chat agents
 agent-runtimes chat agents --server https://agents.datalayer.ai
 ```
 
+### Sessions: list, pause, resume
+
+In `loop`'s prompt the conversation is a **session** from its first message:
+it is kept in the record, listed, paused and resumed — on this machine and on
+Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sessions/cli.mdx) page; in short:
+
+- **As `loop` starts**, with nothing on the command line that says what to run, it lists your paused sessions before asking where a new agent should run — those kept on this machine and, signed in, those on Datalayer. Pick one and it is resumed where it lives, its conversation loaded; *Start a new session*, which Enter picks, goes on to the usual questions. With none paused, nothing is printed.
+- **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
+- **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
+- **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
+- **`/sessions <n or uid>`** switches the prompt to that session, as `/resume` does; the one it was on is left as it is.
+- **`/transfer`** moves this session to the other place — from this machine to Datalayer, or back — under the same uid, and goes on with it there.
+- **`loop sessions`**, alone, is the picker: your sessions in two groups, *On this machine* and *On Datalayer*, one to choose and resume, pause, end, transfer, export, delete or start over. **`loop --continue`** (`-c`) goes on with the most recent one without asking, **`loop --resume <uid>`** with the one named, and `loop --resume` alone opens the picker.
+- **Outside the prompt**: `loop sessions list`, `loop sessions pause <uid>` and `loop sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer. `loop sessions transfer <uid> --to cloud|local` and `loop sessions delete <uid>` need no runtime.
+
+A session on this machine is a folder of `~/.datalayer/sessions`, named by its uid, kept until you delete it and seen only here. A session on Datalayer is in your account's record, seen on the web, in the desktop app and from any machine signed in. Signed out, only those on this machine are listed. A session keeps its uid for its whole life, wherever it lives.
+
+An agent is paused through its session. Runtime checkpoints are switched off on Datalayer: no checkpoint is taken by a pause, and none is needed to resume.
+
 ### Slash Commands
 
 | Command | Shortcut | Description |
 |---------|----------|-------------|
-| `/help` | `Esc H` | Show available commands |
+| `/help` | `Esc H` | Show available commands, the session's under **Sessions** |
+| `/sessions` | | Your sessions, held and recorded, numbered, each with its kind and state; `/sessions <n or uid>` switches the prompt to that one. See [Sessions](#sessions-list-pause-resume) |
+| `/transfer` | | Move this session to Datalayer, or from Datalayer to this machine, under the same uid, and go on with it there |
+| `/pause` | | Pause this session and leave: the conversation is kept in the record, what it holds is given to the agent's memory first; on Datalayer the runtime is given back |
+| `/resume <n or uid>` | | Go on with a session, by its number in the last `/sessions` or by its id |
 | `/status` | `Esc S` | Model, tokens, and connectivity |
 | `/context` | `Esc X` | Visualize context usage grid |
 | `/clear` | `Esc C` | Clear conversation history |
@@ -663,7 +736,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/mcp-servers` | `Esc M` | List MCP servers |
 | `/skills` | `Esc K` | List available skills |
 | `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer (through ai-inference, only those it serves), and apart, under Decisions, the typed-decision models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
-| `/decisions` | | Ask Jev typed questions about a text — `/decisions "<text>" --yes-no "<question>"`, `--choice "<question>" A,B,C`, `--score "<question>" 1-5` — through the runtime, with its ai-inference token; each answer in a line. See [The decide tool](#the-decide-tool) |
+| `/decisions` | `/decide` | For an agent whose spec names `decisions` only: ask its decision model typed questions about a text — `/decisions "<text>" --yes-no "<question>"`, `--choice "<question>" A,B,C`, `--score "<question>" 1-5` — through the runtime, with its ai-inference token; each answer in a line. See [The decide tool](#the-decide-tool) |
 | `/suggestions` | `Esc U` | The agentspec's suggestions, each as its summary and its text; the one chosen is sent. Under `--prompt`, listed and none sent |
 | `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
 | `/agents` | `Esc A` | List agents on the server |
@@ -671,7 +744,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/context-export` | `Esc E` | Export context to CSV |
 | `/notebook` | `Esc N` | Open the agent's notebook page in your browser, on the session's Jupyter server: locally, the local server's; on Datalayer, through the relay, with the runtime's Jupyter server. See [Slash commands on a cloud runtime](#slash-commands-on-a-cloud-runtime) |
 | `/document` | `Esc F` | Open the agent's document page in your browser, the same way as `/notebook` |
-| `/exit` | `Esc Q` | Exit the interactive session |
+| `/exit` | `Esc Q` | Exit the interactive session; with a session open, it says the session is kept, paused as its runtime stops |
 
 ### Banner and Animations
 
@@ -694,6 +767,8 @@ agent-runtimes chat --eggs
 | `--eggs` | | off | Enable Easter egg slash commands |
 | `--local` | | asked | Run the agent on this machine, without asking where |
 | `--cloud` | | asked | Run the agent on Datalayer, in a new or running cloud runtime |
+| `--continue` | `-c` | | Go on with your most recent session that is not ended, without asking |
+| `--resume` | | | Go on with the session of the uid given, where it lives; alone, pick one (`loop sessions`) |
 | `--runtime` | `-r` | | Attach to an agent runtime running on Datalayer, by name (implies `--cloud`) |
 | `--environment` | `-e` | first agent-capable | Environment of a new cloud runtime, without asking |
 | `--minutes` | `-m` | `30` | How long to reserve a new cloud runtime for |
@@ -807,12 +882,14 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `mcp-servers-config` | Display MCP servers from the user's config |
 | `start-mcp-servers` | Start MCP servers for a running agent |
 | `stop-mcp-servers` | Stop MCP servers for a running agent |
+| `mcp` | Talk to the Datalayer MCP gateway, or any MCP server: `toolsets`, `tools`, `describe`, `call`, `run` (see below) |
 | `apps` | Applications: `init`, `build`, `eject`, `validate`, `run`, `deploy`, `pull`, `push`, `threads`, `feedback` (see above) |
 | `scenes` | Scenes: `ls` the catalogue, `rehearse` a scene (see above) |
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
 | `benchmarks` | Benchmarking commands |
-| `checkpoints` | Runtime checkpoint commands |
+| `sessions` | Alone, the picker of your sessions on this machine and on Datalayer. A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`, `transfer`, `delete`; `--cloud` for a runtime on Datalayer. See [`loop sessions`](../sessions/cli.mdx) |
+| `checkpoints` | Runtime checkpoint commands. Checkpoints are switched off on Datalayer: an agent is paused and resumed through its session (`sessions pause`, `sessions resume`) |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
 | `evals` | Benchmarks: `evals run <spec\|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls\|get\|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
@@ -837,6 +914,10 @@ one on a goal, follow, steer, pause, resume, cancel or terminate its run — are
 the `agent-teams` package's, not this one's: `agent-teams …` as its own
 executable, and `datalayer agent-teams …` wherever it is installed beside the
 Datalayer CLI. See the [agent-teams CLI](https://agent-teams.datalayer.tech/cli).
+
+One of them is run from `loop`: a paused session that is a seat of a team run,
+picked in the list `loop` shows as it starts, lets its run go on as
+`agent-teams sessions resume <run>` does.
 
 ## Extending, and Being an Extension
 
@@ -1810,6 +1891,139 @@ try:
 except AgentMcpServersError as e:
     print(f"Error: {e}")
 ```
+
+---
+
+## `mcp` Command
+
+`agent-runtimes mcp` is a plain MCP client for the terminal: it opens a streamable-HTTP session to the Datalayer MCP gateway (or any MCP server), lists its toolsets and tools, calls a tool, runs a script that makes many calls on one session, or reads the gateway's health.
+
+By default it reaches the gateway at `$DATALAYER_MCP_SERVER_URL` (or `https://mcp.datalayer.run/mcp`) with the bearer token in `$DATALAYER_API_KEY`. The token is never printed.
+
+Stdout carries the result alone, so it pipes into `jq` or `json.load`: logs, retry notices and errors go to stderr, and library logs (httpx, botocore, the MCP SDK) stay quiet unless `-v`.
+
+### Options
+
+Every subcommand that opens a session takes:
+
+| Option | Description |
+|--------|-------------|
+| `--url, -u` | MCP endpoint (default: `$DATALAYER_MCP_SERVER_URL`, or the hosted gateway) |
+| `--toolset, -t` | A gateway toolset to add to its defaults (repeatable, or comma-separated) |
+| `--only` | Exactly the given toolsets, without the gateway's defaults (`?only=…`) |
+| `--param, -p` | A session parameter `KEY=VALUE` in the query string (repeatable), e.g. `odoo-company=2` |
+| `--company, -c` | Odoo-specific sugar for `-p odoo-company=N` |
+| `--token-env` | Environment variable holding the bearer token (default: `DATALAYER_API_KEY`) |
+| `--header, -H` | An extra request header `KEY=VALUE` (repeatable) |
+| `--retries` | How many more times opening the session is tried (default: 2) |
+| `--retry-wait` | The first wait between tries in seconds, doubling each time (default: 1) |
+| `--verbose, -v` | Show library logs, on stderr |
+
+The gateway's toolsets are chosen in the query string: `-t odoo -t odoo-accounting -c 2` opens `…/mcp?odoo,odoo-accounting&odoo-company=2`.
+
+Opening a session is retried on what heals by itself — a refused connection, a TLS failure while an ingress is reinstalled, a failed initialize, a 502, 503 or 504 — with one line on stderr per retry. A 401, 403 or 404 fails at once. A tool call is **never** retried: once it reached the server, repeating it could repeat a write. When the retries are spent, one line says what failed and where to look (`the server answered 503 at initialize (after 3 attempts): check https://mcp.datalayer.run/api/mcp/readyz`).
+
+`call` and `run` also take:
+
+| Option | Description |
+|--------|-------------|
+| `--output, -o` | `json` (default), or `text`: a string result printed as it is, anything else as JSON |
+| `--compact` | JSON on one line |
+
+### Examples
+
+```bash
+# The gateway's readiness and liveness (/api/mcp/readyz, /api/mcp/healthz), with failing checks
+agent-runtimes mcp health
+
+# The gateway's toolsets; `*` marks those the session would have
+agent-runtimes mcp toolsets
+agent-runtimes mcp toolsets -t odoo-accounting --json
+
+# A session's tools, with the first line of each description
+agent-runtimes mcp tools --only -t odoo-accounting -c 1
+
+# A tool's description and input schema
+agent-runtimes mcp describe odoo_search_records --only -t odoo
+agent-runtimes mcp tools --only -t odoo --schema odoo_search_records
+
+# Call a tool: arguments as JSON, a JSON file, or KEY=VALUE pairs
+agent-runtimes mcp call odoo_get_account -t odoo -c 1
+agent-runtimes mcp call odoo_search_records -t odoo -c 1 \
+  --args '{"model": "res.partner", "fields": ["name"]}' -a limit=5
+agent-runtimes mcp call odoo_search_records -t odoo --args @query.json
+agent-runtimes mcp call odoo_accounting_find_document -t odoo-accounting -c 1 \
+  -a number=1618720029 | jq '.documents[0].move'
+
+# A base64 payload to a file (here the Intervat XML's xml_base64); the rest printed
+agent-runtimes mcp call odoo_accounting_intervat_xml -t odoo-accounting -c 1 \
+  -a date_from=2026-07-01 -a date_to=2026-09-30 --save intervat-q3.xml
+agent-runtimes mcp call some_tool --save out.pdf --save-field raw.content
+
+# Any other MCP server
+agent-runtimes mcp tools --url http://localhost:4040/mcp --token-env MY_SERVER_TOKEN
+```
+
+`-a KEY=VALUE` values are typed by the tool's input schema, read once per call: a string property keeps the text however numeric it looks (`number=1618720029` stays `"1618720029"`), an integer, number, boolean, array or object property decodes it as JSON (`limit=5`, `draft=true`, `ids=[1,2]`). A property the schema does not type is decoded as JSON when it is JSON. `--args` is sent exactly as written.
+
+`call` prints the tool's result: a result of one content alone, several as a list (`--raw` prints the whole `CallToolResult`). `--save PATH` decodes the first base64 field it finds (`xml_base64`, `raw.content`, `content`, `datas`, `data`, `resource.blob`, or the one `--save-field a.b.c` names) to the file and prints the rest with that field replaced by a note. Exit codes: 0 done, 1 when the tool answers with an error (its text on stderr, no traceback), 2 when the session cannot be opened.
+
+### A script on one session
+
+`mcp run` opens one session and runs a script's `async def main(client)`; what `main` returns, when not `None`, is printed as JSON. Arguments after `--` go to the script when `main` takes a second parameter, `async def main(client, argv)`, as a list of strings.
+
+```python
+# partners.py
+async def main(client):
+    [account] = await client.call("odoo_get_account")
+    rows = await client.call(
+        "odoo_search_records", model="res.partner", fields=["name"], limit=5
+    )
+    return {"company": account["current_company"], "partners": rows[0]}
+```
+
+```bash
+agent-runtimes mcp run partners.py -t odoo -c 1
+```
+
+A script that writes is safest as a dry run by default, writing only when told to:
+
+```python
+# recode.py
+async def main(client, argv):
+    apply = "--apply" in argv
+    [found] = await client.call("odoo_accounting_find_document", number="1618720029")
+    plan = [doc["move"] for doc in found["documents"] if doc["state"] == "draft"]
+    if not apply:
+        return {"would_change": plan}          # dry run: nothing written
+    for move in plan:
+        ...                                    # the writes
+    return {"changed": plan}
+```
+
+```bash
+agent-runtimes mcp run recode.py -t odoo-accounting -c 1             # dry run
+agent-runtimes mcp run recode.py -t odoo-accounting -c 1 -- --apply  # writes
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.mcp import MCPConnectError, MCPToolError, connect
+
+async with connect(
+    toolsets=["odoo-accounting"], params={"odoo-company": 1}, only=True,
+    retries=2, retry_wait=1.0,
+) as client:
+    tools = await client.list_tools()          # mcp.types.Tool, across pages
+    [account] = await client.call("odoo_get_account")
+    [found] = await client.call(
+        "odoo_accounting_find_document", number=1618720029, coerce=True
+    )                                          # sent as "1618720029"
+    result = await client.call_raw("odoo_get_account")   # the CallToolResult as sent
+```
+
+`client.call(tool, **arguments)` returns one decoded value per content (JSON text decoded, other text kept) and raises `MCPToolError` (with `.tool` and `.text`) when the tool errs or the server refuses the request. `coerce=True` types the arguments by the tool's input schema first (fetched once per session). `connect` retries opening the session as the CLI does (`retries`, `retry_wait`, and `on_retry` to be told each retry; a warning is logged otherwise) and raises `MCPConnectError` with the diagnosis when it gives up. The gateway answers with JSON text rather than structured content, which the SDK's `ClientSession.call_tool` refuses for a tool with an output schema; the client sends a raw `tools/call` instead. `connect(url=..., headers=..., token=...)` reaches any other MCP server.
 
 ---
 

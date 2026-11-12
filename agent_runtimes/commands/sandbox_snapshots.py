@@ -14,7 +14,7 @@ from agent_runtimes.displays.sandbox_snapshots import display_code_sandbox_snaps
 # Create a Typer app for snapshot commands
 app = typer.Typer(
     name="sandbox-snapshots",
-    help="Runtime snapshots management commands",
+    help="Manage runtime snapshots.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -156,7 +156,7 @@ def snapshots_list(
         help="API key (Bearer token for API requests).",
     ),
 ) -> None:
-    """List all snapshots (root command)."""
+    """List all snapshots."""
     list_snapshots(token=token)
 
 
@@ -167,5 +167,5 @@ def snapshots_ls(
         help="API key (Bearer token for API requests).",
     ),
 ) -> None:
-    """List all snapshots (root command alias)."""
+    """List all snapshots."""
     list_snapshots(token=token)

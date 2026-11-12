@@ -230,6 +230,32 @@ export interface ChatThread {
 /**
  * Generate unique message ID
  */
+/**
+ * A new session's uid: a ULID, as the platform's other uids are. A chat's
+ * thread is its session, so a thread opened here is named by one.
+ */
+export function generateSessionUid(): string {
+  // Crockford's base32: 10 characters of time in milliseconds, 16 of randomness.
+  const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  let time = Date.now();
+  let stamp = '';
+  for (let index = 0; index < 10; index += 1) {
+    stamp = alphabet[time % 32] + stamp;
+    time = Math.floor(time / 32);
+  }
+  const random = new Uint8Array(16);
+  const source = (globalThis as { crypto?: Crypto }).crypto;
+  if (source?.getRandomValues) {
+    source.getRandomValues(random);
+  } else {
+    // A host without a crypto source (an older phone runtime): unique, not secret.
+    for (let index = 0; index < 16; index += 1) {
+      random[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  return stamp + Array.from(random, byte => alphabet[byte % 32]).join('');
+}
+
 export function generateMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }

@@ -60,6 +60,7 @@ from .routes import (
     apps_router,
     checkpoints_router,
     configure_router,
+    evals_adapters_router,
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
@@ -67,8 +68,10 @@ from .routes import (
     health_router,
     history_router,
     identity_router,
+    inference_relay_router,
     loop_router,
     mcp_auth_router,
+    mcp_lent_router,
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
@@ -87,6 +90,7 @@ from .routes import (
 from .routes.agents import set_api_prefix
 from .routes.computer import router as computer_router
 from .specs.agents import get_agent_spec
+from .tools.decisions import decisions_info, decisions_spec
 
 # Load environment variables from .env file
 load_dotenv()
@@ -180,7 +184,7 @@ async def _create_and_register_cli_agent(
             process, 'jupyter-server' starts a per-agent Jupyter server via
             code_sandboxes, and the name of a provider — 'docker',
             'datalayer', 'google-colab', 'kaggle', 'monty', 'modal',
-            'daytona', 'cloudflare', 'coreweave', 'e2b' — runs it at that
+            'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore' — runs it at that
             provider, under the credentials this process holds for it.
 
     Returns:
@@ -591,6 +595,7 @@ async def _create_and_register_cli_agent(
         tool_ids,
         agent_id=agent_id,
         disable_tool_approvals=tool_approvals_disabled,
+        decisions=agent_spec.decisions,
     )
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)
@@ -668,9 +673,13 @@ async def _create_and_register_cli_agent(
                         c if c.isalnum() or c == "_" else "_" for c in server.id
                     )
 
+                    from agent_runtimes.mcp.env_expansion import expand_env_vars
+
                     # Get env vars from environment
                     server_env: dict[str, str] = {}
-                    for env_key in server.required_env_vars:
+                    for env_ref in server.required_env_vars:
+                        # A reference is versioned (NAME:0.0.1): its name is the variable.
+                        env_key = env_ref.rsplit(":", 1)[0]
                         env_val = os.getenv(env_key)
                         if env_val:
                             server_env[env_key] = env_val
@@ -680,7 +689,11 @@ async def _create_and_register_cli_agent(
                             name=normalized_name,
                             url=server.url if server.transport == "http" else "",
                             command=server.command or "",
-                            args=server.args or [],
+                            # ${VAR} and ${VAR:-default}, as the lifecycle manager expands them.
+                            args=[
+                                expand_env_vars(a) if isinstance(a, str) else a
+                                for a in (server.args or [])
+                            ],
                             env=server_env,
                             enabled=server.enabled,
                         )
@@ -871,6 +884,7 @@ async def _create_and_register_cli_agent(
         "backend_tools": list(agent_spec.backend_tools)
         if agent_spec.backend_tools
         else [],
+        "decisions": agent_spec.decisions,
         "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
         "icon": getattr(agent_spec, "icon", None),
         "emoji": getattr(agent_spec, "emoji", None),
@@ -998,6 +1012,10 @@ async def _create_and_register_cli_agent(
             "codemode": enable_codemode,
             "tool_approvals_disabled": tool_approvals_disabled,
             "skills": list(skills) if skills else [],
+            # How it decides, when its spec names decisions; None when it does not.
+            "decisions": decisions_info(
+                decisions_spec(agent_spec.decisions) if agent_spec.decisions else None
+            ),
             "tools": registered_tools,
             "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],
         },
@@ -1097,6 +1115,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if config is None:
         config = ServerConfig()
 
+    # No token of a websocket's query string in uvicorn's log.
+    from .access_log import install_access_log_redaction
+
+    install_access_log_redaction()
+
     # Set the API prefix for dynamic agent creation
     set_api_prefix(config.api_prefix)
 
@@ -1108,6 +1131,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     _agent_node_stop_event = asyncio.Event()
     _node_enabled = is_node_enabled()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
+    from .agentcore.settings import is_agentcore_target
+
+    _agentcore = is_agentcore_target()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -1127,6 +1153,19 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         from .apps.session_store import active_store
 
         logger.info("Sessions are kept in the %s store", active_store().name)
+
+        # pydantic-ai's GenAI spans for every agent (AC-12), on AgentCore
+        # Runtime also to AgentCore Observability's endpoint (AC-13).
+        from .otel.genai import enable_genai_instrumentation, genai_tracer_provider
+
+        enable_genai_instrumentation(genai_tracer_provider())
+
+        # The demo books' key, taken out of the environment before anything is
+        # started from it: no MCP server, command or sandbox inherits it (B4-01).
+        from .apps.battle_books import take_books_key
+
+        if take_books_key():
+            logger.info("This runtime holds the demo books' key for catalogue Battles.")
 
         # ---- DBOS Durable Execution ----
         from .durable import DurableConfig, DurableLifecycle
@@ -1213,6 +1252,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         harness_id = os.environ.get("AGENT_RUNTIMES_HARNESS")
         if harness_id:
             await _create_harness_agent(app, harness_id, config.api_prefix)
+
+        # Amazon Bedrock AgentCore (AC-01): the agentspec of AGENT_SPEC_ID
+        # configured as a pool pod's is, before the first invocation.
+        if _agentcore and not is_reload_parent:
+            from .agentcore.contract import configure_at_start
+
+            await configure_at_start(app, config.api_prefix)
 
         # Register default agent if specified via CLI (--agent-id flag)
         default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
@@ -1445,7 +1491,26 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             else None
         )
 
+        # AgentCore's A2A contract: the configured agent as a team seat, on
+        # port 9000 at `/`, through the runtime's A2A transport. A runtime
+        # that runs a deployment serves its application's sessions, not a
+        # seat, unless it was created as one (`AGENTCORE_PROTOCOL=A2A`).
+        _agentcore_seat = None
+        from .agentcore.settings import deployment_of_runtime, serves_seat
+
+        if (
+            _agentcore
+            and not is_reload_parent
+            and (serves_seat() or not deployment_of_runtime())
+        ):
+            from .agentcore.a2a import start_seat
+
+            _agentcore_seat = await start_seat()
+
         yield
+
+        if _agentcore_seat is not None:
+            await _agentcore_seat.stop()
 
         # The sessions this runtime holds are paused in their record before
         # it goes (MH-01): a listing from the record then says the truth.
@@ -1610,11 +1675,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
+    app.include_router(mcp_lent_router, prefix=config.api_prefix)
+    app.include_router(inference_relay_router, prefix=config.api_prefix)
     app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)
     app.include_router(evals_router, prefix=config.api_prefix)
+    app.include_router(evals_adapters_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)
@@ -1623,6 +1691,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(a2ui_router, prefix=config.api_prefix)
     if triggers_webhook_router is not None:
         app.include_router(triggers_webhook_router, prefix=config.api_prefix)
+    if _agentcore:
+        # AgentCore Runtime's contract, at the root (AC-02).
+        from .agentcore.contract import router as agentcore_router
+
+        app.include_router(agentcore_router)
 
     # Note: AG-UI mounts and example mounts are added dynamically during lifespan startup
 
@@ -1667,6 +1740,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "status": "ok",
             "service": config.title,
             "version": config.version,
+            # What this runtime can do, said for who talks to it: an agent
+            # made without an Appspec has its conversations kept as
+            # sessions (listed, paused, resumed). A runtime that does not
+            # say it does not.
+            "agent_sessions": True,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "api_prefix": config.api_prefix,
             "startup": startup_info,

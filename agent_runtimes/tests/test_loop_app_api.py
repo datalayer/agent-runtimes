@@ -792,7 +792,11 @@ def test_the_local_agent_is_its_agents_prompt_then_the_applications_instructions
     assert isinstance(agent, Agent)
     assert agent.model is not None
     # As on a runtime: the agent's own prompt first, then the application's.
-    written = "".join(part.instruction for part in agent._instructions)
+    written = "".join(
+        part.instruction
+        for part in agent._instructions
+        if isinstance(part.instruction, str)
+    )
     assert written.startswith("You are a concise writing specialist")
     assert written.endswith("\n\nWrite short.")
     # Its model is never called here: building it is the test.

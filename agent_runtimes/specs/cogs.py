@@ -41,13 +41,21 @@ COG_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     model_additionals=["alibaba:qwen-max"],
     inference_provider=None,
     mcp_servers=[MCP_SERVER_CATALOG["tavily"]],
-    skills=["github:0.0.1", "events:0.0.1", "crawl:0.0.1"],
+    skills=[
+        "github:0.0.1",
+        "events:0.0.1",
+        "datalayer-memory-add:0.0.1",
+        "datalayer-memory-search:0.0.1",
+        "datalayer-memory-list:0.0.1",
+        "datalayer-memory-delete:0.0.1",
+        "crawl:0.0.1",
+    ],
     backend_tools=[],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
     environment_name="ai-agents-env",
     icon="globe",
     emoji="🌐",
-    color="#10B981",
+    color="emerald",
     suggestions=[
         AgentSuggestion(
             text="Search the web for recent news about AI agents",
@@ -71,7 +79,7 @@ COG_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
-    system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
+    system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited. You keep durable memory of the person across sessions: when they ask you to remember, recall, list or forget something, use the datalayer-memory skills, and never delete everything they remember without their explicit confirmation of how many.
 
 ## Frames
 
@@ -182,13 +190,16 @@ Check your output against every Guard before you hand it over, and say which you
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
+    policy={"shield": {"egress": ["*"]}},
     notifications=None,
-    memory="ephemeral",
+    memory="mem0",
+    decisions=None,
     pre_hooks=None,
     post_hooks=None,
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="web-bot-auth-agent",
 )
 
 COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
@@ -209,7 +220,7 @@ COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
     environment_name="ai-agents-env",
     icon="comment-discussion",
     emoji="🎙️",
-    color="#0EA5E9",
+    color="sky",
     suggestions=[
         AgentSuggestion(
             text="Start an interview about why I chose this product",
@@ -337,8 +348,10 @@ Check your output against every Guard before you hand it over, and say which you
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
+    policy={"shield": {"egress": ["*"]}},
     notifications=None,
     memory="mem0",
+    decisions=None,
     pre_hooks=None,
     post_hooks=None,
     tool_hooks=None,
@@ -367,6 +380,7 @@ Check your output against every Guard before you hand it over, and say which you
         "required": ["research_goal"],
     },
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
@@ -386,7 +400,7 @@ COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
     environment_name="ai-agents-env",
     icon="table",
     emoji="📊",
-    color="#1F883D",
+    color="green",
     suggestions=[
         AgentSuggestion(
             text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.",
@@ -505,13 +519,16 @@ Check your output against every Guard before you hand it over, and say which you
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
+    policy={"shield": {"egress": ["*"]}},
     notifications=None,
     memory="ephemeral",
+    decisions=None,
     pre_hooks=None,
     post_hooks=None,
     tool_hooks=None,
     parameters=None,
     subagents=None,
+    identity="datalayer-acting-agent",
 )
 
 

@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, List
 
@@ -28,10 +30,18 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from agent_runtimes.guardrails import declared_secrets as declared_module
 from agent_runtimes.guardrails.credentials import credentials_withheld
 from agent_runtimes.guardrails.declared_secrets import (
+    CATALOGUE_MAY_DECLARE,
     PLATFORM_RUNTIME_SECRETS,
+    DeclaredSecrets,
+    ReservedSecretName,
     declared_secrets,
     env_for_server,
+    env_name,
+    is_reserved,
     note_given,
+    refuse_reserved,
+    refuse_server_names,
+    sandbox_env_names,
     server_env_names,
 )
 from agent_runtimes.types import Agentspec, MCPServer, SkillSpec
@@ -220,21 +230,23 @@ def test_an_agent_on_a_harness_declares_the_key_its_harness_requires(
     assert declared_secrets(Agentspec(id="r19-plain", name="plain")).consumers == {}
 
 
-def test_on_datalayer_claude_codes_key_is_not_declared(monkeypatch) -> None:
-    # On Datalayer, Claude Code calls Anthropic through ai-inference, which
-    # reads the account's key itself: the runtime is never given it.
+def test_on_datalayer_no_harness_declares_a_key(monkeypatch) -> None:
+    # On Datalayer, a harness's model calls go through ai-inference, to Bedrock
+    # or Alibaba, or it is not offered: the runtime is never given a key.
     monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
-    declared = declared_secrets(
-        Agentspec(id="r19-coder-dl", name="coder", harness="claude-code")
-    )
-    assert "ANTHROPIC_API_KEY" not in declared.runtime
-    assert declared.missing(lambda name: False, "Coder") == []
-    # Another harness still declares what it requires.
-    goose = declared_secrets(
-        Agentspec(id="r19-goose-dl", name="goose", harness="goose")
-    )
-    assert "ANTHROPIC_API_KEY" in goose.runtime
+    for harness, key in (
+        ("claude-code", "ANTHROPIC_API_KEY"),
+        ("opencode", "ANTHROPIC_API_KEY"),
+        ("pi", "ANTHROPIC_API_KEY"),
+        ("codex", "OPENAI_API_KEY"),
+        ("goose", "ANTHROPIC_API_KEY"),
+    ):
+        declared = declared_secrets(
+            Agentspec(id=f"r19-{harness}-dl", name="coder", harness=harness)
+        )
+        assert key not in declared.runtime
+        assert declared.missing(lambda name: False, "Coder") == []
 
 
 def test_a_missing_secret_is_said_in_a_sentence() -> None:
@@ -303,8 +315,27 @@ class FakeLifecycle:
     def is_server_running(self, server_id: str, is_config: bool = False) -> bool:
         return False
 
+    def is_start_under_way(self, server_id: str) -> bool:
+        return False
+
+    def is_starting(self, server_id: str) -> bool:
+        return False
+
+    def announce(self, server_ids: list[str]) -> None:
+        pass
+
+    def withdraw(self, server_id: str) -> None:
+        pass
+
+    def get_server_status(self, server_id: str) -> Dict[str, Any]:
+        return {"id": server_id, "status": "stopped"}
+
     async def start_server(
-        self, server_id: str, config: Any, extra_env: Any = None
+        self,
+        server_id: str,
+        config: Any,
+        extra_env: Any = None,
+        deadline: float | None = None,
     ) -> Any:
         self.started[server_id] = dict(extra_env or {})
         return object()
@@ -422,6 +453,101 @@ def test_a_spec_whose_secret_is_not_given_is_refused_and_a_launch_is_told(
         "set_up_refused"
         not in runtime.get("/api/v1/configure/agents/default/spec").json()
     )
+
+
+def test_an_agent_configured_without_its_mcp_servers_needs_none_of_their_secrets(
+    runtime: Any,
+) -> None:
+    from agent_runtimes.routes.agents import _agentspecs
+
+    # Only the skill's secret: the MCP server's is not asked for.
+    response = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={
+            "agent_spec_id": "r19-agent",
+            "env_vars": [ACCOUNT[2]],
+            "without_mcp_servers": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert "R19_SERVER_TOKEN" not in os.environ
+    assert os.environ["R19_SKILL_TOKEN"] == SKILL_SECRET
+    # The agent is made with none of its servers selected.
+    assert _agentspecs["default"]["selected_mcp_servers"] == []
+    # Without the switch, the same configure is refused for the server's secret.
+    refused = _configure(runtime, "r19-agent", [ACCOUNT[2]])
+    assert refused.status_code == 422
+    assert any(
+        "the MCP server r19-probe needs R19_SERVER_TOKEN" in problem
+        for problem in refused.json()["detail"]["problems"]
+    )
+
+
+def test_an_agent_configured_without_a_skill_needs_none_of_its_secrets(
+    runtime: Any,
+) -> None:
+    from agent_runtimes.routes.agents import _agentspecs
+
+    # Nothing given: the server and the skill both left out.
+    response = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={
+            "agent_spec_id": "r19-agent",
+            "env_vars": [],
+            "without_mcp_servers": True,
+            "without_skills": ["r19-skill:0.0.1"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert "R19_SKILL_TOKEN" not in os.environ
+    made = _agentspecs["default"]
+    assert made["selected_mcp_servers"] == []
+    assert made["enable_skills"] is False
+    # A skill the spec does not have is refused, never ignored.
+    refused = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={"agent_spec_id": "r19-agent", "without_skills": ["github"]},
+    )
+    assert refused.status_code == 422
+    assert "has no skill github" in refused.json()["detail"]
+
+
+def test_the_companion_names_the_runtime_s_owner_once(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A pooled runtime is started before it is anybody's: its agent's
+    # memories are kept under the owner its companion names at assignment.
+    monkeypatch.delenv("DATALAYER_USER_UID", raising=False)
+
+    def configure(owner: str) -> Any:
+        return runtime.post(
+            "/api/v1/agents/configure-from-spec",
+            json={"agent_spec_id": "r19-bare", "owner_uid": owner},
+        )
+
+    assert configure("user-ada").status_code == 200
+    assert os.environ["DATALAYER_USER_UID"] == "user-ada"
+    assert configure("user-ada").status_code == 200
+    # Never another owner.
+    taken = configure("user-bob")
+    assert taken.status_code == 409
+    assert "never given another owner" in taken.json()["detail"]
+    assert os.environ["DATALAYER_USER_UID"] == "user-ada"
+
+
+def test_nothing_but_the_pod_names_the_runtime_s_owner(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.apps import callers
+
+    monkeypatch.delenv("DATALAYER_USER_UID", raising=False)
+    monkeypatch.setattr(callers, "is_the_pod", lambda host, secret: False)
+    refused = runtime.post(
+        "/api/v1/agents/configure-from-spec",
+        json={"agent_spec_id": "r19-bare", "owner_uid": "user-mallory"},
+    )
+    assert refused.status_code == 403
+    assert "DATALAYER_USER_UID" not in os.environ
 
 
 def test_a_secret_no_longer_declared_is_taken_back(runtime: Any) -> None:
@@ -688,3 +814,550 @@ def test_the_sandbox_manager_unsets_names_in_every_live_kernel() -> None:
     assert "R19_SKILL_TOKEN" not in os.environ
     manager._sandbox = None
     manager._agent_sandboxes.clear()
+
+
+# --- a secret never sets what the runtime reads of its own ------------------------
+
+FOR_A_DEPLOYMENT = {"deployment_uid": "dep-1"}
+
+#: Other people's services, read by name for their tools or their sandboxes:
+#: their credentials, nothing of the runtime's.
+NOT_THE_RUNTIMES = {
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_KEY",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_GATEWAY",
+    "FAKE_TOKEN",
+    "GITHUB_TOKEN",
+    "KAGGLE_API_TOKEN",
+    "KAGGLE_KEY",
+    "KAGGLE_USERNAME",
+    # What a test of datalayer_core reads, in a pod's image with no test.
+    "TEST_DATALAYER_API_KEY",
+}
+
+_READS = re.compile(
+    r"""(?:os\.environ(?:\.get|\.pop|\.setdefault)?[(\[]|os\.getenv\(|getenv\()\s*["']([A-Za-z_][A-Za-z0-9_]+)["']"""
+)
+_NAMED = re.compile(
+    r"""^[A-Z_]*(?:ENV|VARIABLE|_VAR)[A-Z_]*\s*(?::[^=]+)?=\s*["']([A-Z][A-Z0-9_]+)["']""",
+    re.MULTILINE,
+)
+
+
+def _read_by(package: Any) -> set[str]:
+    """Every variable a package reads, by its name in its source."""
+    names: set[str] = set()
+    for file in Path(package.__file__).parent.rglob("*.py"):
+        text = str(file)
+        if "/tests/" in text or "/specs/agents/" in text:
+            continue
+        source = file.read_text(encoding="utf-8", errors="replace")
+        names.update(_READS.findall(source), _NAMED.findall(source))
+    return names
+
+
+def test_every_variable_the_runtime_reads_is_reserved() -> None:
+    """Whatever is added to read: the list is the code's, not somebody's memory."""
+    import datalayer_core
+
+    import agent_runtimes
+
+    read = _read_by(agent_runtimes) | _read_by(datalayer_core)
+    assert "DATALAYER_AI_INFERENCE_URL" in read
+    assert len(read) > 150
+    not_reserved = sorted(
+        name for name in read - NOT_THE_RUNTIMES if not is_reserved(name)
+    )
+    assert not_reserved == []
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "DATALAYER_AI_INFERENCE_URL",
+        "DATALAYER_IAM_URL",
+        "datalayer_ai_agents_url",
+        "AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS",
+        "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE",
+        "OPENAI_BASE_URL",
+        "ANTHROPIC_BASE_URL",
+        "MY_VENDOR_BASE_URL",
+        "HTTPS_PROXY",
+        "http_proxy",
+        "SSL_CERT_FILE",
+        "LD_PRELOAD",
+        "PYTHONPATH",
+        "NODE_OPTIONS",
+        "PATH",
+        "HOME",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
+    ],
+)
+def test_what_redirects_or_steers_the_runtime_is_reserved(name: str) -> None:
+    assert is_reserved(name)
+
+
+@pytest.mark.parametrize(
+    "name", ["GITHUB_TOKEN", "TAVILY_API_KEY", "ODOO_URL", "SLACK_BOT_TOKEN"]
+)
+def test_a_service_s_credential_is_not(name: str) -> None:
+    assert not is_reserved(name)
+
+
+def _catalogue_declares() -> dict[str, set[str]]:
+    from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
+
+    return {
+        server: set(server_env_names(spec) | sandbox_env_names(spec))
+        for server, spec in MCP_SERVER_CATALOG.items()
+    }
+
+
+def test_the_catalogue_declares_nothing_reserved_but_what_it_may() -> None:
+    from agent_runtimes.specs.skills import SKILLS_CATALOG
+
+    for server, names in _catalogue_declares().items():
+        assert {n for n in names if is_reserved(n)} <= CATALOGUE_MAY_DECLARE, server
+    for skill, spec in SKILLS_CATALOG.items():
+        assert not any(is_reserved(env_name(n)) for n in spec.envvars), skill
+
+
+@pytest.mark.parametrize(
+    "server",
+    [
+        {"id": "x", "name": "x", "required_env_vars": ["DATALAYER_AI_INFERENCE_URL"]},
+        {"id": "x", "name": "x", "url": "https://x.invalid/${DATALAYER_IAM_URL}"},
+        {"id": "x", "name": "x", "args": ["${AGENT_RUNTIMES_MODEL}"]},
+        {"id": "x", "name": "x", "env": {"A": "${HTTPS_PROXY}"}},
+        {"id": "x", "name": "x", "sandbox_envvars": ["PYTHONPATH"]},
+    ],
+)
+def test_a_server_that_declares_one_is_refused_however_it_says_so(
+    server: dict[str, Any],
+) -> None:
+    with pytest.raises(ReservedSecretName, match="reads of its own"):
+        declared_secrets(
+            forwarded_spec={"id": "a", "mcp_servers": [server]},
+            app_instance=FOR_A_DEPLOYMENT,
+        )
+
+
+def test_what_the_catalogue_may_declare_no_spec_may() -> None:
+    """A server of a spec's own, and the person's key in a header of its choosing."""
+    theirs = {
+        "id": "datalayer",
+        "name": "not the catalogue's",
+        "url": "https://x.invalid",
+        "required_env_vars": ["DATALAYER_API_KEY"],
+    }
+    with pytest.raises(ReservedSecretName):
+        declared_secrets(
+            forwarded_spec={"id": "a", "mcp_servers": [theirs]},
+            app_instance=FOR_A_DEPLOYMENT,
+        )
+    declared = declared_secrets(
+        forwarded_spec={"id": "a", "mcp_servers": ["datalayer"]},
+        app_instance=FOR_A_DEPLOYMENT,
+    )
+    assert "DATALAYER_API_KEY" in declared.runtime
+    assert declared.platform == {"DATALAYER_API_KEY"}
+
+
+def test_a_skill_that_declares_one_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_runtimes.specs import skills
+
+    bad = SkillSpec(id="r19-bad", name="bad", envvars=["DATALAYER_IAM_URL:0.0.1"])
+    monkeypatch.setitem(skills.SKILLS_CATALOG, "r19-bad", bad)
+    with pytest.raises(ReservedSecretName, match="The skill r19-bad"):
+        declared_secrets(skills=["r19-bad"], app_instance=FOR_A_DEPLOYMENT)
+
+
+def test_nothing_reserved_is_set_whatever_brought_it() -> None:
+    bare = DeclaredSecrets(for_a_deployment=True)
+    refuse_reserved(["GITHUB_TOKEN"], bare)
+    with pytest.raises(ReservedSecretName):
+        refuse_reserved(["DATALAYER_AI_INFERENCE_URL"], bare)
+    refuse_reserved(
+        ["DATALAYER_API_KEY"],
+        DeclaredSecrets(
+            platform=frozenset({"DATALAYER_API_KEY"}), for_a_deployment=True
+        ),
+    )
+
+
+def test_the_routes_answer_it_in_a_sentence(monkeypatch: pytest.MonkeyPatch) -> None:
+    from fastapi import HTTPException
+
+    from agent_runtimes.routes import agents
+
+    with pytest.raises(HTTPException) as refused:
+        agents.declared_secrets(
+            forwarded_spec={
+                "id": "a",
+                "mcp_servers": [
+                    {
+                        "id": "x",
+                        "name": "x",
+                        "required_env_vars": ["DATALAYER_AI_INFERENCE_URL"],
+                    }
+                ],
+            },
+            app_instance=FOR_A_DEPLOYMENT,
+        )
+    assert refused.value.status_code == 422
+    with pytest.raises(HTTPException) as said:
+        agents._nothing_reserved(
+            ["DATALAYER_IAM_URL"], DeclaredSecrets(for_a_deployment=True)
+        )
+    assert said.value.status_code == 422
+    assert "DATALAYER_IAM_URL" in str(said.value.detail)
+
+
+def test_the_running_agents_keep_what_the_platform_wrote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`mcp-servers/start` applies under what the agents declare: without what
+    the catalogue may declare among it, a kept `datalayer` connection is refused."""
+    from agent_runtimes.routes import agents
+
+    monkeypatch.setitem(
+        agents._agentspecs, "r19-held", {"agent_spec": {"mcp_servers": ["datalayer"]}}
+    )
+    declared = agents._declared_for_agents(["r19-held"])
+    assert declared.platform == {"DATALAYER_API_KEY"}
+
+
+REDIRECTED = "DATALAYER_AI_INFERENCE_URL"
+REDIRECT_SERVER = MCPServer(
+    id="r19-redirect",
+    name="declares what the runtime reads",
+    command="/nonexistent/r19-redirect",
+    required_env_vars=[REDIRECTED],
+)
+REDIRECT_AGENT = Agentspec(id="r19-a", name="r19-a", mcp_servers=[REDIRECT_SERVER])
+SENT = [{"name": REDIRECTED, "value": "https://elsewhere.invalid"}]
+
+
+def _as_if_declared(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Whatever brought the name to where it is applied: the read let it by."""
+    from agent_runtimes.routes import agents
+
+    declared = DeclaredSecrets(
+        consumers={"something": frozenset({REDIRECTED})}, for_a_deployment=True
+    )
+    monkeypatch.setattr(agents, "declared_secrets", lambda *_, **__: declared)
+    monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
+
+
+def test_a_library_spec_that_declares_one_configures_nothing(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.apps import principal
+    from agent_runtimes.routes import agents
+
+    monkeypatch.delenv(REDIRECTED, raising=False)
+    monkeypatch.setattr(agents, "get_library_agent_spec", lambda _: REDIRECT_AGENT)
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    response = _configure(runtime, "r19-a", SENT)
+    assert response.status_code == 422, response.text
+    assert REDIRECTED in response.json()["detail"]["problems"][0]
+    assert REDIRECTED not in os.environ
+    # And the companion is told nothing, so it gives nothing.
+    asked = runtime.post(
+        "/api/v1/agents/declared-secrets", json={"agent_spec_id": "r19-a"}
+    )
+    assert asked.status_code == 422, asked.text
+
+
+def test_configure_does_not_set_one_whatever_brought_it(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(REDIRECTED, raising=False)
+    _as_if_declared(monkeypatch)
+    response = _configure(runtime, "r19-agent", SENT)
+    assert response.status_code == 422, response.text
+    assert REDIRECTED not in os.environ
+
+
+def test_starting_servers_does_not_set_one_whatever_brought_it(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(REDIRECTED, raising=False)
+    assert _configure(runtime, "r19-bare", []).status_code == 200
+    _as_if_declared(monkeypatch)
+    response = runtime.post("/api/v1/agents/mcp-servers/start", json={"env_vars": SENT})
+    assert response.status_code == 422, response.text
+    assert REDIRECTED not in os.environ
+
+
+@pytest.mark.asyncio
+async def test_a_server_that_declares_one_is_not_started_with_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.apps import principal
+    from agent_runtimes.routes import agents
+    from agent_runtimes.routes.acp import _agents
+
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    started: List[str] = []
+
+    class Lifecycle:
+        def is_server_running(self, *_: Any, **__: Any) -> bool:
+            return False
+
+        def is_start_under_way(self, *_: Any) -> bool:
+            return False
+
+        def withdraw(self, *_: Any) -> None:
+            pass
+
+        async def start_server(self, server_id: str, *_: Any, **__: Any) -> Any:
+            started.append(server_id)
+            return object()
+
+    adapter = SimpleNamespace(
+        _selected_mcp_servers=[SimpleNamespace(id="r19-redirect", origin="catalog")]
+    )
+    monkeypatch.setitem(_agents, "r19-held", (adapter, SimpleNamespace()))
+    monkeypatch.setattr(agents, "get_mcp_lifecycle_manager", lambda: Lifecycle())
+    monkeypatch.setattr(agents, "MCP_SERVER_CATALOG", {"r19-redirect": REDIRECT_SERVER})
+    answer = await agents._start_mcp_servers_for_agent(
+        "r19-held", [agents.EnvVar(name=SENT[0]["name"], value=SENT[0]["value"])]
+    )
+    assert started == []
+    assert REDIRECTED in answer[2][0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_no_agent_is_made_from_a_spec_that_declares_one() -> None:
+    from fastapi import HTTPException
+
+    from agent_runtimes.routes import agents
+
+    forwarded = {
+        "id": "r19-a",
+        "mcp_servers": [REDIRECT_SERVER.model_dump(by_alias=True)],
+    }
+    with pytest.raises(HTTPException) as refused:
+        await agents.create_agent(
+            agents.CreateAgentRequest(
+                name="r19-made", agent_spec=forwarded, app_instance=FOR_A_DEPLOYMENT
+            ),
+            SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace())),
+        )
+    assert refused.value.status_code == 422
+    assert REDIRECTED in str(refused.value.detail)
+
+
+def test_a_signed_users_secret_is_the_platforms_though_it_is_named_as_its_own() -> None:
+    """D-21: declared by the deployment's own Appspec, set as any other."""
+    from agent_runtimes.apps.host_user import secret_variable
+
+    declared = declared_secrets(
+        app_spec={
+            "connections": [],
+            "deployment": {"embedded": {"host": {"user": "signed"}}},
+        },
+        app_instance={"deployment_uid": "dep-1"},
+    )
+    name = secret_variable("dep-1")
+    assert is_reserved(name) and name in declared.runtime
+    refuse_reserved([name], declared)
+
+
+# --- the reserved names hold deployments: a person's runtime is theirs ------------
+
+
+AWS_SERVER = {"id": "x", "name": "x", "required_env_vars": ["AWS_PROFILE"]}
+
+
+def test_a_persons_runtime_keeps_what_their_own_server_declares() -> None:
+    """Nothing crosses a boundary there: their spec, their vault, their runtime."""
+    declared = declared_secrets(
+        forwarded_spec={"id": "a", "mcp_servers": [AWS_SERVER]},
+        skills=[],
+    )
+    assert "AWS_PROFILE" in declared.runtime
+    refuse_reserved(["AWS_PROFILE"], declared)
+
+
+def test_a_spec_read_for_a_deployment_is_held_to_them_wherever_it_is_read() -> None:
+    """On no deployment's runtime: ai-agents reads what a version declares."""
+    with pytest.raises(ReservedSecretName):
+        declared_secrets(
+            forwarded_spec={"id": "a", "mcp_servers": [AWS_SERVER]},
+            app_instance={"deployment_uid": "dep-1"},
+        )
+    with pytest.raises(ReservedSecretName):
+        refuse_reserved(
+            ["AWS_PROFILE"],
+            DeclaredSecrets(for_a_deployment=True),
+        )
+
+
+def test_a_runtime_launched_for_a_deployment_is_held_to_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.apps import principal
+
+    monkeypatch.setattr(principal, "launched_for", lambda: "dep-1")
+    with pytest.raises(ReservedSecretName):
+        declared_secrets(forwarded_spec={"id": "a", "mcp_servers": [AWS_SERVER]})
+    with pytest.raises(ReservedSecretName):
+        refuse_reserved(["AWS_PROFILE"], DeclaredSecrets())
+    with pytest.raises(ReservedSecretName):
+        refuse_server_names("x", ["AWS_PROFILE"], from_catalogue=False)
+
+
+def test_a_runtime_serving_a_deployment_is_held_to_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.apps import principal
+
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    with pytest.raises(ReservedSecretName):
+        refuse_reserved(["AWS_PROFILE"], DeclaredSecrets())
+
+
+def test_a_persons_server_starts_with_what_it_declares() -> None:
+    refuse_server_names("x", ["AWS_PROFILE"], from_catalogue=False)
+
+
+# --- an owner's secrets stay out of a kernel they did not launch --------------------
+
+KERNEL_SECRET = "the-owners-" + uuid.uuid4().hex
+
+
+def _as_launched_by_a_visitor(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_runtimes.apps import principal
+
+    monkeypatch.setattr(principal, "launched_for", lambda: "dep-1")
+    monkeypatch.setattr(principal, "kernel_holds_owner_secrets", lambda: False)
+
+
+def test_a_skill_that_needs_one_in_the_kernel_is_refused_in_a_sentence() -> None:
+    declared = DeclaredSecrets(
+        consumers={"the skill github": frozenset({"GITHUB_TOKEN"})},
+        kernel=frozenset({"GITHUB_TOKEN"}),
+    )
+    [said] = declared.kernel_refused(lambda _: False, who="Desk")
+    assert "GITHUB_TOKEN" in said and "Desk" in said and "launched" in said
+
+
+def test_sandbox_envvars_are_refused_only_when_the_owner_holds_them() -> None:
+    """Offered, never required: with none to keep out, there is nothing to refuse."""
+    declared = DeclaredSecrets(
+        kernel=frozenset({"EARTHDATA_PASSWORD"}),
+        offered=frozenset({"EARTHDATA_PASSWORD"}),
+    )
+    assert declared.kernel_refused(lambda _: False, who="Desk") == []
+    assert len(declared.kernel_refused(lambda _: True, who="Desk")) == 1
+
+
+def test_a_server_s_secret_is_nothing_to_the_kernel() -> None:
+    declared = DeclaredSecrets(consumers={"the MCP server s": frozenset({"A_TOKEN"})})
+    assert declared.kernel_refused(lambda _: True, who="Desk") == []
+
+
+def test_the_companion_is_told_nothing_for_a_kernel_it_may_not_fill(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.routes import agents
+
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the skill x": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
+    asked = runtime.post("/api/v1/agents/declared-secrets", json={})
+    assert asked.status_code == 200, asked.text
+    assert asked.json()["kernel"] == []
+    assert asked.json()["runtime"] == ["R19_SKILL_TOKEN"]
+
+
+def test_the_owners_stay_out_of_the_sandbox_it_is_given(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The process holds it: the sandbox shares none of it."""
+    from agent_runtimes.routes import agents
+
+    assert _configure(runtime, "r19-bare", []).status_code == 200
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the MCP server s": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(agents, "_declared_for_agents", lambda _: declared)
+    monkeypatch.setattr(agents, "_launch_of", lambda *_: (None, None))
+    answered = runtime.post(
+        "/api/v1/agents/mcp-servers/start",
+        json={
+            "env_vars": [{"name": "R19_SKILL_TOKEN", "value": KERNEL_SECRET}],
+            "jupyter_sandbox": "http://127.0.0.1:2300?token=t",
+        },
+    )
+    assert answered.status_code == 200, answered.text
+    assert os.environ["R19_SKILL_TOKEN"] == KERNEL_SECRET
+    assert "R19_SKILL_TOKEN" not in runtime.sandbox.kernel
+
+
+def test_a_launch_that_needs_one_in_the_kernel_is_refused_and_its_agent_with_it(
+    runtime: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.routes import agents
+
+    _as_launched_by_a_visitor(monkeypatch)
+    declared = DeclaredSecrets(
+        consumers={"the skill x": frozenset({"R19_SKILL_TOKEN"})},
+        kernel=frozenset({"R19_SKILL_TOKEN"}),
+    )
+    monkeypatch.setattr(
+        agents,
+        "_launch_of",
+        lambda *_: ({"id": "desk", "name": "Desk"}, {"deployment_uid": "dep-1"}),
+    )
+    monkeypatch.setattr(agents, "_note_launched_app", lambda *_: declared)
+    answered = runtime.post(
+        "/api/v1/agents/mcp-servers/start",
+        json={"env_vars": [{"name": "R19_SKILL_TOKEN", "value": KERNEL_SECRET}]},
+    )
+    assert answered.status_code == 422, answered.text
+    assert "R19_SKILL_TOKEN" in str(answered.json()["detail"])
+    assert "launched" in (agents.set_up_refused("desk") or "")
+    assert "R19_SKILL_TOKEN" not in runtime.sandbox.kernel
+
+
+@pytest.mark.asyncio
+async def test_no_agent_is_made_for_a_visitor_from_what_needs_one_in_the_kernel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import HTTPException
+
+    from agent_runtimes.apps import principal
+    from agent_runtimes.routes import agents
+    from agent_runtimes.specs import skills
+
+    monkeypatch.setattr(principal, "kernel_holds_owner_secrets", lambda: False)
+    monkeypatch.setitem(skills.SKILLS_CATALOG, "r19-skill", PROBE_SKILL)
+    with pytest.raises(HTTPException) as refused:
+        await agents.create_agent(
+            agents.CreateAgentRequest(
+                name="r19-visitors",
+                agent_spec={"id": "r19-a", "skills": ["r19-skill:0.0.1"]},
+            ),
+            SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace())),
+        )
+    assert refused.value.status_code == 422
+    assert "R19_SKILL_TOKEN" in str(refused.value.detail)
+
+
+def test_a_persons_own_runtime_keeps_its_kernel(runtime: Any) -> None:
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    assert kernel_holds_owner_secrets()
+    response = _configure(runtime, "r19-agent", ACCOUNT)
+    assert response.status_code == 200, response.text
+    _settle()
+    assert runtime.sandbox.kernel == {"R19_SKILL_TOKEN": SKILL_SECRET}

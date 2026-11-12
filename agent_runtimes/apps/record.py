@@ -56,6 +56,7 @@ import asyncio
 import contextvars
 import logging
 import os
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -137,6 +138,24 @@ SESSION_KINDS = (
 #: `stopped` is not one: it is refused wherever a state is read or written.
 SESSION_STATES = ("open", "paused", "ended")
 
+#: What the record names as the application of a session of an agent run as
+#: such, before its agentspec's id: an agent made without an Appspec is the
+#: application of that one agent, and its sessions say so by this.
+AGENT_APP_PREFIX = "agent:"
+
+
+def agent_app_uid(agent_spec: str) -> str:
+    """The application uid of the sessions of an agent run as such."""
+    return f"{AGENT_APP_PREFIX}{agent_spec}"
+
+
+def session_kind(app_uid: Any) -> str:
+    """Whether a session is an ``agent``'s, run as such, or an
+    ``application``'s: said by the application uid its record names.
+    """
+    return "agent" if str(app_uid or "").startswith(AGENT_APP_PREFIX) else "application"
+
+
 #: Kept whatever `record.include` says: a session's start, a run's start
 #: (what Activity reads as in progress, R-15), what its channels were
 #: sent (R-37), and that it asked the person and waits (`asked`, what
@@ -207,6 +226,75 @@ COMMENT_LIMIT = 2000
 
 #: The longest question, and the longest answer, a turn keeps.
 TURN_LIMIT = 4000
+
+
+#: The platform invocation the current run answers, when a platform calls the
+#: runtime once per turn (AgentCore's ``POST /invocations``): ``{target,
+#: started_at, started, microvm_started_at}``, set by the target for the time
+#: of the call (`invoked`). ``None`` on every other runtime.
+_INVOCATION: contextvars.ContextVar[Optional[Dict[str, Any]]] = contextvars.ContextVar(
+    "loop_app_invocation", default=None
+)
+
+
+def _iso(moment: float) -> str:
+    """A UTC instant as the record writes one (``…Z``)."""
+    return (
+        datetime.fromtimestamp(moment, timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+
+
+@contextmanager
+def invoked(
+    target: str, started: float, microvm_started: Optional[float] = None
+) -> Iterator[None]:
+    """Hold, for the time of a platform's invocation, when it arrived.
+
+    The run's ``output`` entry then carries an ``invocation`` payload
+    (`invocation_of`): what the platform's invocation of the turn lasted,
+    measured, never estimated.
+
+    Parameters
+    ----------
+    target : str
+        The platform that invoked the runtime (``agentcore``).
+    started : float
+        When the invocation arrived, a ``time.time()``.
+    microvm_started : float, optional
+        When the process that answers it started, a ``time.time()``.
+    """
+    held = _INVOCATION.set(
+        {
+            "target": target,
+            "started": float(started),
+            "started_at": _iso(started),
+            **(
+                {"microvm_started_at": _iso(microvm_started)}
+                if microvm_started is not None
+                else {}
+            ),
+        }
+    )
+    try:
+        yield
+    finally:
+        _INVOCATION.reset(held)
+
+
+def invocation_of(ended: float) -> Optional[Dict[str, Any]]:
+    """The invocation the current run answers, as its ``output`` entry carries it.
+
+    ``{target, started_at, ended_at, seconds, microvm_started_at?}``: the
+    invocation's wall time, from its arrival to the run's end (``seconds``),
+    and when the process answering it started. ``None`` outside an invocation.
+    """
+    held = _INVOCATION.get()
+    if held is None:
+        return None
+    said = {k: v for k, v in held.items() if k != "started"}
+    said["ended_at"] = _iso(ended)
+    said["seconds"] = round(max(0.0, ended - held["started"]), 3)
+    return said
 
 
 def current_session() -> str:
@@ -445,12 +533,33 @@ KeepSound = Callable[..., Awaitable[None]]
 def runtime_runs_on() -> Dict[str, Any]:
     """Where a session of this runtime runs (MH-01): ``{kind: runtime, uid}``,
     the runtime's uid as the platform names it (``DATALAYER_RUNTIME_ID``),
-    ``local`` for a runtime started by hand.
+    ``local`` for a runtime started by hand; on Amazon Bedrock AgentCore,
+    ``{kind: agentcore, arn}``, the agent runtime it was told it is
+    (``AGENTCORE_RUNTIME_ARN``).
     """
+    from agent_runtimes.agentcore.settings import is_agentcore_target
+
+    arn = (os.environ.get("AGENTCORE_RUNTIME_ARN") or "").strip()
+    if arn and is_agentcore_target():
+        return {"kind": "agentcore", "arn": arn}
     return {
         "kind": "runtime",
         "uid": (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip() or "local",
     }
+
+
+def local_holder() -> Optional[Dict[str, Any]]:
+    """The process that holds a session of a runtime started by hand
+    (`local_rule.holder`), when its sessions are kept in files on this
+    machine; ``None`` when they are sent to the platform's record, which is
+    told nothing of this machine.
+    """
+    from agent_runtimes.apps.local_rule import holder
+    from agent_runtimes.apps.session_store import active_store
+
+    if str(getattr(active_store(), "name", "")) != "file":
+        return None
+    return holder()
 
 
 def no_lineage() -> Dict[str, Any]:
@@ -493,6 +602,7 @@ def session_from_entries(
     payload = opened.get("payload") or {}
     described: Dict[str, Any] = {
         "uid": uid,
+        "kind": session_kind(opened.get("app_uid")),
         "agent": facts["agent"],
         "harness": facts["harness"],
         "app": {
@@ -534,6 +644,8 @@ def session_from_entries(
                 described["runs_on"] = dict(
                     payload.get("runs_on") or described["runs_on"]
                 )
+                # The process that holds it, when a runtime started by hand said so.
+                described["held_by"] = payload.get("held_by") or None
                 described["resumed"] = bool(payload.get("resumed"))
         elif kind == "turn":
             described["turns"] += 1
@@ -566,6 +678,10 @@ def session_from_entries(
             }
     if described["state"] == "ended":
         described["runs_on"] = None
+    if described["state"] != "open":
+        described.pop("held_by", None)
+    elif not described.get("held_by"):
+        described.pop("held_by", None)
     return described
 
 
@@ -842,7 +958,17 @@ class AppRecorder:
                     "state": "open",
                     **({"woken_by": woken} if woken else {}),
                     **({"resumed": True} if resumed else {}),
-                    **session_facts(facts),
+                    **(written := session_facts(facts)),
+                    # A runtime started by hand says which process holds the
+                    # session, so that a listing of this machine's sessions
+                    # can tell an open one from one whose process is gone
+                    # (`local_rule`).
+                    **(
+                        {"held_by": held_by}
+                        if written["runs_on"] == {"kind": "runtime", "uid": "local"}
+                        and (held_by := local_holder())
+                        else {}
+                    ),
                 },
             )
 
@@ -867,10 +993,16 @@ class AppRecorder:
         send_later(session, self.flush(session))
 
     def paused(
-        self, session: str, *, cancelled: Optional[Dict[str, bool]] = None
+        self,
+        session: str,
+        *,
+        cancelled: Optional[Dict[str, bool]] = None,
+        remembered: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """The session is paused: nothing runs, held or not. ``cancelled``
-        says what the pause cut short — a running turn, a question asked.
+        says what the pause cut short — a running turn, a question asked;
+        ``remembered`` what its agent's memory was given first, when it has
+        one (``{saved, turns}``, with ``refused`` when it took nothing).
         """
         cut = {k: bool(v) for k, v in (cancelled or {}).items() if v}
         self._session_entry(
@@ -882,7 +1014,11 @@ class AppRecorder:
                 if cut
                 else ""
             ),
-            {"state": "paused", "cancelled": cut},
+            {
+                "state": "paused",
+                "cancelled": cut,
+                **({"remembered": dict(remembered)} if remembered else {}),
+            },
         )
 
     def session_ended(self, session: str, *, by: str) -> None:
@@ -1095,7 +1231,13 @@ class AppRecorder:
         the stream ends. Never fails: a record is never worth a run.
         """
         while _SENDING.get(session):
-            await asyncio.gather(*list(_SENDING[session]), return_exceptions=True)
+            # Shielded: whoever waits may be cancelled — a turn whose client
+            # stopped reading — and a cancelled gather cancels what it
+            # gathers, which lost the entries a send had taken to send.
+            await asyncio.gather(
+                *(asyncio.shield(sending) for sending in list(_SENDING[session])),
+                return_exceptions=True,
+            )
             # Sends that are done leave the set in their callbacks, which a
             # gather of done tasks does not wait for: let them run.
             await asyncio.sleep(0)
@@ -1417,13 +1559,16 @@ class AppRecorder:
         """
         if status not in RUN_ENDS:
             raise ValueError(f"A run ends {', '.join(RUN_ENDS)}; not {status!r}.")
-        end: Dict[str, Any] = {
-            "status": status,
-            "ended_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        }
+        now = time.time()
+        end: Dict[str, Any] = {"status": status, "ended_at": _iso(now)}
         trace_id = _trace_id()
         if trace_id:
             end["trace_id"] = trace_id
+        # The platform's invocation of the run, when one called it (`invoked`):
+        # always kept with the end, as the end is.
+        invocation = invocation_of(now)
+        if invocation is not None:
+            end["invocation"] = invocation
         if self.kept("output"):
             self._append("output", summary, {**(payload or {}), **end})
         elif self.kept("run"):
@@ -1505,6 +1650,13 @@ class AppRecordCapability(AbstractCapability[Any]):
             self._spoken[self._key(ctx)] = spoken.as_payload()
         self.recorder.start(session)
         self.recorder.ran(session)
+        # A person's Approve or Dismiss on a recommendation's card arrives as
+        # their turn: kept in the record before the agent reads it.
+        asked = self._asked(ctx)
+        if "a2ui-submission" in asked:
+            from agent_runtimes.tools.recommendations import decided_in
+
+            await decided_in(asked, session)
 
     async def after_tool_execute(
         self,
@@ -1640,7 +1792,10 @@ class AppRecordCapability(AbstractCapability[Any]):
 
 
 __all__ = [
+    "AGENT_APP_PREFIX",
     "ALWAYS_KEPT",
+    "invocation_of",
+    "invoked",
     "ANSWERS",
     "AppRecordCapability",
     "AppRecorder",
@@ -1654,9 +1809,11 @@ __all__ = [
     "send_to_store",
     "session_facts",
     "session_from_entries",
+    "session_kind",
     "session_state_of",
     "RecordNotSent",
     "TURN_LIMIT",
+    "agent_app_uid",
     "agent_recorder",
     "current_session",
     "keep_agent_recorder",

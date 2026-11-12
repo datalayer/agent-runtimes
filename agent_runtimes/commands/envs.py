@@ -72,7 +72,7 @@ _ClickException: type[Exception] = typer.BadParameter.__mro__[2]
 # Create a Typer app for environment commands
 app = typer.Typer(
     name="envs",
-    help="Environment management commands",
+    help="Manage environments.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -554,7 +554,10 @@ def validate(
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """Validate a version: a dry run of whether each variant can build it. Exits 1 when one cannot."""
+    """Validate a version with a dry run of each variant's build.
+
+    Validate a version: a dry run of whether each variant can build it. Exits 1 when one cannot.
+    """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
     report = client.validate_environment_version(
         _version_uid(client, version), variants=variant or None
@@ -626,7 +629,8 @@ def diff(
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """
+    """Compare the locks of two versions.
+
     Compare two versions' locks: the top-level packages added, removed, upgraded and downgraded.
 
     A version with no lock yet is named, and nothing is compared.
@@ -882,7 +886,10 @@ def logs(
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """Print a build's log: what is stored so far, or with --follow, the stream until the build ends."""
+    """Print a build's log.
+
+    Print a build's log: what is stored so far, or with --follow, the stream until the build ends.
+    """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
     if follow:
         _exit_with_outcome(_follow(client, [build_uid], output))
@@ -1045,7 +1052,10 @@ def rollback(
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """Promote the newest ready version older than the promoted one. Nothing is rebuilt."""
+    """Promote the newest ready version older than the promoted one.
+
+    Nothing is rebuilt.
+    """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
     record = client.get_environment(_environment_uid(client, environment))
     if not record.promoted_version_uid:
@@ -1162,7 +1172,7 @@ def envs_list(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List available environments (root command)."""
+    """List available environments."""
     list_environments(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
 
@@ -1183,5 +1193,5 @@ def envs_ls(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List available environments (root command alias)."""
+    """List available environments."""
     list_environments(token=token, iam_url=iam_url, runtimes_url=runtimes_url)

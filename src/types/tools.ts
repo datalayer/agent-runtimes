@@ -86,6 +86,12 @@ export interface FrontendToolSpec {
    * read and edit a notebook but must never delete from it.
    */
   toolset: string | string[];
+  /**
+   * The tools of the set that stream (AGENT_BATTLE B1-00): called once,
+   * each keeps pushing events the harness tells the model as turns it did
+   * not ask for — an arena's `arena_watch`.
+   */
+  streams?: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
   /** Drawn where there is no icon */
@@ -159,6 +165,23 @@ export interface ToolRenderAndWaitProps<
 }
 
 /**
+ * One event a streaming frontend tool pushes: where it comes from, when, and
+ * the state in words a model acts on beside the data.
+ */
+export interface ToolStreamEvent {
+  /** What pushed it: the arena's id, `arena-pong`. */
+  source: string;
+  /** The source's own clock, when it has one: the arena's tick. */
+  tick?: number;
+  /** When it was pushed, as a time in milliseconds. */
+  at: number;
+  /** The state, in words a model acts on. */
+  says: string;
+  /** The state, as data. */
+  state?: unknown;
+}
+
+/**
  * Frontend tool definition (compatible with CopilotKit useFrontendTool)
  */
 export interface FrontendToolDefinition<
@@ -188,6 +211,24 @@ export interface FrontendToolDefinition<
    * Required when location is 'frontend' (default)
    */
   handler?: (args: TArgs) => Promise<TResult>;
+
+  /**
+   * Whether the tool streams: its call returns at once, *subscribed*, and
+   * the page keeps pushing events through `subscribe` until the
+   * subscription ends. The harness tells the model each event as a turn it
+   * did not ask for (an arena says where the ball is rather than waiting to
+   * be asked; AGENT_BATTLE, 6 November 2026).
+   */
+  streams?: boolean;
+
+  /**
+   * For a streaming tool: start pushing events for a call, and return how
+   * to stop. Required when `streams` is set.
+   */
+  subscribe?: (
+    args: TArgs,
+    push: (event: ToolStreamEvent) => void,
+  ) => Promise<() => void> | (() => void);
 
   /**
    * What its card says in place of its arguments' summary, from what it

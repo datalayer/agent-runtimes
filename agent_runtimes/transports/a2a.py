@@ -15,7 +15,7 @@ import logging
 import re
 import traceback
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
@@ -821,8 +821,16 @@ class A2AWorker(_FastA2AWorker):
         from ..context.usage import TurnSpend
 
         turn = TurnSpend.begin(self.agent_id)
+        # The caller's ai-inference token for this context, when the request
+        # that sent the task had one (an AgentCore seat's call): the worker
+        # runs the task apart from that request, so it is held here.
+        from ..models.offered import context_inference_token, use_inference_token
+
+        token = context_inference_token(context_id)
+        held = use_inference_token(token) if token else nullcontext()
         try:
-            await self._run(task_id, context_id, params, turn)
+            with held:
+                await self._run(task_id, context_id, params, turn)
         except Exception as exc:
             # fasta2a marks the task failed and ends the stream, but says
             # nothing about why. Log it, and put the reason on the failed
@@ -835,7 +843,8 @@ class A2AWorker(_FastA2AWorker):
                 self.agent.name,
                 redact("".join(traceback.format_exception(exc))),
             )
-            from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
+            from ..context.delegation import refusal_meta
+            from ..guardrails.model_budget import ModelBudgetExceeded
 
             await self.storage.update_task(task_id, state="failed")
             message = _agent_message(
@@ -863,7 +872,10 @@ class A2AWorker(_FastA2AWorker):
         turn: "TurnSpend",
     ) -> None:
         from ..apps.visitors import (
+            battle_of_a2a,
+            enter_battle_run,
             enter_visitor_run,
+            leave_battle_run,
             leave_visitor_run,
             visitor_of_a2a,
         )
@@ -877,7 +889,12 @@ class A2AWorker(_FastA2AWorker):
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         # A visitor's run, as the application's gate marked it: it only reads,
         # whatever its rules say (R-30).
-        visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        meta = params["message"].get("metadata")
+        visitor = visitor_of_a2a(meta)
+        visiting = enter_visitor_run(visitor)
+        # A visitor's run of a catalogue Battle, as the gate marked it from
+        # their token (B4-01): the Battle's books are reached with its key.
+        battling = enter_battle_run(battle_of_a2a(meta) if visitor else "")
         # A turn asked by a personal agent through the company service: its
         # declared operations are proposed, or performed once confirmed
         # (B-04).
@@ -897,6 +914,7 @@ class A2AWorker(_FastA2AWorker):
         finally:
             leave_run_outputs(composing)
             leave_pap_turn(pap_turn)
+            leave_battle_run(battling)
             leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
@@ -928,6 +946,7 @@ class A2AWorker(_FastA2AWorker):
             CredentialLost,
             checkpoint_of,
             close_steering,
+            delegated_budget,
             enter_execution,
             execution_of,
             forget_pause,
@@ -940,7 +959,6 @@ class A2AWorker(_FastA2AWorker):
             was_delegated,
         )
         from ..context.identities import set_request_user_jwt
-        from ..guardrails.model_budget import delegated_budget
 
         meta = incoming.get("metadata")
         # A message said and heard (its audio by `HearA2AAudio`, or by the

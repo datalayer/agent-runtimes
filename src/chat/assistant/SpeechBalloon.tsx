@@ -26,7 +26,8 @@
  * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
  * (a notebook given, read-only). Either way a tool line stands in for the
  * peek while a tool runs, and a screen reader hears it once as it starts and
- * once as it ends.
+ * once as it ends. Words said carry a small copy icon under them (asked 6
+ * November 2026): the words whole to the clipboard, a check for a moment.
  *
  * @module chat/assistant/SpeechBalloon
  */
@@ -35,7 +36,7 @@ import type { JSX, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { XIcon } from '@primer/octicons-react';
+import { CheckIcon, CopyIcon, XIcon } from '@primer/octicons-react';
 import type { BalloonApproval } from './state';
 import type { DisplayItem } from '../../types/chat';
 import { DecisionAsk } from './DecisionAsk';
@@ -168,6 +169,9 @@ export interface SpeechBalloonProps {
 
 /** How tall the listed conversation grows before it scrolls, in pixels. */
 export const BALLOON_HISTORY_MAX_HEIGHT = 220;
+
+/** How long the copy icon shows its check, in milliseconds. */
+export const COPIED_MS = 1500;
 
 /** Shorter, when something goes with the words under it (a notebook). */
 export const BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT = 120;
@@ -342,6 +346,17 @@ export function SpeechBalloon({
   // *more*: the words whole, when they were cut or overflow their lines.
   const [whole, setWhole] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
+  // The copy icon: a check for a moment once the words went to the clipboard.
+  const [copied, setCopied] = useState(false);
+  const copyWords = async () => {
+    try {
+      await globalThis.navigator?.clipboard?.writeText(wholeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), COPIED_MS);
+    } catch {
+      // The clipboard refused: the words stay on screen.
+    }
+  };
   const cut =
     (!!fullText && fullText !== text) || (!!more && text.endsWith('…'));
   const wholeText = fullText ?? text;
@@ -386,7 +401,7 @@ export function SpeechBalloon({
           wide || listed || offered || whole || (current && attachment)
             ? 300
             : 'max-content',
-        bg: 'canvas.default',
+        bg: 'canvas.overlay',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',
         // The tail, toward what speaks.
@@ -397,7 +412,7 @@ export function SpeechBalloon({
           [align]: `${tailAt - 6}px`,
           width: 12,
           height: 12,
-          bg: 'canvas.default',
+          bg: 'canvas.overlay',
           borderRight: '1px solid',
           borderBottom: '1px solid',
           borderColor: current ? 'accent.muted' : 'border.default',
@@ -506,25 +521,50 @@ export function SpeechBalloon({
           />
         ) : null}
       </Box>
-      {current && !approval && !tool && (cut || overflowing || whole) ? (
+      {/* Under the words: *more* or *less* at the left, the copy icon at the right. */}
+      {!approval && !tool && !listed && wholeText.trim() ? (
         <Box
-          as="button"
-          type="button"
-          aria-expanded={whole}
-          data-balloon-whole={whole ? 'less' : 'more'}
-          onClick={() => setWhole(!whole)}
-          m={0}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={2}
           mt={1}
-          p={0}
-          border={0}
-          bg="transparent"
-          color="accent.fg"
-          font="inherit"
-          fontSize={0}
-          cursor="pointer"
-          hover={{ textDecoration: 'underline' }}
+          data-balloon-under=""
         >
-          {whole ? chatText.showLess : chatText.showMore}
+          {current && (cut || overflowing || whole) ? (
+            <Box
+              as="button"
+              type="button"
+              aria-expanded={whole}
+              data-balloon-whole={whole ? 'less' : 'more'}
+              onClick={() => setWhole(!whole)}
+              m={0}
+              p={0}
+              border={0}
+              bg="transparent"
+              color="accent.fg"
+              font="inherit"
+              fontSize={0}
+              cursor="pointer"
+              hover={{ textDecoration: 'underline' }}
+            >
+              {whole ? chatText.showLess : chatText.showMore}
+            </Box>
+          ) : (
+            <span />
+          )}
+          <IconButton
+            icon={copied ? CheckIcon : CopyIcon}
+            size="small"
+            variant="invisible"
+            aria-label={chatText.copyWords}
+            data-balloon-copy={copied ? 'copied' : ''}
+            onClick={event => {
+              event.stopPropagation();
+              void copyWords();
+            }}
+            sx={{ color: 'fg.muted', mr: '-6px', mb: '-4px' }}
+          />
         </Box>
       ) : null}
       {/* No history listed, at work with nothing written yet: the dots. */}

@@ -20,6 +20,15 @@ async def execute(tux: "CliTux") -> Optional[str]:
     """Exit the application."""
     from ..banner import print_goodbye
 
+    # A session open as the prompt leaves is not lost: its runtime pauses it
+    # as it stops, and it is listed, and resumed, from there.
+    uid = getattr(getattr(tux, "session", None), "session_uid", None)
+    if uid:
+        tux.console.print(
+            f"Session {uid} is kept: paused as its runtime stops. `loop` lists it as it "
+            f"starts, and `/resume {uid}` goes on with it.",
+            markup=False,
+        )
     tux.running = False
 
     # Clean up AG-UI client

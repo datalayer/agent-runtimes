@@ -1,22 +1,19 @@
-# PAP Conversation Control
+# Conversation control
 
-This `Application` drives the conversation controls of the real
-`ConversationClient` against Manzanita Outfitters, the SDK's demo company,
-configured with people available to take a conversation:
+This example drives one Manzanita conversation through every control in PAP
+draft 0.3 §7.9 to §7.12 with the real Python SDK: an `authorization` event
+(`insufficient_scope`, with the scope the request needs) answered by signing
+the same Session in mid-conversation (the conversation keeps its ID), a
+Direct Conversation that locks its parent (`direct_conversation_open` names
+it), a handoff to a person at the company, whose reply names its `author`
+(`type: human`, with the person's `id` and `name`), and closing.
 
-- `start_direct()` opens a Direct Conversation under an open parent, for the
-  user to talk with the company through the agent's interface. While it is
-  open, the parent refuses messages with `direct_conversation_open`, naming
-  it.
-- `handoff()` asks for a person: the parent goes `queued`, then a human
-  responds.
-- `close()` ends a conversation; closing the direct one tells the parent.
-
-The tool returns statuses and event types only; credentials stay with the
-host.
+The tool returns statuses, event types, and the company's answers. Tokens,
+user codes, and proofs stay in the host.
 
 ```bash
 loop apps run examples/personal-agent-protocol/conversation-control/app.py
 ```
 
-See the [PAP personal agent guide](https://personal-agent-protocol.datalayer.tech/guides/personal-agent/).
+Read the [conversations guide](https://personalagentprotocol.org/docs/guides/conversations)
+and the [example flow](https://personalagentprotocol.org/docs/examples/conversation-control).

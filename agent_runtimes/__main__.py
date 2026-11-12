@@ -31,6 +31,7 @@ For programmatic usage, import from agent_runtimes.commands:
 import asyncio
 import logging
 import os
+import sys
 from typing import Annotated, Optional
 
 import typer
@@ -45,6 +46,7 @@ from agent_runtimes.commands.agent_mcp_servers import (
     stop_agent_mcp_servers,
 )
 from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
+from agent_runtimes.commands.agentcore import app as agentcore_app
 from agent_runtimes.commands.agents import app as agents_app
 from agent_runtimes.commands.apps import app as apps_app
 from agent_runtimes.commands.benchmarks import app as benchmarks_app
@@ -67,6 +69,7 @@ from agent_runtimes.commands.list_specs import (
 from agent_runtimes.commands.list_specs import (
     list_agentspecs,
 )
+from agent_runtimes.commands.mcp import app as mcp_app
 from agent_runtimes.commands.mcp_servers_catalog import (
     OutputFormat as CatalogOutputFormat,
 )
@@ -91,14 +94,35 @@ from agent_runtimes.commands.serve import (
     LogLevel,
     Protocol,
     ServeError,
+    Target,
     serve_server,
 )
 from agent_runtimes.commands.sessions import app as sessions_app
+from agent_runtimes.commands.tool_approvals import app as tool_approvals_app
+from agent_runtimes.utils.logs import AWS_LOGGERS, asked_verbose, quiet_loggers
+
+
+def _log_level(argv: list[str]) -> int:
+    """INFO, but WARNING for `agent-runtimes mcp …` without `-v`.
+
+    `mcp` prints a result meant for `| jq`; the libraries imported below
+    (botocore at the chat import) log at INFO before any command runs.
+    """
+    words = [word for word in argv[1:] if not word.startswith("-")]
+    if words[:1] == ["mcp"] and not {"-v", "--verbose"} & set(argv[1:]):
+        return logging.WARNING
+    return logging.INFO
+
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level(sys.argv),
+    stream=sys.stderr,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+# AWS's SDK says at INFO where it found its credentials, over whatever the
+# command prints (`loop sessions`): shown when asked for, its warnings always.
+if not asked_verbose(sys.argv[1:], os.environ):
+    quiet_loggers(AWS_LOGGERS)
 logger = logging.getLogger(__name__)
 
 app = typer.Typer(
@@ -343,6 +367,20 @@ def main_callback(
             "(implies --cloud; nothing is launched)."
         ),
     ),
+    continue_last: bool = typer.Option(
+        False,
+        "--continue",
+        "-c",
+        help="Go on with your most recent session that is not ended, without asking (chat mode).",
+    ),
+    resume: str | None = typer.Option(
+        None,
+        "--resume",
+        help=(
+            "Go on with the session of this uid, where it lives — on this machine "
+            "or on Datalayer; with no uid, pick one, as `loop sessions` does."
+        ),
+    ),
     environment: str | None = typer.Option(
         None,
         "--environment",
@@ -362,6 +400,16 @@ def main_callback(
         False,
         "--keep",
         help="Leave the cloud runtime running when the session ends.",
+    ),
+    without_mcp_servers: bool = typer.Option(
+        False,
+        "--without-mcp-servers",
+        help="Configure the cloud runtime's agent with none of its MCP servers (with --cloud and --prompt).",
+    ),
+    without_skills: list[str] | None = typer.Option(
+        None,
+        "--without-skill",
+        help="Leave this skill of the agent out, by id; repeat for each (with --cloud and --prompt).",
     ),
     prompts: list[str] | None = typer.Option(
         None,
@@ -504,12 +552,22 @@ def main_callback(
             chat_args.append("--cloud")
         if runtime:
             chat_args.extend(["--runtime", runtime])
+        if continue_last:
+            chat_args.append("--continue")
+        if resume is not None:
+            chat_args.extend(["--resume", resume])
         if environment:
             chat_args.extend(["--environment", environment])
         if minutes is not None:
             chat_args.extend(["--minutes", str(minutes)])
         if keep:
             chat_args.append("--keep")
+        # Declared here and handed on: an option the group does not know is
+        # read as the name of a command.
+        if without_mcp_servers:
+            chat_args.append("--without-mcp-servers")
+        for skill in without_skills or []:
+            chat_args.extend(["--without-skill", skill])
         for prompt in prompts or []:
             chat_args.extend(["--prompt", prompt])
         if harness:
@@ -563,6 +621,8 @@ app.add_typer(checkpoints_app)
 app.add_typer(sandboxes_app)
 app.add_typer(console_app)
 app.add_typer(memory_app)
+app.add_typer(tool_approvals_app)
+app.add_typer(mcp_app)
 app.add_typer(envs_app)
 app.add_typer(evals_app)
 app.add_typer(pools_app)
@@ -571,6 +631,7 @@ app.add_typer(ray_app)
 app.add_typer(schedules_app)
 app.add_typer(apps_app)
 app.add_typer(plugins_app)
+app.add_typer(agentcore_app)
 app.add_typer(sessions_app)
 app.add_typer(scenes_app)
 app.command("events-list")(events_list)
@@ -744,7 +805,7 @@ def serve(
             "requires --jupyter-sandbox), or a provider reached with the "
             "credentials this machine holds for it — 'docker', 'datalayer', "
             "'google-colab', 'kaggle', 'monty', 'modal', 'daytona', "
-            "'cloudflare', 'coreweave', 'e2b'.",
+            "'cloudflare', 'coreweave', 'e2b', 'agentcore'.",
         ),
     ] = None,
     protocol: Annotated[
@@ -790,6 +851,16 @@ def serve(
             help="Disable tool approval flows for all agents started by this server",
         ),
     ] = False,
+    target: Annotated[
+        Optional[Target],
+        typer.Option(
+            "--target",
+            envvar="AGENT_RUNTIMES_TARGET",
+            help="Answer a platform's runtime contract: 'agentcore' serves Amazon Bedrock "
+            "AgentCore Runtime's /invocations, /ping and /ws on 0.0.0.0:8080 "
+            "(AGENTCORE_PORT), the agentspec of AGENT_SPEC_ID configured at start",
+        ),
+    ] = None,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -850,6 +921,9 @@ def serve(
         # Using environment variables instead of CLI options
         AGENT_RUNTIMES_PORT=8080 agent-runtimes serve
         AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes serve
+
+        # Answer Amazon Bedrock AgentCore Runtime's contract (0.0.0.0:8080)
+        AGENT_SPEC_ID=crawler agent-runtimes serve --target agentcore
     """
     try:
         serve_server(
@@ -875,6 +949,7 @@ def serve(
             node=node,
             disable_tool_approvals=disable_tool_approvals,
             orchestrator_root=orchestrator_root,
+            target=target,
         )
     except ServeError as e:
         logger.error(str(e))

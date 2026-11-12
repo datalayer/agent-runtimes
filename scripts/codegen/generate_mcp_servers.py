@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,40 @@ from typing import Any
 import yaml
 from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
+
+#: What an ``install`` says is installed (agentspecs: mcp-servers, skills).
+INSTALL_TYPES = ("npm", "python", "docker", "git", "remote", "built-in", "other")
+
+
+def install_of(spec: dict) -> dict | None:
+    """A spec's ``install``, checked: ``{type, command, note?}``; None when it has none.
+
+    Raises
+    ------
+    ValueError
+        When it is not of that shape, in a sentence naming the spec.
+    """
+    install = spec.get("install")
+    if install is None:
+        return None
+    where = f"{spec.get('id')}: install"
+    if not isinstance(install, dict) or set(install) - {"type", "command", "note"}:
+        raise ValueError(f"{where} is {{type, command, note}}, not {install!r}")
+    if install.get("type") not in INSTALL_TYPES:
+        raise ValueError(
+            f"{where}.type is one of {', '.join(INSTALL_TYPES)}, not {install.get('type')!r}"
+        )
+    command = install.get("command", "")
+    if not isinstance(command, str):
+        raise ValueError(f"{where}.command is a shell command, a string")
+    if not command.strip() and install["type"] not in ("remote", "built-in", "other"):
+        raise ValueError(
+            f"{where}.command says how a {install['type']} install is run: it is empty"
+        )
+    out = {"type": install["type"], "command": command.strip()}
+    if install.get("note"):
+        out["note"] = " ".join(str(install["note"]).split())
+    return out
 
 
 def load_mcp_specs(specs_dir: Path) -> list[dict[str, Any]]:
@@ -52,7 +87,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "import tempfile",
         "from typing import Dict",
         "",
-        "from agent_runtimes.types import MCPServer",
+        "from agent_runtimes.types import "
+        + ("InstallSpec, " if any(spec.get("install") for spec in specs) else "")
+        + "MCPServer"
+        + (", MCPServerAuth" if any(spec.get("auth") for spec in specs) else ""),
         "",
         "# " + "=" * 76,
         "# MCP Server Definitions",
@@ -139,6 +177,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             for key, value in headers.items():
                 lines.append(f'        "{key}": "{value}",')
             lines.append("    },")
+        # A bearer minted for the run (AC-20): an AgentCore Gateway trusting
+        # the identity named, never a header written in the spec.
+        if spec.get("auth"):
+            auth = spec["auth"]
+            lines.append(
+                f'    auth=MCPServerAuth(kind="{auth["kind"]}", identity="{auth["identity"]}"),'
+            )
 
         # Add env field if present
         if env_formatted:
@@ -154,6 +199,22 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 + ", ".join(f'"{v}"' for v in sandbox_envvars)
                 + "],"
             )
+        # The rest of what the spec says (the user, 7 November 2026): its tags,
+        # where to read about it and get its key, and what its tools do.
+        if spec.get("tags"):
+            lines.append(f"    tags={list(spec['tags'])!r},")
+        for key in ("documentation_url", "signup_url", "api_key_url", "setup"):
+            if spec.get(key):
+                lines.append(f"    {key}={str(spec[key])!r},")
+        install = install_of(spec)
+        if install:
+            lines.append(
+                "    install=InstallSpec("
+                + ", ".join(f"{k}={v!r}" for k, v in install.items())
+                + "),"
+            )
+        if spec.get("actions"):
+            lines.append(f"    actions={_actions_of(spec)!r},")
         lines.extend([")", ""])
 
     # Generate catalog dictionary
@@ -238,6 +299,19 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _actions_of(spec: dict[str, Any]) -> dict[str, Any]:
+    """What the spec says its tools do, as plain data: the classes by tool, the day checked, the note."""
+    actions = spec.get("actions") or {}
+    tidy: dict[str, Any] = {
+        "tools": {str(k): str(v) for k, v in (actions.get("tools") or {}).items()}
+    }
+    if actions.get("checked"):
+        tidy["checked"] = str(actions["checked"])
+    if actions.get("note"):
+        tidy["note"] = " ".join(str(actions["note"]).split())
+    return tidy
+
+
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     """Generate TypeScript code from MCP server specifications."""
     lines = [
@@ -313,11 +387,51 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                     if spec.get("headers")
                     else []
                 ),
+                *(
+                    [f"  auth: {json.dumps(spec['auth'], ensure_ascii=False)},"]
+                    if spec.get("auth")
+                    else []
+                ),
                 f"  transport: '{spec.get('transport', 'stdio')}',",
                 f"  enabled: {str(spec.get('enabled', False)).lower()},",
                 "  isAvailable: false,",
                 "  tools: [],",
                 f"  requiredEnvVars: {envvars_formatted},",
+                *(
+                    [f"  tags: {json.dumps(list(spec['tags']), ensure_ascii=False)},"]
+                    if spec.get("tags")
+                    else []
+                ),
+                *(
+                    [f"  env: {json.dumps(spec['env'], ensure_ascii=False)},"]
+                    if spec.get("env")
+                    else []
+                ),
+                *(
+                    [f"  sandboxEnvVars: {json.dumps(list(spec['sandbox_envvars']))},"]
+                    if spec.get("sandbox_envvars")
+                    else []
+                ),
+                *[
+                    f"  {camel}: {json.dumps(str(spec[key]), ensure_ascii=False)},"
+                    for key, camel in (
+                        ("documentation_url", "documentationUrl"),
+                        ("signup_url", "signupUrl"),
+                        ("api_key_url", "apiKeyUrl"),
+                        ("setup", "setup"),
+                    )
+                    if spec.get(key)
+                ],
+                *(
+                    [f"  install: {json.dumps(install_of(spec), ensure_ascii=False)},"]
+                    if spec.get("install")
+                    else []
+                ),
+                *(
+                    [f"  actions: {json.dumps(_actions_of(spec), ensure_ascii=False)},"]
+                    if spec.get("actions")
+                    else []
+                ),
                 "};",
                 "",
             ]

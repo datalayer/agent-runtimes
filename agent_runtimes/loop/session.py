@@ -40,8 +40,9 @@ class LoopSession:
     sandbox: dict[str, Any] = field(default_factory=dict)
     #: Free-form extras a front-end wants to carry without subclassing.
     extras: dict[str, Any] = field(default_factory=dict)
-    #: The application session this conversation is (MH-07): what `/swap`,
-    #: `/clone` and `/export` act on; none for a conversation that is no session.
+    #: The session this conversation is — an application's, or the session of
+    #: an agent run as such, from its first message: what `/pause`, `/swap`,
+    #: `/clone` and `/export` act on; none before the first message.
     session_uid: Optional[str] = None
     #: What the last swap said to the new agent.
     said: str = ""
@@ -52,6 +53,13 @@ class LoopSession:
     def api_base(self) -> str:
         """Versioned API root for this session's server."""
         return f"{self.server_url.rstrip('/')}/api/v1"
+
+    @property
+    def session_agui_url(self) -> str:
+        """Where this conversation's turns are sent: its agent over AG-UI, each
+        thread a session of it — recorded, listed, paused and resumed.
+        """
+        return session_agui_url(self.server_url, self.agent_id)
 
     @property
     def sandbox_variant(self) -> str:
@@ -111,6 +119,64 @@ class LoopSession:
         self.agent_id = str(answer.get("agent") or agent_id)
         self.said = str(answer.get("said") or "")
         return self
+
+
+#: The path of an agent's AG-UI endpoint whose threads are sessions.
+SESSION_AGUI_PATH = "/api/v1/apps/agents/"
+
+
+def session_agui_url(server_url: str, agent: str) -> str:
+    """An agent's AG-UI endpoint on a runtime, each thread a session of it."""
+    return f"{server_url.rstrip('/')}{SESSION_AGUI_PATH}{agent}/ag-ui/"
+
+
+def older_runtime_said(version: str) -> str:
+    """What is said of a runtime that keeps no session of an agent."""
+    return (
+        f"This runtime (agent-runtimes {version or 'of an earlier release'}) keeps no "
+        "session of an agent: the conversation goes on as before, and is not listed, "
+        "paused or resumed."
+    )
+
+
+def conversation_url(
+    server_url: str, agent: str, *, get: Any = None
+) -> tuple[str, str]:
+    """Where the prompt sends its turns, and what to say of it, if anything.
+
+    The runtime says what it can do (``GET /api/v1/runtime/status``,
+    ``agent_sessions``): one that keeps an agent's conversations as sessions
+    is talked to on its agent's endpoint whose threads are sessions; one
+    that does not say so — an older one, a pool not updated yet — on its
+    plain AG-UI endpoint, as before, with a sentence saying so.
+
+    Raises
+    ------
+    LoopRefused
+        When the runtime does not answer what it is: nothing is guessed.
+    """
+    import httpx
+
+    base = server_url.rstrip("/")
+    try:
+        answered = (get or httpx.get)(f"{base}/api/v1/runtime/status", timeout=30.0)
+    except httpx.HTTPError as refused:
+        raise LoopRefused(f"The runtime did not say what it runs: {refused}") from None
+    if answered.status_code >= 300:
+        raise LoopRefused(
+            f"The runtime did not say what it runs ({answered.status_code})."
+        )
+    said = answered.json() or {}
+    if said.get("agent_sessions") is True:
+        return session_agui_url(base, agent), ""
+    return f"{base}/api/v1/ag-ui/{agent}/", older_runtime_said(
+        str(said.get("version") or "")
+    )
+
+
+def is_session_agui_url(url: str) -> bool:
+    """Whether an AG-UI address is one whose threads are sessions."""
+    return SESSION_AGUI_PATH in url
 
 
 class LoopRefused(RuntimeError):

@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""The companies an application works with as a personal agent (ADR-1, B-02, B-03).
+"""The companies an application works with as a personal agent.
 
 Each is the gateway's `pap` toolset for that company, reached in the
 person's name, its tools named with the company; the Rules decide them by
@@ -104,7 +104,7 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
     assert await harness.call(ask, {"message": "Where is my order?"}) == {
         "message": "Where is my order?"
     }
-    # A message to the company goes out in the person's name: `send` (R-02, decided 13 October 2026).
+    # A message to the company goes out in the person's name: `send` (decided 13 October 2026).
     assert harness.recorded[-1].decision.classes == ("send",)
     assert pap_connections.classes_of("pap_manzanita_example_pap_confirm") == (
         "write",
@@ -113,7 +113,7 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
     # A connection that reads gives only what reads.
     capability = harness.capability
     assert capability.given("pap_ledgerly_example_pap_read") is True
-    # Sending is not reading: a connection that only reads does not converse (U-15's rule).
+    # Sending is not reading: a connection that only reads does not converse.
     assert capability.given("pap_ledgerly_example_pap_ask") is False
     assert capability.given("pap_ledgerly_example_pap_confirm") is False
     assert capability.given("pap_manzanita_example_pap_confirm") is True
@@ -124,7 +124,7 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
 async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(
     monkeypatch,
 ) -> None:
-    """R-01: the Rules evaluator decides a company's tool, and the record keeps the inputs the
+    """The Rules evaluator decides a company's tool, and the record keeps the inputs the
     runtime holds — the company, its protocol, the connection's level and in whose account it
     acts, whether that level gives the tool — beside what it does, the Rule and the narrowest
     reason. Never an argument of the call."""
@@ -162,7 +162,7 @@ async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(
     # No trace: no correlation ID, never one made up.
     assert "trace_id" not in detail
 
-    # Under a trace, the correlation ID its call carries to the gateway (A-05): the Activity shows
+    # Under a trace, the correlation ID its call carries to the gateway: the Activity shows
     # the gateway's rows of the call beside the decision by it.
     from agent_runtimes.mcp import tracing
 
@@ -207,32 +207,21 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
         }
     )
     pap_connections.remember_agent("agent-4", spec)
-    # Whatever rule would ask first, the runtime does not: the gateway asks the
-    # person with the company's own terms, once (R-04, R-05).
-    harness = Harness(spec)
-    args = {"operation_ref": "op_1", "revision": 1}
-    # *Ask me first* reaches the gateway, whatever the model sent: no approval
-    # in advance stands in for the person there.
-    sent = {**args, "ask_the_person": False}
-    assert await harness.call("pap_manzanita_example_pap_confirm", sent) == {
-        **args,
-        "ask_the_person": True,
-    }
-    assert harness.asked == []
-    assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
-    # *Do it if I asked*: the gateway asks unless an approval in advance covers the terms.
-    if_asked = spec.model_copy(
-        update={"rules": [spec.rules[0].model_copy(update={"behaviour": "if_asked"})]}
-    )
-    pap_connections.remember_agent("agent-5", if_asked)
-    harness = Harness(if_asked)
-    assert await harness.call(
-        "pap_manzanita_example_pap_confirm", {**args, "ask_the_person": True}
-    ) == {**args, "ask_the_person": False}
-    assert (
-        harness.recorded[-1].decision.because
-        == "the_gateway_asks_unless_approved_in_advance"
-    )
+    # The Rule decides whether the call is made, and no Rule approves: whatever it
+    # says short of *Leave it to me*, the runtime does not ask, sends what the model
+    # sent, and the gateway asks the person with the company's own terms, every time.
+    args = {"operation_ref": "op_1", "revision": "r-1"}
+    for behaviour in ("ask_first", "if_asked", "do_it"):
+        ruled = spec.model_copy(
+            update={
+                "rules": [spec.rules[0].model_copy(update={"behaviour": behaviour})]
+            }
+        )
+        pap_connections.remember_agent(f"agent-{behaviour}", ruled)
+        harness = Harness(ruled)
+        assert await harness.call("pap_manzanita_example_pap_confirm", args) == args
+        assert harness.asked == []
+        assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
     # What the Maker leaves to the person stays theirs, at the company.
     with pytest.raises(AppRuleBlockedError) as refused:
         await Harness(app()).call("pap_manzanita_example_pap_confirm", args)
@@ -241,7 +230,7 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
 
 
 def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
-    """PR-54: the runtime's table is agentspecs' `protocol-tools`,
+    """The runtime's table is agentspecs' `protocol-tools`,
     generated — the gateway reads the same — and every commerce operation too."""
     from agentspecs.actions import protocol_tool_classes, protocol_tool_names
 
@@ -267,7 +256,7 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
 
 
 def business() -> AppSpec:
-    """Travel Desk: a person's agent at Example Air over PACT (PI-20)."""
+    """Travel Desk: a person's agent at Example Air over PACT."""
     return APP_CATALOGUE["travel-desk"].model_copy(deep=True)
 
 
@@ -336,7 +325,7 @@ def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
 
 
 def shop() -> AppSpec:
-    """Shopping Desk: a person's agent at Example Store over UCP (PI-20)."""
+    """Shopping Desk: a person's agent at Example Store over UCP."""
     spec = APP_CATALOGUE["shopping-desk"].model_copy(deep=True)
     # Example Outfitters only read: a connection that reads buys nothing.
     store, outfitters = spec.commerce.merchants
@@ -415,7 +404,7 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
 
 
 def reader() -> AppSpec:
-    """Signed Reader: pages read at Example Verifier, each request signed (EX-11)."""
+    """Signed Reader: pages read at Example Verifier, each request signed."""
     return APP_CATALOGUE["signed-reader"].model_copy(deep=True)
 
 

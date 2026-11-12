@@ -1,13 +1,19 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /decisions - Ask Jev typed questions about a text.
+"""Slash command: /decisions - Ask the agent's decision model typed questions about a text.
+
+An agent decides only when its agentspec names a decisions spec
+(``decisions: jev:0.0.1``). The command is offered — listed in ``/help`` and
+in the ``/`` menu — only for such an agent (:func:`OFFERED`); typed for
+another, the runtime's sentence says its spec names no decisions and how to
+add them.
 
 The questions go to the session's runtime (``POST
 /api/v1/configure/inference/decisions``), which asks them as the agent's
-``decide`` tool does: at ai-inference's ``/decisions``, with the token the
-runtime calls its models with. Locally and on Datalayer alike, nothing is
-asked from this process.
+``decide`` tool does: of the model its decisions spec names, at ai-inference's
+``/decisions``, with the token the runtime calls its models with. Locally and
+on Datalayer alike, nothing is asked from this process.
 """
 
 from __future__ import annotations
@@ -25,7 +31,7 @@ if TYPE_CHECKING:
 
 NAME = "decisions"
 ALIASES: list[str] = ["decide"]
-DESCRIPTION = "Ask Jev typed questions about a text: yes or no, a choice, a score"
+DESCRIPTION = "Ask typed questions about a text: yes or no, a choice, a score"
 SHORTCUT = None
 GROUP = "Agents"
 
@@ -49,6 +55,90 @@ KINDS: dict[str, Literal["noul", "choice", "score"]] = {
 
 class Unasked(ValueError):
     """The line does not say what to ask: the sentence says why."""
+
+
+def _session_key(tux: "CliTux") -> tuple[str, str]:
+    """The runtime and the agent a session's decisions were read for."""
+    return (str(tux.server_url), str(getattr(tux, "agent_id", "") or ""))
+
+
+async def refresh(tux: "CliTux") -> Optional[dict[str, Any]]:
+    """
+    Read whether the session's agent decides, and remember it for the session.
+
+    The runtime says it (``GET /api/v1/agents/{agent_id}``, ``decisions``): the
+    decisions spec its agentspec names and the model asked, or nothing. Read
+    once per runtime and agent; a runtime that cannot be read, or one too old
+    to say it, says nothing, and is read again the next time.
+
+    Parameters
+    ----------
+    tux : CliTux
+        The session.
+
+    Returns
+    -------
+    Optional[dict[str, Any]]
+        ``spec``, ``name``, ``model``, ``model_name``, ``questions`` and the
+        limits; ``None`` when the agent does not decide.
+    """
+    key = _session_key(tux)
+    known = getattr(tux, "decisions", None)
+    if known is not None and known[0] == key:
+        return known[1]
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{key[0]}/api/v1/agents/{key[1]}", timeout=5.0)
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200 or "decisions" not in response.json():
+        return None
+    said = response.json()["decisions"]
+    tux.decisions = (key, said if isinstance(said, dict) else None)
+    return tux.decisions[1]
+
+
+def _answered(tux: "CliTux") -> bool:
+    """Whether the runtime said, for this session's agent, if it decides."""
+    known = getattr(tux, "decisions", None)
+    return known is not None and known[0] == _session_key(tux)
+
+
+def not_offered(tux: "CliTux") -> str:
+    """The sentence for ``/decisions`` typed for an agent that does not decide."""
+    from agent_runtimes.tools.decisions import HOW_TO_DECIDE
+
+    agent = getattr(tux, "agent_id", "") or "this agent"
+    return (
+        f"The agent {agent} does not decide: its spec names no decisions. "
+        f"To give it the capability, {HOW_TO_DECIDE}."
+    )
+
+
+def OFFERED(tux: "CliTux") -> bool:
+    """Whether ``/decisions`` is offered now: the session's agent decides."""
+    known = getattr(tux, "decisions", None)
+    return bool(known is not None and known[0] == _session_key(tux) and known[1])
+
+
+def header_value(decisions: Optional[dict[str, Any]]) -> Optional[str]:
+    """
+    Say an agent's decisions on one line of the terminal's header.
+
+    Parameters
+    ----------
+    decisions : Optional[dict[str, Any]]
+        What the runtime says of the agent's decisions, if it decides.
+
+    Returns
+    -------
+    Optional[str]
+        ``jev:0.0.1 (cloudflare:wrk/typesafe/jev)``; ``None`` for an agent
+        that does not decide.
+    """
+    if not decisions:
+        return None
+    return f"{decisions['spec']} ({decisions['model']})"
 
 
 def _name(question: str) -> str:
@@ -167,9 +257,13 @@ def answer_lines(answers: dict[str, Any]) -> list[str]:
 
 
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
-    """Ask Jev the questions typed, through the session's runtime, and say the answers."""
+    """Ask the agent's decision model the questions typed, through the session's runtime, and say the answers."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY
 
+    decides = await refresh(tux)
+    if _answered(tux) and not decides:
+        tux.console.print(f"[red]{not_offered(tux)}[/red]")
+        return None
     if not argv.strip():
         tux.console.print()
         tux.console.print(f"  {USAGE}", style=STYLE_ACCENT)
@@ -190,6 +284,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
                 json={
                     "state": state,
                     "questions": [question.model_dump() for question in questions],
+                    "agent_id": getattr(tux, "agent_id", None) or None,
                 },
                 timeout=90.0,
             )
@@ -210,7 +305,8 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         tux.console.print(f"[red]{body['refusal']}[/red]")
         tux.console.print()
         return None
-    tux.console.print(f"● Decided by {body['model']}", style=STYLE_PRIMARY)
+    by = f"{decides['name']} ({body['model']})" if decides else body["model"]
+    tux.console.print(f"● Decided by {by}", style=STYLE_PRIMARY)
     for line in answer_lines(body["answers"]):
         tux.console.print(f"  {line}", style=STYLE_ACCENT)
     tux.console.print()

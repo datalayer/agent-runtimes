@@ -30,11 +30,13 @@ from fastapi.testclient import TestClient
 from agent_runtimes.apps import acting, principal, sessions
 from agent_runtimes.mcp import google_workspace as gw
 from agent_runtimes.models.models import remember_app_instance
+from agent_runtimes.routes.apps import NOT_WOKEN_BY_THEM
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     answer_of,
     as_,
     events_of,
+    principal_token_of,
     remote,
     runtime,
 )
@@ -62,11 +64,18 @@ TRIAGE = {
 }
 
 
-def token_of(person: str = PERSON, grant: str = GRANT, *, ends_in: float = 900) -> str:
+def token_of(
+    person: str = PERSON,
+    grant: str = GRANT,
+    *,
+    ends_in: float = 900,
+    agent: str = "principal-7",
+) -> str:
     """A token as IAM mints it from a person's grant: its claims, unsigned here."""
     claims = {
         "sub": person,
         "app_uid": "app-1",
+        "agent_uid": agent,
         "task_grant_uid": grant,
         "exp": int(time.time() + ends_in),
     }
@@ -90,11 +99,15 @@ def woken_for(person: str = PERSON, grant: str = GRANT) -> Dict[str, Any]:
 def fresh() -> Iterator[None]:
     acting.forget_acting()
     gw.forget_tokens()
+    principal.give_principal_token(
+        "dep-1", "p-token", expires_in=3600, principal_uid="principal-7"
+    )
     yield
     acting.forget_acting()
     acting.use_iam(None)
     gw.forget_tokens()
     gw.use_iam(None)
+    principal.forget_principal_token("dep-1")
 
 
 @pytest.fixture()
@@ -141,6 +154,14 @@ async def test_a_token_given_that_ends_reaches_nothing_more_in_their_name(
 
 
 def test_a_token_not_the_persons_from_their_grant_or_ended_is_refused() -> None:
+    with pytest.raises(ValueError, match="another application"):
+        acting.given(
+            "dep-1",
+            OWNER_KEY,
+            token_of(agent="the-principal-of-another-deployment"),
+            person=PERSON,
+            grant=GRANT,
+        )
     with pytest.raises(ValueError, match="not ada's"):
         acting.given(
             "dep-1", OWNER_KEY, token_of(person="bob"), person=PERSON, grant=GRANT
@@ -177,7 +198,7 @@ def test_whom_an_event_woke_the_session_for() -> None:
 def deployed(runtime: Runtime) -> Iterator[Runtime]:  # noqa: F811 - the fixture
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         return {
-            "access_token": "p-token",
+            "access_token": principal_token_of(OWNER_KEY),
             "expires_in": 3600,
             "principal_uid": "principal-7",
         }
@@ -204,6 +225,35 @@ def start(client: TestClient, woken_by: Dict[str, Any], **headers: str) -> Any:
             "session": "session-mail-01",
         },
     )
+
+
+def test_nobody_but_its_owner_says_what_woke_a_deployments_session(
+    deployed: Runtime,
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """A visitor who could open it, with the person's real token in their hands:
+    what they say woke it opens nothing, gives nothing and is recorded nowhere."""
+
+    async def administers_nothing(bearer: str) -> List[Dict[str, Any]]:
+        return []
+
+    principal.use_memberships_asker(administers_nothing)
+    refused = remote.post(
+        "/api/v1/apps/sessions",
+        headers={**as_("a-second-account"), acting.ACTING_TOKEN_HEADER: token_of()},
+        json={
+            "agent": "inbox-triage",
+            **DEPLOYMENT,
+            "opener": "A message arrived.",
+            "woken_by": woken_for(),
+            "session": "session-claimed",
+        },
+    )
+    assert refused.status_code == 403
+    assert refused.json()["detail"] == NOT_WOKEN_BY_THEM
+    principal.use_memberships_asker(None)
+    assert sessions.session_of("session-claimed") is None
+    assert deployed.records == []
 
 
 @pytest.mark.asyncio

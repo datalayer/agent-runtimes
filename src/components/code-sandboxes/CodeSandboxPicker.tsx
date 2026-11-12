@@ -296,6 +296,9 @@ export function CodeSandboxPicker(
           location: desc.location,
           burningRate: desc.burningRate,
           gpu: desc.gpu,
+          // An environment the platform switched off where it is defined —
+          // Kaggle, Daytona GPU — is kept behind the dropdown's toggle.
+          disabled: desc.environment?.disabled || undefined,
           group,
         })),
       ),

@@ -515,3 +515,33 @@ describe('the entry’s words, block after block', () => {
     expect(joinBlock('Before.', ' After.')).toBe('Before. After.');
   });
 });
+
+describe("an entry alone in the browser with the page's tools (AGENT_BATTLE B1-01)", () => {
+  it("has an agent whose tools are the page's, and none without them", async () => {
+    const { useA2ATeam } = await import('../useA2ATeam');
+    const tools = [
+      {
+        name: 'deck_add_slide',
+        description: 'Add a slide',
+        parameters: [],
+        handler: async () => ({ ok: true }),
+      },
+    ];
+    const { result } = renderHook(() =>
+      useA2ATeam({
+        entry: APP_CATALOGUE['sales'],
+        inference: { inferenceUrl: 'https://inference.test' },
+        frontendTools: tools,
+      }),
+    );
+    expect(result.current.ready).toBe(true);
+    expect(agents.made.at(-1)?.tools).toEqual(['deck_add_slide']);
+    const { result: alone } = renderHook(() =>
+      useA2ATeam({
+        entry: APP_CATALOGUE['sales'],
+        inference: { inferenceUrl: 'https://inference.test' },
+      }),
+    );
+    expect(alone.current.ready).toBe(false);
+  });
+});

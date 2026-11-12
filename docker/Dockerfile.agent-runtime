@@ -17,11 +17,57 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates build-essential git \
     && rm -rf /var/lib/apt/lists/*
 
+# The MCP servers of the catalogue that run as local processes (the user,
+# 7 November 2026): Node.js for the npm ones, uv for the Python ones. Each is
+# installed here, once, so that a runtime that fetches nothing at run time
+# still starts them.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g \
+        tavily-mcp \
+        @modelcontextprotocol/server-filesystem \
+        @antv/mcp-server-chart \
+        @datalayer/slack-mcp-server \
+        @xdevplatform/xurl \
+    && npm cache clean --force
+# Discord's server (SaseQ/discord-mcp) is a Java application shipped as a Docker image: neither Docker nor Java is here, so it stays off on the platform.
+# Bluesky's server has no package on npm and no bin: built from its repository,
+# run with node (`mcp-servers/bluesky.yaml`).
+RUN git clone --depth 1 https://github.com/brianellin/bsky-mcp-server /opt/mcp-servers/bsky-mcp-server \
+    && cd /opt/mcp-servers/bsky-mcp-server \
+    && npm install \
+    && npm run build \
+    && rm -rf node_modules/.cache
+# uv, and the uvx servers warmed: Alpha Vantage, Google Workspace, Odoo and
+# LinkedIn (Python 3.12, through a signed-in browser session mounted at
+# ~/.linkedin-mcp; off on the platform until one is).
+ENV PATH="/root/.local/bin:${PATH}"
+RUN pip install uv \
+    && uv tool install av-mcp==0.2.1 \
+    && uv tool install workspace-mcp \
+    && uv tool install mcp-server-odoo \
+    && uv tool install --python 3.12 mcp-server-linkedin
+
 COPY package.json pyproject.toml setup.py README.md hatch_build.py ./
 COPY jupyter-config ./jupyter-config
 COPY agent_runtimes ./agent_runtimes
 
-RUN pip install -e .
+# The skills of the catalogue: datalayer-skills with every skill's dependencies
+# (they moved there from agent-skills, 12 November 2026), and what the image and
+# video skills need of the operating system — ffmpeg for the video skill (its
+# trims, zooms, transcodes and GIFs; the zoom uses ffmpeg's scale and crop
+# filters, nothing more), the libraries Pillow and Chromium load,
+# poppler for PDF pages, fonts for the pages Chromium renders — then Chromium
+# itself, for the snapshots and the recordings.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 poppler-utils fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+# With its memory: mem0 and the pgvector store an agent's memories are kept
+# in, in PostgreSQL, past the runtime.
+RUN pip install -e ".[memory]" "datalayer-skills[skills]>=0.3.0" \
+    && python -m playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8765
 

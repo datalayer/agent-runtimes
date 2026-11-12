@@ -337,10 +337,38 @@ describe('the assistant’s conversation, as its balloon', () => {
   });
 
   it('holds the chat bare: the history with the welcome first, the Lexical composer, no header nor footer', async () => {
+    // Its agent decides: the runtime says the decisions its agentspec names.
+    const asked: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        asked.push(url);
+        return new Response(
+          JSON.stringify({
+            id: 'desk',
+            decisions: {
+              spec: 'jev:0.0.1',
+              name: 'Jev',
+              model: 'cloudflare:wrk/typesafe/jev',
+              model_name: 'Jev (Cloudflare Workers AI)',
+              questions: ['noul', 'choice', 'score'],
+              max_questions: 10,
+              max_text_length: 20000,
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
     await render({
       defaultViewMode: 'assistant',
-      decisions: { serverUrl: 'http://localhost:8765' },
+      decisions: { serverUrl: 'http://localhost:8765', agentId: 'desk' },
     });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    vi.unstubAllGlobals();
+    expect(asked).toEqual(['http://localhost:8765/api/v1/agents/desk']);
     const props = seen.chatProps.at(-1)!;
     expect(props).toMatchObject({
       showHeader: false,

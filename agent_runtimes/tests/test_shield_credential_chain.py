@@ -38,6 +38,7 @@ from agent_runtimes.protocol_state import store as state_store
 from agent_runtimes.protocol_state.store import SqliteProtocolStateStore
 from agent_runtimes.routes.acp import AgentInfo, register_agent, unregister_agent
 from agent_runtimes.routes.acp import router as acp_router
+from agent_runtimes.routes.mcp_lent import router as mcp_lent_router
 from agent_runtimes.tests.test_acp_agent import FAKE, connecting, fake_harness, texts
 from mcp import types
 
@@ -91,13 +92,10 @@ def _free_port() -> int:
         return int(one.getsockname()[1])
 
 
-@pytest.fixture
-def gateway() -> Iterator[tuple[Gateway, str]]:
+def _served(app: Any) -> tuple[Any, threading.Thread, int]:
     import uvicorn
 
-    stand_in = Gateway()
     port = _free_port()
-    app = stand_in.server().streamable_http_app(host="127.0.0.1")
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
     )
@@ -106,9 +104,32 @@ def gateway() -> Iterator[tuple[Gateway, str]]:
     deadline = time.monotonic() + 10
     while not server.started:
         if time.monotonic() > deadline:
-            raise RuntimeError("the gateway stand-in did not start")
+            raise RuntimeError("the stand-in did not start")
         time.sleep(0.05)
+    return server, thread, port
+
+
+@pytest.fixture
+def gateway(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[Gateway, str]]:
+    """
+    The stand-in, and the runtime's own route a harness reaches it through.
+
+    Yields
+    ------
+    tuple[Gateway, str]
+        The stand-in and the address of the route.
+    """
+    stand_in = Gateway()
+    server, thread, port = _served(
+        stand_in.server().streamable_http_app(host="127.0.0.1")
+    )
+    runtime = FastAPI()
+    runtime.include_router(mcp_lent_router, prefix="/api/v1")
+    runtime_server, runtime_thread, runtime_port = _served(runtime)
+    monkeypatch.setenv("AGENT_RUNTIMES_PORT", str(runtime_port))
     yield stand_in, f"http://127.0.0.1:{port}/mcp"
+    runtime_server.should_exit = True
+    runtime_thread.join(timeout=10)
     server.should_exit = True
     thread.join(timeout=10)
 

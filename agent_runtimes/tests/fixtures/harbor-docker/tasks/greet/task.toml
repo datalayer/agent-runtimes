@@ -1,0 +1,12 @@
+version = "1.0"
+artifacts = ["/logs/artifacts"]
+
+[metadata]
+difficulty = "easy"
+category = "fixture"
+
+[agent]
+timeout_sec = 120.0
+
+[verifier]
+timeout_sec = 60.0

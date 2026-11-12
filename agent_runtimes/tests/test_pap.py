@@ -21,7 +21,7 @@ class CompanyClient:
             discovery_url="https://shop.example/.well-known/poppy.json",
             document=DiscoveryDocument.model_validate(
                 {
-                    "protocol_version": "0.3",
+                    "protocol_version": "0.4",
                     "organization": {"name": "Example Shop", "domain": "shop.example"},
                     "auth": {
                         "issuer": "https://auth.shop.example",
@@ -48,7 +48,8 @@ class CompanyClient:
                             "description": "Read the catalogue",
                         }
                     ],
-                    "extensions": {"operations": {"version": "1"}},
+                    # Draft 0.4 §3.3: a list, one entry per version the company supports.
+                    "extensions": {"operations": [{"version": "2"}]},
                 }
             ),
             # Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
@@ -59,7 +60,6 @@ class CompanyClient:
                     "revocation_endpoint": "https://auth.shop.example/revoke",
                     "authorization_endpoint": "https://auth.shop.example/authorize",
                     "grant_types_supported": [
-                        "urn:ietf:params:oauth:grant-type:jwt-bearer",
                         "refresh_token",
                         "authorization_code",
                     ],
@@ -79,7 +79,6 @@ class IdentityClient:
                 "client_name": "Example Assistant",
                 "jwks_uri": "https://assistant.example/jwks.json",
                 "redirect_uris": ["https://assistant.example/callback"],
-                "extensions": {"memory": {"version": "2"}},
             }
         )
 
@@ -114,7 +113,7 @@ async def test_company_summary_contains_capabilities_but_no_endpoints() -> None:
     assert summary.scope_hints["catalogue:read"].changes == "none"
     assert summary.protected_resources == ("https://shop.example",)
     assert summary.interfaces == ("agent:a2a", "api:openapi")
-    assert summary.extensions == {"operations": "1"}
+    assert summary.extensions == {"operations": "2"}
     serialized = summary.model_dump_json()
     assert "openapi.json" not in serialized
     assert "/agent" not in serialized
@@ -131,7 +130,10 @@ async def test_agent_summary_contains_public_key_policy_but_no_key_material() ->
 
     assert summary.client_name == "Example Assistant"
     assert summary.signing_algorithms == ("ES256",)
-    assert summary.extensions == {"memory": "2"}
+    # Draft 0.4 §3.3: what this personal agent implements, declared per Session; never client metadata's.
+    from personal_agent_protocol.extensions import SUPPORTED_EXTENSIONS
+
+    assert summary.extensions == dict(SUPPORTED_EXTENSIONS)
     serialized = summary.model_dump_json()
     assert "x-coordinate" not in serialized
     assert "y-coordinate" not in serialized

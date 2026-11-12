@@ -195,8 +195,8 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
+	agent_runtimes/specs/decisions.py \
 	agent_runtimes/specs/strategies.py \
-	agent_runtimes/specs/guardrails.py \
 	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
 	agent_runtimes/specs/triggers.py \
@@ -435,7 +435,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, identities, applications, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -583,6 +583,33 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	else \
 	  echo "Skipping Track specifications: $(AGENTSPECS_DIR)/agentspecs/tracks not found (agentspecs < 0.0.14)"; \
 	fi
+	$(call step,Generating Battle specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/battles" ]; then \
+	  python scripts/codegen/generate_ops.py --kind battles \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/battles \
+	    --python-output agent_runtimes/specs/battles.py \
+	    --typescript-output src/specs/battles.ts; \
+	else \
+	  echo "Skipping Battle specifications: $(AGENTSPECS_DIR)/agentspecs/battles not found (agentspecs < 0.0.145)"; \
+	fi
+	$(call step,Generating Stage specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/stages" ]; then \
+	  python scripts/codegen/generate_ops.py --kind stages \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/stages \
+	    --python-output agent_runtimes/specs/stages.py \
+	    --typescript-output src/specs/stages.ts; \
+	else \
+	  echo "Skipping Stage specifications: $(AGENTSPECS_DIR)/agentspecs/stages not found (agentspecs < 0.0.149)"; \
+	fi
+	$(call step,Generating Identity specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/identities" ]; then \
+	  python scripts/codegen/generate_ops.py --kind identities \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/identities \
+	    --python-output agent_runtimes/specs/identities.py \
+	    --typescript-output src/specs/identities.ts; \
+	else \
+	  echo "Skipping Identity specifications: $(AGENTSPECS_DIR)/agentspecs/identities not found (agentspecs < 0.0.168)"; \
+	fi
 	$(call step,Generating Op specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/ops" ]; then \
 	  python scripts/codegen/generate_ops.py --kind ops \
@@ -617,16 +644,16 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
+	$(call step,Generating decisions specifications)
+	python scripts/codegen/generate_decisions.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/decisions \
+	  --python-output agent_runtimes/specs/decisions.py \
+	  --typescript-output src/specs/decisions.ts
 	$(call step,Generating strategy specifications)
 	python scripts/codegen/generate_strategies.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/strategies \
 	  --python-output agent_runtimes/specs/strategies.py \
 	  --typescript-output src/specs/strategies.ts
-	$(call step,Generating guardrail specifications)
-	python scripts/codegen/generate_guardrails.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \
-	  --python-output agent_runtimes/specs/guardrails.py \
-	  --typescript-output src/specs/guardrails.ts
 	$(call step,Generating eval specifications)
 	python scripts/codegen/generate_evals.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \

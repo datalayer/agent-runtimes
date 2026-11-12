@@ -149,6 +149,25 @@ class EvalRunner:
         )
         return report
 
+    async def run_cases(self, cases: list[Any]) -> list[CaseResult]:
+        """Run the agent on given pydantic-evals cases, one result each.
+
+        Parameters
+        ----------
+        cases : list[pydantic_evals.Case]
+            The cases, run in order.
+
+        Returns
+        -------
+        list[CaseResult]
+            Each case's output, pass and duration, or its error.
+        """
+        from pydantic_evals import Dataset
+
+        return await self._run_pydantic_evals(
+            Dataset(name=self.agent_id, cases=list(cases))
+        )
+
     async def _run_pydantic_evals(self, dataset: Any) -> list[CaseResult]:
         """Run evaluation using pydantic-evals Dataset.evaluate()."""
         results: list[CaseResult] = []

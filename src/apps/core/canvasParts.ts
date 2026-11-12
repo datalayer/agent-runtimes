@@ -25,7 +25,11 @@ export type CanvasPartKind =
   | 'model'
   | 'protocol'
   | 'ui'
-  | 'avatar';
+  | 'avatar'
+  // The accountability plane (the user, 6 November 2026): a Guard, a Gate and the Track of its checks.
+  | 'guard'
+  | 'gate'
+  | 'track';
 
 /**
  * A part of an agent the Canvas may place (C-20): a connection to a

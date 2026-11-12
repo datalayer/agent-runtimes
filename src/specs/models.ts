@@ -33,6 +33,8 @@ export const AIModels = {
   AZURE_OPENAI_GPT_4_1: 'azure-openai:gpt-4.1',
   AZURE_OPENAI_GPT_4O_MINI: 'azure-openai:gpt-4o-mini',
   AZURE_OPENAI_GPT_4O: 'azure-openai:gpt-4o',
+  BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1: 'bedrock:amazon.titan-embed-text-v1',
+  BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0: 'bedrock:amazon.titan-embed-text-v2:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5: 'bedrock:us.anthropic.claude-fable-5',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1:
     'bedrock:us.anthropic.claude-opus-4-6-v1',
@@ -65,6 +67,7 @@ export const AIModels = {
   OPENAI_GPT_4O_MINI: 'openai:gpt-4o-mini',
   OPENAI_GPT_4O: 'openai:gpt-4o',
   OPENAI_O3_MINI: 'openai:o3-mini',
+  OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5: 'openrouter:anthropic/claude-opus-5.5',
 } as const;
 
 export type AIModelId = (typeof AIModels)[keyof typeof AIModels];
@@ -86,6 +89,7 @@ export const ALIBABA_QWEN_MAX_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
+  pricing: { inputUsdPerMillion: 1.6, outputUsdPerMillion: 6.4 },
 };
 
 export const ALIBABA_QWEN3_32B_0_0_1: AIModel = {
@@ -278,6 +282,38 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 16384,
   pricing: { inputUsdPerMillion: 2.5, outputUsdPerMillion: 10.0 },
+};
+
+export const BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1_0_0_1: AIModel = {
+  id: 'bedrock:amazon.titan-embed-text-v1',
+  version: '0.0.1',
+  name: 'Bedrock Titan Text Embeddings',
+  description:
+    "Amazon Titan Embeddings G1 - Text via AWS Bedrock - 1536 dimensions, what an agent's memories are embedded with on a Datalayer runtime",
+  provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/titan/',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  capabilities: ['embeddings'],
+  contextWindow: 8192,
+  pricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.0 },
+};
+
+export const BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0_0_0_1: AIModel = {
+  id: 'bedrock:amazon.titan-embed-text-v2:0',
+  version: '0.0.1',
+  name: 'Bedrock Titan Text Embeddings V2',
+  description:
+    'Amazon Titan Text Embeddings V2 via AWS Bedrock - 1024, 512 or 256 dimensions',
+  provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/titan/',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  capabilities: ['embeddings'],
+  contextWindow: 8192,
+  pricing: { inputUsdPerMillion: 0.02, outputUsdPerMillion: 0.0 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
@@ -725,6 +761,22 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   pricing: { inputUsdPerMillion: 1.1, outputUsdPerMillion: 4.4 },
 };
 
+export const OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1: AIModel = {
+  id: 'openrouter:anthropic/claude-opus-5.5',
+  version: '0.0.1',
+  name: 'OpenRouter Claude Opus 5.5',
+  description:
+    'Claude Opus 5.5 by Anthropic, through OpenRouter - the current frontier Opus, one key for every vendor',
+  provider: 'openrouter',
+  providerUrl: 'https://openrouter.ai/anthropic/claude-opus-5.5',
+  default: false,
+  available: true,
+  requiredEnvVars: ['OPENROUTER_API_KEY'],
+  tokensLimit: 128000,
+  contextWindow: 1000000,
+  pricing: { inputUsdPerMillion: 4.0, outputUsdPerMillion: 20.0 },
+};
+
 // ============================================================================
 // AI Model Catalog
 // ============================================================================
@@ -747,6 +799,10 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'azure-openai:gpt-4.1': AZURE_OPENAI_GPT_4_1_0_0_1,
   'azure-openai:gpt-4o-mini': AZURE_OPENAI_GPT_4O_MINI_0_0_1,
   'azure-openai:gpt-4o': AZURE_OPENAI_GPT_4O_0_0_1,
+  'bedrock:amazon.titan-embed-text-v1':
+    BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1_0_0_1,
+  'bedrock:amazon.titan-embed-text-v2:0':
+    BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0_0_0_1,
   'bedrock:us.anthropic.claude-fable-5':
     BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-6-v1':
@@ -784,6 +840,8 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'openai:gpt-4o-mini': OPENAI_GPT_4O_MINI_0_0_1,
   'openai:gpt-4o': OPENAI_GPT_4O_0_0_1,
   'openai:o3-mini': OPENAI_O3_MINI_0_0_1,
+  'openrouter:anthropic/claude-opus-5.5':
+    OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1,
 };
 
 /**
@@ -806,13 +864,22 @@ export function getModel(modelId: string): AIModel | undefined {
   return AI_MODEL_CATALOGUE[AI_MODEL_ALIASES[modelId] ?? modelId];
 }
 
+/** A typed-decision model (Jev): answers typed questions about a state. */
+export function isDecisionModel(model: AIModel): boolean {
+  return (model.capabilities ?? []).includes('decisions');
+}
+
 /**
  * A model a chat can run on: not a typed-decision model (Jev), which
- * answers typed questions about a state and nothing else. A spec that
+ * answers typed questions about a state and nothing else, nor an
+ * embedding model (Titan), which turns texts into vectors. A spec that
  * states no capability is read as a chat model.
  */
 export function isChatModel(model: AIModel): boolean {
-  return !(model.capabilities ?? []).includes('decisions');
+  const capabilities = model.capabilities ?? [];
+  return (
+    !capabilities.includes('decisions') && !capabilities.includes('embeddings')
+  );
 }
 
 /** The models a person choosing a chat model is offered from. */

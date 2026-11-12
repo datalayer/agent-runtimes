@@ -6,7 +6,7 @@
  */
 
 /**
- * Typed approval renderers (S-302, DC-004):
+ * Typed approval renderers:
  * a complete action or *Review in Datalayer*. Ported from the Slack service;
  * each host tests its own card on top.
  */
@@ -126,7 +126,7 @@ describe('typed approval renderers', () => {
     expect([...MAIL_WORDS].sort()).toEqual(contracts.presentation.mail_words);
   });
 
-  describe("a company's pap_confirm (WHATSAPP WA-43, decided 28 October 2026)", () => {
+  describe("a company's pap_confirm (decided 28 October 2026)", () => {
     const pap = (args: Record<string, unknown>): ApprovalPresentation =>
       of({
         action_class: 'unknown',
@@ -134,14 +134,21 @@ describe('typed approval renderers', () => {
         arguments: {
           key: 'k-1',
           company: 'manzanita.example',
+          company_name: 'Manzanita Outfitters',
           summary: 'Book a table for two at 20:00.',
           terms: { price: '0 EUR', party: 2 },
           operation_ref: 'op-7',
-          revision: 3,
+          revision: 'rev_3',
+          expires_at: '2026-10-30T12:00:00+00:00',
           digest: 'd'.repeat(64),
+          differences: ['party'],
           class: 'write',
           session: { ref: 's-ref', signed_in: true },
-          only_the_person: false,
+          retry: {
+            via: 'openapi',
+            path: '/orders',
+            body: { card: 'held-in-the-request' },
+          },
           ...args,
         },
       });
@@ -151,31 +158,47 @@ describe('typed approval renderers', () => {
       expect(shown.renderer).toBe('pap-confirm');
       expect(shown.complete).toBe(true);
       expect(shown.fields).toEqual([
-        { label: 'Company', value: 'manzanita.example' },
+        { label: 'Company', value: 'Manzanita Outfitters' },
+        { label: 'Domain', value: 'manzanita.example' },
         { label: 'Summary', value: 'Book a table for two at 20:00.' },
         { label: 'price', value: '0 EUR' },
         { label: 'party', value: '2' },
+        { label: 'Not in its words', value: 'party' },
         { label: 'Operation', value: 'op-7' },
-        { label: 'Revision', value: '3' },
+        { label: 'Revision', value: 'rev_3' },
+        { label: 'Holds until', value: '2026-10-30T12:00:00+00:00' },
         { label: 'What it does', value: 'write' },
       ]);
       expect(
-        renderApproval(pap({ was: { revision: 2, terms: {} } })).fields,
-      ).toContainEqual({ label: 'Replaces revision', value: '2' });
+        renderApproval(pap({ was: { revision: 'rev_2', terms: {} } })).fields,
+      ).toContainEqual({ label: 'Replaces revision', value: 'rev_2' });
+    });
+
+    it('knows the retry and never shows it: it holds the request body', () => {
+      const shown = renderApproval(pap({}));
+      expect(shown.complete).toBe(true);
+      expect(JSON.stringify(shown)).not.toContain('held-in-the-request');
+      expect(JSON.stringify(shown)).not.toContain('openapi');
     });
 
     it('fails closed without a revision, a company, its summary or digest, and on an argument it does not know', () => {
       for (const missing of [
         'revision',
         'company',
+        'company_name',
         'summary',
         'operation_ref',
+        'expires_at',
         'digest',
+        'differences',
       ]) {
         const shown = renderApproval(pap({ [missing]: undefined }));
         expect(shown.complete).toBe(false);
       }
-      expect(renderApproval(pap({ revision: '3' })).complete).toBe(false);
+      expect(renderApproval(pap({ revision: 3 })).complete).toBe(false);
+      expect(renderApproval(pap({ only_the_person: true })).complete).toBe(
+        false,
+      );
       expect(renderApproval(pap({ terms: ['a'] })).complete).toBe(false);
       expect(renderApproval(pap({ secret_door: 1 })).complete).toBe(false);
     });

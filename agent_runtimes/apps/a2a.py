@@ -57,12 +57,13 @@ import os
 from typing import Any, Optional
 
 from agent_runtimes.apps.callers import (
+    POD_SECRET_HEADER,
     VERIFIER,
     CallerRefused,
     CallerVerifier,
     _unverified_claims,
     bearer_of,
-    is_loopback,
+    is_the_pod,
 )
 from agent_runtimes.apps.visitors import (
     OTHER_APPLICATION,
@@ -249,8 +250,10 @@ def _with_credential(body: bytes, token: str) -> bytes:
         return body
     if not isinstance(request, dict) or request.get("method") not in _RUN_METHODS:
         return body
-    from agent_runtimes.context.delegation import CREDENTIAL_FIELD
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.context.delegation import (
+        CREDENTIAL_FIELD,
+        DELEGATION_META_KEY,
+    )
 
     params = request.get("params")
     message = params.get("message") if isinstance(params, dict) else None
@@ -263,16 +266,22 @@ def _with_credential(body: bytes, token: str) -> bytes:
     # The key it was called with, whatever the message says: a caller does
     # not pick the identity its run acts as.
     ours[CREDENTIAL_FIELD] = token
+    # Nor the Battle it is played for: only a visitor's token names one (B4-01).
+    from agent_runtimes.apps.visitors import A2A_BATTLE_FIELD
+
+    ours.pop(A2A_BATTLE_FIELD, None)
     metadata[DELEGATION_META_KEY] = ours
     message["metadata"] = metadata
     return json.dumps(request).encode()
 
 
-def as_visitors_run(body: bytes, visitor: str, key: Optional[str]) -> bytes:
+def as_visitors_run(
+    body: bytes, visitor: str, key: Optional[str], battle: str = ""
+) -> bytes:
     """A visitor's request, the run it starts marked theirs, with the owner's key when given.
 
     Whatever the message says: a visitor does not unmark their run, nor pick
-    the identity it acts as.
+    the identity it acts as, nor name a Battle their token does not (B4-01).
     """
     try:
         request = json.loads(body or b"null")
@@ -280,9 +289,11 @@ def as_visitors_run(body: bytes, visitor: str, key: Optional[str]) -> bytes:
         return body
     if not isinstance(request, dict) or request.get("method") not in _RUN_METHODS:
         return body
-    from agent_runtimes.apps.visitors import A2A_VISITOR_FIELD
-    from agent_runtimes.context.delegation import CREDENTIAL_FIELD
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.apps.visitors import A2A_BATTLE_FIELD, A2A_VISITOR_FIELD
+    from agent_runtimes.context.delegation import (
+        CREDENTIAL_FIELD,
+        DELEGATION_META_KEY,
+    )
 
     params = request.get("params")
     message = params.get("message") if isinstance(params, dict) else None
@@ -296,6 +307,9 @@ def as_visitors_run(body: bytes, visitor: str, key: Optional[str]) -> bytes:
     if key:
         ours[CREDENTIAL_FIELD] = key
     ours[A2A_VISITOR_FIELD] = visitor or "visitor"
+    ours.pop(A2A_BATTLE_FIELD, None)
+    if battle:
+        ours[A2A_BATTLE_FIELD] = battle
     metadata[DELEGATION_META_KEY] = ours
     message["metadata"] = metadata
     return json.dumps(request).encode()
@@ -450,13 +464,15 @@ class A2AGate:
             await self.app(scope, receive, send)
             return
         client = scope.get("client")
-        if is_loopback(client[0] if client else None):
-            await self.app(scope, receive, send)
-            return
         headers = {
             key.decode().lower(): value.decode()
             for key, value in scope.get("headers") or []
         }
+        if is_the_pod(
+            client[0] if client else None, headers.get(POD_SECRET_HEADER.lower())
+        ):
+            await self.app(scope, receive, send)
+            return
         token = bearer_of(headers.get("authorization"))
         if token and is_anonymous_audience(_unverified_claims(token)):
             await self._visitor(token, scope, receive, send)
@@ -473,6 +489,7 @@ class A2AGate:
         """A visitor's request: answered when its owner opened it to visitors (R-30)."""
         refusal: Optional[tuple[int, str]] = None
         visitor = ""
+        battle = ""
         visitors = self.visitors
         if visitors is None:
             refusal = (
@@ -489,6 +506,7 @@ class A2AGate:
                 refusal = refused.status, refused.reason
             else:
                 visitor = caller.uid
+                battle = caller.battle
                 if caller.app_uid != self.app_id:
                     refusal = 403, OTHER_APPLICATION
         if refusal is None and visitors is not None:
@@ -499,7 +517,9 @@ class A2AGate:
                 # visitors, when given, never the visitor's own token.
                 await self.app(
                     scope,
-                    replay(as_visitors_run(body, visitor, visitors.key), receive),
+                    replay(
+                        as_visitors_run(body, visitor, visitors.key, battle), receive
+                    ),
                     send,
                 )
                 return

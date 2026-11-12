@@ -268,7 +268,7 @@ def test_a_cloud_run_stops_the_runtime_unless_kept(
     # The launch, the steps and the stop are on standard error.
     assert "The runtime's agent is example-simple" in captured.err
     assert "[2/2] /help" in captured.err
-    assert "Stopped runtime-1." in captured.err
+    assert "Stopped cloud agent runtime runtime-1." in captured.err
     assert not ANSI.search(captured.out) and not ANSI.search(captured.err)
 
     on_datalayer.stopped.clear()

@@ -42,6 +42,8 @@ export enum CodeSandboxVariant {
   CoreWeave = 'coreweave',
   /** A Firecracker microVM on E2B. */
   E2B = 'e2b',
+  /** A session of an Amazon Bedrock AgentCore code interpreter. */
+  AgentCore = 'agentcore',
 }
 
 /** What each variant is called where a person reads it. */
@@ -58,6 +60,7 @@ export const CODE_SANDBOX_VARIANT_TITLES: Record<CodeSandboxVariant, string> = {
   [CodeSandboxVariant.Cloudflare]: 'Cloudflare',
   [CodeSandboxVariant.CoreWeave]: 'CoreWeave',
   [CodeSandboxVariant.E2B]: 'E2B',
+  [CodeSandboxVariant.AgentCore]: 'AgentCore',
 };
 
 /**

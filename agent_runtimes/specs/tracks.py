@@ -17,6 +17,34 @@ from agent_runtimes.types import TrackSpec
 # Track Definitions
 # ============================================================================
 
+DRAFTING_TRACK_0_0_1 = TrackSpec.model_validate(
+    {
+        "id": "drafting",
+        "version": "0.0.1",
+        "name": "Drafting Track",
+        "description": "The record of a low-risk drafting Op: what ran, what the Guards found and the Gates decided, and what was produced. Kept ninety days, readable by the Op's owner only, and not fed back to Organizational Memory.",
+        "retain_for": "90_days",
+        "include": [
+            "op",
+            "cogs_invoked",
+            "guard_results",
+            "gate_decisions",
+            "final_output",
+            "timestamps",
+            "user_identity",
+        ],
+        "readers": [],
+        "redact": ["*Password*", "*Secret*", "*Token*"],
+        "feeds_memory": False,
+        "exchangeable": False,
+        "enabled": True,
+        "tags": ["drafting", "low-risk"],
+        "icon": "log",
+        "emoji": "🧾",
+        "retention_days": 90,
+    }
+)
+
 FINANCIAL_REPORTING_TRACK_0_0_1 = TrackSpec.model_validate(
     {
         "id": "financial-reporting",
@@ -53,6 +81,52 @@ FINANCIAL_REPORTING_TRACK_0_0_1 = TrackSpec.model_validate(
         "icon": "log",
         "emoji": "🧾",
         "retention_days": 2555,
+    }
+)
+
+REGULATED_TRACK_0_0_1 = TrackSpec.model_validate(
+    {
+        "id": "regulated",
+        "version": "0.0.1",
+        "name": "Regulated Track",
+        "description": "The complete record of a clinical, legal or public-sector Op: every input and source, every model and setting, every Guard result, Gate decision, approval, edit and action. Kept ten years, readable by Compliance and Legal, produced to a regulator or an external auditor on request, with personal data kept out, and fed back to Organizational Memory.",
+        "retain_for": "10_years",
+        "include": [
+            "op",
+            "frames_used",
+            "cogs_invoked",
+            "input_data",
+            "source_documents",
+            "model_versions",
+            "configuration",
+            "guard_results",
+            "gate_decisions",
+            "human_approvals",
+            "human_edits",
+            "final_output",
+            "actions_taken",
+            "timestamps",
+            "user_identity",
+            "permissions",
+            "environment",
+            "memory_links",
+        ],
+        "readers": ["compliance", "legal", "external-audit"],
+        "redact": [
+            "*Password*",
+            "*Secret*",
+            "*Token*",
+            "*SSN*",
+            "*PatientId*",
+            "*DateOfBirth*",
+        ],
+        "feeds_memory": True,
+        "exchangeable": False,
+        "enabled": True,
+        "tags": ["regulated", "compliance", "audit"],
+        "icon": "log",
+        "emoji": "🧾",
+        "retention_days": 3650,
     }
 )
 
@@ -93,7 +167,9 @@ STANDARD_TRACK_0_0_1 = TrackSpec.model_validate(
 # ============================================================================
 
 TRACK_CATALOGUE: Dict[str, TrackSpec] = {
+    "drafting": DRAFTING_TRACK_0_0_1,
     "financial-reporting": FINANCIAL_REPORTING_TRACK_0_0_1,
+    "regulated": REGULATED_TRACK_0_0_1,
     "standard": STANDARD_TRACK_0_0_1,
 }
 

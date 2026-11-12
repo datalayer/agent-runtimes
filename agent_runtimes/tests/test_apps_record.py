@@ -3,6 +3,7 @@
 
 """The record of an application, written for every session (R-07)."""
 
+import time
 from typing import Any
 
 import pytest
@@ -17,6 +18,7 @@ from agent_runtimes.apps.record import (
     AppRecordCapability,
     AppRecorder,
     RecordNotSent,
+    invoked,
     recorder_of,
 )
 from agent_runtimes.tests.test_apps_guards import AWS, scripted
@@ -188,6 +190,34 @@ async def test_a_runs_end_says_how_it_ended_beside_its_output():
     assert end["payload"]["ended_at"].endswith("Z")
 
 
+async def test_a_runs_end_carries_the_invocation_that_called_it():
+    """On a platform that invokes the runtime once per turn (AgentCore), the
+    run's end says when the invocation arrived, when the run ended, the wall
+    time between, and when the process answering it started; never elsewhere."""
+    agent, sent = recorded(app([]), "Here is the news.")
+    started = time.time() - 2.5
+    with invoked("agentcore", started, microvm_started=started - 60):
+        await agent.run("news?")
+    invocation = sent[0]["entries"][-1]["payload"]["invocation"]
+    assert sorted(invocation) == [
+        "ended_at",
+        "microvm_started_at",
+        "seconds",
+        "started_at",
+        "target",
+    ]
+    assert invocation["target"] == "agentcore"
+    assert invocation["started_at"].endswith("Z")
+    assert invocation["ended_at"] == sent[0]["entries"][-1]["payload"]["ended_at"]
+    assert 2.5 <= invocation["seconds"] < 30
+    assert invocation["microvm_started_at"] < invocation["started_at"]
+
+    # Outside an invocation, nothing is said of one.
+    agent, sent = recorded(app([]), "Here is the news.")
+    await agent.run("news?")
+    assert "invocation" not in sent[0]["entries"][-1]["payload"]
+
+
 async def test_a_runs_end_carries_its_trace_id(monkeypatch):
     trace = "4bf92f3577b34da6a3ce929d0e0e4736"
     monkeypatch.setattr(
@@ -309,7 +339,9 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
     capability = AppRecordCapability(
         recorder=AppRecorder(app=app(["outputs"]), send=send)
     )
-    ctx: Any = SimpleNamespace(run_id="r-1", conversation_id="t-1")
+    ctx: Any = SimpleNamespace(
+        run_id="r-1", conversation_id="t-1", prompt=None, messages=[]
+    )
     await capability.before_run(ctx)
 
     class Stream:

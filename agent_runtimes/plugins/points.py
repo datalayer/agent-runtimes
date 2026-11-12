@@ -28,6 +28,14 @@ Points:
   ``on_swap``, ``on_clone``, ``on_export``, ``on_import``, ``on_end``, each
   given the session and the operation's facts, each free to refuse in a
   sentence before the operation runs.
+- ``runtime.target`` — a :class:`RuntimeTarget`: where a session runs (the
+  operator's pools, an Agent Node, AgentCore Runtime), known by its id, with
+  what it can do (:class:`TargetCapabilities`) and ``deploy``, ``invoke``,
+  ``status``, ``stop``, ``destroy``.
+- ``identity.provider`` — an :class:`IdentityProvider`: the tokens a session
+  acts with (the person's for the target, the agent's own, a third party's
+  OAuth token or API key) and the consent binding; Datalayer IAM built in,
+  AgentCore Identity beside it, the runtime's target choosing which.
 
 **Fail fast at the seam.** A contribution whose value is not the point's
 shape, or whose id another plugin contributed first, is refused with the
@@ -40,6 +48,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import (
     Any,
+    AsyncIterator,
     Awaitable,
     Callable,
     Dict,
@@ -76,6 +85,15 @@ SESSION_HOOKS: ContributionPoint["SessionHook"] = define_contribution_point(
     "session.hook"
 )
 
+#: Where a session runs.
+RUNTIME_TARGETS: ContributionPoint["RuntimeTarget"] = define_contribution_point(
+    "runtime.target"
+)
+#: The tokens a session acts with.
+IDENTITY_PROVIDERS: ContributionPoint["IdentityProvider"] = define_contribution_point(
+    "identity.provider"
+)
+
 #: The points, in the order ``loop plugins`` lists them.
 POINTS: tuple[ContributionPoint[Any], ...] = (
     HARNESSES,
@@ -83,6 +101,19 @@ POINTS: tuple[ContributionPoint[Any], ...] = (
     SESSION_FORMATS,
     SESSION_CARRY,
     SESSION_HOOKS,
+    RUNTIME_TARGETS,
+    IDENTITY_PROVIDERS,
+)
+
+#: What a runtime target answers, each a callable.
+RUNTIME_TARGET_METHODS = ("deploy", "invoke", "status", "stop", "destroy")
+#: What an identity provider answers, each a callable.
+IDENTITY_PROVIDER_METHODS = (
+    "inbound_token",
+    "workload_token",
+    "oauth_token",
+    "api_key",
+    "complete_binding",
 )
 
 #: The operations a hook may run before.
@@ -259,6 +290,176 @@ class HookRefused(Exception):
 
 
 @dataclass(frozen=True)
+class TargetCapabilities:
+    """What a runtime target can do."""
+
+    #: A session that stopped carries on where it was.
+    resume: bool = False
+    #: A session can be paused and resumed later.
+    pause: bool = False
+    #: The deployment answers A2A beside AG-UI.
+    a2a: bool = False
+    #: A GPU can be asked for.
+    gpu: bool = False
+    #: It runs in the customer's own cloud account.
+    customer_account: bool = False
+
+
+@dataclass
+class Deployment:
+    """An agentspec deployed on a target: what ``deploy`` answers, and what
+    ``invoke``, ``status``, ``stop`` and ``destroy`` are given.
+    """
+
+    #: The target's id (``agentcore``).
+    target: str
+    #: The agentspec deployed.
+    agent_spec_id: str
+    #: The target's own id for it (AgentCore: the agent runtime id).
+    id: str
+    #: Its address on the target (AgentCore: the agent runtime ARN), or ``""``.
+    arn: str = ""
+    #: Its version on the target, or ``""``.
+    version: str = ""
+    #: Its status when last read (AgentCore: ``CREATING``, ``READY``…).
+    status: str = ""
+    #: The endpoint invoked (AgentCore: the qualifier, ``DEFAULT``).
+    endpoint: str = ""
+    #: The workload identity the target made for it, or ``""``.
+    workload_identity: str = ""
+    #: Where it runs (AgentCore: the region).
+    region: str = ""
+
+    def as_dict(self) -> Dict[str, str]:
+        return {
+            "target": self.target,
+            "agent_spec_id": self.agent_spec_id,
+            "id": self.id,
+            "arn": self.arn,
+            "version": self.version,
+            "status": self.status,
+            "endpoint": self.endpoint,
+            "workload_identity": self.workload_identity,
+            "region": self.region,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "Deployment":
+        return cls(
+            **{
+                name: str(data[name])
+                for name in cls.__dataclass_fields__
+                if name in data
+            }
+        )
+
+
+@runtime_checkable
+class RuntimeTarget(Protocol):
+    """Where a session runs: the operator's pools, an Agent Node, AgentCore."""
+
+    #: ``datalayer-pool``, ``agent-node``, ``agentcore``.
+    id: str
+    capabilities: TargetCapabilities
+
+    async def deploy(self, spec: Any, settings: Any) -> Deployment:
+        """Deploy an agentspec with the target's settings."""
+        ...
+
+    def invoke(
+        self, deployment: Deployment, session_uid: str, run_input: Mapping[str, Any]
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Run a turn of a session; the events, as the deployment streams them."""
+        ...
+
+    async def status(self, deployment: Deployment) -> Dict[str, Any]:
+        """The deployment as the target says it now."""
+        ...
+
+    async def stop(self, deployment: Deployment, session_uid: str) -> None:
+        """Stop one session of the deployment."""
+        ...
+
+    async def destroy(self, deployment: Deployment) -> None:
+        """Remove the deployment from the target."""
+        ...
+
+
+class IdentityRefused(Exception):
+    """A token the provider will not or cannot give, said in a sentence."""
+
+
+class AuthorizationRequired(IdentityRefused):
+    """The person must grant access first: the URL to show them.
+
+    Raised by ``oauth_token`` when no ``on_auth_url`` was given to show the URL
+    and wait; ``session_uri`` asks again for the same grant once it is done.
+    """
+
+    def __init__(self, provider: str, url: str, session_uri: str = ""):
+        super().__init__(
+            f"Access to {provider} must be granted first: open {url} to grant it."
+        )
+        self.provider = provider
+        self.url = url
+        self.session_uri = session_uri
+
+
+class AuthorizationDeclined(IdentityRefused):
+    """The person declined the grant, or it failed: the tool call ends here."""
+
+
+class AuthorizationTimedOut(IdentityRefused):
+    """The grant was not completed in the time waited."""
+
+
+@runtime_checkable
+class IdentityProvider(Protocol):
+    """The tokens a session acts with: Datalayer IAM built
+    in, AgentCore Identity beside it. Each method is a coroutine.
+    """
+
+    #: ``datalayer``, ``agentcore``.
+    id: str
+
+    async def inbound_token(self, caller: Mapping[str, Any], audience: str) -> str:
+        """The token the target accepts for this person."""
+        ...
+
+    async def workload_token(self, context: Mapping[str, Any]) -> str:
+        """The agent's own token for the provider's services."""
+        ...
+
+    async def oauth_token(
+        self,
+        provider: str,
+        scopes: Sequence[str],
+        flow: str,
+        on_auth_url: Optional[Callable[[str], Any]],
+        *,
+        context: Optional[Mapping[str, Any]] = None,
+    ) -> str:
+        """Return a third party's access token for the person.
+
+        Raises :class:`AuthorizationRequired`, carrying the URL, when they must
+        grant it and nobody waits for them.
+        """
+        ...
+
+    async def api_key(
+        self, provider: str, *, context: Optional[Mapping[str, Any]] = None
+    ) -> str:
+        """A third party's API key."""
+        ...
+
+    async def complete_binding(
+        self, session_uri: str, caller: Mapping[str, Any]
+    ) -> None:
+        """Finish a consent flow for this person."""
+        ...
+
+
+@dataclass(frozen=True)
 class Refusal:
     """A contribution refused at the seam, as ``loop plugins`` lists it."""
 
@@ -384,6 +585,60 @@ def _check_one(point: ContributionPoint[Any], contribution: Contribution[Any]) -
                 )
             )
         return
+    if point is RUNTIME_TARGETS:
+        missing = [
+            name
+            for name in RUNTIME_TARGET_METHODS
+            if not callable(getattr(value, name, None))
+        ]
+        if missing or not isinstance(getattr(value, "id", None), str) or not value.id:
+            raise ContributionRefused(
+                _sentence(
+                    contribution,
+                    point,
+                    f"that is not a RuntimeTarget: it lacks {', '.join(missing) or 'an id'}.",
+                )
+            )
+        if not isinstance(getattr(value, "capabilities", None), TargetCapabilities):
+            raise ContributionRefused(
+                _sentence(
+                    contribution,
+                    point,
+                    "without its capabilities: a TargetCapabilities says what it can do.",
+                )
+            )
+        if value.id != contribution.id:
+            raise ContributionRefused(
+                _sentence(
+                    contribution,
+                    point,
+                    f"whose target says id {value.id!r}: a target is contributed under its id.",
+                )
+            )
+        return
+    if point is IDENTITY_PROVIDERS:
+        missing = [
+            name
+            for name in IDENTITY_PROVIDER_METHODS
+            if not callable(getattr(value, name, None))
+        ]
+        if missing or not isinstance(getattr(value, "id", None), str) or not value.id:
+            raise ContributionRefused(
+                _sentence(
+                    contribution,
+                    point,
+                    f"that is not an IdentityProvider: it lacks {', '.join(missing) or 'an id'}.",
+                )
+            )
+        if value.id != contribution.id:
+            raise ContributionRefused(
+                _sentence(
+                    contribution,
+                    point,
+                    f"whose provider says id {value.id!r}: a provider is contributed under its id.",
+                )
+            )
+        return
 
 
 def check(
@@ -435,23 +690,35 @@ async def run_hook(
 __all__ = [
     "HARNESSES",
     "HOOK_EVENTS",
+    "IDENTITY_PROVIDERS",
+    "IDENTITY_PROVIDER_METHODS",
     "POINTS",
+    "RUNTIME_TARGETS",
+    "RUNTIME_TARGET_METHODS",
     "SESSION_CARRY",
     "SESSION_FORMATS",
     "SESSION_HOOKS",
     "SESSION_STORES",
+    "AuthorizationDeclined",
+    "AuthorizationRequired",
+    "AuthorizationTimedOut",
     "Carried",
     "ContributionRefused",
+    "Deployment",
     "Exported",
     "HarnessContribution",
     "HookRefused",
+    "IdentityProvider",
+    "IdentityRefused",
     "Imported",
     "Refusal",
+    "RuntimeTarget",
     "SessionCarry",
     "SessionFormat",
     "SessionHook",
     "SessionPage",
     "SessionStore",
+    "TargetCapabilities",
     "check",
     "run_hook",
 ]

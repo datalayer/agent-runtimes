@@ -147,7 +147,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
                 f"{skill_count} skill{'s' if skill_count != 1 else ''}"
             )
         if sandbox_variant == "jupyter-server":
-            summary_parts.append("Jupyter sandbox")
+            summary_parts.append("Jupyter Code Sandbox")
         if codemode_on:
             summary_parts.append("Codemode")
 

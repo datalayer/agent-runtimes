@@ -22,7 +22,7 @@
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
 import { useMemo } from 'react';
-import type { ToolExecutionContext } from '@datalayer/jupyter-react';
+import type { ToolExecutionContext } from '@datalayer/reactor/tools';
 import {
   lexicalStore,
   DefaultExecutor as LexicalDefaultExecutor,

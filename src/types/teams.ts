@@ -242,7 +242,7 @@ export interface TeamSpec {
   icon?: string;
   /** Emoji representation */
   emoji?: string;
-  /** Theme color (hex) */
+  /** Its colour: a name of the palette (`teal`, `indigo`…), drawn in the theme's value for it, or a hex where no name fits (`resolvePaletteColor`, primer-addons) */
   color?: string;
   /** ID of the associated agent spec */
   agentSpecId: string;

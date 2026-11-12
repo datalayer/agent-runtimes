@@ -14,6 +14,12 @@ import logging
 from typing import Callable, List
 
 from agent_runtimes.specs.backend_tools import BackendToolSpec, get_backend_tool_spec
+from agent_runtimes.tools.decisions import (
+    DECIDE_TOOL,
+    decide_tool,
+    decisions_spec,
+    tools_with_decisions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +85,7 @@ def register_agent_tools(
     agent_id: str | None = None,
     runtime_name: str | None = None,
     disable_tool_approvals: bool = False,
+    decisions: str | None = None,
 ) -> list[str]:
     """Register runtime tools on a pydantic_ai.Agent instance.
 
@@ -94,10 +101,15 @@ def register_agent_tools(
         disable_tool_approvals: When true, force all runtime tools to
             ``requires_approval=False`` even if their BackendToolSpec is marked
             manual/approval-required.
+        decisions: The decisions spec the agent's spec names (``id:version``),
+            if any. The capability brings the ``decide`` tool, asked of that
+            spec's model; ``decide`` listed by an agent that names none is
+            refused (:class:`~agent_runtimes.tools.decisions.NoDecisions`).
 
     Returns:
         List of registered tool names.
     """
+    tool_ids = tools_with_decisions(tool_ids, decisions, agent_id or "it")
     if not tool_ids:
         return []
 
@@ -119,7 +131,12 @@ def register_agent_tools(
             logger.info("Tool '%s' is disabled; skipping", tool_id)
             continue
 
-        impl = _resolve_python_tool(spec)
+        # The agent's own `decide`: asked of the model its decisions spec names.
+        impl = (
+            decide_tool(decisions_spec(decisions))
+            if spec.id == DECIDE_TOOL and decisions
+            else _resolve_python_tool(spec)
+        )
         if impl is None:
             logger.warning(
                 "No Python implementation resolved for tool '%s'; skipping", tool_id

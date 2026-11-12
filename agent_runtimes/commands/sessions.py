@@ -3,6 +3,15 @@
 
 """Sessions: `loop sessions …` (MH-17).
 
+With nothing else, `loop sessions` is the picker: your sessions in two
+groups, **On this machine** and **On Datalayer**, one to choose and resume
+where it lives, pause, end, transfer, export, delete or start over
+(`agent_runtimes.loop.picker`); without a terminal, or with `--json`, the
+same two groups printed. A session on this machine is a folder of
+``~/.datalayer/sessions`` named by its uid; one on Datalayer is in the
+account's record. `transfer` moves one between the two under the same uid,
+`delete` deletes one, on this machine or, signed in, on Datalayer.
+
 A session is one conversation of one person with one application's agent,
 kept in the application's record: one id a person lists, resumes, swaps,
 clones, exports and ends — on the web, here, from the phone later. The verbs
@@ -23,14 +32,18 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from rich.console import Console
 
 app = typer.Typer(
     name="sessions",
-    help="Sessions: list, show, resume, swap, clone, export, import, end.",
+    help=(
+        "Sessions. With nothing else: pick one of your sessions, on this machine and on Datalayer, "
+        "to resume, pause, end, transfer, export, delete or start over. "
+        "Else: list, show, resume, pause, swap, clone, export, import, end, transfer, delete."
+    ),
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -151,14 +164,40 @@ def session_line(session: Dict[str, Any]) -> str:
         for part in (
             str(session.get("uid") or ""),
             f"{session.get('state', ''):<6}",
+            # What it is a session of: an application, or an agent run as such.
+            f"{'agent' if session.get('kind') == 'agent' else 'app':<5}",
             str(session.get("agent") or ""),
             f"{turns} turn{'s' if turns != 1 else ''}",
             where,
+            "archived" if session.get("archived") else "",
             said,
             f"— {title}" if title else "",
         )
         if part
     )
+
+
+def print_sessions_table(sessions: List[Dict[str, Any]], out: Any = None) -> None:
+    """Print sessions as a markdown table on standard output: in a terminal, cut
+    to its width — the title with an ellipsis, a row one line; piped, with
+    nothing cut.
+    """
+    from agent_runtimes.loop.session_table import cells_of_session, table_lines
+
+    out = out or console
+    rows = [
+        cells_of_session(session, number)
+        for number, session in enumerate(sessions, start=1)
+    ]
+    for line in table_lines(rows, out.width if out.is_terminal else None):
+        out.print(
+            line,
+            markup=False,
+            highlight=False,
+            no_wrap=True,
+            overflow="ignore",
+            crop=False,
+        )
 
 
 def show_lines(session: Dict[str, Any]) -> List[str]:
@@ -185,9 +224,445 @@ def show_lines(session: Dict[str, Any]) -> List[str]:
     return lines
 
 
+# --- the picker: every session, in its two places -------------------------------
+
+
+def _token() -> str:
+    """The person's Datalayer token, or ``""`` signed out."""
+    from agent_runtimes.loop.launch import make_client
+
+    try:
+        _, token = make_client()
+    except Exception:  # noqa: BLE001 - signed out: the sessions of this machine only
+        return ""
+    return str(token or "")
+
+
+def every_session(token: str, **stubs: Any) -> List[Any]:
+    """Every session of the person, of every state, newest first: those on
+    this machine and, signed in, those on Datalayer.
+    """
+    from agent_runtimes.loop.paused import STATES, paused_sessions
+
+    return paused_sessions(
+        token=token,
+        states=STATES,
+        say=lambda line: errors.print(line, markup=False),
+        **stubs,
+    )
+
+
+def listed_sessions(token: str, **stubs: Any) -> List[Any]:
+    """The sessions the picker lists: those that run and those that can be
+    gone on with (`agent_runtimes.loop.paused.is_listed`), newest first. An
+    ended session is not among them: `every_session` reads it.
+    """
+    from agent_runtimes.loop.paused import LISTED_STATES, listed, paused_sessions
+
+    return listed(
+        paused_sessions(
+            token=token,
+            states=LISTED_STATES,
+            say=lambda line: errors.print(line, markup=False),
+            **stubs,
+        )
+    )
+
+
+def _place_of(row: Any, token: str) -> Any:
+    from agent_runtimes.loop.paused import ON_THIS_MACHINE
+    from agent_runtimes.loop.transfer import OnDatalayer, ThisMachine
+
+    return ThisMachine() if row.where == ON_THIS_MACHINE else OnDatalayer(token)
+
+
+def resume_command(row: Any) -> List[str]:
+    """What goes on with a session where it lives."""
+    return ["--resume", row.uid]
+
+
+def start_over_command(row: Any) -> List[str]:
+    """What opens a new session of the same agent or application, where this one lives."""
+    from agent_runtimes.loop.paused import ON_DATALAYER
+
+    place = "--cloud" if row.where == ON_DATALAYER else "--local"
+    if row.kind == "agent":
+        return ["-a", row.agent, place]
+    return ["apps", "run", row.app_uid] + (["--cloud"] if place == "--cloud" else [])
+
+
+def _run_loop(arguments: List[str]) -> None:
+    """Go on as `loop <arguments>`: this process becomes it."""
+    console.print(f"loop {' '.join(arguments)}", markup=False, style="dim")
+    os.execvp(sys.argv[0], [sys.argv[0], *arguments])
+
+
+def export_to_file(row: Any, token: str, folder: Optional[Path] = None) -> str:
+    """A session written as a session file in the folder, from where it is kept."""
+    import asyncio
+
+    from agent_runtimes.apps.record import session_from_entries
+    from agent_runtimes.apps.session_files import format_named
+
+    entries = asyncio.run(_place_of(row, token).entries(row.uid))
+    described = session_from_entries(row.uid, [dict(entry) for entry in entries])
+    if described is None:
+        raise SessionsRefused(f"There is no session {row.uid} to export.")
+    # A session file names its owner; this machine's own sessions, opened by
+    # nobody signed in, are said `local`.
+    owner = str((described.get("opened_by") or {}).get("uid") or "local")
+    exported = format_named("").export(
+        {**described, "opened_by": {"uid": owner}}, entries, exported_by=owner
+    )
+    out = (folder or Path.cwd()) / f"{row.uid}.session.jsonl"
+    out.write_text("\n".join(exported.lines) + "\n")
+    return (
+        f"Exported {exported.turns} turn{'s' if exported.turns != 1 else ''}, {exported.entries} entries, "
+        f"{exported.redactions} redaction{'s' if exported.redactions != 1 else ''} → {out}."
+    )
+
+
+def end_session(row: Any, token: str) -> str:
+    """A paused session ended, in its record, where it is kept."""
+    import asyncio
+
+    asyncio.run(
+        _place_of(row, token).append(
+            row.uid,
+            [
+                {
+                    "kind": "ended",
+                    "summary": "Ended from the terminal",
+                    "payload": {"state": "ended"},
+                }
+            ],
+            {"app_uid": row.app_uid},
+        )
+    )
+    return f"Ended {row.uid}: its record stays, and it is not resumed. Clone it to go on from it."
+
+
+def delete_session(uid: str, token: str, where: str = "") -> str:
+    """A session deleted for good where it is kept: a folder of this machine,
+    or, signed in, the person's record on Datalayer (one session they opened;
+    an open one is refused there, in its sentence). ``where`` names the place
+    when it is known (the picker's row); otherwise this machine first.
+    """
+    import asyncio
+
+    from agent_runtimes.apps.session_store import FileSessionStore, SessionStoreError
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.loop.transfer import OnDatalayer
+
+    store = FileSessionStore()
+    if where != ON_DATALAYER and store.delete(uid):
+        return f"Deleted {uid} from this machine ({store.root / uid})."
+    if where == ON_THIS_MACHINE:
+        raise SessionsRefused(
+            f"There is no session {uid} on this machine ({store.root})."
+        )
+    if not token:
+        raise SessionsRefused(
+            f"There is no session {uid} on this machine ({store.root}). A session on Datalayer is "
+            "deleted signed in: `datalayer login`."
+        )
+    try:
+        asyncio.run(OnDatalayer(token).remove(uid))
+    except SessionStoreError as refused:
+        raise SessionsRefused(refused.reason) from None
+    return f"Deleted {uid} from your Datalayer account's record."
+
+
+#: The answers `delete_across` takes for each session.
+DELETE_KEEP, DELETE_YES, DELETE_STOP = "keep", "delete", "stop"
+
+
+def delete_across(
+    rows: List[Any],
+    token: str,
+    ask: Any,
+    say: Any,
+    delete: Any = None,
+) -> Tuple[int, int]:
+    """Go through every session, asking of each whether to delete it.
+
+    ``ask(row)`` answers ``DELETE_YES``, ``DELETE_KEEP`` or ``DELETE_STOP``
+    (nothing more is asked); a refused delete (an open session on Datalayer, one
+    nobody may delete) is said and the walk goes on. Returns how many were
+    deleted and how many kept.
+    """
+    delete = delete or delete_session
+    deleted = kept = 0
+    for row in rows:
+        answer = ask(row)
+        if answer == DELETE_STOP:
+            break
+        if answer != DELETE_YES:
+            kept += 1
+            continue
+        try:
+            say(delete(row.uid, token, row.where))
+            deleted += 1
+        except SessionsRefused as refused:
+            say(f"Not deleted: {refused}")
+            kept += 1
+    return deleted, kept
+
+
+def transfer_session(
+    uid: str, to: str, token: str, *, yes: bool, ask: Any = None
+) -> Any:
+    """A session moved to ``cloud`` or to ``local``, asked first unless ``yes``."""
+    import asyncio
+
+    from agent_runtimes.loop.transfer import TransferRefused, places, transfer
+
+    try:
+        source, destination = places(to, token)
+        confirm = None
+        if not yes:
+            from agent_runtimes.loop.launch import interactive
+
+            if ask is None and not interactive():
+                raise TransferRefused(
+                    "A transfer sends a session's conversation off this machine, or brings it here: "
+                    "say `--yes` where nobody can be asked."
+                )
+            confirm = ask or _confirm
+        return asyncio.run(
+            transfer(uid, source=source, destination=destination, confirm=confirm)
+        )
+    except TransferRefused as refused:
+        raise SessionsRefused(str(refused)) from None
+
+
+def _confirm(question: str) -> bool:
+    import questionary
+
+    return bool(questionary.confirm(question, default=False).ask())
+
+
+def perform(action: str, row: Any, token: str) -> str:
+    """Do to a session what the picker was asked, and say what was done."""
+    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+
+    if action == "export":
+        return export_to_file(row, token)
+    if action == "end":
+        if not _confirm(
+            f"End session {row.uid}? It is not resumed afterwards; its record stays."
+        ):
+            return "Not ended."
+        return end_session(row, token)
+    if action == "delete":
+        place = "this machine" if row.where == ON_THIS_MACHINE else "Datalayer"
+        if not _confirm(
+            f"Delete session {row.uid} from {place}, for good? Its conversation and its record go with it."
+        ):
+            return "Not deleted."
+        return delete_session(row.uid, token, row.where)
+    if action == "transfer":
+        to = ON_DATALAYER if row.where == ON_THIS_MACHINE else ON_THIS_MACHINE
+        done = transfer_session(row.uid, to, token, yes=False)
+        return f"{done.said} Enter resumes it there."
+    raise SessionsRefused(f"There is no action {action!r}.")
+
+
+def _quiet() -> None:
+    """A reader's window: the requests behind an answer are not printed over it."""
+    import logging
+
+    logging.getLogger().setLevel(logging.ERROR)
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.ERROR)
+
+
+def run_picker(as_json: bool = False, everything: bool = False) -> None:
+    """`loop sessions`: the picker in a terminal, the two groups printed
+    otherwise — each a markdown table. Listed: the sessions that run and
+    those that can be gone on with; ``everything`` lists the ended ones too.
+    """
+    from agent_runtimes.loop.launch import interactive
+    from agent_runtimes.loop.picker import (
+        NOT_LISTED,
+        Picker,
+        listing_json,
+        listing_lines,
+        pick,
+    )
+
+    _quiet()
+    token = _token()
+    said = ""
+    while True:
+        rows = every_session(token) if everything else listed_sessions(token)
+        if as_json:
+            print(json.dumps(listing_json(rows, signed_in=bool(token)), indent=1))
+            return
+        if not interactive():
+            # Printed as it is, never wrapped: a table's row is one line.
+            for line in (
+                *listing_lines(rows, signed_in=bool(token)),
+                *([] if everything else [NOT_LISTED]),
+            ):
+                print(line)
+            return
+        chosen = pick(Picker(rows, signed_in=bool(token), said=said))
+        if chosen is None:
+            return
+        action, row = chosen
+        if action == "resume":
+            _run_loop(resume_command(row))
+        if action == "start_over":
+            _run_loop(start_over_command(row))
+        try:
+            said = perform(action, row, token)
+        except SessionsRefused as refused:
+            said = str(refused)
+
+
 @app.callback()
-def sessions() -> None:
-    """Your sessions on a runtime: list, show, resume, swap, clone, export, import, end."""
+def sessions(
+    ctx: typer.Context,
+    as_json: bool = typer.Option(
+        False, "--json", help="Print the two groups as JSON, and pick nothing."
+    ),
+    everything: bool = typer.Option(
+        False,
+        "--all",
+        help="The ended sessions too: they are not resumed, and are cloned, exported or deleted.",
+    ),
+) -> None:
+    """Your sessions. With nothing else: the picker.
+
+    Two groups, each a table: a session's uid, state, kind, agent or
+    application, turns, age and title. Listed: the sessions that run (open)
+    and those you can go on with (paused); an ended one is not resumed, and
+    is listed with --all. Piped, the tables are markdown.
+
+    On this machine: a session is a folder of ~/.datalayer/sessions, named by
+    its uid, kept until you delete it, seen only here and resumed by a
+    runtime on this machine.
+
+    On Datalayer: a session is in your Datalayer account's record, seen on
+    the web, in the desktop app and from any machine signed in, and resumed
+    on a runtime Datalayer launches. Signed out, only the sessions on this
+    machine are listed.
+
+    A session keeps its uid for its whole life; `transfer` moves it between
+    the two places under that uid. Arrow keys or a number choose, typing
+    filters, Enter resumes; the keys for pause, end, transfer, export,
+    delete and start over are said under the list. The verbs below act on a
+    runtime's sessions (`--server`, `--cloud`).
+    """
+    if ctx.invoked_subcommand is None:
+        run_picker(as_json, everything)
+
+
+@app.command(name="transfer")
+def transfer_command(
+    uid: str = typer.Argument(..., help="The session's uid."),
+    to: str = typer.Option(
+        ...,
+        "--to",
+        help="Where it goes: cloud (your Datalayer account) or local (this machine).",
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Do not ask before the conversation is sent."
+    ),
+) -> None:
+    """Move a paused session between this machine and Datalayer, under the same uid.
+
+    Its conversation and its record are carried as a session file is written
+    and read (credentials redacted; the files it was given are named, their
+    contents not sent). It lives where it was sent, and is ended where it
+    was, its record saying where it went. Refused in a sentence: signed out,
+    an open or ended session, a deployment's, a seat of a team run, an agent
+    that is not of the catalogue, a uid the other place keeps as another
+    session.
+    """
+    _quiet()
+    try:
+        done = transfer_session(uid, to, _token(), yes=yes)
+    except SessionsRefused as refused:
+        _exit(refused)
+        return
+    console.print(done.said, markup=False)
+    console.print(f"Go on with it: `loop --resume {uid}`.", markup=False)
+
+
+@app.command(name="delete")
+def delete_command(
+    uid: str = typer.Argument(
+        "",
+        help="The session's uid. Without one, every session is gone through, each asked of in turn.",
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Do not ask (one named session only)."
+    ),
+) -> None:
+    """Delete a session for good: on this machine, else in your Datalayer account's record.
+
+    One on Datalayer is deleted signed in, and only one you opened; an open
+    one is refused: pause or end it first. Without a uid, every session (this
+    machine's and, signed in, Datalayer's) is gone through, newest first, and
+    you are asked of each: delete it, keep it, or stop.
+    """
+    if not uid:
+        if yes:
+            _exit(
+                SessionsRefused(
+                    "Name the session to delete without asking: `--yes` deletes one session, never all."
+                )
+            )
+            return
+        _delete_each()
+        return
+    try:
+        if not yes and not _confirm(
+            f"Delete session {uid} for good? Its conversation and its record go with it."
+        ):
+            console.print("Not deleted.")
+            return
+        console.print(delete_session(uid, _token()), markup=False)
+    except SessionsRefused as refused:
+        _exit(refused)
+
+
+def _delete_each() -> None:
+    """`loop sessions delete` with no uid: every session, asked of in turn."""
+    import questionary
+
+    from agent_runtimes.loop.paused import ON_THIS_MACHINE, paused_line
+
+    token = _token()
+    rows = every_session(token)
+    if not rows:
+        console.print("You have no session to delete.")
+        return
+    console.print(
+        f"{len(rows)} session{'s' if len(rows) != 1 else ''}, newest first: for each, delete it, keep it, or stop.",
+        markup=False,
+    )
+
+    def ask(row: Any) -> str:
+        place = "this machine" if row.where == ON_THIS_MACHINE else "Datalayer"
+        answer = questionary.select(
+            f"{paused_line(row)} — {row.state}, on {place}",
+            choices=[
+                questionary.Choice("Keep it", DELETE_KEEP),
+                questionary.Choice("Delete it for good", DELETE_YES),
+                questionary.Choice("Stop", DELETE_STOP),
+            ],
+            default=DELETE_KEEP,
+        ).ask()
+        # Ctrl-C or Escape stops, deleting nothing more.
+        return answer or DELETE_STOP
+
+    deleted, kept = delete_across(
+        rows, token, ask, lambda line: console.print(line, markup=False)
+    )
+    console.print(f"Deleted {deleted}, kept {kept}.", markup=False)
 
 
 @app.command(name="list")
@@ -195,19 +670,32 @@ def list_sessions(
     app_id: str = typer.Option(
         "", "--app", help="One application's sessions, by its id."
     ),
-    all_sessions: bool = typer.Option(False, "--all", help="The archived ones too."),
-    state: str = typer.Option("", "--state", help="open, paused or ended."),
+    archived: bool = typer.Option(
+        False, "--archived", help="The archived ones too; each is marked `archived`."
+    ),
+    state: str = typer.Option(
+        "",
+        "--state",
+        help="open, paused or ended. Unsaid: the open and the paused ones.",
+    ),
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     server: Optional[str] = _server_option(),
     cloud: bool = _cloud_option(),
 ) -> None:
-    """List your sessions, held and recorded, newest first."""
+    """List your sessions, held and recorded, newest first, as a table.
+
+    Listed: the sessions that run (open) and those you can go on with
+    (paused). An ended session is not resumed: `--state ended` lists them,
+    and `show`, `clone` and `export` still act on one by its uid. In a
+    terminal the table fits its width, the title cut; piped, it is a
+    markdown table.
+    """
     try:
         client = _client(server, cloud)
         params: Dict[str, Any] = {"limit": limit}
         if app_id:
             params["app"] = app_id
-        if all_sessions:
+        if archived:
             params["archived"] = "true"
         if state:
             params["state"] = state
@@ -215,15 +703,32 @@ def list_sessions(
     except SessionsRefused as refused:
         _exit(refused)
         return
-    if not answer.get("sessions"):
+    # A runtime older than this rule answers every state: what is listed is
+    # decided here too.
+    sessions = [
+        session
+        for session in answer.get("sessions") or []
+        if state or session.get("state") != "ended"
+    ]
+    if not sessions:
+        what = f"{state} session" if state else "session to go on with"
         console.print(
-            "No session yet." if not app_id else f"No session of {app_id} yet."
+            f"No {what}"
+            + (f" of {app_id}" if app_id else "")
+            + "."
+            + ("" if state else " Ended ones: `loop sessions list --state ended`."),
+            markup=False,
         )
         return
-    for session in answer["sessions"]:
-        console.print(session_line(session), markup=False)
+    print_sessions_table(sessions)
     if answer.get("has_more"):
         errors.print(f"More: `loop sessions list --limit {limit * 2}`.")
+    if not state:
+        errors.print(
+            "Ended sessions are not listed: `loop sessions list --state ended`.",
+            markup=False,
+            style="dim",
+        )
 
 
 @app.command(name="show")
@@ -298,6 +803,31 @@ def resume(
         + (f" {''.join(said).strip()}" if said else ""),
         markup=False,
     )
+
+
+@app.command(name="pause")
+def pause(
+    uid: str = typer.Argument(..., help="The session's id."),
+    server: Optional[str] = _server_option(),
+    cloud: bool = _cloud_option(),
+) -> None:
+    """Pause a session its runtime holds: its conversation is given to its agent's memory first, when it has one."""
+    from agent_runtimes.chat.commands.pause import remembered_line
+
+    try:
+        answer = _ask(_client(server, cloud), "POST", f"/{uid}/stop").json()
+    except SessionsRefused as refused:
+        _exit(refused)
+        return
+    turns = int(answer.get("turns") or 0)
+    console.print(
+        f"Paused {answer.get('uid')} ({answer.get('agent')}, {turns} turn{'s' if turns != 1 else ''}).",
+        markup=False,
+    )
+    said = remembered_line(answer.get("remembered") or {})
+    if said:
+        console.print(said, markup=False)
+    console.print(f"Resume it: loop sessions resume {answer.get('uid')}", markup=False)
 
 
 @app.command(name="swap")
@@ -502,6 +1032,8 @@ __all__ = [
     "RETIRED",
     "SessionsRefused",
     "app",
+    "listed_sessions",
+    "print_sessions_table",
     "retired",
     "session_line",
     "show_lines",

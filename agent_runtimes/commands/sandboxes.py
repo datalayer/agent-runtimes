@@ -30,7 +30,7 @@ from rich.table import Table
 
 app = typer.Typer(
     name="sandboxes",
-    help="Code sandbox providers, environments and sandboxes.",
+    help="Manage code sandboxes, their providers and environments.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -104,7 +104,7 @@ def _add(table: Table, provider: str, info: Any) -> None:
 
 providers_app = typer.Typer(
     name="providers",
-    help="The places sandboxes can run, and what each of them requires.",
+    help="List the places sandboxes can run and what each requires.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

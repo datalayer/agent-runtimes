@@ -7,7 +7,10 @@ One function, :func:`contribute_builtins`, called by the built-in plugin's
 ``provide_contributions``: the harness catalogue to ``harness`` (MH-F02),
 the stores to ``session.store`` (MH-F03), ``datalayer-session/1`` to
 ``session.format`` (MH-F04), the default policy to ``session.carry``
-(MH-F05), the audit rows and the OTEL spans to ``session.hook`` (MH-F06).
+(MH-F05), the audit rows and the OTEL spans to ``session.hook`` (MH-F06),
+the ``agentcore`` target to ``runtime.target`` (AC-10), and the
+``datalayer`` and ``agentcore`` providers to ``identity.provider`` (ID-20,
+ID-21).
 Each lands here as its box does; nothing is contributed twice.
 """
 
@@ -17,6 +20,8 @@ from typing import Any
 
 from agent_runtimes.plugins.points import (
     HARNESSES,
+    IDENTITY_PROVIDERS,
+    RUNTIME_TARGETS,
     SESSION_CARRY,
     SESSION_FORMATS,
     SESSION_HOOKS,
@@ -64,6 +69,20 @@ def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
     for hook in (AUDIT_HOOK, OTEL_HOOK):
         contributions.contribute(
             SESSION_HOOKS, hook, contribution_id=hook.name, order=order
+        )
+    from agent_runtimes.agentcore.identity import AGENTCORE_IDENTITY
+    from agent_runtimes.agentcore.target import AGENTCORE_TARGET
+    from agent_runtimes.identity.datalayer import DATALAYER_IDENTITY
+
+    contributions.contribute(
+        RUNTIME_TARGETS,
+        AGENTCORE_TARGET,
+        contribution_id=AGENTCORE_TARGET.id,
+        order=order,
+    )
+    for provider in (DATALAYER_IDENTITY, AGENTCORE_IDENTITY):
+        contributions.contribute(
+            IDENTITY_PROVIDERS, provider, contribution_id=provider.id, order=order
         )
 
 

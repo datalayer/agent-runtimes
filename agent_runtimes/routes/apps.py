@@ -60,11 +60,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_runtimes.apps.callers import (
     LOCAL,
+    POD_SECRET_HEADER,
     VERIFIER,
     Caller,
     CallerRefused,
     bearer_of,
-    is_loopback,
+    is_the_pod,
     origin_allowed,
     platform_origins,
 )
@@ -103,6 +104,13 @@ class ConfigureAppRequest(BaseModel):
     user_token: Optional[str] = None
     jupyter_sandbox: Optional[str] = None
     mcp_proxy_url: Optional[str] = None
+    app_uid: Optional[str] = Field(
+        None,
+        description=(
+            "The application as Datalayer knows it, when it is one the person "
+            "keeps there: its sessions are recorded, and resumed, under it"
+        ),
+    )
     organization_uid: Optional[str] = Field(
         None,
         description=(
@@ -255,7 +263,10 @@ async def _authorize(
         raise HTTPException(
             status_code=403, detail=f"This application does not answer {origin}."
         )
-    if is_loopback(request.client.host if request.client else None):
+    if is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
         return Authorized(LOCAL, app)
     if token is None:
         token = bearer_of(request.headers.get("authorization"))
@@ -475,7 +486,11 @@ def connections_not_started(adapter: Any) -> List[Tuple[str, str]]:
         server_id = getattr(selection, "id", str(selection))
         if getattr(selection, "origin", None) == "contents":
             continue
-        if server_id in starting or manager.is_server_running(server_id):
+        if (
+            server_id in starting
+            or manager.is_starting(server_id)
+            or manager.is_server_running(server_id)
+        ):
             continue
         if server_id in failed:
             # A traceback's last line says what went wrong.
@@ -554,9 +569,15 @@ async def configure_app(
             mcp_proxy_url=body.mcp_proxy_url,
             app_spec=body.app,
             app_instance=(
-                {"organization_uid": body.organization_uid}
-                if body.organization_uid
-                else None
+                {
+                    **(
+                        {"organization_uid": body.organization_uid}
+                        if body.organization_uid
+                        else {}
+                    ),
+                    **({"app_uid": body.app_uid} if body.app_uid else {}),
+                }
+                or None
             ),
             model=app.model or None,
             # An application is spoken to over AG-UI — by its page and by the
@@ -570,6 +591,24 @@ async def configure_app(
     from agent_runtimes.routes.acp import _agents as _acp_agents
 
     if "default" in _acp_agents:
+        # Its connections start in the background, each bounded: an
+        # application is served once they have, or told which did not.
+        from agent_runtimes.mcp.lifecycle import (
+            MCP_SERVER_START_GRACE,
+            background_start_timeout,
+            get_mcp_lifecycle_manager,
+        )
+
+        await get_mcp_lifecycle_manager().wait_while_starting(
+            [
+                str(getattr(s, "id", s))
+                for s in getattr(
+                    _acp_agents["default"][0], "_selected_mcp_servers", None
+                )
+                or []
+            ],
+            timeout=background_start_timeout() + MCP_SERVER_START_GRACE + 1,
+        )
         not_started = connections_not_started(_acp_agents["default"][0])
         if not_started:
             raise HTTPException(
@@ -715,6 +754,100 @@ async def stop_serving_over_a2a(
     stopped = served_apps()
     stop_serving_apps()
     return {"success": True, "stopped": stopped}
+
+
+class RuntimeProofRequest(BaseModel):
+    """What the companion gives a runtime launched for a deployment."""
+
+    proof: str = Field(..., description="The proof the platform minted at its launch")
+    pod_secret: str = Field(
+        ...,
+        description="What the companion holds, and is told by from now on: "
+        "on such a runtime an address proves nothing",
+    )
+    user_token: Optional[str] = Field(
+        default=None,
+        description="The token of whoever launched it: what ai-agents answers "
+        "the deployment's version to, with the proof",
+    )
+    version: Optional[int] = Field(
+        default=None,
+        description="The version its launch names, for a deployment moved to "
+        "it; none for the one the deployment runs",
+    )
+
+
+@router.put("/runtime-proof")
+async def runtime_proof(body: RuntimeProofRequest, request: Request) -> Dict[str, Any]:
+    """Keep the proof that this runtime was launched for a deployment, and read
+    from ai-agents what that deployment runs.
+
+    The companion gives it as the runtime is assigned, before anything is
+    declared or configured. Only the pod itself may, and nobody reads it back:
+    this route answers which deployment it names, not the proof, and `unread`,
+    why what it runs was not read, when it was not. See
+    `agent_runtimes.apps.principal`.
+    """
+    from agent_runtimes.apps.principal import (
+        give_runtime_proof,
+        launched_app,
+        read_launched_app,
+    )
+    from agent_runtimes.routes.agents import _note_launched_app
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its proof.",
+        )
+    try:
+        deployment = give_runtime_proof(body.proof, body.pod_secret)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    unread = await read_launched_app(body.user_token, body.version)
+    if unread:
+        logger.warning("Launched for deployment %s: %s", deployment, unread)
+        return {"success": True, "deployment": deployment, "unread": unread}
+    _note_launched_app(*launched_app())
+    return {"success": True, "deployment": deployment}
+
+
+@router.post("/owner-secrets")
+async def owner_secrets(request: Request) -> Dict[str, Any]:
+    """What the deployment this runtime was launched for declares, of its owner's
+    vault: for the companion to give out, in place of the launcher's. Only the pod
+    itself is answered; 409 on a runtime launched for none; 502 when ai-agents
+    gave none, and nothing is kept here either way. See
+    `agent_runtimes.apps.principal.read_owner_secrets`.
+    """
+    from agent_runtimes.apps.principal import (
+        OwnerSecretsUnread,
+        kernel_holds_owner_secrets,
+        launched_for,
+        read_owner_secrets,
+    )
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403, detail="Only the runtime's own pod reads its secrets."
+        )
+    if not launched_for():
+        raise HTTPException(
+            status_code=409, detail="This runtime was launched for no deployment."
+        )
+    try:
+        return {
+            "secrets": await read_owner_secrets(),
+            "launched_by_owner": kernel_holds_owner_secrets(),
+        }
+    except OwnerSecretsUnread as unread:
+        raise HTTPException(status_code=502, detail=str(unread)) from None
 
 
 class RenewPrincipalRequest(BaseModel):
@@ -1222,6 +1355,7 @@ async def _acts_as(
         preview_grants,
         principal_uid_of,
     )
+    from agent_runtimes.apps.record import session_kind
     from agent_runtimes.apps.sessions import SessionRefused
 
     deployment = deployment_of(instance)
@@ -1292,6 +1426,10 @@ async def _acts_as(
             **({"deployment_uid": deployment} if deployment else {}),
         }
     if not deployment:
+        if caller.kind == "person" and session_kind(instance.get("app_uid")) == "agent":
+            # An agent run as such is no Preview: it runs as the person,
+            # with their own token, as their agent always did.
+            return {"kind": "person", "uid": caller.uid}
         if caller.kind == "person":
             try:
                 await ensure_preview_token(
@@ -1336,8 +1474,46 @@ def _signed_user(
         raise HTTPException(status_code=refused.status, detail=refused.reason) from None
 
 
+#: Why a session of a deployment is not said to be woken by who opens it.
+NOT_WOKEN_BY_THEM = (
+    "Only a deployment's owner says what woke its session, as the scheduler does "
+    "with their key: this session is opened by somebody."
+)
+
+
+async def _woken_by(
+    body: StartSessionRequest,
+    authorized: Authorized,
+    instance: Dict[str, Any],
+    bearer: str,
+) -> Dict[str, Any]:
+    """What woke a session, from who may say so; else 403.
+
+    What it says opens the session without its host's signature (D-21), runs
+    the handler of the schedule it names and the person's token it names (W-03),
+    and is what the record shows in place of who opened it. So of a deployment it
+    is read from the authority `POST /deployments/{uid}/wake` answers, its owner,
+    whose key the scheduler holds. ai-agents refuses anybody else there, and here
+    a visitor, a host's person or a second account is refused, not ignored: they
+    said something false. A Preview is its owner's already.
+    """
+    deployment = str(instance.get("deployment_uid") or "")
+    if not body.woken_by or not deployment:
+        return body.woken_by
+    try:
+        await its_owner(authorized, [deployment], bearer)
+    except HTTPException as refused:
+        if refused.status_code != 403:
+            raise
+        raise HTTPException(status_code=403, detail=NOT_WOKEN_BY_THEM) from None
+    return body.woken_by
+
+
 def _given_in_their_name(
-    request: Request, body: StartSessionRequest, instance: Dict[str, Any], bearer: str
+    request: Request,
+    woken_by: Dict[str, Any],
+    instance: Dict[str, Any],
+    bearer: str,
 ) -> None:
     """A session woken for one person's own source — a message in their
     mailbox (W-03) — is given that person's token naming the
@@ -1357,7 +1533,7 @@ def _given_in_their_name(
     )
 
     token = str(request.headers.get(ACTING_TOKEN_HEADER) or "").strip()
-    person, grant = person_woken_for(body.woken_by)
+    person, grant = person_woken_for(woken_by)
     if not person:
         if token:
             raise HTTPException(
@@ -1530,12 +1706,12 @@ async def _external_turn(
 @router.post("/sessions")
 async def start_session(body: StartSessionRequest, request: Request) -> Any:
     """Start a session of the application an agent of this runtime runs."""
-    from agent_runtimes.apps.sessions import SessionRefused, agent_app, new_session
+    from agent_runtimes.apps.sessions import SessionRefused, new_session, session_app
     from agent_runtimes.context.identities import set_request_user_jwt
 
     await _visitors_agent(body.agent, request)
     try:
-        app, instance = agent_app(body.agent)
+        app, instance = session_app(body.agent)
     except SessionRefused as refused:
         raise _refused(refused) from None
     authorized = await _authorize(
@@ -1546,11 +1722,13 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+    # What woke it, from who may say so: everything below reads this.
+    woken_by = await _woken_by(body, authorized, instance, bearer or "")
     # Woken for one person's own source, it is given their token naming the
     # application, held where its runs find it (W-03).
-    _given_in_their_name(request, body, instance, bearer or "")
+    _given_in_their_name(request, woken_by, instance, bearer or "")
     # Who its user is, embedded, when it takes only one its host signed (D-21).
-    user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
+    user = _signed_user(app, instance, body.user_token, woken=bool(woken_by))
     # A host's retry is answered the original session and turn.
     turn_key = _turn_key(authorized.caller, request, body.external_event_id)
     asked = body.model_dump(exclude={"user_token"})
@@ -1579,7 +1757,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
                 body.external_event_id,
                 lambda head: live.open(
                     opener=body.opener.strip(),
-                    woken_by=body.woken_by or None,
+                    woken_by=woken_by or None,
                     head=head,
                     bearer=bearer,
                 ),
@@ -1587,7 +1765,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
         return _stream(
             live.open(
                 opener=body.opener.strip(),
-                woken_by=body.woken_by or None,
+                woken_by=woken_by or None,
                 head=live.session_event(),
                 bearer=bearer,
             )
@@ -1599,6 +1777,23 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
 def _owner_of(caller: Any) -> Dict[str, str]:
     """Who a listing is for: the caller, as the store filters by opener."""
     return {"kind": str(caller.kind), "uid": str(caller.uid or "")}
+
+
+async def _record_owner(caller: Any, bearer: str) -> Dict[str, str]:
+    """Who the record's listing is for. The machine itself with a person's
+    token — a runtime on one's own machine keeping its sessions in the
+    platform's record — lists that person's: the record lists what a
+    person opened, and is asked in their name.
+    """
+    if caller.kind == "local" and bearer:
+        try:
+            person = await VERIFIER.verify(bearer, "")
+        except CallerRefused as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
+        return _owner_of(person)
+    return _owner_of(caller)
 
 
 async def _store_refused(call: Any) -> Any:
@@ -1637,8 +1832,13 @@ async def list_sessions(
     filtered (``?app=``, ``?agent=``, ``?state=`` — an unknown word is 422 —,
     ``?q=`` on the title, ``?archived=true`` to include the archived).
     ``?held=true`` lists what this runtime holds alone.
+
+    With no ``?state=``, the sessions that run (``open``) and those that
+    can be gone on with (``paused``) are listed; an ended one — not resumed,
+    still shown, cloned and exported by its uid — with ``?state=ended``.
     """
     from agent_runtimes.apps import sessions
+    from agent_runtimes.apps.record import session_kind
     from agent_runtimes.apps.session_store import active_store
     from agent_runtimes.apps.session_workspace import with_workspaces
     from agent_runtimes.apps.sessions import SessionRefused, check_state
@@ -1652,13 +1852,14 @@ async def list_sessions(
     # The record is read as the caller: the store takes the bearer from the
     # request's context (found on r1, 21 October 2026: `loop sessions list
     # --cloud` on a kept runtime answered 401, "none was sent").
-    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
+    bearer = bearer_of(request.headers.get("authorization")) or ""
+    set_request_user_jwt(bearer or None)
     limit = max(1, min(int(limit or 50), 200))
     held_here = [
         live.describe()
         for live in sessions._SESSIONS.values()
         if (not agent or live.agent_spec == agent)
-        and (not wanted or live.state == wanted)
+        and (live.state == wanted if wanted else live.state != "ended")
         and (
             not app
             or live.app.id == app
@@ -1670,9 +1871,15 @@ async def list_sessions(
     ]
     if held:
         return {"sessions": await with_workspaces(held_here), "has_more": False}
+    store = active_store()
+    owner = (
+        await _record_owner(authorized.caller, bearer)
+        if str(getattr(store, "name", "")) == "record"
+        else _owner_of(authorized.caller)
+    )
     page = await _store_refused(
-        active_store().list(
-            _owner_of(authorized.caller),
+        store.list(
+            owner,
             app=app,
             after=after,
             limit=limit,
@@ -1685,9 +1892,24 @@ async def list_sessions(
     by_uid = {item["uid"]: item for item in held_here}
     listed: List[Dict[str, Any]] = []
     for recorded in page.sessions:
+        if not wanted and recorded.get("state") == "ended":
+            # A record older than this rule answers every state.
+            continue
         # A session held here is said as the runtime holds it: its turn phase
         # and what it asks are the runtime's, not the record's.
-        listed.append(by_uid.pop(recorded["uid"], {}) or {**recorded, "held": False})
+        listed.append(
+            by_uid.pop(recorded["uid"], {})
+            or {
+                **recorded,
+                "held": False,
+                # The record's own listing names the application's uid, which
+                # says whether the session is an agent's, run as such.
+                "kind": session_kind(
+                    recorded.get("app_uid")
+                    or (recorded.get("instance") or {}).get("app_uid")
+                ),
+            }
+        )
     if not after:
         # Held sessions the record does not list yet (its write in flight): first.
         listed = [*by_uid.values(), *listed]
@@ -2450,8 +2672,9 @@ async def session_ui(websocket: WebSocket) -> None:
 
 @router.post("/sessions/{uid}/stop")
 async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
-    """Stop a session: what runs is cancelled; it is ``paused`` until resumed.
-    A paused one answers 409.
+    """Stop a session: what runs is cancelled; it is ``paused`` until resumed,
+    and what its conversation holds is given to its agent's memory first,
+    when it has one (``remembered``). A paused one answers 409.
     """
     from agent_runtimes.apps.sessions import SessionRefused
 
@@ -2460,7 +2683,11 @@ async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
         await live.stop()
     except SessionRefused as refused:
         raise _refused(refused) from None
-    return dict(live.describe())
+    # On the record before it is answered: whoever paused it may stop the
+    # runtime at once, and a listing from the record says the truth.
+    await live.recorder.settled(live.uid)
+    # What its agent's memory was given first, when it has one.
+    return {**live.describe(), "remembered": dict(live.remembered)}
 
 
 @router.post("/sessions/{uid}/end")
@@ -2476,6 +2703,40 @@ async def end_session(uid: str, request: Request) -> Dict[str, Any]:
     except SessionRefused as refused:
         raise _refused(refused) from None
     return dict(live.describe())
+
+
+@router.delete("/sessions/{uid}")
+async def delete_session(uid: str, request: Request) -> Dict[str, Any]:
+    """Delete a session for good, where the session store keeps it: its
+    folder on this machine, or its opener's record on Datalayer. Only its
+    opener's; anybody else's is a 404. One this runtime holds open is
+    refused (409): pause or end it first. A paused one it holds is let go.
+    """
+    from agent_runtimes.apps import sessions
+    from agent_runtimes.apps.session_store import active_store
+    from agent_runtimes.context.identities import set_request_user_jwt
+
+    held = sessions.session_of(uid) is not None
+    if held:
+        live, _ = await _held(uid, request)
+        if live.state == "open":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Session {uid} is open: pause it or end it first, then delete it.",
+            )
+    else:
+        await _recorded(uid, request)
+    set_request_user_jwt(bearer_of(request.headers.get("authorization")) or None)
+    store = active_store()
+    if not hasattr(store, "remove"):
+        raise HTTPException(
+            status_code=501,
+            detail=f"The session store {getattr(store, 'name', '?')!r} does not delete a session.",
+        )
+    if not await _store_refused(store.remove(uid)) and not held:
+        raise HTTPException(status_code=404, detail=f"No session {uid} is kept.")
+    sessions._SESSIONS.pop(uid, None)
+    return {"uid": uid, "deleted": True}
 
 
 @router.post("/sessions/logout")
@@ -2501,11 +2762,11 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
     """
     from agent_runtimes.apps.sessions import (
         SessionRefused,
-        agent_app,
         apply_rules,
         new_session,
         opener_may,
         rebuilt_from_record,
+        session_app,
         session_of,
     )
     from agent_runtimes.context.identities import set_request_user_jwt
@@ -2520,7 +2781,7 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
                 f"No session {uid} is held here: say which agent runs its application, "
                 "and it is resumed from its record.",
             )
-        app, instance = agent_app(body.agent)
+        app, instance = session_app(body.agent)
         authorized = await _authorize(
             request, False, app, str(instance.get("app_uid") or "")
         )
@@ -2565,6 +2826,7 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
             lineage=rebuilt.lineage,
         )
         apply_rules(live, rebuilt.rules)
+        live.remembered_turns = rebuilt.remembered
         return _stream(live.resume(head=live.session_event()))
     except SessionRefused as refused:
         raise _refused(refused) from None
@@ -2617,8 +2879,8 @@ async def session_agui(agent: str, request: Request) -> Any:
     """
     from agent_runtimes.apps.sessions import (
         SessionRefused,
-        agent_app,
         new_session,
+        session_app,
         session_of,
     )
     from agent_runtimes.context.identities import set_request_user_jwt
@@ -2629,10 +2891,16 @@ async def session_agui(agent: str, request: Request) -> Any:
         raise HTTPException(status_code=422, detail="An AG-UI run is JSON.") from None
     if not isinstance(body, dict):
         raise HTTPException(status_code=422, detail="An AG-UI run is a JSON object.")
+    # A run names its thread and itself in either spelling AG-UI clients
+    # send (`threadId` or `thread_id`): read as one, so a client's thread
+    # is its session whichever it writes.
+    for camel, snake in (("threadId", "thread_id"), ("runId", "run_id")):
+        if not body.get(camel) and body.get(snake):
+            body[camel] = body.pop(snake)
     if session_of(str(body.get("threadId") or "")) is None:
         await _visitors_agent(agent, request)
     try:
-        app, instance = agent_app(agent)
+        app, instance = session_app(agent)
     except SessionRefused as refused:
         raise _refused(refused) from None
     authorized = await _authorize(

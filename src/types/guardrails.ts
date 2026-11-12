@@ -4,116 +4,83 @@
  */
 
 /**
- * Permission flags for a guardrail identity.
+ * An agent's guardrails: the entries of an agent spec's `guardrails` list.
+ *
+ * What is typed here is what the runtime enforces of an entry
+ * (`agent_runtimes.capabilities.factory`) and what the components read of it
+ * (the cost budget). What may be *done* is not here: that is the Policy a
+ * Guard extends (`PolicySpec`, `agentspecs/policies`).
  */
-export interface GuardrailPermissions {
-  'read:data': boolean;
-  'write:data': boolean;
-  'execute:code': boolean;
-  'access:internet': boolean;
-  'send:email': boolean;
-  'deploy:production': boolean;
-}
 
 /**
- * Token usage limits for a guardrail.
+ * Each section names the keys the runtime reads; what a spec writes beside
+ * them is carried as written, as the Python type (`List[Dict[str, Any]]`)
+ * carries it, and read by nothing.
  */
-export interface GuardrailTokenLimits {
-  per_run: string;
-  per_day: string;
-  per_month: string;
+
+/** The money an agent may spend: read by the runtime and shown by the cost tracker. */
+export interface AgentCostBudget {
+  per_run_usd?: number;
+  cumulative_usd?: number;
+  /** What happens past the budget: `stop` when unsaid. */
+  on_budget_exceeded?: string;
+  [key: string]: unknown;
 }
 
-/**
- * Data scope restrictions — which systems/objects are accessible.
- */
-export interface GuardrailDataScope {
-  allowed_systems: string[];
-  allowed_objects: string[];
-  denied_objects: string[];
-  denied_fields: string[];
+/** The tokens an agent may use. */
+export interface AgentTokenLimits {
+  per_run?: string | number;
+  per_day?: string | number;
+  per_month?: string | number;
+  request_limit?: number;
+  tool_calls_limit?: number;
+  [key: string]: unknown;
 }
 
-/**
- * Data handling policies — aggregation, row-level, PII, redaction.
- */
-export interface GuardrailDataHandling {
-  default_aggregation: boolean;
-  allow_row_level_output: boolean;
-  max_rows_in_output: number;
-  redact_fields: string[];
-  hash_fields: string[];
-  pii_detection: boolean;
-  pii_action: string;
+/** Which systems and objects it may reach, and which fields it may not name. */
+export interface AgentDataScope {
+  allowed_systems?: string[];
+  allowed_objects?: string[];
+  denied_objects?: string[];
+  denied_fields?: string[];
+  [key: string]: unknown;
 }
 
-/**
- * Approval policy for sensitive operations.
- */
-export interface GuardrailApprovalPolicy {
-  require_manual_approval_for: string[];
-  auto_approved: string[];
+/** How rows and personal data leave. */
+export interface AgentDataHandling {
+  allow_row_level_output?: boolean;
+  max_rows_in_output?: number;
+  pii_detection?: boolean;
+  /** `warn`, `redact` or `block`. */
+  pii_action?: string;
+  [key: string]: unknown;
 }
 
-/**
- * Tool invocation limits.
- */
-export interface GuardrailToolLimits {
-  max_tool_calls: number;
-  max_query_rows: number;
-  max_query_runtime: string;
-  max_time_window_days: number;
+/** Untrusted text and instructions found in data. */
+export interface AgentContentSafety {
+  treat_crm_text_fields_as_untrusted?: boolean;
+  do_not_follow_instructions_from_data?: boolean;
+  [key: string]: unknown;
 }
 
-/**
- * Audit trail configuration.
- */
-export interface GuardrailAudit {
-  log_tool_calls: boolean;
-  log_query_metadata_only: boolean;
-  retain_days: number;
-  require_lineage_in_report: boolean;
-}
-
-/**
- * Content safety settings.
- */
-export interface GuardrailContentSafety {
-  treat_crm_text_fields_as_untrusted: boolean;
-  do_not_follow_instructions_from_data: boolean;
-}
-
-/**
- * Full guardrail specification.
- */
-export interface GuardrailSpec {
-  /** Unique guardrail identifier */
-  id?: string;
-  /** Version */
-  version?: string;
-  /** Display name */
+/** One entry of an agent spec's `guardrails`. */
+export interface AgentGuardrail {
   name?: string;
-  /** Description of the guardrail */
-  description?: string;
-  /** Identity provider (e.g., 'datalayer', 'github', 'azure-ad', 'google') */
-  identity_provider?: string;
-  /** Identity name within the provider */
-  identity_name?: string;
-  /** Permission flags */
-  permissions?: GuardrailPermissions | Record<string, boolean>;
-  /** Token usage limits */
-  token_limits?: GuardrailTokenLimits | Record<string, string>;
-  /** Data scope restrictions */
-  data_scope?: GuardrailDataScope | Record<string, unknown>;
-  /** Data handling policies */
-  data_handling?: GuardrailDataHandling | Record<string, unknown>;
-  /** Approval policy */
-  approval_policy?: GuardrailApprovalPolicy | Record<string, unknown>;
-  /** Tool invocation limits */
-  tool_limits?: GuardrailToolLimits | Record<string, unknown>;
-  /** Audit trail configuration */
-  audit?: GuardrailAudit | Record<string, unknown>;
-  /** Content safety settings */
-  content_safety?: GuardrailContentSafety | Record<string, unknown>;
+  cost_budget?: AgentCostBudget;
+  token_limits?: AgentTokenLimits;
+  /** Permission flags, `read:data` and the like, each true or false. */
+  permissions?: Record<string, boolean>;
+  data_scope?: AgentDataScope;
+  data_handling?: AgentDataHandling;
+  content_safety?: AgentContentSafety;
+  /** The shield-style sections the runtime builds a capability from, each by its own keys. */
+  prompt_injection?: Record<string, unknown> | boolean;
+  secret_redaction?: Record<string, unknown> | boolean;
+  blocked_keywords?: Record<string, unknown> | boolean;
+  no_refusals?: Record<string, unknown> | boolean;
+  tool_guard?: Record<string, unknown> | boolean;
+  async_guardrail?: Record<string, unknown> | boolean;
+  tool_approval?: Record<string, unknown> | boolean;
+  /** What a spec writes beyond this is carried as written, as the Python type (`List[Dict[str, Any]]`) carries it. */
   [key: string]: unknown;
 }

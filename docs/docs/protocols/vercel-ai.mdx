@@ -1,0 +1,108 @@
+---
+sidebar_position: 12
+title: Vercel AI
+---
+
+# Vercel AI: the AI SDK's data stream
+
+The [AI SDK](https://ai-sdk.dev) by Vercel streams a chat as a sequence of typed
+parts over Server-Sent Events. Agent Runtimes serves that stream through
+Pydantic AI's [Vercel AI support](https://ai.pydantic.dev/ui/vercel-ai/), and it
+is the default transport: `serve` and `POST /api/v1/agents` use it when nothing
+else is named.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Server | `agent_runtimes.transports.VercelAITransport` | — |
+| Client | — | `VercelAIAdapter` in `@datalayer/agent-runtimes/lib/protocols`; `useVercelAI` |
+| Version | through `pydantic-ai-slim` `>=2.35.0,<2.60` | `ai` 7.0.90, `@ai-sdk/react` 4.0.93 |
+
+The version this runtime speaks is that of those packages: the stream has no
+number of its own.
+
+## Enable it
+
+```bash
+agent-runtimes serve --agent-id example-agentic-chat --port 8765
+```
+
+```bash
+curl -X POST http://localhost:8765/api/v1/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "Demo"}'
+```
+
+`--protocol vercel-ai-jupyter` registers the same transport, for a Jupyter
+execution context. `browser-vercel-ai` is no route at all:
+`BrowserAgentAdapter` turns the loop in the page with the AI SDK, behind the same
+adapter interface.
+
+## Routes
+
+| Route | What it does |
+| --- | --- |
+| `POST /api/v1/vercel-ai/{agent_id}` | Runs the agent: a chat request in, the data stream out. 404 for an agent not registered on this transport |
+| `GET /api/v1/vercel-ai/agents` | The agents served, by id |
+| `GET /api/v1/vercel-ai/requests` | The requests running now |
+| `POST /api/v1/vercel-ai/terminate` | Stops `request_id`; with none, every running request |
+
+Besides the AI SDK's own fields, the body may carry `model` (this run's model,
+replacing the agent's), `builtinTools`, `skills` and `identities` (the person's
+OAuth tokens, for the tools that use them).
+
+## Example
+
+```bash
+curl -N -X POST http://localhost:8765/api/v1/vercel-ai/demo \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "trigger": "submit-message",
+    "id": "c1",
+    "messages": [
+      {"id": "m1", "role": "user", "parts": [{"type": "text", "text": "Hello"}]}
+    ]
+  }'
+```
+
+```text
+data: {"type":"start"}
+data: {"type":"start-step"}
+data: {"type":"text-start","id":"…"}
+data: {"type":"text-delta","delta":"hello ","id":"…"}
+data: {"type":"text-delta","delta":"there","id":"…"}
+data: {"type":"text-end","id":"…"}
+data: {"type":"finish-step"}
+data: {"type":"finish"}
+data: [DONE]
+```
+
+In TypeScript, the adapter takes the agent's whole endpoint as its `baseUrl`:
+
+```typescript
+import { VercelAIAdapter } from '@datalayer/agent-runtimes/lib/protocols';
+import { createUserMessage } from '@datalayer/agent-runtimes/lib/types/messages';
+
+const adapter = new VercelAIAdapter({
+  protocol: 'vercel-ai',
+  baseUrl: 'http://localhost:8765/api/v1/vercel-ai/demo',
+});
+adapter.subscribe(event => console.log(event.type));
+await adapter.connect();
+await adapter.sendMessage(createUserMessage('Hello'));
+```
+
+## Approvals
+
+A tool that needs a person's approval is deferred, and the conversation resumes
+with a request carrying its tool part at state `approval-responded`, with
+`approval: {id, approved}`. The
+[tool approvals routes](../endpoints#tool-approvals--monitoring-stream-websocket)
+keep the record.
+
+## Limits
+
+- It serves a Pydantic AI agent only. A harness on this transport is refused
+  with a 422; harnesses are served over [AG-UI](./ag-ui), [ACP](./acp) and
+  [A2A](./a2a).
+- One stream per request, as with AG-UI.
+- `requests` and `terminate` read this process's memory only.

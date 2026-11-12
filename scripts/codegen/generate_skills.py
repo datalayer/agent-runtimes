@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,40 @@ from typing import Any
 import yaml
 from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
+
+#: What an ``install`` says is installed (agentspecs: mcp-servers, skills).
+INSTALL_TYPES = ("npm", "python", "docker", "git", "remote", "built-in", "other")
+
+
+def install_of(spec: dict) -> dict | None:
+    """A spec's ``install``, checked: ``{type, command, note?}``; None when it has none.
+
+    Raises
+    ------
+    ValueError
+        When it is not of that shape, in a sentence naming the spec.
+    """
+    install = spec.get("install")
+    if install is None:
+        return None
+    where = f"{spec.get('id')}: install"
+    if not isinstance(install, dict) or set(install) - {"type", "command", "note"}:
+        raise ValueError(f"{where} is {{type, command, note}}, not {install!r}")
+    if install.get("type") not in INSTALL_TYPES:
+        raise ValueError(
+            f"{where}.type is one of {', '.join(INSTALL_TYPES)}, not {install.get('type')!r}"
+        )
+    command = install.get("command", "")
+    if not isinstance(command, str):
+        raise ValueError(f"{where}.command is a shell command, a string")
+    if not command.strip() and install["type"] not in ("remote", "built-in", "other"):
+        raise ValueError(
+            f"{where}.command says how a {install['type']} install is run: it is empty"
+        )
+    out = {"type": install["type"], "command": command.strip()}
+    if install.get("note"):
+        out["note"] = " ".join(str(install["note"]).split())
+    return out
 
 
 def _fmt_list(items: list[str]) -> str:
@@ -57,7 +92,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "import os",
         "from typing import Dict, List",
         "",
-        "from agent_runtimes.types import SkillSpec",
+        "from agent_runtimes.types import "
+        + ("InstallSpec, " if any(spec.get("install") for spec in specs) else "")
+        + "SkillSpec",
         "",
         "",
         "# " + "=" * 76,
@@ -113,6 +150,15 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    envvars={_fmt_list(spec.get('envvars', []))},",
                 f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
                 f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
+                *(
+                    [
+                        "    install=InstallSpec("
+                        + ", ".join(f"{k}={v!r}" for k, v in install_of(spec).items())
+                        + "),"
+                    ]
+                    if spec.get("install")
+                    else []
+                ),
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    icon={icon},",
                 f"    emoji={emoji},",
@@ -277,6 +323,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  requiredEnvVars: {envvars_json},",
                 f"  optionalEnvVars: {optional_env_vars_json},",
                 f"  dependencies: {dependencies_json},",
+                *(
+                    [f"  install: {json.dumps(install_of(spec), ensure_ascii=False)},"]
+                    if spec.get("install")
+                    else []
+                ),
                 f"  tags: {tags_json},",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",

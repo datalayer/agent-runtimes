@@ -128,6 +128,7 @@ def managed() -> Iterator[FakeIam]:
 @pytest.fixture
 def unmanaged(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
+    monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     managed_policies.use_source(None)
     yield
     session_rules().clear()
@@ -144,6 +145,10 @@ class TestManagedFromIam:
     def test_iams_documents_decide_first_above_the_appspecs_and_the_default(
         self, managed: FakeIam
     ) -> None:
+        # The fixture's 50 ms copy can expire between two reads on a loaded
+        # machine (a full suite under a memory cap): this one asks a copy held
+        # for longer than the test takes.
+        runtime_policies().poll_seconds = 30.0
         policies = policies_in_force()
         assert [p.scope for p in policies] == ["organization", "session"]
         decision = decide(act("execute", command="pytest"), _ctx(), policies)
@@ -262,6 +267,23 @@ class TestManagedFromIam:
         assert runtime_policies().is_managed is False
         assert not [r for r in caplog.records if "unmanaged" in r.getMessage()]
         managed_policies.use_source(None)
+
+    def test_the_account_key_is_read_before_a_token_that_lapses(
+        self, monkeypatch
+    ) -> None:
+        """A kept runtime lives for days: a user's token lapsed within the hour, IAM
+        answered 401, and the Shield refused every action."""
+        policies = runtime_policies()
+        token = "x.eyJ1aWQiOiAiYWNjdDEifQ.y"
+        key = "x.eyJzdWIiOiAiYWNjdDEifQ.key"
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://iam.test")
+        monkeypatch.setenv("DATALAYER_USER_TOKEN", token)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+        policies._source(None)
+        assert policies._credential == token
+        monkeypatch.setenv("DATALAYER_API_KEY", key)
+        policies._source(token)
+        assert policies._credential == key
 
     def test_a_token_without_iams_url_runs_unmanaged_and_says_so(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
@@ -405,9 +427,21 @@ class TestAdmittedHarnesses:
         ):
             harness_agent("a", "fake", workspace=tmp_path)
 
-    def test_the_platforms_credentials_rule_refuses_on_a_runtime_that_lends_the_accounts_own(
-        self,
+    def test_the_platforms_credentials_rule_holds_on_datalayer(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A harness there calls through ai-inference, on the platform's credentials."""
+        monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+        monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+        platform = Policy(
+            scope="organization", harnesses=Harnesses(credentials="platform")
+        )
+        assert harness_refusal([platform, default_policy()], "claude-code") is None
+
+    def test_the_platforms_credentials_rule_refuses_on_a_runtime_that_lends_the_accounts_own(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", raising=False)
         platform = Policy(
             scope="organization", harnesses=Harnesses(credentials="platform")
         )
@@ -1258,7 +1292,7 @@ class TestConformanceAcrossFaces:
                         **{"class": class_of(kind)},
                         **fields,
                     ),
-                    count_as=face,
+                    key=face,
                 )
                 for face in FACES
             }

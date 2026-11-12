@@ -147,6 +147,13 @@ def toolsets_for_the_run(
             continue
         reaches = True
         bearer = users_token if server_id in in_users_name else token
+        # A catalogue Battle's run on the books reaches them with the books
+        # key; a server started with it is left out of any other run (B4-01).
+        from agent_runtimes.apps.battle_books import books_bearer
+
+        books = books_bearer(server_id)
+        if books is not None:
+            bearer = books
         if not bearer:
             # Nobody to reach it in the name of: left out of this run, which goes on
             # without it — an empty Bearer is no header, and broke the whole run.

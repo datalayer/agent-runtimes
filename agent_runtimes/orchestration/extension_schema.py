@@ -32,6 +32,7 @@ from typing import Any
 from agent_runtimes.context.delegation import (
     CHECKPOINT_FIELD,
     CREDENTIAL_FIELD,
+    DELEGATION_META_KEY,
     EXECUTION_FIELD,
     EXTENSION_URI,
     PAUSE_FIELD,
@@ -40,7 +41,6 @@ from agent_runtimes.context.delegation import (
     STEER_METHOD,
     WITHHELD,
 )
-from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 
 #: The budget field of a delegation, which `budget.model_budget` writes.
 BUDGET_FIELD = "budget"

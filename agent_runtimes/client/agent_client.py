@@ -17,7 +17,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import requests
@@ -1095,6 +1095,7 @@ class AgentClient(
         parent_reservation_uid: Optional[str] = None,
         version: Optional[Union[int, str]] = None,
         app_spec: Optional[dict[str, Any]] = None,
+        agent_setup: Optional[dict[str, Any]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -1132,6 +1133,9 @@ class AgentClient(
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made
             (R-19), as `loop apps run --cloud` launches one.
+        agent_setup : Optional[dict[str, Any]], optional
+            How its agent is configured at launch: ``without_mcp_servers``,
+            ``without_skills`` (``loop --without-mcp-servers``).
 
         Returns
         -------
@@ -1177,6 +1181,9 @@ class AgentClient(
         if api_key:
             client_for_request = _BaseDatalayerClient(urls=self._urls, api_key=api_key)
 
+        # Named only when given: a client that does not know it is not told.
+        setup: Dict[str, Any] = {"agent_setup": agent_setup} if agent_setup else {}
+
         if snapshot_name is not None or from_snapshot_uid:
             snapshot_uid = from_snapshot_uid or None
             if snapshot_uid is None:
@@ -1205,6 +1212,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
+                **setup,
             )
         else:
             # Create runtime without snapshot
@@ -1222,6 +1230,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
+                **setup,
             )
 
         # Process the response and create RuntimesService object
@@ -1315,6 +1324,7 @@ class AgentClient(
                     started_at=runtime["started_at"],
                     expired_at=runtime["expired_at"],
                     unmetered=bool(runtime.get("unmetered", False)),
+                    deployment_uid=str(runtime.get("deployment_uid") or ""),
                 )
             )
         return runtime_services

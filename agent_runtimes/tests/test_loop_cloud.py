@@ -156,6 +156,13 @@ def test_only_environments_that_hold_an_agent_are_offered(
     assert [e.name for e in offer.agent_environments] == ["ai-agents-env"]
     assert [r.runtime_name for r in offer.agent_runtimes] == ["runtime-9"]
     assert agent_capable(ENVIRONMENTS[0]) and not agent_capable(ENVIRONMENTS[1])
+    # A runtime launched for a deployment serves its application only: not one to go back to.
+    kept = Running("runtime-10", "ai-agents-env", expired_at=time.time() + 900)
+    kept.deployment_uid = "d-1"
+    datalayer.running.append(kept)
+    assert [r.runtime_name for r in read_offer(datalayer).agent_runtimes] == [
+        "runtime-9"
+    ]
 
     lines = offer_lines(offer)
     assert lines[0] == "Credits: 100.00 left."
@@ -245,7 +252,9 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
     monkeypatch.setattr(
         launch,
         "ensure_agentspec",
-        lambda url, spec, runtime_name, token: _kept(asked, (spec, token), True),
+        lambda url, spec, runtime_name, token, agent_setup=None: _kept(
+            asked, (spec, token), True
+        ),
     )
     back = launch.launch_cloud("crawler", runtime="runtime-9", can_ask=False)
     try:
@@ -469,6 +478,12 @@ class FakeRuntime:
             if path == "/api/v1/configure/agents/default/spec":
                 return JSONResponse(
                     {"agent_spec_id": runtime.spec_id, "skills": ["pdf"]}
+                )
+            if path == "/api/v1/runtime/status":
+                # What the prompt asks first: this one keeps no agent sessions,
+                # so its turns go to the plain AG-UI endpoint the fake serves.
+                return JSONResponse(
+                    {"status": "ready", "version": "1.5.128", "agent_sessions": False}
                 )
             if path == "/api/v1/agents":
                 return JSONResponse({"agents": [{"id": "default"}]})
@@ -761,3 +776,43 @@ def test_loop_forwards_where_to_the_chat(monkeypatch: pytest.MonkeyPatch) -> Non
             "--keep",
         ]
     ]
+
+
+def test_a_launch_carries_how_its_agent_is_configured(
+    datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    setup = {"without_mcp_servers": True, "without_skills": ["github"]}
+    started = launch.launch_cloud(
+        "worker-marketer", reconnect=False, can_ask=False, minutes=5, agent_setup=setup
+    )
+    try:
+        assert datalayer.created["agent_setup"] == setup
+    finally:
+        started.relay.stop()
+    # Attached to, the runtime's agent is configured the same way.
+    datalayer.running = [Running("runtime-9", "ai-agents-env")]
+    asked: List[Any] = []
+    monkeypatch.setattr(
+        launch,
+        "ensure_agentspec",
+        lambda url, spec, runtime_name, token, agent_setup=None: _kept(
+            asked, agent_setup, True
+        ),
+    )
+    back = launch.launch_cloud(
+        "worker-marketer", runtime="runtime-9", can_ask=False, agent_setup=setup
+    )
+    try:
+        assert asked == [setup]
+    finally:
+        back.relay.stop()
+
+
+def test_the_cli_says_the_setup_from_its_options() -> None:
+    from agent_runtimes.chat.cli import _agent_setup
+
+    assert _agent_setup(False, None) is None
+    assert _agent_setup(True, ["github", "crawl"]) == {
+        "without_mcp_servers": True,
+        "without_skills": ["github", "crawl"],
+    }

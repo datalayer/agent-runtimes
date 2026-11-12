@@ -17,6 +17,7 @@ from typing import Any, Dict, List
 
 import yaml
 from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
+from generate_decisions import apply_agent_decisions
 from versioning import (
     ensure_spec_version,
     split_spec_ref,
@@ -306,6 +307,9 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     check_protocols(resolved, load_protocol_ids(specs_dir))
     check_harnesses(resolved, load_harnesses(specs_dir))
     check_voices(resolved)
+    check_identities(resolved, load_identity_ids(specs_dir))
+    # Decisions: an agent decides only when its spec names one; it brings `decide`.
+    apply_agent_decisions([spec for _, spec in resolved], specs_dir)
     return resolved
 
 
@@ -340,6 +344,39 @@ def load_protocol_ids(specs_dir: Path) -> set[str]:
         if protocol.get("id"):
             ids.add(str(protocol["id"]))
     return ids
+
+
+def load_identity_ids(specs_dir: Path) -> set[str]:
+    """Every id of the identities catalogue (`agentspecs/identities`)."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "identities").glob("*.yaml")):
+        identity = yaml.safe_load(yaml_file.read_text()) or {}
+        if identity.get("id"):
+            ids.add(str(identity["id"]))
+    return ids
+
+
+def check_identities(
+    specs: List[tuple[str, Dict[str, Any]]], identity_ids: set[str]
+) -> None:
+    """Refuse an agent that names no identity, or one the identities catalogue does not hold."""
+    problems = []
+    for _, spec in specs:
+        said = spec.get("identity")
+        if not said:
+            if identity_ids:
+                problems.append(
+                    f"{spec.get('id')}: identity is required (who the agent acts as)"
+                )
+            continue
+        base, _, version = str(said).rpartition(":")
+        identity = base if base and "." in version else str(said)
+        if identity not in identity_ids:
+            problems.append(
+                f"{spec.get('id')}: identity names what the catalogue does not know: {said}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
 
 
 def check_protocols(
@@ -608,6 +645,8 @@ from agent_runtimes.types import (
             voice_py_line = (
                 f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
             )
+            identity_val = spec.get("identity")
+            voice_py_line += f'    identity="{identity_val}",\n' if identity_val else ""
             inference_provider = spec.get("inference_provider")
             inference_provider_str = (
                 f'"{inference_provider}"' if inference_provider else "None"
@@ -655,6 +694,8 @@ from agent_runtimes.types import (
             notifs = spec.get("notifications")
             memory_val = spec.get("memory")
             memory_str = f'"{memory_val}"' if memory_val else "None"
+            decisions_val = spec.get("decisions")
+            decisions_str = f'"{decisions_val}"' if decisions_val else "None"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
             tool_hooks_val = spec.get("tool_hooks")
@@ -763,8 +804,10 @@ from agent_runtimes.types import (
     advanced={_fmt_py_literal(advanced_val)},
     checkpoints={_fmt_py_literal(checkpoints_val)},
     authorization_policy={auth_policy_str},
+    policy={_fmt_py_literal(spec.get("policy"))},
     notifications={_fmt_py_literal(notifs)},
     memory={memory_str},
+    decisions={decisions_str},
     pre_hooks={_fmt_py_literal(pre_hooks_val)},
     post_hooks={_fmt_py_literal(post_hooks_val)},
     tool_hooks={_fmt_py_literal(tool_hooks_val)},
@@ -1065,6 +1108,8 @@ function toAgentSkillSpec(skill: SkillSpec) {
         tags: skill.tags,
         enabled: skill.enabled,
         requiredEnvVars: skill.requiredEnvVars,
+        icon: skill.icon,
+        emoji: skill.emoji,
     };
 }
 """
@@ -1241,6 +1286,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             voice_ts_line = (
                 f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
             )
+            identity_val = spec.get("identity")
+            voice_ts_line += (
+                f"    identity: '{identity_val}',\n" if identity_val else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_ts = (
                 f"'{inference_provider}'" if inference_provider else "undefined"
@@ -1288,6 +1337,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             notifs = spec.get("notifications")
             memory_val = spec.get("memory")
             memory_ts = f"'{memory_val}'" if memory_val else "undefined"
+            decisions_val = spec.get("decisions")
+            decisions_ts = f"'{decisions_val}'" if decisions_val else "undefined"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
             tool_hooks_val = spec.get("tool_hooks")
@@ -1342,8 +1393,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     advanced: {_fmt_ts_literal(advanced_val)},
     checkpoints: {_fmt_ts_literal(checkpoints_val)},
     authorizationPolicy: {auth_policy_ts},
+    policy: {_fmt_ts_literal(spec.get("policy"))},
     notifications: {_fmt_ts_literal(notifs)},
     memory: {memory_ts},
+    decisions: {decisions_ts},
     preHooks: {_fmt_ts_literal(pre_hooks_val)},
     postHooks: {_fmt_ts_literal(post_hooks_val)},
     toolHooks: {_fmt_ts_literal(tool_hooks_val)},
@@ -1764,10 +1817,10 @@ export * from './agents';
 export * from './teams';
 export * from './envvars';
 export * from './evals';
-export * from './guardrails';
 export * from './strategies';
 export * from './mcpServers';
 export * from './memory';
+export * from './decisions';
 export * from './models';
 export * from './modelProviders';
 export * from './notifications';

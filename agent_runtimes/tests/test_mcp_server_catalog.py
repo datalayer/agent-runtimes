@@ -139,9 +139,11 @@ class TestTheSpecificationsAreWellFormed:
             assert spec.get("transport") == "streamable-http", (
                 f"{server_id}.yaml is remote and not over streamable-http"
             )
-            assert isinstance(spec.get("headers"), dict), (
-                f"{server_id}.yaml names no headers"
-            )
+            # Its headers, or its auth: an AgentCore Gateway's bearer is the
+            # token the runtime obtains for the run, never a header written here.
+            assert isinstance(spec.get("headers"), dict) or isinstance(
+                spec.get("auth"), dict
+            ), f"{server_id}.yaml names neither headers nor auth"
             assert "args" not in spec, f"{server_id}.yaml has args and no command"
 
     @pytest.mark.parametrize("server_id", sorted(specifications()))

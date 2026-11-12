@@ -116,19 +116,26 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "customer-interview",
         "data-quality",
         "decide",
+        # The deck and sheet makers, the player and the Marketer (agentspecs 0.0.148 to 0.0.150, 6 and 7 November 2026).
+        "deck-maker",
         "disaster-assessment",
         "event-response",
         # The two Personal Agent Protocol examples (agentspecs 881a752, E-01, E-02).
         "exchange-desk",
         "inbox-triage",
+        "marketer",
         "month-end-close",
         "model-choice",
         "order-desk",
         "pipeline-report",
+        "player",
         "quote-calculator",
         "report-from-a-file",
         "sales",
+        "sheet-maker",
         "ship-or-fix",
+        # Datalayer Steward for AWS (agentspecs 0.0.176 as aws-account-agent, 0.0.179 as steward-aws).
+        "aws-steward-agent",
         "supplier-comparison",
         "support-desk",
         "web-research",
@@ -147,19 +154,23 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "sign-in-desk",
         "returns-desk",
         "bookkeeping-desk",
+        # A coding agent behind the Shield, lent one repository to read (agentspecs 0.0.137).
+        "code-explainer",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
     assert reports["decide"].setup == []
-    # Inbox triage's agent and Gmail's server are offered since agentspecs 0.0.128 (W-02).
-    assert reports["inbox-triage"].setup == []
+    # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
+    # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
+    assert reports["inbox-triage"].setup == [
+        "The agent 'worker-mail-triage:0.0.1' is not enabled."
+    ]
     # The team over A2A: each ready, its setup what is not enabled today.
     assert reports["sales"].setup == [
         "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
     ]
-    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." in (
-        reports["accounting"].setup
-    )
+    # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
+    assert not any("odoo-accounting" in step for step in reports["accounting"].setup)
 
 
 def test_json_for_ci(tmp_path: Path) -> None:

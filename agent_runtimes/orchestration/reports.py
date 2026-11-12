@@ -29,6 +29,9 @@ from datalayer_core.orchestration import (
     format_context_uri,
 )
 
+from agent_runtimes.utils.lexical import block as _element
+from agent_runtimes.utils.lexical import text as _text
+
 __all__ = [
     "EXECUTION_TREE_NODE",
     "REPORT_ARTIFACT_NAME",
@@ -62,30 +65,6 @@ def report_artifact_id(execution_id: str) -> str:
         The id, the same every time it is asked for.
     """
     return f"art_report-{execution_id}"
-
-
-def _text(content: str, fmt: int = 0) -> dict[str, Any]:
-    return {
-        "detail": 0,
-        "format": fmt,
-        "mode": "normal",
-        "style": "",
-        "text": content,
-        "type": "text",
-        "version": 1,
-    }
-
-
-def _element(kind: str, children: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
-    return {
-        "children": children,
-        "direction": "ltr",
-        "format": "",
-        "indent": 0,
-        "type": kind,
-        "version": 1,
-        **extra,
-    }
 
 
 def execution_report_document(execution: Execution) -> dict[str, Any]:

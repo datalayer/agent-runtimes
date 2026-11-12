@@ -34,7 +34,11 @@ the deployment's principal's token is held) and runs that agent's sessions
 with it; a request carrying code of its own (`app_code`) is refused (422). The agent's capabilities are the same as in a terminal —
 its rules, checks and record, its documents, saving and learning tools.
 The session API does not make agents; it refuses, in a sentence, an agent that
-is not there or runs no application.
+is not there. An agent made **without** an Appspec answers as the application
+of that one agent: its conversations are sessions too, named in the record
+`agent:<agentspec id>` and said `kind: agent` wherever a session is
+described (an application's says `kind: application`). Such a session runs
+as the person, with their own token, never as a Preview.
 
 ## In whose name it runs
 
@@ -42,7 +46,22 @@ is not there or runs no application.
   agent holds the principal's token, asked of ai-agents with the caller's
   token, and asked again with the latest request's token when it runs out
   (see *In whose name it acts on the platform* in
-  [Applications in Python](./python-applications)).
+  [Applications in Python](./python-applications)). A
+  runtime launched for a deployment proves it beside that token: ai-agents answers
+  anybody but the owner only with the proof the platform gave the runtime at its
+  launch, so a person calling ai-agents directly is refused.
+  What such a runtime runs comes from ai-agents as well: the Appspec, the version
+  and the instance of what the deployment runs. Nothing a launcher sends with the
+  launch, with `POST /api/v1/agents` or to the start hooks is read, whichever
+  field it is in.
+  Code its model writes shares the runtime's loopback, so an address proves
+  nothing there: the runtime answers its own management routes to its companion
+  alone, by a secret they hold. That code reaches its tool calls only while it
+  runs, and each is decided as a tool call of the agent's in that turn: rules,
+  approvals and checks see it with its real arguments.
+  What it declares comes from its owner's vault, never the launcher's. On a
+  runtime its owner did not launch, those secrets stay out of the sandbox, and an
+  application whose skill or tool needs one there is refused in a sentence.
 - **Its connections in the name of each person who uses it** (`as: user`) to
   the Datalayer MCP gateway are reached with **the person's** token, never
   the principal's: on each request the runtime asks IAM, with the token of
@@ -241,6 +260,7 @@ as `GET` says it — then the turn's events.
 | `POST /sessions/{uid}/stop` | **Stop**: what runs is cancelled, a Python application's `stop` runs, the session waits to be resumed. Answers the session, as JSON. |
 | `POST /sessions/{uid}/resume` | **Resume** a stopped session; or, with `{agent}`, one this runtime no longer holds, from its record. |
 | `POST /sessions/{uid}/end` | **End**: what runs is cancelled, a Python application's `end` runs, and the runtime no longer holds the session. Answers the session, `ended`, as JSON. Its record stays. |
+| `DELETE /sessions/{uid}` | **Delete**: the session for good, where the session store keeps it — its folder on this machine, or its opener's record on Datalayer. Its opener's alone (anybody else's is a 404); one the runtime holds open is refused (409): stop or end it first. Answers `{uid, deleted}`. |
 | `POST /sessions/logout` | **Sign out**: each of the caller's sessions here runs a Python application's `logout`, then ends. Answers `{ended: [uid, …]}`. |
 | `GET /sessions/{uid}` | What the session is. |
 | `GET /sessions/{uid}/messages` | **Its conversation**, as AG-UI messages: `{uid, messages}`. What a page that reloaded draws again. |
@@ -496,9 +516,12 @@ an agent made on AG-UI, and returns the conversation in words.
 
 ## Stop and resume
 
-**Stop** cancels the turn and leaves the session stopped. A client that goes
-away before the turn ends stops the turn only: the session stays open, which
-is what the chat's stop button does.
+**Stop** cancels the turn and pauses the session: its record says `paused`,
+and it takes no turn until it is resumed. That is what the chat's button
+does while a turn runs; in a conversation whose threads are sessions the
+button says *Pause*, with the pause icon, and *Resume* is in the
+conversation's menu. A client that goes away before the turn ends stops the
+turn only: the session stays open.
 
 **Resume** of a stopped session streams the conversation so far as a
 `MESSAGES_SNAPSHOT`, runs a Python application's `resume`, and opens it again.

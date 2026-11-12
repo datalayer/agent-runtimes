@@ -37,6 +37,8 @@ class AIModels(str, Enum):
     AZURE_OPENAI_GPT_4_1 = "azure-openai:gpt-4.1"
     AZURE_OPENAI_GPT_4O_MINI = "azure-openai:gpt-4o-mini"
     AZURE_OPENAI_GPT_4O = "azure-openai:gpt-4o"
+    BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1 = "bedrock:amazon.titan-embed-text-v1"
+    BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0 = "bedrock:amazon.titan-embed-text-v2:0"
     BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5 = "bedrock:us.anthropic.claude-fable-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8 = "bedrock:us.anthropic.claude-opus-4-8"
@@ -72,6 +74,7 @@ class AIModels(str, Enum):
     OPENAI_GPT_4O_MINI = "openai:gpt-4o-mini"
     OPENAI_GPT_4O = "openai:gpt-4o"
     OPENAI_O3_MINI = "openai:o3-mini"
+    OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5 = "openrouter:anthropic/claude-opus-5.5"
     CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT = (
         "cloudflare:google/gemma-4-26b-a4b-it"  # before the id moved
     )
@@ -104,6 +107,7 @@ ALIBABA_QWEN_MAX_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
+    pricing=ModelPricing(input_usd_per_million=1.6, output_usd_per_million=6.4),
 )
 
 ALIBABA_QWEN3_32B_0_0_1 = AIModel(
@@ -286,6 +290,38 @@ AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=16384,
     pricing=ModelPricing(input_usd_per_million=2.5, output_usd_per_million=10.0),
+)
+
+BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1_0_0_1 = AIModel(
+    id="bedrock:amazon.titan-embed-text-v1",
+    version="0.0.1",
+    name="Bedrock Titan Text Embeddings",
+    description="Amazon Titan Embeddings G1 - Text via AWS Bedrock - 1536 dimensions, what an agent's memories are embedded with on a Datalayer runtime",
+    provider="bedrock",
+    provider_url="https://aws.amazon.com/bedrock/titan/",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=None,
+    capabilities=["embeddings"],
+    context_window=8192,
+    pricing=ModelPricing(input_usd_per_million=0.1, output_usd_per_million=0.0),
+)
+
+BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0_0_0_1 = AIModel(
+    id="bedrock:amazon.titan-embed-text-v2:0",
+    version="0.0.1",
+    name="Bedrock Titan Text Embeddings V2",
+    description="Amazon Titan Text Embeddings V2 via AWS Bedrock - 1024, 512 or 256 dimensions",
+    provider="bedrock",
+    provider_url="https://aws.amazon.com/bedrock/titan/",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=None,
+    capabilities=["embeddings"],
+    context_window=8192,
+    pricing=ModelPricing(input_usd_per_million=0.02, output_usd_per_million=0.0),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
@@ -717,6 +753,21 @@ OPENAI_O3_MINI_0_0_1 = AIModel(
     pricing=ModelPricing(input_usd_per_million=1.1, output_usd_per_million=4.4),
 )
 
+OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1 = AIModel(
+    id="openrouter:anthropic/claude-opus-5.5",
+    version="0.0.1",
+    name="OpenRouter Claude Opus 5.5",
+    description="Claude Opus 5.5 by Anthropic, through OpenRouter - the current frontier Opus, one key for every vendor",
+    provider="openrouter",
+    provider_url="https://openrouter.ai/anthropic/claude-opus-5.5",
+    default=False,
+    available=True,
+    required_env_vars=["OPENROUTER_API_KEY"],
+    tokens_limit=128000,
+    context_window=1000000,
+    pricing=ModelPricing(input_usd_per_million=4.0, output_usd_per_million=20.0),
+)
+
 # ============================================================================
 # AI Model Catalog
 # ============================================================================
@@ -736,6 +787,8 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "azure-openai:gpt-4.1": AZURE_OPENAI_GPT_4_1_0_0_1,
     "azure-openai:gpt-4o-mini": AZURE_OPENAI_GPT_4O_MINI_0_0_1,
     "azure-openai:gpt-4o": AZURE_OPENAI_GPT_4O_0_0_1,
+    "bedrock:amazon.titan-embed-text-v1": BEDROCK_AMAZON_TITAN_EMBED_TEXT_V1_0_0_1,
+    "bedrock:amazon.titan-embed-text-v2:0": BEDROCK_AMAZON_TITAN_EMBED_TEXT_V2_0_0_0_1,
     "bedrock:us.anthropic.claude-fable-5": BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-6-v1": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-8": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
@@ -761,6 +814,7 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "openai:gpt-4o-mini": OPENAI_GPT_4O_MINI_0_0_1,
     "openai:gpt-4o": OPENAI_GPT_4O_0_0_1,
     "openai:o3-mini": OPENAI_O3_MINI_0_0_1,
+    "openrouter:anthropic/claude-opus-5.5": OPENROUTER_ANTHROPIC_CLAUDE_OPUS_5_5_0_0_1,
 }
 
 # The ids a model answered to before its id moved, to the id it has now.
@@ -836,12 +890,20 @@ def list_models() -> list[AIModel]:
     return list(AI_MODEL_CATALOGUE.values())
 
 
+def is_decision_model(model: AIModel) -> bool:
+    """A typed-decision model (Jev): answers typed questions about a state."""
+    return "decisions" in model.capabilities
+
+
 def is_chat_model(model: AIModel) -> bool:
     """A model a chat can run on: not a typed-decision model (Jev), which
-    answers typed questions about a state and nothing else. A spec that
+    answers typed questions about a state and nothing else, nor an
+    embedding model (Titan), which turns texts into vectors. A spec that
     states no capability is read as a chat model.
     """
-    return "decisions" not in model.capabilities
+    return (
+        "decisions" not in model.capabilities and "embeddings" not in model.capabilities
+    )
 
 
 def list_chat_models() -> list[AIModel]:

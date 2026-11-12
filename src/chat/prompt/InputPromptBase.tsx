@@ -71,6 +71,8 @@ export interface InputPromptBaseProps {
   onSend: (message: string) => void;
   /** Callback when the stop button is clicked */
   onStop?: () => void;
+  /** Stopping the turn pauses the conversation's session: the button says so. */
+  stopPausesSession?: boolean;
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
   /** Trigger value change to refocus input */
@@ -136,6 +138,7 @@ export function InputPromptBase({
   isKernelBusy = false,
   onSend,
   onStop,
+  stopPausesSession = false,
   autoFocus = false,
   focusTrigger,
   showBorderTop = true,
@@ -424,6 +427,7 @@ export function InputPromptBase({
             sendDisabled={!input.trim() || disabled || readOnly}
             onSend={handleSend}
             onStop={handleStop}
+            stopPausesSession={stopPausesSession}
             rightContent={footerRightContent}
           >
             {footerContent}

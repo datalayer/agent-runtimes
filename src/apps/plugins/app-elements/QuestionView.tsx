@@ -18,7 +18,8 @@
 
 import type { JSX } from 'react';
 import { lazy, Suspense, useState } from 'react';
-import { Box, Button, Text, TextInput } from '@primer/react';
+import { Button, Text, TextInput } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { ANSWER_ACTION, type Display } from '@datalayer/reactor/ui';
 import type { RendererProps } from '@datalayer/reactor/ui/react';
 

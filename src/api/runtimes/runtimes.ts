@@ -273,6 +273,11 @@ export interface PauseResumeResponse {
   success: boolean;
   message: string;
   checkpoint_id: string | null;
+  /**
+   * The new runtime a resume launched, for the same agent and user: a light
+   * pause is resumed as a launch, under a uid of its own. Absent on a pause.
+   */
+  runtime_uid?: string;
 }
 
 /**

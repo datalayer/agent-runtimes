@@ -53,10 +53,16 @@ The shared volume (/mnt/shared-agent) contains:
 
 This module provides the `/api/v1/mcp/proxy/*` endpoints that bridge the gap
 between the remote Jupyter sandbox and the local stdio MCP servers.
+
+On a runtime held to an application's routes (a deployment's, the visitors') the
+sandbox is the model's code, on the pod's loopback, with no secret. There each
+call is made as a tool call of the run whose code is running
+(`apps.enforcement.through_the_code_run`), and with none running it is not
+answered (`apps.visitors.OwnRoutesOnly`).
 """
 
 import logging
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
@@ -197,6 +203,39 @@ async def _try_codemode_tool_call(
     return None
 
 
+async def _in_the_code_run(
+    tool_name: str,
+    arguments: dict[str, Any],
+    call: Callable[[dict[str, Any]], Awaitable[ToolCallResponse]],
+) -> ToolCallResponse:
+    """A call of the sandbox: made as the rules of its run say, where they hold it.
+
+    What refuses it is said as the call's own error, which the code and the
+    model read; nothing is made then.
+    """
+    from pydantic_ai.exceptions import SkipToolExecution
+
+    from agent_runtimes.apps.enforcement import through_the_code_run
+    from agent_runtimes.apps.visitors import held_to_own_routes
+
+    if not held_to_own_routes():
+        return await call(arguments)
+    made: list[ToolCallResponse] = []
+
+    async def forward(args: dict[str, Any]) -> Any:
+        made.append(await call(args))
+        return made[-1].result
+
+    try:
+        result = await through_the_code_run(tool_name, arguments, forward)
+    except SkipToolExecution as said:
+        return ToolCallResponse(success=True, result=said.result)
+    except Exception as refused:  # noqa: BLE001 - any hook may refuse, as for the agent's calls
+        logger.info(f"[MCP Proxy] '{tool_name}' from the sandbox: {refused}")
+        return ToolCallResponse(success=False, error=str(refused), is_error=True)
+    return made[-1].model_copy(update={"result": result})
+
+
 def _bearer(authorization: str | None) -> str | None:
     """The token of an ``Authorization: Bearer …`` header, if there is one."""
     if not authorization:
@@ -276,19 +315,25 @@ async def proxy_contents_tool_call(
     logger.info(
         f"[MCP Proxy] Calling '{tool_name}' through Contents MCP session '{session_uid}'"
     )
-    try:
-        result = await toolset.direct_call_tool(
-            tool_name,
-            request.arguments,
-            token=token,
-            destination_uri=request.destination_uri,
-        )
-    except ContentsMcpError as error:
-        return ToolCallResponse(success=False, error=str(error), is_error=True)
-    except Exception as error:
-        logger.error(f"[MCP Proxy] Contents MCP call failed: {error}", exc_info=True)
-        return ToolCallResponse(success=False, error=str(error), is_error=True)
-    return ToolCallResponse(success=True, result=result)
+
+    async def call(arguments: dict[str, Any]) -> ToolCallResponse:
+        try:
+            result = await toolset.direct_call_tool(
+                tool_name,
+                arguments,
+                token=token,
+                destination_uri=request.destination_uri,
+            )
+        except ContentsMcpError as error:
+            return ToolCallResponse(success=False, error=str(error), is_error=True)
+        except Exception as error:
+            logger.error(
+                f"[MCP Proxy] Contents MCP call failed: {error}", exc_info=True
+            )
+            return ToolCallResponse(success=False, error=str(error), is_error=True)
+        return ToolCallResponse(success=True, result=result)
+
+    return await _in_the_code_run(f"contents__{tool_name}", request.arguments, call)
 
 
 @router.post("/{server_name}/tools/{tool_name}", response_model=ToolCallResponse)
@@ -322,6 +367,18 @@ async def proxy_tool_call(
     logger.info(f"[MCP Proxy] Proxying tool call: {server_name}__{tool_name}")
     logger.debug(f"[MCP Proxy] Arguments: {request.arguments}")
 
+    # The skills pseudo-server's tools are the agent's by their bare names.
+    return await _in_the_code_run(
+        tool_name if server_name == "skills" else f"{server_name}__{tool_name}",
+        request.arguments,
+        lambda arguments: _call_tool(server_name, tool_name, arguments),
+    )
+
+
+async def _call_tool(
+    server_name: str, tool_name: str, arguments: dict[str, Any]
+) -> ToolCallResponse:
+    """Make a tool call on the server that runs it."""
     # ------------------------------------------------------------------
     # Skills pseudo-server: route to the registered skills proxy caller
     # ------------------------------------------------------------------
@@ -333,7 +390,7 @@ async def proxy_tool_call(
                 detail="Skills proxy caller not registered — skills are not enabled for this agent.",
             )
         try:
-            result = await caller(f"skills__{tool_name}", request.arguments)
+            result = await caller(f"skills__{tool_name}", arguments)
             return ToolCallResponse(success=True, result=result)
         except Exception as exc:
             logger.error(f"[MCP Proxy] Skills call failed: {exc}", exc_info=True)
@@ -352,7 +409,7 @@ async def proxy_tool_call(
             # Codemode manages MCP servers in per-agent registries rather than
             # the lifecycle manager, so fall back to those before giving up.
             codemode_response = await _try_codemode_tool_call(
-                server_name, tool_name, request.arguments
+                server_name, tool_name, arguments
             )
             if codemode_response is not None:
                 return codemode_response
@@ -385,9 +442,7 @@ async def proxy_tool_call(
             # Use direct_call_tool which doesn't require a RunContext
             # This is the preferred method for proxy calls
             if hasattr(pydantic_server, "direct_call_tool"):
-                result = await pydantic_server.direct_call_tool(
-                    tool_name, request.arguments
-                )
+                result = await pydantic_server.direct_call_tool(tool_name, arguments)
 
                 # Parse the MCP response - ToolResult has content and is_error
                 if hasattr(result, "model_dump"):

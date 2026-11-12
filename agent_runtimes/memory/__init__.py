@@ -8,10 +8,12 @@ Provides pluggable memory storage for durable agents:
 - ``EphemeralMemory`` — in-memory dict (default, non-persistent)
 - ``SqliteMemory`` — durable local SQLite store (offline, no API key)
 - ``Mem0Backend`` — integration with the Mem0 memory framework
+- ``AgentCoreMemory`` — Amazon Bedrock AgentCore Memory, in the person's AWS account
 
 Other backends (memU, SimpleMem) are planned for future iterations.
 """
 
+from .agentcore_backend import AgentCoreMemory
 from .base import BaseMemoryBackend
 from .capability import MemoryCapability, build_memory_capability
 from .config import resolve_mem0_config
@@ -27,6 +29,7 @@ from .registry import (
 from .sqlite_backend import SqliteMemory
 
 __all__ = [
+    "AgentCoreMemory",
     "BaseMemoryBackend",
     "EphemeralMemory",
     "Mem0Backend",

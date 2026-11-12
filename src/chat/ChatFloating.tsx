@@ -45,8 +45,8 @@ import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
 import { ASSISTANT_CLEARANCE_VAR } from './assistant/clearance';
-import { decisionsAskerAt } from './assistant/decisions';
-import { DecisionAsk } from './assistant/DecisionAsk';
+import { DecisionAsk, useDecisionAsker } from './assistant/DecisionAsk';
+import type { DecisionsTarget } from './assistant/decisions';
 import type { ChatBaseProps } from '../types/chat';
 import { useSpokenAnswers } from '../voice/useSpokenAnswers';
 import { useVoiceSpeaker } from '../voice/useVoiceSpeaker';
@@ -145,6 +145,13 @@ export type FloatingConversation = {
   /** The tool it is calling now, or just called: said in the balloon. */
   tool?: BalloonToolLine;
 };
+
+/** The agent an endpoint talks to: the id in its path, when it has one. */
+function endpointAgentId(endpoint?: string): string | undefined {
+  return endpoint?.match(
+    /\/api\/v1\/(?:ag-ui|vercel-ai|a2a\/agents|acp\/ws)\/([^/]+)/,
+  )?.[1];
+}
 
 /**
  * ChatFloating props — extends ChatCommonProps with floating/popup-specific configuration.
@@ -267,11 +274,13 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * The runtime the floating assistant asks typed decisions at — its
-   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — and
-   * the token to ask with, if it needs one: its balloon offers *Ask a
-   * decision*, answered there in plain words with its confidence.
+   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — the
+   * token to ask with, if it needs one, and the agent asking (the endpoint's
+   * when unsaid). Its balloon offers *Ask a decision* only when that agent
+   * decides — its agentspec names decisions — and says which model decides;
+   * the answer is said there in plain words with its confidence.
    */
-  decisions?: { serverUrl: string; token?: string };
+  decisions?: DecisionsTarget;
 
   /**
    * Callback when the user switches view mode via the header toggle.
@@ -666,12 +675,15 @@ export function ChatFloating({
           },
         }
       : undefined;
-  const assistantDecide = useMemo(
-    () =>
-      decisions?.serverUrl
-        ? decisionsAskerAt(decisions.serverUrl, decisions.token)
-        : undefined,
-    [decisions?.serverUrl, decisions?.token],
+  // Offered only when the agent decides: the runtime says it.
+  const assistantDecide = useDecisionAsker(
+    decisions?.serverUrl
+      ? {
+          serverUrl: decisions.serverUrl,
+          token: decisions.token,
+          agentId: decisions.agentId ?? endpointAgentId(endpoint),
+        }
+      : undefined,
   );
   // At work: a turn runs, or the host's conversation says it does.
   const atWork =
@@ -982,11 +994,7 @@ export function ChatFloating({
     const detectedType = (explicitType ?? protocolMatch?.[1] ?? 'vercel-ai') as
       'ag-ui' | 'vercel-ai' | 'a2a' | 'acp';
 
-    // Extract agentId from endpoint path
-    const agentIdMatch = endpoint.match(
-      /\/api\/v1\/(?:ag-ui|vercel-ai|a2a\/agents|acp\/ws)\/([^/]+)/,
-    );
-    const extractedAgentId = agentIdMatch ? agentIdMatch[1] : undefined;
+    const extractedAgentId = endpointAgentId(endpoint);
 
     return {
       type: detectedType,

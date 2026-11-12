@@ -387,13 +387,21 @@ def build_capabilities_from_agent_spec(
         from ..memory import build_memory_capability
         from ..memory.identity import resolve_memory_identity
 
-        # Memories are persisted under the composite (user_uid, agent_uid)
-        # key. The user is the trusted ownership boundary (never the agent id
-        # or any caller-provided value); the agent uid namespaces memories
-        # per agent within that user's personal account.
+        # Memories are persisted under the composite (user_uid, agent) key.
+        # The user is the trusted ownership boundary (never the agent id or
+        # any caller-provided value); the agent namespaces memories per agent
+        # within that user's personal account. The agent is its agentspec's
+        # id, never its name on this runtime (`default` on every cloud
+        # runtime): a paused agent resumed on a new runtime, for the same
+        # user, reads the same memories, and two agents never share theirs.
         identity = resolve_memory_identity()
         memory_config = getattr(agent_spec, "memory_config", None)
-        effective_memory_agent_id = agent_id
+        spec_id = str(getattr(agent_spec, "id", "") or "").strip()
+        if not spec_id:
+            raise ValueError(
+                "An agent's memories are kept under its agentspec's id: this spec has none."
+            )
+        effective_memory_agent_id = spec_id
         app_memory_key = ""
         if isinstance(memory_config, dict):
             override: Any = None
@@ -431,6 +439,7 @@ def build_capabilities_from_agent_spec(
                 user_id=identity.user_id,
                 agent_id=effective_memory_agent_id,
                 config=memory_config,
+                register_as=agent_id,
             )
         if memory_capability is not None:
             capabilities.append(memory_capability)
@@ -508,6 +517,12 @@ def build_capabilities_from_agent_spec(
         from ..context.prompt_history import PromptHistoryCapability
 
         capabilities.append(PromptHistoryCapability(agent_id=agent_id))
+
+    # The skill a `load_skill` call loaded, on its tool span, as AgentCore's
+    # skill evaluators read it (AC-15).
+    from ..otel.skill_spans import SkillSpanCapability
+
+    capabilities.append(SkillSpanCapability())
 
     # Monitoring snapshot broadcast (pushes to WebSocket after each run).
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_MONITORING", True) and agent_id:

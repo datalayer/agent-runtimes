@@ -9,6 +9,7 @@ import type { Protocol } from './protocol';
 import type { AgentValidationConfig } from './execution';
 import { BuiltinTool } from './models';
 import type { AgentSuggestion } from './agentspecs';
+import type { AgentDecisions } from './decisions';
 
 /**
  * Default agent configuration values.
@@ -91,6 +92,12 @@ export interface RemoteConfig {
   decisionModels: ModelConfig[];
   /** What a typed-decision model is for, in a sentence. */
   decisionsNote: string;
+  /**
+   * The decisions of the agent the configuration was asked for: the decisions
+   * spec its agentspec names and the model asked. Null or unsaid: its spec
+   * names none, it does not decide, and nothing about decisions is offered.
+   */
+  agentDecisions?: AgentDecisions | null;
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];

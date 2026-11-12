@@ -12,7 +12,11 @@
 import type { ProtocolAdapterConfig, AGUI } from '../types';
 import type { ChatMessage, ContentPart } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
-import { generateMessageId, createAssistantMessage } from '../types/messages';
+import {
+  generateMessageId,
+  generateSessionUid,
+  createAssistantMessage,
+} from '../types/messages';
 import { agUiRefusal, refusalBody } from '../portable/agUiRefusal';
 import {
   AgUiFrames,
@@ -279,7 +283,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     this.inFlight.add(controller);
 
     const threadId =
-      options?.threadId || this.currentThreadId || generateMessageId();
+      options?.threadId || this.currentThreadId || generateSessionUid();
     this.currentThreadId = threadId;
 
     // Use full message history if provided, otherwise just the new message

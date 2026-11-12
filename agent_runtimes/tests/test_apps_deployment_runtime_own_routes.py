@@ -66,6 +66,7 @@ OWN = {
     ("PUT", "/api/v1/apps/a2a"),
     ("DELETE", "/api/v1/apps/a2a"),
     ("POST", "/api/v1/apps/principal"),
+    ("PUT", "/api/v1/apps/runtime-proof"),
     ("GET", "/api/v1/apps/agents/{agent}/deployment"),
     ("GET", "/api/v1/apps"),
     ("GET", "/api/v1/apps/current"),
@@ -93,6 +94,8 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/interrupt"),
     ("POST", "/api/v1/apps/sessions/{uid}/stop"),
     ("POST", "/api/v1/apps/sessions/{uid}/end"),
+    # A session the person opened, deleted for good (an open one refused).
+    ("DELETE", "/api/v1/apps/sessions/{uid}"),
     ("POST", "/api/v1/apps/sessions/logout"),
     ("POST", "/api/v1/apps/sessions/{uid}/resume"),
     # A person's rules on their running session (SH-54).
@@ -112,6 +115,7 @@ OWN = {
     ("GET", "/api/v1/apps/agents/{agent}/computer"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/files"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/file"),
+    ("GET", "/api/v1/apps/agents/{agent}/computer/repository"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/take-over"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/run"),
     ("POST", "/api/v1/apps/agents/{agent}/computer/hand-back"),

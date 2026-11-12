@@ -260,7 +260,7 @@ def test_under_profile_read_a_business_is_told_the_persons_handle_and_name() -> 
 
 def test_a_visitor_never_says_for_whom_a_business_is_asked() -> None:
     from agent_runtimes.apps.visitors import A2A_VISITOR_FIELD
-    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.context.delegation import DELEGATION_META_KEY
 
     forged = {
         "pact": {

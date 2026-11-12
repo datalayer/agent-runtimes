@@ -12,7 +12,7 @@ import os
 from typing import Any
 
 from .base import BaseMemoryBackend
-from .config import resolve_mem0_config
+from .config import MemoryNotConfigured, resolve_mem0_config
 from .ephemeral import EphemeralMemory
 
 logger = logging.getLogger(__name__)
@@ -68,8 +68,8 @@ def create_memory_backend(
     Parameters
     ----------
     memory_type : str | None
-        The memory backend type (``"mem0"``, ``"sqlite"``, ``"ephemeral"``, or
-        None). ``None`` and ``"ephemeral"`` both return ``EphemeralMemory``.
+        The memory backend type (``"mem0"``, ``"agentcore"``, ``"sqlite"``,
+        ``"ephemeral"``, or None). ``None`` and ``"ephemeral"`` both return ``EphemeralMemory``.
     user_id : str
         Effective user identifier (personal account) for memory isolation.
     agent_id : str | None
@@ -122,25 +122,52 @@ def create_memory_backend(
         return SqliteMemory(user_id=user_id, agent_id=agent_id, config=config)
 
     if memory_type == "mem0":
+        # Run on a person's own machine with their Datalayer API key, the
+        # agent remembers where it does on Datalayer: the same memories, read
+        # and kept through the runtimes service, never a local store apart.
+        from .datalayer_backend import DatalayerMemory, datalayer_api_key
+
+        if not config and not _running_on_kubernetes() and datalayer_api_key():
+            if not agent_id:
+                raise ValueError(
+                    "An agent's memories are kept under its agentspec's id: none was given."
+                )
+            logger.info(
+                "Using Datalayer memory for agent=%s (DATALAYER_API_KEY)", agent_id
+            )
+            return DatalayerMemory(agent_id=agent_id)
         try:
+            from .config import on_datalayer_runtime
             from .mem0_backend import Mem0Backend
 
-            resolved_config = resolve_mem0_config(
-                user_id=user_id,
-                agent_id=agent_id,
-                explicit_config=config,
-            )
             logger.info("Using Mem0 memory backend for user=%s", user_id)
+            if config:
+                return Mem0Backend(user_id=user_id, agent_id=agent_id, config=config)
+            # Read at each use: on a Datalayer runtime the token mem0 embeds
+            # with is given after the agent is made, and renewed; a runtime
+            # that cannot keep memories says why at the first use.
             return Mem0Backend(
                 user_id=user_id,
                 agent_id=agent_id,
-                config=resolved_config,
+                config=lambda: resolve_mem0_config(user_id=user_id, agent_id=agent_id),
+                infer=not on_datalayer_runtime(),
             )
         except ImportError:
-            logger.warning(
-                "Mem0 not available (pip install mem0ai) — falling back to ephemeral"
-            )
-            return EphemeralMemory(user_id=user_id, agent_id=agent_id)
+            # Never an ephemeral memory in its place: what the agent is told
+            # would be forgotten when its runtime stops.
+            raise MemoryNotConfigured(
+                "This agent remembers with mem0, which is not installed here: "
+                "pip install 'agent-runtimes[memory]'."
+            ) from None
+
+    if memory_type == "agentcore":
+        # Amazon Bedrock AgentCore Memory, in the person's own AWS account:
+        # the memory resource is configured (agentspec or environment), and
+        # one nobody named is refused here, never replaced by another store.
+        from .agentcore_backend import AgentCoreMemory
+
+        logger.info("Using AgentCore memory backend for user=%s", user_id)
+        return AgentCoreMemory(user_id=user_id, agent_id=agent_id, config=config)
 
     # Unknown backend types fall back to ephemeral
     logger.warning(

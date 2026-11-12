@@ -169,6 +169,7 @@ class RuntimesClient:
         app_uid: Optional[str] = None,
         deployment_uid: Optional[str] = None,
         app_spec: Optional[dict[str, Any]] = None,
+        agent_setup: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -214,6 +215,11 @@ class RuntimesClient:
             gives the runtime the secrets its connections declare before its
             agent is made. An application's launch carries it: ``app_uid``
             without it is refused (`ValueError`).
+        agent_setup : Optional[dict[str, Any]]
+            How the runtime's companion configures its agent at launch:
+            ``without_mcp_servers`` (bool) and ``without_skills`` (ids) leave
+            the spec's MCP servers or those skills out, their secrets not
+            asked for.
 
         Returns
         -------
@@ -314,6 +320,8 @@ class RuntimesClient:
                 body["deployment_uid"] = deployment_uid
             if app_spec:
                 body["app_spec"] = dict(app_spec)
+            if agent_setup:
+                body["agent_setup"] = dict(agent_setup)
 
             if runtime_name:
                 body["runtime_name"] = runtime_name

@@ -21,7 +21,7 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_runtimes.apps import host_user, sessions
+from agent_runtimes.apps import host_user, principal, sessions
 from agent_runtimes.apps.host_user import (
     HostUser,
     UserNotSigned,
@@ -31,9 +31,16 @@ from agent_runtimes.apps.host_user import (
     verify_host_user,
 )
 from agent_runtimes.apps.saving import authorship, byline
+from agent_runtimes.routes.apps import NOT_WOKEN_BY_THEM
 from agent_runtimes.tests import test_app_embed_sessions as embeds
 from agent_runtimes.tests import test_app_sessions as base
-from agent_runtimes.tests.test_app_sessions import ASSISTANT, Runtime, as_, events_of
+from agent_runtimes.tests.test_app_sessions import (
+    ASSISTANT,
+    Runtime,
+    as_,
+    events_of,
+    principal_token_of,
+)
 
 runtime = base.runtime
 remote = base.remote
@@ -351,6 +358,41 @@ def test_a_session_woken_by_a_schedule_or_a_preview_has_nobody_to_sign(
     assert host_user.host_user_of(app, {"app_uid": "app-1"}, "") is None
     with pytest.raises(UserNotSigned):
         host_user.host_user_of(app, DEPLOYED, "")
+
+
+def test_saying_a_schedule_woke_it_does_not_open_it_unsigned(
+    runtime: Runtime, remote: TestClient, embedded: Any, secret: str
+) -> None:
+    """`woken_by` is what lets a session go without a signature: its owner's, not the page's."""
+    runtime.make("notes-assistant", SIGNED_APP, DEPLOYED)
+    deployment = str(DEPLOYED["deployment_uid"])
+    principal.give_principal_token(
+        deployment,
+        principal_token_of("the-owner"),
+        expires_in=3600,
+        principal_uid="principal-7",
+    )
+
+    async def administers_nothing(bearer: str) -> List[Dict[str, Any]]:
+        return []
+
+    principal.use_memberships_asker(administers_nothing)
+    try:
+        answered = remote.post(
+            "/api/v1/apps/sessions",
+            headers=as_("somebody-on-the-page"),
+            json={
+                "agent": "notes-assistant",
+                **DEPLOYED,
+                "opener": "hello",
+                "woken_by": {"kind": "schedule"},
+            },
+        )
+    finally:
+        principal.use_memberships_asker(None)
+        principal.forget_principal_token(deployment)
+    assert answered.status_code == 403
+    assert answered.json()["detail"] == NOT_WOKEN_BY_THEM
 
 
 def test_nothing_of_the_token_is_kept(

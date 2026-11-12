@@ -36,6 +36,10 @@ async def execute(tux: "CliTux") -> Optional[str]:
         await tux._agui_client.disconnect()
         tux._agui_client = None
 
+    # The next message opens a new session; the one cleared stays in the
+    # record, where `/sessions` lists it.
+    tux.session.session_uid = None
+    tux.session.conversation_id = None
     tux.stats = SessionStats()
     tux.console.print("● Conversation cleared. Starting fresh.", style=STYLE_PRIMARY)
     return None

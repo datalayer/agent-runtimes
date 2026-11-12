@@ -141,6 +141,23 @@ describe('what can be launched from here', () => {
     expect(isCodeSandboxEnvironmentLaunchable(platform())).toBe(true);
   });
 
+  it('keeps a platform entry its definition disables behind the toggle', () => {
+    /* Kaggle and Daytona GPU: kept and listed, offered disabled, never the
+       entry a launcher opens on. */
+    const kaggle = platform({
+      name: 'kaggle-cpu',
+      owner: 'kaggle',
+      disabled: true,
+    });
+    expect(isCodeSandboxEnvironmentLaunchable(kaggle)).toBe(false);
+    expect(codeSandboxEnvironmentOption(kaggle, VIEWER).disabled).toBe(true);
+    expect(codeSandboxEnvironmentBuildHref(kaggle)).toBeUndefined();
+    const python = platform();
+    expect(firstLaunchableCodeSandboxEnvironment([kaggle, python])).toBe(
+      python,
+    );
+  });
+
   it('refuses a user environment with nothing promoted', () => {
     expect(
       isCodeSandboxEnvironmentLaunchable(mine({ promotedVersion: undefined })),

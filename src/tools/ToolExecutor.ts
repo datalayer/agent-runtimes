@@ -16,6 +16,7 @@ import type {
   ToolCallRequest,
   ToolExecutionResult,
   ToolRenderStatus,
+  ToolStreamEvent,
 } from '../types/tools';
 import type { InferenceProvider } from '../types/inference';
 import { hasHitlRender } from '../types/tools';
@@ -43,6 +44,12 @@ export interface ToolExecutionContext {
     result?: unknown,
     error?: string,
   ) => void;
+  /**
+   * Where a streaming tool's events go: the harness, which tells the model
+   * each as a turn it did not ask for. A streaming tool called where nobody
+   * listens is refused, never subscribed in silence.
+   */
+  onToolEvent?: (toolCall: ToolCallRequest, event: ToolStreamEvent) => void;
 }
 
 /**
@@ -50,9 +57,34 @@ export interface ToolExecutionContext {
  */
 export class ToolExecutor {
   private context: ToolExecutionContext;
+  /** The streaming calls still subscribed, by tool call id, each with how to stop it. */
+  private subscriptions = new Map<string, () => void>();
 
   constructor(context: ToolExecutionContext) {
     this.context = context;
+  }
+
+  /** The tool call ids of the streams still subscribed. */
+  subscribed(): string[] {
+    return [...this.subscriptions.keys()];
+  }
+
+  /** Stop one stream; true when there was one. */
+  unsubscribe(toolCallId: string): boolean {
+    const stop = this.subscriptions.get(toolCallId);
+    if (!stop) {
+      return false;
+    }
+    this.subscriptions.delete(toolCallId);
+    stop();
+    return true;
+  }
+
+  /** Stop every stream: the conversation ended, or the Battle did. */
+  unsubscribeAll(): void {
+    for (const toolCallId of this.subscribed()) {
+      this.unsubscribe(toolCallId);
+    }
   }
 
   /**
@@ -141,6 +173,48 @@ export class ToolExecutor {
         result: hitlResult,
         executionTime: Date.now() - startTime,
       };
+    }
+
+    // A streaming tool: subscribed once, its events to the harness; refused where nobody listens.
+    if (definition.streams) {
+      if (!definition.subscribe) {
+        return {
+          success: false,
+          error: `Frontend tool "${definition.name}" streams and has no subscribe`,
+        };
+      }
+      if (!this.context.onToolEvent) {
+        return {
+          success: false,
+          error: `Frontend tool "${definition.name}" streams, and this conversation takes no events`,
+        };
+      }
+      if (this.subscriptions.has(toolCall.toolCallId)) {
+        return {
+          success: false,
+          error: `Tool call ${toolCall.toolCallId} is already subscribed`,
+        };
+      }
+      try {
+        const push = (event: ToolStreamEvent) => {
+          if (this.subscriptions.has(toolCall.toolCallId)) {
+            this.context.onToolEvent?.(toolCall, event);
+          }
+        };
+        const stop = await definition.subscribe(args, push);
+        this.subscriptions.set(toolCall.toolCallId, stop);
+        return {
+          success: true,
+          result: { subscribed: true, tool: definition.name },
+          executionTime: Date.now() - startTime,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          executionTime: Date.now() - startTime,
+        };
+      }
     }
 
     // Check if handler is defined

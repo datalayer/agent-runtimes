@@ -137,10 +137,10 @@ def build_local_model(model_id: str, timeout: float = 60.0) -> Any:
     if provider_spec is None:
         return None
 
-    # httpx2, not httpx: pydantic-ai deprecated httpx clients for
-    # OpenAI-compatible providers, and a local runtime is a new code path with
-    # no reason to inherit that.
-    import httpx2
+    # httpx, as every hosted branch of `models.py` uses: pydantic-ai hands the
+    # client to the openai package, which takes an httpx client and refuses an
+    # httpx2 one (`Invalid http_client argument`, openai 2.44, 7 November 2026).
+    import httpx
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
     from pydantic_ai.settings import ModelSettings
@@ -167,8 +167,8 @@ def build_local_model(model_id: str, timeout: float = 60.0) -> Any:
             api_key=api_key,
             # A short connect timeout: when nothing is listening on the port,
             # the useful answer is "the runtime is not running", quickly.
-            http_client=httpx2.AsyncClient(
-                timeout=httpx2.Timeout(timeout, connect=5.0),
+            http_client=httpx.AsyncClient(
+                timeout=httpx.Timeout(timeout, connect=5.0),
                 follow_redirects=True,
             ),
         ),

@@ -65,8 +65,10 @@ The generated catalogs are written under `agent_runtimes/specs/` (Python) and
 - agent_runtimes/specs/envvars.py · src/specs/envvars.ts
 - agent_runtimes/specs/ui.py · src/specs/ui.ts (the UI plugins and the catalog of visual components) and agent_runtimes/specs/ui_renderers.py · src/specs/uiRenderers.ts (the UI renderers): see [UI plugins and Components](./ui.mdx)
 - agent_runtimes/mcp/catalog_mcp_servers.py · src/specs/mcpServers.ts
-- plus models, memory, guardrails, evals, events, notifications, outputs,
-  personas, strategies, triggers, benchmarks — one catalog each, same pattern
+- agent_runtimes/specs/decisions.py · src/specs/decisions.ts (how an agent decides: the model asked typed decisions, the question types, the limits; an agent names one with `decisions: jev:0.0.1`, which brings the `decide` tool)
+- plus models, memory, policies (which the Guards extend), evals, events,
+  notifications, outputs, personas, strategies, triggers, benchmarks — one
+  catalog each, same pattern
 
 ## What You Can Define in an Agent Spec
 
@@ -134,6 +136,28 @@ runtime behavior, and monitoring-friendly metadata (used by snapshots/streams).
   browser: it is not started on a runtime.*).
 - `enable_codemode` and codemode config: Enables MCP-discovery + programmatic composition.
 - `skills` / `enable_skills`: Enables reusable skill execution.
+
+### Memory
+
+- `memory`: the agent's durable memory — `mem0` (on Datalayer, kept in
+  PostgreSQL under the person and the agent's id) or `agentcore` (Amazon
+  Bedrock AgentCore Memory in your own AWS account). `memory_config` gives the
+  backend what it needs; for `agentcore`, the memory resource to use:
+
+  ```yaml
+  memory: agentcore
+  memory_config:
+    memory_id: my_memory-AbCdEf1234   # or AGENT_RUNTIMES_AGENTCORE_MEMORY_ID
+    region: us-east-1                 # or AWS_REGION
+    namespaces: ["/facts/{actorId}"]  # optional: read from the memory's strategies
+  ```
+
+  The agent's turns are kept as events of the person (the actor, their account
+  id) in the agent's session (its spec's id); `search_memory` reads the
+  long-term records AgentCore's strategies extract, in namespaces with
+  `{actorId}` filled in. A memory that is not named is refused when the agent
+  is created, never replaced by another store; a namespace without `{actorId}`
+  is refused before anything is read from it.
 
 ### Outputs and Notifications
 

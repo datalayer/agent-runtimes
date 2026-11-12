@@ -155,11 +155,17 @@ class CodemodeIntegration:
         try:
             from agent_codemode import MCPServerConfig
 
+            from agent_runtimes.mcp.env_expansion import expand_env_vars
+
             return MCPServerConfig(
                 name=server.id,
                 url=server.url,
                 command=server.command or "",
-                args=server.args or [],
+                # ${VAR} and ${VAR:-default}, as the lifecycle manager expands them.
+                args=[
+                    expand_env_vars(a) if isinstance(a, str) else a
+                    for a in (server.args or [])
+                ],
             )
         except Exception as e:
             logger.warning(f"Failed to convert server config: {e}")

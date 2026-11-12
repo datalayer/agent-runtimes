@@ -35,6 +35,11 @@ export type ChatWords = {
   messageInput: string;
   send: string;
   stop: string;
+  /**
+   * What the stop button says in a conversation that is a session: there,
+   * stopping the turn pauses the session — it waits to be resumed.
+   */
+  pauseSession: string;
   pauseKernelBusy: string;
   /** The starters under the prompt, for a screen reader. */
   suggestedPrompts: string;
@@ -54,6 +59,8 @@ export type ChatWords = {
   /** The empty chat's line when it has no starters. */
   sendToBegin: string;
   copyTurn: string;
+  /** The balloon's words, copied whole. */
+  copyWords: string;
   removeTurn: string;
   /** What the agent says when its answer failed. */
   error: (message: string) => string;
@@ -101,6 +108,11 @@ export type ChatWords = {
   arguments: string;
   approvalWarning: string;
   rememberChoice: string;
+  // A third party's grant a tool waits for (ID-10).
+  connectToContinue: (provider: string) => string;
+  connectAsks: (agent: string, scopes: string) => string;
+  connect: string;
+  decline: string;
   // The assistant's balloon.
   /** An approval waits and cannot be answered in the balloon itself. */
   waitingOpen: string;
@@ -131,6 +143,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Message input',
     send: 'Send',
     stop: 'Stop',
+    pauseSession:
+      'Pause the session: what runs stops, and the conversation is kept to be resumed',
     pauseKernelBusy: 'Pause (kernel busy)',
     suggestedPrompts: 'Suggested prompts',
     demoKeyExpired:
@@ -142,6 +156,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Start a conversation',
     sendToBegin: 'Send a message to begin chatting',
     copyTurn: 'Copy this turn',
+    copyWords: 'Copy the words',
     removeTurn: 'Remove this turn',
     error: message => `Error: ${message}`,
     thinking: 'Thinking…',
@@ -186,6 +201,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'This tool will perform an action on your behalf. Please review the arguments before approving.',
     rememberChoice: 'Remember my choice for this tool',
+    connectToContinue: provider => `Connect ${provider} to continue`,
+    connectAsks: (agent, scopes) => `${agent} asks for access to ${scopes}.`,
+    connect: 'Connect',
+    decline: 'Decline',
     waitingOpen: 'Waiting for you — open the conversation to answer.',
     waitingForYou: 'Waiting for you',
     paused: 'Paused — it answers again once it is resumed.',
@@ -208,6 +227,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Saisie du message',
     send: 'Envoyer',
     stop: 'Arrêter',
+    pauseSession:
+      'Mettre la session en pause : ce qui tourne s’arrête, et la conversation est gardée pour être reprise',
     pauseKernelBusy: 'Pause (noyau occupé)',
     suggestedPrompts: 'Suggestions de questions',
     demoKeyExpired:
@@ -220,6 +241,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Commencer une conversation',
     sendToBegin: 'Envoyez un message pour commencer',
     copyTurn: 'Copier cet échange',
+    copyWords: 'Copier les mots',
     removeTurn: 'Supprimer cet échange',
     error: message => `Erreur : ${message}`,
     thinking: 'Réflexion…',
@@ -266,6 +288,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Cet outil va agir en votre nom. Vérifiez ses arguments avant de l’approuver.',
     rememberChoice: 'Mémoriser mon choix pour cet outil',
+    connectToContinue: provider => `Connectez ${provider} pour continuer`,
+    connectAsks: (agent, scopes) => `${agent} demande l’accès à ${scopes}.`,
+    connect: 'Connecter',
+    decline: 'Refuser',
     waitingOpen: 'Il vous attend — ouvrez la conversation pour répondre.',
     waitingForYou: 'Il vous attend',
     paused: 'En pause — il répondra de nouveau une fois relancé.',
@@ -288,6 +314,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Entrada del mensaje',
     send: 'Enviar',
     stop: 'Detener',
+    pauseSession:
+      'Pausar la sesión: lo que se ejecuta se detiene y la conversación se guarda para reanudarla',
     pauseKernelBusy: 'Pausa (kernel ocupado)',
     suggestedPrompts: 'Preguntas sugeridas',
     demoKeyExpired:
@@ -300,6 +328,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Empieza una conversación',
     sendToBegin: 'Envía un mensaje para empezar',
     copyTurn: 'Copiar este turno',
+    copyWords: 'Copiar las palabras',
     removeTurn: 'Eliminar este turno',
     error: message => `Error: ${message}`,
     thinking: 'Pensando…',
@@ -347,6 +376,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Esta herramienta actuará en tu nombre. Revisa sus argumentos antes de aprobarla.',
     rememberChoice: 'Recordar mi elección para esta herramienta',
+    connectToContinue: provider => `Conecta ${provider} para continuar`,
+    connectAsks: (agent, scopes) => `${agent} pide acceso a ${scopes}.`,
+    connect: 'Conectar',
+    decline: 'Rechazar',
     waitingOpen: 'Te está esperando: abre la conversación para responder.',
     waitingForYou: 'Te está esperando',
     paused: 'En pausa: responderá de nuevo cuando se reanude.',
@@ -368,6 +401,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Nachrichteneingabe',
     send: 'Senden',
     stop: 'Stoppen',
+    pauseSession:
+      'Sitzung pausieren: was läuft, hält an, und das Gespräch bleibt zum Fortsetzen erhalten',
     pauseKernelBusy: 'Pause (Kernel beschäftigt)',
     suggestedPrompts: 'Vorgeschlagene Fragen',
     demoKeyExpired:
@@ -381,6 +416,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Ein Gespräch beginnen',
     sendToBegin: 'Sende eine Nachricht, um zu beginnen',
     copyTurn: 'Diesen Austausch kopieren',
+    copyWords: 'Die Worte kopieren',
     removeTurn: 'Diesen Austausch entfernen',
     error: message => `Fehler: ${message}`,
     thinking: 'Denkt nach…',
@@ -428,6 +464,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Dieses Werkzeug handelt in deinem Namen. Prüfe seine Argumente, bevor du es freigibst.',
     rememberChoice: 'Meine Wahl für dieses Werkzeug merken',
+    connectToContinue: provider => `${provider} verbinden, um fortzufahren`,
+    connectAsks: (agent, scopes) => `${agent} bittet um Zugriff auf ${scopes}.`,
+    connect: 'Verbinden',
+    decline: 'Ablehnen',
     waitingOpen: 'Wartet auf dich – öffne das Gespräch, um zu antworten.',
     waitingForYou: 'Wartet auf dich',
     paused: 'Pausiert – antwortet wieder, sobald es fortgesetzt wird.',
@@ -450,6 +490,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Campo del messaggio',
     send: 'Invia',
     stop: 'Interrompi',
+    pauseSession:
+      'Metti in pausa la sessione: ciò che è in corso si ferma e la conversazione resta da riprendere',
     pauseKernelBusy: 'Pausa (kernel occupato)',
     suggestedPrompts: 'Domande suggerite',
     demoKeyExpired:
@@ -462,6 +504,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Inizia una conversazione',
     sendToBegin: 'Invia un messaggio per iniziare',
     copyTurn: 'Copia questo scambio',
+    copyWords: 'Copia le parole',
     removeTurn: 'Rimuovi questo scambio',
     error: message => `Errore: ${message}`,
     thinking: 'Sta pensando…',
@@ -510,6 +553,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Questo strumento agirà per tuo conto. Controlla i suoi argomenti prima di approvarlo.',
     rememberChoice: 'Ricorda la mia scelta per questo strumento',
+    connectToContinue: provider => `Collega ${provider} per continuare`,
+    connectAsks: (agent, scopes) => `${agent} chiede l’accesso a ${scopes}.`,
+    connect: 'Collega',
+    decline: 'Rifiuta',
     waitingOpen: 'Ti sta aspettando: apri la conversazione per rispondere.',
     waitingForYou: 'Ti sta aspettando',
     paused: 'In pausa: risponderà di nuovo quando verrà ripreso.',
@@ -532,6 +579,8 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     messageInput: 'Campo da mensagem',
     send: 'Enviar',
     stop: 'Parar',
+    pauseSession:
+      'Pausar a sessão: o que está em curso para e a conversa fica guardada para ser retomada',
     pauseKernelBusy: 'Pausar (kernel ocupado)',
     suggestedPrompts: 'Perguntas sugeridas',
     demoKeyExpired:
@@ -544,6 +593,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     startConversation: 'Comece uma conversa',
     sendToBegin: 'Envie uma mensagem para começar',
     copyTurn: 'Copiar esta troca',
+    copyWords: 'Copiar as palavras',
     removeTurn: 'Remover esta troca',
     error: message => `Erro: ${message}`,
     thinking: 'Pensando…',
@@ -592,6 +642,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     approvalWarning:
       'Esta ferramenta vai agir em seu nome. Revise os argumentos antes de aprovar.',
     rememberChoice: 'Lembrar minha escolha para esta ferramenta',
+    connectToContinue: provider => `Conecte ${provider} para continuar`,
+    connectAsks: (agent, scopes) => `${agent} pede acesso a ${scopes}.`,
+    connect: 'Conectar',
+    decline: 'Recusar',
     waitingOpen: 'Esperando por você — abra a conversa para responder.',
     waitingForYou: 'Esperando por você',
     paused: 'Em pausa — volta a responder quando for retomado.',

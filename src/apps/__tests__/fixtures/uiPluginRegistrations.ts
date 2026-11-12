@@ -53,6 +53,8 @@ import { NotebookViewPlugin } from '../../plugins/notebook-view';
 import { LoopPageLayoutPlugin } from '../../plugins/page-layout';
 import { PapSignInPlugin } from '../../plugins/pap-sign-in';
 import { PromptPlugin } from '../../plugins/prompt';
+import { SpreadsheetPlugin } from '../../plugins/spreadsheet';
+import { SpreadsheetViewPlugin } from '../../plugins/spreadsheet-view';
 import { SubagentActivityPlugin } from '../../plugins/subagent-activity';
 import { WindowFramePlugin } from '../../plugins/window-frame';
 
@@ -124,6 +126,8 @@ export const HOW_TO_MOUNT: Record<string, Mount> = {
   'page-layout': () => [LoopPageLayoutPlugin],
   'pap-sign-in': () => [PapSignInPlugin],
   prompt: () => [PromptPlugin],
+  spreadsheet: () => [SpreadsheetPlugin],
+  'spreadsheet-view': () => [SpreadsheetViewPlugin],
   'subagent-activity': () => [SubagentActivityPlugin],
   'window-frame': () => [WindowFramePlugin],
 };

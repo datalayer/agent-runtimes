@@ -17,7 +17,7 @@ import time
 import traceback
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agent_runtimes.guardrails.credentials import (
     SENDS_CREDENTIAL,
@@ -27,8 +27,10 @@ from agent_runtimes.guardrails.credentials import (
     redact,
 )
 from agent_runtimes.guardrails.declared_secrets import env_for_server
+from agent_runtimes.mcp.agentcore_gateway import gateway_auth_of
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.mcp.remote import remote_toolset
+from agent_runtimes.plugins.points import IdentityRefused
 from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
@@ -76,6 +78,92 @@ def start_deadline() -> float:
         * (2 * MCP_SERVER_STARTUP_TIMEOUT + MCP_SERVER_RETRY_BACKOFF)
         + MCP_SERVER_START_GRACE
     )
+
+
+#: How long a server started in the background — while the agent already
+#: answers with its model (the user, 8 November 2026) — is given to start, in
+#: seconds: ``AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT``, else 30.
+def background_start_timeout() -> float:
+    """
+    The deadline of a server's start in the background, in seconds.
+
+    Returns
+    -------
+    float
+        ``AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT`` when set, else 30.
+    """
+    given = os.environ.get("AGENT_RUNTIMES_MCP_BACKGROUND_START_TIMEOUT", "").strip()
+    return float(given) if given else 30.0
+
+
+_UNREACHABLE = re.compile(
+    r"ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|"
+    r"getaddrinfo|Name or service not known|Temporary failure in name resolution|"
+    r"Network is unreachable|Connection refused|Could not resolve host|"
+    r"Failed to establish a new connection",
+    re.IGNORECASE,
+)
+_HOST = re.compile(
+    r"(?:https?://)?((?:[a-z0-9-]+\.)+(?:org|com|io|net|dev|run|ai|cloud))\b",
+    re.IGNORECASE,
+)
+_NO_COMMAND = re.compile(
+    r"(?:spawn|exec)\s+(\S+)\s+ENOENT|No such file or directory: '([^']+)'|"
+    r"(\S+): (?:command )?not found",
+    re.IGNORECASE,
+)
+_REFUSED_KEY = re.compile(
+    r"\b401\b|Unauthorized|invalid api key|invalid_api_key|authentication failed",
+    re.IGNORECASE,
+)
+_WITHIN = re.compile(r"did not start within (\d+(?:\.\d+)?)s")
+
+
+def failure_sentence(server_id: str, error: str, stderr: str = "") -> str:
+    """
+    Why a server did not start, in a sentence a page can show.
+
+    Read off the error the start failed with and the last of what its
+    process wrote on its stderr (`stderr_tail`): "tavily could not start:
+    the runtime cannot reach registry.npmjs.org."
+
+    Parameters
+    ----------
+    server_id : str
+        The server.
+    error : str
+        What the start failed with.
+    stderr : str
+        The last of its process's stderr, when it had one.
+
+    Returns
+    -------
+    str
+        The sentence, credentials withheld.
+    """
+    text = f"{error}\n{stderr}"
+    if _UNREACHABLE.search(text):
+        hosts = [
+            h
+            for h in _HOST.findall(stderr) + _HOST.findall(error)
+            if not h.lower().startswith(("localhost", "127."))
+        ]
+        where = hosts[0] if hosts else "the network"
+        return redact(f"{server_id} could not start: the runtime cannot reach {where}.")
+    missing = _NO_COMMAND.search(text)
+    if missing:
+        command = next(g for g in missing.groups() if g)
+        return redact(f"{server_id} could not start: the runtime has no {command}.")
+    if _REFUSED_KEY.search(text):
+        return redact(f"{server_id} could not start: its key was refused.")
+    within = _WITHIN.search(error)
+    if within:
+        return f"{server_id} could not start within {within.group(1)} s."
+    first = next((line.strip() for line in error.splitlines() if line.strip()), "")
+    if first.startswith(f"MCP server '{server_id}' "):
+        first = first[len(f"MCP server '{server_id}' ") :]
+    first = first.rstrip(".") or "it ended without saying why"
+    return redact(f"{server_id} could not start: {first}.")
 
 
 #: How long a server that is not running waits before a turn that needs it
@@ -173,6 +261,14 @@ class MCPLifecycleManager:
         self._catalog_servers: dict[str, MCPServerInstance] = {}  # From catalog
         self._failed_servers: dict[str, str] = _Failures()  # server_id -> error
         self._starting_servers: set[str] = set()  # server_ids currently starting
+        # Servers whose start in the background is asked for and not begun:
+        # said "starting" from the moment a configure answers, never
+        # "not started" while the page waits (the user, 8 November 2026).
+        self._announced: set[str] = set()
+        # Why each failed server failed, in a sentence (`failure_sentence`).
+        self._failure_reasons: dict[str, str] = {}
+        # The stderr of each stdio server's process, its last lines kept.
+        self._stderr_tails: dict[str, Any] = {}
         # What each server was first started with — its secrets and the
         # configuration it was given, which a configure's may differ from the
         # catalogue's — to start it the same way again, and when it was last
@@ -212,28 +308,30 @@ class MCPLifecycleManager:
         """
         Expand environment variables in a string (${VAR_NAME} syntax).
 
+        ``${VAR_NAME:-default}`` is the default when the variable is unset or
+        empty, as in a shell: a server installed where the runtime image puts
+        it, or where a person's own machine has it (``install``).
+
         Args:
             value: The string containing ``${VAR_NAME}`` placeholders.
             lookup_env: Optional env dict to resolve variables from.
                 Falls back to ``os.environ`` if not provided.
         """
-        import re
+        from agent_runtimes.mcp.env_expansion import PATTERN, expand_env_vars
 
         env_source = lookup_env if lookup_env is not None else os.environ
-        pattern = r"\$\{([^}]+)\}"
-
-        def replace(match: re.Match[str]) -> str:
-            var_name = match.group(1)
-            env_value = env_source.get(var_name, "")
-            if not env_value:
+        for match in PATTERN.finditer(value):
+            name, has_default, _ = match.group(1).partition(":-")
+            if not has_default and not env_source.get(name, ""):
                 logger.warning(
-                    f"Environment variable '{var_name}' not found or empty during expansion"
+                    f"Environment variable '{name}' not found or empty during expansion"
                 )
-            # Used by the tool, never shown to the model (R-19).
-            hold_expansion(value, var_name, env_value)
-            return env_value
-
-        return re.sub(pattern, replace, value)
+        # Used by the tool, never shown to the model (R-19).
+        return expand_env_vars(
+            value,
+            env_source,
+            on_value=lambda name, found: hold_expansion(value, name, found),
+        )
 
     def _load_mcp_config(self) -> dict[str, Any]:
         """Load MCP configuration from mcp.json file."""
@@ -389,6 +487,7 @@ class MCPLifecycleManager:
         server_id: str,
         config: MCPServer | None = None,
         extra_env: dict[str, str] | None = None,
+        deadline: float | None = None,
     ) -> MCPServerInstance | None:
         """
         Start an MCP server.
@@ -401,6 +500,8 @@ class MCPLifecycleManager:
                 subprocess. These are merged on top of ``os.environ`` and
                 ``config.env``, and are also available for ``${VAR}``
                 expansion in server args and config env values.
+            deadline: How long the whole start is given, in seconds;
+                `start_deadline` when ``None``.
 
         Returns:
             MCPServerInstance if started successfully, None otherwise
@@ -415,11 +516,18 @@ class MCPLifecycleManager:
         # word on it — this one's result is (a turn waiting on it waits for
         # that, rather than giving up on the stale failure).
         self._failed_servers.pop(server_id, None)
+        self._failure_reasons.pop(server_id, None)
         self._starting_servers.add(server_id)
+        self._announced.discard(server_id)
         try:
             async with self._lock_for(server_id):
                 logger.debug(f"Acquired lock for '{server_id}'")
-                return await self._start_within_deadline(server_id, config, extra_env)
+                instance = await self._start_within_deadline(
+                    server_id, config, extra_env, deadline
+                )
+            if instance is None:
+                self._note_failure(server_id)
+            return instance
         except asyncio.CancelledError:
             # Whoever asked for the start is gone (the request that spawned
             # it ended, the runtime stops): said, so that a turn finds the
@@ -434,15 +542,69 @@ class MCPLifecycleManager:
             )
             logger.error(redact(f"✗ {error}"))
             self._failed_servers[server_id] = error
+            self._note_failure(server_id)
             return None
         finally:
             self._starting_servers.discard(server_id)
+
+    def _note_failure(self, server_id: str) -> None:
+        """Say why the server failed, in a sentence, and log it once."""
+        tail = self._stderr_tails.pop(server_id, None)
+        stderr = ""
+        if tail is not None:
+            stderr = tail.text()
+            tail.close()
+        error = self._failed_servers.get(server_id, "it ended without saying why")
+        reason = failure_sentence(server_id, error, stderr)
+        self._failure_reasons[server_id] = reason
+        logger.warning(f"✗ {reason}")
+
+    def announce(self, server_ids: list[str]) -> None:
+        """Say these servers are starting before their start begins.
+
+        Their start runs in the background; until it begins they are said
+        "starting", not "not started" — a server running already is left as
+        it is.
+        """
+        for server_id in server_ids:
+            if not self.is_server_running(server_id):
+                self._announced.add(server_id)
+                self._failed_servers.pop(server_id, None)
+                self._failure_reasons.pop(server_id, None)
+
+    def withdraw(self, server_id: str) -> None:
+        """A server announced whose start was not asked for after all."""
+        self._announced.discard(server_id)
+
+    def is_start_under_way(self, server_id: str) -> bool:
+        """Whether a start of the server has begun and not ended."""
+        return server_id in self._starting_servers
+
+    def is_starting(self, server_id: str) -> bool:
+        """Whether a start of the server is under way, or announced."""
+        return server_id in self._starting_servers or server_id in self._announced
+
+    async def wait_while_starting(self, server_ids: list[str], timeout: float) -> None:
+        """Wait until none of these servers is starting, ``timeout`` at most."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while any(self.is_starting(s) for s in server_ids) and loop.time() < deadline:
+            await asyncio.sleep(0.1)
+
+    def failure_reason(self, server_id: str) -> str | None:
+        """Why the server failed, in a sentence, or None."""
+        if server_id not in self._failed_servers:
+            return None
+        return self._failure_reasons.get(server_id) or failure_sentence(
+            server_id, self._failed_servers[server_id]
+        )
 
     async def _start_within_deadline(
         self,
         server_id: str,
         config: MCPServer | None,
         extra_env: dict[str, str] | None,
+        deadline: float | None = None,
     ) -> MCPServerInstance | None:
         """
         Run the start as a task of its own, ended at `start_deadline`.
@@ -462,13 +624,18 @@ class MCPLifecycleManager:
             Its configuration, or the catalogue's or mcp.json's when ``None``.
         extra_env : dict[str, str] | None
             The secrets the start was given.
+        deadline : float | None
+            How long it is given, in seconds; `start_deadline` when ``None``.
 
         Returns
         -------
         MCPServerInstance | None
             The running server, or ``None`` when it did not start.
         """
-        deadline = start_deadline()
+        if deadline is None:
+            deadline = start_deadline()
+        else:
+            logger.info(f"MCP server '{server_id}' is given {deadline:g}s to start")
         task = asyncio.ensure_future(
             self._start_server_inner(server_id, config, extra_env)
         )
@@ -576,6 +743,22 @@ class MCPLifecycleManager:
             # This ordering lets config.env reference extra_env values via ${VAR}.
             # Without the secrets a configure gave for other servers (R-19).
             env = env_for_server(os.environ, config)
+            # A deployment's agent acts as its principal (`apps/principal`):
+            # a server of the catalogue asking for `${DATALAYER_API_KEY}` on a
+            # runtime launched without one — a pool runtime a hosted page or
+            # the keeper gave an application — sends the principal's token,
+            # which the gateway reads as a run with an identity of its own.
+            # Seen 6 November 2026: the home page's Accounting could not open
+            # `odoo-accounting`, its runtime holding no key at all.
+            # On the visitors' runtime, the gateway's Odoo servers start with
+            # the demo books' key, for a catalogue Battle's runs alone (B4-01).
+            principal = self._principal_key(server_id, config, env)
+            if not principal and self._asks_for_datalayer_key(config):
+                from agent_runtimes.apps.battle_books import books_start_key
+
+                principal = books_start_key(server_id, env)
+            if principal:
+                env["DATALAYER_API_KEY"] = principal
 
             if extra_env:
                 env.update(extra_env)
@@ -636,8 +819,20 @@ class MCPLifecycleManager:
                     logger.error(f"✗ {problem}")
                     self._failed_servers[server_id] = problem
                     return None
+                # An AgentCore Gateway: its bearer minted for the run by
+                # the agentcore identity provider, never a header (AC-20).
+                try:
+                    gateway_auth = gateway_auth_of(config)
+                except IdentityRefused as refused:
+                    logger.error(f"✗ {refused}")
+                    self._failed_servers[server_id] = str(refused)
+                    return None
                 pydantic_server = remote_toolset(
-                    server_id, config.url, headers, MCP_SERVER_HANDSHAKE_TIMEOUT
+                    server_id,
+                    config.url,
+                    headers,
+                    MCP_SERVER_HANDSHAKE_TIMEOUT,
+                    auth=gateway_auth,
                 )
             elif config.transport == "streamable-http" and config.url:
                 # Its command runs as a local HTTP process, reached at its
@@ -652,11 +847,19 @@ class MCPLifecycleManager:
                     "no url to reach it at"
                 )
             else:
+                from agent_runtimes.mcp.stderr_tail import StderrTail
+
+                previous = self._stderr_tails.pop(server_id, None)
+                if previous is not None:
+                    previous.close()
+                tail = StderrTail(server_id)
+                self._stderr_tails[server_id] = tail
                 pydantic_server = DisplayMCPToolset(
                     StdioTransport(
                         command=config.command,
                         args=expanded_args,
                         env=env,
+                        log_file=tail.file,
                     ),
                     id=server_id,
                     init_timeout=MCP_SERVER_HANDSHAKE_TIMEOUT,
@@ -872,6 +1075,61 @@ class MCPLifecycleManager:
             await exit_stack.aclose()
         except BaseException as close_error:  # noqa: BLE001
             logger.debug(f"Closing '{server_id}' after {after}: {close_error}")
+
+    @staticmethod
+    def _asks_for_datalayer_key(config: MCPServer) -> bool:
+        """Whether a server's address, arguments or environment ask for ``${DATALAYER_API_KEY}``."""
+        wanted = "${DATALAYER_API_KEY}"
+        return (
+            any(wanted in str(value) for value in (config.headers or {}).values())
+            or any(wanted in str(arg) for arg in (config.args or []))
+            or any(wanted in str(value) for value in (config.env or {}).values())
+        )
+
+    @staticmethod
+    def _principal_key(
+        server_id: str, config: MCPServer, env: Mapping[str, str]
+    ) -> str:
+        """The deployment's principal token, when the server asks for
+        ``${DATALAYER_API_KEY}`` and this runtime has none: ``""`` otherwise.
+
+        One served deployment with a token: its principal is the key. None, or
+        several with different tokens: nothing is chosen, and the server
+        fails closed as before (`empty_bearer_problem`). Held, never shown
+        to the model (R-19); logged by name, never by value.
+        """
+        if env.get("DATALAYER_API_KEY"):
+            return ""
+        if not MCPLifecycleManager._asks_for_datalayer_key(config):
+            return ""
+        try:
+            from agent_runtimes.apps.principal import (  # noqa: PLC0415
+                deployments_served,
+                principal_token,
+            )
+
+            tokens = {
+                token
+                for token in (principal_token(uid) for uid in deployments_served())
+                if token
+            }
+        except Exception as error:  # noqa: BLE001 - no principal is no key
+            logger.debug(f"No principal to read a key from for '{server_id}': {error}")
+            return ""
+        if len(tokens) != 1:
+            if tokens:
+                logger.warning(
+                    f"'{server_id}' asks for DATALAYER_API_KEY and {len(tokens)} "
+                    "deployments served here hold a principal each: none chosen."
+                )
+            return ""
+        token = tokens.pop()
+        hold(token)
+        logger.info(
+            f"  [mcp/lifecycle] DATALAYER_API_KEY for '{server_id}' is the "
+            "deployment's principal token: the runtime was launched without one."
+        )
+        return token
 
     def _expanded_headers(
         self, config: MCPServer, env: dict[str, str]
@@ -1187,7 +1445,7 @@ class MCPLifecycleManager:
                 "error": instance.error,
                 "is_config": instance.config.is_config,
             }
-        elif server_id in self._starting_servers:
+        elif self.is_starting(server_id):
             return {
                 "id": server_id,
                 "status": "starting",
@@ -1197,6 +1455,7 @@ class MCPLifecycleManager:
                 "id": server_id,
                 "status": "failed",
                 "error": self._failed_servers[server_id],
+                "reason": self.failure_reason(server_id),
             }
         else:
             return {
@@ -1212,6 +1471,7 @@ class MCPLifecycleManager:
         - id: server identifier
         - status: one of "none", "not_started", "starting", "failed", "started"
         - error: error message (only when status == "failed")
+        - reason: why, in a sentence (only when status == "failed")
         - tools_count: number of discovered tools (only when status == "started")
         """
         # Collect all known server IDs
@@ -1221,6 +1481,7 @@ class MCPLifecycleManager:
         all_ids.update(self._catalog_servers.keys())
         all_ids.update(self._failed_servers.keys())
         all_ids.update(self._starting_servers)
+        all_ids.update(self._announced)
 
         results: list[dict[str, Any]] = []
         for sid in sorted(all_ids):
@@ -1242,7 +1503,7 @@ class MCPLifecycleManager:
                         ],
                     }
                 )
-            elif sid in self._starting_servers:
+            elif self.is_starting(sid):
                 results.append(
                     {
                         "id": sid,
@@ -1255,6 +1516,7 @@ class MCPLifecycleManager:
                         "id": sid,
                         "status": "failed",
                         "error": self._failed_servers[sid],
+                        "reason": self.failure_reason(sid),
                     }
                 )
             elif sid in self._expected_servers:
@@ -1383,6 +1645,11 @@ class MCPLifecycleManager:
 
         self._failed_servers.clear()
         self._starting_servers.clear()
+        self._announced.clear()
+        self._failure_reasons.clear()
+        for tail in self._stderr_tails.values():
+            tail.close()
+        self._stderr_tails.clear()
         self._expected_servers.clear()
         self._initialization_started = False
         self._initialization_event = None

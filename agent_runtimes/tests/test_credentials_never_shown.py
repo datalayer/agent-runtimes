@@ -318,7 +318,9 @@ def test_an_mcp_server_that_fails_with_its_command_line_says_it_withheld(
     from agent_runtimes.types import MCPServer
 
     class _Echoing:
-        def __init__(self, command: str, args: List[str], env: Dict[str, str]):
+        def __init__(
+            self, command: str, args: List[str], env: Dict[str, str], **_: Any
+        ):
             raise RuntimeError(f"cannot spawn {command} {' '.join(args)}")
 
     monkeypatch.setattr(transports, "StdioTransport", _Echoing)

@@ -123,7 +123,7 @@ top of the window, beside it when the window is too short for either:
   scrolls inside it, kept on the newest message, and the composer stays in
   sight at the bottom;
 - *Ask a decision* beside the composer, when it is given a runtime to ask
-  (below).
+  and its agent decides (below).
 
 That is the `history` display. The other one is `current`.
 
@@ -332,9 +332,19 @@ said and did.
 
 ## Ask a decision
 
-Given a runtime to ask, **the balloon offers *Ask a decision***: a typed
-decision asked of Jev, the typed-decision model
-(`cloudflare:wrk/typesafe/jev`), without going through the agent — beside the
+Not every agent decides: an agent has the capability only when its agentspec
+names a decisions spec (`decisions: jev:0.0.1`, see
+[Decisions](https://agentspecs.datalayer.tech/agents/decisions)), which says
+the model asked, the question types it answers and the limits of one call.
+
+Given a runtime to ask, and an agent that decides, **the balloon offers *Ask
+a decision***: a typed decision asked of the agent's decision model (Jev,
+`cloudflare:wrk/typesafe/jev`, for `jev`), without going through the agent.
+The assistant asks the runtime first whether the agent decides (`decisions`
+of `GET /api/v1/agents/{agent_id}`); for an agent whose spec names no
+decisions, nothing is offered. The form says which model decides (*Decided by
+Jev (cloudflare:wrk/typesafe/jev)*) and offers only the question types its
+decisions spec answers. It is beside the
 composer in the open conversation; in a LOOP workspace, whose conversation
 is the workspace's own, in the character's peek. It opens a small form:
 
@@ -345,8 +355,10 @@ is the workspace's own, in the character's peek. It opens a small form:
   least two); *A score*, with its range, from 1 to 5 by default;
 - **Name**: what the answer is said under (*Answer* when left empty).
 
-*Ask* sends it to the runtime's `POST /api/v1/configure/inference/decisions`,
-the route that asks as the agent's `decide` tool does, through ai-inference,
+*Ask* sends it, with the agent's id, to the runtime's
+`POST /api/v1/configure/inference/decisions`,
+the route that asks as the agent's `decide` tool does, of the model its
+decisions spec names, through ai-inference,
 with the token the runtime calls its models with — so the token path is the
 same as the tool's. The answer comes back in the balloon, in plain words with
 its confidence:
@@ -380,14 +392,18 @@ configurePlugin(LoopAssistantPlugin, {
 ```
 
 `token` is sent as a bearer when the runtime needs one; the machine's own
-server does not. See [The decide tool](../cli#the-decide-tool) for
+server does not. `agentId` names the agent asking; unsaid, it is the one of
+the chat's endpoint (in a LOOP workspace, the workspace's agent). The route
+refuses an agent that does not decide in a sentence (`Nothing was decided:
+the agent … does not decide, its spec names no decisions. …`). See [The decide tool](../cli#the-decide-tool) for
 `/decisions`, the same route from the terminal.
 
 ### The Decide example
 
 `AgentDecideExample` (`src/examples/AgentDecideExample.tsx`) draws the
 *Decide* application of the catalogue (agentspecs `apps/decide.yaml`: the
-agent `example-simple` with the `decide` tool, instructions to answer by
+agent `example-simple`, which names `decisions: jev:0.0.1` and so has the
+`decide` tool, instructions to answer by
 asking a typed decision, decision questions as its starters, and one rule —
 deciding is a read, done without asking) in the LOOP workspace on the Local
 target, with the floating assistant beside it. Ask in the chat (*Is this
@@ -752,7 +768,7 @@ is skipped with a warning in the console.
 | --- | --- | --- | --- |
 | `defaultViewMode` | `'floating' \| 'floating-small' \| 'floating-draggable' \| 'assistant' \| 'panel'` | `'floating'` | `'assistant'` opens on the character. |
 | `assistantCharacter` | `string \| AssistantCharacter \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, a contributed drawing, or one read from a file. |
-| `decisions` | `{ serverUrl: string; token?: string }` | — | The runtime its balloon asks typed decisions at: offers *Ask a decision* (see [Ask a decision](#ask-a-decision)). |
+| `decisions` | `{ serverUrl: string; token?: string; agentId?: string }` | — | The runtime its balloon asks typed decisions at, and the agent asking (the endpoint's when unsaid): offers *Ask a decision* when that agent decides (see [Ask a decision](#ask-a-decision)). |
 
 The chat's `description` is what the character says on a hover before
 anything else has been said.

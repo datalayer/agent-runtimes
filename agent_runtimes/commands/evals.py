@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -61,7 +63,7 @@ from agent_runtimes.evals.status import is_terminal_run_status
 
 app = typer.Typer(
     name="evals",
-    help="Launch and monitor SaaS evalsets, experiments, runs, and live monitoring.",
+    help="Launch and monitor evalsets, experiments and runs.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -83,7 +85,7 @@ runs_app = typer.Typer(
 )
 launches_app = typer.Typer(
     name="launches",
-    help="Launches: one submission of a benchmark across its experiments (B2-03).",
+    help="Follow the submissions of a benchmark across its experiments.",
     pretty_exceptions_show_locals=False,
 )
 live_app = typer.Typer(
@@ -100,6 +102,325 @@ def evals_callback(ctx: typer.Context) -> None:
     """Show evals command group help."""
     if ctx.invoked_subcommand is None:
         typer.echo(ctx.get_help())
+
+
+adapters_app = typer.Typer(
+    name="adapters",
+    help="Inspect, import, launch and reproduce external frameworks.",
+    no_args_is_help=True,
+)
+
+INSPECTION_POLL_SECONDS = 2.0
+INSPECTION_TIMEOUT_SECONDS = 600.0
+
+
+@adapters_app.command(name="ls")
+def adapters_ls(
+    token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
+    raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
+) -> None:
+    """The external frameworks this deployment offers."""
+    payload = _make_client(token=token).evals_list_adapters()
+    if raw:
+        console.print_json(json.dumps(payload))
+        return
+    table = Table(title="External frameworks")
+    for column in ("Framework", "Framework version", "Adapter version", "Environment"):
+        table.add_column(column)
+    for item in payload.get("adapters") or []:
+        table.add_row(
+            str(item.get("framework")),
+            str(item.get("framework_version")),
+            str(item.get("adapter_version")),
+            str(item.get("environment")),
+        )
+    console.print(table)
+
+
+def _print_inspection(record: dict[str, Any]) -> None:
+    found = record.get("inspection") or {}
+    console.print(
+        f"Inspection {record.get('id')} [{record.get('status')}] source sha256:{record.get('digest')}"
+    )
+    console.print(
+        f"{found.get('framework')} {found.get('framework_version')}, adapter {found.get('adapter_version')}"
+    )
+    console.print(
+        f"tasks: {', '.join(found.get('entry_points') or [])}; {len(found.get('cases') or [])} cases"
+    )
+    table = Table(title="Capabilities")
+    for column in ("Status", "Kind", "Component", "Why"):
+        table.add_column(column)
+    for item in found.get("capabilities") or []:
+        table.add_row(
+            str(item.get("status")),
+            str(item.get("kind")),
+            str(item.get("component")),
+            str(item.get("reason") or ""),
+        )
+    console.print(table)
+
+
+def source_bytes(
+    source: Optional[Path], *, git: str, commit: str, subfolder: str, registry: str
+) -> tuple[bytes, str]:
+    """A source as the archive it is kept as: fetched here if it is remote."""
+    from agent_runtimes.evals.adapters.harbor_sources import (
+        SourceNotFetched,
+        fetch_git,
+        fetch_registry,
+    )
+    from agent_runtimes.evals.adapters.source import pack_source
+
+    if sum([source is not None, bool(git), bool(registry)]) != 1:
+        console.print("[red]Name one source: a path, --git, or --registry.[/red]")
+        raise typer.Exit(1)
+    if source is not None:
+        if source.is_dir():
+            return pack_source(source), f"{source.name}.tar.gz"
+        return source.read_bytes(), source.name
+    with tempfile.TemporaryDirectory() as directory:
+        into = Path(directory) / "source"
+        try:
+            root = (
+                fetch_git(git, commit, into, path=subfolder)
+                if git
+                else fetch_registry(registry, into)
+            )
+        except SourceNotFetched as error:
+            console.print(f"[red]{error}[/red]")
+            raise typer.Exit(1) from None
+        return pack_source(root), "fetched.tar.gz"
+
+
+def inspected_source(
+    client: Any,
+    framework: str,
+    data: bytes,
+    filename: str,
+    task_arg: list[str],
+    *,
+    wait: bool = True,
+) -> dict[str, Any]:
+    """A source kept by its digest and inspected in a sandbox: what was found."""
+    task_args = {
+        name: json.loads(value)
+        for name, _, value in (item.partition("=") for item in task_arg)
+    }
+    answer = client.evals_inspect_source(
+        framework=framework,
+        filename=filename,
+        content_base64=base64.b64encode(data).decode(),
+        options={"task_args": task_args},
+    )
+    record = answer.get("inspection") or {}
+    deadline = time.monotonic() + INSPECTION_TIMEOUT_SECONDS
+    while wait and record.get("status") == "pending":
+        if time.monotonic() >= deadline:
+            console.print(
+                f"[red]No answer yet: follow inspection {record.get('id')}.[/red]"
+            )
+            raise typer.Exit(1)
+        time.sleep(INSPECTION_POLL_SECONDS)
+        record = (
+            client.evals_get_inspection(str(record.get("id"))).get("inspection") or {}
+        )
+    return record
+
+
+def import_selection(
+    entry_point: list[str],
+    model: list[str],
+    scorer: Optional[str],
+    threshold: Optional[float],
+    limit: Optional[int],
+    name: Optional[str],
+) -> dict[str, Any]:
+    """What of a source to import, as the service takes it."""
+    aggregation: dict[str, Any] = {}
+    if scorer:
+        aggregation["scorer"] = scorer
+    if threshold is not None:
+        aggregation["threshold"] = threshold
+    return {
+        key: value
+        for key, value in {
+            "entry_points": entry_point,
+            "models": model,
+            "aggregation": aggregation,
+            "limit": limit,
+            "name": name,
+        }.items()
+        if value
+    }
+
+
+@adapters_app.command(name="inspect")
+def adapters_inspect(
+    framework: str = typer.Argument(
+        ..., help="The framework, as `evals adapters ls` names it."
+    ),
+    source: Optional[Path] = typer.Argument(
+        None, exists=True, help="An archive, or a directory to pack."
+    ),
+    git: str = typer.Option("", "--git", help="A Harbor repository, fetched here."),
+    commit: str = typer.Option("", "--commit", help="The full commit of `--git`."),
+    subfolder: str = typer.Option("", "--path", help="The folder of `--git` to read."),
+    registry: str = typer.Option(
+        "", "--registry", help="A Harbor registry reference, pinned, fetched here."
+    ),
+    token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
+    task_arg: list[str] = typer.Option(
+        [], "--task-arg", help="name=json, as the task takes it."
+    ),
+    wait: bool = typer.Option(
+        True, "--wait/--no-wait", help="Wait for the sandbox's answer."
+    ),
+    raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
+) -> None:
+    """Keep a source by its digest and inspect it in a sandbox."""
+    client = _make_client(token=token)
+    data, filename = source_bytes(
+        source, git=git, commit=commit, subfolder=subfolder, registry=registry
+    )
+    record = inspected_source(client, framework, data, filename, task_arg, wait=wait)
+    if raw:
+        console.print_json(json.dumps(record))
+    elif record.get("status") == "failed":
+        console.print(f"[red]The source could not be read:[/red] {record.get('error')}")
+    else:
+        _print_inspection(record)
+    if record.get("status") == "failed":
+        raise typer.Exit(1)
+
+
+@adapters_app.command(name="import")
+def adapters_import(
+    inspection_id: str = typer.Argument(..., help="The inspection to import."),
+    token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
+    entry_point: list[str] = typer.Option(
+        [], "--entry-point", help="A task; every one when none is named."
+    ),
+    model: list[str] = typer.Option(
+        [],
+        "--model",
+        help="A catalogue model of AI Inference (bedrock:..., alibaba:...): one experiment each.",
+    ),
+    scorer: Optional[str] = typer.Option(
+        None, "--scorer", help="The scorer that is the headline."
+    ),
+    threshold: Optional[float] = typer.Option(
+        None, "--threshold", help="The score a task must reach to pass."
+    ),
+    limit: Optional[int] = typer.Option(None, "--limit", min=1, help="How many tasks."),
+    name: Optional[str] = typer.Option(None, "--name", help="The benchmark's name."),
+    raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
+) -> None:
+    """A benchmark and its experiments, from what an inspection found."""
+    selection = import_selection(entry_point, model, scorer, threshold, limit, name)
+    payload = _make_client(token=token).evals_import_external(
+        inspection_id=inspection_id, selection=selection
+    )
+    if raw:
+        console.print_json(json.dumps(payload))
+        return
+    evalset = payload.get("evalset") or {}
+    console.print(
+        f"Benchmark {evalset.get('id')} {evalset.get('name')}: {len(evalset.get('cases') or [])} tasks"
+    )
+    for experiment in payload.get("experiments") or []:
+        console.print(f"  experiment {experiment.get('id')} {experiment.get('name')}")
+
+
+def _external_launch_body(
+    client: Any, evalset_id: str, *, tool: list[str], concurrency: int
+) -> tuple[list[str], dict[str, Any]]:
+    experiments = [
+        item
+        for item in (
+            client.evals_list_experiments(evalset_id=evalset_id).get("experiments")
+            or []
+        )
+    ]
+    return [str(item.get("id")) for item in experiments], {
+        "concurrency": concurrency,
+        "tools": list(tool),
+    }
+
+
+@adapters_app.command(name="launch")
+def adapters_launch(
+    evalset_id: str = typer.Argument(..., help="The imported benchmark."),
+    token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
+    tool: list[str] = typer.Option(
+        [], "--tool", help="A tool this launch approves, by name."
+    ),
+    concurrency: int = typer.Option(1, "--concurrency", min=1),
+    budget: Optional[float] = typer.Option(
+        None,
+        "--budget",
+        min=0,
+        help="Credits this launch may spend; a run stops there.",
+    ),
+    app_uid: str = typer.Option(
+        "",
+        "--app-uid",
+        help="The application its model calls are metered under, if it has one.",
+    ),
+    deployment_uid: str = typer.Option(
+        "", "--deployment-uid", help="That application's deployment, if it has one."
+    ),
+    raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
+) -> None:
+    """Launch an imported benchmark: every experiment, the tools approved by name."""
+    client = _make_client(token=token)
+    experiment_ids, config = _external_launch_body(
+        client, evalset_id, tool=tool, concurrency=concurrency
+    )
+    if budget is not None:
+        config["budget"] = budget
+    if app_uid or deployment_uid:
+        config["application"] = {"app_uid": app_uid, "deployment_uid": deployment_uid}
+    plan = client.evals_validate_launch(
+        evalset_id, experiment_ids=experiment_ids, config=config
+    )
+    if not plan.get("ok"):
+        for problem in plan.get("problems") or []:
+            if problem.get("severity") == "error":
+                console.print(f"[red]{problem.get('message')}[/red]")
+        raise typer.Exit(1)
+    payload = client.evals_create_launch(
+        evalset_id, experiment_ids=experiment_ids, config=config
+    )
+    if raw:
+        console.print_json(json.dumps(payload))
+        return
+    launch = payload.get("launch") or {}
+    console.print(f"Launch {launch.get('id')} {launch_url(str(launch.get('id')))}")
+    console.print(str(plan.get("metering") or ""))
+
+
+@adapters_app.command(name="reproduce")
+def adapters_reproduce(
+    evalset_id: str = typer.Argument(..., help="The imported benchmark."),
+    token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
+    tool: list[str] = typer.Option(
+        [], "--tool", help="A tool the launch would approve."
+    ),
+) -> None:
+    """The pinned framework command, to run this benchmark on your own machine."""
+    client = _make_client(token=token)
+    experiment_ids, config = _external_launch_body(
+        client, evalset_id, tool=tool, concurrency=1
+    )
+    plan = client.evals_validate_launch(
+        evalset_id, experiment_ids=experiment_ids, config=config
+    )
+    reproduction = str((plan.get("external_plan") or {}).get("reproduction") or "")
+    if not reproduction:
+        console.print("[red]This benchmark was not imported from a framework.[/red]")
+        raise typer.Exit(1)
+    typer.echo(reproduction)
 
 
 @app.command(name="ls")
@@ -716,8 +1037,10 @@ def evals_run(
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
-    """Run a benchmark: import the spec if needed, one experiment per subject,
-    validate, launch, and follow the launch (B2-15).
+    """Run a benchmark and follow its launch.
+
+    Run a benchmark: import the spec if needed, one experiment per subject,
+    validate, launch, and follow the launch.
 
     On the cloud the platform executes the launch on a pool of sandboxes as
     you, grades it, and keeps the evidence; the command exits 0 when the
@@ -1547,6 +1870,7 @@ def live_targets(
 
 
 app.add_typer(evals_app)
+app.add_typer(adapters_app)
 app.add_typer(experiments_app)
 app.add_typer(runs_app)
 app.add_typer(launches_app)

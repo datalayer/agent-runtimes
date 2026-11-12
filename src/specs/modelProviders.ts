@@ -29,6 +29,7 @@ export const ALIBABA_0_0_1: ModelProvider = {
   privacyUrl:
     'https://www.alibabacloud.com/help/en/legal/latest/privacy-policy',
   hosting: 'cloud',
+  via: 'ai-inference',
 };
 
 export const ANTHROPIC_0_0_1: ModelProvider = {
@@ -43,6 +44,7 @@ export const ANTHROPIC_0_0_1: ModelProvider = {
   privacyUrl: 'https://www.anthropic.com/legal/privacy',
   dataUsageUrl: 'https://www.anthropic.com/legal/aup',
   hosting: 'cloud',
+  via: 'direct',
 };
 
 export const AZURE_OPENAI_0_0_1: ModelProvider = {
@@ -60,6 +62,7 @@ export const AZURE_OPENAI_0_0_1: ModelProvider = {
   dataUsageUrl:
     'https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy',
   hosting: 'cloud',
+  via: 'ai-inference',
 };
 
 export const BEDROCK_0_0_1: ModelProvider = {
@@ -76,6 +79,7 @@ export const BEDROCK_0_0_1: ModelProvider = {
   dataUsageUrl:
     'https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html',
   hosting: 'cloud',
+  via: 'ai-inference',
 };
 
 export const CLOUDFLARE_0_0_1: ModelProvider = {
@@ -91,6 +95,7 @@ export const CLOUDFLARE_0_0_1: ModelProvider = {
   dataUsageUrl:
     'https://developers.cloudflare.com/workers-ai/platform/data-usage/',
   hosting: 'cloud',
+  via: 'ai-inference',
 };
 
 export const OLLAMA_0_0_1: ModelProvider = {
@@ -104,6 +109,7 @@ export const OLLAMA_0_0_1: ModelProvider = {
   termsUrl: 'https://ollama.com/terms',
   privacyUrl: 'https://ollama.com/privacy',
   hosting: 'local',
+  via: 'direct',
 };
 
 export const OPENAI_0_0_1: ModelProvider = {
@@ -118,6 +124,22 @@ export const OPENAI_0_0_1: ModelProvider = {
   privacyUrl: 'https://openai.com/policies/privacy-policy/',
   dataUsageUrl: 'https://platform.openai.com/docs/guides/your-data',
   hosting: 'cloud',
+  via: 'direct',
+};
+
+export const OPENROUTER_0_0_1: ModelProvider = {
+  id: 'openrouter',
+  version: '0.0.1',
+  name: 'OpenRouter',
+  description:
+    "One OpenAI-compatible API in front of the models of many vendors — Anthropic, OpenAI, Google, Meta, Mistral and the open-weight houses — with one key and one bill, routed to the vendor or to a host of its weights; a model is named `openrouter:<vendor>/<model>`, as OpenRouter lists it. What a request carries goes to the vendor it is routed to, under that vendor's terms; OpenRouter's own retention is set per account.",
+  website: 'https://openrouter.ai',
+  docsUrl: 'https://openrouter.ai/docs',
+  termsUrl: 'https://openrouter.ai/terms',
+  privacyUrl: 'https://openrouter.ai/privacy',
+  dataUsageUrl: 'https://openrouter.ai/docs/features/privacy-and-logging',
+  hosting: 'cloud',
+  via: 'direct',
 };
 
 export const MODEL_PROVIDER_CATALOGUE: Record<string, ModelProvider> = {
@@ -128,6 +150,7 @@ export const MODEL_PROVIDER_CATALOGUE: Record<string, ModelProvider> = {
   cloudflare: CLOUDFLARE_0_0_1,
   ollama: OLLAMA_0_0_1,
   openai: OPENAI_0_0_1,
+  openrouter: OPENROUTER_0_0_1,
 };
 
 /** The provider a model spec's `provider` names, or undefined. */

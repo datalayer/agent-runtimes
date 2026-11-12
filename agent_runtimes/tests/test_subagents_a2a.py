@@ -752,10 +752,8 @@ class TestWorker:
         """O1-07: the budget the message carries reaches the run, and a limit
         reached comes back on the failed status, where the budget came from."""
         from agent_runtimes.adapters.base import StreamEvent
-        from agent_runtimes.guardrails.model_budget import (
-            ModelBudgetReached,
-            refusal_meta,
-        )
+        from agent_runtimes.context.delegation import refusal_meta
+        from agent_runtimes.guardrails.model_budget import ModelBudgetReached
 
         said = ModelBudgetReached(
             "Exceeded the output_tokens_limit of 100 (output_tokens=150)",

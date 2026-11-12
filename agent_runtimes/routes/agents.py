@@ -19,7 +19,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Callable, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -27,6 +27,7 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..apps.today import today_instruction
 from ..capabilities import (
     LLMContextUsageCapability,
     ToolApprovalConfig,
@@ -40,18 +41,24 @@ from ..events import create_event
 from ..guardrails.credentials import release
 from ..guardrails.declared_secrets import (
     DeclaredSecrets,
-    declared_secrets,
+    ReservedSecretName,
+    as_the_catalogue_wrote_it,
     forget_given,
     given_names,
     keep_declared,
     launched,
     note_given,
     note_launched,
+    refuse_reserved,
+    refuse_server_names,
     server_env_names,
+)
+from ..guardrails.declared_secrets import (
+    declared_secrets as read_declared_secrets,
 )
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..mcp.lifecycle import background_start_timeout, get_mcp_lifecycle_manager
 from ..models.models import (
     remember_app_instance,
     resolve_model_for_inference_provider,
@@ -77,6 +84,12 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
     EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
+from ..tools.decisions import (
+    NoDecisions,
+    agent_decisions,
+    decisions_info,
+    tools_with_decisions,
+)
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import (
     BUILTIN_HARNESSES,
@@ -148,6 +161,46 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
         "SkillsGuardrailCapability",
     }
 )
+
+
+def declared_secrets(*specs: Any, **read: Any) -> DeclaredSecrets:
+    """What specs declare (`guardrails.declared_secrets`): 422 when one declares
+    a name of the runtime's own.
+    """
+    try:
+        return read_declared_secrets(*specs, **read)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+
+
+def _nothing_reserved(names: Any, declared: DeclaredSecrets) -> None:
+    """422 before any of these is set, when one is a name of the runtime's own."""
+    try:
+        refuse_reserved(names, declared)
+    except ReservedSecretName as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+
+
+def _kernel_names(declared: DeclaredSecrets) -> frozenset[str]:
+    """What the sandbox gets: nothing of an owner's, on a runtime they did not launch."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    return declared.kernel if kernel_holds_owner_secrets() else frozenset()
+
+
+def _kernel_refused(
+    declared: DeclaredSecrets, available: Callable[[str], bool], who: str
+) -> list[str]:
+    """Why what needs an owner's secret in the sandbox does not run for a visitor."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    if kernel_holds_owner_secrets():
+        return []
+    return declared.kernel_refused(available, who)
 
 
 def get_library_agent_spec(agent_id: str) -> Any:
@@ -812,6 +865,13 @@ _SANDBOX_VARIANT_NOTES: dict[str, str] = {
         "The sandbox is a Daytona sandbox running a Python interpreter — "
         "variables, imports, and installed packages persist across calls."
     ),
+    "agentcore": (
+        "The sandbox is a session of an Amazon Bedrock AgentCore code "
+        "interpreter running a Python kernel — variables and imports persist "
+        "across calls. It reaches no internet unless its code interpreter was "
+        "created in PUBLIC network mode, and the value of a last expression "
+        "comes back printed in its output."
+    ),
     "cloudflare": (
         "The sandbox is a container on Cloudflare's edge and it is "
         "STATELESS: every snippet runs in a process of its own, so nothing "
@@ -1284,7 +1344,18 @@ class CreateAgentRequest(BaseModel):
             "code_sandboxes, or connects to an existing one when "
             "jupyter_sandbox names it), or a provider reached with its own "
             "credentials — 'docker', 'datalayer', 'google-colab', 'kaggle', "
-            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
+            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b', "
+            "'agentcore'."
+        ),
+    )
+    mcp_servers_in_background: bool = Field(
+        default=False,
+        exclude=True,
+        description=(
+            "Create the agent without waiting on its MCP servers: it answers "
+            "with its model at once, its servers are started by whoever asked "
+            "(configure-from-spec, once, with their secrets) and their tools "
+            "added as each comes up. Codemode starts with no MCP binding."
         ),
     )
     agent_spec_id: str | None = Field(
@@ -1333,6 +1404,14 @@ class CreateAgentRequest(BaseModel):
         default=None,
         alias="memoryConfig",
         description="Optional memory backend configuration override.",
+    )
+    decisions: str | None = Field(
+        default=None,
+        description=(
+            "How the agent decides: a decisions spec of the catalogue, `id:version` "
+            "(for example 'jev:0.0.1'). Taken from the agent's spec when unsaid. "
+            "Only an agent that names one decides; it brings the `decide` tool."
+        ),
     )
     pre_hooks: dict[str, Any] | None = Field(
         default=None,
@@ -1393,6 +1472,9 @@ def _keep_app_recorder(
     from agent_runtimes.routes.apps import keep_running
 
     serving = request.app_instance or {}
+    # What woke a deployment's session is said with the session, by who may
+    # (`routes.apps._woken_by`): never of the agent every session of it runs on.
+    deployment = str(serving.get("deployment_uid") or "")
     # What it did, session by session, kept by ai-agents (R-07).
     recorder = AppRecorder(
         app=running_app,
@@ -1402,7 +1484,7 @@ def _keep_app_recorder(
         purpose=str(serving.get("purpose") or ""),
         launch_uid=str(serving.get("launch_uid") or ""),
         # What woke it, when nobody opened it (R-14).
-        woken_by=dict(serving.get("woken_by") or {}),
+        woken_by={} if deployment else dict(serving.get("woken_by") or {}),
         # Only visitors without an account talk to it (R-30).
         visitors=bool(serving.get("visitor_app")),
     )
@@ -1413,6 +1495,70 @@ def _keep_app_recorder(
     # a kept runtime too (P-24).
     keep_running(agent_id, running_app)
     return recorder
+
+
+#: What of the instance a caller sends is theirs to say on a runtime launched
+#: for a deployment: what its record is kept under, and nothing it runs.
+_INSTANCE_THE_CALLER_SAYS = ("purpose", "launch_uid")
+
+
+async def _as_deployed(
+    request: "CreateAgentRequest", http_request: Request
+) -> tuple["CreateAgentRequest", dict[str, Any]]:
+    """The agent a runtime launched for a deployment makes, as ai-agents says it.
+
+    Whoever launched the runtime makes its agent, and it acts as the
+    deployment's principal, so nothing they send makes it: not its Appspec, and
+    no other field either, each of which would change what runs as the
+    principal. It is made as the keeper makes a kept deployment's
+    (`kept_payload`), from the version ai-agents answers, which it answers to
+    whoever would be let open a session of the deployment.
+
+    Returns
+    -------
+    tuple
+        The request it is made from, and what ai-agents answered.
+    """
+    from agent_runtimes.apps.callers import bearer_of
+    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.loading import AppNotRunnable
+    from agent_runtimes.apps.principal import (
+        DeploymentCodeUnread,
+        launched_for,
+        read_deployment,
+    )
+
+    deployment = launched_for()
+    instance = request.app_instance or {}
+    said = instance.get("version")
+    try:
+        answer = await read_deployment(
+            deployment,
+            said if isinstance(said, int) and said > 0 else None,
+            bearer_of(http_request.headers.get("Authorization")) or None,
+        )
+    except DeploymentCodeUnread as unread:
+        raise HTTPException(status_code=422, detail=str(unread)) from None
+    try:
+        payload = kept_payload(
+            answer["spec"],
+            app_uid=str(answer["app_uid"]),
+            deployment_uid=deployment,
+            version=int(answer["version"]),
+            organization_uid=str(answer.get("organization_uid") or ""),
+            spend_limit=float(answer.get("spend_limit") or 0.0),
+            runs="launched for it",
+        )
+    except AppNotRunnable as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": refused.problems}
+        ) from None
+    except DeployRefused as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    payload["app_instance"].update(
+        {key: instance[key] for key in _INSTANCE_THE_CALLER_SAYS if key in instance}
+    )
+    return CreateAgentRequest(**payload), answer
 
 
 async def _harness_agent_of(
@@ -1498,6 +1644,24 @@ async def create_agent(
     Raises:
         HTTPException: If agent creation fails.
     """
+    # A runtime launched for a deployment makes that deployment's agent and
+    # nothing else (`principal.agent_refused_here`), as ai-agents says it
+    # (`_as_deployed`), whoever asks: its sandbox shares the pod's loopback.
+    from agent_runtimes.apps.principal import (
+        agent_refused_here,
+        deployment_of,
+        launched_for,
+    )
+
+    deployed: dict[str, Any] | None = None
+    if launched_for():
+        refused = agent_refused_here(
+            deployment_of(request.app_instance), request.sandbox_variant
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+        request, deployed = await _as_deployed(request, http_request)
+
     # Generate agent ID from name (lowercase, replace spaces with hyphens)
     agent_id = request.name.lower().replace(" ", "-")
 
@@ -1527,6 +1691,27 @@ async def create_agent(
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
         # This accepts both camelCase and snake_case keys.
         forwarded_spec = request.agent_spec or {}
+        # What it declares is read before anything is made of it.
+        declared_by_it = declared_secrets(
+            get_library_agent_spec(request.agent_spec_id)
+            if request.agent_spec_id
+            else None,
+            forwarded_spec=forwarded_spec,
+            app_spec=request.app_spec,
+            app_instance=request.app_instance,
+            resolve_agent=get_library_agent_spec,
+        )
+        # Who launched this runtime, learnt before deciding what its sandbox may hold (7 November 2026).
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
+        problems = _kernel_refused(
+            declared_by_it,
+            lambda name: bool((os.environ.get(name) or "").strip()),
+            request.name,
+        )
+        if problems:
+            raise HTTPException(status_code=422, detail={"problems": problems})
 
         def _spec_value(*keys: str) -> Any:
             for key in keys:
@@ -1623,6 +1808,8 @@ async def create_agent(
                 library_spec, "memory_config", None
             ):
                 request.memory_config = library_spec.memory_config
+            if request.decisions is None and getattr(library_spec, "decisions", None):
+                request.decisions = library_spec.decisions
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1731,6 +1918,10 @@ async def create_agent(
                 memory_cfg_from_spec = _spec_value("memoryConfig", "memory_config")
                 if isinstance(memory_cfg_from_spec, dict):
                     request.memory_config = memory_cfg_from_spec
+            if request.decisions is None:
+                decisions_from_spec = _spec_value("decisions")
+                if isinstance(decisions_from_spec, str) and decisions_from_spec:
+                    request.decisions = decisions_from_spec
             if request.transport == "ag-ui":
                 protocol = _spec_value("protocol")
                 if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
@@ -1940,33 +2131,39 @@ async def create_agent(
                 # The code of the version it runs, read from the deployment
                 # with the same caller's token: run for this agent's
                 # sessions, in its principal's name only.
-                try:
-                    deployed_version = int(
-                        (request.app_instance or {}).get("version") or 0
-                    )
-                except (TypeError, ValueError):
-                    deployed_version = 0
-                if deployed_version < 1:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=(
-                            "A deployment's agent names the version it runs "
-                            "(app_instance.version): its code is that version's."
-                        ),
-                    )
-                try:
-                    code = await read_deployment_code(
-                        serving_deployment, deployed_version, bearer
-                    )
-                except DeploymentCodeUnread as unread:
-                    raise HTTPException(status_code=422, detail=str(unread)) from None
+                if deployed is not None:
+                    code = deployed["code"]
+                else:
+                    try:
+                        deployed_version = int(
+                            (request.app_instance or {}).get("version") or 0
+                        )
+                    except (TypeError, ValueError):
+                        deployed_version = 0
+                    if deployed_version < 1:
+                        raise HTTPException(
+                            status_code=422,
+                            detail=(
+                                "A deployment's agent names the version it runs "
+                                "(app_instance.version): its code is that version's."
+                            ),
+                        )
+                    try:
+                        code = await read_deployment_code(
+                            serving_deployment, deployed_version, bearer
+                        )
+                    except DeploymentCodeUnread as unread:
+                        raise HTTPException(
+                            status_code=422, detail=str(unread)
+                        ) from None
                 if code is not None:
                     served_code = _application_code_of(code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
             # its own (U-31, U-32), read from IAM with the caller's
-            # token; what cannot be read stops it. Kept for the Required
-            # Frame Guard at each session's start (R-06).
+            # token; what cannot be read stops it, and what it disabled is
+            # left out and said. Kept for the Required Frame Guard at each
+            # session's start (R-06).
             organization_frames = None
             if running_app.context:
                 from datalayer_core.utils.urls import DatalayerURLs
@@ -2023,7 +2220,15 @@ async def create_agent(
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset
-        if not request.enable_codemode and selected_mcp_servers:
+        if request.mcp_servers_in_background and selected_mcp_servers:
+            # Started in the background by the configure, once, with their
+            # secrets: the agent answers with its model meanwhile.
+            logger.info(
+                "Agent %s: MCP servers %s start in the background",
+                agent_id,
+                [s.id for s in selected_mcp_servers],
+            )
+        elif not request.enable_codemode and selected_mcp_servers:
             logger.info(
                 f"Agent {agent_id} will use MCP servers: {selected_mcp_servers}"
             )
@@ -2398,7 +2603,12 @@ async def create_agent(
         # - Sandbox-only mode (sandbox_variant set, codemode disabled):
         #   execute_code only, with MCP conversion/discovery disabled.
         if request.enable_codemode:
-            disable_mcp_for_codemode = (
+            # In the background, codemode starts with no MCP binding: its
+            # codegen connects to every server, and a server that cannot start
+            # held the configure for as long as its start took (72 s on r1,
+            # 8 November 2026). The bindings of each server are added once it
+            # is up (`_start_mcp_servers_for_agent`).
+            disable_mcp_for_codemode = request.mcp_servers_in_background or (
                 selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
             )
             mcp_manager = get_mcp_manager()
@@ -2567,7 +2777,14 @@ async def create_agent(
             # NOTE: We don't pass MCP toolsets here. They will be dynamically
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
-            tool_ids = list(request.backend_tools or [])
+            # Decisions bring `decide`; `decide` without decisions is refused.
+            try:
+                request.backend_tools = tools_with_decisions(
+                    list(request.backend_tools or []), request.decisions, agent_id
+                )
+            except NoDecisions as refused:
+                raise HTTPException(status_code=422, detail=str(refused)) from None
+            tool_ids = list(request.backend_tools)
             capabilities = None
             usage_limits = None
 
@@ -2700,7 +2917,8 @@ async def create_agent(
             usage_limits = apply_model_output_tokens_limit(usage_limits, request.model)
 
             agent_kwargs: dict[str, Any] = {
-                "instructions": final_system_prompt,
+                # The date per run: a kept runtime outlives the day it started.
+                "instructions": [final_system_prompt, today_instruction],
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             if capabilities:
@@ -2837,6 +3055,7 @@ async def create_agent(
                 disable_tool_approvals=not _catalogue_tools_deferred(
                     tool_approvals_disabled, running_app
                 ),
+                decisions=request.decisions,
             )
 
             # Wrap with DBOS durable execution if enabled
@@ -3127,7 +3346,7 @@ async def create_agent(
         # lifecycle manager. Starting them here keeps that surface in sync
         # for codemode agents too. ``start_server`` is idempotent, so this
         # is safe.
-        if selected_mcp_servers:
+        if selected_mcp_servers and not request.mcp_servers_in_background:
             _in_background(_start_mcp_servers_background(agent_id, http_request))
 
         return CreateAgentResponse(
@@ -3387,6 +3606,8 @@ def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
         "system_prompt": system_prompt,
         "capabilities": info.capabilities.model_dump() if info.capabilities else {},
         "toolsets": toolsets_info,
+        # How it decides, when its spec names decisions; None when it does not.
+        "decisions": decisions_info(agent_decisions(agent_id)),
     }
 
 
@@ -3448,6 +3669,122 @@ async def search_agent_memory(agent_id: str, request: Request) -> dict[str, Any]
         logger.warning("Failed to search memory for %s: %s", agent_id, exc)
         memories = []
     return {"results": memories}
+
+
+#: The longest memory kept through the routes below, in characters.
+MEMORY_TEXT_LIMIT = 2000
+
+
+class MemoryToKeep(BaseModel):
+    """What the agent is to remember of the person."""
+
+    content: str
+    metadata: dict[str, Any] | None = None
+
+
+def _durable_memory_of(agent_id: str) -> Any:
+    """The memory backend an agent of this runtime keeps the person's memories in.
+
+    Its scope is the backend's own — the runtime owner's account and the
+    agent (``memory.identity``) — never one the caller names. An agent
+    without durable memory is not found, in a sentence.
+    """
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"The agent {agent_id} has no durable memory on this runtime.",
+        )
+    return backend
+
+
+def _memory_refusal(exc: Exception) -> HTTPException:
+    """A memory that cannot be kept here, said in its own sentence (409)."""
+    from ..memory.config import MemoryNotConfigured
+
+    if isinstance(exc, MemoryNotConfigured):
+        return HTTPException(status_code=409, detail=str(exc))
+    raise exc
+
+
+# Declared before ``DELETE /{agent_id:path}`` below, which would otherwise
+# take ``DELETE /{agent_id}/memory`` for the deletion of the agent itself.
+@router.post("/{agent_id}/memory")
+async def add_agent_memory(agent_id: str, memory: MemoryToKeep) -> dict[str, Any]:
+    """Keep one thing in an agent's durable memory of the person, in their words."""
+    words = " ".join(memory.content.split())
+    if not words:
+        raise HTTPException(
+            status_code=422, detail="A memory says what to remember: it is empty."
+        )
+    if len(words) > MEMORY_TEXT_LIMIT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"A memory is at most {MEMORY_TEXT_LIMIT} characters, not {len(words)}.",
+        )
+    backend = _durable_memory_of(agent_id)
+    try:
+        await backend.add(
+            [{"role": "user", "content": words}], metadata=memory.metadata
+        )
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    return {"added": 1, "content": words}
+
+
+@router.delete("/{agent_id}/memory/{memory_id}")
+async def forget_agent_memory(agent_id: str, memory_id: str) -> dict[str, Any]:
+    """Forget one memory of the agent; somebody else's, or another agent's, is not found."""
+    backend = _durable_memory_of(agent_id)
+    forget = getattr(backend, "forget", None)
+    if forget is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"The memory of {agent_id} cannot forget one memory.",
+        )
+    try:
+        forgotten = await forget(memory_id)
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    if not forgotten:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{agent_id} remembers nothing as {memory_id}.",
+        )
+    return {"forgotten": 1}
+
+
+@router.delete("/{agent_id}/memory")
+async def forget_all_agent_memory(
+    agent_id: str, count: int = Query(..., ge=0)
+) -> dict[str, Any]:
+    """Forget everything the agent remembers of the person — no more than ``count``.
+
+    ``count`` is what the person was shown and confirmed: when it remembers
+    more now, nothing is forgotten (409).
+    """
+    backend = _durable_memory_of(agent_id)
+    forget_all = getattr(backend, "forget_all", None)
+    if forget_all is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"The memory of {agent_id} cannot forget everything.",
+        )
+    try:
+        if len(await backend.list_all(limit=count + 1)) > count:
+            raise HTTPException(
+                status_code=409,
+                detail=f"It remembers more than the {count} you confirmed now. "
+                "Nothing was forgotten.",
+            )
+        forgotten = await forget_all()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _memory_refusal(exc) from exc
+    return {"forgotten": forgotten}
 
 
 @router.get("/{agent_id:path}")
@@ -3660,7 +3997,7 @@ async def update_agent_transport(
     # Unregister from old transport
     if current_transport == "ag-ui":
         try:
-            unregister_agui_agent(agent_id)
+            unregister_agui_agent(agent_id, keep_state=True)
             # Remove the dynamic mount
             if http_request.app:
                 mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
@@ -3676,7 +4013,7 @@ async def update_agent_transport(
             logger.warning(f"Could not unregister from AG-UI: {e}")
     elif current_transport == "vercel-ai":
         try:
-            unregister_vercel_agent(agent_id)
+            unregister_vercel_agent(agent_id, keep_state=True)
             logger.info(f"Unregistered agent from Vercel AI: {agent_id}")
         except Exception as e:
             logger.warning(f"Could not unregister from Vercel AI: {e}")
@@ -3905,7 +4242,7 @@ class ConfigureSandboxRequest(BaseModel):
             "(Jupyter sandbox: managed local or existing URL), or a provider "
             "code_sandboxes reaches with its own credentials — 'docker', "
             "'datalayer', 'google-colab', 'kaggle', 'monty', 'modal', "
-            "'daytona', 'cloudflare', 'coreweave', 'e2b'."
+            "'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore'."
         ),
     )
     jupyter_url: str | None = Field(
@@ -4073,6 +4410,15 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Raises:
         HTTPException: If configuration fails.
     """
+    from agent_runtimes.apps.principal import (
+        NO_SANDBOX_IN_THIS_PROCESS,
+        launched_for,
+    )
+
+    # Asked from the pod too: its sandbox shares its loopback, and code run
+    # in this process would read what acts as the deployment.
+    if launched_for() and (request.variant != "jupyter-server" or request.jupyter_url):
+        raise HTTPException(status_code=403, detail=NO_SANDBOX_IN_THIS_PROCESS)
     try:
         from ..services.code_sandbox_manager import get_code_sandbox_manager
 
@@ -4307,18 +4653,38 @@ async def _start_mcp_servers_background(
             )
 
 
+async def _say_mcp_status(agent_id: str) -> None:
+    """Send the page a snapshot: an MCP server's start has ended."""
+    try:
+        from ..streams.loop import publish_stream_event
+
+        await publish_stream_event(
+            event_type="agent.mcp.ready",
+            payload={"agentId": agent_id},
+            agent_id=agent_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - the page is told on its next poll
+        logger.debug("Could not broadcast the MCP status of '%s': %s", agent_id, exc)
+
+
 async def _start_mcp_servers_for_agent(
     agent_id: str,
     env_vars: list[EnvVar],
     request: Request | None = None,
+    deadline: float | None = None,
 ) -> tuple[list[str], list[str], list[dict[str, str]], bool]:
     """
     Internal helper to start MCP servers for a single agent.
+
+    The servers are started at once, each on its own; a codemode agent is
+    given the bindings of those that started.
 
     Args:
         agent_id: The agent ID to start servers for
         env_vars: Environment variables to set before starting
         request: Optional FastAPI request (used to access app.state.pending_mcp_servers)
+        deadline: How long each server's start is given, in seconds
+            (`lifecycle.start_deadline` when None)
 
     Returns:
         Tuple of (started_servers, already_running, failed_servers, codemode_rebuilt)
@@ -4396,12 +4762,13 @@ async def _start_mcp_servers_for_agent(
     already_running: list[str] = []
     failed: list[dict[str, str]] = []
 
-    for selection in selected_servers:
+    async def _start_one(selection: Any) -> None:
+        """Start one server, said as it ends: its tools appear when it is up."""
         server_id = selection.id if hasattr(selection, "id") else str(selection)
         if getattr(selection, "origin", None) == "contents":
             # Reached through a Contents session; there is no process to start.
             already_running.append(server_id)
-            continue
+            return
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already running
@@ -4409,8 +4776,18 @@ async def _start_mcp_servers_for_agent(
             logger.info(
                 f"_start_mcp_servers_for_agent: Server '{server_id}' is already running"
             )
+            lifecycle_manager.withdraw(server_id)
             already_running.append(server_id)
-            continue
+            return
+        if lifecycle_manager.is_start_under_way(server_id):
+            # Started once: another start of it is not asked for, its result
+            # is the one said (the user, 8 November 2026 — tavily was started
+            # twice on r1, once without its secrets).
+            logger.info(
+                f"_start_mcp_servers_for_agent: Server '{server_id}' is starting already"
+            )
+            lifecycle_manager.withdraw(server_id)
+            return
 
         # Get server config from appropriate source.
         # Try all sources in order: config file → catalog → mcp_manager.
@@ -4441,26 +4818,34 @@ async def _start_mcp_servers_for_agent(
             logger.warning(
                 f"_start_mcp_servers_for_agent: Server config not found for '{server_id}'"
             )
+            lifecycle_manager.withdraw(server_id)
             failed.append(
                 {
                     "server_id": server_id,
                     "error": f"Server config not found (origin={getattr(selection, 'origin', 'unknown')})",
                 }
             )
-            continue
+            return
 
         # Start the server
         try:
             logger.info(
-                f"_start_mcp_servers_for_agent: Starting server '{server_id}'..."
+                f"_start_mcp_servers_for_agent: Starting server '{server_id}'"
+                + (f" (deadline {deadline:g}s)" if deadline is not None else "")
+                + "..."
             )
             # Pass env vars explicitly so MCP subprocess gets them even if
             # os.environ was not populated (robust, order-independent).
             # Its own secrets alone: another server's are not its (R-19).
             own = server_env_names(config)
+            refuse_server_names(
+                server_id,
+                own,
+                from_catalogue=as_the_catalogue_wrote_it(server_id, config),
+            )
             extra_env = {ev.name: ev.value for ev in env_vars if ev.name in own} or None
             instance = await lifecycle_manager.start_server(
-                server_id, config, extra_env=extra_env
+                server_id, config, extra_env=extra_env, deadline=deadline
             )
             if instance is not None:
                 logger.info(
@@ -4475,22 +4860,31 @@ async def _start_mcp_servers_for_agent(
                         f"_start_mcp_servers_for_agent: Added server '{server_id}' to mcp_manager"
                     )
             else:
-                error = lifecycle_manager._failed_servers.get(
-                    server_id, "Unknown error"
-                )
+                error = lifecycle_manager.failure_reason(
+                    server_id
+                ) or lifecycle_manager._failed_servers.get(server_id, "Unknown error")
                 logger.warning(
                     f"_start_mcp_servers_for_agent: ✗ Failed to start server '{server_id}': {error}"
                 )
                 failed.append({"server_id": server_id, "error": str(error)})
         except Exception as e:
+            lifecycle_manager.withdraw(server_id)
             logger.error(
                 f"_start_mcp_servers_for_agent: ✗ Exception starting server '{server_id}': {e}"
             )
             failed.append({"server_id": server_id, "error": str(e)})
+        finally:
+            await _say_mcp_status(agent_id)
+
+    # Each server on its own, at once: a server that is slow to start holds
+    # back no other, each bounded by its own deadline.
+    await asyncio.gather(*(_start_one(selection) for selection in selected_servers))
 
     # Rebuild Codemode toolset if enabled
     codemode_rebuilt = False
-    if hasattr(adapter, "_codemode_builder") and adapter._codemode_builder is not None:
+    if getattr(adapter, "_codemode_builder", None) is not None and (
+        started or already_running
+    ):
         try:
             # Log sandbox configuration before rebuild
             try:
@@ -4504,7 +4898,12 @@ async def _start_mcp_servers_for_agent(
             except ImportError:
                 logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
 
-            new_codemode = adapter._codemode_builder(selected_servers)
+            # Those that are up alone: a server that failed would hold the
+            # codegen as long as its start takes again.
+            up = set(started) | set(already_running)
+            new_codemode = adapter._codemode_builder(
+                [s for s in selected_servers if getattr(s, "id", str(s)) in up]
+            )
             if new_codemode is not None:
                 # Log which sandbox the new toolset is using
                 if getattr(new_codemode, "sandbox_client", None) is not None:
@@ -4517,7 +4916,10 @@ async def _start_mcp_servers_for_agent(
                 # we still want to use the new toolset since it has the correct sandbox
                 start_succeeded = False
                 try:
-                    await new_codemode.start()
+                    if deadline is None:
+                        await new_codemode.start()
+                    else:
+                        await asyncio.wait_for(new_codemode.start(), timeout=deadline)
                     start_succeeded = True
                     logger.info("Codemode toolset start() completed successfully")
                 except Exception as start_error:
@@ -4559,6 +4961,8 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
     servers: dict[str, frozenset[str]] = {}
     kernel: set[str] = set()
     held: set[str] = set()
+    platform: set[str] = set()
+    for_a_deployment = False
     for name in agent_ids:
         record = _agentspecs.get(name)
         if not isinstance(record, dict):
@@ -4581,11 +4985,15 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
             servers[key] = servers.get(key, frozenset()) | value
         kernel |= found.kernel
         held |= found.held
+        platform |= found.platform
+        for_a_deployment = for_a_deployment or found.for_a_deployment
     return DeclaredSecrets(
         consumers=consumers,
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
+        platform=frozenset(platform),
+        for_a_deployment=for_a_deployment,
     ).merged(launched())
 
 
@@ -4612,6 +5020,19 @@ def _declared_for_app(
         app_instance=app_instance,
         resolve_agent=get_library_agent_spec,
     )
+
+
+def _launch_of(
+    app_spec: dict[str, Any] | None, app_instance: dict[str, Any] | None
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """The application the runtime was launched for: the one sent, except on a
+    runtime launched for a deployment, where it is the deployment's, as
+    ai-agents said it (`principal.read_launched_app`), and what was sent is not
+    read.
+    """
+    from agent_runtimes.apps.principal import launched_app, launched_for
+
+    return launched_app() if launched_for() else (app_spec, app_instance)
 
 
 def _note_launched_app(
@@ -4664,6 +5085,7 @@ async def _setup_env_and_sandbox(
             }
         )
     env_var_names = [ev.name for ev in body.env_vars]
+    _nothing_reserved(env_var_names, declared)
     for env_var in body.env_vars:
         # Names only: never any part of a value.
         logger.info("[%s] setting env var: %s", label, env_var.name)
@@ -4685,7 +5107,9 @@ async def _setup_env_and_sandbox(
             sandbox_manager = get_code_sandbox_manager()
             # The skills' secrets alone: a server's stays with the server (R-19).
             env_dict = {
-                ev.name: ev.value for ev in body.env_vars if ev.name in declared.kernel
+                ev.name: ev.value
+                for ev in body.env_vars
+                if ev.name in _kernel_names(declared)
             } or None
             sandbox_manager.configure_from_url(
                 body.jupyter_sandbox,
@@ -4840,7 +5264,10 @@ async def start_all_agents_mcp_servers(
     """
     # The application the runtime was launched for (R-19): its secrets are
     # set now, before its agent is made, and a missing one is refused here.
-    launch = _note_launched_app(body.launch_app_spec, body.launch_app_instance)
+    launch_spec, launch_instance = _launch_of(
+        body.launch_app_spec, body.launch_app_instance
+    )
+    launch = _note_launched_app(launch_spec, launch_instance)
     if not _agents and launch is None:
         return AgentMcpServersResponse(
             agent_id=None,
@@ -4849,13 +5276,21 @@ async def start_all_agents_mcp_servers(
         )
     if launch is not None:
         given = {ev.name: ev.value for ev in body.env_vars if ev.name}
-        app_id = str((body.launch_app_spec or {}).get("id") or "")
-        problems = launch.missing(
-            lambda name: bool(
+        app_id = str((launch_spec or {}).get("id") or "")
+
+        def available(name: str) -> bool:
+            return bool(
                 (given.get(name) or "").strip() or (os.environ.get(name) or "").strip()
-            ),
-            who=str((body.launch_app_spec or {}).get("name") or app_id),
-        )
+            )
+
+        who = str((launch_spec or {}).get("name") or app_id)
+        from agent_runtimes.apps.principal import ensure_launcher_known
+
+        await ensure_launcher_known()
+        problems = [
+            *launch.missing(available, who=who),
+            *_kernel_refused(launch, available, who),
+        ]
         if problems:
             if app_id:
                 _SET_UP_REFUSED[app_id] = " ".join(problems)
@@ -5288,6 +5723,71 @@ class ConfigureFromSpecRequest(BaseModel):
     connections' secrets (R-19). Not the agent's own ``app_spec``."""
     launch_app_instance: dict[str, Any] | None = None
     """Where that application runs: its app_uid and deployment_uid."""
+    owner_uid: str | None = None
+    """Who the runtime is assigned to, named by its companion alone, once: its
+    agent's memories are kept under them (`_take_owner`)."""
+    without_mcp_servers: bool = False
+    """Configure the agent with none of its spec's MCP servers: their secrets
+    are neither declared nor asked for, and the agent is given none of their
+    tools: an agent tried before its servers' secrets are in the account."""
+    without_skills: list[str] = Field(default_factory=list)
+    """Skills of the spec to leave out, by id (``github`` or ``github:0.0.1``):
+    their secrets neither declared nor asked for, the skills not given. A
+    skill the spec does not have is refused (422)."""
+
+
+def _skill_ref(skill: Any) -> str:
+    """A skill's id without its version, however a spec lists it."""
+    from ..guardrails.declared_secrets import _ref_id
+
+    if isinstance(skill, str):
+        return _ref_id(skill)
+    if isinstance(skill, dict):
+        return _ref_id(skill.get("id") or skill.get("name"))
+    return _ref_id(getattr(skill, "id", None) or getattr(skill, "name", None))
+
+
+def _without_skills(spec: Any, agent_spec_id: str, left_out: list[str]) -> Any:
+    """The spec with the skills named left out; a name it has not is refused."""
+    from ..guardrails.declared_secrets import _ref_id
+
+    names = {_ref_id(name) for name in left_out}
+    unknown = sorted(names - {_skill_ref(skill) for skill in spec.skills or []})
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{agent_spec_id} has no skill {', '.join(unknown)} to leave out.",
+        )
+    return spec.model_copy(
+        update={"skills": [s for s in spec.skills or [] if _skill_ref(s) not in names]}
+    )
+
+
+def _take_owner(http_request: Request, owner_uid: str) -> None:
+    """Know who this runtime is assigned to: ``DATALAYER_USER_UID``, which an
+    agent's memories are kept under (`memory.identity`).
+
+    A pooled runtime is started before it is anybody's, so the Operator
+    cannot set it then; its companion names the owner when it configures the
+    runtime it was assigned. Only the pod names it (`callers.is_the_pod`),
+    and only once: a runtime is never given another owner.
+    """
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    host = http_request.client.host if http_request.client else None
+    if not is_the_pod(host, http_request.headers.get(POD_SECRET_HEADER)):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's companion names who the runtime is assigned to.",
+        )
+    owner = owner_uid.strip()
+    held = os.environ.get("DATALAYER_USER_UID", "").strip()
+    if held and held != owner:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This runtime is assigned to {held}: it is never given another owner.",
+        )
+    os.environ["DATALAYER_USER_UID"] = owner
 
 
 class DeclaredSecretsRequest(BaseModel):
@@ -5310,7 +5810,15 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     ``kernel`` (what the code sandbox gets: the skills'), ``consumers`` (who
     needs which). The companion gives the runtime those of the account's
     secrets and no other (R-19, decided 2026-10-07).
+
+    A runtime launched for a deployment answers what that deployment declares,
+    whatever it is asked about (`_launch_of`).
     """
+    from agent_runtimes.apps.principal import launched_for
+
+    if launched_for():
+        declared = _declared_for_agents(list(_agents))
+        return {**declared.as_names(), "kernel": sorted(_kernel_names(declared))}
     if body.agent_spec_id:
         spec = get_library_agent_spec(body.agent_spec_id)
         if spec is None:
@@ -5328,6 +5836,19 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     if body.app_spec:
         declared = declared.merged(_declared_for_app(body.app_spec, body.app_instance))
     return declared.as_names()
+
+
+def _mcp_server_ids_of(agent_id: str) -> list[str]:
+    """The ids of the MCP servers the agent runs with a process, in order."""
+    entry = _agents.get(agent_id)
+    if entry is None:
+        return []
+    selected = getattr(entry[0], "_selected_mcp_servers", None) or []
+    return [
+        str(getattr(s, "id", s))
+        for s in selected
+        if getattr(s, "origin", None) != "contents"
+    ]
 
 
 def set_up_refused(agent_id: str) -> str | None:
@@ -5380,6 +5901,10 @@ async def configure_from_spec_endpoint(
        that unblocks ``request_and_wait()`` — resuming or rejecting the
        tool call.
     """
+    from agent_runtimes.apps.principal import DEPLOYMENT_RUNS_ITS_OWN, launched_for
+
+    if launched_for():
+        raise HTTPException(status_code=403, detail=DEPLOYMENT_RUNS_ITS_OWN)
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
     # ── 1. The library spec, and the secrets its specs declare (R-19) ──
@@ -5390,6 +5915,39 @@ async def configure_from_spec_endpoint(
             detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
     target_agent_name = body.agent_id
+    if body.owner_uid:
+        _take_owner(http_request, body.owner_uid)
+    if body.without_mcp_servers:
+        # Its MCP servers left out: neither their secrets nor their tools.
+        spec = spec.model_copy(update={"mcp_servers": []})
+        if body.agent_spec:
+            body.agent_spec = {
+                key: value
+                for key, value in body.agent_spec.items()
+                if key not in ("mcp_servers", "mcpServers")
+            }
+        logger.info(
+            "[configure-from-spec] '%s' configured without its MCP servers",
+            body.agent_spec_id,
+        )
+    if body.without_skills:
+        # The skills named left out: neither their secrets nor the skills.
+        spec = _without_skills(spec, body.agent_spec_id, body.without_skills)
+        if body.agent_spec and isinstance(body.agent_spec.get("skills"), list):
+            left_out = {_skill_ref(name) for name in body.without_skills}
+            body.agent_spec = {
+                **body.agent_spec,
+                "skills": [
+                    s
+                    for s in body.agent_spec["skills"]
+                    if _skill_ref(s) not in left_out
+                ],
+            }
+        logger.info(
+            "[configure-from-spec] '%s' configured without the skills %s",
+            body.agent_spec_id,
+            sorted(body.without_skills),
+        )
     _note_launched_app(body.launch_app_spec, body.launch_app_instance)
     declared = declared_secrets(
         spec,
@@ -5444,6 +6002,7 @@ async def configure_from_spec_endpoint(
         _SET_UP_REFUSED[target_agent_name] = " ".join(problems)
         raise HTTPException(status_code=422, detail={"problems": problems})
     _SET_UP_REFUSED.pop(target_agent_name, None)
+    _nothing_reserved(kept, declared)
     for name, value in kept.items():
         logger.info("[configure-from-spec] setting env var: %s", name)
         os.environ[name] = value
@@ -5516,6 +6075,20 @@ async def configure_from_spec_endpoint(
         app_spec=body.app_spec,
         app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
+        **({"selected_mcp_servers": []} if body.without_mcp_servers else {}),
+        # Its MCP servers are started below, in the background, once, with
+        # their secrets: the agent answers with its model meanwhile (the
+        # user, 8 November 2026).
+        mcp_servers_in_background=True,
+        **(
+            (
+                {"skills": [str(s) for s in spec.skills]}
+                if spec.skills
+                else {"enable_skills": False}
+            )
+            if body.without_skills
+            else {}
+        ),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).
@@ -5641,6 +6214,7 @@ async def configure_from_spec_endpoint(
                     target_agent_name,
                     env_var_objects,
                     request=http_request,
+                    deadline=background_start_timeout(),
                 )
                 logger.info(
                     "[configure-from-spec] MCP server start results for '%s': "
@@ -5657,6 +6231,10 @@ async def configure_from_spec_endpoint(
                     target_agent_name,
                     e,
                 )
+            finally:
+                # None is left "starting" whose start was never asked for.
+                for server_id in mcp_server_ids:
+                    get_mcp_lifecycle_manager().withdraw(server_id)
 
         # ── Sandbox env-var injection ────────────────────────
         if sandbox_env_vars:
@@ -5683,6 +6261,10 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
+    # Said "starting" from now: the page reads the agent ready, its servers
+    # starting, before the background has begun (the user, 8 November 2026).
+    mcp_server_ids = _mcp_server_ids_of(target_agent_name)
+    get_mcp_lifecycle_manager().announce(mcp_server_ids)
     _in_background(_background_mcp_and_sandbox())
 
     # The model the agent runs on now: a switch's, not the library spec's.
@@ -5698,6 +6280,15 @@ async def configure_from_spec_endpoint(
         if isinstance(effective_model, str)
         else str(effective_model),
         "specs_changed": specs_changed,
+        # It answers with its model now; its MCP servers start in the
+        # background, each said in `mcp-toolsets-status` as it ends.
+        "ready": target_agent_name in _agents,
+        "mcp_servers": [
+            {"id": server_id, "status": "starting"}
+            if get_mcp_lifecycle_manager().is_starting(server_id)
+            else get_mcp_lifecycle_manager().get_server_status(server_id)
+            for server_id in mcp_server_ids
+        ],
         "evals_mode": body.evals_mode,
         "emit_live_events": body.emit_live_events,
         "message": (

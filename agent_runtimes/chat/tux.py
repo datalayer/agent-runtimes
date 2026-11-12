@@ -25,10 +25,20 @@ from rich.style import Style
 from rich.text import Text
 
 from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
+from agent_runtimes.loop.session import is_session_agui_url
 
-from .banner import LOOP_VERSION, LOOP_WORDMARK, TOKENS_DOWN, TOKENS_UP
+from .banner import (
+    DATALAYER_MARK,
+    DATALAYER_MARK_STAND_IN,
+    LOOP_VERSION,
+    LOOP_WORDMARK,
+    TOKENS_DOWN,
+    TOKENS_UP,
+    drawn_cells,
+)
 from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
+from .markdown_stream import MarkdownStream
 
 # Rich styles matching Datalayer brand
 # Brand color reference (from BRAND_MANUAL.md):
@@ -126,6 +136,9 @@ class SessionStats:
 class CliTux:
     """Terminal UX for theLoop assistant."""
 
+    #: How often ai-agents is asked which approvals a cloud run waits on.
+    APPROVALS_POLL_SECONDS = 2.0
+
     def __init__(
         self,
         agent_url: str,
@@ -138,6 +151,7 @@ class CliTux:
         where: Optional[str] = None,
         voice: bool = False,
         speak: bool = False,
+        cloud_runtime: Optional[str] = None,
     ):
         """Initialize the TUX.
 
@@ -153,6 +167,8 @@ class CliTux:
             voice: Listen with this machine's microphone, Ctrl+T to start and stop (VO-15)
             speak: Say the answers through this machine's speaker (VO-15)
                 (a cloud runtime on Datalayer, reached through ``server_url``)
+            cloud_runtime: The Datalayer runtime the agent runs on: its tool calls
+                that wait on an approval are read from ai-agents, said, and waited for
         """
         self.agent_url = agent_url
         # `server_url` is the one address every slash command reads and acts
@@ -168,6 +184,11 @@ class CliTux:
         #: Whether the lines come from ``loop --prompt`` rather than a person:
         #: a command then asks nothing (the next line is the next prompt).
         self.scripted = False
+        #: The Datalayer runtime the agent runs on, when it is not this machine.
+        self.cloud_runtime = cloud_runtime
+        #: The approvals a run of this agent waits on now: while any is, a
+        #: silent run is not a run that stopped answering.
+        self._approvals_waiting: set[str] = set()
         # Piped or redirected, what is printed is not wrapped at a guessed
         # width, so an answer stays one greppable line per line it has.
         self.console = Console(soft_wrap=not sys.stdout.isatty())
@@ -186,6 +207,8 @@ class CliTux:
         )
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
+        #: A paused session to resume before the first prompt, by its uid.
+        self.resume_at_start: Optional[str] = None
         # Voice at the terminal (VO-15): the microphone on Ctrl+T,
         # the answers said with --speak; made on first use.
         self.voice = voice
@@ -193,6 +216,8 @@ class CliTux:
         self._voice_session: Any = None
         # How the next message was said, sent with it (VO-15, VO-27).
         self._spoken_line: Optional[Dict[str, str]] = None
+        # The answer being drawn, when a turn is under way (`MarkdownStream`).
+        self._answer: Optional[MarkdownStream] = None
 
         # Initialize slash commands. The registry is the source of truth —
         # built-ins plus whatever the installed plugins contributed — and
@@ -201,6 +226,12 @@ class CliTux:
             self, eggs=eggs, jupyter_url=jupyter_url
         )
         self.commands: dict[str, SlashCommand] = self.command_registry.as_mapping()
+        # Whether the session's agent decides, as its runtime said it: the
+        # runtime and agent it was read for, and its decisions or None
+        # (`commands.decisions.refresh`). /decisions is offered only then.
+        self.decisions: Optional[tuple[tuple[str, str], Optional[Dict[str, Any]]]] = (
+            None
+        )
 
         # What a command is allowed to know about the session it runs in, so a
         # command can be written against the session rather than against this
@@ -482,8 +513,24 @@ class CliTux:
         except Exception:
             return None
 
+    #: Whether the welcome was drawn in this process: the start draws it
+    #: before its questions, and neither the launch nor the prompt draws it
+    #: again below what was said since.
+    _welcome_drawn = False
+
     def show_welcome(self) -> None:
-        """Display the welcome banner."""
+        """Display the welcome banner, once in this process.
+
+        The start draws it before its questions, again before a launch and
+        again as the prompt opens: only the first is drawn.
+        """
+        if CliTux._welcome_drawn:
+            return
+        CliTux._welcome_drawn = True
+        self._draw_welcome()
+
+    def _draw_welcome(self) -> None:
+        """Draw the welcome banner."""
         display_name = self._get_display_name()
         cwd = self._get_cwd()
 
@@ -560,7 +607,14 @@ class CliTux:
         footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
 
         # Create the main panel
-        title = f" ☰ {LOOP_WORDMARK} {version} "
+        # The mark is measured as this terminal draws it: where the tables
+        # say two cells and the terminal draws one, the line is laid out with
+        # a one-cell stand-in and the mark put back, so the corner is in line.
+        from rich.cells import cell_len
+
+        stands_in = drawn_cells(DATALAYER_MARK) != cell_len(DATALAYER_MARK)
+        mark = DATALAYER_MARK_STAND_IN if stands_in else DATALAYER_MARK
+        title = f" {mark} {LOOP_WORDMARK} {version} by Datalayer "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -575,7 +629,15 @@ class CliTux:
             box=ROUNDED,
         )
 
-        self.console.print(main_panel)
+        if stands_in and self.console.is_terminal:
+            with self.console.capture() as drawn:
+                self.console.print(main_panel)
+            self.console.file.write(
+                drawn.get().replace(DATALAYER_MARK_STAND_IN, DATALAYER_MARK, 1)
+            )
+            self.console.file.flush()
+        else:
+            self.console.print(main_panel)
         # Current working directory, shown full-width beneath the box and
         # truncated (keeping both ends) only if it overflows the terminal.
         path_line = self._truncate_middle(cwd, max(10, self.console.width - 2))
@@ -619,6 +681,10 @@ class CliTux:
 
     async def show_prompt(self) -> str:
         """Display the prompt and get user input with slash command completion."""
+        # Whether this agent decides: /decisions is offered only when it does.
+        from .commands import decisions as _decisions_cmd
+
+        await _decisions_cmd.refresh(self)
         # Initialize prompt session lazily (after commands are registered)
         if self.prompt_session is None:
             # The reactor's REPL machinery, over the same registry: the slash
@@ -756,6 +822,167 @@ class CliTux:
             self.console.print("    ✗ Denied", style=STYLE_ERROR)
         return approved
 
+    def _can_ask(self) -> bool:
+        """Whether a person is here to answer: never on ``loop --prompt`` lines."""
+        try:
+            return not self.scripted and sys.stdin.isatty()
+        except Exception:
+            return False
+
+    @staticmethod
+    def _approval_preview(tool_args: Any, width: int = 50) -> str:
+        if not isinstance(tool_args, dict) or not tool_args:
+            return ""
+        parts: list[str] = []
+        for key, value in tool_args.items():
+            text = str(value)
+            if len(text) > width:
+                text = text[:width] + "…"
+            parts.append(f"{key}={text}")
+        return ", ".join(parts)
+
+    def _say_approval_waiting(
+        self, approval: dict[str, Any], *, decide_with: str
+    ) -> None:
+        """Say which tool call waits on the person, and how to decide it."""
+        out = self.status_console
+        approval_id = str(approval.get("id") or "")
+        tool_name = approval.get("tool_name") or approval.get("toolName") or "A tool"
+        out.print()
+        out.print(
+            f"  🔒 {tool_name} waits on your approval ({approval_id})",
+            style=STYLE_WARNING,
+            markup=False,
+        )
+        preview = self._approval_preview(
+            approval.get("tool_args") or approval.get("toolArgs")
+        )
+        if preview:
+            out.print(f"    ({preview})", style=STYLE_MUTED, markup=False)
+        out.print(f"    {decide_with}", style=STYLE_MUTED, markup=False)
+        out.print("    Waiting for your decision…", style=STYLE_MUTED)
+
+    def _say_approval_decided(
+        self, approval: dict[str, Any], status: str, note: str = ""
+    ) -> None:
+        tool_name = (
+            approval.get("tool_name") or approval.get("toolName") or "The tool call"
+        )
+        if status == "approved":
+            self.status_console.print(
+                f"    ✓ {tool_name} approved", style=STYLE_ACCENT, markup=False
+            )
+        else:
+            said = f": {note}" if note else ""
+            self.status_console.print(
+                f"    ✗ {tool_name} {status or 'decided'}{said}",
+                style=STYLE_ERROR,
+                markup=False,
+            )
+
+    async def _watch_cloud_approvals(self, stop_event: asyncio.Event) -> None:
+        """Background task: the approvals a cloud run waits on, from ai-agents.
+
+        Each tool call of this runtime waiting on the person is said once. A
+        person at the terminal is asked, and the decision goes to ai-agents,
+        which tells the run; ``loop --prompt`` lines ask nothing: the approval
+        is said with the commands that decide it, and waited for, and its
+        decision is said when it comes — from ``loop tool-approvals``, the
+        approvals page of datalayer.ai, or anyone the approval waits on.
+        """
+        from agent_runtimes.commands.tool_approvals import (
+            ApprovalsClient,
+            ApprovalsError,
+            _resolve_base_url,
+            _resolve_token,
+        )
+
+        try:
+            client = ApprovalsClient(_resolve_base_url(None), _resolve_token(None))
+        except Exception as error:  # noqa: BLE001 - said once, the run goes on
+            self.status_console.print(
+                f"  The approvals this run may wait on cannot be read: {error}",
+                style=STYLE_MUTED,
+                markup=False,
+            )
+            return
+
+        said: dict[str, dict[str, Any]] = {}
+        while not stop_event.is_set():
+            try:
+                pending = await asyncio.to_thread(
+                    client.list, status="pending", limit=200
+                )
+            except ApprovalsError:
+                pending = None
+            if pending is not None:
+                mine = {
+                    str(a.get("id")): a
+                    for a in pending
+                    if a.get("id") and a.get("runtime_name") == self.cloud_runtime
+                }
+                for approval_id, approval in mine.items():
+                    if approval_id in said:
+                        continue
+                    said[approval_id] = approval
+                    self._approvals_waiting.add(approval_id)
+                    if self._can_ask():
+                        self._say_approval_waiting(
+                            approval, decide_with="Answer here, or on datalayer.ai."
+                        )
+                        approved = await asyncio.to_thread(self._ask_approve)
+                        try:
+                            decided = await asyncio.to_thread(
+                                client.decide, approval_id, approve=approved, note=None
+                            )
+                            status = str(
+                                decided.get("status")
+                                or ("approved" if approved else "rejected")
+                            )
+                        except ApprovalsError as error:
+                            # Decided meanwhile elsewhere: what it became is said below.
+                            self.status_console.print(
+                                f"    {error}", style=STYLE_MUTED, markup=False
+                            )
+                            continue
+                        self._approvals_waiting.discard(approval_id)
+                        self._say_approval_decided(approval, status)
+                    else:
+                        self._say_approval_waiting(
+                            approval,
+                            decide_with=(
+                                f"Approve: loop tool-approvals approve {approval_id}   "
+                                f"Reject: loop tool-approvals reject {approval_id}"
+                            ),
+                        )
+                for approval_id in [
+                    i for i in list(self._approvals_waiting) if i not in mine
+                ]:
+                    self._approvals_waiting.discard(approval_id)
+                    try:
+                        record = await asyncio.to_thread(client.get, approval_id)
+                    except ApprovalsError:
+                        record = {}
+                    self._say_approval_decided(
+                        said.get(approval_id, {}),
+                        str(record.get("status") or "decided"),
+                        str(record.get("note") or ""),
+                    )
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(), timeout=self.APPROVALS_POLL_SECONDS
+                )
+            except asyncio.TimeoutError:
+                pass
+
+    def _ask_approve(self) -> bool:
+        try:
+            from rich.prompt import Confirm
+
+            return bool(Confirm.ask("  Approve?", default=False, console=self.console))
+        except Exception:
+            return False
+
     async def _watch_approvals(self, stop_event: asyncio.Event) -> None:
         """Background task: surface pending tool approvals during a run.
 
@@ -789,6 +1016,21 @@ class CliTux:
                     approvals = payload.get("approvals") or []
                     if not isinstance(approvals, list):
                         continue
+                    by_id = {
+                        a["id"]: a
+                        for a in approvals
+                        if isinstance(a, dict) and isinstance(a.get("id"), str)
+                    }
+                    # Decided since: said, and no longer waited on.
+                    for waiting_id in list(self._approvals_waiting):
+                        entry = by_id.get(waiting_id)
+                        if entry is not None and entry.get("status") != "pending":
+                            self._approvals_waiting.discard(waiting_id)
+                            self._say_approval_decided(
+                                entry,
+                                str(entry.get("status") or "decided"),
+                                str(entry.get("note") or ""),
+                            )
                     for appr in approvals:
                         if not isinstance(appr, dict):
                             continue
@@ -799,6 +1041,15 @@ class CliTux:
                         if approval_id in handled:
                             continue
                         handled.add(approval_id)
+                        if not self._can_ask():
+                            # ``loop --prompt`` asks nothing, and a line read
+                            # from no terminal is no answer: said, and waited for.
+                            self._approvals_waiting.add(approval_id)
+                            self._say_approval_waiting(
+                                appr,
+                                decide_with="Decide it on the runtime (its approvals page).",
+                            )
+                            continue
                         tool_name = (
                             appr.get("tool_name") or appr.get("toolName") or "tool"
                         )
@@ -838,10 +1089,22 @@ class CliTux:
         try:
             # Create or reuse the AG-UI client for conversation history
             if self._agui_client is None:
-                self._agui_client = AGUIClient(self.agent_url)
+                headers: dict[str, str] = {}
+                if is_session_agui_url(self.agent_url):
+                    # A session's turns are signed as the session commands
+                    # are: its record is written in the person's name.
+                    from .commands.sessions_shared import signing_headers
+
+                    headers = signing_headers(self)
+                self._agui_client = AGUIClient(self.agent_url, headers=headers)
                 await self._agui_client.connect()
 
             client = self._agui_client
+            if is_session_agui_url(self.agent_url):
+                # The thread is a session of the agent from this message on:
+                # what `/pause`, `/swap`, `/clone` and `/export` act on.
+                self.session.session_uid = client.thread_id
+                self.session.conversation_id = client.thread_id
 
             # Show thinking indicator: on a terminal only, nothing animates
             # into a pipe.
@@ -884,12 +1147,22 @@ class CliTux:
             # user in the terminal. The run blocks server-side until a decision
             # is relayed, so this keeps the terminal interactive during approval.
             approval_stop = asyncio.Event()
-            approval_task = asyncio.create_task(self._watch_approvals(approval_stop))
+            self._approvals_waiting.clear()
+            approval_task = asyncio.create_task(
+                self._watch_cloud_approvals(approval_stop)
+                if self.cloud_runtime
+                else self._watch_approvals(approval_stop)
+            )
 
+            # The answer's text, drawn as Markdown while it streams; held on
+            # the instance so that whatever ends the turn closes it.
+            answer = self._answer = MarkdownStream(self.console)
             spoken, self._spoken_line = self._spoken_line, None
             async for event in client.run(
                 message,
                 forwarded_props={"voice": spoken} if spoken else None,
+                # A run waiting on an approval says nothing until it is decided.
+                keep_waiting=lambda: bool(self._approvals_waiting),
             ):
                 # Extract token usage directly from AG-UI events when available.
                 in_tok, out_tok = self._extract_tokens_from_payload(event.data)
@@ -908,10 +1181,12 @@ class CliTux:
                     await _clear_waiting_indicator(show_bullet=False)
                     content = event.delta or ""
                     response_text += content
-                    self.console.print(content, end="", markup=False)
+                    # Markdown on a terminal, the text as it comes elsewhere.
+                    answer.write(content)
 
                 elif event.type == EventType.TOOL_CALL_START:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     # Start of a new tool call
                     # Use event properties which handle both camelCase and snake_case
                     tool_call_id = event.tool_call_id or ""
@@ -978,6 +1253,7 @@ class CliTux:
 
                 elif event.type == EventType.RUN_FINISHED:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     # Do not break immediately: the server emits a trailing
                     # ``usage`` event (authoritative pydantic-ai
                     # ``result.usage()``) right after RUN_FINISHED. Mark the run
@@ -989,6 +1265,7 @@ class CliTux:
 
                 elif event.type == EventType.RUN_ERROR:
                     await _clear_waiting_indicator(show_bullet=False)
+                    answer.end()
                     if current_tool_call:
                         current_tool_call.status = "error"
                     self.console.print()
@@ -996,6 +1273,7 @@ class CliTux:
                     break
 
             await _clear_waiting_indicator(show_bullet=False)
+            answer.end()
 
             # Stop the approval watcher now that the run is complete.
             approval_stop.set()
@@ -1127,6 +1405,10 @@ class CliTux:
         except Exception as e:
             self._failed(f"Error: {e}")
         finally:
+            # An answer cut short (an error, an interrupt) is still closed and drawn.
+            if self._answer is not None:
+                self._answer.end()
+                self._answer = None
             # Ensure the approval watcher is always torn down.
             _appr_task = locals().get("approval_task")
             _appr_stop = locals().get("approval_stop")
@@ -1271,6 +1553,10 @@ class CliTux:
             # renders the colors instead of printing the escape sequences.
             self.console.print(Text.from_ansi(self.startup_message))
             self.console.print()
+        if self.resume_at_start:
+            # The paused session picked at the start: its conversation
+            # loaded, so the first message goes on with it.
+            await self.run_line(f"/resume {self.resume_at_start}")
 
         while self.running:
             try:
@@ -1303,6 +1589,8 @@ async def run_tux(
     where: Optional[str] = None,
     voice: bool = False,
     speak: bool = False,
+    cloud_runtime: Optional[str] = None,
+    resume: Optional[str] = None,
 ) -> None:
     """Run theLoop assistant TUX.
 
@@ -1327,5 +1615,8 @@ async def run_tux(
         where=where,
         voice=voice,
         speak=speak,
+        cloud_runtime=cloud_runtime,
     )
+    # A paused session picked as `loop` started: resumed before the first prompt.
+    tux.resume_at_start = resume
     await tux.run()

@@ -67,10 +67,15 @@ the rows around it:
   that sentence. Only an in-page agent, with no runtime to ask, offers the
   catalogue's available chat models instead.
 
-  Under the models, the menu shows a **Decisions** group, read-only: the
-  typed-decision models ai-inference serves, such as Jev on Workers AI
-  (`cloudflare:wrk/typesafe/jev`, named as the agentspecs catalogue names it,
-  *Jev (Cloudflare Workers AI)*). The runtime answers them apart, in
+  For an agent that decides — one whose agentspec names a decisions spec
+  (`decisions: jev:0.0.1`) — the menu shows a **Decisions** group under the
+  models, read-only: the model the agent decides with, such as Jev on Workers
+  AI (`cloudflare:wrk/typesafe/jev`, named as the agentspecs catalogue names
+  it, *Jev (Cloudflare Workers AI)*), with its decisions spec named (*This
+  agent decides with Jev (jev:0.0.1).*). The runtime says the agent's
+  decisions in `agentDecisions` of `/api/v1/configure?agent_id=`; for an agent
+  whose spec names none it is null, and the menu has no such group. The
+  runtime answers the typed-decision models ai-inference serves apart, in
   `decisionModels` with `decisionsNote` (`decision_models` and
   `decisions_note` on `/api/v1/configure/models`), never among `models`, so
   no row of the group can be picked as the agent's model. Each row says what

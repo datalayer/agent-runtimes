@@ -40,7 +40,8 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
-from agent_runtimes.guardrails.model_budget import ModelBudgetReached, refusal_meta
+from agent_runtimes.context.delegation import refusal_meta
+from agent_runtimes.guardrails.model_budget import ModelBudgetReached
 from agent_runtimes.orchestration import (
     AdapterCapabilities,
     InMemoryExecutionStore,

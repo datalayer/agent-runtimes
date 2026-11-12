@@ -115,6 +115,30 @@ describe('a French page', () => {
     expect(buttonNames(busy)).toContain('Arrêter');
   });
 
+  it('says a session is paused where stopping its turn pauses it', async () => {
+    prefers(['en']);
+    const session = await render(
+      <InPromptFooter
+        onSend={() => {}}
+        onStop={() => {}}
+        isLoading
+        stopPausesSession
+      />,
+    );
+    expect(buttonNames(session)).toContain(CHAT_WORDS.en.pauseSession);
+    expect(buttonNames(session)).not.toContain('Stop');
+    expect(
+      session
+        .querySelector('[data-prompt-action="stop"]')
+        ?.hasAttribute('data-prompt-pauses-session'),
+    ).toBe(true);
+    expect(CHAT_WORDS.en.pauseSession).toMatch(/^Pause the session: /);
+    // Every language says it.
+    for (const words of Object.values(CHAT_WORDS)) {
+      expect(words.pauseSession.length).toBeGreaterThan(10);
+    }
+  });
+
   it('asks for approval in French on the tool card', async () => {
     prefers(['fr-FR']);
     const card = await render(

@@ -1,0 +1,165 @@
+{
+  "recorded": "rec-000000000001",
+  "recommendation": {
+    "id": "rec-000000000001",
+    "kind": "cost",
+    "category": "unattached",
+    "resource": {
+      "arn": "arn:aws:ec2:us-east-1:111122223333:volume/vol-0example",
+      "account": "",
+      "region": "us-east-1",
+      "service": "ec2",
+      "tags": {}
+    },
+    "finding": "An EBS volume of 1 GiB has been unattached for 9 days.",
+    "evidence": [
+      {
+        "source": "compute-optimizer",
+        "call": "GetEBSVolumeRecommendations",
+        "read_at": "2026-11-11T07:00:12+00:00",
+        "values": {
+          "finding": "NotOptimized",
+          "attached": false
+        }
+      }
+    ],
+    "estimate": {
+      "monthly_saving_usd": 0.08,
+      "risk": "",
+      "by": "datalayer",
+      "method": "1 GiB gp3 at 0.08 USD per GiB-month"
+    },
+    "confidence": "high",
+    "fix": {
+      "form": "cli",
+      "change": "aws ec2 create-snapshot --volume-id vol-0example && aws ec2 delete-volume --volume-id vol-0example",
+      "rollback": "Create a volume from the snapshot taken first.",
+      "needs": "write-role"
+    },
+    "state": "open",
+    "recorded_at": "2026-11-11T07:00:20+00:00"
+  },
+  "surfaceId": "rec-000000000001",
+  "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
+  "title": "Recommendation: An EBS volume of 1 GiB has been unattached for 9 days.",
+  "messages": [
+    {
+      "version": "v0.9",
+      "createSurface": {
+        "surfaceId": "rec-000000000001",
+        "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+      }
+    },
+    {
+      "version": "v0.9",
+      "updateComponents": {
+        "surfaceId": "rec-000000000001",
+        "components": [
+          {
+            "id": "root",
+            "component": "Card",
+            "child": "body"
+          },
+          {
+            "id": "finding",
+            "component": "Text",
+            "text": "An EBS volume of 1 GiB has been unattached for 9 days.",
+            "variant": "h3"
+          },
+          {
+            "id": "where",
+            "component": "Text",
+            "text": "cost \u00b7 unattached \u00b7 ec2 \u00b7 us-east-1 \u00b7 arn:aws:ec2:us-east-1:111122223333:volume/vol-0example",
+            "variant": "caption"
+          },
+          {
+            "id": "estimate",
+            "component": "Text",
+            "text": "Estimated saving: $0.08 a month (Datalayer's estimate: 1 GiB gp3 at 0.08 USD per GiB-month). Confidence: high."
+          },
+          {
+            "id": "evidence-0",
+            "component": "Text",
+            "text": "compute-optimizer GetEBSVolumeRecommendations, read 2026-11-11T07:00:12+00:00: {\"finding\": \"NotOptimized\", \"attached\": false}",
+            "variant": "caption"
+          },
+          {
+            "id": "change",
+            "component": "Text",
+            "text": "The change (cli): aws ec2 create-snapshot --volume-id vol-0example && aws ec2 delete-volume --volume-id vol-0example"
+          },
+          {
+            "id": "rollback",
+            "component": "Text",
+            "text": "Rollback: Create a volume from the snapshot taken first."
+          },
+          {
+            "id": "means",
+            "component": "Text",
+            "text": "Approve accepts it: you are handed the change and its rollback to apply yourself. This agent has no write access and changes nothing in your account.",
+            "variant": "caption"
+          },
+          {
+            "id": "approved-label",
+            "component": "Text",
+            "text": "Approve"
+          },
+          {
+            "id": "approved-button",
+            "component": "Button",
+            "variant": "primary",
+            "child": "approved-label",
+            "action": {
+              "event": {
+                "name": "submit_a2ui_form",
+                "context": {
+                  "recommendation": "rec-000000000001",
+                  "decision": "approved"
+                }
+              }
+            }
+          },
+          {
+            "id": "dismissed-label",
+            "component": "Text",
+            "text": "Dismiss"
+          },
+          {
+            "id": "dismissed-button",
+            "component": "Button",
+            "variant": "default",
+            "child": "dismissed-label",
+            "action": {
+              "event": {
+                "name": "submit_a2ui_form",
+                "context": {
+                  "recommendation": "rec-000000000001",
+                  "decision": "dismissed"
+                }
+              }
+            }
+          },
+          {
+            "id": "decide",
+            "component": "Row",
+            "children": ["approved-button", "dismissed-button"]
+          },
+          {
+            "id": "body",
+            "component": "Column",
+            "children": [
+              "finding",
+              "where",
+              "estimate",
+              "evidence-0",
+              "change",
+              "rollback",
+              "means",
+              "decide"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

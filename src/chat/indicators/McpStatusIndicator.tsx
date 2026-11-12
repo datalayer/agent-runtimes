@@ -61,8 +61,8 @@ function buildTooltipText(
     if (s.status === 'started' && s.tools_count !== undefined) {
       detail += ` (${s.tools_count} tools)`;
     }
-    if (s.status === 'failed' && s.error) {
-      detail += ` — ${s.error}`;
+    if (s.status === 'failed' && (s.reason || s.error)) {
+      detail += ` — ${s.reason || s.error}`;
     }
     lines.push(detail);
   }

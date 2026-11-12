@@ -1,0 +1,53 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  The AWS identity Datalayer's services act as when they run an organization's
+  agentspecs on Amazon Bedrock AgentCore in that organization's AWS account: an
+  IAM user allowed only to assume the DatalayerRole an organization's stack
+  (agentcore-cross-account-role.yaml) creates, and only with that organization's
+  external id, which the role's trust policy requires. Deployed once, in the
+  account organizations name as Datalayer's account (DatalayerAccountId).
+
+Parameters:
+  UserName:
+    Type: String
+    Default: datalayer-agentcore
+    Description: The IAM user's name.
+
+Resources:
+  AgentCoreUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref UserName
+      Policies:
+        - PolicyName: assume-organizations-datalayer-role
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The role each organization's stack creates is named
+              # <stack>-DatalayerRole-<suffix>; its trust policy names this
+              # account and the organization's external id.
+              - Sid: AssumeOrganizationsDatalayerRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: arn:aws:iam::*:role/*DatalayerRole*
+              - Sid: WhoAmI
+                Effect: Allow
+                Action: sts:GetCallerIdentity
+                Resource: '*'
+
+Outputs:
+  UserName:
+    Description: >-
+      Create its access key with `aws iam create-access-key --user-name <this>`
+      and keep it in the services' rc as DATALAYER_AGENTCORE_AWS_ACCESS_KEY_ID and
+      DATALAYER_AGENTCORE_AWS_SECRET_ACCESS_KEY: never in a stack output.
+    Value: !Ref AgentCoreUser
+  UserArn:
+    Description: The principal organizations' DatalayerRole trusts, through this account.
+    Value: !GetAtt AgentCoreUser.Arn
+  DatalayerAccountId:
+    Description: DATALAYER_AWS_ACCOUNT_ID, the account organizations name in their stack.
+    Value: !Ref AWS::AccountId

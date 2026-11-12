@@ -5,6 +5,222 @@ title: loop sessions
 
 # `loop sessions`
 
+## Pick a session
+
+`loop sessions`, with nothing else, lists your sessions to pick one from, in
+two groups:
+
+```text
+$ loop sessions
+Type to filter.
+On this machine (1)
+   A session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and resumed by a runtime on this machine.
+  |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
+  | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
+❯ |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple  |     2 | 2h  | My name is Ada and I sell tea.  |
+On Datalayer (2)
+   A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
+  |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
+  | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
+  |   2 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign             |
+  |   3 | 01M780EXBBXNNH629KKJJ3PR62 | open   | app   | Exchange Desk   |     1 | 5m  | Which rate applies to an order… |
+↑↓ or a number: choose · PgUp/PgDn: a page · Home/End: first, last · type: filter · Enter: resume · Ctrl-P: pause · Ctrl-E: end · Ctrl-T: transfer to the other place · Ctrl-X: export to a file · Ctrl-D: delete · Ctrl-N: start over (a new session of the same agent or application, with nothing of this conversation; this one is left as it is) · Esc: leave
+```
+
+### What is listed
+
+**The sessions that run (`open`) and those you can go on with (`paused`).**
+A paused session is always resumable; a session that cannot be gone on
+with is `ended`, and is not listed:
+
+- you ended it (`/end`, Ctrl-E, `loop sessions end <uid>`), or transferred
+  it to the other place, where it lives now;
+- it was a seat of a team run, and its run is over — completed, failed or
+  cancelled: an ended run is not resumed;
+- it was a session of a deployment that was taken down.
+
+A session said `open` whose runtime no longer exists is not running: it is
+listed `paused`, and resumes from its record.
+
+The same holds **on this machine**, decided as the list is read: a session
+`open` whose process is gone is `paused` (a runtime started by hand writes
+which process holds it), and a seat of a self-hosted team run is `ended`
+when its run ended, is no longer kept, or stopped without ending.
+
+Three more are not listed, though their record still says `paused`: a
+Preview of a Studio application that was deleted (ended as it is read, on
+Datalayer), a session of an agent that is no longer an agentspec of the
+catalogue (a runtime on Datalayer cannot start it: clone it onto another
+agent), and a session of a deployment that is not yours and has no address
+to open it at. A harness that does not bring its own session back
+(`resume: none`, see [Harness capabilities](./harnesses.mdx)) does not end a
+session: the session resumes from its record, and the harness starts over
+and says so.
+
+### A session of a paused deployment
+
+A session of one of **your own** deployments that is paused stays listed,
+marked in its State column:
+
+```text
+|   4 | 01M61KF1TV0VM5BNQEAHE1QPY9 | paused, deployment paused | app | mh49-pi | 1 | 14d | Which coding agent are you? |
+```
+
+Resuming it asks first, before any environment is chosen or runtime
+launched:
+
+```text
+$ loop --resume 01M61KF1TV0VM5BNQEAHE1QPY9
+? Its deployment is paused. Resume the deployment and go on? (Y/n)
+```
+
+*Yes* resumes the deployment and goes on; *no* stops there, with nothing
+launched (`Not resumed: its deployment stays paused, and nothing was
+launched.`). Where nobody can be asked, or when Datalayer refuses to resume
+the deployment (a spend limit reached, a rule that paused it), it is refused
+in that sentence, exit 1, with nothing launched. If an application still
+does not come up on the runtime launched for it, that runtime is stopped
+without asking — billed or not, unless you said `--keep`.
+
+Nothing is deleted by this. An ended session keeps its record: `loop
+sessions --all` lists the ended ones too, `loop sessions list --state
+ended` lists them alone, and `loop sessions show <uid>`, `clone <uid>` and
+`export <uid>` act on one by its uid. `loop sessions delete <uid>` is what
+deletes a session. Resuming an ended session is refused in a sentence that
+names the command that clones it — `loop sessions clone <uid>`, or
+`agent-teams sessions clone <run>` for a seat of a team run.
+
+### The table
+
+Each group is a table — its number, the session's uid, its state, its kind
+(an `agent`'s, or an `app`lication's), its agent or application, its turns,
+its age (`5m`, `2h`, `14d`) and its title. In a terminal a row is one line,
+as wide as the terminal:
+
+- the uid's column is as wide as the longest uid, up to 32 characters — a
+  uid of today (26 characters) and an older one (32) are whole; a longer
+  one, a scheduled run's, is cut in its middle
+  (`scheduled-e63f8642-a01…-20261111`). `loop sessions show`, the piped
+  table and `--json` say it whole, and the picker resumes the session
+  whatever is drawn;
+- the agent's name takes up to 28 characters;
+- the title takes all that is left, cut with an ellipsis at its end;
+  `(no title)` is never cut;
+- in a narrow terminal the agent's name is cut first, then a long uid, then
+  the title; under 80 columns the Kind column is left out, then Turns.
+
+Piped or redirected, it is a markdown table with nothing cut, so it pastes
+as one:
+
+```text
+$ loop sessions | cat
+…
+On Datalayer (1)
+A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
+
+|   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title               |
+| --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------- |
+|   1 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign |
+
+Listed: the sessions that run (open) and those you can go on with (paused). Ended ones are not: `loop sessions --all` lists them too; `loop sessions show|clone|export <uid>` still act on one.
+```
+
+- **Arrow keys**, or a row's **number**, choose a session; **typing**
+  filters the list (a word of the title, the agent, the uid, the state).
+- **Page Down** and **Page Up** move by a page — the rows your terminal
+  shows, ten when it does not say its height — from one group into the
+  other, and stop at the last and the first row; **Home** and **End** go
+  to the first and the last row. A list taller than the terminal scrolls
+  with the highlighted row.
+- **Enter** resumes it where it lives: a session on this machine on a
+  runtime on this machine, one on Datalayer on a runtime Datalayer launches.
+  The same as `loop --resume <uid>`.
+- **Ctrl-T** transfers it to the other place, under the same uid (see
+  [Transfer](#transfer-between-this-machine-and-datalayer)); **Ctrl-X**
+  writes it as a session file in the current folder; **Ctrl-E** ends a
+  paused session; **Ctrl-D** deletes it for good, after asking: one on
+  this machine, its folder; one on Datalayer, from your account's record
+  (signed in, a session you opened; an open one is paused or ended first);
+  **Ctrl-N** starts over: a new session of the same agent or
+  application, with nothing of this conversation, the old one left as it is.
+- An action that does not apply to the highlighted session says why, in a
+  sentence, under the list.
+- Without a terminal the two groups are printed, each a markdown table;
+  `loop sessions --json` prints them as JSON (`{signed_in, local: [...], cloud: [...]}`,
+  `cloud` null when signed out).
+
+Two shortcuts, as you start `loop`:
+
+| | |
+| --- | --- |
+| `loop --continue`, `loop -c` | Go on with your most recent session that is not ended, without asking. With `-a <agent>`, that agent's; with `--local` or `--cloud`, in that place. The record says when a session started, not the folder it was started from: the most recent is by start. |
+| `loop --resume <uid>` | Go on with the session of that uid, where it lives. |
+| `loop --resume` | Pick one: the same as `loop sessions`. (`-r` is `--runtime`, as before.) |
+| `loop --resume <uid> --prompt "…"`, `loop -c --prompt "…"` | Go on with that session (or the most recent) for the lines given, then stop: the session is resumed first, where it lives (on Datalayer, a new runtime rebuilds it from the record), and each line is its next turn. Add `--prompt /pause` to pause it again, its runtime given back. An application's session or a team run's seat is refused in a sentence (start `loop --resume <uid>` without `--prompt`), as is `--resume` without a uid; a refused resume runs none of the lines. A message given as an argument instead of `--prompt` is refused too: it would start a new conversation. |
+
+## Where a session lives
+
+A session is in one of two places, and has **one uid for its whole life**,
+wherever it lives: every command takes and shows it. A new session's uid is
+a ULID (26 characters, sorted by time); the sessions opened before keep
+theirs.
+
+| | On this machine | On Datalayer |
+| --- | --- | --- |
+| What it is | A folder, `~/.datalayer/sessions/<uid>/`, with `entries.jsonl`: its record, one entry a line | Its record in your Datalayer account |
+| Made by | A runtime on this machine: `loop`, `loop -a <agent>`, `loop apps run` | A runtime on Datalayer: `loop --cloud`, an agent or an application opened on the web |
+| Seen from | This machine only | The web (`/sessions`), the desktop app, any machine signed in |
+| Resumed by | A runtime on this machine | A runtime Datalayer launches |
+| Kept | Until you delete it (`loop sessions delete <uid>`, Ctrl-D in the picker) | As your account keeps its record, or until you delete it: the same command and key, or *Delete* on its row of `/sessions` |
+| Signed out | Listed, resumed | Not listed |
+
+On this machine, `~/.datalayer/sessions/index.json` keeps what a listing
+says of each session, so listing reads one file; it holds nothing the
+entries do not, and is written again when it is missing or a session
+changed. `AGENT_RUNTIMES_SESSIONS_PATH` names another folder. A runtime on
+this machine keeps its sessions there even when you are signed in;
+`AGENT_RUNTIMES_SESSION_STORE=record` makes it keep them in your account's
+record instead.
+
+## Transfer between this machine and Datalayer
+
+`/transfer` in the prompt, Ctrl-T in the picker, or:
+
+```text
+$ loop sessions transfer 01M74VPWT51K7HF7VMJW0N8APT --to cloud
+? Transfer session 01M74VPWT51K7HF7VMJW0N8APT to Datalayer? What is sent: its conversation and its record (2 turns, 7 entries), credentials redacted as an export redacts them. It keeps its uid, and is ended here. (y/N)
+Transferred 01M74VPWT51K7HF7VMJW0N8APT to Datalayer: 2 turns, 7 entries. It lives on Datalayer now, under the same uid, and is ended where it was.
+Go on with it: `loop --resume 01M74VPWT51K7HF7VMJW0N8APT`.
+```
+
+A transfer is a **move**, both ways (`--to cloud`, `--to local`):
+
+- the session **keeps its uid**; it lives where it was sent, paused, and is
+  **ended where it was**, its record saying where it went, so it is never
+  resumed twice. Transferred back, the same folder, or the same record,
+  takes what was new;
+- what is carried is its record, as a session file is written and read:
+  credentials and the runtime's addresses are redacted, each line is
+  validated. The files it was given are named; their contents are not sent;
+- you are asked once, with what is sent, before anything leaves the
+  machine or comes to it; `--yes` skips the question, and is needed where
+  nobody can be asked;
+- `/transfer` in the prompt pauses the session first — which gives the
+  agent's memory the conversation, when its agentspec has one — moves it,
+  ends the prompt, and goes on with it where it was sent, as `loop --resume
+  <uid>` does: on a runtime launched on Datalayer, or on a runtime on this
+  machine.
+
+Refused, in a sentence, with nothing written: signed out; a session that
+is open (pause it first) or ended (clone it); a session of a deployment,
+which belongs to its deployment; a seat of a team run; an agent that is
+not an agentspec of the catalogue, which a runtime on Datalayer cannot
+start; a uid the other place keeps as another session. What a transfer
+does not check: whether the MCP servers an agentspec names are configured
+in the other place — the agent says so when it starts there.
+
+## The verbs, on a runtime
+
 The session's verbs, against a runtime that runs the application: `--server`
 names it (`AGENT_RUNTIMES_URL`, else the local server on port 8000);
 `--cloud` signs the calls with the token `datalayer login` left (or
@@ -14,14 +230,17 @@ sentence and the command exits 1.
 
 | Verb | What it does |
 | --- | --- |
-| `loop sessions list [--app <id>] [--all] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--all` includes the archived. |
+| `loop sessions list [--app <id>] [--archived] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first, as a table: the open and the paused ones; `--state ended` lists the ended ones. `--archived` lists the archived ones too, each marked `archived`. |
 | `loop sessions show <uid>` | What a session is: state, turn, agent and harness, turns, lineage, where it runs, its harness row with the vendor's session id when the adapter exposes it. |
+| `loop sessions pause <uid>` | Pause a session its runtime holds: what its conversation holds is given to its agent's memory first, when the agent has one, and its record says `paused`. |
 | `loop sessions resume <uid> [--agent <id>]` | Resume a paused session — held, or from its record on a runtime of its application (`--agent` names the application's agent there). |
 | `loop sessions swap <uid> --agent <spec>` | Swap the session's agent in place; the new agent is told in a sentence, printed. |
 | `loop sessions clone <uid> [--at <turn>] [--agent <spec>] [--title <t>]` | A new session, paused, cut at the turn, the same or another agent. |
 | `loop sessions export <uid> [-o file] [--format <id>]` | The session as a `datalayer-session/1` file. |
 | `loop sessions import <file> [--agent <spec>] [--format <id>]` | A new session, paused, you its author. |
 | `loop sessions end <uid>` | End it for good; its record stays. |
+| `loop sessions transfer <uid> --to cloud\|local [--yes]` | Move a paused session between this machine and Datalayer, under the same uid. No runtime is asked: the two places are read and written. |
+| `loop sessions delete <uid> [--yes]` | Delete a session for good: its folder on this machine, else, signed in, its record on Datalayer — one you opened, and not open (pause or end it first). Nothing else of its application's is deleted. |
 | `loop sessions feedback <uid>` | What people said of its answers. |
 
 `loop apps threads` and `loop apps feedback` are retired: each answers with
@@ -31,8 +250,11 @@ A session from the terminal, in words:
 
 ```text
 $ loop sessions list --app shield-mvp
-e67a52b2  open    shield-mvp-codex        5 turns  on runtime 01m5d3e8  — The refactor
-c1a9f0e3  paused  shield-mvp-claude-code  2 turns  not running  cloned from e67a52b2 at turn 2  — Before the refactor
+|   # | Session  | State  | Kind | Agent                  | Turns | Age | Title               |
+| --: | -------- | ------ | ---- | ---------------------- | ----: | --- | ------------------- |
+|   1 | e67a52b2 | open   | app  | shield-mvp-codex       |     5 | 2h  | The refactor        |
+|   2 | c1a9f0e3 | paused | app  | shield-mvp-claude-code |     2 | 1h  | Before the refactor |
+Ended sessions are not listed: `loop sessions list --state ended`.
 $ loop sessions resume c1a9f0e3 --agent shield-mvp-claude-code
 Resuming c1a9f0e3 on runtime 01m5d3e8 (shield-mvp-claude-code): 2 turns replayed.
 $ loop sessions swap c1a9f0e3 --agent shield-mvp-codex
@@ -49,13 +271,143 @@ $ loop sessions clone e67a52b2 --at 7
 
 ## In the REPL
 
-In `loop`'s prompt the same verbs act on the session this conversation is:
-`/sessions` lists yours, `/resume <uid>` opens one here, then `/swap <agent>`
-(the sentence shown), `/clone [turn]` and `/export [file]` act on it. Before
-a `/resume`, each says *This conversation is not an application session*.
-`/browser` keeps handing the conversation to the browser; the prompt's own
-turns still go to its agent's endpoint, and `/context-export` exports the
+Each line of a listing says what the session is a session of: `app`, an
+application's, or `agent`, the session of an agent run as such (`loop -a
+<agentspec>`, an agent launched from the Agent Gallery). An agent made
+without an Appspec is the application of that one agent, so its
+conversations are sessions of the same model: the same record, the same
+states, the same verbs.
+
+In `loop`'s prompt the conversation **is** a session, from its first
+message: the prompt sends its turns to its agent's endpoint whose threads
+are sessions (`/api/v1/apps/agents/<agent>/ag-ui/`).
+
+| In the prompt | What it does |
+| --- | --- |
+| `/sessions` | Your sessions in the place this prompt runs in, held and recorded, numbered, each with its kind and state; a first line says how sessions are kept there. `/sessions --app <id>` lists one application's. |
+| `/sessions <number or uid>` | Switch the prompt to that session, as `/resume` does. The session the prompt was on is left as it is, and the prompt says which one it is on now. |
+| `/pause` | Pause this session and leave. What the conversation holds is given to the agent's memory first, when its agentspec has one; the record says `paused`. On Datalayer (`loop --cloud`) the runtime is given back without asking; on your machine the server stops with the prompt. It says how to resume. |
+| `/resume <number or uid> [<agent>]` | Go on with a session here, by its number in the last `/sessions` or by its id: rebuilt from its record on this prompt's agent when the runtime no longer holds it, its conversation loaded, so your next message is its next turn. |
+| `/transfer [cloud\|local] [--yes]` | Move this session to the other place, under the same uid, and go on with it there. See [Transfer](#transfer-between-this-machine-and-datalayer). |
+| `/swap <agent>`, `/clone [turn]`, `/export [file]` | Act on this session (the swap's sentence shown). |
+
+The prompt asks its runtime what it can do first (`GET
+/api/v1/runtime/status`, `agent_sessions`). A runtime that does not say it
+keeps agent sessions — an older one, on a pool not updated yet — is talked to
+on its plain endpoint as before, and one line says the conversation is not
+listed, paused or resumed there.
+
+`/help` lists these under one heading, **Sessions**. After `/pause` the
+prompt says the way back — `loop` lists it as it starts, the command, and,
+for a session kept on Datalayer, `https://datalayer.ai/sessions` — and on
+`/exit` with a session open it says the session is kept, paused as its
+runtime stops. In `loop apps run` the conversation with the application is
+a session too: `/pause` pauses it.
+
+Before the first message, `/pause`, `/swap`, `/clone` and `/export` say
+*This conversation is not a session yet*. `/clear` starts a new session at
+the next message; the one cleared stays in the record. `/browser` keeps
+handing the conversation to the browser, and `/context-export` exports the
 context (it was `/export` before).
+
+```text
+$ loop -a worker-marketer
+> My name is Ada and I sell tea.
+…
+> /pause
+Paused 3f6c… (worker-marketer, 1 turn): it is kept in the record.
+Its memory was given 2 messages of the conversation.
+Resume it: `loop` lists it as it starts; or `loop --resume 3f6c…`; or `loop -a worker-marketer`, then `/resume 3f6c…`.
+$ loop -a worker-marketer
+> /resume 3f6c…
+Resumed 3f6c… (worker-marketer): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
+> What do I sell?
+```
+
+On Datalayer (`loop --cloud`) it is the same, and `/pause` gives the runtime
+back as well: nothing runs, or is billed, while the session is paused. A
+later `loop --resume <uid>`, or the session picked as `loop` starts,
+launches a new runtime, which rebuilds the conversation from the record:
+
+```text
+$ loop --cloud -a example-simple --prompt "Please remember the word tangerine. Reply with just OK." --prompt /pause
+OK
+Paused 01M74Z… (example-simple, 1 turn): it is kept in the record.
+Resume it: `loop` lists it as it starts; or `loop --resume 01M74Z…`; or `loop --cloud -a example-simple`, then `/resume 01M74Z…`.
+On the web: https://datalayer.ai/sessions, under Paused sessions.
+$ loop --resume 01M74Z… --prompt "Which word did I ask you to remember? The word only." --prompt /pause
+Resumed 01M74Z… (example-simple): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
+tangerine
+Paused 01M74Z… (example-simple, 2 turns): it is kept in the record.
+```
+
+The runtime's lines (launched, given back) go to standard error.
+
+## As `loop` starts
+
+Started with nothing on the command line that says what to run, `loop` first
+lists your **paused sessions**, before asking where a new agent should run:
+
+```text
+$ loop
+? You have 12 paused sessions (2 on this machine, 10 on Datalayer). Go on with one, or start a new one?
+❯ Start a new session
+  On this machine (2)
+  Resume: Agent session · example-simple · “My name is Ada and I sell tea.” · 01M74VPWT51K7HF7VMJW0N8APT · started 2 days ago
+  Resume: Application session · Decide · “Reply with one word.” · 01M6ZK2Q0V9D3T8N4W5X6Y7Z8A · started 5 days ago
+  On Datalayer (10; 4 more: loop sessions)
+  Resume: Agent session · worker-marketer · “The autumn campaign” · 01M74THECPG6V21NCRD2TD1FQH · started 3 hours ago
+  Resume: Application session · Exchange Desk · “Hi” · 9a1e52b2c0d94e6f8a7b6c5d4e3f2a1b · started 6 days ago
+  Resume its team run exec_400b: Application session · team-coding-agents · “Fix it” · 7d2c4b10… · started 6 days ago
+  Application session · Shared Desk · “Hello” · c1a9f0e3… · started 7 days ago (a session of somebody else's deployment: a terminal starts a runtime for a deployment of its owner's only)
+```
+
+- The two places are listed apart, **On this machine** first, then **On
+  Datalayer**, each with how many paused sessions it holds and its five
+  most recent; the rest are in `loop sessions`. Each line says the
+  session's uid.
+
+- The sessions kept **on this machine** are always listed; signed in to
+  Datalayer (`datalayer login`, or `DATALAYER_API_KEY`), those **on
+  Datalayer** too. Each says its kind, its agent or its application's name,
+  its title, where it lives and when it started, newest first.
+- Pick one and it is resumed **where it lives**, with its conversation
+  loaded, and nobody asks where to run:
+  - **an agent's session**: its agent is started, on a local server or on a
+    cloud runtime;
+  - **an application's session that is a Preview** — you trying an
+    application, a catalogue's or one you keep in the Studio: the
+    application is started as `loop apps run` starts it, and the session is
+    resumed on it;
+  - **a session of one of your deployments**: a runtime is launched on
+    Datalayer for the deployment, its agent made as its page makes it, so it
+    runs in the application's name as it does at its address. The deployment
+    must run the version the Studio keeps; otherwise the prompt says so and
+    names its address;
+  - **a seat of a team run** goes on with its run: picked, its paused run is
+    let go on, and each seat's session with it — what `agent-teams sessions
+    resume <run>` does, run for you. Nothing is started on this machine. A
+    run that is not paused, or that ended, says so in the command's own
+    sentence (an ended run is cloned to go on: `agent-teams sessions clone`).
+- What a terminal does not resume is drawn too, not to be picked, with why
+  and where to open it (the three most recent; the rest are counted):
+  - **a session of somebody else's deployment**: a terminal starts a runtime
+    for a deployment of its owner's only; go on with it at its address;
+  - a Preview of an application **written in Python** is said so when
+    picked: its code reacts in its own process (`loop apps run app.py`
+    starts a new conversation with it).
+- Up to five resumable sessions of each place are offered, then *N more: loop sessions*.
+- *Start a new session*, the first choice and what Enter picks, goes on to
+  the usual questions.
+- With no paused session nothing is printed. If Datalayer cannot be asked —
+  offline, a key refused — one line says so and the start goes on.
+- A run nobody is at is unchanged: `--prompt`, piped input, an agentspec
+  named with `-a`, a runtime named with `--runtime`.
+
+In the prompt, `/resume <uid>` goes on with a session of what the prompt
+runs. For a session of another agent or application it says so, and that
+the start's list is where it is picked: there its agent, or its
+application, is started first.
 
 ## `loop plugins`
 

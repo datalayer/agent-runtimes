@@ -1,21 +1,22 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Demonstrate PAP signed-out Session start and renewal safely."""
+"""An application that demonstrates PAP Session start and restart."""
 
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import parse_qs
 
 import httpx
+import jwt
+from cryptography.hazmat.primitives.asymmetric import ec
 from personal_agent_protocol import (
-    DPOP_PROOF_PROVIDERS,
-    SIGNERS,
-    DpopProofRequest,
-    InMemorySessionKeys,
-    JoseDpopProofProvider,
+    SESSION_SIGNERS,
+    DelegatedSessionSigner,
+    InMemoryDelegatedKeys,
+    JoseSigner,
     SessionClient,
+    SessionHttpClient,
     build_pap_reactor,
 )
 from pydantic import SecretStr
@@ -23,51 +24,42 @@ from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
 
+ORDERS = "https://company.example/orders"
+
 
 class RecordingSigner:
+    """A key from the agent's `jwks_uri`, recording only what it signed for."""
+
     def __init__(self) -> None:
+        self.key = JoseSigner(
+            ec.generate_private_key(ec.SECP256R1()), key_id="agent-key"
+        )
         self.purposes: list[str] = []
 
-    async def sign(self, _: dict[str, object], *, purpose: str) -> SecretStr:
+    async def sign(self, claims: dict[str, object], *, purpose: str) -> SecretStr:
         self.purposes.append(purpose)
-        return SecretStr(f"host-only-{purpose}-{len(self.purposes)}")
-
-
-class RecordingDpopProvider:
-    """Real Session Keys and proofs, recording which key each proof used.
-
-    Each Session gets its own key; its JWK thumbprint, the Session Key, names the
-    Session. The private halves stay in the host's key custody.
-    """
-
-    def __init__(self) -> None:
-        self.proofs = JoseDpopProofProvider(InMemorySessionKeys())
-        self.requests: list[DpopProofRequest] = []
-
-    async def new_session_key(self, *, tenant_id: str, issuer: str) -> str:
-        return await self.proofs.new_session_key(tenant_id=tenant_id, issuer=issuer)
-
-    async def discard_session_key(
-        self, *, tenant_id: str, issuer: str, session_key: str
-    ) -> None:
-        await self.proofs.discard_session_key(
-            tenant_id=tenant_id, issuer=issuer, session_key=session_key
-        )
-
-    async def create(self, request: DpopProofRequest) -> SecretStr:
-        self.requests.append(request)
-        return await self.proofs.create(request)
+        return await self.key.sign(claims, purpose=purpose)
 
 
 class SessionSecurityPlugin:
-    def __init__(self, signer: RecordingSigner, dpop: RecordingDpopProvider) -> None:
-        self.signer = signer
-        self.dpop = dpop
+    """Contribute the host-owned Session signer through Reactor.
+
+    A delegated key per User ID signs each request's Session JWT. The private keys
+    stay in the host's key custody.
+    """
+
+    def __init__(self, signer: RecordingSigner) -> None:
+        self.session_signer = DelegatedSessionSigner(
+            InMemoryDelegatedKeys(), signer=signer
+        )
 
     def provide_contributions(self, contributions: object) -> None:
         contribute = contributions.contribute  # type: ignore[attr-defined]
-        contribute(SIGNERS, self.signer, contribution_id="example-signer")
-        contribute(DPOP_PROOF_PROVIDERS, self.dpop, contribution_id="example-dpop")
+        contribute(
+            SESSION_SIGNERS,
+            self.session_signer,
+            contribution_id="example-session-signer",
+        )
 
 
 app = Application(
@@ -79,9 +71,9 @@ app = Application(
     ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
-        "Use explain_session_lifecycle to explain signed-out Session start and "
-        "renewal. Never ask for or expose a subject, Session Key, assertion, "
-        "proof, nonce, key, or token."
+        "Use explain_session_lifecycle to explain signed-out PAP Session start "
+        "and restart. Never ask for or expose a subject, Session ID, Session JWT, "
+        "delegation, key, or token."
     ),
 )
 
@@ -91,68 +83,64 @@ async def explain_session_lifecycle() -> dict[str, Any]:
     """Exercise SessionClient and return only lifecycle and safety evidence."""
 
     calls = 0
-    forms: list[dict[str, list[str]]] = []
+    jwts: list[dict[str, Any]] = []
+    kids: list[str] = []
+    authorization: list[str | None] = []
 
     def company(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        forms.append(parse_qs(request.content.decode()))
-        if calls == 1:
-            return httpx.Response(
-                400,
-                json={"error": "use_dpop_nonce"},
-                headers={"DPoP-Nonce": "host-only-company-nonce"},
-            )
-        # No Session ID, no `signed_in`, no `scope`: the proof's key names the
-        # Session, the grant (JWT bearer) makes it signed out, and a signed-out
-        # Session has no scopes.
-        return httpx.Response(
-            200,
-            json={
-                "access_token": f"host-only-session-token-{calls}",
-                "token_type": "DPoP",
-                "expires_in": 300,
-            },
-        )
+        session_jwt = request.headers["poppy-session"]
+        jwts.append(jwt.decode(session_jwt, options={"verify_signature": False}))
+        kids.append(jwt.get_unverified_header(session_jwt)["kid"])
+        authorization.append(request.headers.get("authorization"))
+        if calls in (2, 4, 5):
+            # The company no longer knows this Session, or refuses it (§5.3).
+            return httpx.Response(400, json={"error": "invalid_session"})
+        return httpx.Response(200, json={"orders": []})
 
     signer = RecordingSigner()
-    dpop = RecordingDpopProvider()
     async with httpx.AsyncClient(transport=httpx.MockTransport(company)) as http:
         reactor, _ = build_pap_reactor(http_client=http)
         reactor.register_plugin(
             PluginManifest(name="pap-session-example-security", version="1"),
-            SessionSecurityPlugin(signer, dpop),
+            SessionSecurityPlugin(signer),
         )
-        client = SessionClient(reactor=reactor, http_client=http)
-        options = {
-            "client_id": "https://assistant.example/agent.json",
-            "pairwise_user_id": "usr_host_only_example",
-            "issuer": "https://company.example",
-            "token_endpoint": "https://company.example/oauth/token",
-            "tenant_id": "example-tenant",
-        }
-        # Starting a Session makes a new Session Key; renewing proves the same key.
-        started = await client.start(**options)
-        renewed = await client.renew(**options, session_key=started.session_key)
+        # Starting a Session asks the company nothing: it is local, and signed out.
+        session = await SessionClient(reactor=reactor, http_client=http).start(
+            client_id="https://assistant.example/agent.json",
+            pairwise_user_id="usr_host_only_example",
+            issuer="https://company.example",
+            tenant_id="example-tenant",
+        )
+        requests_to_start = calls
+        started = session.sid
+        transport = SessionHttpClient(reactor=reactor, http_client=http)
+        first = await transport.request("GET", ORDERS, session=session)
+        # `invalid_session` starts a new Session once, and the request is sent again in it.
+        restarted = await transport.request("GET", ORDERS, session=session)
+        after_restart = session.sid
+        # A second `invalid_session` in a row is the caller's to handle: the client stops.
+        refused = await transport.request("GET", ORDERS, session=session)
         reactor.stop()
 
     return {
         "start_status": "created",
-        "renew_status": "renewed",
-        "signed_in": renewed.signed_in,
-        "token_type": renewed.token_type,
-        "scopes": renewed.scopes,
-        "same_session": started.session_key == renewed.session_key,
-        "renewal_proved_with_the_session_key": (
-            dpop.requests[-1].session_key == started.session_key
-        ),
-        "no_session_id_on_the_wire": all("session_id" not in form for form in forms),
-        "nonce_retry": [request.nonce for request in dpop.requests]
-        == [None, "host-only-company-nonce", None],
-        "fresh_assertions": len(signer.purposes) == 6,
-        "fresh_proofs": len(dpop.requests) == 3,
-        "session_key_withheld": True,
-        "assertions_withheld": True,
-        "proofs_withheld": True,
-        "tokens_withheld": True,
+        "requests_to_start_a_session": requests_to_start,
+        "signed_in": any(authorization),
+        "first_request_status": first.status_code,
+        "same_session_until_refused": jwts[0]["sid"] == jwts[1]["sid"] == started,
+        "fresh_session_jwt_per_request": len({claims["jti"] for claims in jwts})
+        == len(jwts),
+        "restarted_after_invalid_session": after_restart != started,
+        "request_resent_in_the_new_session": jwts[2]["sid"] == after_restart,
+        "resent_request_status": restarted.status_code,
+        "same_user_after_restart": len({claims["sub"] for claims in jwts}) == 1,
+        "second_refusal_returned_to_the_caller": refused.status_code,
+        "one_delegated_key_for_the_user": len(set(kids)) == 1,
+        "delegated_key_signed_by_the_agent": signer.purposes == ["delegation"],
+        "session_id_withheld": True,
+        "session_jwts_withheld": True,
+        "delegation_withheld": True,
+        "keys_withheld": True,
     }

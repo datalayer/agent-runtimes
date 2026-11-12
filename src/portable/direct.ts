@@ -37,12 +37,18 @@ export type DirectReply = {
   name?: string;
 };
 
-/** What the company answered, and where the conversation stands. */
+/**
+ * What the company answered, and where the conversation stands: PAP draft 0.4's four
+ * fields (§8.7) — whether it is working, whether it looks for a person (`handoff`), who
+ * answers, whether it is closed.
+ */
 export type DirectAnswer = {
   directConversation: string;
   replies: DirectReply[];
-  status: string;
-  responder: string;
+  working: boolean;
+  handoff: 'none' | 'pending';
+  responder: 'agent' | 'human';
+  closed: boolean;
   cursor: string;
   /** The `PapReplies` display, when the company wrote anything. */
   display: unknown;
@@ -108,7 +114,10 @@ export function directAnswerOf(raw: unknown, company: string): DirectAnswer {
     !data ||
     typeof data.direct_conversation !== 'string' ||
     !Array.isArray(replies) ||
-    typeof data.status !== 'string' ||
+    typeof data.working !== 'boolean' ||
+    typeof data.closed !== 'boolean' ||
+    (data.handoff !== 'none' && data.handoff !== 'pending') ||
+    (data.responder !== 'agent' && data.responder !== 'human') ||
     replies.some(
       reply =>
         !reply ||
@@ -128,8 +137,10 @@ export function directAnswerOf(raw: unknown, company: string): DirectAnswer {
         ? { name: reply.name.trim() }
         : {}),
     })),
-    status: data.status,
-    responder: typeof data.responder === 'string' ? data.responder : '',
+    working: data.working,
+    handoff: data.handoff,
+    responder: data.responder,
+    closed: data.closed,
     cursor: typeof data.cursor === 'string' ? data.cursor : '',
     display: data.display ?? null,
   };
@@ -280,7 +291,7 @@ export function withDirectAnswer(
       })),
     ],
     cursor: answer.cursor || open.cursor,
-    closed: answer.status === 'closed',
+    closed: answer.closed,
   };
 }
 

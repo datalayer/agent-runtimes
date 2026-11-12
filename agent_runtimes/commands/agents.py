@@ -29,12 +29,13 @@ from agent_runtimes.client.agent_client import (
     start_local_agent_runtime,
     terminate_local_agent_runtime,
 )
+from agent_runtimes.loop.launch import stopped_said, stopping_said
 
 DEFAULT_AGENT_SPEC_ID = "example-simple"
 
 app = typer.Typer(
     name="agents",
-    help="Agent runtime management commands.",
+    help="Manage agent runtimes.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -284,9 +285,10 @@ def _create_local_agent_runtime(
         if process is not None:
             process.wait()
     except KeyboardInterrupt:
-        console.print("\n[yellow]Stopping local agent runtime...[/yellow]")
+        console.print(f"\n[yellow]{stopping_said(cloud=False, app=False)}[/yellow]")
     finally:
         terminate_local_agent_runtime(runtime)
+        console.print(stopped_said(cloud=False, app=False), style="dim")
 
 
 @app.command(name="ls")
@@ -912,7 +914,7 @@ def agents_ls(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List running agent runtimes (root command alias)."""
+    """List running agent runtimes."""
     list_agents(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
 

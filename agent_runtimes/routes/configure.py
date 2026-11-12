@@ -30,8 +30,15 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
-from agent_runtimes.tools.decisions import DecisionQuestion, decide
-from agent_runtimes.types import AgentSuggestion, FrontendConfig
+from agent_runtimes.tools import decisions as decisions_tool
+from agent_runtimes.tools.decisions import (
+    DecisionQuestion,
+    NoDecisions,
+    agent_decisions,
+    decisions_info,
+    no_decisions,
+)
+from agent_runtimes.types import AgentDecisions, AgentSuggestion, FrontendConfig
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +253,27 @@ async def set_node_mode(body: NodeModeRequest) -> dict[str, Any]:
     }
 
 
+@router.get("/mcp-toolsets-status")
+async def get_mcp_toolsets_status(
+    agent_id: str | None = Query(default=None),
+) -> dict[str, Any]:
+    """Whether the agent answers, and each MCP server starting, ready or failed.
+
+    The agent answers with its model as soon as it is registered; its MCP
+    servers start in the background, each said ``starting``, ``started`` (its
+    tools with it) or ``failed`` with ``reason``, a sentence a page shows
+    (the user, 8 November 2026). The same as a snapshot's ``mcpStatus``.
+    """
+    from agent_runtimes.mcp import get_config_mcp_toolsets_status
+    from agent_runtimes.routes.acp import _agents
+
+    status = get_config_mcp_toolsets_status()
+    if agent_id is not None:
+        status["agent_id"] = agent_id
+        status["agent_ready"] = agent_id in _agents
+    return status
+
+
 @router.get("/inference/provider")
 async def get_inference_provider() -> dict[str, Any]:
     """Return the effective runtime inference provider."""
@@ -305,14 +333,17 @@ async def give_inference_token_endpoint(
     ai-inference serves is asked again with it, so the models offered are
     those it serves rather than the sentence a pooled runtime started with.
     """
-    from agent_runtimes.apps.callers import is_loopback
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
     from agent_runtimes.models.offered import (
         give_inference_token,
         load_inference_models,
         models_source,
     )
 
-    if not is_loopback(request.client.host if request.client else None):
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
         raise HTTPException(
             status_code=403,
             detail="Only the runtime's own pod gives it its ai-inference token.",
@@ -330,6 +361,60 @@ async def give_inference_token_endpoint(
         "source": source,
         "note": note,
     }
+
+
+class AgentCoreWorkloadRequest(BaseModel):
+    """The workload token a pod is given for AgentCore Identity, as the companion gives it."""
+
+    workload_access_token: str = ""
+    workload_name: str = ""
+    region: str = ""
+
+
+@router.put("/identity/agentcore")
+async def give_agentcore_workload_token_endpoint(
+    request: Request, body: AgentCoreWorkloadRequest
+) -> dict[str, Any]:
+    """Give this pod the workload token the ``agentcore`` identity provider uses (ID-06).
+
+    The companion asks AgentCore Identity for it with the person's token
+    (``GetWorkloadAccessTokenForJWT``) and gives it here, as it gives the
+    inference token. Only the pod itself may. A later call replaces it.
+    """
+    from agent_runtimes.agentcore.identity import give_workload_token
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its AgentCore workload token.",
+        )
+    try:
+        give_workload_token(body.workload_access_token, body.workload_name, body.region)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    return {"workloadName": body.workload_name.strip(), "region": body.region.strip()}
+
+
+@router.post("/identity/authorizations/{authorization_id}/decline")
+async def decline_authorization_endpoint(authorization_id: str) -> dict[str, Any]:
+    """Decline the grant a tool waits for, as the chat's *Decline* asks (ID-10).
+
+    The id is the one the ``identity.authorization_required`` event carried to
+    the person's own turn stream, never listed elsewhere. The tool call ends
+    with a sentence.
+    """
+    from agent_runtimes.identity import decline_authorization
+
+    if not decline_authorization(authorization_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"No authorization {authorization_id} waits: answered, timed out, or never asked.",
+        )
+    return {"id": authorization_id, "declined": True}
 
 
 @router.get("/inference/models")
@@ -357,20 +442,36 @@ class DecisionsRequest(BaseModel):
 
     state: str
     questions: list[DecisionQuestion]
+    #: The agent asking: its spec says whether it decides, and with which model.
+    agent_id: str | None = None
+
+
+def _deciding_agent(agent_id: str | None) -> str | None:
+    """The agent a decision is asked for: the one named, or the runtime's only one."""
+    from .acp import _agents
+
+    if agent_id:
+        return agent_id if agent_id in _agents else None
+    running = list(_agents)
+    return running[0] if len(running) == 1 else None
 
 
 @router.post("/inference/decisions")
 async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
-    """Ask Jev typed questions about a text, as the ``decide`` tool does.
+    """Ask an agent's decision model typed questions about a text, as its ``decide`` tool does.
 
-    Through this runtime's ai-inference, with the token its models are called
-    with: on Datalayer the user's, narrowed to ai-inference. ``loop``'s
-    ``/decisions`` asks here.
+    The model is the one the agent's decisions spec names (its agentspec's
+    ``decisions``); an agent whose spec names none does not decide, and is
+    refused in a sentence. Through this runtime's ai-inference, with the
+    token its models are called with: on Datalayer the user's, narrowed to
+    ai-inference. ``loop``'s ``/decisions`` and the chat's *Ask a decision*
+    ask here.
 
     Parameters
     ----------
     body : DecisionsRequest
-        The text (``state``) and the questions, each named and typed.
+        The text (``state``), the questions, each named and typed, and the
+        agent asking (``agent_id``; the runtime's only agent when unsaid).
 
     Returns
     -------
@@ -378,7 +479,23 @@ async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
         ``model`` and ``answers`` by question name; or ``refusal``, the
         sentence saying why nothing was decided.
     """
-    answer = await decide(body.state, body.questions)
+    agent_id = _deciding_agent(body.agent_id)
+    if agent_id is None:
+        return {
+            "refusal": (
+                f"Nothing was decided: no agent '{body.agent_id}' runs on this runtime."
+                if body.agent_id
+                else "Nothing was decided: say which agent asks (agent_id), "
+                "this runtime runs several or none."
+            )
+        }
+    try:
+        spec = agent_decisions(agent_id)
+    except NoDecisions as refused:
+        return {"refusal": str(refused)}
+    if spec is None:
+        return {"refusal": no_decisions(agent_id)}
+    answer = await decisions_tool.ask_decisions(spec, body.state, body.questions)
     if isinstance(answer, str):
         return {"refusal": answer}
     return answer
@@ -693,6 +810,11 @@ async def get_configuration(
             from .agents import get_stored_agent_spec
 
             spec = get_stored_agent_spec(agent_id)
+            # Whether this agent decides, and with which model: its spec's decisions.
+            decisions = decisions_info(agent_decisions(agent_id))
+            config.agent_decisions = (
+                AgentDecisions.model_validate(decisions) if decisions else None
+            )
             spec_model = spec.get("model") if isinstance(spec, dict) else None
             if isinstance(spec_model, str) and spec_model.strip():
                 config.default_model = spec_model

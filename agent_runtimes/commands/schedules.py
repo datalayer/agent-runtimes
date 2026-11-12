@@ -16,7 +16,7 @@ from rich.table import Table
 
 app = typer.Typer(
     name="schedules",
-    help="Scheduler management commands.",
+    help="Manage schedules.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

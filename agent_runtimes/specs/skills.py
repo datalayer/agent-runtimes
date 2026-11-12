@@ -12,7 +12,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 import os
 from typing import Dict, List
 
-from agent_runtimes.types import SkillSpec
+from agent_runtimes.types import InstallSpec, SkillSpec
 
 # ============================================================================
 # Skill Definitions
@@ -23,17 +23,22 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     version="0.0.1",
     name="Accounting Skill",
     description="Accounting analysis workflows for reconciliation, close, variance, and audit-ready summaries",
-    module="agent_skills.skills.accounting",
+    module="datalayer_skills.skills.accounting",
     package=None,
     method=None,
     path=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=["pandas>=2.0.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]"',
+        note="datalayer-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["accounting", "finance", "reconciliation", "close"],
     icon="@primer/octicons-react:book",
     emoji="🧮",
-    enabled=False,
+    enabled=True,
 )
 
 CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -41,13 +46,18 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     version="0.0.1",
     name="Web Crawl Skill",
     description="Web crawling and content extraction capabilities",
-    module="agent_skills.skills.crawl",
+    module="datalayer_skills.skills.crawl",
     package=None,
     method=None,
     path=None,
     envvars=["TAVILY_API_KEY:0.0.1"],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]"',
+        note="datalayer-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["web", "crawl", "scraping"],
     icon="@primer/octicons-react:globe",
     emoji="🌐",
@@ -59,17 +69,22 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     version="0.0.1",
     name="Events Skill",
     description="Event generation, enrichment, and lifecycle orchestration",
-    module="agent_skills.skills.events",
+    module="datalayer_skills.skills.events",
     package=None,
     method=None,
     path=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=["httpx>=0.27.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]"',
+        note="datalayer-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["events", "orchestration", "automation"],
     icon="@primer/octicons-react:calendar",
     emoji="📅",
-    enabled=False,
+    enabled=True,
 )
 
 GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -77,35 +92,68 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     version="0.0.1",
     name="GitHub Skill",
     description="GitHub repository management and code operations",
-    module="agent_skills.skills.github",
+    module="datalayer_skills.skills.github",
     package=None,
     method=None,
     path=None,
     envvars=["GITHUB_TOKEN:0.0.1"],
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]"',
+        note="datalayer-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["github", "git", "code"],
     icon="@datalayer/icons-react:github-mark",
     emoji="🐙",
-    enabled=False,
+    enabled=True,
+)
+
+IMAGE_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="image",
+    version="0.0.1",
+    name="Image Skills",
+    description="Snapshots of web pages and video frames; images read, resized, cropped, converted, optimized and thumbnailed",
+    module="datalayer_skills.skills.image",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["Pillow>=10.0", "playwright>=1.45"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]" && python -m playwright install chromium',
+        note="Chromium for its page snapshots; the runtime image carries it.",
+    ),
+    tags=["image", "snapshot", "media"],
+    icon="@primer/octicons-react:image",
+    emoji="🖼️",
+    enabled=True,
 )
 
 JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
     id="jokes",
     version="0.0.1",
     name="Jokes Skill",
-    description="Return random jokes from a local path-based skill.",
-    module=None,
+    description="One joke on request, by topic or at random, from a small bundled list.",
+    module="agent_skills.skills.jokes",
     package=None,
     method=None,
-    path="jokes",
+    path=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=[],
+    install=InstallSpec(
+        type="python",
+        command="pip install agent-skills",
+        note="No dependencies of its own.",
+    ),
     tags=["fun", "humor", "demo"],
     icon="@primer/octicons-react:smiley",
     emoji="😄",
-    enabled=False,
+    enabled=True,
 )
 
 PDF_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -113,17 +161,22 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     version="0.0.1",
     name="PDF Processing Skill",
     description="PDF document reading, parsing, and extraction",
-    module="agent_skills.skills.pdf",
+    module="datalayer_skills.skills.pdf",
     package=None,
     method=None,
     path=None,
     envvars=[],
     optional_env_vars=[],
-    dependencies=["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
+    dependencies=["pypdf>=4.0", "pdf2image>=1.17", "Pillow>=10.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]"',
+        note="datalayer-skills with every skill's dependencies; the runtime image installs it the same way.",
+    ),
     tags=["pdf", "documents", "extraction"],
     icon="@primer/octicons-react:file",
     emoji="📄",
-    enabled=False,
+    enabled=True,
 )
 
 TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -132,16 +185,44 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
     name="Text Summarizer Skill",
     description="Summarize text content using extractive and abstractive techniques. Use when the user asks for summaries, key points, or condensed versions of documents.",
     module=None,
-    package="agent_skills.skills.text_summarizer",
+    package="datalayer_skills.skills.text_summarizer",
     method="summarize_text",
     path=None,
     envvars=[],
     optional_env_vars=[],
-    dependencies=["agent-skills>=0.0.1"],
+    dependencies=["datalayer-skills>=0.3.0"],
+    install=InstallSpec(
+        type="python",
+        command="pip install datalayer-skills",
+        note="No dependencies of its own.",
+    ),
     tags=["nlp", "summarization", "text-processing"],
     icon="@primer/octicons-react:note",
     emoji="📝",
-    enabled=False,
+    enabled=True,
+)
+
+VIDEO_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="video",
+    version="0.0.1",
+    name="Video Skills",
+    description="Recordings of web pages; videos read, trimmed, zoomed in and out on a point, transcoded, optimized, framed and turned to GIF",
+    module="datalayer_skills.skills.video",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["imageio-ffmpeg>=0.5", "playwright>=1.45"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills[skills]" && python -m playwright install chromium',
+        note="Chromium for its recordings, and ffmpeg (imageio-ffmpeg brings one); the runtime image carries both.",
+    ),
+    tags=["video", "recording", "media"],
+    icon="@primer/octicons-react:video",
+    emoji="🎬",
+    enabled=True,
 )
 
 # ============================================================================
@@ -153,9 +234,11 @@ SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
+    "image": IMAGE_SKILL_SPEC_0_0_1,
     "jokes": JOKES_SKILL_SPEC_0_0_1,
     "pdf": PDF_SKILL_SPEC_0_0_1,
     "text-summarizer": TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+    "video": VIDEO_SKILL_SPEC_0_0_1,
 }
 
 

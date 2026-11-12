@@ -6,6 +6,7 @@
 /**
  * A tool provided by an MCP server.
  */
+import type { InstallSpec } from './skills';
 export interface MCPServerTool {
   /** Tool name/identifier */
   name: string;
@@ -15,6 +16,16 @@ export interface MCPServerTool {
   enabled: boolean;
   /** JSON schema for tool input parameters */
   inputSchema?: Record<string, unknown>;
+}
+
+/**
+ * How a remote MCP server's bearer is minted for the run (AC-20).
+ */
+export interface MCPServerAuth {
+  /** Who mints it: an Amazon Bedrock AgentCore Gateway's inbound authorizer trusts the identity */
+  kind: 'agentcore-gateway';
+  /** The identity of the identities catalogue the server trusts, by id */
+  identity: string;
 }
 
 /**
@@ -41,6 +52,8 @@ export interface MCPServer {
   args: string[];
   /** The headers a remote server is sent with every request, `${VAR}` expanded as it starts: the bearer among them */
   headers?: Record<string, string>;
+  /** A bearer minted for the run instead of one in `headers`: an AgentCore Gateway trusting the identity named (AC-20) */
+  auth?: MCPServerAuth;
   /** Whether the server is available (based on tool discovery) */
   isAvailable: boolean;
   /** Transport type: 'stdio', 'http', or 'streamable-http' — a remote server reached at `url` with its `headers` when it has no `command`, a command run as a local HTTP process at `url` when it has one */
@@ -51,6 +64,33 @@ export interface MCPServer {
   icon?: string;
   /** Drawn where there is no icon */
   emoji?: string;
+  /** Tags for categorization */
+  tags?: string[];
+  /** The environment the server's process is given, `${VAR}` expanded as it starts */
+  env?: Record<string, string>;
+  /** The variables the code its tools write reads in the code sandbox, never the server (a download's script) */
+  sandboxEnvVars?: string[];
+  /** Where to read about it (the user, 7 November 2026) */
+  documentationUrl?: string;
+  /** Where to sign up for the service behind it */
+  signupUrl?: string;
+  /** Where to make the key or token it needs */
+  apiKeyUrl?: string;
+  /** How it is set up, in a sentence: which key, where it goes */
+  setup?: string;
+  /** How it is installed where an agent runs it */
+  install?: InstallSpec;
+  /** What each tool does to the world (agentspecs.actions): its class by tool name, when it was checked, and a note */
+  actions?: MCPServerActions;
+}
+
+/** What an MCP server's tools do to the world, as its spec classes them. */
+export interface MCPServerActions {
+  /** The day the classes were read off the running server; none when they were not yet */
+  checked?: string;
+  note?: string;
+  /** Each tool's class: `read`, `write`, `send`, `pay`, …; a tool not named is unknown, the most restricted */
+  tools: Record<string, string>;
 }
 
 /**
@@ -85,6 +125,8 @@ export interface McpServerStatus {
   id: string;
   status: 'none' | 'not_started' | 'starting' | 'failed' | 'started';
   error?: string;
+  /** Why it failed, in a sentence a page shows: "tavily could not start: the runtime cannot reach registry.npmjs.org." */
+  reason?: string | null;
   tools_count?: number;
   tools?: Array<{ name: string; description?: string; enabled?: boolean }>;
 }
@@ -93,6 +135,9 @@ export interface McpServerStatus {
  * Full response from `/api/v1/configure/mcp-toolsets-status`.
  */
 export interface McpToolsetsStatusResponse {
+  /** The agent asked about (`?agent_id=`), and whether it answers with its model now. */
+  agent_id?: string;
+  agent_ready?: boolean;
   initialized: boolean;
   ready_count: number;
   failed_count: number;

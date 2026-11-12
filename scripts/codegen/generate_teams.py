@@ -456,7 +456,7 @@ from agent_runtimes.types import (
             code += f"    enabled={spec.get('enabled', False)},\n"
             code += f'    icon="{spec.get("icon", "people")}",\n'
             code += f'    emoji="{spec.get("emoji", "👥")}",\n'
-            code += f'    color="{spec.get("color", "#8250df")}",\n'
+            code += f'    color="{spec.get("color", "purple")}",\n'
             code += f'    agent_spec_id="{spec.get("agent_spec_id", "")}",\n'
             code += f'    orchestration_protocol="{spec.get("orchestration_protocol", "datalayer")}",\n'
             code += (
@@ -755,7 +755,7 @@ import type {{ TeamSpec }} from '{types_import_path}';
             code += f"  enabled: {str(spec.get('enabled', False)).lower()},\n"
             code += f"  icon: '{spec.get('icon', 'people')}',\n"
             code += f"  emoji: '{spec.get('emoji', '👥')}',\n"
-            code += f"  color: '{spec.get('color', '#8250df')}',\n"
+            code += f"  color: '{spec.get('color', 'purple')}',\n"
             code += f"  agentSpecId: '{spec.get('agent_spec_id', '')}',\n"
             code += f"  orchestrationProtocol: '{spec.get('orchestration_protocol', 'datalayer')}',\n"
             code += f"  executionMode: '{spec.get('execution_mode', 'sequential')}',\n"

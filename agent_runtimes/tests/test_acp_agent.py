@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, List, Tuple, cast
 
 import pytest
 from agent_shield.policy import KIND_CLASS, Context, class_of, decide
@@ -35,9 +35,11 @@ from agent_runtimes.adapters.acp_agent import (
     lent_toolsets,
 )
 from agent_runtimes.adapters.base import AgentContext, StreamEvent
+from agent_runtimes.adapters.harness_inference import relay_handle
 from agent_runtimes.adapters.harness_skills import (
     LENT_MARK,
     instructions_markdown,
+    lend_repository,
     skill_markdown,
     skill_specs_of,
     write_lent_files,
@@ -56,6 +58,9 @@ from agent_runtimes.types import (
 )
 
 FAKE = Path(__file__).parent / "fixtures" / "acp_fake_agent.py"
+
+#: Where a routed harness calls: the relay on the pod's loopback, never ai-inference.
+RELAY = "http://127.0.0.1:8765/api/v1/inference/relay"
 
 
 def catalogued_fake(monkeypatch: Any, **overrides: Any) -> HarnessSpec:
@@ -715,10 +720,13 @@ class TestPermissionsAreRules:
         policy = rules_policy(app)
         assert policy is not None and policy.scope == "team"
         assert [(r.name, r.decision, r.classes) for r in policy.rules] == [
-            ("never change my files", "deny", ["write"]),
+            # The commands: one that only reads as reading, any other as writing.
+            ("read freely: a command that only reads", "allow", ["execute"]),
+            ("never change my files", "deny", ["write", "execute"]),
             ("read freely", "allow", ["read"]),
             ("only if I asked", "ask", ["send"]),
         ]
+        assert policy.rules[0].commands
         assert rules_policy(SimpleNamespace(rules=[])) is None
         agent = an_agent(workspace, policies=policies_of(app), approvals=Approvals())
         try:
@@ -728,6 +736,174 @@ class TestPermissionsAreRules:
         assert "edit refused" in texts(events)
         assert "never change my files" in texts(events)
         assert not (workspace / "hello.txt").exists()
+
+
+class TestLentRepository:
+    """The repository an application is lent is checked out as the workspace, at its commit."""
+
+    @staticmethod
+    def a_repository(tmp_path: Path) -> Tuple[str, str]:
+        import subprocess
+
+        source = tmp_path / "source"
+        source.mkdir()
+
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", "-C", str(source), *args],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "GIT_AUTHOR_NAME": "t",
+                    "GIT_AUTHOR_EMAIL": "t@t",
+                    "GIT_COMMITTER_NAME": "t",
+                    "GIT_COMMITTER_EMAIL": "t@t",
+                },
+            ).stdout.strip()
+
+        git("init", "-q")
+        git("config", "uploadpack.allowReachableSHA1InWant", "true")
+        (source / "README.md").write_text("# A project\n")
+        git("add", "README.md")
+        git("commit", "-q", "-m", "first")
+        return f"file://{source}", git("rev-parse", "HEAD")
+
+    @staticmethod
+    def lent(url: str, revision: str) -> Any:
+        return SimpleNamespace(
+            permissions=SimpleNamespace(
+                computer=SimpleNamespace(
+                    repository=SimpleNamespace(url=url, revision=revision)
+                )
+            )
+        )
+
+    def test_checked_out_then_left_as_it_is(self, tmp_path: Path) -> None:
+        url, revision = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        assert lend_repository(workspace, self.lent(url, revision))
+        assert (workspace / "README.md").read_text() == "# A project\n"
+        # Launched again on the same runtime: the checkout stays, and what
+        # Datalayer wrote beside it too.
+        (workspace / "AGENTS.md").write_text("lent")
+        assert "already present" in str(
+            lend_repository(workspace, self.lent(url, revision))
+        )
+        assert (workspace / "AGENTS.md").exists()
+
+    def test_a_workspace_holding_other_files_is_never_cleared(
+        self, tmp_path: Path
+    ) -> None:
+        url, revision = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / "notes.txt").write_text("mine")
+        with pytest.raises(HarnessRefused, match="already holds other files"):
+            lend_repository(workspace, self.lent(url, revision))
+        assert (workspace / "notes.txt").read_text() == "mine"
+
+    def test_nothing_lent_writes_nothing(self, tmp_path: Path) -> None:
+        assert lend_repository(tmp_path, None) is None
+        assert lend_repository(tmp_path, self_less_app()) is None
+        assert not any(tmp_path.iterdir())
+
+    def test_a_commit_that_does_not_exist_is_refused(self, tmp_path: Path) -> None:
+        url, _ = self.a_repository(tmp_path)
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        with pytest.raises(HarnessRefused, match="could not be checked out"):
+            lend_repository(workspace, self.lent(url, "0" * 40))
+        assert not any(workspace.iterdir())
+
+
+def self_less_app() -> Any:
+    """An application with a computer and no repository."""
+    return SimpleNamespace(
+        permissions=SimpleNamespace(computer=SimpleNamespace(repository=None))
+    )
+
+
+class TestCommandsByTheRules:
+    """A harness's commands are decided by the Rules on reading and writing, nobody asked."""
+
+    @staticmethod
+    def verdicts(app: Any, tmp_path: Path, *commands: str) -> List[Tuple[str, str]]:
+        from agent_shield.policy import Action, command_class
+
+        context = Context(workspace=str(tmp_path))
+        policies = policies_of(app)
+        out = []
+        for command in commands:
+            decision = decide(
+                Action(
+                    kind="execute",
+                    title=command,
+                    command=command,
+                    **{"class": command_class(command)},
+                ),
+                context,
+                policies,
+            )
+            out.append((decision.verdict, decision.rule or ""))
+        return out
+
+    def test_reading_is_done_and_changing_is_refused(self, tmp_path: Path) -> None:
+        app = SimpleNamespace(
+            rules=[
+                AppRuleSpec(
+                    action="Read the repository",
+                    applies_to=["read"],
+                    behaviour="do_it",
+                ),
+                AppRuleSpec(
+                    action="Change a file",
+                    applies_to=["write", "delete"],
+                    behaviour="leave_to_me",
+                ),
+            ]
+        )
+        assert self.verdicts(
+            app,
+            tmp_path,
+            "ls -la",
+            "cat README.md",
+            "git log --oneline -3",
+            "find . -name '*.py'",
+            "echo hi >> README.md",
+            "rm README.md",
+            "find . -delete",
+            "cat /etc/passwd",
+            "python -c 'print(1)'",
+        ) == [
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("allow", "Read the repository: a command that only reads"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+            ("deny", "Change a file"),
+        ]
+
+    def test_a_rule_that_lets_writes_be_done_never_widens_commands(
+        self, tmp_path: Path
+    ) -> None:
+        app = SimpleNamespace(
+            rules=[
+                AppRuleSpec(
+                    action="Edit freely", applies_to=["write"], behaviour="do_it"
+                ),
+            ]
+        )
+        # No Rule on reading: a command is the platform's default, asked.
+        assert [v for v, _ in self.verdicts(app, tmp_path, "ls", "make build")] == [
+            "ask",
+            "ask",
+        ]
 
 
 class TestKindsAreClasses:
@@ -970,7 +1146,7 @@ class TestMcpLentThroughTheGateway:
         assert policies_of(None)[0].scope == "session"
 
     @pytest.mark.asyncio
-    async def test_lent_as_http_with_the_bearer_when_the_agent_advertises_it(
+    async def test_lent_as_http_without_the_bearer_when_the_agent_advertises_it(
         self, workspace: Path
     ) -> None:
         app = connecting("earthdata")
@@ -986,11 +1162,9 @@ class TestMcpLentThroughTheGateway:
             events = await turn(agent, "mcp")
             assert agent.lends_over_http
             servers = agent._lent_servers("tok-run")
-            assert servers[0].type == "http" and servers[0].url.endswith(
-                "?only=earthdata"
-            )
-            assert servers[0].headers[0].name == "Authorization"
-            assert servers[0].headers[0].value == "Bearer tok-run"
+            assert servers[0].type == "http"
+            assert "/api/v1/mcp/lent/" in servers[0].url
+            assert "tok-run" not in repr(servers)
         finally:
             await agent.cleanup()
         assert "mcp: ['earthdata:http']" in texts(events)
@@ -999,10 +1173,7 @@ class TestMcpLentThroughTheGateway:
         assert "tok-caller" not in repr(rows)
 
     @pytest.mark.asyncio
-    async def test_lent_over_the_stdio_shim_holding_the_token_otherwise(
-        self, workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
+    async def test_lent_over_the_stdio_shim_otherwise(self, workspace: Path) -> None:
         app = connecting("earthdata")
         lent = lent_toolsets(fake_harness(), app)
         agent = an_agent(
@@ -1014,10 +1185,6 @@ class TestMcpLentThroughTheGateway:
         try:
             events = await turn(agent, "mcp")
             assert not agent.lends_over_http
-            [handle] = agent._handles
-            held = tmp_path / "shield" / "lent" / handle
-            assert held.is_file() and (held.stat().st_mode & 0o777) == 0o600
-            assert "tok-caller" in held.read_text()
             servers = agent._lent_servers("tok-caller")
             assert servers[0].command == sys.executable
             assert servers[0].args[:3] == [
@@ -1031,7 +1198,7 @@ class TestMcpLentThroughTheGateway:
         finally:
             await agent.cleanup()
         assert "mcp: ['earthdata:stdio']" in texts(events)
-        assert not held.exists() and agent._handles == []
+        assert agent._handles == []
 
     @pytest.mark.asyncio
     async def test_a_server_not_on_the_allow_list_is_cut(self, workspace: Path) -> None:
@@ -1091,7 +1258,7 @@ class TestMcpLentThroughTheGateway:
     )
     @pytest.mark.asyncio
     async def test_a_lent_toolset_is_real_on_the_gateway(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
     ) -> None:
         """Read-only against the gateway: the lent toolset lists its tools, and a tool outside it is refused."""
         import mcp.types as types
@@ -1100,9 +1267,6 @@ class TestMcpLentThroughTheGateway:
         from mcp.client.streamable_http import streamable_http_client
         from mcp.shared._httpx_utils import create_mcp_http_client
 
-        from agent_runtimes.mcp.lent_stdio import hold, release
-
-        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
         token = os.environ["DATALAYER_LIVE_GATEWAY_TOKEN"]
         [lent] = lent_toolsets(fake_harness(), connecting("earthdata"))
         assert (
@@ -1126,26 +1290,6 @@ class TestMcpLentThroughTheGateway:
                     types.CallToolResult,
                 )
                 assert outside.is_error
-        # Over the stdio shim: the same toolset, the token held by the shim's process.
-        handle = hold(lent.name, lent.url, token)
-        try:
-            params = StdioServerParameters(
-                command=sys.executable,
-                args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
-                env={
-                    "AGENT_SHIELD_HOME": str(tmp_path / "shield"),
-                    "PATH": os.environ["PATH"],
-                },
-            )
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    through_shim = {
-                        tool.name for tool in (await session.list_tools()).tools
-                    }
-            assert through_shim == names
-        finally:
-            release(handle)
 
 
 def reading_skills() -> HarnessSpec:
@@ -1187,7 +1331,9 @@ class TestSkillsLentInTheHarnessFormat:
         assert (page.stat().st_mode & 0o777) == 0o444
         text = page.read_text()
         assert text.startswith("---\nname: crawl\ndescription: Web crawling")
-        assert "lent-to: fake" in text and "module: agent_skills.skills.crawl" in text
+        assert (
+            "lent-to: fake" in text and "module: datalayer_skills.skills.crawl" in text
+        )
         assert "## When to use it" in text and "## Instructions" in text
         # The package's own page is its instructions; nothing of a secret.
         assert "run_skill_script" in text and "fetch_page" in text
@@ -1213,15 +1359,29 @@ class TestSkillsLentInTheHarnessFormat:
         assert "It needs TAVILY_API_KEY, which Datalayer holds" in text
         assert "do not write it anywhere" in text
 
-    def test_an_unknown_or_disabled_skill_is_refused_at_load(self) -> None:
+    def test_an_unknown_or_disabled_skill_is_refused_at_load(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with pytest.raises(
             HarnessRefused, match="no skill named 'nope' in the catalogue"
         ):
             skill_specs_of(an_app(skills=["nope"]), reading_skills())
+        # Every skill of the catalogue is enabled (7 November 2026), so the
+        # disabled one is put there for the test.
+        from agent_runtimes.specs import skills as skills_catalogue
+        from agent_runtimes.types.types import SkillSpec
+
+        monkeypatch.setitem(
+            skills_catalogue.SKILLS_CATALOG,
+            "off-skill",
+            SkillSpec(id="off-skill", name="Off skill", enabled=False),
+        )
         with pytest.raises(
-            HarnessRefused, match="'events' is not enabled in the catalogue"
+            HarnessRefused, match="'off-skill' is not enabled in the catalogue"
         ):
-            skill_specs_of(an_app(skills=["crawl", "events:0.0.1"]), reading_skills())
+            skill_specs_of(
+                an_app(skills=["crawl", "off-skill:0.0.1"]), reading_skills()
+            )
         with pytest.raises(HarnessRefused, match="Fake agent reads no skills"):
             skill_specs_of(an_app(), fake_harness())
         assert skill_specs_of(an_app(skills=[]), fake_harness()) == []
@@ -1363,6 +1523,7 @@ class TestResolvingACatalogueHarness:
     def test_on_datalayer_claude_code_calls_through_ai_inference(
         self, monkeypatch
     ) -> None:
+        from agent_runtimes.adapters import harness_inference
         from agent_runtimes.models import offered
         from agent_runtimes.specs.harnesses import get_harness
 
@@ -1378,53 +1539,453 @@ class TestResolvingACatalogueHarness:
             offered, "_given", {"token": "the-inference-token", "expires_at": None}
         )
         given = harness_environment(claude, datalayer)
+        given.pop("PATH", None)  # the Shield's prefix, on a machine that has it
+        fixed = harness_inference.claude_code_environment()
         assert given == {
-            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
-            "ANTHROPIC_AUTH_TOKEN": "the-inference-token",
+            **fixed,
+            "ANTHROPIC_BASE_URL": f"{RELAY}/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": harness_inference.relay_handle(),
         }
-        # No key needed there: the route reads the account's own.
+        assert "ANTHROPIC_API_KEY" not in given
+        # No key needed there: ai-inference answers from Bedrock.
         monkeypatch.setattr(offered, "_given", {"token": None, "expires_at": None})
         monkeypatch.delenv("DATALAYER_AI_INFERENCE_API_KEY", raising=False)
         monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
         no_key = {k: v for k, v in datalayer.items() if k != "ANTHROPIC_API_KEY"}
-        assert harness_environment(claude, no_key) == {
-            "ANTHROPIC_BASE_URL": "https://r1.example/api/ai-inference/v1/anthropic",
+        given = harness_environment(claude, no_key)
+        given.pop("PATH", None)
+        assert given == {
+            **fixed,
+            "ANTHROPIC_BASE_URL": f"{RELAY}/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": harness_inference.relay_handle(),
         }
 
-    def test_on_datalayer_codex_calls_through_ai_inferences_openai_route(
-        self, monkeypatch
+    def test_claude_code_asks_for_the_catalogues_model_whatever_its_tier(self) -> None:
+        """Its fast model is a Haiku the catalogue does not offer: every tier is the catalogue's."""
+        from agent_runtimes.adapters import harness_inference
+        from agent_runtimes.specs.models import DEFAULT_MODEL
+
+        fixed = harness_inference.claude_code_environment()
+        bedrock = DEFAULT_MODEL.value.removeprefix("bedrock:")
+        for name in (
+            "ANTHROPIC_MODEL",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+            "ANTHROPIC_SMALL_FAST_MODEL",
+            "CLAUDE_CODE_SUBAGENT_MODEL",
+        ):
+            assert fixed[name] == bedrock, name
+        # Nothing else of Anthropic's is reached, and no beta Bedrock would refuse is asked.
+        assert fixed["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] == "1"
+        assert fixed["CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"] == "1"
+
+    def test_a_routed_claude_code_names_its_application_on_every_call(
+        self, tmp_path: Path, monkeypatch
     ) -> None:
-        """META_HARNESS decision Y: Codex gets ai-inference's OpenAI route and the runtime's token as its key."""
-        from agent_runtimes.models import offered
+        from agent_runtimes.models import models, offered
+        from agent_runtimes.specs.harnesses import get_harness
+
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        monkeypatch.setitem(
+            models._APP_INSTANCES,
+            "metered",
+            {"app_uid": "app-1", "deployment_uid": "dep-1"},
+        )
+        claude = get_harness("claude-code")
+        assert claude is not None
+        agent = ACPAgent(
+            agent_id="metered",
+            harness=claude,
+            command=["/nonexistent/claude-agent-acp"],
+            workspace=tmp_path,
+            environment={"ANTHROPIC_BASE_URL": "https://r1.example/a"},
+        )
+        agent._give_routed_token()
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] != "the-inference-token"
+        assert agent.agent_env["ANTHROPIC_CUSTOM_HEADERS"].splitlines() == [
+            "X-Datalayer-App-Uid: app-1",
+            "X-Datalayer-Deployment-Uid: dep-1",
+        ]
+
+    def test_on_datalayer_codex_calls_ai_inferences_responses_route(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Codex reads a configuration directory: its model the catalogue's, no token in it, no route to OpenAI."""
+        import tomllib
+
+        from agent_runtimes.models import models, offered
+        from agent_runtimes.specs.harnesses import get_harness
+        from agent_runtimes.specs.models import DEFAULT_MODEL
+
+        codex = get_harness("codex")
+        assert codex is not None
+        monkeypatch.setattr(
+            offered, "_given", {"token": "the-inference-token", "expires_at": None}
+        )
+        given = harness_environment(
+            codex,
+            {
+                "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+                "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+                "OPENAI_API_KEY": "sk-not-given",
+            },
+        )
+        assert "OPENAI_API_KEY" not in given and "OPENAI_BASE_URL" not in given
+        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == f"{RELAY}/openai/v1"
+        assert given["DATALAYER_AI_INFERENCE_TOKEN"] != "the-inference-token"
+
+        monkeypatch.setitem(
+            models._APP_INSTANCES,
+            "codex-app",
+            {"app_uid": "app-1", "deployment_uid": "dep-1"},
+        )
+        agent = ACPAgent(
+            agent_id="codex-app",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        directory = Path(agent.agent_env["CODEX_HOME"])
+        assert tmp_path in directory.parents
+        text = (directory / "config.toml").read_text()
+        assert "the-inference-token" not in text
+        config = tomllib.loads(text)
+        bedrock = DEFAULT_MODEL.value.removeprefix("bedrock:")
+        assert config["model"] == bedrock and config["model_provider"] == "datalayer"
+        assert config["web_search"] == "disabled"
+        assert config["model_context_window"] > 0
+        provider = config["model_providers"]["datalayer"]
+        assert provider["base_url"] == f"{RELAY}/openai/v1"
+        assert provider["env_key"] == "DATALAYER_AI_INFERENCE_TOKEN"
+        assert provider["wire_api"] == "responses"
+        assert provider["requires_openai_auth"] is False
+        assert provider["http_headers"] == {
+            "X-Datalayer-App-Uid": "app-1",
+            "X-Datalayer-Deployment-Uid": "dep-1",
+        }
+
+    @pytest.mark.asyncio
+    async def test_a_codex_session_is_held_in_the_mode_that_asks(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Its default mode runs commands and edits itself: read-only makes it ask, so the Shield decides."""
+        from acp.exceptions import RequestError
+        from agent_shield.acp.proxy import ShieldProxy
+
         from agent_runtimes.specs.harnesses import get_harness
 
         codex = get_harness("codex")
         assert codex is not None
-        datalayer = {
-            "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
-            "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
-        }
+        modes: list[tuple[str, str]] = []
+
+        async def set_mode(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            modes.append((mode_id, session_id))
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", set_mode)
+        agent = ACPAgent(
+            agent_id="codex-asks",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment={"OPENAI_API_KEY": "k"},
+        )
+        await agent._hold_asking_mode("s-1")
+        assert modes == [("read-only", "s-1")]
+        await agent.set_session_mode("read-only", "s-1")
+        with pytest.raises(RequestError, match="read-only"):
+            await agent.set_session_mode("agent-full-access", "s-1")
+        assert modes[-1] == ("read-only", "s-1") and len(modes) == 2
+
+    @pytest.mark.asyncio
+    async def test_a_session_codex_will_not_hold_in_that_mode_is_refused(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Fail closed: a Codex that would not ask is not started on a turn."""
+        from agent_shield.acp.proxy import ShieldProxy
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+
+        async def refused(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            raise RuntimeError("no such mode")
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", refused)
+        agent = ACPAgent(
+            agent_id="codex-refuses",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment={"OPENAI_API_KEY": "k"},
+        )
+        with pytest.raises(HarnessRefused, match="Shield"):
+            await agent._hold_asking_mode("s-1")
+
+    @pytest.mark.asyncio
+    async def test_another_harness_is_left_in_its_own_mode(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        from agent_shield.acp.proxy import ShieldProxy
+
+        from agent_runtimes.specs.harnesses import get_harness
+
+        pi = get_harness("pi")
+        assert pi is not None
+        modes: list[str] = []
+
+        async def set_mode(self, mode_id, session_id, **_kwargs):  # noqa: ANN001
+            modes.append(mode_id)
+
+        monkeypatch.setattr(ShieldProxy, "set_session_mode", set_mode)
+        agent = ACPAgent(
+            agent_id="pi-mode",
+            harness=pi,
+            command=["/nonexistent/pi-acp"],
+            workspace=tmp_path,
+            environment={"ANTHROPIC_API_KEY": "k"},
+        )
+        await agent._hold_asking_mode("s-1")
+        await agent.set_session_mode("anything", "s-1")
+        assert modes == ["anything"]
+
+    def test_pi_is_told_to_ask_before_every_tool_and_blocks_on_any_refusal(
+        self, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.adapters import harness_inference
+
+        directory = harness_inference.write_config_directory(
+            harness_inference.ROUTES["pi"], tmp_path, "https://r1.example/a"
+        )
+        extension = (directory / "extensions" / "shield.ts").read_text()
+        assert 'pi.on("tool_call"' in extension
+        assert harness_inference.PI_ASKING_TITLE in extension
+        assert "block: true" in extension
+        # No interface to ask through is a refusal, never a step.
+        assert "ctx.hasUI" in extension
+
+    @pytest.mark.parametrize(
+        ("tool", "given", "kind", "path", "command"),
+        [
+            ("bash", {"command": "touch x"}, "execute", None, "touch x"),
+            ("write", {"path": "a.txt", "content": "b"}, "edit", "a.txt", None),
+            ("edit", {"path": "a.txt", "edits": []}, "edit", "a.txt", None),
+            ("read", {"path": "a.txt"}, "read", "a.txt", None),
+            ("grep", {"pattern": "x", "path": "."}, "search", ".", None),
+            ("an_extension_tool", {}, "other", None, None),
+        ],
+    )
+    def test_pis_asking_is_the_tool_it_asks_about(
+        self, tool: str, given: dict, kind: str, path: str | None, command: str | None
+    ) -> None:
+        """pi-acp says every confirm is kind `other`: the Shield decides the real tool."""
+        import json
+
+        from acp.schema import ToolCallUpdate
+
+        from agent_runtimes.adapters import harness_inference
+
+        asked = ToolCallUpdate(
+            toolCallId="pi-ui-1",
+            title=harness_inference.PI_ASKING_TITLE,
+            kind="other",
+            status="pending",
+            rawInput={
+                "method": "confirm",
+                "title": harness_inference.PI_ASKING_TITLE,
+                "message": json.dumps({"tool": tool, "input": given}),
+            },
+        )
+        read = harness_inference.asked_tool_call("pi", asked)
+        assert read.kind == kind and read.tool_call_id == "pi-ui-1"
+        assert read.raw_input.get("path") == path
+        assert read.raw_input.get("command") == command
+        assert tool in read.title
+
+    def test_a_confirm_that_is_not_the_shields_is_left_as_it_came(self) -> None:
+        from acp.schema import ToolCallUpdate
+
+        from agent_runtimes.adapters import harness_inference
+
+        other = ToolCallUpdate(
+            toolCallId="pi-ui-2", title="Something else", kind="other"
+        )
+        assert harness_inference.asked_tool_call("pi", other) is other
+        malformed = ToolCallUpdate(
+            toolCallId="pi-ui-3",
+            title=harness_inference.PI_ASKING_TITLE,
+            kind="other",
+            rawInput={"message": "not json"},
+        )
+        assert harness_inference.asked_tool_call("pi", malformed).kind == "other"
+        assert harness_inference.asked_tool_call("codex", malformed) is malformed
+
+    def test_off_datalayer_codex_takes_the_persons_key_and_writes_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.specs.harnesses import get_harness
+
+        codex = get_harness("codex")
+        assert codex is not None
+        with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
+            harness_environment(codex, {})
+        given = harness_environment(codex, {"OPENAI_API_KEY": "sk-own"})
+        assert given == {"NO_BROWSER": "1", "OPENAI_API_KEY": "sk-own"}
+        agent = ACPAgent(
+            agent_id="codex-local",
+            harness=codex,
+            command=["/nonexistent/codex-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        assert list(tmp_path.iterdir()) == []
+
+    @pytest.mark.parametrize(
+        "harness_id", ["goose", "gemini-cli", "openhands", "fast-agent"]
+    )
+    def test_on_datalayer_a_harness_with_no_route_is_refused(
+        self, harness_id: str
+    ) -> None:
+        """Fail closed: a harness is served there only when its calls go through ai-inference."""
+        from agent_runtimes.specs.harnesses import get_harness
+
+        harness = get_harness(harness_id)
+        assert harness is not None
+        with pytest.raises(HarnessRefused, match="not offered on Datalayer"):
+            harness_environment(
+                harness,
+                {
+                    "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+                    "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+                    "ANTHROPIC_API_KEY": "sk-ant-not-given",
+                    "GEMINI_API_KEY": "not-given",
+                    "LLM_API_KEY": "not-given",
+                },
+            )
+
+    def test_acp_harness_agent_refuses_before_anything_is_lent(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        from agent_runtimes.adapters import acp_agent
+        from agent_runtimes.specs.harnesses import get_harness
+
+        goose = get_harness("goose")
+        assert goose is not None
+        monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+        monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://r1.example")
+
+        def lent(*_args: object, **_kwargs: object) -> None:
+            raise AssertionError("nothing is lent to a harness that is refused")
+
+        monkeypatch.setattr(acp_agent, "lend_repository", lent)
+        with pytest.raises(HarnessRefused, match="not offered on Datalayer"):
+            acp_agent.acp_harness_agent("refused", goose, workspace=tmp_path)
+
+    def test_on_datalayer_pi_calls_ai_inferences_anthropic_route(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """pi reads no base-URL variable: a directory of its own says the provider, and holds no token."""
+        import json
+
+        from agent_runtimes.adapters import harness_inference
+        from agent_runtimes.models import models, offered
+        from agent_runtimes.specs.harnesses import get_harness
+        from agent_runtimes.specs.models import DEFAULT_MODEL
+
+        pi = get_harness("pi")
+        assert pi is not None
         monkeypatch.setattr(
             offered, "_given", {"token": "the-inference-token", "expires_at": None}
         )
-        given = harness_environment(codex, datalayer)
-        assert (
-            given["OPENAI_BASE_URL"]
-            == "https://r1.example/api/ai-inference/v1/openai/v1"
+        given = harness_environment(
+            pi,
+            {
+                "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE": "datalayer",
+                "DATALAYER_AI_INFERENCE_URL": "https://r1.example",
+                "ANTHROPIC_API_KEY": "sk-ant-not-given",
+            },
         )
-        assert given["OPENAI_API_KEY"] == "the-inference-token"
-        # Off Datalayer, the person's own key is required, as the spec says.
-        with pytest.raises(HarnessRefused, match="OPENAI_API_KEY"):
-            harness_environment(codex, {})
+        assert "ANTHROPIC_API_KEY" not in given
+        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (f"{RELAY}/anthropic")
+        assert given["DATALAYER_AI_INFERENCE_TOKEN"] != "the-inference-token"
+        # Nothing of pi's own reaches outside the boundary.
+        assert given["PI_OFFLINE"] == "1" and given["PI_TELEMETRY"] == "0"
 
-    def test_on_datalayer_opencode_calls_through_ai_inference_by_its_own_configuration(
+        monkeypatch.setitem(models._APP_INSTANCES, "pi-app", {"app_uid": "app-1"})
+        agent = ACPAgent(
+            agent_id="pi-app",
+            harness=pi,
+            command=["/nonexistent/pi-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        directory = Path(agent.agent_env["PI_CODING_AGENT_DIR"])
+        assert tmp_path in directory.parents
+        models_file = (directory / "models.json").read_text()
+        assert "the-inference-token" not in models_file
+        provider = json.loads(models_file)["providers"]["datalayer"]
+        assert provider["baseUrl"] == f"{RELAY}/anthropic"
+        assert provider["api"] == "anthropic-messages"
+        assert provider["apiKey"] == "$DATALAYER_AI_INFERENCE_TOKEN"
+        assert provider["authHeader"] is True
+        assert provider["headers"] == {"X-Datalayer-App-Uid": "app-1"}
+        bedrock = DEFAULT_MODEL.value.removeprefix("bedrock:")
+        assert [item["id"] for item in provider["models"]] == [bedrock]
+        settings = json.loads((directory / "settings.json").read_text())
+        assert settings["defaultProvider"] == harness_inference.PI_PROVIDER
+        assert settings["defaultModel"] == bedrock
+
+    def test_off_datalayer_pi_takes_the_persons_key_and_writes_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        from agent_runtimes.specs.harnesses import get_harness
+
+        pi = get_harness("pi")
+        assert pi is not None
+        given = harness_environment(pi, {"ANTHROPIC_API_KEY": "sk-ant-own"})
+        assert given["ANTHROPIC_API_KEY"] == "sk-ant-own"
+        assert "PI_CODING_AGENT_DIR" not in given
+        agent = ACPAgent(
+            agent_id="pi-local",
+            harness=pi,
+            command=["/nonexistent/pi-acp"],
+            workspace=tmp_path,
+            environment=given,
+        )
+        agent._give_routed_token()
+        assert list(tmp_path.iterdir()) == []
+
+    def test_the_routes_declare_no_secret(self) -> None:
+        """The own-key path is gone: a route carries no account's secret."""
+        from agent_runtimes.adapters import harness_inference
+
+        assert set(harness_inference.ROUTES) == {
+            "claude-code",
+            "codex",
+            "opencode",
+            "pi",
+        }
+        assert not hasattr(harness_inference, "ROUTED")
+        assert not hasattr(harness_inference, "routed_secret")
+        assert not hasattr(harness_inference, "OPENAI_ROUTE")
+
+    def test_on_datalayer_opencode_calls_ai_inferences_chat_completions(
         self, monkeypatch
     ) -> None:
-        """The user's decision of 28 October 2026: OpenCode through ai-inference as Claude Code is, never on the account's secret."""
+        """The user's decision of 29 October 2026: OpenCode on ai-inference's own models, never on an Anthropic key."""
         import json
 
+        from agent_runtimes.adapters import harness_inference
         from agent_runtimes.models import offered
         from agent_runtimes.specs.harnesses import get_harness
+        from agent_runtimes.specs.models import DEFAULT_MODEL
 
         opencode = get_harness("opencode")
         assert opencode is not None
@@ -1437,23 +1998,82 @@ class TestResolvingACatalogueHarness:
             offered, "_given", {"token": "the-inference-token", "expires_at": None}
         )
         given = harness_environment(opencode, datalayer)
-        assert "ANTHROPIC_API_KEY" not in given
-        assert (
-            given["ANTHROPIC_BASE_URL"]
-            == "https://r1.example/api/ai-inference/v1/anthropic"
-        )
+        assert not any(name.startswith("ANTHROPIC_") for name in given)
         config = json.loads(given["OPENCODE_CONFIG_CONTENT"])
-        assert config["enabled_providers"] == ["anthropic"]
-        anthropic = config["provider"]["anthropic"]
-        assert anthropic["npm"] == "@ai-sdk/anthropic"
-        assert anthropic["options"] == {
-            "baseURL": "https://r1.example/api/ai-inference/v1/anthropic/v1",
-            "apiKey": "the-inference-token",
-            "headers": {"Authorization": "Bearer the-inference-token"},
+        assert config["enabled_providers"] == ["datalayer"]
+        assert config["model"] == f"datalayer/{DEFAULT_MODEL.value}"
+        datalayer_provider = config["provider"]["datalayer"]
+        assert datalayer_provider["npm"] == "@ai-sdk/openai-compatible"
+        assert datalayer_provider["models"] == {
+            DEFAULT_MODEL.value: {"name": DEFAULT_MODEL.value, "tool_call": True}
         }
-        # Off Datalayer, the person's own key, as the spec says; no configuration written.
+        assert datalayer_provider["options"] == {
+            "baseURL": RELAY,
+            "apiKey": harness_inference.relay_handle(),
+            "headers": {"Authorization": f"Bearer {harness_inference.relay_handle()}"},
+        }
+        # The application and deployment a call is metered under go with it.
+        route = harness_inference.ROUTES["opencode"]
+        headed = json.loads(
+            harness_inference.inline_config(
+                route,
+                "https://r1.example/api/ai-inference/v1",
+                "t",
+                model="bedrock:a-model",
+                headers={"X-Datalayer-App-Uid": "app-1"},
+            )
+        )
+        assert headed["model"] == "datalayer/bedrock:a-model"
+        assert headed["provider"]["datalayer"]["options"]["headers"] == {
+            "X-Datalayer-App-Uid": "app-1",
+            "Authorization": "Bearer t",
+        }
+        # Every step asks, so the Shield decides it (r1, 30 October 2026: an
+        # edit OpenCode was allowed by its own defaults went through).
+        assert config["permission"] == harness_inference.opencode_permission()
+        # Off Datalayer, the person's own key, as the spec says, and the same
+        # asking: OpenCode never acts before the Shield has answered.
         own = harness_environment(opencode, {"ANTHROPIC_API_KEY": "sk-ant-own"})
-        assert own == {"ANTHROPIC_API_KEY": "sk-ant-own"}
+        assert own["ANTHROPIC_API_KEY"] == "sk-ant-own"
+        assert json.loads(own["OPENCODE_CONFIG_CONTENT"]) == {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": harness_inference.opencode_permission(),
+            "agent": harness_inference.opencode_agents_asking(),
+        }
+
+    def test_opencode_asks_the_shield_for_every_step_and_allows_none(self) -> None:
+        """OpenCode 1.19.0 allows every tool by default (``"*": "allow"``):
+        a tool it allows never sends ``session/request_permission``, so the
+        Shield's answer came after the write. Every tool asks, by wildcard and
+        by name, globally and on each of its own agents."""
+        import json
+
+        from agent_runtimes.adapters import harness_inference
+
+        permission = harness_inference.opencode_permission()
+        assert permission["*"] == "ask"
+        assert {"edit", "bash", "webfetch", "read", "external_directory"} <= set(
+            permission
+        )
+        assert set(permission.values()) == {"ask"}
+        agents = harness_inference.opencode_agents_asking()
+        assert {"build", "plan", "general", "explore"} <= set(agents)
+        assert all(agent["permission"] == permission for agent in agents.values())
+        routed = json.loads(
+            harness_inference.opencode_config(
+                "https://r1.example/api/ai-inference/v1", "t", model="bedrock:a-model"
+            )
+        )
+        assert routed["permission"] == permission and routed["agent"] == agents
+        text = json.dumps(routed) + json.dumps(
+            json.loads(harness_inference.opencode_asking_config())
+        )
+        assert '"allow"' not in text
+        assert harness_inference.asking_config("claude-code") is None
+        assert harness_inference.asking_config("opencode") == (
+            "OPENCODE_CONFIG_CONTENT",
+            harness_inference.opencode_asking_config(),
+        )
 
     def test_an_adapter_installed_in_the_prefix_has_its_bin_first_on_the_path(
         self, tmp_path, monkeypatch
@@ -1488,52 +2108,6 @@ class TestResolvingACatalogueHarness:
         )
 
     @pytest.mark.asyncio
-    async def test_a_routed_codex_is_authenticated_with_the_gateway_method(
-        self, tmp_path: Path
-    ) -> None:
-        from types import SimpleNamespace
-
-        from agent_runtimes.specs.harnesses import get_harness
-
-        codex = get_harness("codex")
-        assert codex is not None
-        agent = ACPAgent(
-            agent_id="routed-codex",
-            harness=codex,
-            command=["/nonexistent/codex-acp"],
-            workspace=tmp_path,
-            environment={
-                "OPENAI_BASE_URL": "https://r1.example/api/ai-inference/v1/openai/v1",
-                "OPENAI_API_KEY": "the-inference-token",
-            },
-        )
-        asked: list = []
-
-        class Channel:
-            async def request(self, method, params=None):
-                asked.append((method, params))
-                return {}
-
-        # codex-acp's gateway method, whatever it advertised: ai-inference's
-        # route as the provider's base URL, the runtime's token as its header.
-        await agent._authenticate_routed(Channel(), SimpleNamespace(auth_methods=[]))
-        assert asked == [
-            (
-                "authenticate",
-                {
-                    "methodId": "gateway",
-                    "_meta": {
-                        "gateway": {
-                            "baseUrl": "https://r1.example/api/ai-inference/v1/openai/v1",
-                            "headers": {"Authorization": "Bearer the-inference-token"},
-                            "providerName": "Datalayer",
-                        }
-                    },
-                },
-            )
-        ]
-
-    @pytest.mark.asyncio
     async def test_a_routed_harness_with_no_token_is_refused_before_it_starts(
         self, monkeypatch, tmp_path: Path
     ) -> None:
@@ -1565,7 +2139,7 @@ class TestResolvingACatalogueHarness:
             offered, "_given", {"token": "given-later", "expires_at": None}
         )
         agent._give_routed_token()
-        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-later"
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == relay_handle()
 
     def _routed_claude(self, tmp_path: Path) -> ACPAgent:
         from agent_runtimes.specs.harnesses import get_harness
@@ -1611,7 +2185,7 @@ class TestResolvingACatalogueHarness:
             await agent.initialize()
         waited = time.monotonic() - started
         assert 0.3 <= waited < 5.0
-        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == "given-while-waiting"
+        assert agent.agent_env["ANTHROPIC_AUTH_TOKEN"] == relay_handle()
         await giving
 
     @pytest.mark.asyncio

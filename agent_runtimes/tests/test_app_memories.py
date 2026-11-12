@@ -192,6 +192,7 @@ def test_its_agent_remembers_under_its_key_for_whoever_the_turn_is_of(
         "Spec",
         (),
         {
+            "id": "inbox-triage",
             "model": "openai:gpt-4.1",
             "guardrails": None,
             "capabilities": None,

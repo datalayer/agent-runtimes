@@ -1,19 +1,21 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the session commands of the REPL share (MH-18): the session API of
-the runtime the REPL talks to, reached as `LoopSession` reaches it, and the
-sentence said when this conversation is no application session.
+"""What the session commands of the REPL share: the session API of the
+runtime the REPL talks to, reached as `LoopSession` reaches it, and the
+sentence said when this conversation is no session yet.
 
-A conversation becomes a session with ``/resume <uid>``: from then on
-``/swap``, ``/clone`` and ``/export`` act on it. The REPL's own turns still go
-to its agent's AG-UI endpoint, which carries no thread of its own; driving
-the session's thread from the prompt is the browser's and `loop sessions`'.
+The prompt's turns go to its agent's AG-UI endpoint whose threads are
+sessions, so a conversation is a session from its first message — an
+application's, or the session of an agent run as such — and ``/resume <uid>``
+opens another here, its conversation loaded: ``/pause``, ``/swap``,
+``/clone`` and ``/export`` act on it.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+import os
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
 
@@ -21,8 +23,9 @@ if TYPE_CHECKING:
     from ..tux import CliTux
 
 NOT_A_SESSION = (
-    "This conversation is not an application session: `/resume <uid>` opens one "
-    "(`/sessions` lists yours), then `/swap`, `/clone` and `/export` act on it."
+    "This conversation is not a session yet: it is one from its first message, and "
+    "`/resume <uid>` opens another (`/sessions` lists yours); then `/pause`, `/swap`, "
+    "`/clone` and `/export` act on it."
 )
 
 
@@ -45,8 +48,7 @@ def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
         if session is not None
         else f"{tux.server_url.rstrip('/')}/api/v1"
     )
-    token: Optional[str] = getattr(session, "token", None)
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    headers = signing_headers(tux)
     response = httpx.request(
         method, f"{base}/apps/sessions{path}", headers=headers, timeout=120.0, **kwargs
     )
@@ -61,7 +63,62 @@ def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
     return response
 
 
+def signing_headers(tux: "CliTux") -> Dict[str, str]:
+    """What the prompt signs its calls to its runtime with: the session's
+    token; else the key `datalayer login` left, as `loop sessions` signs
+    its calls — a runtime on this machine writes and reads the platform's
+    record with it, in the person's name. Nothing without either.
+    """
+    session = session_of(tux)
+    token: Optional[str] = getattr(session, "token", None) or (
+        os.environ.get("DATALAYER_API_KEY") or None
+    )
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
 def current_uid(tux: "CliTux") -> Optional[str]:
-    """The application session this conversation is, or ``None``."""
+    """The session this conversation is, or ``None``."""
     session = session_of(tux)
     return getattr(session, "session_uid", None) if session is not None else None
+
+
+async def load_conversation(
+    tux: "CliTux", uid: str, messages: List[Dict[str, Any]]
+) -> int:
+    """Make the prompt's conversation the session's: its thread the
+    session's uid, its messages what was asked and answered so far, so the
+    next message is the session's next turn. How many messages were loaded.
+
+    A prompt that does not send its turns to an agent's sessions — one
+    connected to an address of another kind — loads nothing.
+    """
+    from agent_runtimes.loop.session import is_session_agui_url
+
+    agent_url = str(getattr(tux, "agent_url", "") or "")
+    if not is_session_agui_url(agent_url):
+        return 0
+    from agent_runtimes.transports.clients import AGUIClient
+
+    client = getattr(tux, "_agui_client", None)
+    if client is None:
+        client = AGUIClient(agent_url, headers=signing_headers(tux))
+        await client.connect()
+        tux._agui_client = client
+    conversation = client.conversation
+    conversation.clear()
+    conversation.thread_id = uid
+    loaded = 0
+    for message in messages:
+        role, content = message.get("role"), message.get("content")
+        if not isinstance(content, str) or not content:
+            continue
+        if role == "user":
+            conversation.add_user_message(content)
+        elif role == "assistant":
+            conversation.add_assistant_message(
+                content, str(message.get("id") or "") or None
+            )
+        else:
+            continue
+        loaded += 1
+    return loaded

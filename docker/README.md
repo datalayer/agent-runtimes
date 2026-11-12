@@ -10,12 +10,13 @@
 
 # Docker for Agent Runtimes
 
-This folder contains Docker assets for Agent Runtimes. Two images are produced:
+This folder contains Docker assets for Agent Runtimes. Three images are produced:
 
 | Dockerfile                 | Image (default)           | Purpose                                                                        |
 | -------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
 | `Dockerfile.agent-runtime` | `datalayer/agent-runtime` | Headless agent runtime server hosting AI agents over the supported protocols.  |
 | `Dockerfile.agent-node`    | `datalayer/agent-nodes`   | Local Agent Node that syncs with the Datalayer platform and serves its web UI. |
+| `Dockerfile.agentcore`     | `datalayer/agent-runtimes-agentcore` (Amazon ECR) | agent-runtimes from PyPI answering the Amazon Bedrock AgentCore Runtime contract, for linux/arm64 and linux/amd64; built and pushed by `.github/workflows/agentcore-image.yml` (see `aws/README.md`). |
 
 - Build context for both images: repository root (`..`).
 - The Agent Node image bundles the frontend `dist`, so it must be built first

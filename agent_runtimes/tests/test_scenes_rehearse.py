@@ -410,6 +410,81 @@ def test_a_member_at_an_address_is_asked_there_and_its_steps_are_lines(
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in verdict.beats[0].lines
 
 
+def test_a_span_ends_after_its_child_in_the_milliseconds_the_transcript_reads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The 1.5.120 release run: the A2A request ended at .9 of a millisecond
+    and the turn above it at .2 of the next. Truncated they were apart, so
+    the turn kept its end; rounded, as the transcript reads them, they tied,
+    and the turn's words came before the answer it waited for."""
+    from datetime import datetime as real_datetime
+    from datetime import timezone
+
+    from agent_runtimes.loop.scenes import stage as stage_module
+    from agent_runtimes.loop.scenes.stage import Recording
+    from agent_runtimes.loop.scenes.transcript import millis
+
+    now = real_datetime(2026, 11, 8, 10, 0, 0, 101200, tzinfo=timezone.utc)
+
+    class _Clock(real_datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> real_datetime:  # type: ignore[override]
+            return now
+
+    monkeypatch.setattr(stage_module, "datetime", _Clock)
+    recording = Recording()
+    turn = recording.start("invoke_agent Sales", "Sales", {})
+    asked = recording.start(
+        "a2a SendStreamingMessage", "Sales", {}, parent=turn["span_id"]
+    )
+    asked["end_time"] = "2026-11-08T10:00:00.100900Z"
+    recording.end(turn)
+    assert millis(turn["end_time"]) > millis(asked["end_time"])
+
+
+def test_a_harness_s_steps_are_named_by_kind_and_title_and_drawn_on_its_workspace(
+    scene: Any,
+) -> None:
+    """OpenCode on r1 (30 October 2026): a step told as *read*, then ended as
+    *README.md*, is one line, *Read README.md*, on its workspace — not two
+    lines on its runtime, the first left open."""
+    from agent_runtimes.loop.scenes.stage import _steps_of
+
+    started = _steps_of(
+        [{"data": {"tool_call": {"id": "c1", "name": "read"}}}],
+        {"kind": "read", "title": "read", "status": "pending"},
+    )
+    ended = _steps_of(
+        [{"data": {"tool_result": {"id": "c1", "name": "README.md"}}}],
+        {"kind": "read", "title": "README.md", "status": "completed"},
+    )
+    assert [(step.name, step.id, step.harness, step.ended) for step in started] == [
+        ("Read", "c1", "read", False)
+    ]
+    assert [(step.name, step.id, step.harness, step.ended) for step in ended] == [
+        ("Read README.md", "c1", "read", True)
+    ]
+    # Another agent's call says no kind: named as it was.
+    assert [
+        step.name for step in _steps_of([{"data": {"tool_call": {"name": "odoo_x"}}}])
+    ] == ["odoo_x"]
+
+    async def over_a2a(member: StageMember, request: str) -> A2AAnswer:
+        return A2AAnswer(TABLE, (*started, *ended))
+
+    members, entry = members_of(
+        scene,
+        addresses={"accounting": ("http://runtime/api/v1/a2a/agents/accounting", "k")},
+    )
+    stage = Stage(members, entry, agent=cast(), ask=over_a2a)
+    verdict = asyncio.run(
+        rehearse(scene, stage, where="cloud", beats=["open-invoices"])
+    )
+    lines = verdict.beats[0].lines
+    assert "Accounting → its workspace: Read README.md" in lines
+    assert not any(line.endswith(": Read") for line in lines), lines
+
+
 def test_a_member_at_an_address_is_asked_for_what_it_can_show_and_its_surface_is_read(
     monkeypatch: pytest.MonkeyPatch, scene: Any
 ) -> None:
@@ -557,10 +632,8 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
         "Beats: open-invoices, aged-receivables, largest-balance, payment-reminders"
         in result.output
     )
-    assert (
-        "· To set up: The MCP server 'odoo-accounting:0.0.1' is not enabled."
-        in result.output
-    )
+    # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
+    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." not in result.output
     listed = json.loads(runner.invoke(scenes_command.app, ["ls", "--json"]).output)
     # The teams staged live: a scripted scene is played as written on its page (X-02).
     assert [scene["id"] for scene in listed] == sorted(
@@ -595,6 +668,37 @@ def test_rehearse_passes_in_the_validate_tab_s_words(
     assert "✓ open-invoices: passed" in result.output
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in result.output
     assert "Rehearsal: 1 of 1 beats passed. The scene is Live." in result.output
+
+
+def test_rehearse_writes_what_it_played_as_a_transcript(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """`--transcript`: the lines played, the beats they belong to, the verdict — what `record` keeps."""
+    from agent_runtimes.loop.scenes.transcript import lines_of_json
+
+    _here(monkeypatch, cast())
+    path = tmp_path / "run.json"
+    result = runner.invoke(
+        scenes_command.app,
+        [
+            "rehearse",
+            "sales-and-accounting",
+            "--beat",
+            "open-invoices",
+            "--transcript",
+            str(path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    written = json.loads(path.read_text())
+    assert written["version"] == 1 and written["scene"] == "sales-and-accounting"
+    assert written["rehearsal"]["passed"] is True
+    assert written["rehearsal"]["where"] == "on this machine"
+    [beat] = written["beats"]
+    assert beat["beat"] == "open-invoices" and beat["first"] == 0
+    lines = lines_of_json(path.read_text())
+    assert beat["count"] == len(lines) and lines[0].who == "You"
+    assert any(line.text == "odoo_accounting_list_invoices" for line in lines)
 
 
 def test_rehearse_fails_with_what_differed_and_exits_1(

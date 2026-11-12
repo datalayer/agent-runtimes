@@ -1,0 +1,61 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# The image Amazon Bedrock AgentCore Runtime runs (AC-04): one image for
+# every agentspec, started with the agentspec id in AGENT_SPEC_ID.
+#
+# It answers AgentCore's runtime contract (`agent-runtimes serve --target
+# agentcore`): /invocations, /ping and /ws on 0.0.0.0:8080 (AGENTCORE_PORT to
+# move it), and the A2A seat on port 9000.
+#
+# Built for linux/arm64 (what AgentCore Runtime runs) and linux/amd64 by
+# .github/workflows/agentcore-image.yml. agent-runtimes is installed from PyPI
+# at AGENT_RUNTIMES_VERSION, never from the checkout, and as wheels only
+# (`--only-binary=:all:`): a dependency without a wheel for the platform fails
+# the build instead of being compiled, so the image needs no compiler.
+#
+# Kept lean compared with Dockerfile.agent-runtime: no Node.js (so neither the
+# npm MCP servers nor the ACP adapters of the coding-agent harnesses), no
+# Chromium, no memory extra. Those agentspecs are not served by this image.
+
+ARG PYTHON_VERSION=3.11
+
+FROM python:${PYTHON_VERSION}-slim
+
+# The agent-runtimes release, and its extras: aws (Bedrock models and the
+# AgentCore control plane), a2a (the team seat on 9000), ui (AG-UI, which
+# /invocations speaks, and ACP), openai (models through Datalayer's
+# ai-inference).
+ARG AGENT_RUNTIMES_VERSION=1.6.2
+ARG AGENT_RUNTIMES_EXTRAS=aws,a2a,ui,openai
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    VIRTUAL_ENV=/opt/agent-runtimes \
+    PATH=/opt/agent-runtimes/bin:${PATH}
+
+RUN python -m venv "${VIRTUAL_ENV}" \
+    && pip install --only-binary=:all: \
+        "agent-runtimes[${AGENT_RUNTIMES_EXTRAS}]==${AGENT_RUNTIMES_VERSION}" \
+    && agent-runtimes --help > /dev/null
+
+# A non-root user, with a home for ~/.datalayer.
+RUN groupadd --system --gid 1000 agent \
+    && useradd --system --uid 1000 --gid agent --create-home --home-dir /home/agent \
+        --shell /usr/sbin/nologin agent
+
+USER agent
+WORKDIR /home/agent
+
+LABEL org.opencontainers.image.title="agent-runtimes-agentcore" \
+      org.opencontainers.image.description="agent-runtimes answering the Amazon Bedrock AgentCore Runtime contract" \
+      org.opencontainers.image.source="https://github.com/datalayer/agent-runtimes" \
+      org.opencontainers.image.licenses="BSD-3-Clause" \
+      org.opencontainers.image.version="${AGENT_RUNTIMES_VERSION}"
+
+# 8080: /invocations, /ping, /ws. 9000: A2A.
+EXPOSE 8080 9000
+
+CMD ["agent-runtimes", "serve", "--target", "agentcore"]

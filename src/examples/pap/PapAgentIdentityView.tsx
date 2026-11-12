@@ -37,7 +37,6 @@ const PapAgentIdentityView: React.FC = () => {
               jwks_uri: `${new URL(requested).origin}/jwks.json`,
               redirect_uris: [`${new URL(requested).origin}/callback`],
               token_endpoint_auth_method: 'private_key_jwt',
-              extensions: { memory: { version: '2' } },
             }),
           fetchJwks: async () =>
             parseJsonWebKeySet({

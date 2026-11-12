@@ -16,7 +16,7 @@ from agent_runtimes.client import AgentClient
 
 app = typer.Typer(
     name="pools",
-    help="Runtime pool administration commands",
+    help="Administer runtime pools.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -94,7 +94,7 @@ def show_pools(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List runtime pools with details (admin-only)."""
+    """List runtime pools with details."""
 
     try:
         payload = _api_get(
@@ -143,7 +143,7 @@ def set_pool_size(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """Update runtime pool size (admin-only)."""
+    """Update runtime pool size."""
 
     if size < 0:
         console.print("[red]Size must be >= 0.[/red]")

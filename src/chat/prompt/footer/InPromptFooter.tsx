@@ -45,6 +45,11 @@ export interface InPromptFooterProps {
   onSend: () => void;
   /** Callback when the stop button is clicked. */
   onStop?: () => void;
+  /**
+   * The conversation is a session, and stopping its turn pauses it (it
+   * waits to be resumed): the button says *Pause*, with the pause icon.
+   */
+  stopPausesSession?: boolean;
 }
 
 export function InPromptFooter({
@@ -56,6 +61,7 @@ export function InPromptFooter({
   isKernelBusy = false,
   onSend,
   onStop,
+  stopPausesSession = false,
 }: InPromptFooterProps) {
   const chatText = useChatWords();
   return (
@@ -81,11 +87,15 @@ export function InPromptFooter({
           {rightContent}
           {isLoading ? (
             <IconButton
-              icon={SquareCircleIcon}
-              aria-label={chatText.stop}
+              // A session's turn stopped is its session paused: said so.
+              icon={stopPausesSession ? PauseIcon : SquareCircleIcon}
+              aria-label={
+                stopPausesSession ? chatText.pauseSession : chatText.stop
+              }
               // A stable hook for tests and probes: the tooltip turns the
               // label above into `aria-labelledby`.
               data-prompt-action="stop"
+              data-prompt-pauses-session={stopPausesSession ? '' : undefined}
               onClick={onStop}
               size="small"
               variant="invisible"

@@ -1,11 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``loop``'s ``/decisions``: typed questions asked of Jev through the runtime.
+"""``loop``'s ``/decisions``: typed questions asked of the agent's decision model.
 
-The command asks the session's runtime (``POST
-/api/v1/configure/inference/decisions``), which asks ai-inference as the
-``decide`` tool does, with the runtime's token. ai-inference is mocked.
+An agent decides only when its spec names decisions: the command is offered
+for such an agent, and says why not for another. It asks the session's runtime
+(``POST /api/v1/configure/inference/decisions``), which asks ai-inference as
+the ``decide`` tool does, of the model the agent's decisions spec names, with
+the runtime's token. ai-inference is mocked.
 """
 
 from __future__ import annotations
@@ -21,10 +23,18 @@ import pytest
 from fastapi import FastAPI
 from rich.console import Console
 
+from agent_runtimes.chat.commands import build_registry
 from agent_runtimes.chat.commands import decisions as decisions_command
 from agent_runtimes.chat.commands.decisions import Unasked, answer_lines, parse
 from agent_runtimes.models.offered import give_inference_token
+from agent_runtimes.routes import acp as acp_route
+from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes import configure as configure_route
+from agent_runtimes.tools.decisions import agent_decisions, decisions_info
+
+#: Two agents of the runtime: one whose spec names decisions, one whose does not.
+DECIDER = "example-simple"
+PLAIN = "plain-agent"
 
 #: httpx's own client, kept before any test replaces it.
 REAL_CLIENT = httpx.AsyncClient
@@ -83,6 +93,18 @@ def session(
     """
     app = FastAPI()
     app.include_router(configure_route.router, prefix="/api/v1")
+
+    @app.get("/api/v1/agents/{agent_id}")
+    async def agent(agent_id: str) -> dict[str, Any]:
+        """Say an agent's decisions as the runtime's agent route does."""
+        return {"id": agent_id, "decisions": decisions_info(agent_decisions(agent_id))}
+
+    monkeypatch.setattr(acp_route, "_agents", {DECIDER: object(), PLAIN: object()})
+    monkeypatch.setattr(
+        agents_route,
+        "_agentspecs",
+        {DECIDER: {"decisions": "jev:0.0.1"}, PLAIN: {"decisions": None}},
+    )
     seen: list[httpx.Request] = []
     monkeypatch.setattr(
         httpx,
@@ -94,6 +116,7 @@ def session(
     tux = SimpleNamespace(
         console=Console(file=io.StringIO(), width=300),
         server_url="http://runtime",
+        agent_id=DECIDER,
         where=None,
     )
     yield tux, seen
@@ -151,13 +174,14 @@ def test_jev_is_asked_through_the_runtime_with_its_token(
         f'"{TICKET}" --yes-no "Is it urgent?" --choice "Which team?" Billing,Tech,Sales',
     )
 
-    assert "● Decided by cloudflare:wrk/typesafe/jev" in said
+    assert "● Decided by Jev (cloudflare:wrk/typesafe/jev)" in said
     assert "is_it_urgent: yes (0.93 that it holds)" in said
     assert "which_team: Billing (confidence 1.00)" in said
     [asked] = seen
     assert str(asked.url) == "https://r1.example/api/ai-inference/v1/decisions"
     assert asked.headers["Authorization"] == "Bearer the-runtime-token"
     body = json.loads(asked.content)
+    assert body["model"] == "cloudflare:wrk/typesafe/jev"
     assert body["state"] == TICKET
     assert body["questions"]["which_team"] == {
         "type": "choice",
@@ -175,6 +199,109 @@ def test_without_a_token_the_runtime_says_why_nothing_was_decided(
 
     assert "Nothing was decided." in said
     assert seen == []
+
+
+def test_for_an_agent_whose_spec_names_no_decisions_it_says_so_and_how_to_add_them(
+    session: tuple[SimpleNamespace, list[httpx.Request]],
+) -> None:
+    tux, seen = session
+    tux.agent_id = PLAIN
+    sentence = (
+        "The agent plain-agent does not decide: its spec names no decisions. "
+        "To give it the capability, add `decisions: jev:0.0.1` to its agentspec."
+    )
+    assert _run(tux, f'"{TICKET}" --yes-no "Is it urgent?"') == sentence
+    tux.console = Console(file=io.StringIO(), width=300)
+    assert _run(tux, "") == sentence
+    assert seen == []
+
+
+def test_the_route_refuses_an_agent_without_decisions_in_its_own_sentence(
+    session: tuple[SimpleNamespace, list[httpx.Request]],
+) -> None:
+    _, seen = session
+
+    async def ask(agent_id: str | None) -> dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://runtime/api/v1/configure/inference/decisions",
+                json={
+                    "state": TICKET,
+                    "questions": [
+                        {
+                            "name": "is_it_urgent",
+                            "type": "noul",
+                            "instructions": "Urgent.",
+                        }
+                    ],
+                    **({"agent_id": agent_id} if agent_id else {}),
+                },
+            )
+        return cast(dict[str, Any], response.json())
+
+    assert asyncio.run(ask(PLAIN)) == {
+        "refusal": (
+            "Nothing was decided: the agent plain-agent does not decide, its spec "
+            "names no decisions. To give it the capability, add "
+            "`decisions: jev:0.0.1` to its agentspec."
+        )
+    }
+    assert asyncio.run(ask("nobody")) == {
+        "refusal": "Nothing was decided: no agent 'nobody' runs on this runtime."
+    }
+    assert "say which agent asks" in asyncio.run(ask(None))["refusal"]
+    assert seen == []
+    assert asyncio.run(ask(DECIDER))["model"] == "cloudflare:wrk/typesafe/jev"
+
+
+def test_it_is_offered_in_help_and_the_menu_only_for_an_agent_that_decides(
+    session: tuple[SimpleNamespace, list[httpx.Request]],
+) -> None:
+    tux, _ = session
+    registry = build_registry(cast(Any, tux), discover=False)
+
+    def listed() -> bool:
+        grouped = [
+            spec.name for specs in registry.by_group().values() for spec in specs
+        ]
+        return (
+            "decisions" in [spec.name for spec in registry] and "decisions" in grouped
+        )
+
+    # Not read yet: not offered, and still answering when typed.
+    assert not listed()
+    assert registry.resolve("decide") is registry.resolve("decisions") is not None
+    assert "decisions" in registry.as_mapping()
+
+    refreshed = asyncio.run(decisions_command.refresh(cast(Any, tux)))
+    assert refreshed is not None and refreshed["spec"] == "jev:0.0.1"
+    assert listed()
+
+    # Switched to an agent that does not decide: gone from both, until read again.
+    tux.agent_id = PLAIN
+    assert not listed()
+    assert asyncio.run(decisions_command.refresh(cast(Any, tux))) is None
+    assert not listed()
+    tux.agent_id = DECIDER
+    assert asyncio.run(decisions_command.refresh(cast(Any, tux)))
+    assert listed()
+
+
+def test_the_header_says_the_spec_and_its_model() -> None:
+    from agent_runtimes.chat.cli import _format_startup_info
+
+    decisions = decisions_info(agent_decisions.__globals__["decisions_spec"]("jev"))
+    assert decisions_command.header_value(decisions) == (
+        "jev:0.0.1 (cloudflare:wrk/typesafe/jev)"
+    )
+    assert decisions_command.header_value(None) is None
+    with_it = _format_startup_info("h", 1, {"agent": {"decisions": decisions}})
+    assert (
+        "Decisions" in with_it and "jev:0.0.1 (cloudflare:wrk/typesafe/jev)" in with_it
+    )
+    assert "Decisions" not in _format_startup_info(
+        "h", 1, {"agent": {"decisions": None}}
+    )
 
 
 def test_with_nothing_typed_it_shows_how(

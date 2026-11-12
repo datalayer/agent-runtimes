@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /resume <uid> - Open this conversation on a session (MH-18)."""
+"""Slash command: /resume <uid> - Go on with a session here, its conversation loaded."""
 
 from __future__ import annotations
 
@@ -10,21 +10,23 @@ from typing import TYPE_CHECKING, Optional
 
 from agent_runtimes.loop.commands import CommandArgSpec
 
-from .sessions_shared import ask, session_of
+from .sessions_shared import ask, load_conversation, session_of
 
 if TYPE_CHECKING:
     from ..tux import CliTux
 
 NAME = "resume"
 ALIASES: list[str] = []
-DESCRIPTION = "Resume a session here: /swap, /clone and /export then act on it"
+DESCRIPTION = "Resume a paused session here, by its number in /sessions or its id"
 SHORTCUT = None
-GROUP = "Session"
+GROUP = "Sessions"
 ARGS = (
-    CommandArgSpec(name="uid", description="The session's id (/sessions)"),
+    CommandArgSpec(
+        name="uid", description="The session's number in /sessions, or its id"
+    ),
     CommandArgSpec(
         name="agent",
-        description="Its application's agent, for a session the runtime no longer holds",
+        description="The agent that runs it here, when it is not this prompt's",
     ),
 )
 
@@ -35,12 +37,41 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     if not parts:
         tux.console.print("  /resume <uid> [<agent>]")
         return None
-    uid, agent = parts[0], (parts[1] if len(parts) > 1 else "")
+    session = session_of(tux)
+    # A session this runtime no longer holds is rebuilt from its record on
+    # the agent named: this prompt's, unless another is.
+    uid = parts[0]
+    # Its number in the last `/sessions`, as well as its id.
+    listed = (
+        list(session.extras.get("listed_sessions") or []) if session is not None else []
+    )
+    if uid.isdigit() and len(uid) < 8:
+        if not 1 <= int(uid) <= len(listed):
+            said = (
+                f"There is no session {uid} in the last /sessions: list them first, "
+                "or give the session's id."
+            )
+            tux.console.print(said, markup=False)
+            # Lines run after it (`loop --prompt`) would start afresh: stopped.
+            tux.last_error = said
+            return None
+        uid = listed[int(uid) - 1]
+    agent = parts[1] if len(parts) > 1 else str(getattr(tux, "agent_id", "") or "")
     try:
         response = ask(tux, "POST", f"/{uid}/resume", json={"agent": agent})
         described = ask(tux, "GET", f"/{uid}").json()
+        thread = ask(tux, "GET", f"/{uid}/messages").json()
     except (RuntimeError, OSError) as refused:
         tux.console.print(f"[red]{refused}[/red]")
+        tux.last_error = str(refused)
+        if "is not a session of" in str(refused):
+            # Another agent's or application's: `loop` starts what it is a
+            # session of when it is picked as it starts.
+            tux.console.print(
+                "Start `loop` with nothing else and pick it among your paused sessions: "
+                "its agent, or its application, is started and it is resumed there.",
+                markup=False,
+            )
         return None
     replayed = 0
     for block in response.text.split("\n\n"):
@@ -59,15 +90,17 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
             replayed += sum(
                 1 for m in event.get("messages") or [] if m.get("role") == "user"
             )
-    session = session_of(tux)
     if session is not None:
         session.session_uid = uid
         session.conversation_id = uid
         if described.get("agent"):
             session.agent_id = str(described["agent"])
+    # The prompt goes on with it: its next message is the session's next
+    # turn, sent with the conversation so far.
+    await load_conversation(tux, uid, thread.get("messages") or [])
     tux.console.print(
         f"Resumed {uid} ({described.get('agent')}): {replayed} turn{'s' if replayed != 1 else ''} replayed. "
-        "/swap, /clone and /export act on it now.",
+        "Your next message goes on with it; /pause, /swap, /clone and /export act on it.",
         markup=False,
     )
     return None

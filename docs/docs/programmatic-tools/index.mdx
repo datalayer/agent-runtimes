@@ -28,6 +28,10 @@ Two variants are supported:
 - **`eval`** — in-process Python execution (fast, default)
 - **`jupyter`** — dedicated Jupyter kernel per agent (isolated, full kernel state)
 
+A sandbox can also run at a provider, reached with the credentials the runtime holds for it (`docker`, `datalayer`, `kaggle`, `modal`, `daytona`, `e2b`, `coreweave`, `cloudflare`, `agentcore`, …; see [code-sandboxes](https://code-sandboxes.datalayer.tech)).
+
+**`agentcore`** runs the agent's code in a session of an Amazon Bedrock AgentCore code interpreter (`aws.codeinterpreter.v1`), in your own AWS account: give the runtime AWS credentials allowed to call `bedrock-agentcore` and `AWS_REGION`. The session keeps one Python kernel, so variables persist between calls; it reaches no internet (the managed interpreter runs in AgentCore's SANDBOX network mode), and the session is stopped with the agent. AgentCore's Browser is a session code-sandboxes starts beside it (`AgentCoreBrowser`), driven over the Chrome DevTools Protocol.
+
 Set `sandbox_variant` in an agent spec to choose the variant. A sandbox is created eagerly at agent-creation time when `sandbox_variant` is specified, regardless of whether Codemode or Skills are enabled.
 
 ### Codemode

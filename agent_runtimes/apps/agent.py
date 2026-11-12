@@ -45,6 +45,7 @@ from agent_runtimes.apps.guards import Ask as CheckAsk
 from agent_runtimes.apps.loading import AppNotRunnable
 from agent_runtimes.apps.plugins import rules_for
 from agent_runtimes.apps.record import AppRecordCapability, AppRecorder
+from agent_runtimes.apps.today import today_instruction
 from agent_runtimes.types import Agentspec, AppSpec
 
 #: How a host builds the agent an application runs, from its spec.
@@ -162,6 +163,18 @@ def app_capabilities(
             deployment_uid=recorder.deployment_uid,
             unread=recorder.approvals_unread,
         ).granted
+    # Who launched it, for the Permission Guard's reading of its Policy's
+    # rules: the deployment served, else the credential's account; the
+    # Shield's authorizer with the same credential, read at each decision.
+    from agent_shield.policy import hook_for
+
+    from agent_runtimes.apps.record import token_for
+    from agent_runtimes.guardrails import shield_authorizer
+
+    def credential() -> str:
+        return token_for(recorder.deployment_uid)[0] or ""
+
+    authorizer = shield_authorizer.runtime_authorizer(credential)
     checks = AppChecksCapability(
         checks=AppChecks.of(app),
         agent_id=agent_id,
@@ -173,6 +186,10 @@ def app_capabilities(
         answered=recorder.answered,
         # What the Required Frame Guard reads at a session's start (R-06).
         organization=organization,
+        subject=lambda: shield_authorizer.runtime_subject(
+            credential(), recorder.deployment_uid
+        ),
+        authorize=hook_for(authorizer) if authorizer is not None else None,
     )
     # The model budget and the spend limit of the policies in force, soft then
     # hard, on every model request (SH-32): the organization's from
@@ -382,11 +399,13 @@ def _agent_from_spec(
     # Cog's, its Frames included), its contexts, then the application's.
     frames = frames_instructions(app.context, organization or NO_ORGANIZATION)
     parts = [spec.system_prompt if spec else "", frames, app.instructions or ""]
-    instructions = "\n\n".join(part for part in parts if part) or None
+    instructions = "\n\n".join(part for part in parts if part)
     provider = spec.inference_provider if spec is not None else None
     return Agent(
         resolve_model_for_inference_provider(model, provider),
-        instructions=instructions,
+        instructions=[instructions, today_instruction]
+        if instructions
+        else today_instruction,
     )
 
 

@@ -38,8 +38,8 @@ app = Application(
 )
 
 # One company, reached through Datalayer's gateway, read only, in each
-# person's own account (`pap.connections`, the typed builder of
-# S-04: a URL, a credential or an unknown field is refused here).
+# person's own account (`pap.connections`, its typed builder:
+# a URL, a credential or an unknown field is refused here).
 app.company_connection(
     "orders",
     "manzanita.example",

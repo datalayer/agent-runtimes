@@ -89,7 +89,7 @@ describe('the Personal Agent Protocol group', () => {
       'PapCompanyDiscoveryExample',
       'PapAgentIdentityExample',
       'PapAuthorizationBoundaryExample',
-      'PapDpopProofExample',
+      'PapSessionJwtExample',
       'PapSessionLifecycleExample',
       'PapGuidedJourneyExample',
       'PapUserWithACompanyExample',

@@ -9,10 +9,11 @@ them. Three things happen, at three moments:
 - **built in**, for every application: nothing that looks like a credential
   leaves — not in a tool's arguments, not in the answer — and none is given
   to its model in its instructions;
-- **the Guards it names** run at their stages and give their signals. A Guard
-  this runtime knows how to execute is executed; one it does not (a Guard
-  judged by a Cog or by a person) is said at the start of the session, never
-  passed in silence;
+- **the Guards it names** run at their stages and give their signals, each
+  against the Policy it extends (``policy_of``: the Shield's document, read
+  from the policies catalogue). A Guard this runtime knows how to execute is
+  executed; one it does not (a Guard judged by a Cog or by a person) is said
+  at the start of the session, never passed in silence;
 - **the Gates it names** read those signals and do what they say: stop, send
   the step back, or ask a person.
 
@@ -43,6 +44,7 @@ from typing import (
     Mapping,
     Optional,
     Set,
+    Tuple,
 )
 
 from pydantic_ai import ModelRetry, RunContext
@@ -75,26 +77,34 @@ POST_RUN = "post_run"
 
 _PRIVATE_KEY_END = re.compile(r"-----END [A-Z ]+-----")
 
+#: Personal data the Sensitive Data Guard looks for, said as it is reported.
+PERSONAL_DATA = {
+    "email": "an email address",
+    "phone": "a phone number",
+    "ssn": "a social security number",
+    "credit_card": "a card number",
+    "iban": "an IBAN",
+}
 
-def _keys_of(value: Any) -> List[str]:
-    keys: List[str] = []
+
+def _text_of(value: Any) -> str:
     if isinstance(value, Mapping):
-        for key, inner in value.items():
-            keys.append(str(key))
-            keys.extend(_keys_of(inner))
-    elif isinstance(value, (list, tuple)):
-        for inner in value:
-            keys.extend(_keys_of(inner))
-    return keys
+        return " ".join(_text_of(inner) for inner in value.values())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_text_of(inner) for inner in value)
+    return "" if value is None else str(value)
 
 
-def denied_fields_in(value: Any, denied: List[str]) -> List[str]:
-    """The fields of a value its guardrail denies, by their glob (`*Password*`)."""
-    found = []
-    for key in _keys_of(value):
-        if any(fnmatch.fnmatch(key.lower(), pattern.lower()) for pattern in denied):
-            found.append(key)
-    return sorted(set(found))
+def personal_data_in(value: Any) -> List[str]:
+    """The kinds of personal data a value holds, by the PII detector's patterns."""
+    from agent_runtimes.guardrails.input_output_safety import PII_PATTERNS
+
+    text = _text_of(value)
+    return [
+        said
+        for name, said in PERSONAL_DATA.items()
+        if re.search(PII_PATTERNS[name], text)
+    ]
 
 
 # --- the Guards -------------------------------------------------------------------
@@ -122,18 +132,10 @@ GuardRun = Callable[[Any, AppSpec, str, Mapping[str, Any], Signals], None]
 def _sensitive_data(
     guard: Any, app: AppSpec, stage: str, seen: Mapping[str, Any], signals: Signals
 ) -> None:
+    """No credential and no personal data in a call's arguments or in the answer."""
     value = seen.get("args") if stage == IN_FLIGHT else seen.get("output")
-    kinds = credentials_in(value)
-    denied = list(
-        getattr(getattr(guard, "data_scope", None), "denied_fields", []) or []
-    )
-    fields = denied_fields_in(value, denied) if denied else []
-    found = kinds + [f"the field `{name}`" for name in fields]
-    signals.set(
-        "sensitive_data_detected",
-        bool(found),
-        ", ".join(found),
-    )
+    found = credentials_in(value) + personal_data_in(value)
+    signals.set("sensitive_data_detected", bool(found), ", ".join(found))
 
 
 def _tool_use_policy(
@@ -188,14 +190,14 @@ def _required_frame(
     signals.set("frames_missing", bool(missing), "; ".join(missing))
 
 
-#: A guardrail's permissions, and what an application does that needs each.
-PERMISSION_WORDS = {
-    "read_data": "read:data",
-    "write_data": "write:data",
-    "execute_code": "execute:code",
-    "access_internet": "access:internet",
-    "send_email": "send:email",
-    "deploy_production": "deploy:production",
+#: The Shield's classes of action, and the kind a check of each is decided as.
+CLASS_KINDS = {
+    "read": "read",
+    "write": "edit",
+    "delete": "delete",
+    "execute": "execute",
+    "send": "send",
+    "buy": "buy",
 }
 
 
@@ -211,16 +213,17 @@ def _named(tools: List[str]) -> str:
     )
 
 
-def permissions_needed(app: AppSpec) -> Dict[str, str]:
-    """What an application does that a guardrail's permissions name, with why.
+def classes_needed(app: AppSpec) -> Dict[str, str]:
+    """What an application does, by the class of action a Policy's rules decide, with why.
 
-    By permission (``read_data``, ``write_data``, ``execute_code``,
-    ``access_internet``, ``send_email``, ``deploy_production``): it reads
-    what it connects to, its documents and its Spaces; it writes through a
-    connection or a Space granted to write, or a tool that writes or deletes;
-    it runs code when its computer has a shell; it reaches the internet when
-    its computer browses; it sends through a tool that sends; it publishes
-    through a tool that publishes.
+    By class (``read``, ``write``, ``delete``, ``execute``, ``send``,
+    ``buy``): it reads what it connects to, its documents and its Spaces; it
+    writes through a connection or a Space granted to write, or a tool that
+    writes; it deletes through a tool that deletes; it runs commands when its
+    computer has a shell; it sends through a tool that sends; it buys through
+    a tool that buys. What its computer browses is decided by the Policy's
+    ``network`` at each fetch, by its host; what a tool publishes is the
+    gateway's class, not one a Policy's rules name.
     """
     from agentspecs.actions import ActionClass, classes_of
 
@@ -240,7 +243,7 @@ def permissions_needed(app: AppSpec) -> Dict[str, str]:
         + [f"the Space `{grant.space}`" for grant in app.permissions.spaces]
     )
     if reads:
-        needs["read_data"] = f"it reads {_named(reads)}"
+        needs["read"] = f"it reads {_named(reads)}"
     writes = (
         [f"`{_id_of(c.server)}`" for c in app.connections if _is_write(c.access)]
         + [
@@ -249,39 +252,69 @@ def permissions_needed(app: AppSpec) -> Dict[str, str]:
             if _is_write(g.access)
         ]
         + doing.get(ActionClass.WRITE, [])
-        + doing.get(ActionClass.DELETE, [])
     )
     if writes:
-        needs["write_data"] = f"it writes through {_named(writes)}"
+        needs["write"] = f"it writes through {_named(writes)}"
+    if doing.get(ActionClass.DELETE):
+        needs["delete"] = f"it deletes through {_named(doing[ActionClass.DELETE])}"
     if app.permissions.computer.shell:
-        needs["execute_code"] = "its computer runs commands"
-    if app.permissions.computer.browse:
-        needs["access_internet"] = "its computer browses"
+        needs["execute"] = "its computer runs commands"
     if doing.get(ActionClass.SEND):
-        needs["send_email"] = f"it can send ({_named(doing[ActionClass.SEND])})"
-    if doing.get(ActionClass.PUBLISH):
-        needs["deploy_production"] = (
-            f"it can publish ({_named(doing[ActionClass.PUBLISH])})"
-        )
+        needs["send"] = f"it can send ({_named(doing[ActionClass.SEND])})"
+    if doing.get(ActionClass.BUY):
+        needs["buy"] = f"it can buy ({_named(doing[ActionClass.BUY])})"
     return needs
+
+
+def _policy_in_force(guard: Any) -> Tuple[str, Any]:
+    """The Policy a Guard extends, named, and parsed as the Shield reads one."""
+    from agent_shield.policy import parse_policy
+
+    from agent_runtimes.specs.guards import policy_of
+
+    spec = policy_of(guard)
+    return f"{spec.id}:{spec.version}", parse_policy(spec.policy, spec.id)
+
+
+def _decided(
+    guard: Any, seen: Mapping[str, Any], action_class: str, why: str
+) -> Tuple[str, Any]:
+    """What the Guard's Policy decides of one class of action, for the launching identity.
+
+    Decided by the Shield's own engine on a plain action of the class, inside
+    the workspace: a rule naming the class, else the Policy's default; a
+    class the Policy lists under ``authorize`` is put to the authorizer the
+    session carries (``seen['authorize']``) for its subject
+    (``seen['subject']``), and refused when there is none — nothing is
+    authorized unsaid.
+    """
+    from agent_shield.policy import Action, Context, decide
+
+    name, policy = _policy_in_force(guard)
+    action = Action(
+        kind=CLASS_KINDS[action_class],
+        action_class=action_class,
+        title=why,
+        inside=True,
+    )
+    context = Context(
+        workspace="",
+        subject=seen.get("subject"),
+        authorize=seen.get("authorize"),
+    )
+    return name, decide(action, context, [policy])
 
 
 def _permission(
     guard: Any, app: AppSpec, stage: str, seen: Mapping[str, Any], signals: Signals
 ) -> None:
-    """Each permission the application needs, its guardrail grants."""
-    granted = getattr(guard, "permissions", None)
-    guardrail = getattr(guard, "guardrail", "") or "its guardrail"
-    denied = [
-        f"{why}, which `{PERMISSION_WORDS[name]}` of {guardrail} does not allow"
-        for name, why in permissions_needed(app).items()
-        if not getattr(granted, name, False)
-    ]
+    """Each class of action the application takes, its Policy's rules allow or ask about for who launched it."""
+    denied = []
+    for action_class, why in classes_needed(app).items():
+        name, decision = _decided(guard, seen, action_class, why)
+        if decision.verdict == "deny":
+            denied.append(f"{why}, which {name} denies ({decision.sentence})")
     signals.set("permission_denied", bool(denied), "; ".join(denied))
-
-
-def _words_of(text: Any) -> List[str]:
-    return re.findall(r"[A-Za-z_][A-Za-z0-9_]*", str(text or ""))
 
 
 def _matches(value: str, patterns: List[str]) -> bool:
@@ -291,48 +324,31 @@ def _matches(value: str, patterns: List[str]) -> bool:
 def _data_source_authorization(
     guard: Any, app: AppSpec, stage: str, seen: Mapping[str, Any], signals: Signals
 ) -> None:
-    """What it reads is within its guardrail's data scope.
+    """What it reads, its Policy lends it and lets it read.
 
-    Its connections' servers are the systems; its documents and its Spaces
-    the objects; an empty allowed list allows every one (the catalogue's
-    default guardrail allows none by name). A denied field is one the
-    application's instructions, or what the session was opened with, name.
+    Its connections' servers are among the MCP servers the Policy lends
+    (``mcp.allow``; a Policy lending none by name lends every one, as the
+    Shield cuts nothing then), and reading each of its documents and Spaces
+    is not something the Policy's rules deny for who launched it.
     """
-    scope = getattr(guard, "data_scope", None)
-    guardrail = getattr(guard, "guardrail", "") or "its guardrail"
-    allowed_systems = list(getattr(scope, "allowed_systems", []) or [])
-    allowed_objects = list(getattr(scope, "allowed_objects", []) or [])
-    denied_objects = list(getattr(scope, "denied_objects", []) or [])
-    denied_fields = list(getattr(scope, "denied_fields", []) or [])
+    name, policy = _policy_in_force(guard)
+    lent = list(policy.mcp.allow)
     unauthorized: List[str] = []
     for connection in app.connections:
         server = _id_of(connection.server)
-        if allowed_systems and not _matches(server, allowed_systems):
+        if lent and not _matches(server, lent):
             unauthorized.append(
-                f"`{server}` is not among the systems {guardrail} allows "
-                f"({', '.join(allowed_systems)})"
+                f"`{server}` is not among the servers {name} lends ({', '.join(lent)})"
             )
-    objects = list(app.contents) + [grant.space for grant in app.permissions.spaces]
-    for name in objects:
-        if denied_objects and _matches(name, denied_objects):
-            unauthorized.append(f"`{name}` is an object {guardrail} denies")
-        elif allowed_objects and not _matches(name, allowed_objects):
+    objects = list(app.contents) + [
+        f"the Space `{g.space}`" for g in app.permissions.spaces
+    ]
+    for what in objects:
+        shown = what if what.startswith("the Space") else f"`{what}`"
+        _, decision = _decided(guard, seen, "read", f"it reads {shown}")
+        if decision.verdict == "deny":
             unauthorized.append(
-                f"`{name}` is not among the objects {guardrail} allows "
-                f"({', '.join(allowed_objects)})"
-            )
-    if denied_fields:
-        named = sorted(
-            {
-                word
-                for word in _words_of(app.instructions) + _words_of(seen.get("prompt"))
-                if _matches(word, denied_fields)
-            }
-        )
-        if named:
-            unauthorized.append(
-                f"the field{'s' if len(named) > 1 else ''} {_named([f'`{w}`' for w in named])} "
-                f"{'are' if len(named) > 1 else 'is'} denied by {guardrail}"
+                f"reading {shown} is denied by {name} ({decision.sentence})"
             )
     signals.set("unauthorized_source", bool(unauthorized), "; ".join(unauthorized))
 
@@ -584,12 +600,24 @@ class AppChecks:
         profiles'; a stop, never a retry: there is no answer to ask again
         for) — then each preflight Guard it names, run on its Appspec and on
         ``seen`` (``prompt``: what the session was opened with;
-        ``organization``: its organization's contexts, when known). A Guard
+        ``organization``: its organization's contexts, when known;
+        ``subject`` and ``authorize``: who launched it and the Shield's
+        authorizer for them, which the Policy's rules are read for). A Guard
         whose signal is raised fails: a stop, with the Gate that reads the
         signal named when the application names one, the Guard alone
         otherwise — there is nothing to retry before the first turn.
+
+        What it runs without because its organization disabled a context is
+        kept with them, each a verdict of no check's that lets it proceed.
         """
-        verdicts: List[Verdict] = []
+        from agent_runtimes.apps.frames import NO_ORGANIZATION, frames_left_out
+
+        verdicts: List[Verdict] = [
+            Verdict("proceed", sentence)
+            for sentence in frames_left_out(
+                self.app.context, seen.get("organization") or NO_ORGANIZATION
+            )
+        ]
         found = credentials_in(instructions_of(self.app))
         verdicts.append(
             Verdict(
@@ -681,6 +709,16 @@ class AppChecksCapability(AbstractCapability[Any]):
     """The contexts of the organization it belongs to (`OrganizationFrames`),
     which the Required Frame Guard reads; none known when unsaid."""
 
+    subject: Optional[Callable[[], Any]] = None
+    """Who launched the session, as the Shield names a subject
+    (`agent_shield.policy.Subject`), read at the session's start: the
+    Permission Guard checks it against its Policy's rules. Nobody when unsaid."""
+
+    authorize: Optional[Any] = None
+    """The Shield's authorize hook for that subject (`hook_for`), which a
+    class the Policy lists under ``authorize`` is put to; none means every
+    such class is refused."""
+
     _preflighted: Set[str] = field(default_factory=set, init=False, repr=False)
 
     async def before_run(self, ctx: RunContext[Any]) -> None:
@@ -702,7 +740,12 @@ class AppChecksCapability(AbstractCapability[Any]):
         if session in self._preflighted:
             return
         verdicts = self.checks.preflight(
-            {"prompt": prompt, "organization": self.organization}
+            {
+                "prompt": prompt,
+                "organization": self.organization,
+                "subject": self.subject() if self.subject is not None else None,
+                "authorize": self.authorize,
+            }
         )
         if self.record is not None:
             for verdict in verdicts:
@@ -868,12 +911,12 @@ __all__ = [
     "AppChecksCapability",
     "BUILT_IN",
     "EXECUTORS",
-    "PERMISSION_WORDS",
+    "CLASS_KINDS",
     "Verdict",
     "credentials_in",
-    "denied_fields_in",
     "instructions_of",
-    "permissions_needed",
+    "classes_needed",
+    "personal_data_in",
     "redact",
     "holds",
 ]

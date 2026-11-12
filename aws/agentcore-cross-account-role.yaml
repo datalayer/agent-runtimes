@@ -1,0 +1,539 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Datalayer on Amazon Bedrock AgentCore, in your own AWS account.
+  Creates four roles: the cross-account role Datalayer assumes (with your
+  organization's external id) to deploy agentspecs as AgentCore agent
+  runtimes, invoke and stop their sessions, obtain workload access tokens
+  from a person's token, and push your organization's policy and rate
+  limits to your AgentCore Gateways; the execution role AgentCore runs the
+  agent with (CloudWatch Logs, X-Ray, and Bedrock models only when you
+  choose to pay for them in this account); the role your Gateways run
+  with, which lets their policy engine decide each call; and the role
+  AgentCore Evaluations judges your deployments' sessions with. It turns on
+  CloudWatch Transaction Search, where AgentCore keeps the agents' spans.
+
+Parameters:
+
+  DatalayerAccountId:
+    Type: String
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: A 12-digit AWS account id.
+    Description: >
+      The AWS account id Datalayer assumes the role from, as shown in your
+      organization's AWS settings on Datalayer.
+
+  ExternalId:
+    Type: String
+    NoEcho: false
+    MinLength: 16
+    MaxLength: 1224
+    AllowedPattern: '^[\w+=,.@:/-]+$'
+    ConstraintDescription: >
+      16 to 1224 characters: letters, digits and +=,.@:/-_ (IAM's rule for
+      sts:ExternalId).
+    Description: >
+      Your organization's external id, as shown in your organization's AWS
+      settings on Datalayer. The role can be assumed only with it, which
+      keeps another Datalayer organization from using your role.
+
+  UseCustomerBedrock:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: >
+      'true' lets the agent call Amazon Bedrock models in this account (the
+      model costs are then billed by AWS to this account). 'false' keeps the
+      models on Datalayer's inference, billed in Datalayer credits.
+
+  EnableTransactionSearch:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'true'
+    Description: >
+      'true' turns on CloudWatch Transaction Search in this account and
+      region (trace segments to CloudWatch Logs, with the log resource
+      policy X-Ray needs). AgentCore Observability takes the agents' spans
+      over OTLP only then, and AgentCore Evaluations judges sessions from
+      those spans: without it every span export answers 400. 'false' when
+      Transaction Search is already on in this account and region (a stack
+      cannot create it twice).
+
+Conditions:
+
+  CustomerBedrock: !Equals [!Ref UseCustomerBedrock, 'true']
+  TransactionSearch: !Equals [!Ref EnableTransactionSearch, 'true']
+
+Resources:
+
+  # -------------------------------------------------------------------------
+  # The execution role: what the agent runs as inside AgentCore Runtime.
+  # -------------------------------------------------------------------------
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: The role Amazon Bedrock AgentCore runs Datalayer agents with.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AgentCoreRuntime
+            Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: datalayer-agentcore-execution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: PullTheImage
+                Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: '*'
+              - Sid: EcrToken
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*'
+              - Sid: LogGroups
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+              - Sid: Traces
+                Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+              - Sid: Metrics
+                Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: bedrock-agentcore
+              - Sid: ThirdPartyCredentials
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetResourceOauth2Token
+                  - bedrock-agentcore:GetResourceApiKey
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+              - Sid: ThirdPartySecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore-identity!*'
+              - Sid: NeverForAnyUserId
+                Effect: Deny
+                Action: bedrock-agentcore:GetWorkloadAccessTokenForUserId
+                Resource: '*'
+
+  ExecutionRoleBedrock:
+    Type: AWS::IAM::RolePolicy
+    Condition: CustomerBedrock
+    Properties:
+      RoleName: !Ref ExecutionRole
+      PolicyName: datalayer-agentcore-bedrock
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: InvokeModels
+            Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:bedrock:*::foundation-model/*'
+              - !Sub 'arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*'
+
+  # -------------------------------------------------------------------------
+  # The Gateway role: what your AgentCore Gateways run with. Give it to each
+  # Gateway your organization registers on Datalayer: its policy engine then
+  # decides every tool call, over the policy session's history.
+  # -------------------------------------------------------------------------
+
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: The role your Amazon Bedrock AgentCore Gateways run with, for Datalayer's policies.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AgentCoreGateway
+            Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+      Policies:
+        - PolicyName: datalayer-agentcore-gateway
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The policy engine attached to the Gateway decides each call.
+              - Sid: PolicyDecisions
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:AuthorizeAction
+                  - bedrock-agentcore:PartiallyAuthorizeActions
+                  - bedrock-agentcore:GetPolicyEngine
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*'
+              # A temporal policy's session: the Gateway's own workload token.
+              - Sid: PolicySessions
+                Effect: Allow
+                Action: bedrock-agentcore:GetWorkloadAccessToken
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+
+  # -------------------------------------------------------------------------
+  # The cross-account role: what Datalayer assumes, with the external id.
+  # -------------------------------------------------------------------------
+
+  DatalayerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: The role Datalayer assumes to run your agents on Amazon Bedrock AgentCore.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Datalayer
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${DatalayerAccountId}:root'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      Policies:
+        - PolicyName: datalayer-agentcore
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Deploy, read, update and remove agent runtimes (the control plane).
+              - Sid: AgentRuntimes
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateAgentRuntime
+                  - bedrock-agentcore:GetAgentRuntime
+                  - bedrock-agentcore:UpdateAgentRuntime
+                  - bedrock-agentcore:DeleteAgentRuntime
+                  - bedrock-agentcore:ListAgentRuntimeVersions
+                  - bedrock-agentcore:CreateAgentRuntimeEndpoint
+                  - bedrock-agentcore:GetAgentRuntimeEndpoint
+                  - bedrock-agentcore:UpdateAgentRuntimeEndpoint
+                  - bedrock-agentcore:DeleteAgentRuntimeEndpoint
+                  - bedrock-agentcore:ListAgentRuntimeEndpoints
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/*'
+              - Sid: ListAgentRuntimes
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:ListAgentRuntimes
+                Resource: '*'
+              # The organization's credential providers, listed on its settings page.
+              - Sid: ListCredentialProviders
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:ListOauth2CredentialProviders
+                  - bedrock-agentcore:ListApiKeyCredentialProviders
+                Resource: '*'
+              # A session: a turn, and its microVM stopped.
+              - Sid: Sessions
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                  - bedrock-agentcore:StopRuntimeSession
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/*'
+              # Workload identities: the one an agent runtime gets, and the one
+              # a Datalayer pod gets when your organization keeps third-party
+              # tokens in AgentCore Identity.
+              - Sid: WorkloadIdentities
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateWorkloadIdentity
+                  - bedrock-agentcore:GetWorkloadIdentity
+                  - bedrock-agentcore:UpdateWorkloadIdentity
+                  - bedrock-agentcore:DeleteWorkloadIdentity
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+              # A workload access token, always for a person whose token
+              # Datalayer signed: never for a user id Datalayer merely names.
+              - Sid: WorkloadAccessTokenForAPerson
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetWorkloadAccessTokenForJWT
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+              - Sid: ThirdPartyCredentials
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetResourceOauth2Token
+                  - bedrock-agentcore:GetResourceApiKey
+                  - bedrock-agentcore:CompleteResourceTokenAuth
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/*'
+              - Sid: ThirdPartySecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore-identity!*'
+              - Sid: NeverForAnyUserId
+                Effect: Deny
+                Action: bedrock-agentcore:GetWorkloadAccessTokenForUserId
+                Resource: '*'
+              # AgentCore Evaluations: a session judged on demand from its
+              # spans (read from aws/spans), and online evaluation of a
+              # deployment, run by the evaluation role below.
+              - Sid: Evaluations
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:Evaluate
+                  - bedrock-agentcore:GetEvaluator
+                  - bedrock-agentcore:ListEvaluators
+                  - bedrock-agentcore:CreateOnlineEvaluationConfig
+                  - bedrock-agentcore:GetOnlineEvaluationConfig
+                  - bedrock-agentcore:ListOnlineEvaluationConfigs
+                  - bedrock-agentcore:UpdateOnlineEvaluationConfig
+                  - bedrock-agentcore:DeleteOnlineEvaluationConfig
+                Resource: '*'
+              - Sid: ReadTheSpans
+                Effect: Allow
+                Action:
+                  - logs:StartQuery
+                  - logs:GetQueryResults
+                  - logs:StopQuery
+                Resource: '*'
+              # Creating an online evaluation, AgentCore reads and sets the
+              # field index of aws/spans with the caller's own permissions.
+              - Sid: IndexTheSpans
+                Effect: Allow
+                Action:
+                  - logs:DescribeIndexPolicies
+                  - logs:PutIndexPolicy
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans:*'
+              - Sid: PassTheEvaluationRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt EvaluationRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: bedrock-agentcore.amazonaws.com
+              # The image the agent runtime is created from.
+              - Sid: PullTheImage
+                Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: '*'
+              - Sid: EcrToken
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              # Your organization's policy: one policy engine, its policies,
+              # LOG_ONLY first and then ACTIVE, attached to your Gateways.
+              - Sid: PolicyEngines
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreatePolicyEngine
+                  - bedrock-agentcore:ListPolicyEngines
+                Resource: '*'
+              - Sid: Policies
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetPolicyEngine
+                  - bedrock-agentcore:CreatePolicy
+                  - bedrock-agentcore:GetPolicy
+                  - bedrock-agentcore:UpdatePolicy
+                  - bedrock-agentcore:DeletePolicy
+                  - bedrock-agentcore:ListPolicies
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*'
+              # Your Gateways: the engine attached, the policies scoped to
+              # them, and your organization's rate limits per user.
+              - Sid: Gateways
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetGateway
+                  - bedrock-agentcore:UpdateGateway
+                  - bedrock-agentcore:ManageResourceScopedPolicy
+                  - bedrock-agentcore:BatchPutGatewayRateLimits
+                  - bedrock-agentcore:ListGatewayRateLimits
+                  - bedrock-agentcore:DeleteGatewayRateLimit
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*'
+              # The Gateway role above, handed back to a Gateway as it is updated.
+              - Sid: PassTheGatewayRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt GatewayRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: bedrock-agentcore.amazonaws.com
+              # The execution role above, handed to AgentCore, and no other role.
+              - Sid: PassTheExecutionRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt ExecutionRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: bedrock-agentcore.amazonaws.com
+
+  # -------------------------------------------------------------------------
+  # The evaluation role: what AgentCore Evaluations runs an online
+  # evaluation of a deployment with (reads its spans, writes its results).
+  # -------------------------------------------------------------------------
+
+  EvaluationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+                aws:ResourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn:
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:evaluator/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:online-evaluation-config/*'
+      Policies:
+        - PolicyName: evaluation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadTheSpans
+                Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:GetQueryResults
+                  - logs:StartQuery
+                Resource: '*'
+              - Sid: WriteTheResults
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/evaluations/*'
+              - Sid: IndexTheSpans
+                Effect: Allow
+                Action:
+                  - logs:DescribeIndexPolicies
+                  - logs:PutIndexPolicy
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans:*'
+              - Sid: JudgeModels
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/*'
+                  - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+
+  # -------------------------------------------------------------------------
+  # CloudWatch Transaction Search: where AgentCore Observability keeps the
+  # agents' spans (the aws/spans log group), which X-Ray's OTLP endpoint
+  # accepts only once trace segments go to CloudWatch Logs.
+  # -------------------------------------------------------------------------
+
+  TransactionSearchLogsPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Condition: TransactionSearch
+    Properties:
+      PolicyName: !Sub 'DatalayerTransactionSearch-${AWS::Region}'
+      PolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "TransactionSearchXRayAccess",
+              "Effect": "Allow",
+              "Principal": {"Service": "xray.amazonaws.com"},
+              "Action": "logs:PutLogEvents",
+              "Resource": [
+                "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws/spans:*",
+                "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/application-signals/data:*"
+              ],
+              "Condition": {
+                "ArnLike": {"aws:SourceArn": "arn:${AWS::Partition}:xray:${AWS::Region}:${AWS::AccountId}:*"},
+                "StringEquals": {"aws:SourceAccount": "${AWS::AccountId}"}
+              }
+            }
+          ]
+        }
+
+  TransactionSearch:
+    Type: AWS::XRay::TransactionSearchConfig
+    Condition: TransactionSearch
+    DependsOn: TransactionSearchLogsPolicy
+    Properties:
+      IndexingPercentage: 1
+
+Outputs:
+
+  DatalayerRoleArn:
+    Description: The role Datalayer assumes; paste it in your organization's AWS settings.
+    Value: !GetAtt DatalayerRole.Arn
+
+  ExecutionRoleArn:
+    Description: The role AgentCore runs your agents with; paste it in your organization's AWS settings.
+    Value: !GetAtt ExecutionRole.Arn
+
+  GatewayRoleArn:
+    Description: The role to give each AgentCore Gateway your organization registers on Datalayer.
+    Value: !GetAtt GatewayRole.Arn
+
+  EvaluationRoleArn:
+    Description: The role AgentCore Evaluations runs an online evaluation of your deployments with.
+    Value: !GetAtt EvaluationRole.Arn
+
+  ExternalId:
+    Description: The external id the cross-account role requires.
+    Value: !Ref ExternalId
+
+  Region:
+    Description: The region the roles' AgentCore permissions are scoped to.
+    Value: !Ref AWS::Region

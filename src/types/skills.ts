@@ -114,6 +114,8 @@ export interface SkillSpec {
   optionalEnvVars?: string[];
   /** Python package dependencies */
   dependencies?: string[];
+  /** How it is installed where an agent runs it */
+  install?: InstallSpec;
   /** Tags for categorization */
   tags: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
@@ -122,4 +124,15 @@ export interface SkillSpec {
   emoji?: string;
   /** Whether the skill is enabled */
   enabled: boolean;
+}
+
+/**
+ * How an MCP server or a skill is installed where an agent runs it: what is
+ * installed, the shell command that installs it on a person's own machine
+ * (`''` when nothing is run), and what else to know.
+ */
+export interface InstallSpec {
+  type: 'npm' | 'python' | 'docker' | 'git' | 'remote' | 'built-in' | 'other';
+  command: string;
+  note?: string;
 }

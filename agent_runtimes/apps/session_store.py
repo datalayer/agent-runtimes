@@ -10,7 +10,10 @@ by session, ``POST …/apps/records`` for the writer, ``GET …/apps/sessions``
 by opener and ``POST …/apps/records/copy`` once the services answer them),
 keyed by ``DATALAYER_AI_AGENTS_URL``; and **the file store**, one
 ``entries.jsonl`` per session under ``~/.datalayer/sessions/<uid>/``, for
-``loop`` on a machine and the tests. The harness rows (``harness_session``
+``loop`` on a machine and the tests — a session's folder is named by its
+uid, the same uid it has on Datalayer; ``index.json`` beside the folders
+keeps what a listing says of each, so listing reads one file
+(``AGENT_RUNTIMES_SESSIONS_PATH`` names another root). The harness rows (``harness_session``
 per (session, agent)) are the protocol state store's, unchanged: the other
 half, not redesigned.
 
@@ -51,8 +54,15 @@ STORE_VARIABLE = "AGENT_RUNTIMES_SESSION_STORE"
 #: The file store's root when ``AGENT_RUNTIMES_SESSIONS_PATH`` names none.
 DEFAULT_SESSIONS_PATH = Path.home() / ".datalayer" / "sessions"
 
+#: The variable that names the file store's root.
+SESSIONS_PATH_VARIABLE = "AGENT_RUNTIMES_SESSIONS_PATH"
+
 #: The file of a session's entries.
 ENTRIES_FILE = "entries.jsonl"
+
+#: What a listing says of each session, beside the folders: read in place of
+#: every session's entries, and written again for a session whose file changed.
+INDEX_FILE = "index.json"
 
 #: The most sessions a page lists.
 PAGE_LIMIT = 200
@@ -102,7 +112,9 @@ def _page(
             continue
         if agent and session["agent"] != agent:
             continue
-        if state and session["state"] != state:
+        # Unsaid, the sessions that run and those that can be gone on with:
+        # an ended one is listed when its state is asked.
+        if session["state"] != state if state else session["state"] == "ended":
             continue
         if query and query.lower() not in session["title"].lower():
             continue
@@ -161,12 +173,18 @@ def cloned_entries(
 
 @dataclass
 class FileSessionStore:
-    """Sessions in files: ``<root>/<uid>/entries.jsonl``."""
+    """Sessions in files: ``<root>/<uid>/entries.jsonl``, and
+    ``<root>/index.json``: each session as a listing says it, with the size
+    and the time of the entries file it was read from. A session whose file
+    is as the index knew it is listed from the index; one that changed, or
+    is new, is read and the index written again; one whose folder is gone
+    leaves it. The index holds nothing the entries do not: deleting it
+    costs one full read.
+    """
 
     root: Path = field(
         default_factory=lambda: Path(
-            os.environ.get("AGENT_RUNTIMES_SESSIONS_PATH", "").strip()
-            or DEFAULT_SESSIONS_PATH
+            os.environ.get(SESSIONS_PATH_VARIABLE, "").strip() or DEFAULT_SESSIONS_PATH
         )
     )
     name: str = "file"
@@ -196,13 +214,11 @@ class FileSessionStore:
         query: str = "",
         archived: bool = False,
     ) -> SessionPage:
-        sessions = []
-        if self.root.is_dir():
-            for folder in sorted(self.root.iterdir()):
-                entries = self._read(folder.name)
-                described = session_from_entries(folder.name, entries)
-                if described is not None:
-                    sessions.append(described)
+        from agent_runtimes.apps.local_rule import reconciled
+
+        # As the rule says them (`local_rule`): a seat whose run is over is
+        # ended, an open one whose process is gone is paused.
+        sessions = reconciled(self, self.described())
         return _page(
             sessions,
             owner=owner,
@@ -215,6 +231,47 @@ class FileSessionStore:
             archived=archived,
         )
 
+    def _index(self) -> Dict[str, Any]:
+        path = self.root / INDEX_FILE
+        if not path.is_file():
+            return {}
+        try:
+            kept = json.loads(path.read_text())
+        except ValueError:
+            # Not readable: read every session once, and write it again.
+            return {}
+        return dict(kept.get("sessions") or {}) if isinstance(kept, dict) else {}
+
+    def described(self) -> List[Dict[str, Any]]:
+        """Every session kept, as a listing says it, through the index."""
+        if not self.root.is_dir():
+            return []
+        known = self._index()
+        fresh: Dict[str, Any] = {}
+        sessions: List[Dict[str, Any]] = []
+        changed = False
+        for folder in sorted(self.root.iterdir()):
+            file = folder / ENTRIES_FILE
+            if not folder.is_dir() or not file.is_file():
+                continue
+            stat = file.stat()
+            stamp = [stat.st_size, stat.st_mtime_ns]
+            kept = known.get(folder.name)
+            if isinstance(kept, dict) and kept.get("stamp") == stamp:
+                described = kept.get("session")
+            else:
+                described = session_from_entries(folder.name, self._read(folder.name))
+                changed = True
+            fresh[folder.name] = {"stamp": stamp, "session": described}
+            if described is not None:
+                sessions.append(described)
+        if changed or set(fresh) != set(known):
+            path = self.root / INDEX_FILE
+            written = path.with_suffix(".json.tmp")
+            written.write_text(json.dumps({"sessions": fresh}, default=str))
+            written.replace(path)
+        return sessions
+
     async def get(self, uid: str) -> Optional[Dict[str, Any]]:
         return session_from_entries(uid, self._read(uid))
 
@@ -223,9 +280,31 @@ class FileSessionStore:
     ) -> List[Dict[str, Any]]:
         return _up_to_turn(self._read(uid), up_to_turn)
 
+    def delete(self, uid: str) -> bool:
+        """Delete a session kept here: its folder, for good. Whether it was kept."""
+        import shutil
+
+        folder = self.root / uid
+        if not uid or folder.parent != self.root or not folder.is_dir():
+            return False
+        shutil.rmtree(folder)
+        return True
+
+    async def remove(self, uid: str) -> bool:
+        """:meth:`delete`, as every store says it: whether it was kept."""
+        return self.delete(uid)
+
     async def append(
         self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
     ) -> None:
+        self.write(uid, entries, **body)
+
+    def write(
+        self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
+    ) -> None:
+        """Add entries to a session's file: what :meth:`append` does, for
+        a caller that is not in a loop (the rule that reconciles a listing).
+        """
         path = self._file(uid)
         path.parent.mkdir(parents=True, exist_ok=True)
         at = _now()
@@ -430,6 +509,45 @@ async def _copy_record(bearer: str, body: Dict[str, Any]) -> int:
     return int((response.json() or {}).get("copied") or 0)
 
 
+async def _delete_record(session_uid: str, bearer: str) -> Dict[str, Any]:
+    """One session the person opened deleted from their record on ai-agents,
+    for good (``DELETE /apps/sessions/{uid}``). A session they did not open
+    is a 404, an open one a 409, each in ai-agents' sentence.
+    """
+    if not bearer:
+        raise SessionStoreError(
+            401,
+            f"Session {session_uid} cannot be deleted: the record is written with your token, and none was sent.",
+        )
+    import httpx
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise SessionStoreError(
+            503, f"Session {session_uid} cannot be deleted: no ai-agents is configured."
+        )
+    async with httpx.AsyncClient(timeout=30.0, transport=_TRANSPORT) as client:
+        response = await client.delete(
+            f"{url.rstrip('/')}/api/ai-agents/v1/apps/sessions/{session_uid}",
+            headers={"Authorization": f"Bearer {bearer}"},
+        )
+    if response.status_code in (404, 409):
+        try:
+            said = str((response.json() or {}).get("detail") or "")
+        except ValueError:
+            said = ""
+        raise SessionStoreError(
+            response.status_code, said or f"Session {session_uid} was not deleted."
+        )
+    if response.status_code >= 300:
+        raise SessionStoreError(
+            502,
+            f"Session {session_uid} could not be deleted ({response.status_code}): {response.text[:200]}",
+        )
+    return dict(response.json() or {})
+
+
 def _bearer() -> str:
     from agent_runtimes.context.identities import get_request_user_jwt
 
@@ -448,6 +566,7 @@ class RecordSessionStore:
     reader: Reader = _read_record
     lister: Callable[[str, Dict[str, Any]], Awaitable[Dict[str, Any]]] = _list_sessions
     copier: Callable[[str, Dict[str, Any]], Awaitable[int]] = _copy_record
+    remover: Callable[[str, str], Awaitable[Dict[str, Any]]] = _delete_record
 
     async def list(
         self,
@@ -504,6 +623,13 @@ class RecordSessionStore:
         return await self.copier(
             _bearer(), {"from": uid, "to": to_uid, "up_to_turn": up_to_turn}
         )
+
+    async def remove(self, uid: str) -> bool:
+        """Delete one session of the caller's from the record, for good; an
+        open one, or one they did not open, refused in ai-agents' sentence.
+        """
+        await self.remover(uid, _bearer())
+        return True
 
     async def lineage(self, uid: str) -> Dict[str, Any]:
         described = await self.get(uid)
@@ -608,6 +734,8 @@ async def send_through_store(body: Dict[str, Any]) -> None:
 __all__ = [
     "DEFAULT_SESSIONS_PATH",
     "ENTRIES_FILE",
+    "INDEX_FILE",
+    "SESSIONS_PATH_VARIABLE",
     "FILE_STORE",
     "RECORD_PAGE",
     "RECORD_READ_LIMIT",

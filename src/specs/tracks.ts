@@ -14,6 +14,33 @@
 
 import type { TrackSpec } from '../types/agentspecs';
 
+export const DRAFTING_TRACK_0_0_1: TrackSpec = {
+  id: 'drafting',
+  version: '0.0.1',
+  name: 'Drafting Track',
+  description:
+    "The record of a low-risk drafting Op: what ran, what the Guards found and the Gates decided, and what was produced. Kept ninety days, readable by the Op's owner only, and not fed back to Organizational Memory.",
+  retainFor: '90_days',
+  include: [
+    'op',
+    'cogs_invoked',
+    'guard_results',
+    'gate_decisions',
+    'final_output',
+    'timestamps',
+    'user_identity',
+  ],
+  readers: [],
+  redact: ['*Password*', '*Secret*', '*Token*'],
+  feedsMemory: false,
+  exchangeable: false,
+  enabled: true,
+  tags: ['drafting', 'low-risk'],
+  icon: 'log',
+  emoji: '🧾',
+  retentionDays: 90,
+};
+
 export const FINANCIAL_REPORTING_TRACK_0_0_1: TrackSpec = {
   id: 'financial-reporting',
   version: '0.0.1',
@@ -52,6 +79,51 @@ export const FINANCIAL_REPORTING_TRACK_0_0_1: TrackSpec = {
   retentionDays: 2555,
 };
 
+export const REGULATED_TRACK_0_0_1: TrackSpec = {
+  id: 'regulated',
+  version: '0.0.1',
+  name: 'Regulated Track',
+  description:
+    'The complete record of a clinical, legal or public-sector Op: every input and source, every model and setting, every Guard result, Gate decision, approval, edit and action. Kept ten years, readable by Compliance and Legal, produced to a regulator or an external auditor on request, with personal data kept out, and fed back to Organizational Memory.',
+  retainFor: '10_years',
+  include: [
+    'op',
+    'frames_used',
+    'cogs_invoked',
+    'input_data',
+    'source_documents',
+    'model_versions',
+    'configuration',
+    'guard_results',
+    'gate_decisions',
+    'human_approvals',
+    'human_edits',
+    'final_output',
+    'actions_taken',
+    'timestamps',
+    'user_identity',
+    'permissions',
+    'environment',
+    'memory_links',
+  ],
+  readers: ['compliance', 'legal', 'external-audit'],
+  redact: [
+    '*Password*',
+    '*Secret*',
+    '*Token*',
+    '*SSN*',
+    '*PatientId*',
+    '*DateOfBirth*',
+  ],
+  feedsMemory: true,
+  exchangeable: false,
+  enabled: true,
+  tags: ['regulated', 'compliance', 'audit'],
+  icon: 'log',
+  emoji: '🧾',
+  retentionDays: 3650,
+};
+
 export const STANDARD_TRACK_0_0_1: TrackSpec = {
   id: 'standard',
   version: '0.0.1',
@@ -83,7 +155,9 @@ export const STANDARD_TRACK_0_0_1: TrackSpec = {
 };
 
 export const TRACK_CATALOGUE: Record<string, TrackSpec> = {
+  drafting: DRAFTING_TRACK_0_0_1,
   'financial-reporting': FINANCIAL_REPORTING_TRACK_0_0_1,
+  regulated: REGULATED_TRACK_0_0_1,
   standard: STANDARD_TRACK_0_0_1,
 };
 

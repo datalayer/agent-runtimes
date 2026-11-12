@@ -15,7 +15,7 @@ from agent_runtimes.displays.runtime_checkpoints import display_runtime_checkpoi
 # Create a Typer app for checkpoint commands
 app = typer.Typer(
     name="checkpoints",
-    help="Runtime checkpoint management commands (CRIU full-pod checkpoints)",
+    help="Manage runtime checkpoints (CRIU full-pod checkpoints).",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -127,7 +127,7 @@ def checkpoints_ls(
         help="Datalayer Runtimes server URL.",
     ),
 ) -> None:
-    """List runtime checkpoints (root command alias)."""
+    """List runtime checkpoints."""
     checkpoints_list(agent_uid=agent_uid, token=token, runtimes_url=runtimes_url)
 
 

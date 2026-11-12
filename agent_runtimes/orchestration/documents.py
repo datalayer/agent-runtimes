@@ -26,6 +26,15 @@ from typing import Any
 
 from datalayer_core.orchestration import Artifact, ArtifactType, ContextKind, Execution
 
+from agent_runtimes.output.formats import NOTEBOOK_MEDIA_TYPE
+from agent_runtimes.utils.lexical import BOLD as _BOLD
+from agent_runtimes.utils.lexical import CODE as _CODE
+from agent_runtimes.utils.lexical import ITALIC as _ITALIC
+from agent_runtimes.utils.lexical import STRIKETHROUGH as _STRIKETHROUGH
+from agent_runtimes.utils.lexical import block as _block
+from agent_runtimes.utils.lexical import document as _document
+from agent_runtimes.utils.lexical import text as _text
+
 __all__ = [
     "NOTEBOOK_MEDIA_TYPE",
     "PlatformObject",
@@ -34,9 +43,6 @@ __all__ = [
     "notebook_of",
     "platform_object",
 ]
-
-#: The media type a notebook arrives under.
-NOTEBOOK_MEDIA_TYPE = "application/x-ipynb+json"
 
 
 @dataclass(frozen=True)
@@ -78,38 +84,8 @@ def notebook_of(body: str) -> dict[str, Any] | None:
     return None
 
 
-# The node shapes the editor writes, as `agent_runtimes.evals.lexical` writes them.
-
-
-def _text(content: str, fmt: int = 0) -> dict[str, Any]:
-    return {
-        "detail": 0,
-        "format": fmt,
-        "mode": "normal",
-        "style": "",
-        "text": content,
-        "type": "text",
-        "version": 1,
-    }
-
-
-def _block(
-    kind: str,
-    children: list[dict[str, Any]],
-    mark: dict[str, Any] | None,
-    **extra: Any,
-) -> dict[str, Any]:
-    # Unmarked (``None``), a block is anybody's to edit: a page a person saved.
-    return {
-        "children": children,
-        "direction": "ltr",
-        "format": "",
-        "indent": 0,
-        "type": kind,
-        "version": 1,
-        **({"$": {"evidence": mark}} if mark is not None else {}),
-        **extra,
-    }
+# The node shapes the editor writes: `agent_runtimes.utils.lexical`. Unmarked
+# (``None``), a block is anybody's to edit: a page a person saved.
 
 
 def _lines(text: str) -> list[dict[str, Any]]:
@@ -132,10 +108,6 @@ def _lines(text: str) -> list[dict[str, Any]]:
 # live, 2026-09-13, on an execution's own committed answer.
 # ---------------------------------------------------------------------------
 
-_BOLD = 1
-_ITALIC = 2
-_STRIKETHROUGH = 4
-_CODE = 16
 
 #: Longest marker first: `**` must not be read as two `*`s, the same rule
 #: the js transformers' own comment states ("then longer tags match").
@@ -281,16 +253,7 @@ def markdown_document(title: str, body: str) -> dict[str, Any]:
     """
     children = [_block("heading", [_text(title)], None, tag="h1")]
     children.extend(_markdown_blocks(body, None))
-    return {
-        "root": {
-            "children": children,
-            "direction": "ltr",
-            "format": "",
-            "indent": 0,
-            "type": "root",
-            "version": 1,
-        }
-    }
+    return _document(children)
 
 
 def artifact_document(
@@ -346,16 +309,7 @@ def artifact_document(
         children.append(_block("code", _lines(pretty), mark, language="json"))
     else:
         children.extend(_markdown_blocks(body, mark))
-    return {
-        "root": {
-            "children": children,
-            "direction": "ltr",
-            "format": "",
-            "indent": 0,
-            "type": "root",
-            "version": 1,
-        }
-    }
+    return _document(children)
 
 
 def platform_object(

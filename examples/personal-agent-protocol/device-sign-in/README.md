@@ -1,15 +1,16 @@
-# PAP Device Sign-In
+# Device Sign-In
 
-This Agent Runtimes `Application` exercises the real PAP Device Sign-In state
-machine. It presents a company-owned link and code, suppresses early polls,
-handles `authorization_pending` and `slow_down`, upgrades the existing Session,
-reports partial consent, and puts the Account Token in a Reactor token store.
+This example runs PAP Device Sign-In through the real Python SDK. It shows the
+human a company-owned link and code, respects the company's polling interval
+and `slow_down`, checks the verification link against the issuer and its
+`protected_resources`, reports partial consent, and stores the refresh token
+behind an opaque Reactor reference. Sign-in is plain OAuth: it names no Session.
 
-Only safe lifecycle evidence reaches the Loop model. Device codes, assertions,
-proofs, Session Tokens, and Account Tokens remain in host-owned code.
+The Agent Runtimes tool receives only lifecycle evidence. Device codes, client
+assertions, access tokens, and refresh tokens remain in host-owned code.
 
 ```bash
 loop apps run examples/personal-agent-protocol/device-sign-in/app.py
 ```
 
-See the [PAP Device Sign-In guide](https://personal-agent-protocol.datalayer.tech/guides/device-sign-in/).
+Read the [Device Sign-In guide](https://personalagentprotocol.org/docs/guides/device-sign-in).

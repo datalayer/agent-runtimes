@@ -1,0 +1,154 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  The Amazon ECR repository of the agent-runtimes image Amazon Bedrock AgentCore
+  Runtime runs (datalayer/agent-runtimes-agentcore), and the role the
+  GitHub Actions workflow agentcore-image.yml of datalayer/agent-runtimes
+  assumes through GitHub's OIDC provider to push to it, and only to it.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: GitHub
+        Parameters:
+          - GitHubOrg
+          - GitHubRepo
+          - DispatchBranch
+          - CreateOidcProvider
+      - Label:
+          default: Repository
+        Parameters:
+          - RepositoryName
+          - PullAccountIds
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Default: datalayer
+    Description: The GitHub organization of the repository allowed to push.
+  GitHubRepo:
+    Type: String
+    Default: agent-runtimes
+    Description: The GitHub repository allowed to push.
+  DispatchBranch:
+    Type: String
+    Default: main
+    Description: >-
+      The branch a manual run (workflow_dispatch) may push from, besides the
+      v* tags. A manual run started on a v* tag is allowed whatever this says.
+  CreateOidcProvider:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: >-
+      'false' when the account already has the OIDC provider
+      token.actions.githubusercontent.com (an account holds only one per URL).
+  RepositoryName:
+    Type: String
+    Default: datalayer/agent-runtimes-agentcore
+    Description: The ECR repository the image is pushed to.
+  PullAccountIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: >-
+      Other AWS account ids allowed to pull the image (an AgentCore runtime in
+      another account). Empty: only this account pulls.
+
+Conditions:
+  ShouldCreateOidcProvider: !Equals [!Ref CreateOidcProvider, 'true']
+  HasPullAccounts: !Not [!Equals [!Join ['', !Ref PullAccountIds], '']]
+
+Resources:
+  # Tags are immutable, but for `latest`, which every release moves: a
+  # version tag, once pushed, always names the same image.
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE_WITH_EXCLUSION
+      ImageTagMutabilityExclusionFilters:
+        - ImageTagMutabilityExclusionFilterType: WILDCARD
+          ImageTagMutabilityExclusionFilterValue: latest
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      RepositoryPolicyText: !If
+        - HasPullAccounts
+        - Version: '2012-10-17'
+          Statement:
+            - Sid: PullFromAgentCoreAccounts
+              Effect: Allow
+              Principal:
+                AWS: !Ref PullAccountIds
+              Action:
+                - ecr:BatchGetImage
+                - ecr:GetDownloadUrlForLayer
+        - !Ref AWS::NoValue
+
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  PushRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: !Sub >-
+        Assumed by GitHub Actions of ${GitHubOrg}/${GitHubRepo} (v* tags and
+        workflow_dispatch from ${DispatchBranch}) to push to ECR ${RepositoryName}.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - ShouldCreateOidcProvider
+                - !GetAtt GitHubOidcProvider.Arn
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/tags/v*
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${DispatchBranch}
+      Policies:
+        - PolicyName: agentcore-image-push
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EcrLogin
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: PushToTheRepository
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: !GetAtt Repository.Arn
+
+Outputs:
+  PushRoleArn:
+    Description: The value of the repository secret AGENTCORE_IMAGE_ROLE_ARN.
+    Value: !GetAtt PushRole.Arn
+  RepositoryUri:
+    Description: The repository; DATALAYER_AGENTCORE_IMAGE_URI is <this>:<version>.
+    Value: !GetAtt Repository.RepositoryUri

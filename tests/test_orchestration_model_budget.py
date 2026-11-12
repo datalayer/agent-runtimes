@@ -18,12 +18,11 @@ import pytest
 from datalayer_core.orchestration import Budget, ErrorCode
 from pydantic_ai.exceptions import UsageLimitExceeded
 
+from agent_runtimes.context.delegation import delegated_budget, refusal_meta
 from agent_runtimes.guardrails.model_budget import (
     ModelBudgetReached,
     acp_stop_reason,
-    delegated_budget,
     reached,
-    refusal_meta,
     usage_limits_for,
 )
 from agent_runtimes.orchestration.budget import (
