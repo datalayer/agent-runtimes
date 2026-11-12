@@ -38,10 +38,15 @@ export type BoundHostKey = Readonly<{ hostKey: string; hostUid: string }>;
 
 /**
  * What an installation's pushes are signed with, as its registration was
- * answered: the secret, and the key it is derived under (none: the
- * platform's shared secret, accepted until the end of its window only).
+ * answered: the secret, the key it is derived under (none: the platform's
+ * shared secret, accepted until the end of its window only), and the
+ * registration's version (none: kept before the version was).
  */
-export type DeliverySecret = Readonly<{ key?: string; secret: string }>;
+export type DeliverySecret = Readonly<{
+  key?: string;
+  secret: string;
+  version?: number;
+}>;
 
 /** Where a host keeps its installations, as deliveries read them. */
 export interface DeliverySink {
@@ -164,10 +169,12 @@ export function deliveryRoute(
 /**
  * Each bound installation's webhook registered again when ai-agents asks
  * (`GET …/self` answers `delivery.renew`: its secret rests on a key
- * ai-agents no longer signs with), or when the key the host kept is not the
- * one ai-agents registered (a renewal whose secret was not kept). The new
- * secret and key are handed to `keep`, where the host stores the old ones;
- * an installation with no webhook reads its outbox and is left alone.
+ * ai-agents no longer signs with), or when what the host kept is not what
+ * ai-agents registered: another key, or another version (a renewal whose
+ * secret was not kept, or two replicas renewing at once, the later answer
+ * kept first). The new secret, key and version are handed to `keep`, where
+ * the host stores the old ones; an installation with no webhook reads its
+ * outbox and is left alone.
  */
 export class DeliveryRenewal {
   #timer?: ReturnType<typeof setInterval>;
@@ -190,13 +197,18 @@ export class DeliveryRenewal {
           continue;
         }
         const kept = await this.sink.deliverySecretOf(hostUid);
-        if (!delivery.renew && kept?.secret && kept.key === delivery.key) {
+        const current =
+          !!kept?.secret &&
+          kept.key === delivery.key &&
+          (kept.version === undefined || kept.version === delivery.version);
+        if (!delivery.renew && current) {
           continue;
         }
         const hook = await this.client.setWebhook(hostKey, delivery.url);
         await this.keep(hostUid, {
           ...(hook.key ? { key: hook.key } : {}),
           secret: hook.signingSecret,
+          version: hook.version,
         });
         renewed += 1;
       } catch (error) {

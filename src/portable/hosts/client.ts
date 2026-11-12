@@ -52,7 +52,12 @@ export type HostSelf = Readonly<{
    * The registered webhook, if any: where, the key its secret is derived
    * under, and whether ai-agents asks it registered again.
    */
-  delivery?: Readonly<{ key?: string; renew: boolean; url: string }>;
+  delivery?: Readonly<{
+    key?: string;
+    renew: boolean;
+    url: string;
+    version: number;
+  }>;
   /** The installation's own uid: what its deliveries are addressed to. */
   uid: string;
 }>;
@@ -199,6 +204,7 @@ export class DatalayerHostClient {
               ...(host.delivery.key ? { key: host.delivery.key } : {}),
               renew: host.delivery.renew ?? false,
               url: host.delivery.url,
+              version: host.delivery.version ?? 0,
             },
           }
         : {}),

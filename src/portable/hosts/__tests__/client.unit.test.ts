@@ -181,7 +181,7 @@ describe('DatalayerHostClient.self', () => {
     const url = 'https://slack.example/datalayer/deliveries/h-1';
     expect(
       (await answer({ url, version: 1, renew: true }).self('k')).delivery,
-    ).toEqual({ renew: true, url });
+    ).toEqual({ renew: true, url, version: 1 });
     expect(
       (
         await answer({
@@ -191,7 +191,12 @@ describe('DatalayerHostClient.self', () => {
           renew: false,
         }).self('k')
       ).delivery,
-    ).toEqual({ key: 'ai-agents-host-deliveries-v1', renew: false, url });
+    ).toEqual({
+      key: 'ai-agents-host-deliveries-v1',
+      renew: false,
+      url,
+      version: 2,
+    });
     // No webhook registered (the outbox is read): nothing to renew.
     expect((await answer({ version: 1 }).self('k')).delivery).toBeUndefined();
   });

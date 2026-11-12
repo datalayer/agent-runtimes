@@ -173,15 +173,21 @@ describe('deliveryRoute', () => {
 
 describe('DeliveryRenewal', () => {
   const KEY = 'ai-agents-host-deliveries-v1';
+  type Registered = {
+    key?: string;
+    renew: boolean;
+    url: string;
+    version: number;
+  };
   const setup = (
-    delivery: { key?: string; renew: boolean; url: string } | undefined,
+    delivery: Registered | undefined,
     kept: DeliverySecret | undefined,
   ) => {
     const keep = vi.fn(async () => undefined);
     const setWebhook = vi.fn(async () => ({
       key: KEY,
       signingSecret: 'n'.repeat(64),
-      version: 2,
+      version: 4,
     }));
     const renewal = new DeliveryRenewal(
       {
@@ -202,9 +208,9 @@ describe('DeliveryRenewal', () => {
   };
   const URL_ = 'https://slack.example/datalayer/deliveries/h1';
 
-  it('registers again when ai-agents asks, at the address it holds, and keeps the new secret and key', async () => {
+  it('registers again when ai-agents asks, at the address it holds, and keeps the new secret, key and version', async () => {
     const { keep, renewal, setWebhook } = setup(
-      { renew: true, url: URL_ },
+      { renew: true, url: URL_, version: 1 },
       { secret: 'o'.repeat(64) },
     );
     expect(await renewal.renewOnce()).toBe(1);
@@ -212,28 +218,36 @@ describe('DeliveryRenewal', () => {
     expect(keep).toHaveBeenCalledWith('h1', {
       key: KEY,
       secret: 'n'.repeat(64),
+      version: 4,
     });
   });
 
-  it('registers again when the key kept is not the one ai-agents registered', async () => {
-    const { keep, renewal } = setup(
-      { key: KEY, renew: false, url: URL_ },
+  it('registers again when the key or the version kept is not what ai-agents registered', async () => {
+    for (const kept of [
       { secret: 'o'.repeat(64) },
-    );
-    expect(await renewal.renewOnce()).toBe(1);
-    expect(keep).toHaveBeenCalledTimes(1);
+      // Two replicas renewed at once and the earlier answer was kept last.
+      { key: KEY, secret: 'o'.repeat(64), version: 2 },
+    ]) {
+      const { keep, renewal } = setup(
+        { key: KEY, renew: false, url: URL_, version: 3 },
+        kept,
+      );
+      expect(await renewal.renewOnce()).toBe(1);
+      expect(keep).toHaveBeenCalledTimes(1);
+    }
   });
 
   it('leaves alone a current registration, one ai-agents does not ask for, and an installation without a webhook', async () => {
-    for (const [delivery, kept] of [
+    const cases: Array<[Registered | undefined, DeliverySecret | undefined]> = [
       [
-        { key: KEY, renew: false, url: URL_ },
-        { key: KEY, secret: 's' },
+        { key: KEY, renew: false, url: URL_, version: 3 },
+        { key: KEY, secret: 's', version: 3 },
       ],
       // ai-agents still signs under the shared secret: nothing to gain.
-      [{ renew: false, url: URL_ }, { secret: 's' }],
+      [{ renew: false, url: URL_, version: 1 }, { secret: 's' }],
       [undefined, undefined],
-    ] as const) {
+    ];
+    for (const [delivery, kept] of cases) {
       const { renewal, setWebhook } = setup(delivery, kept);
       expect(await renewal.renewOnce()).toBe(0);
       expect(setWebhook).not.toHaveBeenCalled();
@@ -254,7 +268,10 @@ describe('DeliveryRenewal', () => {
       {
         self: async (hostKey: string) => {
           if (hostKey === 'k1') throw new Error('down');
-          return { delivery: { renew: true, url: URL_ }, uid: 'h2' } as never;
+          return {
+            delivery: { renew: true, url: URL_, version: 2 },
+            uid: 'h2',
+          } as never;
         },
         setWebhook: async () => ({ key: KEY, signingSecret: 'n', version: 3 }),
       },
@@ -262,7 +279,11 @@ describe('DeliveryRenewal', () => {
       { warn },
     );
     expect(await renewal.renewOnce()).toBe(1);
-    expect(keep).toHaveBeenCalledWith('h2', { key: KEY, secret: 'n' });
+    expect(keep).toHaveBeenCalledWith('h2', {
+      key: KEY,
+      secret: 'n',
+      version: 3,
+    });
     expect(warn).toHaveBeenCalledTimes(1);
   });
 });
