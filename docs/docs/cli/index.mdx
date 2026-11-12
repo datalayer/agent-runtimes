@@ -62,7 +62,7 @@ For several lines in one session, slash commands among them, see [Run without in
 
 ### Here, or on Datalayer
 
-`loop` asks **where** the agent runs first: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
+`loop` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `loop` starts](../sessions/cli.mdx#as-loop-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
 
 On this machine, `loop` then lists the agentspecs your local model keys allow, as before. On Datalayer it lists **no agentspecs**. Launching an agent in the cloud needs an environment that supports it, so you pick an environment instead. The list is read through the Datalayer SDK (`AgentClient.list_environments`):
 
@@ -707,7 +707,7 @@ In `loop`'s prompt the conversation is a **session** from its first message:
 it is kept in the record, listed, paused and resumed — on this machine and on
 Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sessions/cli.mdx) page; in short:
 
-- **As `loop` starts**, with nothing on the command line that says what to run, it lists your paused sessions before asking where a new agent should run — those kept on this machine and, signed in, those on Datalayer. Pick one and it is resumed where it lives, its conversation loaded; *Start a new session*, which Enter picks, goes on to the usual questions. With none paused, nothing is printed.
+- **As `loop` starts**, with nothing on the command line that says what to run, it opens the screen `loop sessions` opens, with its launch rows first: *Start a new session on this machine* and *on Datalayer* (where it runs, asked there; one *Start a new session* row with `--local`, `--cloud` or signed out), highlighted, and under them your sessions in the same two groups and table. Enter on a launch row starts a new session; on a session, resumes it where it lives, as `loop --resume <uid>` does; Esc leaves. With no session listed, nothing is drawn. See [As `loop` starts](../sessions/cli.mdx#as-loop-starts).
 - **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
 - **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
 - **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
@@ -916,7 +916,7 @@ executable, and `datalayer agent-teams …` wherever it is installed beside the
 Datalayer CLI. See the [agent-teams CLI](https://agent-teams.datalayer.tech/cli).
 
 One of them is run from `loop`: a paused session that is a seat of a team run,
-picked in the list `loop` shows as it starts, lets its run go on as
+picked on the screen `loop` opens as it starts, lets its run go on as
 `agent-teams sessions resume <run>` does.
 
 ## Extending, and Being an Extension

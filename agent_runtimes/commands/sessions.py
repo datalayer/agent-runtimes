@@ -32,7 +32,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import typer
 from rich.console import Console
@@ -520,14 +520,30 @@ def _quiet() -> None:
         logging.getLogger(name).setLevel(logging.ERROR)
 
 
-def run_picker(as_json: bool = False, everything: bool = False) -> None:
-    """`loop sessions`: the picker in a terminal, the two groups printed
+def run_picker(
+    as_json: bool = False,
+    everything: bool = False,
+    launch: Sequence[Tuple[str, str]] = (),
+    highlighted: str = "",
+) -> Optional[Tuple[str, Any]]:
+    """The sessions screen, for `loop sessions`, `loop --resume` and the
+    start of `loop`: the picker in a terminal, the two groups printed
     otherwise — each a markdown table. Listed: the sessions that run and
     those that can be gone on with; ``everything`` lists the ended ones too.
+
+    ``launch``, from the start of `loop`: its launch rows ``(id, label)``,
+    drawn above the sessions, ``highlighted`` (an id) the one Enter picks.
+    Then what was chosen is answered, nothing run: ``(id, None)`` for a
+    launch row, ``("resume", session)`` for a session, which `loop` resumes
+    as `loop --resume <uid>` does, with its own flags; ``None`` when the
+    person left. With no session listed, the highlighted launch row is
+    answered at once, unasked. Without ``launch``, Enter goes on as
+    `loop --resume <uid>` and this process becomes it.
     """
     from agent_runtimes.loop.launch import interactive
     from agent_runtimes.loop.picker import (
         NOT_LISTED,
+        Launch,
         Picker,
         listing_json,
         listing_lines,
@@ -536,12 +552,15 @@ def run_picker(as_json: bool = False, everything: bool = False) -> None:
 
     _quiet()
     token = _token()
+    rows_above = tuple(Launch(key, label) for key, label in launch)
     said = ""
     while True:
         rows = every_session(token) if everything else listed_sessions(token)
+        if rows_above and not rows:
+            return highlighted or rows_above[0].id, None
         if as_json:
             print(json.dumps(listing_json(rows, signed_in=bool(token)), indent=1))
-            return
+            return None
         if not interactive():
             # Printed as it is, never wrapped: a table's row is one line.
             for line in (
@@ -549,12 +568,20 @@ def run_picker(as_json: bool = False, everything: bool = False) -> None:
                 *([] if everything else [NOT_LISTED]),
             ):
                 print(line)
-            return
-        chosen = pick(Picker(rows, signed_in=bool(token), said=said))
+            return None
+        picker = Picker(rows, launch=rows_above, signed_in=bool(token), said=said)
+        picker.index = next(
+            (index for index, row in enumerate(rows_above) if row.id == highlighted), 0
+        )
+        chosen = pick(picker)
         if chosen is None:
-            return
+            return None
         action, row = chosen
+        if row is None:
+            return action, None
         if action == "resume":
+            if rows_above:
+                return action, row
             _run_loop(resume_command(row))
         if action == "start_over":
             _run_loop(start_over_command(row))

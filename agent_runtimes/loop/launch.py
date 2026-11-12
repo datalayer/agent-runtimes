@@ -107,23 +107,67 @@ def choose_where(
         return LOCAL
     if not (interactive() if can_ask is None else can_ask):
         return LOCAL
-    last = _read_preferences(preferences).get("where")
-    default = last if last in (LOCAL, CLOUD) else LOCAL
     answer = (ask or _select)(
         "Where should the agent run?",
-        [
-            ("On this machine — a local server, with your own model keys", LOCAL),
-            (
-                "On Datalayer — a cloud runtime with Datalayer's models, billed by the minute",
-                CLOUD,
-            ),
-        ],
-        default,
+        [(f"{PLACES[place]} — {WHERE_SAID[place]}", place) for place in (LOCAL, CLOUD)],
+        last_where(preferences),
     )
     if answer is None:
         raise KeyboardInterrupt
-    _write_preferences({"where": answer}, preferences)
+    remember_where(answer, preferences)
     return answer
+
+
+#: The two places, as the question and the start's launch rows name them.
+PLACES = {LOCAL: "On this machine", CLOUD: "On Datalayer"}
+
+#: What each place is, in a few words.
+WHERE_SAID = {
+    LOCAL: "a local server, with your own model keys",
+    CLOUD: "a cloud runtime with Datalayer's models, billed by the minute",
+}
+
+#: The launch row that starts a new session with where it runs already said
+#: (by a flag) or not to be asked (signed out): the questions follow as ever.
+NEW_SESSION = "new"
+
+
+def last_where(preferences: Path = PREFERENCES) -> str:
+    """The last answer to *where?*, offered first: on this machine when none."""
+    last = _read_preferences(preferences).get("where")
+    return last if last in (LOCAL, CLOUD) else LOCAL
+
+
+def remember_where(where: str, preferences: Path = PREFERENCES) -> None:
+    """Keep the answer to *where?*, to offer it first next time."""
+    _write_preferences({"where": where}, preferences)
+
+
+def start_choices(
+    *,
+    local: bool = False,
+    cloud: bool = False,
+    cloud_offered: bool = True,
+    preferences: Path = PREFERENCES,
+) -> tuple[list[tuple[str, str]], str]:
+    """The launch rows `loop` draws above the sessions as it starts, as
+    ``(id, label)``, and the one highlighted.
+
+    Where it runs still to be asked — no flag says it, and Datalayer is
+    offered — the question is the rows: *Start a new session on this
+    machine* and *on Datalayer*, the last answer highlighted, and their ids
+    are `LOCAL` and `CLOUD`. Otherwise one row, *Start a new session*
+    (`NEW_SESSION`), and what the flags say, or this machine, follows.
+    """
+    if local or cloud or not cloud_offered:
+        return [(NEW_SESSION, "Start a new session")], NEW_SESSION
+    return [
+        (
+            place,
+            f"Start a new session {PLACES[place][0].lower()}{PLACES[place][1:]} — {WHERE_SAID[place]}",
+        )
+        for place in (LOCAL, CLOUD)
+    ], last_where(preferences)
 
 
 def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:

@@ -60,10 +60,10 @@ and says so.
 ### A session of a paused deployment
 
 A session of one of **your own** deployments that is paused stays listed,
-marked in its State column:
+its State `paused` as any paused session's:
 
 ```text
-|   4 | 01M61KF1TV0VM5BNQEAHE1QPY9 | paused, deployment paused | app | mh49-pi | 1 | 14d | Which coding agent are you? |
+|   4 | 01M61KF1TV0VM5BNQEAHE1QPY9 | paused | app | mh49-pi | 1 | 14d | Which coding agent are you? |
 ```
 
 Resuming it asks first, before any environment is chosen or runtime
@@ -345,34 +345,46 @@ The runtime's lines (launched, given back) go to standard error.
 
 ## As `loop` starts
 
-Started with nothing on the command line that says what to run, `loop` first
-lists your **paused sessions**, before asking where a new agent should run:
+Started with nothing on the command line that says what to run, `loop`
+opens the screen `loop sessions` opens — the same groups, the same
+sentences under their titles, the same table, filter and keys — with its
+**launch rows** first, above the sessions:
 
 ```text
 $ loop
-? You have 12 paused sessions (2 on this machine, 10 on Datalayer). Go on with one, or start a new one?
-❯ Start a new session
-  On this machine (2)
-  Resume: Agent session · example-simple · “My name is Ada and I sell tea.” · 01M74VPWT51K7HF7VMJW0N8APT · started 2 days ago
-  Resume: Application session · Decide · “Reply with one word.” · 01M6ZK2Q0V9D3T8N4W5X6Y7Z8A · started 5 days ago
-  On Datalayer (10; 4 more: loop sessions)
-  Resume: Agent session · worker-marketer · “The autumn campaign” · 01M74THECPG6V21NCRD2TD1FQH · started 3 hours ago
-  Resume: Application session · Exchange Desk · “Hi” · 9a1e52b2c0d94e6f8a7b6c5d4e3f2a1b · started 6 days ago
-  Resume its team run exec_400b: Application session · team-coding-agents · “Fix it” · 7d2c4b10… · started 6 days ago
-  Application session · Shared Desk · “Hello” · c1a9f0e3… · started 7 days ago (a session of somebody else's deployment: a terminal starts a runtime for a deployment of its owner's only)
+❯ Start a new session on this machine — a local server, with your own model keys
+  Start a new session on Datalayer — a cloud runtime with Datalayer's models, billed by the minute
+Type to filter.
+On this machine (1)
+   A session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and
+   resumed by a runtime on this machine.
+  |   # | Session                    | State  | Kind  | Agent          | Turns | Age | Title                          |
+  | --: | -------------------------- | ------ | ----- | -------------- | ----: | --- | ------------------------------ |
+  |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple |     2 | 2h  | My name is Ada and I sell tea. |
+On Datalayer (2)
+   A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in,
+   and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
+  |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                         |
+  | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ----------------------------- |
+  |   2 | 01M780EXBBXNNH629KKJJ3PR62 | open   | app   | Exchange Desk   |     1 | 5m  | Which rate applies to an ord… |
+  |   3 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign           |
+↑↓ or a number: choose · PgUp/PgDn: a page · Home/End: first, last · type: filter · Enter: resume · Ctrl-P: pause · …
 ```
 
-- The two places are listed apart, **On this machine** first, then **On
-  Datalayer**, each with how many paused sessions it holds and its five
-  most recent; the rest are in `loop sessions`. Each line says the
-  session's uid.
-
-- The sessions kept **on this machine** are always listed; signed in to
-  Datalayer (`datalayer login`, or `DATALAYER_API_KEY`), those **on
-  Datalayer** too. Each says its kind, its agent or its application's name,
-  its title, where it lives and when it started, newest first.
-- Pick one and it is resumed **where it lives**, with its conversation
-  loaded, and nobody asks where to run:
+- **The launch rows.** Signed in, with neither `--local` nor `--cloud`,
+  they are the question *where should the agent run?*: *Start a new session
+  on this machine* and *on Datalayer*, your last answer highlighted (this
+  machine the first time). Enter goes on to the usual questions — the
+  agentspec on this machine, the environment on Datalayer — and the answer
+  is kept for next time. With `--local` or `--cloud`, or signed out, one
+  row, *Start a new session*, and the questions follow as ever.
+- **The sessions** are listed as `loop sessions` lists them: those that run
+  and those you can go on with, never an ended one, each once, none that
+  nothing resumes. All of them, paged with Page Up and Page Down; numbered
+  from 1 under the launch rows, so a number picks a session.
+- **Enter on a session** resumes it where it lives, as `loop --resume <uid>`
+  does — its conversation loaded, nobody asked where — with the flags given
+  to `loop` (`--environment`, `--minutes`, `--keep`):
   - **an agent's session**: its agent is started, on a local server or on a
     cloud runtime;
   - **an application's session that is a Preview** — you trying an
@@ -381,32 +393,29 @@ $ loop
     resumed on it;
   - **a session of one of your deployments**: a runtime is launched on
     Datalayer for the deployment, its agent made as its page makes it, so it
-    runs in the application's name as it does at its address. The deployment
-    must run the version the Studio keeps; otherwise the prompt says so and
-    names its address;
-  - **a seat of a team run** goes on with its run: picked, its paused run is
-    let go on, and each seat's session with it — what `agent-teams sessions
-    resume <run>` does, run for you. Nothing is started on this machine. A
-    run that is not paused, or that ended, says so in the command's own
-    sentence (an ended run is cloned to go on: `agent-teams sessions clone`).
-- What a terminal does not resume is drawn too, not to be picked, with why
-  and where to open it (the three most recent; the rest are counted):
-  - **a session of somebody else's deployment**: a terminal starts a runtime
-    for a deployment of its owner's only; go on with it at its address;
-  - a Preview of an application **written in Python** is said so when
-    picked: its code reacts in its own process (`loop apps run app.py`
-    starts a new conversation with it).
-- Up to five resumable sessions of each place are offered, then *N more: loop sessions*.
-- *Start a new session*, the first choice and what Enter picks, goes on to
-  the usual questions.
-- With no paused session nothing is printed. If Datalayer cannot be asked —
-  offline, a key refused — one line says so and the start goes on.
+    runs in the application's name as it does at its address. A paused
+    deployment is asked about first (see
+    [A session of a paused deployment](#a-session-of-a-paused-deployment));
+  - **a seat of a team run** goes on with its run: its paused run is let go
+    on, and each seat's session with it — what `agent-teams sessions resume
+    <run>` does, run for you. Nothing is started on this machine.
+- The other keys act on the highlighted session as in `loop sessions`
+  (pause, end, transfer, export, delete, start over), and the screen is
+  drawn again. On a launch row they say that Enter starts it.
+- **Esc** or **Ctrl-C** leaves `loop`, nothing started.
+- With no session listed, the screen is not drawn and the usual questions
+  follow. If Datalayer cannot be asked — offline, a key refused — one line
+  says so and the start goes on with the sessions of this machine.
 - A run nobody is at is unchanged: `--prompt`, piped input, an agentspec
   named with `-a`, a runtime named with `--runtime`.
 
+`loop sessions` and `loop --resume` show the same screen without the
+launch rows: there you came to manage your sessions, and Ctrl-N starts a
+session over.
+
 In the prompt, `/resume <uid>` goes on with a session of what the prompt
 runs. For a session of another agent or application it says so, and that
-the start's list is where it is picked: there its agent, or its
+the screen `loop` opens as it starts is where it is picked: there its agent, or its
 application, is started first.
 
 ## `loop plugins`

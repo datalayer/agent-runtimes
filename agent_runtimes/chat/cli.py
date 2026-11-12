@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import typer
 from pydantic_ai import Agent
@@ -851,24 +851,39 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
-def _offer_paused() -> Any:
-    """The paused session the person goes on with as `loop` starts, or
-    ``None``: nobody at the terminal, none paused, or a new one chosen.
+def _offer_paused(*, local: bool = False, cloud: bool = False) -> Tuple[Any, str]:
+    """What the person starts with as `loop` starts: ``(session, "")`` for
+    a session to go on with, ``(None, where)`` for a new one — `LOCAL` or
+    `CLOUD` when the start's launch rows asked where it runs, ``""`` when
+    the usual questions still follow.
 
-    Those on this machine and, signed in, those on Datalayer; the
-    platform's list failing is said in a line and the start goes on.
+    The screen is `loop sessions`' (`run_picker`), its launch rows above
+    the sessions; nobody at the terminal, or no session listed, it is not
+    drawn. Esc or Ctrl-C leaves `loop` (KeyboardInterrupt).
     """
-    from agent_runtimes.loop.launch import interactive, make_client
-    from agent_runtimes.loop.paused import choose_paused, paused_sessions
+    from agent_runtimes.commands.sessions import _token, run_picker
+    from agent_runtimes.loop.launch import (
+        NEW_SESSION,
+        interactive,
+        remember_where,
+        start_choices,
+    )
 
     if not interactive():
-        return None
-    try:
-        _, token = make_client()
-    except Exception:  # noqa: BLE001 - not signed in: the local ones only
-        token = ""
-    rows = paused_sessions(token=token, say=lambda line: print(f"{GRAY}{line}{RESET}"))
-    return choose_paused(rows)
+        return None, ""
+    launch, highlighted = start_choices(
+        local=local, cloud=cloud, cloud_offered=local or cloud or bool(_token())
+    )
+    chosen = run_picker(launch=launch, highlighted=highlighted)
+    if chosen is None:
+        raise KeyboardInterrupt
+    picked, session = chosen
+    if session is not None:
+        return session, ""
+    if picked == NEW_SESSION:
+        return None, ""
+    remember_where(picked)
+    return None, picked
 
 
 def _session_named(
@@ -1597,7 +1612,7 @@ def main_callback(
     # agentspec is picked from the list this machine's keys allow; on
     # Datalayer the environment is picked instead, and no agentspec list is
     # shown.
-    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
+    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME, LOCAL
 
     # The paused sessions that can be gone on with, offered first when
     # nothing on the command line says what to run: one picked is resumed
@@ -1620,10 +1635,13 @@ def main_callback(
         )
     elif agent_id is None and not query and not runtime:
         try:
-            paused = _offer_paused()
+            paused, where_picked = _offer_paused(local=local, cloud=cloud)
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
+        # A launch row that said where it runs answers the question.
+        if where_picked:
+            local, cloud = where_picked == LOCAL, where_picked == CLOUD
     if paused is not None:
         from agent_runtimes.loop.paused import resume_plan
 

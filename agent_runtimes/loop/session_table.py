@@ -79,7 +79,9 @@ def cells_of_row(row: Paused, number: int, now: Optional[datetime] = None) -> Li
     return [
         str(number),
         row.uid,
-        row.state_said,
+        # The session's state alone: a paused deployment is asked about
+        # when the session is resumed, not marked here.
+        row.state,
         "agent" if row.kind == "agent" else "app",
         _one_line(row.agent if row.kind == "agent" else (row.app_name or row.app_uid)),
         str(row.turns),
