@@ -1,0 +1,15 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# What the agent does, in kagent's terms: its model (a ModelConfig of
+# modelconfig-*.yaml) and its description. The agentspec of the Harness says
+# the rest. RemoteMCPServer tools may be added under `tools` (whole servers:
+# agent-runtimes refuses a `tools` selection or `requireApproval` under kagent).
+apiVersion: api.kagent.dev/v1alpha3
+kind: AgentTemplate
+metadata:
+  name: agent-runtimes
+spec:
+  description: An agent-runtimes agentspec served by kagent.
+  modelConfig:
+    name: datalayer-ai-inference

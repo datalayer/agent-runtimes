@@ -1,0 +1,146 @@
+---
+title: kagent
+---
+
+# kagent
+
+[kagent](https://kagent.dev) is a Kubernetes control plane for agents. From
+its 1.0 release, an agent is an `Agent` (`api.kagent.dev/v1alpha3`) that pairs
+an `AgentTemplate` (model, prompt, MCP tools) with a `Harness` (the runtime
+image), and kagent runs it as a sandboxed actor per conversation (Session),
+behind its A2A gateway.
+
+Agent Runtimes runs as a kagent **BYO Harness**: any agentspec of the library
+becomes a kagent Agent, invoked through kagent's gateway, CLI and UI.
+
+This page is written for kagent **1.0.1** (Substrate 1.0.0). kagent 0.x
+(`kagent.dev/v1alpha2`, `spec.type: BYO` Deployments) is a different contract
+and is not supported.
+
+## How it works
+
+```
+kagent A2A gateway ──A2A v1, gRPC :80──▶ kagent bridge ──A2A 1.0 JSON-RPC──▶ agent-runtimes serve --target kagent
+                                          │  /readyz :8081                      (127.0.0.1:8765, the agentspec
+                                          └─ kagent's task store (gRPC)          of AGENT_SPEC_ID, as `default`)
+```
+
+The image (`docker/Dockerfile.kagent`) holds two Python environments:
+
+- **the kagent bridge** (`agent_runtimes/kagent/bridge.py`), with kagent's
+  `kagent-core` and `a2a-sdk` 1.x. It does what kagent asks of a BYO image:
+  it materializes the configuration kagent hands the actor
+  (`/config/config.json`, `/config/agent-card.json`), serves A2A v1 over gRPC
+  on port 80 and `GET /readyz` on 8081, and saves every task through kagent's
+  task store. Each task is forwarded to the agent-runtimes server beside it,
+  and its artifacts and final state are relayed back.
+- **agent-runtimes**, started by the bridge with
+  `agent-runtimes serve --target kagent`. It serves the agentspec named by
+  `AGENT_SPEC_ID` over its usual A2A transport, on loopback.
+
+The agent card kagent serves is the one kagent compiles from the Agent.
+
+## Models
+
+The model of the Agent's `AgentTemplate` (a kagent `ModelConfig`) is the one
+the agent calls:
+
+| kagent provider | agent-runtimes model | endpoint |
+| --- | --- | --- |
+| `OpenAI` | `openai:<model>` (`openai-responses:<model>` with `apiFormat: responses`) | `openAI.baseUrl` → `OPENAI_BASE_URL` |
+| `Anthropic` | `anthropic:<model>` | `anthropic.baseUrl` → `ANTHROPIC_BASE_URL` |
+| `Bedrock` | `bedrock:<model>` | `bedrock.region` → `AWS_REGION` |
+
+Any other provider stops the agent at start, with a sentence saying so.
+Without a model in the template, the agentspec's own model is used.
+
+The API key never enters the actor: kagent's egress gateway sets it on each
+call to the endpoint, from the Secret the `ModelConfig` names.
+
+**With Datalayer**, use Datalayer's AI inference, an OpenAI-compatible
+endpoint billed in Datalayer credits: a `ModelConfig` of provider `OpenAI`
+whose `baseUrl` is your Datalayer plane's `/api/ai-inference/v1` and whose
+Secret holds a Datalayer API key (`deploy/kagent/modelconfig-datalayer.yaml`).
+Its `model` is an agent-runtimes model id, such as
+`bedrock:us.anthropic.claude-sonnet-4-6`.
+
+**With your own provider**, a `ModelConfig` of that provider and a Secret with
+its key (`deploy/kagent/modelconfig-openai-compatible.yaml`). The examples
+ship no key.
+
+## MCP tools
+
+The `RemoteMCPServer` tools of the template are given to the agent as remote
+MCP servers over Streamable HTTP, beside the agentspec's own. Secret-backed
+headers stay in kagent's egress gateway, as for models.
+
+agent-runtimes serves the **whole** server under kagent. A binding it cannot
+honour as written stops the agent at start instead of serving more than was
+bound: a `tools` selection, `requireApproval`, token or header passthrough,
+and SSE servers.
+
+## Deploy
+
+1. Install kagent 1.0.1 (`kagent install`; Kubernetes 1.35 with kagent's
+   feature gates).
+2. Build and push the image, naming a release of agent-runtimes that has the
+   kagent target:
+
+   ```bash
+   docker build -f docker/Dockerfile.kagent \
+     --build-arg AGENT_RUNTIMES_VERSION=<version> \
+     -t <registry>/agent-runtimes-kagent:<version> .
+   docker push <registry>/agent-runtimes-kagent:<version>
+   ```
+
+3. In `deploy/kagent/harness.yaml`, set the image **by digest** (kagent runs
+   no other) and `AGENT_SPEC_ID`; in `modelconfig-datalayer.yaml`, your plane's
+   `baseUrl`. Create the model Secret, then:
+
+   ```bash
+   kubectl apply -k deploy/kagent
+   kubectl get agents.api.kagent.dev -n kagent
+   ```
+
+4. Talk to it through kagent's gateway:
+
+   ```bash
+   kubectl port-forward -n kagent svc/kagent-controller 8083:8083
+   curl -H 'X-User-Id: admin@kagent.dev' \
+     http://127.0.0.1:8083/agents/kagent/agent-runtimes/.well-known/agent-card.json
+   curl -H 'X-User-Id: admin@kagent.dev' -H 'A2A-Version: 1.0' \
+     -H 'content-type: application/json' \
+     http://127.0.0.1:8083/agents/kagent/agent-runtimes \
+     -d '{"jsonrpc":"2.0","id":"1","method":"SendMessage","params":{"message":{"messageId":"m1","role":"ROLE_USER","parts":[{"text":"Hello"}]}}}'
+   ```
+
+## Running the pair without kagent
+
+The bridge runs outside kagent with its tasks in memory
+(`KAGENT_BRIDGE_LOCAL=true`), the configuration written by hand in
+`KAGENT_CONFIG_DIR`:
+
+```bash
+mkdir -p /tmp/kagent-config
+echo '{"runtime":{"name":"agent","namespace":"local","port":50051,"control_plane_url":"http://127.0.0.1:8083","gateway_url":"http://127.0.0.1:8083"},"agent":{}}' \
+  > /tmp/kagent-config/config.json
+echo '{"name":"agent","description":"An agentspec","version":"v1","capabilities":{"streaming":true}}' \
+  > /tmp/kagent-config/agent-card.json
+AGENT_SPEC_ID=example-blank AGENT_RUNTIMES_MODEL=test \
+KAGENT_CONFIG_DIR=/tmp/kagent-config KAGENT_BRIDGE_LOCAL=true \
+  <bridge venv>/bin/python -I agent_runtimes/kagent/bridge.py
+```
+
+`AGENT_RUNTIMES_MODEL=test` is pydantic-ai's test model: it answers without
+calling any model. The bridge then answers A2A v1 over gRPC on 50051.
+
+## Environment
+
+| Variable | Read by | Meaning |
+| --- | --- | --- |
+| `AGENT_SPEC_ID` | agent-runtimes | The agentspec served (Harness `spec.env`). Required. |
+| `AGENT_RUNTIMES_KAGENT_PORT` | both | The loopback port of agent-runtimes, 8765. |
+| `KAGENT_CONFIG_DIR` | bridge | Where kagent's configuration is, `/config`. |
+| `KAGENT_BRIDGE_LOCAL` | bridge | `true`: tasks in memory, outside kagent. |
+| `KAGENT_BRIDGE_TASK_TIMEOUT` | bridge | Seconds one task may take, 600. |
+| `AGENT_RUNTIMES_COMMAND` | bridge | The agent-runtimes executable, set in the image. |

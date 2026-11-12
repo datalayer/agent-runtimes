@@ -1357,6 +1357,21 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                         f"Loaded {len(agent_spec.mcp_servers)} MCP servers from agent spec"
                     )
 
+                # Under kagent, the RemoteMCPServer tools of the Agent's
+                # template are the agent's too, beside the agentspec's.
+                from .kagent.settings import is_kagent_target, kagent_settings
+
+                if is_kagent_target():
+                    from .types import MCPServer
+
+                    for body in kagent_settings().mcp_servers:
+                        kagent_server = MCPServer(**body)
+                        mcp_manager.add_server(kagent_server)
+                        all_mcp_servers.append(kagent_server)
+                        logger.info(
+                            f"Loaded kagent MCP server: {kagent_server.id} at {kagent_server.url}"
+                        )
+
                 async def start_all_mcp_servers() -> None:
                     """Start all MCP servers for the default agent."""
                     for mcp_server in all_mcp_servers:

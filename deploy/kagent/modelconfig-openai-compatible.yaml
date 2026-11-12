@@ -1,0 +1,20 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# Your own OpenAI-compatible provider. Create the Secret with its key first:
+#
+#   kubectl create secret generic model-api-key -n kagent \
+#     --from-literal=api-key="<your provider's key>"
+#
+# Point the AgentTemplate's modelConfig at this one to use it.
+apiVersion: api.kagent.dev/v1alpha3
+kind: ModelConfig
+metadata:
+  name: openai-compatible
+spec:
+  provider: OpenAI
+  model: gpt-5-mini
+  apiKeySecret: model-api-key
+  apiKeySecretKey: api-key
+  openAI:
+    baseUrl: https://api.openai.com/v1

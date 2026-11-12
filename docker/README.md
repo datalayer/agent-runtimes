@@ -10,13 +10,14 @@
 
 # Docker for Agent Runtimes
 
-This folder contains Docker assets for Agent Runtimes. Three images are produced:
+This folder contains Docker assets for Agent Runtimes. Four images are produced:
 
 | Dockerfile                 | Image (default)           | Purpose                                                                        |
 | -------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
 | `Dockerfile.agent-runtime` | `datalayer/agent-runtime` | Headless agent runtime server hosting AI agents over the supported protocols.  |
 | `Dockerfile.agent-node`    | `datalayer/agent-nodes`   | Local Agent Node that syncs with the Datalayer platform and serves its web UI. |
 | `Dockerfile.agentcore`     | `datalayer/agent-runtimes-agentcore` (Amazon ECR) | agent-runtimes from PyPI answering the Amazon Bedrock AgentCore Runtime contract, for linux/arm64 and linux/amd64; built and pushed by `.github/workflows/agentcore-image.yml` (see `aws/README.md`). |
+| `Dockerfile.kagent`        | `datalayer/agent-runtimes-kagent` | agent-runtimes from PyPI as a [kagent](https://kagent.dev) 1.0 BYO Harness: the kagent bridge (A2A v1 gRPC on 80, `/readyz` on 8081, kagent's task store) in its own environment, forwarding to `agent-runtimes serve --target kagent`. Build with `--build-arg AGENT_RUNTIMES_VERSION=<a release with the kagent target>`; see `deploy/kagent/README.md`. |
 
 - Build context for both images: repository root (`..`).
 - The Agent Node image bundles the frontend `dist`, so it must be built first

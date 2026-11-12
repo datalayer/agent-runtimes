@@ -1,0 +1,80 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# The image a kagent (https://kagent.dev, 1.0) BYO Harness runs: one image for
+# every agentspec, the agentspec named in the Harness's env (AGENT_SPEC_ID).
+#
+# Two environments:
+#
+# - /opt/agent-runtimes: agent-runtimes from PyPI at AGENT_RUNTIMES_VERSION,
+#   which serves the agentspec over A2A on loopback
+#   (`agent-runtimes serve --target kagent`);
+# - /opt/kagent-bridge: kagent-core and a2a-sdk 1.x, which agent-runtimes'
+#   own a2a-sdk pin excludes, running the bridge (agent_runtimes/kagent/bridge.py):
+#   A2A v1 over gRPC on 80, /readyz on 8081, kagent's task store, each task
+#   forwarded to agent-runtimes.
+#
+# kagent-proto, which kagent-core needs, is not on PyPI: it is installed from
+# the kagent tag KAGENT_VERSION names.
+#
+# Lean like Dockerfile.agentcore: no Node.js, no Chromium, no memory extra.
+# kagent runs only digest-pinned images: push it, then name it by digest in
+# the Harness (deploy/kagent/harness.yaml).
+
+ARG PYTHON_VERSION=3.11
+
+FROM python:${PYTHON_VERSION}-slim
+
+# No default: the release named must have `serve --target kagent` (the first
+# one after 1.6.34).
+ARG AGENT_RUNTIMES_VERSION
+ARG AGENT_RUNTIMES_EXTRAS=a2a,openai,anthropic,aws
+ARG KAGENT_VERSION=1.0.1
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN test -n "${AGENT_RUNTIMES_VERSION}" || { echo "Set --build-arg AGENT_RUNTIMES_VERSION=<a release with serve --target kagent>" >&2; exit 1; } \
+    && python -m venv /opt/agent-runtimes \
+    && /opt/agent-runtimes/bin/pip install \
+        "agent-runtimes[${AGENT_RUNTIMES_EXTRAS}]==${AGENT_RUNTIMES_VERSION}" \
+    && /opt/agent-runtimes/bin/agent-runtimes --help > /dev/null
+
+# kagent-core imports fastapi, and the bridge serves gRPC health: both are
+# installed here, as kagent's own runtimes have them.
+RUN python -m venv /opt/kagent-bridge \
+    && /opt/kagent-bridge/bin/pip install \
+        "kagent-proto @ git+https://github.com/kagent-dev/kagent@v${KAGENT_VERSION}#subdirectory=python/packages/kagent-proto" \
+        "kagent-core==${KAGENT_VERSION}" \
+        fastapi grpcio-health-checking httpx \
+    && cp "$(/opt/agent-runtimes/bin/python -c 'import importlib.util; print(importlib.util.find_spec("agent_runtimes").submodule_search_locations[0])')/kagent/bridge.py" \
+        /opt/kagent-bridge/bridge.py \
+    && /opt/kagent-bridge/bin/python -I -c "import kagent.core, a2a.server.request_handlers.grpc_handler"
+
+# kagent's runtimes run as 65532, with /config theirs: kagent-core writes the
+# materialized configuration there.
+RUN mkdir -p /config /home/agent \
+    && chown 65532:65532 /config /home/agent
+
+ENV HOME=/home/agent \
+    AGENT_RUNTIMES_COMMAND=/opt/agent-runtimes/bin/agent-runtimes
+
+USER 65532:65532
+WORKDIR /home/agent
+
+LABEL org.opencontainers.image.title="agent-runtimes-kagent" \
+      org.opencontainers.image.description="agent-runtimes as a kagent BYO Harness" \
+      org.opencontainers.image.source="https://github.com/datalayer/agent-runtimes" \
+      org.opencontainers.image.licenses="BSD-3-Clause" \
+      org.opencontainers.image.version="${AGENT_RUNTIMES_VERSION}"
+
+# 80: A2A v1 gRPC (kagent's private runtime port). 8081: /readyz.
+EXPOSE 80 8081
+
+CMD ["/opt/kagent-bridge/bin/python", "-I", "/opt/kagent-bridge/bridge.py"]

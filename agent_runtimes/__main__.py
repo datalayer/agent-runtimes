@@ -876,7 +876,9 @@ def serve(
             envvar="AGENT_RUNTIMES_TARGET",
             help="Answer a platform's runtime contract: 'agentcore' serves Amazon Bedrock "
             "AgentCore Runtime's /invocations, /ping and /ws on 0.0.0.0:8080 "
-            "(AGENTCORE_PORT), the agentspec of AGENT_SPEC_ID configured at start",
+            "(AGENTCORE_PORT), the agentspec of AGENT_SPEC_ID configured at start; "
+            "'kagent' serves the agentspec of AGENT_SPEC_ID over A2A on loopback for "
+            "the kagent bridge, with the model and MCP servers kagent configured",
         ),
     ] = None,
 ) -> None:
@@ -942,6 +944,9 @@ def serve(
 
         # Answer Amazon Bedrock AgentCore Runtime's contract (0.0.0.0:8080)
         AGENT_SPEC_ID=crawler agent-runtimes serve --target agentcore
+
+        # Serve a kagent BYO actor's agent, for the bridge beside it
+        AGENT_SPEC_ID=crawler agent-runtimes serve --target kagent
     """
     try:
         serve_server(

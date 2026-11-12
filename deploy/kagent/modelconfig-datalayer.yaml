@@ -1,0 +1,23 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# Models through Datalayer's ai-inference (OpenAI-compatible), billed in
+# Datalayer credits. Create the Secret with your Datalayer API key first:
+#
+#   kubectl create secret generic datalayer-api-key -n kagent \
+#     --from-literal=api-key="$DATALAYER_API_KEY"
+#
+# and set baseUrl to your Datalayer plane's ai-inference (a full DNS name:
+# Substrate's egress allows named origins only). The key never enters the
+# actor: kagent's egress gateway sets it on each call.
+apiVersion: api.kagent.dev/v1alpha3
+kind: ModelConfig
+metadata:
+  name: datalayer-ai-inference
+spec:
+  provider: OpenAI
+  model: bedrock:us.anthropic.claude-sonnet-4-6
+  apiKeySecret: datalayer-api-key
+  apiKeySecretKey: api-key
+  openAI:
+    baseUrl: https://datalayer.example.com/api/ai-inference/v1

@@ -1,0 +1,23 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# agent-runtimes as a kagent BYO Harness. kagent runs only digest-pinned
+# images: replace the digest with the one of the image you pushed
+# (docker/Dockerfile.kagent). AGENT_SPEC_ID names the agentspec served.
+apiVersion: api.kagent.dev/v1alpha3
+kind: Harness
+metadata:
+  name: agent-runtimes
+spec:
+  byo: {}
+  workload:
+    image: docker.io/datalayer/agent-runtimes-kagent@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    command: ["/opt/kagent-bridge/bin/python", "-I", "/opt/kagent-bridge/bridge.py"]
+  env:
+    - name: AGENT_SPEC_ID
+      value: example-blank
+  substrate:
+    workerPoolRef:
+      name: kagent-default
+    snapshotPolicy:
+      location: s3://ate-snapshots/kagent/
