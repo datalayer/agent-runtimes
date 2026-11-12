@@ -132,7 +132,8 @@ def test_the_list_holds_the_held_and_the_recorded_paged_and_filtered(
     listed = remote.get("/api/v1/apps/sessions", headers=as_("ada")).json()
     uids = [s["uid"] for s in listed["sessions"]]
     assert uids[:2] == ["session-l001", "session-l002"], "held first"
-    assert set(uids[2:]) == {"session-l010", "session-l011", "session-l012"}
+    # The sessions that run and those that can be gone on with: the ended one is asked for.
+    assert set(uids[2:]) == {"session-l010", "session-l012"}
     assert "session-l013" not in uids and "session-l014" not in uids
     assert not listed["has_more"]
     held = {s["uid"]: s for s in listed["sessions"]}
@@ -140,20 +141,24 @@ def test_the_list_holds_the_held_and_the_recorded_paged_and_filtered(
     assert (
         not held["session-l010"]["held"] and held["session-l010"]["state"] == "paused"
     )
+    [ended] = remote.get(
+        "/api/v1/apps/sessions?state=ended", headers=as_("ada")
+    ).json()["sessions"]
     assert (
-        held["session-l011"]["state"] == "ended"
-        and held["session-l011"]["runs_on"] is None
+        ended["uid"] == "session-l011"
+        and ended["state"] == "ended"
+        and ended["runs_on"] is None
     )
     assert (
         held["session-l012"]["title"] == "The refactor"
         and held["session-l012"]["turns"] == 1
     )
-    # A page of two of the recorded, then the next from `after`.
+    # A page of one of the recorded, then the next from `after`.
     page = remote.get(
-        "/api/v1/apps/sessions?limit=2&app=app-1", headers=as_("ada")
+        "/api/v1/apps/sessions?limit=1&app=app-1", headers=as_("ada")
     ).json()
-    assert page["has_more"] and len(page["sessions"]) == 4, (
-        "two held, then the page of two"
+    assert page["has_more"] and len(page["sessions"]) == 3, (
+        "two held, then the page of one"
     )
     rest = remote.get(
         f"/api/v1/apps/sessions?limit=2&after={page['sessions'][-1]['uid']}",

@@ -112,7 +112,9 @@ def _page(
             continue
         if agent and session["agent"] != agent:
             continue
-        if state and session["state"] != state:
+        # Unsaid, the sessions that run and those that can be gone on with:
+        # an ended one is listed when its state is asked.
+        if session["state"] != state if state else session["state"] == "ended":
             continue
         if query and query.lower() not in session["title"].lower():
             continue

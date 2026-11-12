@@ -17,7 +17,7 @@ ROWS = [
     {"uid": "01a", "state": "paused", "kind": "app", "agent": "writer", "turns": 2},
     {
         "uid": "01b",
-        "state": "ended",
+        "state": "paused",
         "kind": "app",
         "agent": "writer",
         "turns": 1,
@@ -62,8 +62,8 @@ def test_the_archived_flag_lists_them_too_and_marks_each(monkeypatch: Any) -> No
     assert result.exit_code == 0, result.output
     assert asked[0]["archived"] == "true"
     lines = result.output.splitlines()
-    assert "archived" in next(line for line in lines if line.startswith("01b"))
-    assert "archived" not in next(line for line in lines if line.startswith("01a"))
+    assert "paused, archived" in next(line for line in lines if "| 01b " in line)
+    assert "archived" not in next(line for line in lines if "| 01a " in line)
 
 
 def test_the_former_all_flag_is_gone() -> None:

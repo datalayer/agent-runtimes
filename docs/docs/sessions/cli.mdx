@@ -15,12 +15,61 @@ $ loop sessions
 On this machine: a session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and resumed by a runtime on this machine.
 On Datalayer: a session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
 Type to filter.
-On this machine (2)
-❯  1  01M74VPWT51K7HF7VMJW0N8APT  paused  agent  example-simple   2 turns  2 hours ago  — My name is Ada and I sell tea.
-   2  01M6ZK2Q0V9D3T8N4W5X6Y7Z8A  ended   app    decide           1 turn   5 days ago   — Reply with one word.
-On Datalayer (1)
-   3  01M74THECPG6V21NCRD2TD1FQH  paused  agent  worker-marketer  4 turns  3 hours ago  — The autumn campaign
+On this machine (1)
+  |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
+  | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
+❯ |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple  |     2 | 2h  | My name is Ada and I sell tea.  |
+On Datalayer (2)
+  |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
+  | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
+  |   2 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign             |
+  |   3 | 01M780EXBBXNNH629KKJJ3PR62 | open   | app   | Exchange Desk   |     1 | 5m  | Which rate applies to an order… |
 ↑↓ or a number: choose · type: filter · Enter: resume · Ctrl-P: pause · Ctrl-E: end · Ctrl-T: transfer to the other place · Ctrl-X: export to a file · Ctrl-D: delete · Ctrl-N: start over (a new session of the same agent or application, with nothing of this conversation; this one is left as it is) · Esc: leave
+```
+
+### What is listed
+
+**The sessions that run (`open`) and those you can go on with (`paused`).**
+A paused session is always resumable; a session that cannot be gone on
+with is `ended`, and is not listed:
+
+- you ended it (`/end`, Ctrl-E, `loop sessions end <uid>`), or transferred
+  it to the other place, where it lives now;
+- it was a seat of a team run, and its run is over — completed, failed or
+  cancelled: an ended run is not resumed;
+- it was a session of a deployment that was taken down.
+
+A session said `open` whose runtime no longer exists is not running: it is
+listed `paused`, and resumes from its record.
+
+Nothing is deleted by this. An ended session keeps its record: `loop
+sessions --all` lists the ended ones too, `loop sessions list --state
+ended` lists them alone, and `loop sessions show <uid>`, `clone <uid>` and
+`export <uid>` act on one by its uid. `loop sessions delete <uid>` is what
+deletes a session. Resuming an ended session is refused in a sentence that
+names the command that clones it — `loop sessions clone <uid>`, or
+`agent-teams sessions clone <run>` for a seat of a team run.
+
+### The table
+
+Each group is a table — its number, the session's uid (whole, always), its
+state, its kind (an `agent`'s, or an `app`lication's), its agent or
+application, its turns, its age (`5m`, `2h`, `14d`) and its title. In a
+terminal a row is one line: the title is the column that is cut, with an
+ellipsis, to the terminal's width (the agent's name next, in a narrow one).
+Piped or redirected, it is a markdown table with nothing cut, so it pastes
+as one:
+
+```text
+$ loop sessions | cat
+…
+On Datalayer (1)
+
+|   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title               |
+| --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------- |
+|   1 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign |
+
+Listed: the sessions that run (open) and those you can go on with (paused). Ended ones are not: `loop sessions --all` lists them too; `loop sessions show|clone|export <uid>` still act on one.
 ```
 
 - **Arrow keys**, or a row's **number**, choose a session; **typing**
@@ -38,8 +87,8 @@ On Datalayer (1)
   application, with nothing of this conversation, the old one left as it is.
 - An action that does not apply to the highlighted session says why, in a
   sentence, under the list.
-- Without a terminal the two groups are printed as text; `loop sessions
-  --json` prints them as JSON (`{signed_in, local: [...], cloud: [...]}`,
+- Without a terminal the two groups are printed, each a markdown table;
+  `loop sessions --json` prints them as JSON (`{signed_in, local: [...], cloud: [...]}`,
   `cloud` null when signed out).
 
 Two shortcuts, as you start `loop`:
@@ -123,7 +172,7 @@ sentence and the command exits 1.
 
 | Verb | What it does |
 | --- | --- |
-| `loop sessions list [--app <id>] [--archived] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--archived` lists the archived ones too, each marked `archived`. |
+| `loop sessions list [--app <id>] [--archived] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first, as a table: the open and the paused ones; `--state ended` lists the ended ones. `--archived` lists the archived ones too, each marked `archived`. |
 | `loop sessions show <uid>` | What a session is: state, turn, agent and harness, turns, lineage, where it runs, its harness row with the vendor's session id when the adapter exposes it. |
 | `loop sessions pause <uid>` | Pause a session its runtime holds: what its conversation holds is given to its agent's memory first, when the agent has one, and its record says `paused`. |
 | `loop sessions resume <uid> [--agent <id>]` | Resume a paused session — held, or from its record on a runtime of its application (`--agent` names the application's agent there). |
@@ -143,8 +192,11 @@ A session from the terminal, in words:
 
 ```text
 $ loop sessions list --app shield-mvp
-e67a52b2  open    app    shield-mvp-codex        5 turns  on runtime 01m5d3e8  — The refactor
-c1a9f0e3  paused  app    shield-mvp-claude-code  2 turns  not running  cloned from e67a52b2 at turn 2  — Before the refactor
+|   # | Session  | State  | Kind | Agent                  | Turns | Age | Title               |
+| --: | -------- | ------ | ---- | ---------------------- | ----: | --- | ------------------- |
+|   1 | e67a52b2 | open   | app  | shield-mvp-codex       |     5 | 2h  | The refactor        |
+|   2 | c1a9f0e3 | paused | app  | shield-mvp-claude-code |     2 | 1h  | Before the refactor |
+Ended sessions are not listed: `loop sessions list --state ended`.
 $ loop sessions resume c1a9f0e3 --agent shield-mvp-claude-code
 Resuming c1a9f0e3 on runtime 01m5d3e8 (shield-mvp-claude-code): 2 turns replayed.
 $ loop sessions swap c1a9f0e3 --agent shield-mvp-codex

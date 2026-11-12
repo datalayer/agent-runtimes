@@ -1832,6 +1832,10 @@ async def list_sessions(
     filtered (``?app=``, ``?agent=``, ``?state=`` — an unknown word is 422 —,
     ``?q=`` on the title, ``?archived=true`` to include the archived).
     ``?held=true`` lists what this runtime holds alone.
+
+    With no ``?state=``, the sessions that run (``open``) and those that
+    can be gone on with (``paused``) are listed; an ended one — not resumed,
+    still shown, cloned and exported by its uid — with ``?state=ended``.
     """
     from agent_runtimes.apps import sessions
     from agent_runtimes.apps.record import session_kind
@@ -1855,7 +1859,7 @@ async def list_sessions(
         live.describe()
         for live in sessions._SESSIONS.values()
         if (not agent or live.agent_spec == agent)
-        and (not wanted or live.state == wanted)
+        and (live.state == wanted if wanted else live.state != "ended")
         and (
             not app
             or live.app.id == app
@@ -1888,6 +1892,9 @@ async def list_sessions(
     by_uid = {item["uid"]: item for item in held_here}
     listed: List[Dict[str, Any]] = []
     for recorded in page.sessions:
+        if not wanted and recorded.get("state") == "ended":
+            # A record older than this rule answers every state.
+            continue
         # A session held here is said as the runtime holds it: its turn phase
         # and what it asks are the runtime's, not the record's.
         listed.append(

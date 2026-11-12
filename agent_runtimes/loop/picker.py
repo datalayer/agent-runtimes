@@ -18,6 +18,7 @@ terminal's drawing of it.
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -29,8 +30,10 @@ from agent_runtimes.loop.paused import (
     PLACE_TITLES,
     Paused,
     _ago,
+    clone_command,
     grouped,
 )
+from agent_runtimes.loop.session_table import cells_of_row, table_lines
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,19 @@ LEGEND = (
     + " · Esc: leave"
 )
 
+#: What an empty group says, by place. Ended sessions are not listed.
+NO_SESSION = {
+    ON_THIS_MACHINE: "No session to go on with: `loop` starts one.",
+    ON_DATALAYER: "No session to go on with: `loop --cloud` starts one.",
+}
+
+#: Said under the listing: what is not in it, and how it is seen.
+NOT_LISTED = (
+    "Listed: the sessions that run (open) and those you can go on with (paused). "
+    "Ended ones are not: `loop sessions --all` lists them too; "
+    "`loop sessions show|clone|export <uid>` still act on one."
+)
+
 NOT_SIGNED_IN = (
     "Not signed in: only the sessions on this machine are listed. `datalayer login` "
     "lists those on Datalayer too."
@@ -79,7 +95,15 @@ def why_not(action: str, row: Paused, *, signed_in: bool = True) -> str:
     here = row.where == ON_THIS_MACHINE
     if action == "resume":
         if row.state == "ended":
-            return f"Session {row.uid} ended: start over, or clone it to go on from it."
+            what = (
+                "was a seat of a team run that ended; an ended run is not resumed"
+                if row.team_run or row.app_uid.startswith("team:")
+                else "ended; an ended session is not resumed"
+            )
+            return (
+                f"Session {row.uid} {what} — clone it to go on from it "
+                f"(`{clone_command(row)}`), or start over."
+            )
         if not row.resumable:
             where = f": open {row.address}" if row.address else ""
             return f"Session {row.uid} is {row.why_not or 'not resumed from a terminal'}{where}."
@@ -171,6 +195,8 @@ class Picker:
     index: int = 0
     said: str = ""
     now: Optional[datetime] = field(default=None, repr=False)
+    width: Optional[int] = None
+    """The columns a row may take: the terminal's, unless a test says."""
 
     @property
     def number(self) -> Optional[int]:
@@ -251,6 +277,9 @@ class Picker:
         )
         on = self.highlighted()
         number = 0
+        # A row is one line: the table is as wide as the terminal less the
+        # marker, its title the column that is cut.
+        width = (self.width or shutil.get_terminal_size((100, 24)).columns) - 3
         for place, rows in self.groups():
             if place == ON_DATALAYER and not self.signed_in:
                 continue
@@ -261,19 +290,25 @@ class Picker:
                         "dim",
                         "   No session matches."
                         if self.typed
-                        else (
-                            "   No session yet: `loop` starts one."
-                            if place == ON_THIS_MACHINE
-                            else "   No session yet: `loop --cloud` starts one."
-                        ),
+                        else f"   {NO_SESSION[place]}",
                     )
                 )
-            for row in rows:
+            if not rows:
+                continue
+            table = table_lines(
+                [
+                    cells_of_row(row, number + index + 1, self.now)
+                    for index, row in enumerate(rows)
+                ],
+                width,
+            )
+            drawn += [("dim", f"  {line}") for line in table[:2]]
+            for row, line in zip(rows, table[2:]):
                 number += 1
                 drawn.append(
                     (
                         "on" if row is on else "row",
-                        f"{'❯' if row is on else ' '}{number:>3}  {row_line(row, self.now)}",
+                        f"{'❯' if row is on else ' '} {line}",
                     )
                 )
         drawn.append(("dim", LEGEND))
@@ -285,15 +320,31 @@ class Picker:
 def listing_lines(
     rows: List[Paused], *, signed_in: bool, now: Optional[datetime] = None
 ) -> List[str]:
-    """The two groups as text, for a run nobody is at."""
+    """The two groups as text, for a run nobody is at: each a title and a
+    markdown table (pipes, a header separator, nothing cut), a blank line
+    around it so that the whole pastes as markdown; an empty group says so
+    in a sentence.
+    """
     picker = Picker(rows, signed_in=signed_in, now=now)
     lines: List[str] = []
+    number = 0
     for place, of_place in picker.groups():
         if place == ON_DATALAYER and not signed_in:
             lines.append(NOT_SIGNED_IN)
             continue
         lines.append(f"{PLACE_TITLES[place]} ({len(of_place)})")
-        lines += [f"  {row_line(row, now)}" for row in of_place]
+        if not of_place:
+            lines.append(NO_SESSION[place])
+            continue
+        lines.append("")
+        lines += table_lines(
+            [
+                cells_of_row(row, number + index + 1, now)
+                for index, row in enumerate(of_place)
+            ]
+        )
+        lines.append("")
+        number += len(of_place)
     return lines
 
 
@@ -385,6 +436,7 @@ def pick(
         return [(STYLES[style], f"{line}\n") for style, line in picker.lines()]
 
     application: Any = Application(
+        # A row is one line, cut to the terminal's width; the sentences wrap.
         layout=Layout(Window(FormattedTextControl(drawn), wrap_lines=True)),
         key_bindings=bindings,
         full_screen=False,
@@ -398,7 +450,9 @@ __all__ = [
     "ACTIONS",
     "Action",
     "LEGEND",
+    "NOT_LISTED",
     "NOT_SIGNED_IN",
+    "NO_SESSION",
     "Picker",
     "listing_json",
     "listing_lines",

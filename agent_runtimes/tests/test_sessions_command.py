@@ -91,19 +91,28 @@ def test_list_and_show(fake: Runtime, remote: TestClient) -> None:  # noqa: F811
     _open(remote, "session-k002", opener="Two")
     result = runner.invoke(command.app, ["list", "--cloud"])
     assert result.exit_code == 0, result.output
-    lines = result.output.strip().splitlines()
-    assert any(
-        line.startswith(
-            "session-k001  paused  app    notes-assistant  1 turn  on runtime local  — Refactor the billing module"
-        )
-        for line in lines
-    )
-    assert any(
-        line.startswith(
-            "session-k002  open    app    notes-assistant  1 turn  on runtime local  — Two"
-        )
-        for line in lines
-    )
+    # Piped, a markdown table: the header, its separator, one line a session.
+    rows = [
+        [cell.strip() for cell in line.strip("|").split("|")]
+        for line in result.output.strip().splitlines()
+        if line.startswith("|")
+    ]
+    assert rows[0] == [
+        "#",
+        "Session",
+        "State",
+        "Kind",
+        "Agent",
+        "Turns",
+        "Age",
+        "Title",
+    ]
+    assert set("".join(rows[1])) <= set("-:")
+    by_uid = {row[1]: row for row in rows[2:]}
+    assert by_uid["session-k001"][2:6] == ["paused", "app", "notes-assistant", "1"]
+    assert by_uid["session-k001"][7] == "Refactor the billing module"
+    assert by_uid["session-k002"][2:6] == ["open", "app", "notes-assistant", "1"]
+    assert by_uid["session-k002"][7] == "Two"
     assert (
         runner.invoke(command.app, ["list", "--state", "paused"]).output.count(
             "session-k00"

@@ -177,6 +177,29 @@ def session_line(session: Dict[str, Any]) -> str:
     )
 
 
+def print_sessions_table(sessions: List[Dict[str, Any]], out: Any = None) -> None:
+    """Sessions as a markdown table on standard output: in a terminal, cut
+    to its width — the title with an ellipsis, a row one line; piped, with
+    nothing cut.
+    """
+    from agent_runtimes.loop.session_table import cells_of_session, table_lines
+
+    out = out or console
+    rows = [
+        cells_of_session(session, number)
+        for number, session in enumerate(sessions, start=1)
+    ]
+    for line in table_lines(rows, out.width if out.is_terminal else None):
+        out.print(
+            line,
+            markup=False,
+            highlight=False,
+            no_wrap=True,
+            overflow="ignore",
+            crop=False,
+        )
+
+
 def show_lines(session: Dict[str, Any]) -> List[str]:
     """A session, field by field, as `loop sessions show` prints it."""
     lines = [
@@ -226,6 +249,23 @@ def every_session(token: str, **stubs: Any) -> List[Any]:
         states=STATES,
         say=lambda line: errors.print(line, markup=False),
         **stubs,
+    )
+
+
+def listed_sessions(token: str, **stubs: Any) -> List[Any]:
+    """The sessions the picker lists: those that run and those that can be
+    gone on with (`agent_runtimes.loop.paused.is_listed`), newest first. An
+    ended session is not among them: `every_session` reads it.
+    """
+    from agent_runtimes.loop.paused import LISTED_STATES, listed, paused_sessions
+
+    return listed(
+        paused_sessions(
+            token=token,
+            states=LISTED_STATES,
+            say=lambda line: errors.print(line, markup=False),
+            **stubs,
+        )
     )
 
 
@@ -437,24 +477,39 @@ def _quiet() -> None:
         logging.getLogger(name).setLevel(logging.ERROR)
 
 
-def run_picker(as_json: bool = False) -> None:
-    """`loop sessions`: the picker in a terminal, the two groups printed otherwise."""
+def run_picker(as_json: bool = False, everything: bool = False) -> None:
+    """`loop sessions`: the picker in a terminal, the two groups printed
+    otherwise — each a markdown table. Listed: the sessions that run and
+    those that can be gone on with; ``everything`` lists the ended ones too.
+    """
     from agent_runtimes.loop.launch import interactive
-    from agent_runtimes.loop.picker import Picker, listing_json, listing_lines, pick
+    from agent_runtimes.loop.picker import (
+        NOT_LISTED,
+        Picker,
+        listing_json,
+        listing_lines,
+        pick,
+    )
 
     _quiet()
     token = _token()
     said = ""
     while True:
-        rows = every_session(token)
+        rows = every_session(token) if everything else listed_sessions(token)
         if as_json:
             print(json.dumps(listing_json(rows, signed_in=bool(token)), indent=1))
             return
         if not interactive():
             from agent_runtimes.loop.paused import MANAGED
 
-            for line in (*MANAGED, *listing_lines(rows, signed_in=bool(token))):
-                console.print(line, markup=False)
+            # Printed as it is, never wrapped: a table's row is one line.
+            for line in (
+                *MANAGED,
+                "",
+                *listing_lines(rows, signed_in=bool(token)),
+                *([] if everything else [NOT_LISTED]),
+            ):
+                print(line)
             return
         chosen = pick(Picker(rows, signed_in=bool(token), said=said))
         if chosen is None:
@@ -476,11 +531,18 @@ def sessions(
     as_json: bool = typer.Option(
         False, "--json", help="Print the two groups as JSON, and pick nothing."
     ),
+    everything: bool = typer.Option(
+        False,
+        "--all",
+        help="The ended sessions too: they are not resumed, and are cloned, exported or deleted.",
+    ),
 ) -> None:
     """Your sessions. With nothing else: the picker.
 
-    Two groups, each session with its uid, state, kind, agent or application,
-    turns, when it started and its title.
+    Two groups, each a table: a session's uid, state, kind, agent or
+    application, turns, age and title. Listed: the sessions that run (open)
+    and those you can go on with (paused); an ended one is not resumed, and
+    is listed with --all. Piped, the tables are markdown.
 
     On this machine: a session is a folder of ~/.datalayer/sessions, named by
     its uid, kept until you delete it, seen only here and resumed by a
@@ -498,7 +560,7 @@ def sessions(
     runtime's sessions (`--server`, `--cloud`).
     """
     if ctx.invoked_subcommand is None:
-        run_picker(as_json)
+        run_picker(as_json, everything)
 
 
 @app.command(name="transfer")
@@ -615,12 +677,23 @@ def list_sessions(
     archived: bool = typer.Option(
         False, "--archived", help="The archived ones too; each is marked `archived`."
     ),
-    state: str = typer.Option("", "--state", help="open, paused or ended."),
+    state: str = typer.Option(
+        "",
+        "--state",
+        help="open, paused or ended. Unsaid: the open and the paused ones.",
+    ),
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     server: Optional[str] = _server_option(),
     cloud: bool = _cloud_option(),
 ) -> None:
-    """List your sessions, held and recorded, newest first."""
+    """List your sessions, held and recorded, newest first, as a table.
+
+    Listed: the sessions that run (open) and those you can go on with
+    (paused). An ended session is not resumed: `--state ended` lists them,
+    and `show`, `clone` and `export` still act on one by its uid. In a
+    terminal the table fits its width, the title cut; piped, it is a
+    markdown table.
+    """
     try:
         client = _client(server, cloud)
         params: Dict[str, Any] = {"limit": limit}
@@ -634,15 +707,32 @@ def list_sessions(
     except SessionsRefused as refused:
         _exit(refused)
         return
-    if not answer.get("sessions"):
+    # A runtime older than this rule answers every state: what is listed is
+    # decided here too.
+    sessions = [
+        session
+        for session in answer.get("sessions") or []
+        if state or session.get("state") != "ended"
+    ]
+    if not sessions:
+        what = f"{state} session" if state else "session to go on with"
         console.print(
-            "No session yet." if not app_id else f"No session of {app_id} yet."
+            f"No {what}"
+            + (f" of {app_id}" if app_id else "")
+            + "."
+            + ("" if state else " Ended ones: `loop sessions list --state ended`."),
+            markup=False,
         )
         return
-    for session in answer["sessions"]:
-        console.print(session_line(session), markup=False)
+    print_sessions_table(sessions)
     if answer.get("has_more"):
         errors.print(f"More: `loop sessions list --limit {limit * 2}`.")
+    if not state:
+        errors.print(
+            "Ended sessions are not listed: `loop sessions list --state ended`.",
+            markup=False,
+            style="dim",
+        )
 
 
 @app.command(name="show")
@@ -946,6 +1036,8 @@ __all__ = [
     "RETIRED",
     "SessionsRefused",
     "app",
+    "listed_sessions",
+    "print_sessions_table",
     "retired",
     "session_line",
     "show_lines",

@@ -23,8 +23,26 @@ its agent.
 | `agent`, `harness` | The agentspec bound to it now; its harness when the agent runs on one (Claude Code, Codex, OpenCode, pi — see [Harness capabilities](./harnesses.mdx)). |
 | `turns` | The person's turns — the cursor a clone is cut at. |
 | `title`, `archived` | The person's title, else the first turn's first line; an archived session is hidden from the list unless asked for. |
-| `runs_on` | `{kind: runtime, uid}` where it runs when open; `null` on no runtime. |
+| `runs_on` | `{kind: runtime, uid}` where it runs when open, `{kind: team_run, execution_id, seat}` for a seat of a team run; `null` on no runtime. |
 | `lineage` | `forked_from: {uid, at_turn}` for a clone; `imported_from: {digest, exported_at, exported_by, redactions}` for an import. |
+
+### What is listed
+
+A listing — `GET /api/v1/apps/sessions`, `loop sessions list`, the picker,
+the Sessions page — answers **the sessions that run (`open`) and those that
+can be gone on with (`paused`)**. A paused session is always resumable: a
+session ends with what it runs on, so a seat of a team run (`runs_on:
+{kind: team_run, execution_id, seat}`) is `ended` when its run is over —
+completed, failed or cancelled — and a deployment's session when its
+deployment is taken down; a session said `open` on a runtime that no longer
+exists is `paused`. The record is made to say so when it happens, and as a
+session is read for one written before.
+
+An ended session is not resumed and not listed by default; it is not
+deleted either. `?state=ended` (`loop sessions list --state ended`, the
+page's *Ended* filter) lists the ended ones, and one is still shown, cloned
+and exported by its uid. Only `DELETE` (`loop sessions delete <uid>`, a
+row's *Delete*) deletes a session.
 
 The record keeps the session's shape on its opening entry and says every
 change of state (`paused`, `ended`) and every operation (`swapped`,

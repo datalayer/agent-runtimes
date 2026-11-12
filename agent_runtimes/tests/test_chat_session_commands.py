@@ -291,7 +291,7 @@ def test_loop_sessions_pause(wired: TestClient, marketer: Said) -> None:  # noqa
     command.use_client(lambda server, cloud: Signed())
     try:
         listed = runner.invoke(command.app, ["list"])
-        assert f"{uid}  open    agent  {SPEC}  1 turn" in listed.output
+        assert f"| {uid} | open  | agent | {SPEC} |     1 |" in listed.output
         paused = runner.invoke(command.app, ["pause", uid])
         assert paused.exit_code == 0, paused.output
         assert paused.output.splitlines() == [

@@ -388,8 +388,27 @@ def record_paused(
         Whatever kept the record from answering: `paused_sessions` says it
         in a line and goes on.
     """
-    only = states[0] if len(states) == 1 else ""
-    answered = asker(token) if asker else asyncio.run(_ask_the_record(token, only))
+    if asker:
+        answered = asker(token)
+    else:
+        # Unsaid, the record answers the open and the paused ones: the ended
+        # are asked for by their state.
+        only = states[0] if len(states) == 1 else ""
+        answered = asyncio.run(_ask_the_record(token, only))
+        if not only and "ended" in states:
+            ended = asyncio.run(_ask_the_record(token, "ended"))
+            known = {session.get("uid") for session in answered["sessions"]}
+            answered = {
+                "sessions": answered["sessions"]
+                + [s for s in ended["sessions"] if s.get("uid") not in known],
+                "deployments": answered["deployments"]
+                + [
+                    d
+                    for d in ended["deployments"]
+                    if d.get("uid")
+                    not in {one.get("uid") for one in answered["deployments"]}
+                ],
+            }
     deployments = {
         str(deployment.get("uid") or ""): deployment
         for deployment in answered.get("deployments") or []
@@ -431,6 +450,37 @@ def paused_sessions(
 
 #: Every state a session has, for a listing of all of them.
 STATES = ("open", "paused", "ended")
+
+#: What is listed unless more is asked: the sessions that run (``open``) and
+#: those that can be gone on with (``paused``).
+LISTED_STATES = ("open", "paused")
+
+
+def is_listed(row: Paused) -> bool:
+    """Whether a session is listed by default: it runs, or it can be gone on
+    with — from here, or at the address it is opened at. An ended one is
+    not (it is cloned or exported, by its uid), nor a paused one nothing
+    resumes (a seat whose run the record does not name)."""
+    if row.state == "open":
+        return True
+    return row.state == "paused" and (row.resumable or bool(row.address))
+
+
+def listed(rows: Sequence[Paused]) -> List[Paused]:
+    """The sessions among some that are listed by default (`is_listed`)."""
+    return [row for row in rows if is_listed(row)]
+
+
+def clone_command(row: Paused) -> str:
+    """The command that clones a session to go on from it: a team run's
+    seat is cloned with its run, any other session by its uid."""
+    if row.team_run:
+        return f"agent-teams sessions clone {row.team_run}"
+    if row.app_uid.startswith("team:"):
+        return "agent-teams sessions clone <run> (`agent-teams sessions list --all` names its run)"
+    return f"loop sessions clone {row.uid}" + (
+        " --cloud" if row.where == ON_DATALAYER else ""
+    )
 
 
 def grouped(rows: List[Paused]) -> List[Tuple[str, List[Paused]]]:
@@ -555,8 +605,12 @@ __all__ = [
     "MANAGED",
     "PLACE_TITLES",
     "SEPARATOR",
+    "LISTED_STATES",
     "STATES",
     "TEAM_WHY_NOT",
+    "clone_command",
+    "is_listed",
+    "listed",
     "grouped",
     "TeamResumeUnavailable",
     "catalogue_names",

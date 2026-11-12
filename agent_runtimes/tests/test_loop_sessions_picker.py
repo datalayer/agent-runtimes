@@ -18,7 +18,14 @@ import pytest
 
 from agent_runtimes.apps.session_store import INDEX_FILE, FileSessionStore
 from agent_runtimes.loop import picker, transfer
-from agent_runtimes.loop.paused import MANAGED, STATES, Paused, paused_sessions
+from agent_runtimes.loop.paused import (
+    MANAGED,
+    STATES,
+    Paused,
+    is_listed,
+    listed,
+    paused_sessions,
+)
 from agent_runtimes.loop.picker import Picker, listing_json, listing_lines, why_not
 from agent_runtimes.loop.transfer import (
     OnDatalayer,
@@ -281,7 +288,10 @@ def test_an_action_applies_or_says_why_not(files: FileSessionStore) -> None:
     cloud, deployed = by_uid["cloud-agent"], by_uid["cloud-deployed"]
     for action in ("resume", "end", "transfer", "export", "delete", "start_over"):
         assert why_not(action, paused_here) == ""
-    assert "ended: start over" in why_not("resume", ended)
+    assert why_not("resume", ended) == (
+        "Session local-ended ended; an ended session is not resumed — clone it to go on "
+        "from it (`loop sessions clone local-ended`), or start over."
+    )
     assert "nothing to pause" in why_not("pause", paused_here)
     assert "pause it there, with /pause" in why_not("pause", open_here)
     assert "not signed in" in why_not("transfer", paused_here, signed_in=False)
@@ -305,6 +315,12 @@ def test_without_a_terminal_the_two_groups_are_printed(files: FileSessionStore) 
     rows = _rows(files)
     lines = listing_lines(rows, signed_in=True, now=NOW)
     assert lines[0] == "On this machine (3)" and "On Datalayer (2)" in lines
+    # Each group is a markdown table: a header, its separator, one line a session.
+    assert (
+        lines[2].split()
+        == "| # | Session | State | Kind | Agent | Turns | Age | Title |".split()
+    )
+    assert set(lines[3]) <= set("|-: ")
     said = listing_json(rows, signed_in=True)
     assert [row["uid"] for row in said["cloud"]] == ["cloud-agent", "cloud-deployed"]
     assert {
