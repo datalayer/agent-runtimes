@@ -39,7 +39,15 @@ class TestStreamSkillsState:
         finally:
             loop.purge_agent_stream_state(agent_id)
 
-    def test_set_agent_enabled_skills_uses_catalog_metadata_when_missing(self) -> None:
+    def test_set_agent_enabled_skills_uses_catalog_metadata_when_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Discovery knows no skill here: an installed package that declares
+        # the skill as an entry point (datalayer-skills does, since 0.3.0)
+        # would name it by its SKILL.md, and the catalogue would not be asked.
+        from agent_runtimes.routes import configure
+
+        monkeypatch.setattr(configure, "_get_available_skills", lambda: [])
         agent_id = "skills-catalog-fallback"
         loop.purge_agent_stream_state(agent_id)
         try:
