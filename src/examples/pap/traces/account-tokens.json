@@ -3,7 +3,7 @@
   "title": "Refresh tokens",
   "description": "Refresh, rotation, narrowing, re-consent, and revocation of the refresh token Atlas holds for Ada at Manzanita, which never leaves the host's vault.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.32.0",
+  "sdk": "personal-agent-protocol 0.33.0",
   "parties": [
     {
       "id": "user",
@@ -132,16 +132,13 @@
               "web": {
                 "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
               },
-              "feedback": {
-                "endpoint": "https://manzanita.example/poppy/feedback"
-              },
-              "excluded_tasks": {
-                "url": "https://manzanita.example/poppy/excluded-tasks.json"
+              "tasks": {
+                "endpoint": "https://manzanita.example/poppy/tasks"
               },
               "extensions": {
                 "operations": [
                   {
-                    "version": "2"
+                    "version": "3"
                   }
                 ],
                 "links": [
@@ -247,7 +244,8 @@
               ],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
-              "device_1": "https://manzanita.example/oauth/device"
+              "device_1": "https://manzanita.example/oauth/device",
+              "client_id_metadata_document_supported": true
             }
           }
         }

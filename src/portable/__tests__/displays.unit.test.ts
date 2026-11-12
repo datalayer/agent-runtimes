@@ -144,6 +144,26 @@ describe('protocol displays', () => {
     );
   });
 
+  it('shows the values of the terms when the company wrote no summary', () => {
+    const noSummary: Record<string, unknown> = { ...CONFIRM };
+    delete noSummary.summary;
+    const shown = protocolDisplayOf(wire('confirm', noSummary, 'appr-9-confirm'));
+    expect(shown).toMatchObject({
+      kind: 'confirm',
+      summaryGiven: false,
+      summary: 'amount.value: 4000\namount.currency: EUR',
+    });
+    expect(
+      protocolDisplayOf(wire('confirm', CONFIRM, 'appr-9-confirm')),
+    ).toMatchObject({ summaryGiven: true });
+    // A summary that is there but blank still fails closed.
+    expect(
+      protocolDisplayOf(
+        wire('confirm', { ...CONFIRM, summary: '  ' }, 'appr-9-confirm'),
+      )!.kind,
+    ).toBe('unknown');
+  });
+
   it('reads no outcome: an answer to pap_confirm carries no display', () => {
     expect(
       protocolDisplayOf(

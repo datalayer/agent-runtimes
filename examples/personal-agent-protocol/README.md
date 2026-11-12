@@ -21,7 +21,7 @@ feature while keeping protocol secrets outside model context.
 | [`mediated-sign-in`](./mediated-sign-in/)                 | The extension grant, credentials on `pap.protectedInput`  | Questions asked and outcome; credentials withheld |
 | [`conversation-streaming`](./conversation-streaming/)     | SSE events, display-only deltas, Last-Event-ID            | Event evidence; credentials withheld              |
 | [`conversation-control`](./conversation-control/)         | Direct Conversation, handoff and close                    | Statuses and event types; credentials withheld    |
-| [`operations`](./operations/)                             | Operations version 2: the person asked, at most once      | What was asked and what the company said          |
+| [`operations`](./operations/)                             | Operations version 3: the person asked, at most once      | What was asked and what the company said          |
 | [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                         | What each party saw; codes and tokens withheld    |
 | [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind             | Each approval the person gave; secrets withheld   |
 | [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`)               | Display's model view; no link, no code            |

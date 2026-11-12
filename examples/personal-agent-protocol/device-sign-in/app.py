@@ -155,10 +155,9 @@ async def explain_device_sign_in() -> dict[str, Any]:
             client_id="https://assistant.example/agent.json",
             scopes=("orders:read", "orders:return"),
             tenant_id="example-tenant",
+            # The verification link must be on the issuer's host or the company's
+            # `organization.domain`, or a subdomain of either (PAP 0.4 §4.3).
             organization=Organization(name="Shop", domain="shop.example"),
-            # The issuer's `protected_resources`: the verification link must be on the
-            # issuer's host or one of these.
-            protected_resources=("https://shop.example",),
         )
         early = await client.poll(started.reference)
         security.clock.advance(5)

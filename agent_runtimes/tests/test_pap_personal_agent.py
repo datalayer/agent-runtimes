@@ -214,6 +214,104 @@ async def test_other_terms_come_back_to_the_person(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_declined_approval_says_so_and_is_not_sent_again(
+    tmp_path: Path,
+) -> None:
+    """A company may decline an approval that passes its checks (Operations 6): nothing is
+    done, the person is told why in the company's words, and the approval is gone."""
+    from personal_agent_protocol.company import Decline
+
+    surface = Surface(True)
+    config = replace(
+        CONFIG, decline=lambda request: Decline(reason="Not from this account.")
+    )
+    capability, operation, shop, _ = await _journey(surface, tmp_path, config)
+    declined = await capability.confirm(
+        DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+    )
+    assert declined.status == "declined"
+    assert declined.result == "Not from this account."
+    assert declined.operation.operation_ref == operation.operation_ref
+    record = await shop.operation_record(operation.operation_ref)
+    assert (record.status, record.approval) == ("open", None)
+    # The same approval is never sent again: the operation is no longer held.
+    with pytest.raises(PapCapabilityError) as raised:
+        await capability.confirm(
+            DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+        )
+    assert raised.value.code == "unknown_operation"
+    assert len(surface.asked) == 1
+
+
+@pytest.mark.asyncio
+async def test_the_approval_says_the_person_approved(tmp_path: Path) -> None:
+    """Every approval names its approver (Operations 6): the person, asked on the host's
+    own surface."""
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    confirmed = await capability.confirm(
+        DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+    )
+    assert confirmed.status == "confirmed"
+    record = await shop.operation_record(operation.operation_ref)
+    assert record.approval is not None and record.approval["approver"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_a_standing_permission_approves_as_the_agent(tmp_path: Path) -> None:
+    """A standing permission the person gave, with terms its check covers, approves
+    without asking: `approver: agent`, with a new random `reference` (Operations 5)."""
+    from personal_agent_protocol import AgentInstruction
+
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    instruction = AgentInstruction(
+        text="Go ahead with any exchange at Manzanita.", covers=lambda revision: True
+    )
+    confirmed = await capability.confirm(
+        DOMAIN,
+        operation.operation_ref,
+        operation.revision,
+        user_id="ada",
+        instruction=instruction,
+    )
+    assert confirmed.status == "confirmed"
+    assert confirmed.approver == "agent"
+    assert confirmed.reference and confirmed.reference.startswith("apr_")
+    assert surface.asked == []
+    record = await shop.operation_record(operation.operation_ref)
+    assert record.approval is not None
+    assert record.approval["approver"] == "agent"
+    assert record.approval["reference"] == confirmed.reference
+
+
+@pytest.mark.asyncio
+async def test_a_permission_that_does_not_cover_the_terms_asks_the_person(
+    tmp_path: Path,
+) -> None:
+    """Any doubt goes to the person: a check that says anything but `True` asks, and the
+    approval is the person's, with its own `reference`."""
+    from personal_agent_protocol import AgentInstruction
+
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    instruction = AgentInstruction(
+        text="Only exchanges under 1 EUR.", covers=lambda revision: None
+    )
+    confirmed = await capability.confirm(
+        DOMAIN,
+        operation.operation_ref,
+        operation.revision,
+        user_id="ada",
+        instruction=instruction,
+    )
+    assert confirmed.status == "confirmed"
+    assert confirmed.approver == "user"
+    assert confirmed.reference and confirmed.reference.startswith("apr_")
+    assert len(surface.asked) == 1
+
+
+@pytest.mark.asyncio
 async def test_an_expired_revision_is_not_asked(tmp_path: Path) -> None:
     surface = Surface(True)
     capability, operation, _, _ = await _journey(surface, tmp_path)

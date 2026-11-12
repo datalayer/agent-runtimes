@@ -198,7 +198,7 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             summary = await pap.discover_company(DOMAIN)
             assert summary.organization == "Order Desk"
             assert summary.sign_in == ("device",)
-            assert summary.extensions == {"operations": "2"}
+            assert summary.extensions == {"operations": "3"}
             # Its own scopes, what each allows and the Maker's hints (draft 0.3 §4.4).
             assert summary.scopes == {
                 "orders:read": "Read your orders",

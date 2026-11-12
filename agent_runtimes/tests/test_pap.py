@@ -49,7 +49,7 @@ class CompanyClient:
                         }
                     ],
                     # Draft 0.4 §3.3: a list, one entry per version the company supports.
-                    "extensions": {"operations": [{"version": "2"}]},
+                    "extensions": {"operations": [{"version": "3"}]},
                 }
             ),
             # Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
@@ -113,7 +113,7 @@ async def test_company_summary_contains_capabilities_but_no_endpoints() -> None:
     assert summary.scope_hints["catalogue:read"].changes == "none"
     assert summary.protected_resources == ("https://shop.example",)
     assert summary.interfaces == ("agent:a2a", "api:openapi")
-    assert summary.extensions == {"operations": "2"}
+    assert summary.extensions == {"operations": "3"}
     serialized = summary.model_dump_json()
     assert "openapi.json" not in serialized
     assert "/agent" not in serialized

@@ -35,7 +35,7 @@ const company: DiscoveredCompany = {
       },
     ],
     // PAP draft 0.4 §3.3: a list, one entry per version the company supports.
-    extensions: { operations: [{ version: '1' }, { version: '2' }] },
+    extensions: { operations: [{ version: '2' }, { version: '3' }] },
   },
   // Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
   oauthMetadata: {
@@ -91,7 +91,7 @@ describe('PapPersonalAgentCapability', () => {
       protectedResources: ['https://shop.example'],
       interfaces: ['agent:a2a', 'api:openapi'],
       // The version a Session declares: the one this agent implements (Poppy-Extensions).
-      extensions: { operations: '2' },
+      extensions: { operations: '3' },
     });
     expect(JSON.stringify(summary)).not.toContain('openapi.json');
     expect(JSON.stringify(summary)).not.toContain('/agent');

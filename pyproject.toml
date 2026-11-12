@@ -47,7 +47,12 @@ dependencies = [
     # 0.31.0: PAP 0.3 as published (upstream 2289293).
     # 0.32.0: PAP draft 0.4 as of 46beb21 (Poppy-Version, Poppy-Extensions, request ids,
     # working/handoff/responder/closed); a 0.4 personal agent uses only 0.4 companies.
-    "personal-agent-protocol[ui]>=0.32.0,<0.33",
+    # 0.33.0: PAP 0.4 as published (upstream 4803900) and Operations version 3: every
+    # approval says `approver`, an operation's `terms` are required and its `summary`
+    # optional, a company may decline an approval, task coverage is asked per Session
+    # (`tasks.endpoint`), a Device Sign-In link is shown only on the issuer's host or the
+    # company's domain. No compatibility with 0.32: both sides move together.
+    "personal-agent-protocol[ui]>=0.33.0,<0.34",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).

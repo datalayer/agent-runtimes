@@ -13,7 +13,9 @@
  *   or a business's `pact_sign_in` answer): Direct, Device or Mediated, its
  *   page (`https` only), its code, until when, what it needs.
  * - **An operation to approve** (`…pap.confirm+json`): the company's words
- *   verbatim, its terms and what the terms check found, the opaque revision
+ *   verbatim — its summary, or the values of its terms when it wrote none
+ *   (Operations 3: `terms` required, `summary` optional) — its terms and what
+ *   the terms check found, the opaque revision
  *   and the one it replaced, what it does (a Rules class; `buy` when money
  *   moves — a purchase). Every operation is the person's: it is answered where
  *   approvals are, never here, and the approval it stands for is named
@@ -65,7 +67,10 @@ export type ProtocolDisplay =
       /** The approval it stands for: answered where approvals are. */
       approvalId: string;
       company: string;
+      /** The company's summary, else the values of its terms, one `path: value` a line. */
       summary: string;
+      /** Whether `summary` is the company's own (else it is the terms' values). */
+      summaryGiven: boolean;
       terms: Record<string, unknown>;
       operationRef: string;
       /** Opaque, the company's: approved exactly as it is shown. */
@@ -139,6 +144,45 @@ const text = (value: unknown): string =>
   typeof value === 'string' ? value : '';
 const words = (value: unknown): string => text(value).trim();
 
+/** Every leaf of the terms with its dotted path, as the SDK's `termsLeaves`. */
+function termsLeaves(
+  value: unknown,
+  path = '',
+  found: [string, unknown][] = [],
+): [string, unknown][] {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    for (const [key, item] of Object.entries(value as Raw)) {
+      termsLeaves(item, path ? `${path}.${key}` : key, found);
+    }
+  } else {
+    found.push([path, value]);
+  }
+  return found;
+}
+
+/** A leaf as text, as the SDK's `shownValue` (Python's `str`) writes it. */
+function shownValue(value: unknown, nested = false): string {
+  if (typeof value === 'string') return nested ? `'${value}'` : value;
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (value === null || value === undefined) return 'None';
+  if (Array.isArray(value)) {
+    return `[${value.map(item => shownValue(item, true)).join(', ')}]`;
+  }
+  if (typeof value === 'object') {
+    return `{${Object.entries(value as Raw)
+      .map(([key, item]) => `'${key}': ${shownValue(item, true)}`)
+      .join(', ')}}`;
+  }
+  return String(value);
+}
+
+/** The terms as a host shows them when the company wrote no summary (Operations 5). */
+export function shownTerms(terms: Record<string, unknown>): string {
+  return termsLeaves(terms)
+    .map(([path, value]) => `${path}: ${shownValue(value)}`)
+    .join('\n');
+}
+
 const ACTIONS: readonly ActionClass[] = [
   'read',
   'write',
@@ -176,7 +220,7 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
     }
     case PAP_CONFIRM_TYPE: {
       const company = words(data.company);
-      const summary = text(data.summary);
+      const given = text(data.summary);
       const operationRef = words(data.operation_ref);
       const revision = words(data.revision);
       const terms = record(data.terms);
@@ -185,7 +229,7 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
       const expiresAt = words(data.expires_at);
       if (
         !company ||
-        !summary.trim() ||
+        (data.summary !== undefined && data.summary !== null && !given.trim()) ||
         !operationRef ||
         !revision ||
         !terms ||
@@ -203,6 +247,9 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
           ? null
           : ACTIONS.find(a => a === data.does);
       if (does === undefined) return unknown;
+      const summaryGiven = Boolean(given.trim());
+      const summary = summaryGiven ? given : shownTerms(terms);
+      if (!summary.trim()) return unknown;
       const session = record(data.session);
       return {
         kind: 'confirm',
@@ -210,6 +257,7 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
         approvalId: id.slice(0, -'-confirm'.length),
         company,
         summary,
+        summaryGiven,
         terms,
         operationRef,
         revision,
