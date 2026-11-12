@@ -100,7 +100,6 @@ async def run_two_companies() -> dict[str, Any]:
         scopes=("books:read", "payments:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
     )
     await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
     clock.advance(started.poll_interval)
@@ -164,12 +163,12 @@ async def run_two_companies() -> dict[str, Any]:
         ),
         "ledgerly_identity_at_northwind": at_northwind.identity.client_id,
         "connect_at": connect["verification_uri"],
-        "relayed_summary": relayed.summary,
+        "relayed_summary": relayed.shown,
         "ada_was_asked_by": ada.asked[0].company_name,
         "bank_payments_before_ada_approved": performed_before_approval,
         "after_ada_approved": paid.text,
         "bank_record_approved_revision": first.approved,
-        "next_payment_asks_ada": second.summary if second else None,
+        "next_payment_asks_ada": second.shown if second else None,
         "bank_payments_performed": len(bank_plugin.executor.performed),
         "tokens_codes_and_session_jwts_withheld": True,
     }

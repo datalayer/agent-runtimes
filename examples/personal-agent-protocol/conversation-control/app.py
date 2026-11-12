@@ -123,7 +123,6 @@ async def explain_conversation_control() -> dict[str, Any]:
         scopes=tuple((asked.scope or "").split()),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
         pairwise_user_id=PAIRWISE,
     )
     await shop.approve_device(started.user_code, account_id="acct_ada")

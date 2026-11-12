@@ -174,7 +174,6 @@ async def _at_manzanita(record: Record) -> str:
             scopes=("orders:read",),
             tenant_id=TENANT,
             organization=company.document.organization,
-            protected_resources=metadata.protected_resources,
         )
         # Ada approves on Manzanita's own page; the code never reaches the model.
         await shop.approve_device(started.user_code, account_id="acct_ada")

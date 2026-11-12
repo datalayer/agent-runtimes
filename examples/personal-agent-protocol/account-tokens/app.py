@@ -94,7 +94,6 @@ async def explain_account_tokens() -> dict[str, Any]:
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
             organization=company.document.organization,
-            protected_resources=metadata.protected_resources,
         )
         await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)

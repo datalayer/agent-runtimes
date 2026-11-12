@@ -166,7 +166,8 @@ def _scope_hints(company: Any) -> dict[str, tuple[str, bool]]:
 
 
 def _excluded_tasks(company: Any) -> tuple[dict[str, Any], ...]:
-    """The tasks it does not offer through the protocol, as ``excluded-tasks.json`` lists them."""
+    """The tasks it does not offer through the protocol, as the tasks response lists them
+    for each Session (PAP 0.4 §9)."""
     return tuple(
         task.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
         for task in company.excluded_tasks
@@ -303,7 +304,7 @@ class ApplicationOperationExecutor:
             {
                 "action": self.action,
                 "tool": self.tool,
-                "terms": dict(operation.terms or {}),
+                "terms": dict(operation.terms),
             }
         )
         try:

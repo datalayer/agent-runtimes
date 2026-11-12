@@ -119,7 +119,6 @@ async def run_manzanita_journey() -> dict[str, Any]:
         scopes=("orders:read", "orders:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
         pairwise_user_id=PAIRWISE,
     )
     steps.append(f"Ada opened {started.verification_uri} and entered the code")
@@ -144,7 +143,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
     proposal = [e for e in page.events if e.type != "state"][-1].message.operation  # type: ignore[union-attr]
     if not (proposal is not None):
         raise RuntimeError("the example world is incomplete")
-    steps.append(f"company proposed revision {proposal.revision}: {proposal.summary}")
+    steps.append(f"company proposed revision {proposal.revision}: {proposal.shown}")
 
     # Ada approves exactly that revision, in the host's own interface; it is done once.
     # Draft 0.4 §3.4: Operations as the company lists it and the Session declares it.

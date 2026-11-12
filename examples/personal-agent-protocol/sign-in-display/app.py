@@ -83,7 +83,6 @@ async def _device_sign_in() -> dict[str, Any]:
             scopes=("orders:read",),
             tenant_id=TENANT,
             organization=company.document.organization,
-            protected_resources=metadata.protected_resources,
         )
     return {
         "status": WAITING_FOR_THE_PERSON,

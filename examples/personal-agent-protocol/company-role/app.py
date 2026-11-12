@@ -116,11 +116,15 @@ async def explain_company_role() -> dict[str, Any]:
     revision_1 = _revision(first, "rev_a")
     revision_2 = _revision(second, "rev_b")
     approval = Approval(
-        operation_id=revision_1.operation_id, revision=revision_1.revision
+        operation_id=revision_1.operation_id,
+        revision=revision_1.revision,
+        approver="user",
     )
     stale = approval.revision != revision_2.revision
     confirmed = Approval(
-        operation_id=revision_2.operation_id, revision=revision_2.revision
+        operation_id=revision_2.operation_id,
+        revision=revision_2.revision,
+        approver="user",
     )
 
     # 3. The perform turn, redeemed for the confirmed revision: the declared

@@ -121,7 +121,6 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
         scopes=("accounts:read", "payments:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
         pairwise_user_id=PAIRWISE,
     )
     await bank.approve_device(started.user_code, account_id=ACCOUNT)
@@ -192,10 +191,10 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     )
     await bank.revise(
         first.operation_id,
-        summary=first.summary.replace("1250.00", "1262.50")
+        summary=first.shown.replace("1250.00", "1262.50")
         + " Includes a EUR 12.50 fee.",
         terms={
-            **(first.terms or {}),
+            **first.terms,
             "amount": {"amount": "1262.50", "currency": "EUR"},
         },
     )

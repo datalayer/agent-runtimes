@@ -3,7 +3,7 @@
   "title": "Operations",
   "description": "Manzanita returns an exchange as an operation; Atlas asks Ada about every revision, and sends her approval of that exact revision, performed at most once.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.32.0",
+  "sdk": "personal-agent-protocol 0.33.0",
   "parties": [
     {
       "id": "user",
@@ -132,16 +132,13 @@
               "web": {
                 "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
               },
-              "feedback": {
-                "endpoint": "https://manzanita.example/poppy/feedback"
-              },
-              "excluded_tasks": {
-                "url": "https://manzanita.example/poppy/excluded-tasks.json"
+              "tasks": {
+                "endpoint": "https://manzanita.example/poppy/tasks"
               },
               "extensions": {
                 "operations": [
                   {
-                    "version": "2"
+                    "version": "3"
                   }
                 ],
                 "links": [
@@ -247,7 +244,8 @@
               ],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
-              "device_1": "https://manzanita.example/oauth/device"
+              "device_1": "https://manzanita.example/oauth/device",
+              "client_id_metadata_document_supported": true
             }
           }
         }
@@ -255,8 +253,8 @@
     },
     {
       "title": "An operation",
-      "channel": "Operations version 2",
-      "summary": "The company lists operations version 2 and the Session declares it in Poppy-Extensions (negotiated: True). Signed in, Manzanita returns the exchange as an operation in its message: nothing is done, and only Ada can approve it.",
+      "channel": "Operations version 3",
+      "summary": "The company lists operations version 3 and the Session declares it in Poppy-Extensions (negotiated: True). Signed in, Manzanita returns the exchange as an operation in its message: nothing is done, and only Ada can approve it.",
       "chat": [
         {
           "speaker": "manzanita",
@@ -508,7 +506,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_VZNyCiPYnHaUHqSwbgj7tw",
+              "id": "req_f5x8L1-Ha044pQSPrTYE1w",
               "message": {
                 "author": {
                   "type": "human"
@@ -529,7 +527,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "id": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "author": {
                       "type": "human"
                     },
@@ -547,7 +545,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "as_of_request": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -761,7 +759,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+              "id": "req_qKloFB2-6txpF4pXXEYYbA",
               "message": {
                 "author": {
                   "type": "agent"
@@ -771,6 +769,7 @@
                     "approval": {
                       "operation_id": "op_1",
                       "revision": "rev_1",
+                      "approver": "user",
                       "approved_at": 1791709210
                     }
                   }
@@ -790,7 +789,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "id": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "author": {
                       "type": "human"
                     },
@@ -808,7 +807,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "as_of_request": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -841,7 +840,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "id": "req_qKloFB2-6txpF4pXXEYYbA",
                     "author": {
                       "type": "agent"
                     },
@@ -850,6 +849,7 @@
                         "approval": {
                           "operation_id": "op_1",
                           "revision": "rev_1",
+                          "approver": "user",
                           "approved_at": 1791709210
                         }
                       }
@@ -867,7 +867,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "as_of_request": "req_qKloFB2-6txpF4pXXEYYbA",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
                     "extensions": {
                       "operations": {
@@ -995,7 +995,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_CBQ8vybzSYxlhpgzzo3Now",
+              "id": "req_W0ChyZHCrWYtLfFpMNF4tg",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1005,6 +1005,7 @@
                     "approval": {
                       "operation_id": "op_1",
                       "revision": "rev_2",
+                      "approver": "user",
                       "approved_at": 1791709210
                     }
                   }
@@ -1024,7 +1025,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "id": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "author": {
                       "type": "human"
                     },
@@ -1042,7 +1043,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "as_of_request": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -1075,7 +1076,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "id": "req_qKloFB2-6txpF4pXXEYYbA",
                     "author": {
                       "type": "agent"
                     },
@@ -1084,6 +1085,7 @@
                         "approval": {
                           "operation_id": "op_1",
                           "revision": "rev_1",
+                          "approver": "user",
                           "approved_at": 1791709210
                         }
                       }
@@ -1101,7 +1103,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "as_of_request": "req_qKloFB2-6txpF4pXXEYYbA",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
                     "extensions": {
                       "operations": {
@@ -1128,7 +1130,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_CBQ8vybzSYxlhpgzzo3Now",
+                    "id": "req_W0ChyZHCrWYtLfFpMNF4tg",
                     "author": {
                       "type": "agent"
                     },
@@ -1137,6 +1139,7 @@
                         "approval": {
                           "operation_id": "op_1",
                           "revision": "rev_2",
+                          "approver": "user",
                           "approved_at": 1791709210
                         }
                       }
@@ -1154,7 +1157,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_CBQ8vybzSYxlhpgzzo3Now",
+                    "as_of_request": "req_W0ChyZHCrWYtLfFpMNF4tg",
                     "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
                     "data": {
                       "order_id": "ord_7Hk2",
@@ -1190,7 +1193,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_CBQ8vybzSYxlhpgzzo3Now",
+              "id": "req_W0ChyZHCrWYtLfFpMNF4tg",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1200,6 +1203,7 @@
                     "approval": {
                       "operation_id": "op_1",
                       "revision": "rev_2",
+                      "approver": "user",
                       "approved_at": 1791709210
                     }
                   }
@@ -1219,7 +1223,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "id": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "author": {
                       "type": "human"
                     },
@@ -1237,7 +1241,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_VZNyCiPYnHaUHqSwbgj7tw",
+                    "as_of_request": "req_f5x8L1-Ha044pQSPrTYE1w",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -1270,7 +1274,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "id": "req_qKloFB2-6txpF4pXXEYYbA",
                     "author": {
                       "type": "agent"
                     },
@@ -1279,6 +1283,7 @@
                         "approval": {
                           "operation_id": "op_1",
                           "revision": "rev_1",
+                          "approver": "user",
                           "approved_at": 1791709210
                         }
                       }
@@ -1296,7 +1301,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_l-Bmm6Oy_wGOiRuwohz7Zg",
+                    "as_of_request": "req_qKloFB2-6txpF4pXXEYYbA",
                     "text": "That approval doesn't cover these terms. Here they are to approve.",
                     "extensions": {
                       "operations": {
@@ -1323,7 +1328,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_CBQ8vybzSYxlhpgzzo3Now",
+                    "id": "req_W0ChyZHCrWYtLfFpMNF4tg",
                     "author": {
                       "type": "agent"
                     },
@@ -1332,6 +1337,7 @@
                         "approval": {
                           "operation_id": "op_1",
                           "revision": "rev_2",
+                          "approver": "user",
                           "approved_at": 1791709210
                         }
                       }
@@ -1349,7 +1355,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_CBQ8vybzSYxlhpgzzo3Now",
+                    "as_of_request": "req_W0ChyZHCrWYtLfFpMNF4tg",
                     "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
                     "data": {
                       "order_id": "ord_7Hk2",
