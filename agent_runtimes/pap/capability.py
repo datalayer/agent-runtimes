@@ -31,6 +31,7 @@ import httpx
 from personal_agent_protocol import (
     BROWSER_SIGN_IN_SCOPE,
     AgentIdentityClient,
+    AgentInstruction,
     ConversationClient,
     DeviceSignInClient,
     DiscoveryClient,
@@ -42,6 +43,7 @@ from personal_agent_protocol import (
     SessionHttpClient,
     generate_request_id,
     mediated_sign_in,
+    new_approval_reference,
     operations_negotiated,
     resolve_pairwise_user_id,
 )
@@ -274,6 +276,12 @@ class PapConfirmSummary(BaseModel):
     state: Literal["said", "not_said"] | None = None
     #: What the company wrote, in its own words.
     result: str | None = None
+    #: Who approved, when an approval was made: ``user`` (the person, on the host's
+    #: surface) or ``agent`` (on a standing permission the person gave, Operations 5).
+    approver: Literal["user", "agent"] | None = None
+    #: The approval's ``reference``: a new random id for each approval, the same on
+    #: every send of it, so the company and the host can look into it later.
+    reference: str | None = None
 
 
 class PapCapabilityError(Exception):
@@ -331,6 +339,9 @@ class _Link:
     cursor: str | None = None
     device_reference: str | None = None
     operations: dict[str, _Returned] = field(default_factory=dict)
+    #: Operations declined, or answered with new terms after an agent approval: a new
+    #: revision of the same action is the person's to approve (Operations 5, 6).
+    user_only: set[str] = field(default_factory=set)
 
 
 class PapPersonalAgentCapability:
@@ -679,7 +690,13 @@ class PapPersonalAgentCapability:
         )
 
     async def confirm(
-        self, domain: str, operation_ref: str, revision: str, *, user_id: str
+        self,
+        domain: str,
+        operation_ref: str,
+        revision: str,
+        *,
+        user_id: str,
+        instruction: AgentInstruction | None = None,
     ) -> PapConfirmSummary:
         """Send an operation to the person, and their approval of this exact revision.
 
@@ -692,6 +709,13 @@ class PapPersonalAgentCapability:
         the action is done at most once. Another revision in answer is
         ``new_revision``, for the person to be asked about; a decline is
         ``declined``, and the approval is never sent again.
+
+        ``instruction`` is a standing permission the person gave, with terms (never a
+        blanket *Do it*): when its check says it covers this revision's terms, the agent
+        approves without asking, ``approver: agent``. Any doubt asks the person instead:
+        the check saying anything but ``True``, terms that differ from the summary, or
+        an earlier decline or new terms after an agent approval of the same action.
+        Every approval carries a new random ``reference``.
         """
         reactor, _, _ = self._host()
         link = await self._link(user_id, domain)
@@ -707,13 +731,32 @@ class PapPersonalAgentCapability:
                 "no_operations", f"{domain} and this agent do not both offer Operations"
             )
         client = OperationsClient(reactor=reactor)
+        reference = new_approval_reference()
+        approval = None
+        if instruction is not None:
+            try:
+                approval = await client.approve_as_agent(
+                    operation,
+                    instruction=instruction,
+                    user_only=operation_ref in link.user_only,
+                    reference=reference,
+                )
+            except OperationError as error:
+                if error.code == "revision_expired":
+                    return PapConfirmSummary(
+                        status="not_decided", operation=_operation_summary(operation)
+                    )
+                if error.code != "ask_user":
+                    raise PapCapabilityError(error.code, error.message) from error
         try:
-            approval = await client.ask_user(
-                operation,
-                organization=link.company.document.organization,
-                tenant_id=self._tenant_id,
-                replaces=returned.replaces,
-            )
+            if approval is None:
+                approval = await client.ask_user(
+                    operation,
+                    organization=link.company.document.organization,
+                    tenant_id=self._tenant_id,
+                    replaces=returned.replaces,
+                    reference=reference,
+                )
         except OperationError as error:
             if error.code == "not_approved":
                 return PapConfirmSummary(
@@ -735,7 +778,11 @@ class PapPersonalAgentCapability:
         message = Message(
             id=generate_request_id(reactor),
             author=Author(type="agent"),
-            text="The person approved this.",
+            text=(
+                "The person approved this."
+                if approval.approver == "user"
+                else "Approved on the person's standing permission."
+            ),
             extensions=operations_content(approval=approval),
         )
         sent = await client.send(
@@ -754,9 +801,10 @@ class PapPersonalAgentCapability:
             ),
             approval,
         )
+        who = {"approver": approval.approver, "reference": approval.reference}
         if sent.status == "unknown":
             return PapConfirmSummary(
-                status="in_progress", operation=_operation_summary(operation)
+                status="in_progress", operation=_operation_summary(operation), **who
             )
         declined = next(
             (
@@ -776,15 +824,20 @@ class PapPersonalAgentCapability:
             # content, shown and never followed.
             self._keep(link, sent.answer, operation)
             link.operations.pop(operation_ref, None)
+            link.user_only.add(operation_ref)
             return PapConfirmSummary(
                 status="declined",
                 operation=_operation_summary(operation),
                 result=declined.reason,
+                **who,
             )
         revised = self._keep(link, sent.answer, operation)
         if revised:
+            if approval.approver == "agent":
+                # New terms in answer to an agent approval are the person's.
+                link.user_only.add(revised[0].operation_id)
             return PapConfirmSummary(
-                status="new_revision", operation=_operation_summary(revised[0])
+                status="new_revision", operation=_operation_summary(revised[0]), **who
             )
         link.operations.pop(operation_ref, None)
         said = " ".join(
@@ -800,6 +853,7 @@ class PapPersonalAgentCapability:
             operation=_operation_summary(operation),
             state="said" if said else "not_said",
             result=said or None,
+            **who,
         )
 
     def session_of(self, domain: str, *, user_id: str) -> dict[str, Any] | None:
