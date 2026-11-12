@@ -501,6 +501,11 @@ async def start_a2a_task_managers() -> None:
     """
     for agent_id, registration in _a2a_agents.items():
         if registration.app:
+            if getattr(registration.app, "_lifespan_task", None) is not None:
+                # Registered while the server was starting (the agent of
+                # ``serve --agent-id``): its lifespan already runs in a task of
+                # its own, and a second start breaks both.
+                continue
             try:
                 # Trigger the FastA2A app's lifespan startup
                 if hasattr(registration.app, "router") and hasattr(

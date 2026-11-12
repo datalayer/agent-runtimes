@@ -1456,10 +1456,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # Add A2A mounts (FastA2A apps) after agents are registered
         for mount in get_a2a_mounts():
-            # Mount under /api/v1/a2a/agents/{agent_id}
-            full_mount = Mount(
-                f"{config.api_prefix}/a2a/agents{mount.path}", app=mount.app
-            )
+            # Mount under /api/v1/a2a/agents/{agent_id}, unless the agent was
+            # mounted when it registered (the agent of ``serve --agent-id``).
+            full_path = f"{config.api_prefix}/a2a/agents{mount.path}"
+            if any(getattr(r, "path", None) == full_path for r in app.routes):
+                continue
+            full_mount = Mount(full_path, app=mount.app)
             app.routes.append(full_mount)
             logger.info(
                 f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}"
