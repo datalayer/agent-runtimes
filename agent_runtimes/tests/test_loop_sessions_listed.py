@@ -17,6 +17,7 @@ import io
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
+import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
@@ -222,16 +223,98 @@ def test_piped_the_table_is_markdown_with_nothing_cut() -> None:
     assert lines[3].rstrip().endswith("| a \\| b" + " " * (len(LONG) - 6) + " |")
 
 
-def test_in_a_terminal_only_the_title_is_cut_and_a_row_is_one_line() -> None:
-    for width in (140, 120, 100):
-        lines = table_lines(_cells([LONG, "Short"]), width)
-        assert all(len(line) <= width for line in lines), width
-        assert f"| {UID} | paused | agent | worker-marketer |     4 | 3h " in lines[2]
-    cut = table_lines(_cells([LONG]), 100)[2]
-    assert cut.rstrip(" |").endswith("…") and LONG not in cut
-    # Narrower still, the agent's name gives next; the uid is whole, always.
-    narrow = table_lines(_cells([LONG]), 60)[2]
-    assert UID in narrow and "worker-…" in narrow
+HEX = "72a52412b51f401ab91555394f4ef82c"
+SCHEDULED = "scheduled-e63f8642-a01b-43ec-88ac-28c74f3a5879-20261111"
+
+
+def _mixed() -> List[List[str]]:
+    """ULIDs, a 32-character hexadecimal uid and one long scheduled uid."""
+    rows = [
+        _row(
+            UID,
+            title="List my GitHub repositories, names only.",
+            agent="example-github-repositories",
+        ),
+        _row(HEX, title=""),
+        _row(SCHEDULED, title=LONG),
+        _row("01M75JVX5C26R21YXGM1Q0W204", title="Short"),
+    ]
+    return [cells_of_row(row, number, NOW) for number, row in enumerate(rows, start=1)]
+
+
+def _column(lines: List[str], name: str) -> List[str]:
+    header = [cell.strip() for cell in lines[0].strip("|").split("|")]
+    at = header.index(name)
+    return [line.strip("|").split("|")[at].strip() for line in lines[2:]]
+
+
+@pytest.mark.parametrize("width", [80, 100, 120, 160])
+def test_in_a_terminal_a_row_is_one_line_and_the_title_takes_the_rest(
+    width: int,
+) -> None:
+    lines = table_lines(_mixed(), width)
+    assert {len(line) for line in lines} == {width}, "one line a row, the width taken"
+    header = [cell.strip() for cell in lines[0].strip("|").split("|")]
+    assert header == list(COLUMNS)
+    sessions, agents, titles = (
+        _column(lines, "Session"),
+        _column(lines, "Agent"),
+        _column(lines, "Title"),
+    )
+    # A long uid never widens its column past 32: it is cut in its middle,
+    # its start and its end kept.
+    assert max(len(uid) for uid in sessions) <= 32
+    assert sessions[2].startswith("sched") and sessions[2].endswith("1111")
+    assert "…" in sessions[2] and SCHEDULED not in lines[4]
+    # "(no title)" is never cut.
+    assert titles[1] == "(no title)" and titles[3] == "Short"
+    if width >= 100:
+        # A ULID is whole.
+        assert sessions[0] == UID
+    if width >= 120:
+        # So is a hexadecimal uid; the agent's name has 20 characters and more
+        # and the title's column its 20 (a cut never ends on a space).
+        assert sessions[1] == HEX
+        assert sessions[2] == "scheduled-e63f8642-a01…-20261111"
+        assert len(agents[0]) >= 20 and len(titles[2]) >= 19
+    if width >= 160:
+        # Nothing but the long uid and the long title is cut, and the title
+        # takes all that is left.
+        assert agents[0] == "example-github-repositories"
+        assert titles[0] == "List my GitHub repositories, names only."
+        assert titles[2].endswith("…") and len(titles[2]) > 40
+
+
+def test_the_agent_gives_before_the_title_and_a_ulid_last() -> None:
+    lines = table_lines(_cells([LONG, "Short"]), 100)
+    assert all(len(line) <= 100 for line in lines)
+    assert UID in lines[2] and "worker-ma…" in lines[2]
+    assert lines[2].rstrip(" |").endswith("…") and LONG not in lines[2]
+    # With room for it, nothing but the title is cut.
+    wide = table_lines(_cells([LONG, "Short"]), 140)[2]
+    assert f"| {UID} | paused | agent | worker-marketer |     4 | 3h " in wide
+    assert table_lines(_cells(["Short"]), 140)[2].rstrip().endswith("| Short |")
+
+
+def test_under_80_columns_kind_is_left_out_then_turns() -> None:
+    def header(width: int) -> List[str]:
+        lines = table_lines(_mixed(), width)
+        assert all(len(line) <= max(width, 64) for line in lines), width
+        return [cell.strip() for cell in lines[0].strip("|").split("|")]
+
+    assert header(80) == list(COLUMNS)
+    assert header(79) == [name for name in COLUMNS if name != "Kind"]
+    assert header(72) == [name for name in COLUMNS if name != "Kind"]
+    assert header(64) == [name for name in COLUMNS if name not in ("Kind", "Turns")]
+    # The numbers still set to the right, whichever columns are left.
+    narrow = table_lines(_mixed(), 72)
+    assert narrow[1].split("|")[1].strip().endswith(":")
+    assert narrow[1].split("|")[5].strip().endswith(":")
+
+
+def test_piped_every_uid_is_whole() -> None:
+    lines = table_lines(_mixed())
+    assert SCHEDULED in lines[4] and HEX in lines[3] and LONG in lines[4]
 
 
 def test_list_in_a_terminal_fits_its_width_and_piped_cuts_nothing() -> None:

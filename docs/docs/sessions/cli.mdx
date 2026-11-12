@@ -52,11 +52,23 @@ names the command that clones it — `loop sessions clone <uid>`, or
 
 ### The table
 
-Each group is a table — its number, the session's uid (whole, always), its
-state, its kind (an `agent`'s, or an `app`lication's), its agent or
-application, its turns, its age (`5m`, `2h`, `14d`) and its title. In a
-terminal a row is one line: the title is the column that is cut, with an
-ellipsis, to the terminal's width (the agent's name next, in a narrow one).
+Each group is a table — its number, the session's uid, its state, its kind
+(an `agent`'s, or an `app`lication's), its agent or application, its turns,
+its age (`5m`, `2h`, `14d`) and its title. In a terminal a row is one line,
+as wide as the terminal:
+
+- the uid's column is as wide as the longest uid, up to 32 characters — a
+  uid of today (26 characters) and an older one (32) are whole; a longer
+  one, a scheduled run's, is cut in its middle
+  (`scheduled-e63f8642-a01…-20261111`). `loop sessions show`, the piped
+  table and `--json` say it whole, and the picker resumes the session
+  whatever is drawn;
+- the agent's name takes up to 28 characters;
+- the title takes all that is left, cut with an ellipsis at its end;
+  `(no title)` is never cut;
+- in a narrow terminal the agent's name is cut first, then a long uid, then
+  the title; under 80 columns the Kind column is left out, then Turns.
+
 Piped or redirected, it is a markdown table with nothing cut, so it pastes
 as one:
 
