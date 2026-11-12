@@ -52,7 +52,9 @@ dependencies = [
     # optional, a company may decline an approval, task coverage is asked per Session
     # (`tasks.endpoint`), a Device Sign-In link is shown only on the issuer's host or the
     # company's domain. No compatibility with 0.32: both sides move together.
-    "personal-agent-protocol[ui]>=0.33.0,<0.34",
+    # 0.34.0: operations on websites (Poppy-Operation, the operations endpoint) and the
+    # Browser Control extension, version 1; nothing these applications use changed.
+    "personal-agent-protocol[ui]>=0.33.0,<0.35",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).
