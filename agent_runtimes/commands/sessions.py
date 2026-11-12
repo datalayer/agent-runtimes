@@ -178,7 +178,7 @@ def session_line(session: Dict[str, Any]) -> str:
 
 
 def print_sessions_table(sessions: List[Dict[str, Any]], out: Any = None) -> None:
-    """Sessions as a markdown table on standard output: in a terminal, cut
+    """Print sessions as a markdown table on standard output: in a terminal, cut
     to its width — the title with an ellipsis, a row one line; piped, with
     nothing cut.
     """

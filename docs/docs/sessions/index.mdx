@@ -31,8 +31,8 @@ its agent.
 A listing — `GET /api/v1/apps/sessions`, `loop sessions list`, the picker,
 the Sessions page — answers **the sessions that run (`open`) and those that
 can be gone on with (`paused`)**. A paused session is always resumable: a
-session ends with what it runs on, so a seat of a team run (`runs_on:
-{kind: team_run, execution_id, seat}`) is `ended` when its run is over —
+session ends with what it runs on, so a seat of a team run
+(`runs_on: {kind: team_run, execution_id, seat}`) is `ended` when its run is over —
 completed, failed or cancelled — and a deployment's session when its
 deployment is taken down; a session said `open` on a runtime that no longer
 exists is `paused`. The record is made to say so when it happens, and as a

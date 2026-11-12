@@ -460,7 +460,8 @@ def is_listed(row: Paused) -> bool:
     """Whether a session is listed by default: it runs, or it can be gone on
     with — from here, or at the address it is opened at. An ended one is
     not (it is cloned or exported, by its uid), nor a paused one nothing
-    resumes (a seat whose run the record does not name)."""
+    resumes (a seat whose run the record does not name).
+    """
     if row.state == "open":
         return True
     return row.state == "paused" and (row.resumable or bool(row.address))
@@ -473,7 +474,8 @@ def listed(rows: Sequence[Paused]) -> List[Paused]:
 
 def clone_command(row: Paused) -> str:
     """The command that clones a session to go on from it: a team run's
-    seat is cloned with its run, any other session by its uid."""
+    seat is cloned with its run, any other session by its uid.
+    """
     if row.team_run:
         return f"agent-teams sessions clone {row.team_run}"
     if row.app_uid.startswith("team:"):

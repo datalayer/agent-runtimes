@@ -66,7 +66,7 @@ def _row(uid: str, state: str = "paused", **more: Any) -> Paused:
 
 
 def _described() -> List[Dict[str, Any]]:
-    """Sessions as the record lists them, of every kind and state."""
+    """Give sessions as the record lists them, of every kind and state."""
     base = {"agent": "an-agent", "started_at": "2026-11-12T09:00:00+00:00"}
     return [
         {**base, "uid": "agent-paused", "state": "paused", "app_uid": "agent:coder"},
