@@ -365,3 +365,82 @@ def test_an_agent_that_declares_no_secret_asks_iam_for_none(
         assert said.json()["status"] == "success"
     finally:
         secrets.use_secrets_reader(None)
+
+
+def _principal_of_ada() -> None:
+    """The deployment's principal token says its owner is ada, as IAM signs it."""
+    import base64
+    import json
+
+    def part(value: Dict[str, Any]) -> str:
+        return base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip("=")
+
+    token = f"{part({'alg': 'none'})}.{part({'account_uid': 'ada', 'sub': 'principal-7'})}.sig"
+
+    async def principal_of(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {
+            "access_token": token,
+            "expires_in": 3600,
+            "principal_uid": "principal-7",
+        }
+
+    principal.use_asker(principal_of)
+    principal.forget_principal_token(DEPLOYMENT)
+
+
+#: What the scheduler's tick says woke the session, relayed by ai-agents (AC-67).
+TICK = {
+    "kind": "schedule",
+    "schedule_uid": "sch-1",
+    "run_uid": "run-1",
+    "planned_at": "2026-11-12T15:30:00Z",
+    "position": 0,
+    "cron": "0 7 * * *",
+}
+
+
+def test_a_scheduled_turn_records_what_woke_its_session(
+    deployed: Any, agentcore: TestClient
+) -> None:
+    runtime, _ = deployed
+    _principal_of_ada()
+    said = agentcore.post(
+        "/invocations",
+        headers=as_("ada"),
+        json={"prompt": "Scan the account", "threadId": UID, "woken_by": TICK},
+    )
+    assert said.json()["status"] == "success"
+    # Asked as said, without what woke it in the run.
+    assert runtime.models["notes-assistant"].prompts[-1] == "Scan the account"
+    [opened] = runtime.entries("session")
+    assert opened["payload"]["woken_by"] == TICK
+    assert "woken by its schedule" in opened["summary"]
+
+
+def test_only_its_owner_says_what_woke_a_session(
+    deployed: Any, agentcore: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime, _ = deployed
+    _principal_of_ada()
+
+    async def administers(owner: str, bearer: str) -> bool:
+        return False
+
+    monkeypatch.setattr(principal, "administers", administers)
+    said = agentcore.post(
+        "/invocations",
+        headers=as_("bob"),
+        json={"prompt": "Scan the account", "woken_by": TICK},
+    )
+    assert said.status_code == 403
+    assert not [e for e in runtime.entries("session") if e["payload"].get("woken_by")]
+
+
+def test_what_woke_a_session_is_an_object(deployed: Any, agentcore: TestClient) -> None:
+    said = agentcore.post(
+        "/invocations",
+        headers=as_("ada"),
+        json={"prompt": "Scan the account", "woken_by": "schedule"},
+    )
+    assert said.status_code == 400
+    assert "woken_by" in said.json()["detail"]

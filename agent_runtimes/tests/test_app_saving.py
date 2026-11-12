@@ -251,6 +251,18 @@ def test_the_key_and_the_link() -> None:
         == "/eric/my%20notes/documents/d%201"
     )
     assert link_of({}, "d1") == "/documents/d1"
+    # An organization's Space, under the organization (found live, 12 November 2026).
+    assert (
+        link_of(
+            {
+                "owner_handle_s": "eric",
+                "organization_handle_s": "test-datalayer",
+                "handle_s": "weekly-reports",
+            },
+            "d1",
+        )
+        == "/test-datalayer/weekly-reports/documents/d1"
+    )
 
 
 async def test_it_writes_through_spacer_under_its_key(monkeypatch) -> None:
