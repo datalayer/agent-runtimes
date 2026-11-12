@@ -164,7 +164,7 @@
     "@datalayer/lexical-loro": "^1.0.6",
     "@datalayer/primer-addons": "^1.0.46",
     "@datalayer/primer-rjsf": "^1.0.3",
-    "@datalayer/personal-agent-protocol": ">=0.33.0 <0.35",
+    "@datalayer/personal-agent-protocol": ">=0.33.0 <0.36",
     "@datalayer/reactor": "^1.3.5",
     "@datalayer/reactor-commands": "^1.0.4",
     "@datalayer/reactor-manager": "^1.0.4",
