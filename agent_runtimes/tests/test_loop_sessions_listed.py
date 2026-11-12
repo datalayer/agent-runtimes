@@ -23,6 +23,7 @@ from typer.testing import CliRunner
 from agent_runtimes.commands import sessions as command
 from agent_runtimes.loop import picker
 from agent_runtimes.loop.paused import (
+    MANAGED_BY_PLACE,
     ON_DATALAYER,
     ON_THIS_MACHINE,
     TEAM_WHY_NOT,
@@ -263,18 +264,25 @@ def test_the_two_groups_are_two_tables_and_an_empty_group_says_so() -> None:
     lines = listing_lines([here, there], signed_in=True, now=NOW)
     first, second = lines.index("On this machine (1)"), lines.index("On Datalayer (1)")
     assert first < second
-    # A title, a blank line, the table, a blank line: it pastes as markdown.
+    # A title, how the place keeps its sessions, a blank line, the table, a
+    # blank line: it pastes as markdown.
     assert (
-        lines[first + 1] == ""
-        and lines[first + 2].startswith("| ")
-        and lines[first + 5] == ""
+        lines[first + 1] == MANAGED_BY_PLACE[ON_THIS_MACHINE]
+        and lines[second + 1] == MANAGED_BY_PLACE[ON_DATALAYER]
+        and lines[first + 2] == ""
+        and lines[first + 3].startswith("| ")
+        and lines[first + 6] == ""
     )
     assert (
-        "|   1 | local-one" in lines[first + 4]
-        and "|   2 | cloud-one" in lines[second + 4]
+        "|   1 | local-one" in lines[first + 5]
+        and "|   2 | cloud-one" in lines[second + 5]
     )
     empty = listing_lines([there], signed_in=True, now=NOW)
-    assert empty[:2] == ["On this machine (0)", picker.NO_SESSION[ON_THIS_MACHINE]]
+    assert empty[:3] == [
+        "On this machine (0)",
+        MANAGED_BY_PLACE[ON_THIS_MACHINE],
+        picker.NO_SESSION[ON_THIS_MACHINE],
+    ]
     drawn = [line for _, line in Picker([there], now=NOW, width=100).lines()]
     assert f"   {picker.NO_SESSION[ON_THIS_MACHINE]}" in drawn
 

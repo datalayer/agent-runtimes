@@ -12,19 +12,19 @@ two groups:
 
 ```text
 $ loop sessions
-On this machine: a session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and resumed by a runtime on this machine.
-On Datalayer: a session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
 Type to filter.
 On this machine (1)
+   A session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and resumed by a runtime on this machine.
   |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
   | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
 ❯ |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple  |     2 | 2h  | My name is Ada and I sell tea.  |
 On Datalayer (2)
+   A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
   |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
   | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
   |   2 | 01M74THECPG6V21NCRD2TD1FQH | paused | agent | worker-marketer |     4 | 3h  | The autumn campaign             |
   |   3 | 01M780EXBBXNNH629KKJJ3PR62 | open   | app   | Exchange Desk   |     1 | 5m  | Which rate applies to an order… |
-↑↓ or a number: choose · type: filter · Enter: resume · Ctrl-P: pause · Ctrl-E: end · Ctrl-T: transfer to the other place · Ctrl-X: export to a file · Ctrl-D: delete · Ctrl-N: start over (a new session of the same agent or application, with nothing of this conversation; this one is left as it is) · Esc: leave
+↑↓ or a number: choose · PgUp/PgDn: a page · Home/End: first, last · type: filter · Enter: resume · Ctrl-P: pause · Ctrl-E: end · Ctrl-T: transfer to the other place · Ctrl-X: export to a file · Ctrl-D: delete · Ctrl-N: start over (a new session of the same agent or application, with nothing of this conversation; this one is left as it is) · Esc: leave
 ```
 
 ### What is listed
@@ -64,6 +64,7 @@ as one:
 $ loop sessions | cat
 …
 On Datalayer (1)
+A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
 
 |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title               |
 | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------- |
@@ -74,6 +75,11 @@ Listed: the sessions that run (open) and those you can go on with (paused). Ende
 
 - **Arrow keys**, or a row's **number**, choose a session; **typing**
   filters the list (a word of the title, the agent, the uid, the state).
+- **Page Down** and **Page Up** move by a page — the rows your terminal
+  shows, ten when it does not say its height — from one group into the
+  other, and stop at the last and the first row; **Home** and **End** go
+  to the first and the last row. A list taller than the terminal scrolls
+  with the highlighted row.
 - **Enter** resumes it where it lives: a session on this machine on a
   runtime on this machine, one on Datalayer on a runtime Datalayer launches.
   The same as `loop --resume <uid>`.

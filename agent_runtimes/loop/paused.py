@@ -230,14 +230,21 @@ TEAM_WHY_NOT = (
 #: What the two places are called, wherever sessions are listed.
 PLACE_TITLES = {ON_THIS_MACHINE: "On this machine", ON_DATALAYER: "On Datalayer"}
 
-#: How local and cloud sessions are managed, in two sentences: said by the
-#: picker, by `/sessions` and by `loop sessions --help`.
-MANAGED = (
-    "On this machine: a session is a folder of ~/.datalayer/sessions, named by its uid, "
+#: How the sessions of each place are managed, in a sentence: said under the
+#: place's title by the picker and by `loop sessions` printed.
+MANAGED_BY_PLACE = {
+    ON_THIS_MACHINE: "A session is a folder of ~/.datalayer/sessions, named by its uid, "
     "kept until you delete it, seen only here and resumed by a runtime on this machine.",
-    "On Datalayer: a session is in your Datalayer account's record, seen on the web, in the "
+    ON_DATALAYER: "A session is in your Datalayer account's record, seen on the web, in the "
     "desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. "
     "Signed out, only the sessions on this machine are listed.",
+}
+
+#: The same, each sentence naming its place: said by `/sessions` and by
+#: `loop sessions --help`, where no title stands above it.
+MANAGED = tuple(
+    f"{PLACE_TITLES[place]}: {sentence[0].lower()}{sentence[1:]}"
+    for place, sentence in MANAGED_BY_PLACE.items()
 )
 
 #: A choice that is a group's title, not to be picked.
@@ -605,6 +612,7 @@ __all__ = [
     "record_paused",
     "DEPLOYMENT_WHY_NOT",
     "MANAGED",
+    "MANAGED_BY_PLACE",
     "PLACE_TITLES",
     "SEPARATOR",
     "LISTED_STATES",

@@ -44,6 +44,7 @@ from agent_runtimes.mcp.hosted_client import (
     list_toolsets,
     result_text,
 )
+from agent_runtimes.utils.logs import QUIET_LOGGERS, quiet_loggers
 
 app = typer.Typer(
     name="mcp",
@@ -53,18 +54,6 @@ app = typer.Typer(
     ),
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
-)
-
-#: Loggers that talk on every request or at import; WARNING unless `-v`.
-QUIET_LOGGERS = (
-    "httpx",
-    "httpx2",
-    "httpcore",
-    "mcp",
-    "botocore",
-    "boto3",
-    "urllib3",
-    "fastmcp",
 )
 
 
@@ -84,8 +73,7 @@ def configure_logging(verbose: bool) -> None:
             ):
                 handler.setStream(sys.stderr)
     logging.getLogger().setLevel(level)
-    for name in QUIET_LOGGERS:
-        logging.getLogger(name).setLevel(level)
+    quiet_loggers(QUIET_LOGGERS, level)
 
 
 VerboseOption = Annotated[

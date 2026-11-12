@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -20,6 +21,9 @@ from agent_runtimes.apps.session_store import INDEX_FILE, FileSessionStore
 from agent_runtimes.loop import picker, transfer
 from agent_runtimes.loop.paused import (
     MANAGED,
+    MANAGED_BY_PLACE,
+    ON_DATALAYER,
+    ON_THIS_MACHINE,
     STATES,
     Paused,
     paused_sessions,
@@ -239,11 +243,27 @@ def test_two_groups_every_state_and_a_filter(files: FileSessionStore) -> None:
     }
     assert [row.uid for row in groups["cloud"]] == ["cloud-agent", "cloud-deployed"]
     drawn = [line for _, line in model.lines()]
-    # How the two are managed, said first; then each place with its count.
-    assert drawn[:2] == list(MANAGED)
+    # What is typed first, then each place with its count and, under its
+    # title, how it keeps its sessions — the place not named again.
+    assert drawn[0] == "Type to filter."
     assert "On this machine (3)" in drawn and "On Datalayer (2)" in drawn
     assert drawn.index("On this machine (3)") < drawn.index("On Datalayer (2)")
-    assert picker.LEGEND in drawn
+    for place, title in (
+        (ON_THIS_MACHINE, "On this machine (3)"),
+        (ON_DATALAYER, "On Datalayer (2)"),
+    ):
+        under = drawn[drawn.index(title) + 1 :]
+        table = next(index for index, line in enumerate(under) if line[2:3] == "|")
+        assert (
+            " ".join(line.strip() for line in under[:table]) == MANAGED_BY_PLACE[place]
+        )
+        assert not MANAGED_BY_PLACE[place].startswith("On ")
+    # Said with its place where no title stands above it (`/sessions`, --help).
+    assert [line.split(": ", 1)[0] for line in MANAGED] == [
+        "On this machine",
+        "On Datalayer",
+    ]
+    assert picker.LEGEND in " ".join(drawn)
     for word in (
         "Enter: resume",
         "Ctrl-P: pause",
@@ -315,10 +335,13 @@ def test_without_a_terminal_the_two_groups_are_printed(files: FileSessionStore) 
     assert lines[0] == "On this machine (3)" and "On Datalayer (2)" in lines
     # Each group is a markdown table: a header, its separator, one line a session.
     assert (
-        lines[2].split()
+        lines[3].split()
         == "| # | Session | State | Kind | Agent | Turns | Age | Title |".split()
     )
-    assert set(lines[3]) <= set("|-: ")
+    assert set(lines[4]) <= set("|-: ")
+    # Under each title, how the place keeps its sessions, in one line.
+    assert lines[1] == MANAGED_BY_PLACE[ON_THIS_MACHINE]
+    assert lines[lines.index("On Datalayer (2)") + 1] == MANAGED_BY_PLACE[ON_DATALAYER]
     said = listing_json(rows, signed_in=True)
     assert [row["uid"] for row in said["cloud"]] == ["cloud-agent", "cloud-deployed"]
     assert {
@@ -366,6 +389,112 @@ def test_the_picker_in_a_terminal_answers_the_key_pressed(
     with create_pipe_input() as keys:
         keys.send_text("\x03")
         assert picker.pick(Picker(rows), input=keys, output=DummyOutput()) is None
+
+
+def _many(here: int, there: int) -> List[Paused]:
+    return [
+        Paused(f"here-{n}", "agent", "example-simple", "T", ON_THIS_MACHINE, "file", "")
+        for n in range(here)
+    ] + [
+        Paused(f"there-{n}", "agent", "example-simple", "T", ON_DATALAYER, "record", "")
+        for n in range(there)
+    ]
+
+
+@pytest.fixture
+def no_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A terminal that does not say its size: whatever is asked is the fallback."""
+    monkeypatch.setattr(
+        picker.shutil, "get_terminal_size", lambda fallback: os.terminal_size(fallback)
+    )
+
+
+def test_a_page_moves_by_ten_rows_unknown_height_and_stops_at_the_ends(
+    no_terminal: None,
+) -> None:
+    # 3 rows on this machine, 20 on Datalayer; a terminal whose height is not
+    # known pages by ten.
+    model = Picker(_many(3, 20), width=100)
+    assert model.page_size() == picker.PAGE == 10
+    assert model.highlighted().uid == "here-0"  # type: ignore[union-attr]
+    # A page down crosses from this machine's rows into Datalayer's.
+    model.page(1)
+    assert model.index == 10 and model.highlighted().uid == "there-7"  # type: ignore[union-attr]
+    model.page(1)
+    assert model.index == 20
+    # It stops at the last row, and does not go around as an arrow does.
+    model.page(1)
+    assert model.index == 22 and model.highlighted().uid == "there-19"  # type: ignore[union-attr]
+    model.page(1)
+    assert model.index == 22
+    model.move(1)
+    assert model.index == 0
+    model.move(-1)
+    assert model.index == 22
+    # And back up, across the two places, to the first.
+    model.page(-2)
+    assert model.index == 2 and model.highlighted().uid == "here-2"  # type: ignore[union-attr]
+    model.page(-1)
+    assert model.index == 0
+    model.page(-1)
+    assert model.index == 0
+    model.last()
+    assert model.index == 22
+    model.first()
+    assert model.index == 0
+    # With no row, nothing moves and nothing fails.
+    empty = Picker([], width=100)
+    empty.page(1)
+    empty.last()
+    assert empty.index == 0 and empty.highlighted() is None
+
+
+def test_a_page_is_the_rows_the_terminal_shows() -> None:
+    model = Picker(_many(3, 20), width=100, height=30)
+    drawn = model.lines()
+    rows = [line for style, line in drawn if style in ("row", "on")]
+    assert len(rows) == 23
+    # The titles, the sentences, the table heads and the legend take lines too.
+    assert model.page_size() == 30 - (len(drawn) - 23) > 1
+    # A terminal shorter than what is said still moves by one row.
+    assert Picker(_many(3, 20), width=100, height=5).page_size() == 1
+    # The highlighted row's line is what the terminal keeps in sight.
+    model.page(1)
+    style, line = model.lines()[model.cursor_line()]
+    assert style == "on" and model.highlighted().uid in line  # type: ignore[union-attr]
+    assert Picker([], width=100).cursor_line() == 0
+
+
+def test_a_sentence_is_wrapped_between_words() -> None:
+    model = Picker(_many(1, 1), width=60)
+    drawn = [line for style, line in model.lines() if style == "dim"]
+    assert all(len(line) <= 60 for line in drawn if line[2:3] != "|")
+    said = " ".join(line.strip() for line in drawn)
+    # Every word whole: none cut at the terminal's edge.
+    for text in (*MANAGED_BY_PLACE.values(), picker.LEGEND):
+        assert text in said
+    for word in ("PgUp/PgDn: a page", "Home/End: first, last"):
+        assert word in picker.LEGEND
+
+
+def test_page_and_home_and_end_keys_in_a_terminal(no_terminal: None) -> None:
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    rows = Picker(_many(3, 20)).visible()
+
+    def pressed(keys_sent: str) -> Any:
+        with create_pipe_input() as keys:
+            keys.send_text(keys_sent + "\r")
+            chosen = picker.pick(Picker(rows), input=keys, output=DummyOutput())
+        assert chosen is not None and chosen[0] == "resume"
+        return chosen[1].uid
+
+    assert pressed("\x1b[6~") == "there-7"  # Page Down
+    assert pressed("\x1b[6~\x1b[6~\x1b[6~") == "there-19"
+    assert pressed("\x1b[6~\x1b[6~\x1b[5~") == "there-7"  # then Page Up
+    assert pressed("\x1b[F") == "there-19"  # End
+    assert pressed("\x1b[F\x1b[H") == "here-0"  # then Home
 
 
 def test_what_resumes_and_what_starts_over() -> None:

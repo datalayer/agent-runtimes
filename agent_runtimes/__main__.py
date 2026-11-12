@@ -99,6 +99,7 @@ from agent_runtimes.commands.serve import (
 )
 from agent_runtimes.commands.sessions import app as sessions_app
 from agent_runtimes.commands.tool_approvals import app as tool_approvals_app
+from agent_runtimes.utils.logs import AWS_LOGGERS, asked_verbose, quiet_loggers
 
 
 def _log_level(argv: list[str]) -> int:
@@ -118,6 +119,10 @@ logging.basicConfig(
     stream=sys.stderr,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+# AWS's SDK says at INFO where it found its credentials, over whatever the
+# command prints (`loop sessions`): shown when asked for, its warnings always.
+if not asked_verbose(sys.argv[1:], os.environ):
+    quiet_loggers(AWS_LOGGERS)
 logger = logging.getLogger(__name__)
 
 app = typer.Typer(

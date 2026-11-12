@@ -500,12 +500,8 @@ def run_picker(as_json: bool = False, everything: bool = False) -> None:
             print(json.dumps(listing_json(rows, signed_in=bool(token)), indent=1))
             return
         if not interactive():
-            from agent_runtimes.loop.paused import MANAGED
-
             # Printed as it is, never wrapped: a table's row is one line.
             for line in (
-                *MANAGED,
-                "",
                 *listing_lines(rows, signed_in=bool(token)),
                 *([] if everything else [NOT_LISTED]),
             ):
