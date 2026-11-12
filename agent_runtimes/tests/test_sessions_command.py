@@ -89,7 +89,8 @@ def test_list_and_show(fake: Runtime, remote: TestClient) -> None:  # noqa: F811
     _open(remote, "session-k001")
     remote.post("/api/v1/apps/sessions/session-k001/stop", headers=as_("ada"))
     _open(remote, "session-k002", opener="Two")
-    result = runner.invoke(command.app, ["list", "--cloud"])
+    # --cloud alone reads Datalayer's record (needs a key): a runtime named by --server is asked.
+    result = runner.invoke(command.app, ["list", "--cloud", "--server", "http://testserver"])
     assert result.exit_code == 0, result.output
     # Piped, a markdown table: the header, its separator, one line a session.
     rows = [
