@@ -21,6 +21,21 @@ export const HOST_KEY_HEADER = 'X-Datalayer-Host-Key';
 export const SIGNATURE_HEADER = 'X-Datalayer-Signature';
 export const TIMESTAMP_HEADER = 'X-Datalayer-Timestamp';
 export const DELIVERY_HEADER = 'X-Datalayer-Delivery';
+/**
+ * The version of ai-agents' own key a push was signed under
+ * (`ai-agents-host-deliveries-v<N>`), the `key` its registration was
+ * answered. Absent on a webhook registered under the platform's shared
+ * secret, which is refused after {@link SHARED_SECRET_DELIVERIES_UNTIL}.
+ */
+export const DELIVERY_KEY_HEADER = 'X-Datalayer-Delivery-Key';
+export const DELIVERY_KEY_PATTERN = /^ai-agents-host-deliveries-v\d+$/;
+/**
+ * The end of the platform's HS256 window (31 December 2026, 00:00 UTC):
+ * from then on a push without a `key` is refused, and ai-agents holds such a
+ * registration's pushes in the outbox until its host registers again.
+ */
+export const SHARED_SECRET_DELIVERIES_UNTIL =
+  Date.parse('2026-12-31T00:00:00Z') / 1000;
 export const IDEMPOTENCY_HEADER = 'Idempotency-Key';
 
 /** The presentation version the hosts render; another is reviewed in Datalayer. */
@@ -72,6 +87,19 @@ export const selfSchema = z.object({
         .optional(),
       direct_only: z.array(z.string()).optional(),
       paused: z.boolean().optional(),
+      /**
+       * The registered webhook: `renew` when ai-agents asks it registered
+       * again (its secret rests on a key ai-agents no longer signs with).
+       */
+      delivery: z
+        .object({
+          url: z.string().optional(),
+          version: z.number().int().optional(),
+          key: z.string().optional(),
+          renew: z.boolean().optional(),
+        })
+        .loose()
+        .optional(),
     })
     .loose(),
 });
@@ -93,6 +121,8 @@ export const webhookSchema = z.object({
   events: z.array(z.string()),
   version: z.number().int(),
   signing_secret: z.string().min(32),
+  /** The version of ai-agents' key the secret is derived under; absent: the shared secret. */
+  key: z.string().regex(DELIVERY_KEY_PATTERN).optional(),
 });
 
 /** One delivery of the outbox, as `GET …/self/deliveries` lists it. */
@@ -252,9 +282,15 @@ export function deliverySignature(
 /**
  * Verify a pushed delivery before trusting it: its signature in constant
  * time, and a timestamp within five minutes, so a captured push cannot be
- * replayed later.
+ * replayed later. `key` is what the registration was answered with the
+ * secret: the push must name it (`keyHeader`, {@link DELIVERY_KEY_HEADER}).
+ * A secret kept without one was derived from the platform's shared secret:
+ * accepted until {@link SHARED_SECRET_DELIVERIES_UNTIL} only, then refused
+ * until the host registers again.
  */
 export function verifyDelivery(input: {
+  key?: string;
+  keyHeader?: string;
   nowSeconds?: number;
   rawBody: string | Buffer;
   secret: string;
@@ -269,6 +305,19 @@ export function verifyDelivery(input: {
     Math.abs(now - stamp) > (input.toleranceSeconds ?? 300)
   ) {
     throw new Error("The delivery's timestamp is missing or too old.");
+  }
+  if (input.key) {
+    if (input.keyHeader !== input.key) {
+      throw new Error('The delivery names another signing key.');
+    }
+  } else if (input.keyHeader) {
+    throw new Error(
+      'The delivery names a key this registration was not answered.',
+    );
+  } else if (now >= SHARED_SECRET_DELIVERIES_UNTIL) {
+    throw new Error(
+      "The delivery's secret was derived from the platform's shared secret, refused since 31 December 2026: register again.",
+    );
   }
   const expected = Buffer.from(
     deliverySignature(input.secret, stamp, input.rawBody),

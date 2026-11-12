@@ -19,6 +19,7 @@ import {
   deliveryOfOutbox,
   deliverySignature,
   DELIVERY_HEADER,
+  DELIVERY_KEY_HEADER,
   HOST_KEY_HEADER,
   hostMayDecide,
   IDEMPOTENCY_HEADER,
@@ -64,6 +65,7 @@ describe('Datalayer host contracts', () => {
   it('names the headers ai-agents and the session API read', () => {
     expect(contracts.headers).toMatchObject({
       delivery: DELIVERY_HEADER,
+      delivery_key: DELIVERY_KEY_HEADER,
       host_key: HOST_KEY_HEADER,
       idempotency_key: IDEMPOTENCY_HEADER,
       signature: SIGNATURE_HEADER,

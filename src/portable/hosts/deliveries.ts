@@ -19,6 +19,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { DatalayerHostClient } from './client';
 import {
   DELIVERY_HEADER,
+  DELIVERY_KEY_HEADER,
   SIGNATURE_HEADER,
   TIMESTAMP_HEADER,
   verifyDelivery,
@@ -35,10 +36,17 @@ export type DeliveryJob = Readonly<{ delivery: HostDelivery; hostUid: string }>;
 /** A host installation bound at Datalayer: its uid and key. */
 export type BoundHostKey = Readonly<{ hostKey: string; hostUid: string }>;
 
+/**
+ * What an installation's pushes are signed with, as its registration was
+ * answered: the secret, and the key it is derived under (none: the
+ * platform's shared secret, accepted until the end of its window only).
+ */
+export type DeliverySecret = Readonly<{ key?: string; secret: string }>;
+
 /** Where a host keeps its installations, as deliveries read them. */
 export interface DeliverySink {
   /** What Datalayer signs an installation's pushes with, or `undefined` for an unknown one. */
-  deliverySecretOf(hostUid: string): Promise<string | undefined>;
+  deliverySecretOf(hostUid: string): Promise<DeliverySecret | undefined>;
   /** The installation's key, or `undefined` once it was removed (late work is dropped). */
   hostKeyOf(hostUid: string): Promise<string | undefined>;
   /** Every installation bound at Datalayer: whose outbox is read. */
@@ -116,8 +124,8 @@ export function deliveryRoute(
     try {
       const named = request.params?.hostUid;
       const hostUid = typeof named === 'string' ? named : '';
-      const secret = hostUid ? await sink.deliverySecretOf(hostUid) : undefined;
-      if (!secret) {
+      const kept = hostUid ? await sink.deliverySecretOf(hostUid) : undefined;
+      if (!kept?.secret) {
         return answer(404, { ok: false, error: 'unknown installation' });
       }
       const header = (name: string) => {
@@ -128,9 +136,11 @@ export function deliveryRoute(
       let delivery: HostDelivery;
       try {
         delivery = verifyDelivery({
+          key: kept.key,
+          keyHeader: header(DELIVERY_KEY_HEADER),
           nowSeconds: nowSeconds?.(),
           rawBody,
-          secret,
+          secret: kept.secret,
           signature: header(SIGNATURE_HEADER),
           timestamp: header(TIMESTAMP_HEADER),
         });
@@ -149,6 +159,80 @@ export function deliveryRoute(
       return answer(500, { ok: false });
     }
   };
+}
+
+/**
+ * Each bound installation's webhook registered again when ai-agents asks
+ * (`GET …/self` answers `delivery.renew`: its secret rests on a key
+ * ai-agents no longer signs with), or when the key the host kept is not the
+ * one ai-agents registered (a renewal whose secret was not kept). The new
+ * secret and key are handed to `keep`, where the host stores the old ones;
+ * an installation with no webhook reads its outbox and is left alone.
+ */
+export class DeliveryRenewal {
+  #timer?: ReturnType<typeof setInterval>;
+  #running = false;
+
+  constructor(
+    readonly sink: Pick<DeliverySink, 'boundHosts' | 'deliverySecretOf'>,
+    readonly client: Pick<DatalayerHostClient, 'self' | 'setWebhook'>,
+    readonly keep: (hostUid: string, secret: DeliverySecret) => Promise<void>,
+    readonly logger: Pick<Console, 'warn'> = console,
+  ) {}
+
+  /** One pass over the bound installations: how many registered again. */
+  async renewOnce(): Promise<number> {
+    let renewed = 0;
+    for (const { hostKey, hostUid } of await this.sink.boundHosts()) {
+      try {
+        const delivery = (await this.client.self(hostKey)).delivery;
+        if (!delivery) {
+          continue;
+        }
+        const kept = await this.sink.deliverySecretOf(hostUid);
+        if (!delivery.renew && kept?.secret && kept.key === delivery.key) {
+          continue;
+        }
+        const hook = await this.client.setWebhook(hostKey, delivery.url);
+        await this.keep(hostUid, {
+          ...(hook.key ? { key: hook.key } : {}),
+          secret: hook.signingSecret,
+        });
+        renewed += 1;
+      } catch (error) {
+        this.logger.warn(
+          `The webhook of one installation was not registered again: ${(error as Error).message}`,
+        );
+      }
+    }
+    return renewed;
+  }
+
+  /** A pass now, then one every `intervalSeconds`. */
+  start(intervalSeconds: number): void {
+    if (intervalSeconds <= 0 || this.#timer) {
+      return;
+    }
+    const pass = () => {
+      if (this.#running) {
+        return;
+      }
+      this.#running = true;
+      void this.renewOnce().finally(() => {
+        this.#running = false;
+      });
+    };
+    pass();
+    this.#timer = setInterval(pass, intervalSeconds * 1000);
+    (this.#timer as { unref?: () => void }).unref?.();
+  }
+
+  stop(): void {
+    if (this.#timer) {
+      clearInterval(this.#timer);
+    }
+    this.#timer = undefined;
+  }
 }
 
 /**

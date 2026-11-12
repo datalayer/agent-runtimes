@@ -6,6 +6,7 @@
     "signature": "X-Datalayer-Signature",
     "timestamp": "X-Datalayer-Timestamp",
     "delivery": "X-Datalayer-Delivery",
+    "delivery_key": "X-Datalayer-Delivery-Key",
     "idempotency_key": "Idempotency-Key"
   },
   "routes": {
@@ -249,7 +250,8 @@
       "events",
       "version",
       "signing_secret"
-    ]
+    ],
+    "key_about": "Once ai-agents signs deliveries with its own ring, the answer also names the ring's version, key (ai-agents-host-deliveries-v<N>), and every push says it in the delivery_key header. A registration without key, or under a version that no longer signs, is answered delivery.renew: true by GET self: the host registers again and keeps the new secret and key. Past the HS256 window (2026-12-31T00:00:00Z) a push without the header is refused by the host and ai-agents holds a keyless registration's pushes."
   },
   "delivery": {
     "events": [

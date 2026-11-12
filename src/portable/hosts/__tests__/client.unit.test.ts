@@ -171,6 +171,31 @@ describe('DatalayerHostClient.self', () => {
     ).toBe('dlhk_key');
   });
 
+  it('reads the registered webhook: its key, and whether ai-agents asks it registered again', async () => {
+    const answer = (delivery: Record<string, unknown>) =>
+      new DatalayerHostClient(API, (async () =>
+        Response.json({
+          success: true,
+          host: { uid: 'h-1', deployments: [], delivery },
+        })) as typeof fetch);
+    const url = 'https://slack.example/datalayer/deliveries/h-1';
+    expect(
+      (await answer({ url, version: 1, renew: true }).self('k')).delivery,
+    ).toEqual({ renew: true, url });
+    expect(
+      (
+        await answer({
+          url,
+          version: 2,
+          key: 'ai-agents-host-deliveries-v1',
+          renew: false,
+        }).self('k')
+      ).delivery,
+    ).toEqual({ key: 'ai-agents-host-deliveries-v1', renew: false, url });
+    // No webhook registered (the outbox is read): nothing to renew.
+    expect((await answer({ version: 1 }).self('k')).delivery).toBeUndefined();
+  });
+
   it('refuses an answer without the installation uid', async () => {
     const client = new DatalayerHostClient(API, (async () =>
       Response.json({
@@ -178,5 +203,34 @@ describe('DatalayerHostClient.self', () => {
         host: { deployments: [] },
       })) as typeof fetch);
     await expect(client.self('dlhk_key')).rejects.toThrow();
+  });
+});
+
+describe('DatalayerHostClient.setWebhook', () => {
+  it('answers the secret and the key it is derived under, and refuses a key of another ring', async () => {
+    const reply = (key?: string) =>
+      new DatalayerHostClient(API, (async () =>
+        Response.json({
+          success: true,
+          url: 'https://slack.example/datalayer/deliveries/h-1',
+          events: ['approval.requested'],
+          version: 2,
+          signing_secret: 's'.repeat(64),
+          ...(key ? { key } : {}),
+        })) as typeof fetch);
+    expect(
+      await reply('ai-agents-host-deliveries-v3').setWebhook('k', 'https://x'),
+    ).toEqual({
+      key: 'ai-agents-host-deliveries-v3',
+      signingSecret: 's'.repeat(64),
+      version: 2,
+    });
+    expect(await reply().setWebhook('k', 'https://x')).toEqual({
+      signingSecret: 's'.repeat(64),
+      version: 2,
+    });
+    await expect(
+      reply('ai-agents-host-tokens-v1').setWebhook('k', 'https://x'),
+    ).rejects.toThrow();
   });
 });

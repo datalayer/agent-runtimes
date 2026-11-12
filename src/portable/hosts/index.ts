@@ -77,11 +77,13 @@ export {
   DELIVERY_PATH,
   DELIVERY_ROUTE,
   DeliveryPoller,
+  DeliveryRenewal,
   deliveryRoute,
   receiveDelivery,
   type BoundHostKey,
   type DeliveryClaimStore,
   type DeliveryJob,
+  type DeliverySecret,
   type DeliverySink,
 } from './deliveries';
 export {

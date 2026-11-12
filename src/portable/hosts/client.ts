@@ -48,6 +48,11 @@ export type HostSelf = Readonly<{
   deployments: ReadonlyArray<{ appName: string; kept: boolean; uid: string }>;
   directOnly: readonly string[];
   paused: boolean;
+  /**
+   * The registered webhook, if any: where, the key its secret is derived
+   * under, and whether ai-agents asks it registered again.
+   */
+  delivery?: Readonly<{ key?: string; renew: boolean; url: string }>;
   /** The installation's own uid: what its deliveries are addressed to. */
   uid: string;
 }>;
@@ -188,6 +193,15 @@ export class DatalayerHostClient {
       })),
       directOnly: host.direct_only ?? [],
       paused: host.paused ?? false,
+      ...(host.delivery?.url
+        ? {
+            delivery: {
+              ...(host.delivery.key ? { key: host.delivery.key } : {}),
+              renew: host.delivery.renew ?? false,
+              url: host.delivery.url,
+            },
+          }
+        : {}),
       uid: host.uid,
     };
   }
@@ -272,11 +286,15 @@ export class DatalayerHostClient {
     return { linked: state.linked, principalUid: state.principal_uid };
   }
 
-  /** Where deliveries are pushed: answered the secret they are signed with, once. */
+  /**
+   * Where deliveries are pushed: answered the secret they are signed with,
+   * once, and the key it is derived under (kept beside it: every push names
+   * it). Registering again moves the version: the old secret stops.
+   */
   async setWebhook(
     hostKey: string,
     url: string,
-  ): Promise<{ signingSecret: string; version: number }> {
+  ): Promise<{ key?: string; signingSecret: string; version: number }> {
     const hook = await this.#call(
       'Datalayer did not register the delivery address',
       '/apps/hosts/self/delivery',
@@ -290,7 +308,11 @@ export class DatalayerHostClient {
       },
       webhookSchema,
     );
-    return { signingSecret: hook.signing_secret, version: hook.version };
+    return {
+      ...(hook.key ? { key: hook.key } : {}),
+      signingSecret: hook.signing_secret,
+      version: hook.version,
+    };
   }
 
   /** What the installation has not acknowledged, oldest first: pushed or not. */
