@@ -4,12 +4,16 @@
  */
 
 /**
- * Agent monitoring hooks.
+ * Agent monitoring: metric rows read from the OTEL service, for the charts.
+ *
+ * A total of tokens is not read here: listing the latest points of a running
+ * total and adding them up is neither bounded in time nor a total. It is the
+ * OTEL service's token route (`GET /api/otel/v1/metrics/tokens`), which
+ * reads each counter's increase over a window, per service.
  *
  * @module hooks/useMonitoring
  */
 
-import { useEffect, useState } from 'react';
 import { createOtelClient } from '@datalayer/core/lib/otel';
 
 export interface OtelQueryOptions {
@@ -75,103 +79,4 @@ export async function fetchOtelMetricRows({
     accountUid,
   });
   return fallback.data;
-}
-
-export async function fetchOtelMetricTotal(
-  options: OtelQueryOptions,
-): Promise<number> {
-  const rows = await fetchOtelMetricRows(options);
-  return rows.reduce((sum, row) => sum + toMetricValue(row), 0);
-}
-
-export interface OtelTotalTokensOptions {
-  serviceName?: string;
-  otelUrl?: string;
-  apiKey?: string;
-  limit?: number;
-  accountUid?: string;
-}
-
-export async function fetchOtelTotalTokens({
-  serviceName,
-  otelUrl,
-  apiKey,
-  limit = 500,
-  accountUid,
-}: OtelTotalTokensOptions): Promise<number> {
-  const total = await fetchOtelMetricTotal({
-    metric: 'agent_runtimes.prompt.turn.total_tokens',
-    serviceName,
-    otelUrl,
-    apiKey,
-    limit,
-    accountUid,
-  });
-  if (total > 0) {
-    return total;
-  }
-
-  const prompt = await fetchOtelMetricTotal({
-    metric: 'agent_runtimes.prompt.turn.prompt_tokens',
-    serviceName,
-    otelUrl,
-    apiKey,
-    limit,
-    accountUid,
-  });
-  const completion = await fetchOtelMetricTotal({
-    metric: 'agent_runtimes.prompt.turn.completion_tokens',
-    serviceName,
-    otelUrl,
-    apiKey,
-    limit,
-    accountUid,
-  });
-  return prompt + completion;
-}
-
-export function useOtelTotalTokens({
-  serviceName,
-  otelUrl,
-  apiKey,
-  limit = 500,
-  accountUid,
-}: OtelTotalTokensOptions): string {
-  const [tokensLabel, setTokensLabel] = useState('-');
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const total = await fetchOtelTotalTokens({
-          serviceName,
-          otelUrl,
-          apiKey,
-          limit,
-          accountUid,
-        });
-        if (cancelled) {
-          return;
-        }
-        if (total > 0) {
-          setTokensLabel(Math.round(total).toLocaleString());
-        } else {
-          setTokensLabel('-');
-        }
-      } catch {
-        if (!cancelled) {
-          setTokensLabel('-');
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [apiKey, limit, otelUrl, serviceName, accountUid]);
-
-  return tokensLabel;
 }

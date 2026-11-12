@@ -238,13 +238,7 @@ export {
   type ProjectData,
 } from './useProjects';
 
-export {
-  useOtelTotalTokens,
-  fetchOtelTotalTokens,
-  fetchOtelMetricTotal,
-  fetchOtelMetricRows,
-  toMetricValue,
-} from './useMonitoring';
+export { fetchOtelMetricRows, toMetricValue } from './useMonitoring';
 
 // Global top progress bar: a single shared store + a convenience hook so any
 // view can drive the one app-wide progress bar.
