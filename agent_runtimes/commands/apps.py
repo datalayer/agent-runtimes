@@ -2109,18 +2109,105 @@ def resumed_application(app_uid: str, catalogue: Any = None, store: Any = None) 
     return document, app_uid
 
 
-def deployed_application(deployment_uid: str, store: Any = None) -> Any:
+#: What is asked before anything is launched for a session of a paused deployment.
+RESUME_DEPLOYMENT_QUESTION = (
+    "Its deployment is paused. Resume the deployment and go on?"
+)
+
+
+def _ask_to_resume_deployment() -> Optional[bool]:
+    """The person's answer to `RESUME_DEPLOYMENT_QUESTION`, or ``None`` where nobody can be asked."""
+    from agent_runtimes.loop.launch import interactive
+
+    if not interactive():
+        return None
+    import questionary
+
+    return bool(questionary.confirm(RESUME_DEPLOYMENT_QUESTION, default=True).ask())
+
+
+def deployment_preflight(deployment: Any, store: Any, confirm: Any = None) -> Any:
+    """What must hold of a deployment before a runtime is launched for it,
+    checked on what the person's own list already says of it — so that no
+    environment is asked for and no runtime launched for a session that
+    cannot go on. The deployment, live.
+
+    A **paused** deployment gives its principal's token to nobody: its owner
+    is asked first whether to resume it (``confirm``, a question in a
+    terminal); *yes* resumes it through its route (``PATCH`` with ``state:
+    live``) and goes on, *no* stops there.
+
+    Raises
+    ------
+    ResumeRefused
+        Not resumed — the person said no, nobody could be asked, or
+        ai-agents refused to resume it (its sentence: a spend limit reached,
+        a rule that paused it) — with nothing launched.
+    """
+    from agent_runtimes.apps.deployments import DeployRefused
+
+    if str(deployment.state or "live") == "live":
+        return deployment
+    if deployment.state != "paused":
+        raise ResumeRefused(
+            f"Its deployment is {deployment.state}, not live: nothing was launched."
+        )
+    answer = (confirm or _ask_to_resume_deployment)()
+    if answer is None:
+        raise ResumeRefused(
+            "Its deployment is paused, and a paused deployment's session is not gone on with: "
+            "nothing was launched. Resume the deployment — on its page, or by answering yes to "
+            "`loop --resume <uid>` in a terminal — then go on."
+        )
+    if not answer:
+        raise ResumeRefused(
+            "Not resumed: its deployment stays paused, and nothing was launched."
+        )
+    try:
+        store.change(deployment.uid, state="live")
+    except DeployRefused as refused:
+        raise ResumeRefused(
+            f"Its deployment was not resumed: {_sentence(str(refused))} Nothing was launched."
+        ) from None
+    console.print("The deployment is live again.", style="dim")
+    return deployment
+
+
+def _sentence(text: str) -> str:
+    """A refusal as one sentence: the ``detail`` of a JSON answer when it is
+    one, on one line, ending with one full stop."""
+    said = str(text or "").strip()
+    try:
+        body = json.loads(said)
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and body.get("detail"):
+        detail = body["detail"]
+        said = (
+            "; ".join(str(part) for part in detail.get("problems") or [detail])
+            if isinstance(detail, dict)
+            else str(detail)
+        )
+    said = " ".join(said.split()).rstrip(".")
+    return f"{said}." if said else ""
+
+
+def deployed_application(
+    deployment_uid: str, store: Any = None, confirm: Any = None
+) -> Any:
     """A deployment of the person's, to go on with a session of it from the
     terminal: ``(document, instance)`` — the Appspec of the version it runs
     and the instance its agent is made for (``app_uid``, ``deployment_uid``,
-    ``version``), as its page gives a runtime.
+    ``version``), as its page gives a runtime. Checked first, before
+    anything is launched (`deployment_preflight`): a paused deployment is
+    resumed when its owner says yes (``confirm``).
 
     Raises
     ------
     ResumeRefused
         When the deployment is not the person's (a terminal starts a runtime
-        for its owner's only), or it runs another version than the one the
-        Studio keeps (the terminal reads the latest).
+        for its owner's only), it is paused and stays so, or it runs another
+        version than the one the Studio keeps (the terminal reads the latest).
     """
     import yaml
 
@@ -2137,6 +2224,7 @@ def deployed_application(deployment_uid: str, store: Any = None) -> Any:
                 "This deployment is not one of yours: a terminal starts a runtime for a "
                 "deployment of its owner's only. Go on with the session at its address."
             )
+        deployment_preflight(deployment, store, confirm)
         text, version, _ = pull(store, deployment.app_uid)
     except DeployRefused as refused:
         raise ResumeRefused(str(refused)) from None
@@ -2178,9 +2266,36 @@ def start_deployment_agent(
     made = httpx.post(f"{base_url}/api/v1/agents", json=payload, timeout=180.0)
     if made.status_code not in (200, 201, 409):
         raise ResumeRefused(
-            f"The deployment's agent was not made ({made.status_code}): {made.text[:300]}"
+            f"The deployment's agent was not made: {_sentence(made.text[:600])}"
         )
     return str(payload["name"])
+
+
+def stop_or_finish(
+    launch: Any, *, started: bool, keep: bool = False, say: Any = None
+) -> None:
+    """Let go of the runtime a resume launched. One the application ran on
+    is finished as any session's (the person is asked, `finish_cloud`). One
+    this command launched and the application never came up on is stopped
+    without asking — billed or not, it can do nothing for anybody — unless
+    the person asked to keep it (``--keep``) or it was running before
+    (attached): then it is finished as usual.
+    """
+    from agent_runtimes.loop.launch import finish_cloud
+
+    say = say or (lambda line: console.print(line, style="dim", markup=False))
+    if started or keep or getattr(launch, "attached", False):
+        finish_cloud(launch, keep=keep)
+        return
+    if launch.stop():
+        say(
+            f"Stopped {launch.said} {launch.runtime_name}: the application never ran on it."
+        )
+    else:
+        say(
+            f"Could not stop {launch.said} {launch.runtime_name}: stop it with "
+            f"`loop agents terminate {launch.runtime_name}`."
+        )
 
 
 def resume_application_session(
@@ -2211,7 +2326,6 @@ def resume_application_session(
         CLOUD_AGENT_NAME,
         CloudRefused,
         NotSignedIn,
-        finish_cloud,
         launch_cloud,
         speak_ag_ui,
     )
@@ -2262,6 +2376,9 @@ def resume_application_session(
             raise ResumeRefused("The local server did not start.")
         base_url = f"http://127.0.0.1:{port}"
     agent_name = CLOUD_AGENT_NAME
+    # Whether the application came up on what was started for it: a runtime
+    # launched by this command that never ran it is stopped without asking.
+    started = False
     try:
         if instance:
             agent_name = start_deployment_agent(base_url, document, instance)
@@ -2274,6 +2391,7 @@ def resume_application_session(
                 raise ResumeRefused("The application's agent did not come up.")
         from agent_runtimes.chat.tux import run_tux
 
+        started = True
         where_said = (
             f"on Datalayer ({cloud_launch.runtime_name})"
             if cloud_launch
@@ -2298,7 +2416,7 @@ def resume_application_session(
         if cloud_launch is not None:
             # It runs an application: its stop says so.
             cloud_launch.app = True
-            finish_cloud(cloud_launch, keep=keep)
+            stop_or_finish(cloud_launch, started=started, keep=keep)
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)

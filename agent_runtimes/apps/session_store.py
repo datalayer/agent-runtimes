@@ -214,7 +214,11 @@ class FileSessionStore:
         query: str = "",
         archived: bool = False,
     ) -> SessionPage:
-        sessions = self.described()
+        from agent_runtimes.apps.local_rule import reconciled
+
+        # As the rule says them (`local_rule`): a seat whose run is over is
+        # ended, an open one whose process is gone is paused.
+        sessions = reconciled(self, self.described())
         return _page(
             sessions,
             owner=owner,
@@ -293,6 +297,13 @@ class FileSessionStore:
     async def append(
         self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
     ) -> None:
+        self.write(uid, entries, **body)
+
+    def write(
+        self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
+    ) -> None:
+        """Entries added to a session's file: what :meth:`append` does, for
+        a caller that is not in a loop (the rule that reconciles a listing)."""
         path = self._file(uid)
         path.parent.mkdir(parents=True, exist_ok=True)
         at = _now()

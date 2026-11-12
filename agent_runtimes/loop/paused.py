@@ -110,6 +110,17 @@ class Paused:
     """``open``, ``paused`` or ``ended``."""
     team_run: str = ""
     """For a seat of a team run, its run (the root execution): resumed with it."""
+    deployment_paused: bool = False
+    """Whether it is a session of one of the person's own deployments that is
+    paused: resuming it asks first to resume the deployment."""
+
+    @property
+    def state_said(self) -> str:
+        """Its state as a listing says it: the state, marked when its
+        deployment is paused (as an archived one is marked)."""
+        if self.deployment_paused and self.state != "ended":
+            return f"{self.state}, deployment paused"
+        return self.state
 
     @property
     def resumable(self) -> bool:
@@ -221,6 +232,19 @@ DEPLOYMENT_WHY_NOT = (
     "a session of somebody else's deployment: a terminal starts a runtime for a "
     "deployment of its owner's only"
 )
+AGENT_WHY_NOT = (
+    "a session of the agent {agent}, which is no longer an agentspec of the catalogue: "
+    "a runtime on Datalayer cannot start it — clone it onto another agent to go on"
+)
+
+
+def agentspec_in_catalogue(agent: str) -> bool:
+    """Whether an agentspec is one of the catalogue's."""
+    from agent_runtimes.specs.agents.agents import get_agent_spec
+
+    return bool(agent) and get_agent_spec(agent) is not None
+
+
 TEAM_WHY_NOT = (
     "a seat of a team run whose run the record does not name: it is resumed "
     "with its run, agent-teams sessions resume <run>"
@@ -267,15 +291,19 @@ def paused_of(
     deployments: Optional[Mapping[str, Mapping[str, Any]]] = None,
     names: Optional[Mapping[str, str]] = None,
     states: Tuple[str, ...] = ("paused",),
+    in_catalogue: Optional[Callable[[str], bool]] = None,
 ) -> List[Paused]:
     """The sessions among described ones, as a store lists them: the paused
     ones, unless other ``states`` are named.
 
     ``deployments`` are the person's, by uid (their application's name, their
-    address); ``names`` the catalogue's applications' names by id.
+    address, whether it is paused); ``names`` the catalogue's applications'
+    names by id; ``in_catalogue`` says whether an agentspec is one of the
+    catalogue's (what a runtime on Datalayer can start).
     """
     deployments = deployments or {}
     names = catalogue_names() if names is None else names
+    in_catalogue = in_catalogue or agentspec_in_catalogue
     rows: List[Paused] = []
     for session in sessions:
         if session.get("state") not in states or session.get("archived"):
@@ -305,6 +333,16 @@ def paused_of(
             slug = str(deployment.get("slug") or "")
             if slug and deployment.get("target") == "hosted":
                 address = f"{SITE}/apps/{slug}?thread={session.get('uid') or ''}"
+        elif kind == "agent" and store == RECORD:
+            # On Datalayer a runtime starts an agentspec of the catalogue:
+            # one that left it cannot be started again.
+            spec = (
+                app_uid[len("agent:") :]
+                if app_uid.startswith("agent:")
+                else str(session.get("agent") or "")
+            )
+            if spec and not in_catalogue(spec):
+                why_not = AGENT_WHY_NOT.format(agent=spec)
         app_name = ""
         if kind == "application":
             app_name = (
@@ -331,6 +369,10 @@ def paused_of(
                 address=address,
                 state=str(session.get("state") or ""),
                 team_run=team_run,
+                # One of the person's own, paused: its owner resumes it, so
+                # the session stays listed, marked.
+                deployment_paused=bool(deployment)
+                and str(deployment.get("state") or "live") == "paused",
             )
         )
     return rows
@@ -344,10 +386,16 @@ def local_paused(
     """The sessions kept in files on this machine: the paused ones, unless
     other ``states`` are named.
     """
+    from agent_runtimes.apps.local_rule import reconciled
     from agent_runtimes.apps.session_store import FileSessionStore
 
     files = store or FileSessionStore()
-    return paused_of(files.described(), FILE, None, names, states)
+    described = files.described()
+    if hasattr(files, "write"):
+        # As the rule says them (`local_rule`): a seat whose local run is
+        # over is ended, an open one whose process is gone is paused.
+        described = reconciled(files, described)
+    return paused_of(described, FILE, None, names, states)
 
 
 async def _ask_the_record(token: str, state: str = "paused") -> Dict[str, Any]:
@@ -610,7 +658,9 @@ __all__ = [
     "paused_of",
     "paused_sessions",
     "record_paused",
+    "AGENT_WHY_NOT",
     "DEPLOYMENT_WHY_NOT",
+    "agentspec_in_catalogue",
     "MANAGED",
     "MANAGED_BY_PLACE",
     "PLACE_TITLES",

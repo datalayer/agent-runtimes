@@ -42,6 +42,46 @@ with is `ended`, and is not listed:
 A session said `open` whose runtime no longer exists is not running: it is
 listed `paused`, and resumes from its record.
 
+The same holds **on this machine**, decided as the list is read: a session
+`open` whose process is gone is `paused` (a runtime started by hand writes
+which process holds it), and a seat of a self-hosted team run is `ended`
+when its run ended, is no longer kept, or stopped without ending.
+
+Three more are not listed, though their record still says `paused`: a
+Preview of a Studio application that was deleted (ended as it is read, on
+Datalayer), a session of an agent that is no longer an agentspec of the
+catalogue (a runtime on Datalayer cannot start it: clone it onto another
+agent), and a session of a deployment that is not yours and has no address
+to open it at. A harness that does not bring its own session back
+(`resume: none`, see [Harness capabilities](./harnesses.mdx)) does not end a
+session: the session resumes from its record, and the harness starts over
+and says so.
+
+### A session of a paused deployment
+
+A session of one of **your own** deployments that is paused stays listed,
+marked in its State column:
+
+```text
+|   4 | 01M61KF1TV0VM5BNQEAHE1QPY9 | paused, deployment paused | app | mh49-pi | 1 | 14d | Which coding agent are you? |
+```
+
+Resuming it asks first, before any environment is chosen or runtime
+launched:
+
+```text
+$ loop --resume 01M61KF1TV0VM5BNQEAHE1QPY9
+? Its deployment is paused. Resume the deployment and go on? (Y/n)
+```
+
+*Yes* resumes the deployment and goes on; *no* stops there, with nothing
+launched (`Not resumed: its deployment stays paused, and nothing was
+launched.`). Where nobody can be asked, or when Datalayer refuses to resume
+the deployment (a spend limit reached, a rule that paused it), it is refused
+in that sentence, exit 1, with nothing launched. If an application still
+does not come up on the runtime launched for it, that runtime is stopped
+without asking — billed or not, unless you said `--keep`.
+
 Nothing is deleted by this. An ended session keeps its record: `loop
 sessions --all` lists the ended ones too, `loop sessions list --state
 ended` lists them alone, and `loop sessions show <uid>`, `clone <uid>` and

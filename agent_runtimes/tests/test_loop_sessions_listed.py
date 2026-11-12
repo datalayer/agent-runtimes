@@ -71,9 +71,24 @@ def _described() -> List[Dict[str, Any]]:
     """Give sessions as the record lists them, of every kind and state."""
     base = {"agent": "an-agent", "started_at": "2026-11-12T09:00:00+00:00"}
     return [
-        {**base, "uid": "agent-paused", "state": "paused", "app_uid": "agent:coder"},
-        {**base, "uid": "agent-open", "state": "open", "app_uid": "agent:coder"},
-        {**base, "uid": "agent-ended", "state": "ended", "app_uid": "agent:coder"},
+        {
+            **base,
+            "uid": "agent-paused",
+            "state": "paused",
+            "app_uid": "agent:example-simple",
+        },
+        {
+            **base,
+            "uid": "agent-open",
+            "state": "open",
+            "app_uid": "agent:example-simple",
+        },
+        {
+            **base,
+            "uid": "agent-ended",
+            "state": "ended",
+            "app_uid": "agent:example-simple",
+        },
         {**base, "uid": "preview-paused", "state": "paused", "app_uid": "app-1"},
         {
             **base,

@@ -38,6 +38,14 @@ deployment is taken down; a session said `open` on a runtime that no longer
 exists is `paused`. The record is made to say so when it happens, and as a
 session is read for one written before.
 
+The rule is one, kept in two places that stay in step: the platform's
+record (the services' `session_rule`) and this machine's files
+(`agent_runtimes.apps.local_rule`), where an `open` session whose process is
+gone is `paused` and a seat of a self-hosted team run ends with its run. A
+session of a **paused** deployment stays `paused` — pausing a deployment is
+its owner's, and reversible: its owner's list marks it (`paused, deployment
+paused`) and resuming it asks first to resume the deployment.
+
 An ended session is not resumed and not listed by default; it is not
 deleted either. `?state=ended` (`loop sessions list --state ended`, the
 page's *Ended* filter) lists the ended ones, and one is still shown, cloned

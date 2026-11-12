@@ -548,6 +548,19 @@ def runtime_runs_on() -> Dict[str, Any]:
     }
 
 
+def local_holder() -> Optional[Dict[str, Any]]:
+    """The process that holds a session of a runtime started by hand
+    (`local_rule.holder`), when its sessions are kept in files on this
+    machine; ``None`` when they are sent to the platform's record, which is
+    told nothing of this machine."""
+    from agent_runtimes.apps.local_rule import holder
+    from agent_runtimes.apps.session_store import active_store
+
+    if str(getattr(active_store(), "name", "")) != "file":
+        return None
+    return holder()
+
+
 def no_lineage() -> Dict[str, Any]:
     """A session that was neither cloned nor imported: both keys said, each ``None``."""
     return {"forked_from": None, "imported_from": None}
@@ -630,6 +643,8 @@ def session_from_entries(
                 described["runs_on"] = dict(
                     payload.get("runs_on") or described["runs_on"]
                 )
+                # The process that holds it, when a runtime started by hand said so.
+                described["held_by"] = payload.get("held_by") or None
                 described["resumed"] = bool(payload.get("resumed"))
         elif kind == "turn":
             described["turns"] += 1
@@ -662,6 +677,10 @@ def session_from_entries(
             }
     if described["state"] == "ended":
         described["runs_on"] = None
+    if described["state"] != "open":
+        described.pop("held_by", None)
+    elif not described.get("held_by"):
+        described.pop("held_by", None)
     return described
 
 
@@ -938,7 +957,17 @@ class AppRecorder:
                     "state": "open",
                     **({"woken_by": woken} if woken else {}),
                     **({"resumed": True} if resumed else {}),
-                    **session_facts(facts),
+                    **(written := session_facts(facts)),
+                    # A runtime started by hand says which process holds the
+                    # session, so that a listing of this machine's sessions
+                    # can tell an open one from one whose process is gone
+                    # (`local_rule`).
+                    **(
+                        {"held_by": held_by}
+                        if written["runs_on"] == {"kind": "runtime", "uid": "local"}
+                        and (held_by := local_holder())
+                        else {}
+                    ),
                 },
             )
 

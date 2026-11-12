@@ -79,7 +79,7 @@ def cells_of_row(row: Paused, number: int, now: Optional[datetime] = None) -> Li
     return [
         str(number),
         row.uid,
-        row.state,
+        row.state_said,
         "agent" if row.kind == "agent" else "app",
         _one_line(row.agent if row.kind == "agent" else (row.app_name or row.app_uid)),
         str(row.turns),

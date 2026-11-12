@@ -22,6 +22,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_runtimes.apps import sessions
+from agent_runtimes.apps.local_rule import holder
 from agent_runtimes.apps.record import (
     SESSION_KINDS,
     SESSION_STATES,
@@ -85,6 +86,8 @@ def test_the_shape_in_the_record_and_describe(
         "title": "",
         "archived": False,
         "lineage": {"forked_from": None, "imported_from": None},
+        # Kept in files by a runtime started by hand: the process that holds it (`local_rule`).
+        "held_by": holder(),
     }
     said = remote.get("/api/v1/apps/sessions/session-0101", headers=as_("ada")).json()
     assert {
