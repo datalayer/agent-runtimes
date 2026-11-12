@@ -89,7 +89,8 @@ dependencies = [
     # its week's report (recommendations-report, every Monday) and its email channel.
     # 1.6.27 with agentspecs 0.0.179: Datalayer Steward for AWS (steward-aws, worker-steward-aws, the tag steward).
     # 1.6.28 with agentspecs 0.0.180: the odoo-accounting quarter-close tools, second round, classed.
-    "agentspecs>=0.0.180",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.29 with agentspecs 0.0.181: the skills load from datalayer_skills.skills.<name>; the Steward's application is aws-steward-agent.
+    "agentspecs>=0.0.181",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
