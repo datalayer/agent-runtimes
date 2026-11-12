@@ -10,10 +10,11 @@ the same golden snapshot: an environment variable, or anything the process read
 at start, is the golden actor's and identical in every clone. The files are the
 actor's own, so they are read again after each wake.
 
-A Datalayer runtime served by an actor is named ``rt-<uid>``, its uid
-lowercased (actor names are DNS labels). The runtime's uid is that name's tail,
-uppercased back: a ULID. That uid is the runtime's identity everywhere on the
-platform; the worker the actor runs on is never named.
+A Datalayer runtime served by an actor is named ``rt-<uid>``: the platform
+spells a runtime's uid as a lowercase ULID, which is a DNS label as actor names
+must be. The runtime's uid is that name's tail, as it is. That uid is the
+runtime's identity everywhere on the platform; the worker the actor runs on is
+never named.
 """
 
 from __future__ import annotations
@@ -31,8 +32,9 @@ UID_FILE = "actor-uid"
 #: The prefix of an actor that serves a Datalayer runtime.
 RUNTIME_ACTOR_PREFIX = "rt-"
 
-#: A runtime uid: a ULID (Crockford base32, 26 characters).
-_ULID = re.compile(r"^[0-9A-HJKMNP-TV-Z]{26}$")
+#: A runtime uid: a ULID (Crockford base32, 26 characters), lowercase as the
+#: platform spells it.
+_ULID = re.compile(r"^[0-9a-hjkmnp-tv-z]{26}$")
 
 
 @dataclass(frozen=True)
@@ -69,27 +71,28 @@ def runtime_uid_of_actor(actor_name: Optional[str]) -> Optional[str]:
     Returns
     -------
     str or None
-        The ULID, uppercased; ``None`` when the name is not a runtime's.
+        The ULID, lowercase as the platform spells it; ``None`` when the
+        name is not a runtime's.
     """
     name = (actor_name or "").strip()
     if not name.startswith(RUNTIME_ACTOR_PREFIX):
         return None
-    uid = name[len(RUNTIME_ACTOR_PREFIX) :].upper()
+    uid = name[len(RUNTIME_ACTOR_PREFIX) :].lower()
     return uid if _ULID.match(uid) else None
 
 
 def actor_name_of_runtime(runtime_uid: str) -> str:
-    """The actor name of a Datalayer runtime: ``rt-`` and its uid, lowercased.
+    """The actor name of a Datalayer runtime: ``rt-`` and its uid (lowercase).
 
     Raises
     ------
     ValueError
         When the uid is not a ULID, in a sentence.
     """
-    uid = (runtime_uid or "").strip().upper()
+    uid = (runtime_uid or "").strip().lower()
     if not _ULID.match(uid):
         raise ValueError(f"A runtime uid is a ULID, not {runtime_uid!r}.")
-    return f"{RUNTIME_ACTOR_PREFIX}{uid.lower()}"
+    return f"{RUNTIME_ACTOR_PREFIX}{uid}"
 
 
 def _read(directory: Path, name: str) -> str:

@@ -38,8 +38,8 @@ from agent_runtimes.ate.template import (
 )
 from agent_runtimes.commands.serve import ServeError, Target, serve_server
 
-UID_A = "01JQ7ZK3M4N5P6Q7R8S9T0V1W2"
-UID_B = "01JQ7ZK3M4N5P6Q7R8S9T0V1W3"
+UID_A = "01jq7zk3m4n5p6q7r8s9t0v1w2"
+UID_B = "01jq7zk3m4n5p6q7r8s9t0v1w3"
 IMAGE = "ghcr.io/example/agent-runtimes@sha256:" + "a" * 64
 
 
@@ -99,7 +99,7 @@ def test_is_ate_target() -> None:
 
 def test_runtime_actor_names_round_trip() -> None:
     name = actor_name_of_runtime(UID_A)
-    assert name == "rt-" + UID_A.lower()
+    assert name == "rt-" + UID_A
     assert runtime_uid_of_actor(name) == UID_A
 
 
@@ -117,12 +117,12 @@ def test_a_runtime_uid_is_a_ulid() -> None:
 
 def test_identity_is_read_from_the_system_info_files(tmp_path: Path) -> None:
     identity = read_identity(
-        str(actor_dir(tmp_path, "rt-" + UID_A.lower(), uid="incarnation-7"))
+        str(actor_dir(tmp_path, "rt-" + UID_A, uid="incarnation-7"))
     )
     assert identity is not None
     assert identity.as_dict() == {
         "atespace": "agents",
-        "actor": "rt-" + UID_A.lower(),
+        "actor": "rt-" + UID_A,
         "actor_uid": "incarnation-7",
         "runtime_uid": UID_A,
     }
