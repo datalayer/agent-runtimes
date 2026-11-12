@@ -140,7 +140,7 @@ def events_ls(
         None, "--base-url", help="Datalayer run base URL."
     ),
 ) -> None:
-    """List agent events (alias for list)."""
+    """List agent events."""
     events_list(agent_id=agent_id, kind=kind, token=token, base_url=base_url)
 
 

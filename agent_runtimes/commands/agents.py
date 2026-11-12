@@ -914,7 +914,7 @@ def agents_ls(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List running agent runtimes (root command alias)."""
+    """List running agent runtimes."""
     list_agents(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
 

@@ -127,7 +127,7 @@ def checkpoints_ls(
         help="Datalayer Runtimes server URL.",
     ),
 ) -> None:
-    """List runtime checkpoints (root command alias)."""
+    """List runtime checkpoints."""
     checkpoints_list(agent_uid=agent_uid, token=token, runtimes_url=runtimes_url)
 
 

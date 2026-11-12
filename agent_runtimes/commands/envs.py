@@ -1162,7 +1162,7 @@ def envs_list(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List available environments (root command)."""
+    """List available environments."""
     list_environments(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
 
@@ -1183,5 +1183,5 @@ def envs_ls(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List available environments (root command alias)."""
+    """List available environments."""
     list_environments(token=token, iam_url=iam_url, runtimes_url=runtimes_url)

@@ -156,7 +156,7 @@ def snapshots_list(
         help="API key (Bearer token for API requests).",
     ),
 ) -> None:
-    """List all snapshots (root command)."""
+    """List all snapshots."""
     list_snapshots(token=token)
 
 
@@ -167,5 +167,5 @@ def snapshots_ls(
         help="API key (Bearer token for API requests).",
     ),
 ) -> None:
-    """List all snapshots (root command alias)."""
+    """List all snapshots."""
     list_snapshots(token=token)

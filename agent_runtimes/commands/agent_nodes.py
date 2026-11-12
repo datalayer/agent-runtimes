@@ -106,7 +106,7 @@ def agent_nodes_list(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List registered agent nodes (root command)."""
+    """List registered agent nodes."""
     list_agent_nodes(token=token, runtimes_url=runtimes_url)
 
 
@@ -122,5 +122,5 @@ def agent_nodes_ls(
         help="Datalayer Runtimes server URL",
     ),
 ) -> None:
-    """List registered agent nodes (root alias)."""
+    """List registered agent nodes."""
     list_agent_nodes(token=token, runtimes_url=runtimes_url)
