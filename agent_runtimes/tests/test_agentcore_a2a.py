@@ -426,7 +426,13 @@ async def test_a_team_seat_on_agentcore_records_its_task_as_a_turn_of_a_seat_ses
         assert EXTENSION_URI in extensions
         # One session, the seat's, in the record.
         [described] = store.described()
-        entries = await store.entries(described["uid"])
+        # The task says completed before its turn is written to the record:
+        # the turn is waited for, a moment, not read at once.
+        for _ in range(200):
+            entries = await store.entries(described["uid"])
+            if any(entry["kind"] == "turn" for entry in entries):
+                break
+            await asyncio.sleep(0.02)
         [head] = [entry for entry in entries if entry["kind"] == "session"]
         assert head["payload"]["runs_on"] == {
             "kind": "team_run",
