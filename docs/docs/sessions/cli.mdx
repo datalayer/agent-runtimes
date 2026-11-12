@@ -123,7 +123,7 @@ sentence and the command exits 1.
 
 | Verb | What it does |
 | --- | --- |
-| `loop sessions list [--app <id>] [--all] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--all` includes the archived. |
+| `loop sessions list [--app <id>] [--archived] [--state open\|paused\|ended] [--limit n]` | Your sessions, held and recorded, newest first; `--archived` lists the archived ones too, each marked `archived`. |
 | `loop sessions show <uid>` | What a session is: state, turn, agent and harness, turns, lineage, where it runs, its harness row with the vendor's session id when the adapter exposes it. |
 | `loop sessions pause <uid>` | Pause a session its runtime holds: what its conversation holds is given to its agent's memory first, when the agent has one, and its record says `paused`. |
 | `loop sessions resume <uid> [--agent <id>]` | Resume a paused session — held, or from its record on a runtime of its application (`--agent` names the application's agent there). |

@@ -169,6 +169,7 @@ def session_line(session: Dict[str, Any]) -> str:
             str(session.get("agent") or ""),
             f"{turns} turn{'s' if turns != 1 else ''}",
             where,
+            "archived" if session.get("archived") else "",
             said,
             f"— {title}" if title else "",
         )
@@ -609,7 +610,9 @@ def list_sessions(
     app_id: str = typer.Option(
         "", "--app", help="One application's sessions, by its id."
     ),
-    all_sessions: bool = typer.Option(False, "--all", help="The archived ones too."),
+    archived: bool = typer.Option(
+        False, "--archived", help="The archived ones too; each is marked `archived`."
+    ),
     state: str = typer.Option("", "--state", help="open, paused or ended."),
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     server: Optional[str] = _server_option(),
@@ -621,7 +624,7 @@ def list_sessions(
         params: Dict[str, Any] = {"limit": limit}
         if app_id:
             params["app"] = app_id
-        if all_sessions:
+        if archived:
             params["archived"] = "true"
         if state:
             params["state"] = state
