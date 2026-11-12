@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 from fastapi import FastAPI
@@ -242,9 +242,11 @@ def test_the_identity_names_the_runtime_uid_never_a_worker(client: TestClient) -
 
 
 @pytest.fixture
-def no_server(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+def no_server(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[dict[str, Any]]]:
+    """No server started; the environment serve_server writes is put back after."""
     import uvicorn
 
+    environ = dict(os.environ)
     runs: list[dict[str, Any]] = []
     monkeypatch.setattr(uvicorn, "run", lambda *a, **k: runs.append(k))
     for name in (
@@ -259,7 +261,9 @@ def no_server(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
         "AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS",
     ):
         monkeypatch.delenv(name, raising=False)
-    return runs
+    yield runs
+    os.environ.clear()
+    os.environ.update(environ)
 
 
 def test_serve_target_ate_listens_on_80_without_an_agent(

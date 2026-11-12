@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import socket
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 import yaml
@@ -225,12 +226,16 @@ def test_server_ids_are_unique() -> None:
 
 
 @pytest.fixture()
-def no_server(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+def no_server(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[dict[str, Any]]]:
+    """No server started; the environment serve_server writes is put back after."""
     import uvicorn
 
+    environ = dict(os.environ)
     runs: list[dict[str, Any]] = []
     monkeypatch.setattr(uvicorn, "run", lambda *a, **k: runs.append(k))
-    return runs
+    yield runs
+    os.environ.clear()
+    os.environ.update(environ)
 
 
 def test_serve_target_kagent_configures_the_agent(
@@ -259,7 +264,6 @@ def test_serve_target_kagent_configures_the_agent(
         "AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS",
     ):
         monkeypatch.delenv(name, raising=False)
-    import os
 
     serve_server(host="0.0.0.0", port=9999, target=Target.kagent)  # nosec B104 - overridden
     assert no_server[0]["host"] == "127.0.0.1" and no_server[0]["port"] == 8765
