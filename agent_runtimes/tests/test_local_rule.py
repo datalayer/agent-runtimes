@@ -175,11 +175,12 @@ def test_a_runtime_started_by_hand_says_which_process_holds_its_session() -> Non
         "payload": {"agent": "a", "runs_on": HERE, "held_by": ALIVE},
         "at": "2026-11-12T10:00:00Z",
     }
-    assert session_from_entries("s", [opened])["held_by"] == ALIVE
+    held = session_from_entries("s", [opened])
+    assert held is not None and held["held_by"] == ALIVE
     paused = session_from_entries(
         "s", [opened, {"kind": "paused", "payload": {"state": "paused"}}]
     )
-    assert "held_by" not in paused
+    assert paused is not None and "held_by" not in paused
 
 
 def test_the_files_are_made_to_say_it_as_they_are_listed(

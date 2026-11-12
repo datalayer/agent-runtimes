@@ -552,7 +552,8 @@ def local_holder() -> Optional[Dict[str, Any]]:
     """The process that holds a session of a runtime started by hand
     (`local_rule.holder`), when its sessions are kept in files on this
     machine; ``None`` when they are sent to the platform's record, which is
-    told nothing of this machine."""
+    told nothing of this machine.
+    """
     from agent_runtimes.apps.local_rule import holder
     from agent_runtimes.apps.session_store import active_store
 

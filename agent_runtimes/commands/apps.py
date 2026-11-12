@@ -2175,7 +2175,8 @@ def deployment_preflight(deployment: Any, store: Any, confirm: Any = None) -> An
 
 def _sentence(text: str) -> str:
     """A refusal as one sentence: the ``detail`` of a JSON answer when it is
-    one, on one line, ending with one full stop."""
+    one, on one line, ending with one full stop.
+    """
     said = str(text or "").strip()
     try:
         body = json.loads(said)

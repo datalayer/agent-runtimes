@@ -100,7 +100,9 @@ dependencies = [
     # semver proper (the 0.0.x releases made no compatibility promise across
     # even a patch bump, hence the one-release-wide pin until then); the
     # field-name constants it exports are the ones 0.0.3 made public.
-    "agent-teams>=1.0.0,<2",
+    # 1.1.5: a self-hosted run says which process holds it (`held_by`), which the
+    # local sessions rule reads; resuming an ended team session names its clone command.
+    "agent-teams>=1.1.5,<2",
     # Agent Shield: the Shield's engine —
     # the policy model and `decide`, the ACP channel and proxy, the audit
     # vocabulary, the SaaS client. agent-runtimes hosts it; it never imports

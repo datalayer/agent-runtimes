@@ -116,8 +116,9 @@ class Paused:
 
     @property
     def state_said(self) -> str:
-        """Its state as a listing says it: the state, marked when its
-        deployment is paused (as an archived one is marked)."""
+        """The state as a listing says it: the state, marked when its
+        deployment is paused (as an archived one is marked).
+        """
         if self.deployment_paused and self.state != "ended":
             return f"{self.state}, deployment paused"
         return self.state
