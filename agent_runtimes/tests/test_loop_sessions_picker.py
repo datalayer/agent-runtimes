@@ -22,8 +22,6 @@ from agent_runtimes.loop.paused import (
     MANAGED,
     STATES,
     Paused,
-    is_listed,
-    listed,
     paused_sessions,
 )
 from agent_runtimes.loop.picker import Picker, listing_json, listing_lines, why_not
