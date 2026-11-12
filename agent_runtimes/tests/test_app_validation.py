@@ -203,7 +203,9 @@ def test_a_guard_named_that_this_runtime_does_not_run_is_said_and_runs_on_the_an
         tests={"cases": [{"ask": "Hello", "expect": "It greets back."}]},
     )
     report = _run(
-        app, {"Hello": '{"name": "Ana", "IBAN": "BE68 5390 0754 7034"}'}, judge_saying({})
+        app,
+        {"Hello": '{"name": "Ana", "IBAN": "BE68 5390 0754 7034"}'},
+        judge_saying({}),
     )
     # No Gate: the Guard's signal on the answer — the personal data in it, an IBAN — fails the case by itself.
     assert [(case.state, case.check) for case in report.cases] == [

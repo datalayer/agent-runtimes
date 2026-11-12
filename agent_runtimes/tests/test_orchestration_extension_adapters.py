@@ -768,7 +768,8 @@ class TestAnACPAgentSpeakingTheExtension:
 class TestAWorkerAskedWithAToken:
     """A seat behind a relay serves its card only to the token it is asked
     with: resolved without it, it read as serving none and its delegations
-    named no execution, so the seat recorded no session."""
+    named no execution, so the seat recorded no session.
+    """
 
     @pytest.mark.asyncio
     async def test_its_card_is_read_again_with_the_token_and_says_what_it_speaks(

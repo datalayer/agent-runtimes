@@ -85,7 +85,9 @@ async def relayed(path: str, request: Request) -> Response:
     bearer = bearer_of(request.headers.get("authorization"))
     key = request.headers.get("x-api-key")
     if not _is_the_handle(bearer) and not _is_the_handle(key):
-        raise HTTPException(status_code=401, detail="That is not this harness's handle.")
+        raise HTTPException(
+            status_code=401, detail="That is not this harness's handle."
+        )
     refusal = inference_token_refusal()
     token = inference_token()
     if refusal or not token:
@@ -98,9 +100,7 @@ async def relayed(path: str, request: Request) -> Response:
     headers["authorization"] = f"Bearer {token}"
     if key is not None:
         headers["x-api-key"] = token
-    root = _normalize_ai_inference_base_url(
-        harness_inference.inference_url()
-    )
+    root = _normalize_ai_inference_base_url(harness_inference.inference_url())
     query = request.url.query
     return await passed_on(
         request, f"{root}/{path}{'?' + query if query else ''}", headers, _ANSWERED

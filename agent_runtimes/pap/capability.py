@@ -45,6 +45,10 @@ from personal_agent_protocol import (
     operations_negotiated,
     resolve_pairwise_user_id,
 )
+from personal_agent_protocol.extensions import (
+    SUPPORTED_EXTENSIONS,
+    negotiate_extensions,
+)
 from personal_agent_protocol.models import (
     Author,
     ClientMetadata,
@@ -53,7 +57,6 @@ from personal_agent_protocol.models import (
     Operation,
     operations_content,
 )
-from personal_agent_protocol.extensions import SUPPORTED_EXTENSIONS, negotiate_extensions
 from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
@@ -519,11 +522,21 @@ class PapPersonalAgentCapability:
         if page.working or page.has_more:
             # Accepted, not yet acted on (§8.3): read until the company has no work in progress (§8.7).
             rest = await client.read_until_done(
-                endpoint, page.conversation_id, session=session, token=link.token, cursor=page.cursor, wait=10
+                endpoint,
+                page.conversation_id,
+                session=session,
+                token=link.token,
+                cursor=page.cursor,
+                wait=10,
             )
             seen = {event.id for event in page.events}
             page = rest.model_copy(
-                update={"events": [*page.events, *(e for e in rest.events if e.id not in seen)]}
+                update={
+                    "events": [
+                        *page.events,
+                        *(e for e in rest.events if e.id not in seen),
+                    ]
+                }
             )
         operations = self._keep(link, page)
         replies: list[PapReplyLine] = []
@@ -582,7 +595,9 @@ class PapPersonalAgentCapability:
             )
         # Never `poppy:browser-sign-in` (PAP draft 0.4 §4.7, §6): it joins no browser to a Session.
         offered = tuple(
-            scope for scope in metadata.scopes_supported or () if scope != BROWSER_SIGN_IN_SCOPE
+            scope
+            for scope in metadata.scopes_supported or ()
+            if scope != BROWSER_SIGN_IN_SCOPE
         )
         asked = offered if scopes is None else tuple(scopes)
         beyond = [scope for scope in asked if scope not in offered]

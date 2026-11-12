@@ -214,7 +214,10 @@ def keep_played(module: Any, scene: Any, verdict: Any) -> Optional[Any]:
         return write(scene.id, played)
     except PermissionError:
         # An installed catalogue is read-only: a job's rehearsal is kept where it publishes it.
-        logger.info("The rehearsal of %s is not kept beside its scene: the catalogue is read-only here.", scene.id)
+        logger.info(
+            "The rehearsal of %s is not kept beside its scene: the catalogue is read-only here.",
+            scene.id,
+        )
         return None
     except OSError as refused:
         logger.warning("The rehearsal of %s was not kept: %s", scene.id, refused)

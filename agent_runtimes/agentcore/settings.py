@@ -41,7 +41,7 @@ PROTOCOL_VARIABLE = "AGENTCORE_PROTOCOL"
 SEAT_PROTOCOL = "A2A"
 
 #: AgentCore's host: every interface.
-HOST = "0.0.0.0"
+HOST = "0.0.0.0"  # nosec B104 - AgentCore's contract: its container listens on every interface
 
 #: AgentCore's default port for HTTP and AG-UI.
 DEFAULT_PORT = 8080

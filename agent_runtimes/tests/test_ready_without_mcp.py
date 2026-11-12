@@ -22,7 +22,7 @@ import logging
 import sys
 import time
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -155,7 +155,7 @@ async def test_a_server_starting_is_not_started_again(
         _selected_mcp_servers=[SimpleNamespace(id="hanging", origin="catalog")],
         _codemode_builder=None,
     )
-    monkeypatch.setitem(_agents, "once", (adapter, SimpleNamespace()))  # type: ignore[arg-type]
+    monkeypatch.setitem(_agents, "once", cast(Any, (adapter, SimpleNamespace())))
     first = asyncio.create_task(
         agents._start_mcp_servers_for_agent("once", [], deadline=DEADLINE)
     )

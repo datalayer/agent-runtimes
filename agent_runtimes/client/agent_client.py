@@ -17,7 +17,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import requests
@@ -1181,6 +1181,9 @@ class AgentClient(
         if api_key:
             client_for_request = _BaseDatalayerClient(urls=self._urls, api_key=api_key)
 
+        # Named only when given: a client that does not know it is not told.
+        setup: Dict[str, Any] = {"agent_setup": agent_setup} if agent_setup else {}
+
         if snapshot_name is not None or from_snapshot_uid:
             snapshot_uid = from_snapshot_uid or None
             if snapshot_uid is None:
@@ -1209,7 +1212,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
-                **({"agent_setup": agent_setup} if agent_setup else {}),
+                **setup,
             )
         else:
             # Create runtime without snapshot
@@ -1227,7 +1230,7 @@ class AgentClient(
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
                 app_spec=app_spec or None,
-                **({"agent_setup": agent_setup} if agent_setup else {}),
+                **setup,
             )
 
         # Process the response and create RuntimesService object

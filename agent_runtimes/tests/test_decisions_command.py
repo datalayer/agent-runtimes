@@ -273,7 +273,8 @@ def test_it_is_offered_in_help_and_the_menu_only_for_an_agent_that_decides(
     assert registry.resolve("decide") is registry.resolve("decisions") is not None
     assert "decisions" in registry.as_mapping()
 
-    assert asyncio.run(decisions_command.refresh(cast(Any, tux)))["spec"] == "jev:0.0.1"
+    refreshed = asyncio.run(decisions_command.refresh(cast(Any, tux)))
+    assert refreshed is not None and refreshed["spec"] == "jev:0.0.1"
     assert listed()
 
     # Switched to an agent that does not decide: gone from both, until read again.

@@ -592,7 +592,8 @@ class AgentCoreTarget:
     @classmethod
     def online_evaluation_name(cls, deployment: Deployment) -> str:
         """The online evaluation configuration of an agent runtime, one per runtime
-        (AgentCore allows 48 characters)."""
+        (AgentCore allows 48 characters).
+        """
         return f"{cls.runtime_name_of(deployment)[:37]}_evaluation"
 
     async def evaluate_online(

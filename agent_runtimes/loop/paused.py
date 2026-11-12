@@ -56,7 +56,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from agent_runtimes.apps.record import session_kind
 
@@ -255,7 +255,7 @@ def catalogue_names() -> Dict[str, str]:
 
 
 def paused_of(
-    sessions: List[Mapping[str, Any]],
+    sessions: Sequence[Mapping[str, Any]],
     store: str,
     deployments: Optional[Mapping[str, Mapping[str, Any]]] = None,
     names: Optional[Mapping[str, str]] = None,
@@ -335,7 +335,8 @@ def local_paused(
     states: Tuple[str, ...] = ("paused",),
 ) -> List[Paused]:
     """The sessions kept in files on this machine: the paused ones, unless
-    other ``states`` are named."""
+    other ``states`` are named.
+    """
     from agent_runtimes.apps.session_store import FileSessionStore
 
     files = store or FileSessionStore()

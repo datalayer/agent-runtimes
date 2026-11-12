@@ -173,7 +173,8 @@ def books_bearer(server_id: str) -> Optional[str]:
 
 def books_left_out(toolsets: list) -> list:
     """The run's toolsets as the process holds them, without a server started
-    with the books key when the run is no Battle's on those books."""
+    with the books key when the run is no Battle's on those books.
+    """
     return [
         toolset
         for toolset in toolsets

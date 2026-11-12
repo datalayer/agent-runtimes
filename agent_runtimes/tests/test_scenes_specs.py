@@ -127,5 +127,6 @@ def test_what_a_scene_needs_arrives_as_setup() -> None:
     ]
     # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
     assert not any(
-        "odoo-accounting" in step for step in SCENE_CATALOGUE["sales-and-accounting"].setup
+        "odoo-accounting" in step
+        for step in SCENE_CATALOGUE["sales-and-accounting"].setup
     )

@@ -17,7 +17,11 @@ from personal_agent_protocol import (
     SessionHttpClient,
     generate_request_id,
 )
-from personal_agent_protocol.conversations import StreamReconnected, TextDelta, WorkingChanged
+from personal_agent_protocol.conversations import (
+    StreamReconnected,
+    TextDelta,
+    WorkingChanged,
+)
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
     InProcessNetwork,
@@ -139,7 +143,9 @@ async def explain_conversation_streaming() -> dict[str, Any]:
         else:
             delivered.append(item.id)
             last_state = (
-                ("closed" if item.closed else "open") if item.type == "state" else last_state
+                ("closed" if item.closed else "open")
+                if item.type == "state"
+                else last_state
             )
             if item.message is not None and item.message.role == "company":
                 final_text.append(item.message.text or "")

@@ -111,9 +111,18 @@ def _served(app: Any) -> tuple[Any, threading.Thread, int]:
 
 @pytest.fixture
 def gateway(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[Gateway, str]]:
-    """The stand-in, and the runtime's own route a harness reaches it through."""
+    """
+    The stand-in, and the runtime's own route a harness reaches it through.
+
+    Yields
+    ------
+    tuple[Gateway, str]
+        The stand-in and the address of the route.
+    """
     stand_in = Gateway()
-    server, thread, port = _served(stand_in.server().streamable_http_app(host="127.0.0.1"))
+    server, thread, port = _served(
+        stand_in.server().streamable_http_app(host="127.0.0.1")
+    )
     runtime = FastAPI()
     runtime.include_router(mcp_lent_router, prefix="/api/v1")
     runtime_server, runtime_thread, runtime_port = _served(runtime)

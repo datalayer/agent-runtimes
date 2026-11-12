@@ -393,7 +393,7 @@ STATE = "state-issued-by-iam"
 
 @pytest.fixture()
 def consent(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """IAM's binding page and a state, as `identity.consent` gets them."""
+    """Give IAM's binding page and a state, as `identity.consent` gets them."""
     from agent_runtimes.identity import consent as consent_module
 
     asked: list[Any] = []

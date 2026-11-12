@@ -54,13 +54,27 @@ TRACEPARENT = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
 
 async def _chunks(body: bytes) -> AsyncIterator[bytes]:
-    """A body as a stream comes: the route passes it on as it arrives."""
+    """
+    A body as a stream comes: the route passes it on as it arrives.
+
+    Yields
+    ------
+    bytes
+        The body, in one chunk.
+    """
     yield body
 
 
 @pytest.fixture()
 def answered() -> Iterator[List[httpx.Request]]:
-    """The gateway, keeping what reaches it."""
+    """
+    The gateway, keeping what reaches it.
+
+    Yields
+    ------
+    List[httpx.Request]
+        The requests it got.
+    """
     seen: List[httpx.Request] = []
 
     def gateway(request: httpx.Request) -> httpx.Response:
@@ -221,7 +235,7 @@ def _strings_of(pid: int) -> bytes:
             if not permissions.startswith("r"):
                 continue
             start, stop = (int(end, 16) for end in span.split("-"))
-            if stop >= 0x7fff_ffff_f000:
+            if stop >= 0x7FFF_FFFF_F000:
                 continue
             try:
                 memory.seek(start)
@@ -317,7 +331,14 @@ def _free_port() -> int:
 
 @pytest.fixture()
 def a_gateway() -> Iterator[str]:
-    """A real Streamable HTTP MCP server beside the route, checking the bearer."""
+    """
+    A real Streamable HTTP MCP server beside the route, checking the bearer.
+
+    Yields
+    ------
+    str
+        The server's MCP address.
+    """
     import uvicorn
     from mcp.server import MCPServer
     from starlette.applications import Starlette
@@ -396,7 +417,12 @@ async def test_the_stdio_shim_reaches_it_with_nothing_of_the_credential(
     handle = lent_stdio.hold("earthdata", a_gateway, TOKEN)
     params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", lent_stdio.lent_url(handle)],
+        args=[
+            "-m",
+            "agent_runtimes.mcp.lent_stdio",
+            "--lent",
+            lent_stdio.lent_url(handle),
+        ],
         env={"PATH": os.environ["PATH"], "HOME": os.environ["HOME"]},
     )
     try:

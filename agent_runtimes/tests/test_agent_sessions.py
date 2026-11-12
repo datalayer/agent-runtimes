@@ -17,7 +17,7 @@ agent has a memory, before the session is marked paused.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -413,7 +413,7 @@ def test_the_machine_itself_lists_the_record_as_the_person_whose_token_it_sends(
         }
 
     store = RecordSessionStore()
-    store.lister = lister  # type: ignore[method-assign]
+    setattr(store, "lister", lister)
     use_session_store(store)
     listed = local.get(SESSIONS, headers=as_("ada")).json()["sessions"]
     assert (asked[0]["bearer"], asked[0]["opened_by"]) == ("ada", "ada")
@@ -469,7 +469,7 @@ def test_an_agent_talked_to_over_another_transport_runs_its_sessions_all_the_sam
     use_session_store(FileSessionStore(root=tmp_path / "sessions"))
     model = Said()
     agent = Agent(FunctionModel(model, stream_function=model.stream))
-    _agents[AGENT] = (PydanticAIAdapter(agent, agent_id=AGENT), object())
+    _agents[AGENT] = (PydanticAIAdapter(agent, agent_id=AGENT), cast(Any, object()))
     agents._agentspecs[AGENT] = {"agent_spec_id": SPEC, "name": "The Marketer"}
     try:
         assert get_agui_app(AGENT) is None

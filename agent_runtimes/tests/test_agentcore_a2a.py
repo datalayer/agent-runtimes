@@ -58,7 +58,14 @@ def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
 
 
 async def streamed(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterator[str]:
-    """Stream the seat's answer, as the A2A worker asks it."""
+    """
+    Stream the seat's answer, as the A2A worker asks it.
+
+    Yields
+    ------
+    str
+        A part of the answer.
+    """
     _called_with()
     yield "The seat "
     yield "did the task."
@@ -66,7 +73,14 @@ async def streamed(messages: list[ModelMessage], info: AgentInfo) -> AsyncIterat
 
 @pytest.fixture()
 def configured(state: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:  # noqa: F811
-    """The agent of the spec, as configure-from-spec leaves it on the runtime."""
+    """
+    The agent of the spec, as configure-from-spec leaves it on the runtime.
+
+    Yields
+    ------
+    None
+        Nothing: the agent is configured while the test runs.
+    """
     from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
     from agent_runtimes.transports import AGUITransport
 
@@ -134,6 +148,7 @@ async def test_a_delegated_task_runs_on_the_seat_at_the_root(configured: None) -
     exchange.use_exchange(None)
     seat.register_seat({"AGENTCORE_RUNTIME_URL": URL})
     served = a2a_routes._a2a_agents[AGENT_ID].app
+    assert served is not None
     async with (
         served.router.lifespan_context(served),
         httpx.AsyncClient(
@@ -231,6 +246,7 @@ async def test_a_seat_answers_a_task_routed_by_agentcore_on_the_runs_session(
     CALLED_WITH.clear()
     seat.register_seat({"AGENTCORE_RUNTIME_URL": URL})
     served = a2a_routes._a2a_agents[AGENT_ID].app
+    assert served is not None
     # As AgentCore calls the container: the bearer its authorizer validated,
     # the session the relay named (the run, behind its padding).
     routed = {
@@ -361,6 +377,7 @@ async def test_a_team_seat_on_agentcore_records_its_task_as_a_turn_of_a_seat_ses
     exchange.use_exchange(None)
     seat.register_seat({"AGENTCORE_RUNTIME_URL": URL})
     served = a2a_routes._a2a_agents[AGENT_ID].app
+    assert served is not None
     credential = jwt.encode({"sub": "ada"}, "a-secret", algorithm="HS256")
     message = {
         **_message("Review the benchmark."),

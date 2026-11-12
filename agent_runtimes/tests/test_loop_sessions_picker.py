@@ -703,12 +703,17 @@ def test_stop_ends_the_walk_and_deletes_nothing_more() -> None:
     ]
     replies = iter([command.DELETE_YES, command.DELETE_STOP, command.DELETE_YES])
     deleted: List[str] = []
+
+    def delete(uid: str, token: str, where: str) -> str:
+        deleted.append(uid)
+        return "ok"
+
     counts = command.delete_across(
         rows,
         "",
         lambda row: next(replies),
         lambda line: None,
-        lambda uid, token, where: deleted.append(uid) or "ok",
+        delete,
     )
     assert deleted == ["01-0"] and counts == (1, 0)
 

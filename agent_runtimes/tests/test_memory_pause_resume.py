@@ -30,7 +30,7 @@ import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, Optional
 
 import pytest
 
@@ -74,7 +74,9 @@ def datalayer_runtime(monkeypatch: pytest.MonkeyPatch) -> Dict[str, str]:
 def test_a_runtime_keeps_memories_in_postgres_and_embeds_through_ai_inference(
     datalayer_runtime: Dict[str, str],
 ) -> None:
-    resolved = memory_config.resolve_mem0_config("u1", "worker-marketer")
+    resolved: Optional[Dict[str, Any]] = memory_config.resolve_mem0_config(
+        "u1", "worker-marketer"
+    )
     assert resolved is not None
     store = resolved["vector_store"]
     assert store["provider"] == "pgvector"
@@ -134,7 +136,7 @@ def test_off_datalayer_the_local_defaults_stay(monkeypatch: pytest.MonkeyPatch) 
 
 
 class FakeMem0:
-    """mem0's `Memory`, keeping rows where a table would: past any one runtime."""
+    """The `Memory` of mem0, keeping rows where a table would: past any one runtime."""
 
     rows: Dict[str, Dict[str, Any]] = {}
     built: List[Dict[str, Any]] = []
@@ -399,7 +401,7 @@ def _vector(text: str) -> List[float]:
 
 
 class _Embeddings(BaseHTTPRequestHandler):
-    """ai-inference's OpenAI-compatible embeddings route, as mem0 calls it."""
+    """The OpenAI-compatible embeddings route of ai-inference, as mem0 calls it."""
 
     asked: List[Dict[str, Any]] = []
 
@@ -432,8 +434,8 @@ class _Embeddings(BaseHTTPRequestHandler):
 @pytest.fixture(scope="module")
 def postgres() -> Iterator[Dict[str, Any]]:
     """A PostgreSQL with pgvector in a container, holding the platform's table."""
-    docker = shutil.which("docker")
-    if docker is None:
+    docker = shutil.which("docker") or ""
+    if not docker:
         pytest.skip("No docker here to start a PostgreSQL with pgvector in.")
     present = subprocess.run(
         [docker, "image", "inspect", PGVECTOR_IMAGE], capture_output=True, check=False

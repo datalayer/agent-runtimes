@@ -118,7 +118,7 @@ Writer = Callable[[str, Dict[str, Any]], Awaitable[None]]
 
 
 async def _write_record(token: str, body: Dict[str, Any]) -> None:
-    """Entries added to a session's record on Datalayer, as the person."""
+    """Add entries to a session's record on Datalayer, as the person."""
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 

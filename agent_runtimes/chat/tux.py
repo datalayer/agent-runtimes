@@ -1022,10 +1022,10 @@ class CliTux:
                         if isinstance(a, dict) and isinstance(a.get("id"), str)
                     }
                     # Decided since: said, and no longer waited on.
-                    for approval_id in list(self._approvals_waiting):
-                        entry = by_id.get(approval_id)
+                    for waiting_id in list(self._approvals_waiting):
+                        entry = by_id.get(waiting_id)
                         if entry is not None and entry.get("status") != "pending":
-                            self._approvals_waiting.discard(approval_id)
+                            self._approvals_waiting.discard(waiting_id)
                             self._say_approval_decided(
                                 entry,
                                 str(entry.get("status") or "decided"),

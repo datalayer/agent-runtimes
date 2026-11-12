@@ -154,7 +154,8 @@ _DAILY_WORDS = re.compile(r"daily|per day", re.IGNORECASE)
 
 class JudgeLimited(RuntimeError):
     """The judge's model refused for its provider's limit: AI Inference's
-    429, or a 5xx whose body names a rate limit or a quota."""
+    429, or a 5xx whose body names a rate limit or a quota.
+    """
 
     def __init__(self, message: str, *, daily: bool = False) -> None:
         super().__init__(message)
@@ -168,7 +169,8 @@ def is_judge_limited(status: int, body: str) -> bool:
 
 def judge_name_of(model: str) -> str:
     """A model's short name for a sentence: Claude for any Claude, else its
-    catalogue name without the vendor (Qwen-Max)."""
+    catalogue name without the vendor (Qwen-Max).
+    """
     if "claude" in (model or "").lower():
         return "Claude"
     if not model:

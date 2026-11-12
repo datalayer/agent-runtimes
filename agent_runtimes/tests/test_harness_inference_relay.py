@@ -63,7 +63,14 @@ async def _chunks(body: bytes) -> AsyncIterator[bytes]:
 
 @pytest.fixture()
 def reached() -> Iterator[List[httpx.Request]]:
-    """ai-inference, keeping what reaches it."""
+    """
+    Mock ai-inference, keeping what reaches it.
+
+    Yields
+    ------
+    List[httpx.Request]
+        The requests it got.
+    """
     seen: List[httpx.Request] = []
 
     def answer(request: httpx.Request) -> httpx.Response:
@@ -78,7 +85,9 @@ def reached() -> Iterator[List[httpx.Request]]:
             content=_chunks(b"data: done\n\n"),
         )
 
-    mcp_lent.use_client(lambda: httpx.AsyncClient(transport=httpx.MockTransport(answer)))
+    mcp_lent.use_client(
+        lambda: httpx.AsyncClient(transport=httpx.MockTransport(answer))
+    )
     yield seen
     mcp_lent.use_client(None)
 

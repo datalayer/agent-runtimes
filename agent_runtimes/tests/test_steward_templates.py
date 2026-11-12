@@ -4,7 +4,8 @@
 """The CloudFormation templates of Datalayer Steward for AWS, read as AWS reads them:
 the read role grants no action that is not a read; the change role never
 allows IAM, KMS, Organizations, account or billing actions, and sits under
-a permissions boundary that denies them."""
+a permissions boundary that denies them.
+"""
 
 from __future__ import annotations
 

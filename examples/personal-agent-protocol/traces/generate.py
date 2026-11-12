@@ -63,7 +63,11 @@ from personal_agent_protocol import (
 from personal_agent_protocol.__version__ import __version__ as sdk_version
 from personal_agent_protocol.accounts import RefreshTokenClient, RefreshTokenContext
 from personal_agent_protocol.company import CompanyService, build_company, company_app
-from personal_agent_protocol.conversations import StreamReconnected, TextDelta, WorkingChanged
+from personal_agent_protocol.conversations import (
+    StreamReconnected,
+    TextDelta,
+    WorkingChanged,
+)
 from personal_agent_protocol.demo import kit
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
@@ -1037,7 +1041,9 @@ async def conversation_streaming() -> Trace:
         )
     ]
     resumed = [
-        i for i in await_items if not isinstance(i, (TextDelta, StreamReconnected, WorkingChanged))
+        i
+        for i in await_items
+        if not isinstance(i, (TextDelta, StreamReconnected, WorkingChanged))
     ]
     trace.step(
         "Resuming from Last-Event-ID",
@@ -1107,7 +1113,9 @@ async def conversation_control() -> Trace:
     await world.conversations.close(
         world.endpoint, direct.conversation_id, **world.auth
     )
-    await world.conversations.handoff(world.endpoint, parent.conversation_id, **world.auth)
+    await world.conversations.handoff(
+        world.endpoint, parent.conversation_id, **world.auth
+    )
     receipt = await world.conversations.read_until_done(
         world.endpoint, parent.conversation_id, wait=0, **world.auth
     )

@@ -25,19 +25,18 @@ from agent_runtimes.services.runtime_tools import register_agent_tools
 from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS
 from agent_runtimes.specs.agents import get_agent_spec
 from agent_runtimes.specs.backend_tools import get_backend_tool_spec
-from agent_runtimes.specs.decisions import get_decisions
 from agent_runtimes.tools import decisions
 from agent_runtimes.tools.decisions import (
     DecisionQuestion,
     NoDecisions,
     decide_tool,
+    decisions_spec,
     tools_with_decisions,
 )
 from agent_runtimes.tools.decisions import decide as undecided
 
 #: The shipped decisions spec, and the tool of an agent that names it.
-JEV = get_decisions("jev:0.0.1")
-assert JEV is not None
+JEV = decisions_spec("jev:0.0.1")
 decide = decide_tool(JEV)
 
 #: httpx's own client, kept before any test replaces it.

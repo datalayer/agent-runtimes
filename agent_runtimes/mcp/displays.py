@@ -188,6 +188,9 @@ class DisplayMCPToolset(MCPToolset):
     names the server and how long it was given.
     """
 
+    # pydantic-ai's, said here for the session reopened in `_reopen`.
+    _exit_stack: AsyncExitStack | None
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         from fastmcp.client import Client  # noqa: PLC0415
 
@@ -222,7 +225,8 @@ class DisplayMCPToolset(MCPToolset):
 
     def _once_more_on_a_lost_session(self, request: Any) -> Any:
         """``request`` on the client, asked again once in a new session when
-        the server has lost the one it was asked in."""
+        the server has lost the one it was asked in.
+        """
 
         async def asked(*a: Any, **kw: Any) -> Any:
             lost = self._open_session()

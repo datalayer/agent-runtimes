@@ -47,7 +47,9 @@ def _silent_then_finished(silence: float) -> httpx.MockTransport:
         yield f"data: {json.dumps(FINISHED)}\n\n".encode()
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body())
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, content=body()
+        )
 
     return httpx.MockTransport(handler)
 
@@ -75,7 +77,7 @@ def test_a_silence_with_nothing_awaited_still_ends_the_run() -> None:
 
 
 class FakeApprovals:
-    """ai-agents: the approval pending for ``pending_polls`` reads, then approved."""
+    """Fake ai-agents: the approval pending for ``pending_polls`` reads, then approved."""
 
     def __init__(self, base_url: str, token: str, **_: Any) -> None:
         self.pending_polls = FakeApprovals.polls
@@ -87,7 +89,10 @@ class FakeApprovals:
     def list(self, **_: Any) -> list[dict[str, Any]]:
         if self.pending_polls > 0:
             self.pending_polls -= 1
-            return [dict(APPROVAL), {**APPROVAL, "id": "OTHER", "runtime_name": "another"}]
+            return [
+                dict(APPROVAL),
+                {**APPROVAL, "id": "OTHER", "runtime_name": "another"},
+            ]
         return []
 
     def get(self, approval_id: str) -> dict[str, Any]:
@@ -101,7 +106,9 @@ class FakeApprovals:
 def _tux(monkeypatch: pytest.MonkeyPatch) -> CliTux:
     monkeypatch.setattr(approvals_command, "ApprovalsClient", FakeApprovals)
     monkeypatch.setattr(approvals_command, "_resolve_token", lambda token: "TOKEN")
-    monkeypatch.setattr(approvals_command, "_resolve_base_url", lambda url: "https://ai-agents.test")
+    monkeypatch.setattr(
+        approvals_command, "_resolve_base_url", lambda url: "https://ai-agents.test"
+    )
     tux = CliTux(
         agent_url="http://runtime/api/v1/ag-ui/default/",
         server_url="http://runtime",
@@ -144,7 +151,10 @@ def test_a_prompt_line_says_the_approval_and_waits_for_its_decision(
     seen = asyncio.run(_watch(tux))
 
     said = _said(tux)
-    assert "skill:datalayer-memory-add waits on your approval (01M6Y475W1Q8ATP6WHNN00ZX3D)" in said
+    assert (
+        "skill:datalayer-memory-add waits on your approval (01M6Y475W1Q8ATP6WHNN00ZX3D)"
+        in said
+    )
     assert "loop tool-approvals approve 01M6Y475W1Q8ATP6WHNN00ZX3D" in said
     assert "loop tool-approvals reject 01M6Y475W1Q8ATP6WHNN00ZX3D" in said
     assert "✓ skill:datalayer-memory-add approved" in said

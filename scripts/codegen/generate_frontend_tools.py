@@ -101,7 +101,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
                 f"    toolset={_fmt_toolset(spec.get('toolset', 'all'))},",
-                *([f"    streams={_fmt_list(spec['streams'])},"] if spec.get("streams") else []),
+                *(
+                    [f"    streams={_fmt_list(spec['streams'])},"]
+                    if spec.get("streams")
+                    else []
+                ),
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 ")",
@@ -194,7 +198,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 f"  toolset: {_fmt_toolset_ts(spec.get('toolset', 'all'))},",
-                *([f"  streams: {_fmt_toolset_ts(spec['streams'])},"] if spec.get("streams") else []),
+                *(
+                    [f"  streams: {_fmt_toolset_ts(spec['streams'])},"]
+                    if spec.get("streams")
+                    else []
+                ),
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 "};",

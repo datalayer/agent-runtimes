@@ -4,13 +4,14 @@
 """A consent on AgentCore comes back to Datalayer IAM's binding page with a
 state IAM issued to the person: asked once per invocation token and runtime
 while it stands, with that token (AgentCore binds a consent to it alone),
-forgotten once used, refused in a sentence without IAM in the path."""
+forgotten once used, refused in a sentence without IAM in the path.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -190,12 +191,19 @@ def test_only_the_agentcore_provider_asks_for_a_consent(monkeypatch) -> None:
     for chosen in (agentcore, datalayer):
         asyncio.run(
             identity.oauth_token(
-                "github", scopes=["read:user"], identity=chosen, context={"bearer": "b"}
+                "github",
+                scopes=["read:user"],
+                identity=cast(Any, chosen),
+                context={"bearer": "b"},
             )
         )
     asyncio.run(
         identity.oauth_token(
-            "github", scopes=["read:user"], flow="M2M", identity=agentcore, context={}
+            "github",
+            scopes=["read:user"],
+            flow="M2M",
+            identity=cast(Any, agentcore),
+            context={},
         )
     )
 

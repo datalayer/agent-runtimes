@@ -367,9 +367,7 @@ async def test_a_person_who_answers_after_the_code_ended_makes_nothing(
         await answer.wait()
 
     async def body(sandbox: httpx.AsyncClient) -> None:
-        late.append(
-            asyncio.create_task(sandbox.post(SEND, json={"arguments": {}}))
-        )
+        late.append(asyncio.create_task(sandbox.post(SEND, json={"arguments": {}})))
         await asked.wait()
 
     rules = _rules(Person())

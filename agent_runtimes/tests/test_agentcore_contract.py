@@ -65,7 +65,8 @@ ASSISTANT: Dict[str, Any] = {
 
 class Said:
     """A model that answers how many prompts it was given and the last one;
-    asked to, it calls the ``slow`` tool once first."""
+    asked to, it calls the ``slow`` tool once first.
+    """
 
     def __init__(self, with_tool: bool = False) -> None:
         self.prompts: List[List[str]] = []
@@ -502,7 +503,14 @@ def test_the_websocket_runs_the_same_turn(client: TestClient, model: Said) -> No
 
 @pytest.fixture()
 def recorded(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Said]:
-    """An agent running an application whose record is the test's file store."""
+    """
+    An agent running an application whose record is the test's file store.
+
+    Yields
+    ------
+    Said
+        The model the agent answers with.
+    """
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     app = load_app(ASSISTANT)

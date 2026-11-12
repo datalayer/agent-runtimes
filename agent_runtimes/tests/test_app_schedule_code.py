@@ -284,9 +284,7 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
     try:
         # Said of the agent, it says nothing of the session: every session of
         # a deployment runs on one agent, and that was its launcher's to say.
-        unattended = unattended_of(
-            "digest-woken", {**DEPLOYMENT, "woken_by": woken(2)}
-        )
+        unattended = unattended_of("digest-woken", {**DEPLOYMENT, "woken_by": woken(2)})
         assert not unattended()
         recorder = agent_recorder("digest-woken")
         assert recorder is not None

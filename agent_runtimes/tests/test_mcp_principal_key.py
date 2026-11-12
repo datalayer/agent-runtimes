@@ -20,12 +20,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from test_mcp_start_fails_closed import _Toolset  # noqa: E402
+
 from agent_runtimes.apps import principal  # noqa: E402
 from agent_runtimes.mcp import lifecycle  # noqa: E402
 from agent_runtimes.mcp.lifecycle import MCPLifecycleManager  # noqa: E402
 from agent_runtimes.types import MCPServer  # noqa: E402
-
-from test_mcp_start_fails_closed import _Toolset  # noqa: E402
 
 SERVER = "odoo-accounting"
 

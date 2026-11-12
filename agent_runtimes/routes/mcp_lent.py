@@ -28,7 +28,13 @@ router = APIRouter(prefix="/mcp/lent", tags=["mcp-lent"])
 
 #: What of the harness's request goes on: the protocol's, never a credential of
 #: its own, nor any header that would steer the call elsewhere.
-_ASKED = ("accept", "content-type", "last-event-id", "mcp-protocol-version", "mcp-session-id")
+_ASKED = (
+    "accept",
+    "content-type",
+    "last-event-id",
+    "mcp-protocol-version",
+    "mcp-session-id",
+)
 
 #: What of the gateway's answer comes back.
 _ANSWERED = ("cache-control", "content-type", "mcp-protocol-version", "mcp-session-id")

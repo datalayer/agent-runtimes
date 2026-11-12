@@ -83,7 +83,14 @@ def wired(
     remote: TestClient,  # noqa: F811 - the fixture
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[TestClient]:
-    """The commands' HTTP calls reach the runtime in process."""
+    """
+    The commands' HTTP calls reach the runtime in process.
+
+    Yields
+    ------
+    TestClient
+        The runtime's client the calls reach.
+    """
 
     def request(
         method: str, url: str, headers: Any = None, timeout: Any = None, **kwargs: Any
@@ -413,10 +420,13 @@ def test_transfer_pauses_moves_and_goes_on_where_it_was_sent(
     assert run("local") == [
         "This session is on this machine: it is transferred to Datalayer (`/transfer cloud`)."
     ]
+
+    def declined(question: str) -> bool:
+        asked.append(question)
+        return False
+
     # Asked first, naming what is sent; declined, nothing is paused or sent.
-    assert run("", confirm=lambda question: asked.append(question) or False) == [
-        "Not transferred: nothing was sent."
-    ]
+    assert run("", confirm=declined) == ["Not transferred: nothing was sent."]
     assert f"Transfer this session ({uid}) to Datalayer?" in asked[0] and moved == []
     said = run("--yes")
     assert moved == [(uid, "local", "cloud", "paused")]

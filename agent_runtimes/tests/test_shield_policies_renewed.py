@@ -422,7 +422,9 @@ class TestThePushSocket:
             try:
                 await asyncio.wait_for(lost.wait(), 5)
                 held(renewed)
-                await asyncio.sleep(0.35)  # the first token runs out while the socket is away
+                await asyncio.sleep(
+                    0.35
+                )  # the first token runs out while the socket is away
                 for _ in range(300):
                     if len(tokens) > 1:
                         break

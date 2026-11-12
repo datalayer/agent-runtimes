@@ -2,7 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Slash command: /sessions - List your sessions on this runtime: an
-application's and an agent's, each saying its kind and its state."""
+application's and an agent's, each saying its kind and its state.
+"""
 
 from __future__ import annotations
 
@@ -35,7 +36,8 @@ ARGS = (
 
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     """List the caller's sessions, newest first; or, with a session's number
-    or uid, switch the prompt to it as `/resume` does."""
+    or uid, switch the prompt to it as `/resume` does.
+    """
     words = (argv or "").split()
     app_id = ""
     if "--app" in words:

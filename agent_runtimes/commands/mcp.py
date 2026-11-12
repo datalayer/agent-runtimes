@@ -69,7 +69,7 @@ QUIET_LOGGERS = (
 
 
 def configure_logging(verbose: bool) -> None:
-    """Logs to stderr only; library loggers at WARNING unless `verbose`."""
+    """Log to stderr only; library loggers at WARNING unless `verbose`."""
     level = logging.INFO if verbose else logging.WARNING
     loggers = [logging.getLogger()] + [
         candidate
@@ -633,7 +633,7 @@ def call_command(
 def load_main(path: Path) -> Any:
     """The `async def main(client)` (or `main(client, argv)`) a script file defines."""
     namespace: dict[str, Any] = {"__name__": "__mcp_run__", "__file__": str(path)}
-    exec(compile(path.read_text(), str(path), "exec"), namespace)  # noqa: S102
+    exec(compile(path.read_text(), str(path), "exec"), namespace)  # noqa: S102  # nosec B102 - the script the person names, run as `python` would
     main = namespace.get("main")
     if main is None or not inspect.iscoroutinefunction(main):
         raise typer.BadParameter(f"{path} must define `async def main(client)`.")

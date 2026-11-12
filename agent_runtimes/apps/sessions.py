@@ -469,7 +469,8 @@ def _new_id() -> str:
 
 def new_session_uid() -> str:
     """A new session's uid: a ULID, wherever it is minted. A session keeps
-    the uid it was opened with, whatever its shape."""
+    the uid it was opened with, whatever its shape.
+    """
     from agent_runtimes.utils.ulid import new_ulid
 
     return new_ulid()

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Callable, Optional
+from typing import Any, AsyncIterator, Callable, Optional, cast
 
 import pytest
 
@@ -65,11 +65,11 @@ def _run(provider: WaitingProvider) -> AsyncIterator[bytes]:
     async def chunks() -> AsyncIterator[bytes]:
         yield b'data: {"type":"RUN_STARTED"}\n\n'
         original = identity.active_provider
-        identity.active_provider = lambda platform=None: provider  # type: ignore[assignment]
+        setattr(identity, "active_provider", lambda platform=None: provider)
         try:
             result = await my_repos()
         finally:
-            identity.active_provider = original  # type: ignore[assignment]
+            setattr(identity, "active_provider", original)
         yield f"data: {json.dumps({'type': 'TOOL_CALL_RESULT', 'content': result})}\n\n".encode()
         yield b'data: {"type":"RUN_FINISHED"}\n\n'
 
@@ -77,7 +77,7 @@ def _run(provider: WaitingProvider) -> AsyncIterator[bytes]:
 
 
 async def _read(
-    provider: WaitingProvider, answer: Callable[[dict[str, Any]], None]
+    provider: WaitingProvider, answer: Callable[[dict[str, Any]], Any]
 ) -> list[dict[str, Any]]:
     seen: list[dict[str, Any]] = []
     stream = stream_with_authorizations(
@@ -134,7 +134,9 @@ def test_a_visitor_is_never_asked(monkeypatch: pytest.MonkeyPatch) -> None:
     provider = WaitingProvider()
 
     async def ask() -> str:
-        return await identity.oauth_token("github", scopes=["repo"], identity=provider)
+        return await identity.oauth_token(
+            "github", scopes=["repo"], identity=cast(Any, provider)
+        )
 
     with pytest.raises(IdentityRefused, match="A visitor grants no access to github"):
         asyncio.run(ask())

@@ -59,7 +59,8 @@ def _cleanup_subprocess() -> None:
 
 def _cleanup_subprocess_with_spinner(app: bool = False) -> None:
     """Stop the local runtime, saying where and what it is while it stops
-    and once it has: a local agent runtime, or a local app runtime."""
+    and once it has: a local agent runtime, or a local app runtime.
+    """
     from agent_runtimes.loop.launch import stopped_said, stopping_said
 
     global _subprocess_ref

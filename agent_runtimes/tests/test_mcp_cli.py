@@ -654,8 +654,9 @@ class FakeResponse:
 
 @pytest.fixture
 def transport(monkeypatch):
-    """`connect`'s SDK pieces; `plan` scripts each initialize: None succeeds,
-    an int answers that HTTP status and fails, an exception is raised."""
+    """Fake the SDK pieces of `connect`; `plan` scripts each initialize: None succeeds,
+    an int answers that HTTP status and fails, an exception is raised.
+    """
     import mcp.client.session
     import mcp.client.streamable_http
     import mcp.shared._httpx_utils

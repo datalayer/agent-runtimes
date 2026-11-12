@@ -227,7 +227,8 @@ async def explain_conversation_control() -> dict[str, Any]:
         "signed_in_answer": answered.text if answered else None,
         "direct_conversation_opened": direct.conversation_id != parent,
         "parent_while_direct_is_open": refusals,
-        "direct_conversation_closed": direct_closed.conversation_id == direct.conversation_id,
+        "direct_conversation_closed": direct_closed.conversation_id
+        == direct.conversation_id,
         "handoff": handed.handoff,
         "handoff_responder": handed.responder,
         "events_after_handoff": after_handoff,

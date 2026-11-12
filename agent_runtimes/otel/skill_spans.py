@@ -42,7 +42,14 @@ AVAILABLE_SKILLS = "available_skills"
 
 
 def _toolsets_under(toolset: Any, seen: Optional[set[int]] = None) -> Iterator[Any]:
-    """Walk a toolset and everything it wraps or combines."""
+    """
+    Walk a toolset and everything it wraps or combines.
+
+    Yields
+    ------
+    Any
+        The toolset, then each toolset it wraps or combines, once each.
+    """
     seen = set() if seen is None else seen
     if toolset is None or id(toolset) in seen:
         return

@@ -117,7 +117,8 @@ def not_offered(tux: "CliTux") -> str:
 
 def OFFERED(tux: "CliTux") -> bool:
     """Whether ``/decisions`` is offered now: the session's agent decides."""
-    return bool(_answered(tux) and tux.decisions[1])
+    known = getattr(tux, "decisions", None)
+    return bool(known is not None and known[0] == _session_key(tux) and known[1])
 
 
 def header_value(decisions: Optional[dict[str, Any]]) -> Optional[str]:

@@ -3,7 +3,8 @@
 
 """The AWS account readers: the read role assumed with the external id, every
 call a read, paginated, answered in the evidence shape; AWS stubbed, never
-called."""
+called.
+"""
 
 from __future__ import annotations
 
@@ -268,7 +269,7 @@ def test_cost_explorer_spend_by_service_and_aws_errors_in_a_sentence(
     ],
 )
 def test_cost_explorer_refuses_a_wrong_parameter_before_reading(
-    stubs: _Stubs, kwargs: Dict[str, str], said: str
+    stubs: _Stubs, kwargs: Dict[str, Any], said: str
 ) -> None:
     answer = asyncio.run(aws_account.aws_cost_explorer(**kwargs))
     assert said in answer and stubs.made == []
@@ -300,7 +301,7 @@ def _spec_egress() -> List[str]:
     from agent_runtimes.specs.agents import get_agent_spec
 
     spec = get_agent_spec("worker-steward-aws")
-    assert spec is not None
+    assert spec is not None and spec.policy is not None
     return list(spec.policy["shield"]["egress"])
 
 

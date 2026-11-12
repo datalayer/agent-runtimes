@@ -141,7 +141,7 @@ def on_datalayer_runtime() -> bool:
 
 
 def through_ai_inference() -> dict[str, object]:
-    """Mem0's embedder and LLM, both called through ai-inference.
+    """Give Mem0's embedder and LLM, both called through ai-inference.
 
     OpenAI-compatible, at ai-inference's v1 root, with the token the runtime
     holds now: never a provider's key of the account's. Memories are added

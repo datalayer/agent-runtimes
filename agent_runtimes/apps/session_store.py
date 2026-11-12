@@ -612,7 +612,8 @@ class RecordSessionStore:
 
     async def remove(self, uid: str) -> bool:
         """Delete one session of the caller's from the record, for good; an
-        open one, or one they did not open, refused in ai-agents' sentence."""
+        open one, or one they did not open, refused in ai-agents' sentence.
+        """
         await self.remover(uid, _bearer())
         return True
 

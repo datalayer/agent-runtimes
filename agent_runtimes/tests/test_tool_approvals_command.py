@@ -15,7 +15,7 @@ from typer.testing import CliRunner
 from agent_runtimes.commands import tool_approvals as command
 from agent_runtimes.commands.tool_approvals import ApprovalsClient, ApprovalsError
 
-PENDING = [
+PENDING: list[dict[str, Any]] = [
     {
         "id": "01M6Y0SQ973NCAYB7QWRWDQMAQ",
         "status": "pending",
@@ -36,7 +36,7 @@ PENDING = [
 
 
 class FakeAiAgents:
-    """ai-agents' approvals routes, as they answer (one person's approvals)."""
+    """The approvals routes of ai-agents, as they answer (one person's approvals)."""
 
     def __init__(self) -> None:
         self.records = {r["id"]: dict(r) for r in PENDING}

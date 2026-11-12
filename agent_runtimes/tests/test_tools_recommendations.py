@@ -1,9 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""record_recommendation: a recommendation kept with its evidence, in the
+"""Tests of record_recommendation: a recommendation kept with its evidence, in the
 session's list and the application's record; one without evidence, without
-its estimate's method or without a reviewable fix refused and never kept."""
+its estimate's method or without a reviewable fix refused and never kept.
+"""
 
 from __future__ import annotations
 
@@ -154,7 +155,8 @@ def test_the_application_record_keeps_it_under_outputs(
 
 def _submission(rec_id: str, decision: str) -> str:
     """The turn the transcript sends when a card's button is pressed
-    (`encodeFormSubmission`)."""
+    (`encodeFormSubmission`).
+    """
     import json
 
     body = {
@@ -520,7 +522,7 @@ async def test_a_press_on_the_card_decides_its_approval_at_ai_agents_which_keeps
         _submission(rec_id, "approved"), "session-1"
     )
 
-    assert decided["state"] == "approved"
+    assert decided is not None and decided["state"] == "approved"
     assert decided_at == [("session-1", rec_id, "approved")]
     # ai-agents keeps the decision in the record: nothing written twice here.
     assert deployed["recorder"].added == []

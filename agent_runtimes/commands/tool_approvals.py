@@ -63,7 +63,7 @@ def _resolve_base_url(ai_agents_url: Optional[str]) -> str:
 
 
 class ApprovalsClient:
-    """ai-agents' tool approvals, as the person the token names."""
+    """The tool approvals of ai-agents, as the person the token names."""
 
     def __init__(
         self,

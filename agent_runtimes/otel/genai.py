@@ -145,7 +145,7 @@ def _a_visitor_s() -> bool:
 
 
 class GenAIInstrumentationSettings(InstrumentationSettings):
-    """pydantic-ai's settings, content decided as each span is written.
+    """The settings of pydantic-ai, content decided as each span is written.
 
     ``include_content`` is the setting given, except in a visitor's turn
     and on the visitors' runtime, where it is always ``False``.
@@ -307,7 +307,7 @@ def _sigv4_session(region: str) -> Any:
         """Sign every request for the ``xray`` service of one region."""
 
         def request(  # type: ignore[override]
-            self, method: str, url: str, *args: Any, **kwargs: Any
+            self, method: str, url: str, **kwargs: Any
         ) -> Any:
             """Send the request signed with the current credentials."""
             headers = {**dict(self.headers), **dict(kwargs.pop("headers", None) or {})}
@@ -317,9 +317,7 @@ def _sigv4_session(region: str) -> Any:
             SigV4Auth(credentials.get_frozen_credentials(), "xray", region).add_auth(
                 signed
             )
-            return super().request(
-                method, url, *args, headers=dict(signed.headers), **kwargs
-            )
+            return super().request(method, url, headers=dict(signed.headers), **kwargs)
 
     return SigV4Session()
 

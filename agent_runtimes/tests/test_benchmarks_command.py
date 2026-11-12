@@ -69,7 +69,18 @@ def test_a_source_is_inspected_and_imported_in_one_command(client, tmp_path):
     source.write_bytes(ARCHIVE)
     answered = runner.invoke(
         app,
-        ["benchmarks", "import", "inspect-ai", str(source), "--model", "alibaba:qwen-max", "--scorer", "includes", "--limit", "1"],
+        [
+            "benchmarks",
+            "import",
+            "inspect-ai",
+            str(source),
+            "--model",
+            "alibaba:qwen-max",
+            "--scorer",
+            "includes",
+            "--limit",
+            "1",
+        ],
     )
     assert answered.exit_code == 0, answered.output
     assert "Benchmark e1 Drill: 2 tasks" in answered.output
@@ -126,12 +137,23 @@ def test_public_asks_with_no_credential_at_all(monkeypatch):
 
     def get(url, **kwargs):
         asked.append((url, kwargs))
-        return SimpleNamespace(content=ARCHIVE, headers=HEADERS, raise_for_status=lambda: None)
+        return SimpleNamespace(
+            content=ARCHIVE, headers=HEADERS, raise_for_status=lambda: None
+        )
 
     monkeypatch.setattr(requests, "get", get)
     mixin = Mixin(None)
-    assert mixin.evals_download_source("e1", public=True) == (ARCHIVE, "../fixture.tar.gz", DIGEST)
-    assert asked == [("https://service/api/ai-agents/v1/evals/public/evalsets/e1/external-source", {"timeout": 120})]
+    assert mixin.evals_download_source("e1", public=True) == (
+        ARCHIVE,
+        "../fixture.tar.gz",
+        DIGEST,
+    )
+    assert asked == [
+        (
+            "https://service/api/ai-agents/v1/evals/public/evalsets/e1/external-source",
+            {"timeout": 120},
+        )
+    ]
     assert mixin.fetched == []
 
 

@@ -117,6 +117,7 @@ CAMEL = {
     "client_id_per_application": "clientIdPerApplication",
 }
 
+
 def _flat(text: Any) -> str:
     return " ".join(str(text or "").split())
 
@@ -164,14 +165,19 @@ def load_specs(kind: str, specs_dir: Path) -> list[dict[str, Any]]:
         ]
     elif kind == "battles":
         battles = module.load_battles(specs_dir)
-        specs = [battles[identity].model_dump(mode="json") for identity in sorted(battles)]
+        specs = [
+            battles[identity].model_dump(mode="json") for identity in sorted(battles)
+        ]
     elif kind == "stages":
         stages = module.load_stages(specs_dir)
-        specs = [stages[identity].model_dump(mode="json") for identity in sorted(stages)]
+        specs = [
+            stages[identity].model_dump(mode="json") for identity in sorted(stages)
+        ]
     elif kind == "identities":
         identities = module.load_identities(specs_dir)
         specs = [
-            identities[identity].model_dump(mode="json") for identity in sorted(identities)
+            identities[identity].model_dump(mode="json")
+            for identity in sorted(identities)
         ]
     elif kind == "tracks":
         tracks = module.load_tracks(specs_dir)

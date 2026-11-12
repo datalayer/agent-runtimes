@@ -162,13 +162,13 @@ class RecordedAccount:
         os.environ[aws_account.ROLE_ARN_ENV] = RECORDED_ROLE
         os.environ[aws_account.EXTERNAL_ID_ENV] = "recorded-external-id"
         aws_account.forget_credentials()
-        aws_account._boto_client = self._client  # type: ignore[assignment]
+        aws_account._boto_client = self._client
         return self
 
     def __exit__(self, *exc: Any) -> None:
         from agent_runtimes.tools import aws_account
 
-        aws_account._boto_client = self._saved["client"]  # type: ignore[assignment]
+        aws_account._boto_client = self._saved["client"]
         for name, value in self._saved["env"].items():
             if value is None:
                 os.environ.pop(name, None)
@@ -329,6 +329,8 @@ def _model(name: Optional[str] = None) -> Any:
     from agent_runtimes.specs.agents import get_agent_spec
 
     spec = get_agent_spec("worker-steward-aws")
+    if spec is None:
+        raise LookupError("The catalogue has no worker-steward-aws agentspec.")
     return resolve_model_for_inference_provider(
         name or str(spec.model), "datalayer", timeout=300.0
     )

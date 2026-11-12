@@ -217,7 +217,8 @@ def _token() -> str:
 
 def every_session(token: str, **stubs: Any) -> List[Any]:
     """Every session of the person, of every state, newest first: those on
-    this machine and, signed in, those on Datalayer."""
+    this machine and, signed in, those on Datalayer.
+    """
     from agent_runtimes.loop.paused import STATES, paused_sessions
 
     return paused_sessions(
@@ -301,11 +302,12 @@ def end_session(row: Any, token: str) -> str:
     return f"Ended {row.uid}: its record stays, and it is not resumed. Clone it to go on from it."
 
 
-def delete_session(uid: str, token: str = "", where: str = "") -> str:
+def delete_session(uid: str, token: str, where: str = "") -> str:
     """A session deleted for good where it is kept: a folder of this machine,
     or, signed in, the person's record on Datalayer (one session they opened;
     an open one is refused there, in its sentence). ``where`` names the place
-    when it is known (the picker's row); otherwise this machine first."""
+    when it is known (the picker's row); otherwise this machine first.
+    """
     import asyncio
 
     from agent_runtimes.apps.session_store import FileSessionStore, SessionStoreError

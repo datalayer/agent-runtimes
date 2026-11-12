@@ -84,7 +84,8 @@ def test_what_a_member_needs_is_its_applications_setup(serve_scenes) -> None:
     ]
     # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
     assert not any(
-        "odoo-accounting" in step for step in serve_scenes.member_setup("month-end-close")
+        "odoo-accounting" in step
+        for step in serve_scenes.member_setup("month-end-close")
     )
     assert serve_scenes.member_setup("not-an-app") == []
 

@@ -96,7 +96,7 @@ class MCPConnectError(RuntimeError):
 def _innermost(error: BaseException) -> BaseException:
     """The error itself, through anyio's exception groups."""
     while getattr(error, "exceptions", None):
-        error = error.exceptions[0]  # type: ignore[attr-defined]
+        error = error.exceptions[0]
     return error
 
 
@@ -513,8 +513,12 @@ async def connect(
     ----------
     url : str, optional
         The MCP endpoint; the Datalayer gateway when omitted.
-    toolsets, params, only
-        The gateway's query string, see :func:`endpoint_url`.
+    toolsets : Iterable[str]
+        The gateway toolsets to add to its defaults, see :func:`endpoint_url`.
+    params : Mapping[str, Any], optional
+        The session's ``key=value`` parameters, see :func:`endpoint_url`.
+    only : bool
+        Give exactly `toolsets`, without the gateway's defaults.
     token : str, optional
         The bearer token; read from `token_env` when omitted. No token sends
         no ``Authorization`` header.

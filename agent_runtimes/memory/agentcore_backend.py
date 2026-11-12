@@ -172,9 +172,12 @@ class AgentCoreMemory(BaseMemoryBackend):
     config : dict | None
         ``memory_id``, ``region``, ``namespaces`` (see
         `resolve_agentcore_memory_config`).
-    data_client, control_client :
-        boto3 clients of ``bedrock-agentcore`` and
-        ``bedrock-agentcore-control`` to use instead of new ones (a test).
+    data_client : Any, optional
+        A boto3 client of ``bedrock-agentcore`` to use instead of a new one
+        (a test).
+    control_client : Any, optional
+        A boto3 client of ``bedrock-agentcore-control`` to use instead of a
+        new one (a test).
     """
 
     def __init__(

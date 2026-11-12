@@ -165,7 +165,8 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
 
 def declared_secrets(*specs: Any, **read: Any) -> DeclaredSecrets:
     """What specs declare (`guardrails.declared_secrets`): 422 when one declares
-    a name of the runtime's own."""
+    a name of the runtime's own.
+    """
     try:
         return read_declared_secrets(*specs, **read)
     except ReservedSecretName as refused:
@@ -5027,7 +5028,8 @@ def _launch_of(
     """The application the runtime was launched for: the one sent, except on a
     runtime launched for a deployment, where it is the deployment's, as
     ai-agents said it (`principal.read_launched_app`), and what was sent is not
-    read."""
+    read.
+    """
     from agent_runtimes.apps.principal import launched_app, launched_for
 
     return launched_app() if launched_for() else (app_spec, app_instance)

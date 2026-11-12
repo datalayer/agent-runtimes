@@ -82,7 +82,14 @@ def says() -> Dict[str, httpx.Response]:
 def ai_agents(
     monkeypatch: pytest.MonkeyPatch, says: Dict[str, httpx.Response]
 ) -> Iterator[List[httpx.Request]]:
-    """ai-agents on the wire: what it answers a runtime launched for the deployment."""
+    """
+    Mock ai-agents on the wire: what it answers a runtime launched for the deployment.
+
+    Yields
+    ------
+    List[httpx.Request]
+        The requests it got.
+    """
     asked: List[httpx.Request] = []
 
     def answer(request: httpx.Request) -> httpx.Response:

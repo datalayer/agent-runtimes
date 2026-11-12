@@ -331,7 +331,8 @@ def kernel_holds_owner_secrets() -> bool:
 def launched_app() -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
     """The Appspec and the instance of the deployment this runtime was launched
     for, as ai-agents said them (`read_launched_app`); ``(None, None)`` when it
-    has not."""
+    has not.
+    """
     if not _LAUNCHED_APP:
         return None, None
     return _LAUNCHED_APP["spec"], _LAUNCHED_APP["instance"]
@@ -372,7 +373,8 @@ NO_SANDBOX_IN_THIS_PROCESS = (
 
 def _proved(deployment_uid: str, url: str) -> dict[str, str]:
     """The header proving this runtime to ai-agents, for that deployment and that
-    address alone: no header at all for any other."""
+    address alone: no header at all for any other.
+    """
     if _PROOF.get("deployment_uid") != deployment_uid or _PROOF.get(
         "ai_agents_url"
     ) != url.rstrip("/"):
@@ -663,7 +665,8 @@ async def _read_from_ai_agents(
     deployment_uid: str, version: Optional[int], bearer: Optional[str]
 ) -> dict[str, Any]:
     """What ai-agents answers of a deployment's version: the one named, or with
-    ``None`` the one it runs. Its ``code`` read; the rest is `read_deployment`'s."""
+    ``None`` the one it runs. Its ``code`` read; the rest is `read_deployment`'s.
+    """
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 

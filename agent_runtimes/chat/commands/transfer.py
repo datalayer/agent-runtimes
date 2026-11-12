@@ -2,7 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Slash command: /transfer - Move this session between this machine and
-Datalayer, under the same uid, and go on with it where it was sent."""
+Datalayer, under the same uid, and go on with it where it was sent.
+"""
 
 from __future__ import annotations
 
@@ -46,7 +47,8 @@ def go_on_command(uid: str) -> List[str]:
 
 def _go_on_at_exit(arguments: List[str]) -> None:
     """Once the prompt has ended and its runtime is stopped or given back,
-    this process becomes `loop --resume <uid>`."""
+    this process becomes `loop --resume <uid>`.
+    """
     atexit.register(lambda: os.execvp(sys.argv[0], [sys.argv[0], *arguments]))
 
 
@@ -60,7 +62,8 @@ async def execute(
     go_on: Optional[Callable[[List[str]], None]] = None,
 ) -> Optional[str]:
     """Pause this session, move it to the other place under its uid, end the
-    prompt, and go on with it there."""
+    prompt, and go on with it there.
+    """
     from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
     from agent_runtimes.loop.transfer import SAID, TransferRefused, places, transfer
 

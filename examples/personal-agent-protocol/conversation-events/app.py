@@ -73,7 +73,11 @@ async def read_conversation_events() -> dict[str, object]:
                                 }
                             }
                             if calls == 1
-                            else {"handoff": "none", "responder": "agent", "closed": True}
+                            else {
+                                "handoff": "none",
+                                "responder": "agent",
+                                "closed": True,
+                            }
                         ),
                     }
                 ],

@@ -153,7 +153,8 @@ def account_of_token(token: str) -> str:
 
 class CurrentCredentialSource:
     """IAM over HTTP (:class:`agent_shield.saas.IamPolicySource`), asked for one account
-    with the credential held at each read: the first one's expiry ends nothing."""
+    with the credential held at each read: the first one's expiry ends nothing.
+    """
 
     def __init__(
         self, iam_url: str, credential: Callable[[], str], account_uid: str

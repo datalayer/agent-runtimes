@@ -521,7 +521,14 @@ def test_a_process_that_cannot_be_kept_holds_nothing(
 
 @pytest.fixture()
 def asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]:
-    """ai-agents, keeping what reaches it, and saying the owner's secrets."""
+    """
+    Mock ai-agents, keeping what reaches it, and saying the owner's secrets.
+
+    Yields
+    ------
+    list[httpx.Request]
+        The requests it got.
+    """
     seen: list[httpx.Request] = []
 
     def answer(request: httpx.Request) -> httpx.Response:

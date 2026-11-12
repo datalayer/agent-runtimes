@@ -1910,9 +1910,7 @@ class TestResolvingACatalogueHarness:
             },
         )
         assert "ANTHROPIC_API_KEY" not in given
-        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (
-            f"{RELAY}/anthropic"
-        )
+        assert given["DATALAYER_AI_INFERENCE_BASE_URL"] == (f"{RELAY}/anthropic")
         assert given["DATALAYER_AI_INFERENCE_TOKEN"] != "the-inference-token"
         # Nothing of pi's own reaches outside the boundary.
         assert given["PI_OFFLINE"] == "1" and given["PI_TELEMETRY"] == "0"

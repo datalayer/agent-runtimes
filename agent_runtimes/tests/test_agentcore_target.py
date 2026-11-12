@@ -12,7 +12,7 @@ import io
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, cast
 
 import pytest
 
@@ -324,7 +324,7 @@ def test_deploy_refuses_what_agentcore_would_and_what_the_deployment_sets_itself
             ),
         )
     with pytest.raises(TypeError, match="AgentCoreDeploySettings"):
-        asyncio.run(target.deploy("crawler", {"image_uri": IMAGE}))
+        asyncio.run(target.deploy("crawler", cast(Any, {"image_uri": IMAGE})))
     assert (
         runtime_name_for("openrouter:anthropic/claude-x")
         == "datalayer_openrouter_anthropic_claude_x"
@@ -504,8 +504,12 @@ def test_invoke_reads_a_json_answer_and_refuses_what_is_neither(data) -> None:
 
 def test_invoke_refuses_a_session_uid_that_is_not_one() -> None:
     events = AgentCoreTarget(data_client=object()).invoke(_deployment(), "bad uid!", {})
+
+    async def first() -> Any:
+        return await events.__anext__()
+
     with pytest.raises(ValueError, match="is not a session uid"):
-        asyncio.run(events.__anext__())
+        asyncio.run(first())
 
 
 def test_stop_and_destroy(control, data) -> None:

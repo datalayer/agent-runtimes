@@ -73,15 +73,21 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
         update={
             # Draft 0.4 §3.3: an entry per version the company supports.
             "extensions": {
-                MEDIATED_EXTENSION: [ExtensionDescriptor.model_validate(
-                    {
-                        "version": "1",
-                        "fields": [
-                            {"name": "client_id", "label": "Client", "secret": False}
-                        ],
-                        "scopes": ["orders:read"],
-                    }
-                )]
+                MEDIATED_EXTENSION: [
+                    ExtensionDescriptor.model_validate(
+                        {
+                            "version": "1",
+                            "fields": [
+                                {
+                                    "name": "client_id",
+                                    "label": "Client",
+                                    "secret": False,
+                                }
+                            ],
+                            "scopes": ["orders:read"],
+                        }
+                    )
+                ]
             }
         }
     )

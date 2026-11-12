@@ -196,13 +196,21 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
     """D4-08 (PAP 0.3 as published §3.2, `auth.disabled`): off unless said; on, written as
     `sign_in_disabled`, and the company answers signed out only."""
     quiet = Application("q", "chat", agent="example-blank:0.0.1")
-    assert quiet.as_company(scopes=[{"name": "orders:read", "description": "Read your orders"}]).sign_in_disabled is False
+    assert (
+        quiet.as_company(
+            scopes=[{"name": "orders:read", "description": "Read your orders"}]
+        ).sign_in_disabled
+        is False
+    )
     assert "sign_in_disabled" not in quiet._pap()["company"]
     closed = Application("c", "chat", agent="example-blank:0.0.1")
     role = closed.as_company(
-        scopes=[{"name": "orders:read", "description": "Read your orders"}], sign_in_disabled=True
+        scopes=[{"name": "orders:read", "description": "Read your orders"}],
+        sign_in_disabled=True,
     )
-    assert role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
+    assert (
+        role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
+    )
     # Its public skills published to personal agents (D4-06): off unless said.
     publishing = Application("p", "chat", agent="example-blank:0.0.1")
     assert publishing.as_company(publish_skills=True).publish_skills is True
@@ -218,12 +226,20 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
 def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None:
     """D5-09 (PAP draft 0.4 §6): `web_unscoped` with the website, `web_disabled` without it; off unless said."""
     full = Application("w", "chat", agent="example-blank:0.0.1")
-    assert full.as_company(interfaces=("agent", "web"), web_unscoped=True).web_unscoped is True
-    assert full._pap()["company"]["web_unscoped"] is True and "web_disabled" not in full._pap()["company"]
+    assert (
+        full.as_company(interfaces=("agent", "web"), web_unscoped=True).web_unscoped
+        is True
+    )
+    assert (
+        full._pap()["company"]["web_unscoped"] is True
+        and "web_disabled" not in full._pap()["company"]
+    )
     away = Application("a", "chat", agent="example-blank:0.0.1")
     assert away.as_company(web_disabled=True).web_disabled is True
     with pytest.raises(ValidationError, match="add the `web` interface"):
-        Application("x", "chat", agent="example-blank:0.0.1").as_company(web_unscoped=True)
+        Application("x", "chat", agent="example-blank:0.0.1").as_company(
+            web_unscoped=True
+        )
 
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:

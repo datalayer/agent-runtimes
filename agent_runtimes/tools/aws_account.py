@@ -308,7 +308,7 @@ def _plain(value: Any) -> Any:
 
 
 def _method_name(operation: str) -> str:
-    """botocore's snake_case method for an operation (``GetEC2Instance…`` → ``get_ec2_instance…``)."""
+    """Give the snake_case method of botocore for an operation (``GetEC2Instance…`` → ``get_ec2_instance…``)."""
     from botocore import xform_name
 
     return xform_name(operation)

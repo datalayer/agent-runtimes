@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Awaitable, Callable, Literal
+from typing import Any, Callable, Coroutine, Literal
 
 import httpx
 from pydantic import BaseModel, Field
@@ -353,7 +353,9 @@ async def ask_decisions(
 
 
 #: The tool as an agent calls it: a text and typed questions in, answers out.
-DecideTool = Callable[[str, list[DecisionQuestion]], Awaitable["dict[str, Any] | str"]]
+DecideTool = Callable[
+    [str, list[DecisionQuestion]], Coroutine[Any, Any, "dict[str, Any] | str"]
+]
 
 
 def decide_tool(spec: DecisionsSpec) -> DecideTool:

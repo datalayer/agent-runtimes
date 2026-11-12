@@ -202,7 +202,8 @@ class ReservedSecretName(ValueError):
 
 def on_a_deployment(app_instance: Optional[Mapping[str, Any]] = None) -> bool:
     """Whether reserved names are refused here: what is read is for a deployment,
-    wherever it is read, or this runtime was launched for one or serves one."""
+    wherever it is read, or this runtime was launched for one or serves one.
+    """
     if str((app_instance or {}).get("deployment_uid") or "").strip():
         return True
     from agent_runtimes.apps.principal import a_deployment_is_served, launched_for
@@ -317,7 +318,8 @@ def _catalog_server(server_id: str) -> Any:
 
 def as_the_catalogue_wrote_it(server_id: str, server: Any) -> bool:
     """Whether a server is the catalogue's own: a spec carries its copy, and
-    a copy pointed elsewhere under its id is the spec's."""
+    a copy pointed elsewhere under its id is the spec's.
+    """
     catalogue = _catalog_server(server_id)
     return catalogue is not None and all(
         _get(server, key) == _get(catalogue, key)

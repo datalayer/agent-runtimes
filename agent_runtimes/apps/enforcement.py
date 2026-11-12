@@ -977,7 +977,8 @@ class AppRulesCapability(AbstractCapability[Any]):
 
 def _approved_with_its_code(decision: Decision) -> bool:
     """Whether the person approved this tool, for no more than it does here, as
-    they were shown the code that calls it."""
+    they were shown the code that calls it.
+    """
     classes = _PASSED_WITH_ITS_CODE.get().get(decision.tool)
     return classes is not None and set(decision.classes) <= set(classes)
 

@@ -45,7 +45,17 @@ import json
 import re
 import threading
 import uuid
-from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional, Tuple
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -649,7 +659,8 @@ async def decided_in(text: str, session: str = "") -> Optional[Dict[str, Any]]:
 
 async def _decided_at_ai_agents(session: str, rec_id: str, decision: str) -> bool:
     """The approval the recommendation waits under, decided at ai-agents with
-    the person's own token (the turn's); whether it was."""
+    the person's own token (the turn's); whether it was.
+    """
     with _lock:
         approval = _approvals.get((session, rec_id))
     if not approval:
@@ -733,7 +744,9 @@ async def _deployment_recommendations(
     return list(answered.json().get("recommendations") or [])
 
 
-def weekly_summary(listed: List[Mapping[str, Any]], days: int = 7) -> Dict[str, Any]:
+def weekly_summary(
+    listed: Sequence[Mapping[str, Any]], days: int = 7
+) -> Dict[str, Any]:
     """The report of a period's recommendations: counted by state, their savings, the largest open."""
 
     def saving(item: Mapping[str, Any]) -> float:
@@ -808,7 +821,8 @@ def _clipped(words: str, limit: int) -> str:
 
 def _evidence_words(recommendation: Mapping[str, Any]) -> str:
     """What a recommendation rests on, as it recorded it: each read's source
-    and call with the values it read — nothing that is not in its evidence."""
+    and call with the values it read — nothing that is not in its evidence.
+    """
     reads = []
     for read in recommendation.get("evidence") or []:
         if not isinstance(read, Mapping):
@@ -842,7 +856,8 @@ def _sources(recommendation: Mapping[str, Any]) -> List[str]:
 
 def report_period(days: int, today: Optional[dt.date] = None) -> Tuple[dt.date, str]:
     """The period a report of ``days`` made today covers: its first day, and
-    its words — *the week of 9 November* for seven days."""
+    its words — *the week of 9 November* for seven days.
+    """
     today = today or dt.datetime.now(dt.timezone.utc).date()
     start = today - dt.timedelta(days=days)
     day = f"{start.day} {start:%B}"
@@ -855,7 +870,7 @@ def report_title(days: int, start: dt.date, subject: str = REPORT_SUBJECT) -> st
 
 
 def recommendations_report_document(
-    listed: List[Mapping[str, Any]],
+    listed: Sequence[Mapping[str, Any]],
     *,
     start: dt.date,
     days: int = 7,
@@ -987,7 +1002,7 @@ NO_SPACE = (
 
 
 async def _write_report(
-    recorder: Any, listed: List[Mapping[str, Any]], period: int
+    recorder: Any, listed: Sequence[Mapping[str, Any]], period: int
 ) -> Dict[str, Any]:
     """Write the period's report as a page of the first Space the application
     may write, as itself; ``{"document": {uid, link}}`` or ``{"no_document": why}``.
