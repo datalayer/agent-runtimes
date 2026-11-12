@@ -50,7 +50,14 @@ dependencies = [
     "personal-agent-protocol[ui]>=0.32.0,<0.33",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
-    "agent-skills>=1.2.0",
+    # 1.4.0: agent-skills is the framework alone (and its `jokes` example).
+    "agent-skills>=1.4.0",
+    # 0.3.0: the catalogue's skills (accounting, crawl, events, github, image, pdf,
+    # text-summarizer, video — with its zoom), which the skill specs name as
+    # `datalayer_skills.skills.<name>`; the memory skills since 0.2.0. Each skill's own
+    # dependencies are the extras `datalayer-skills[skills-<name>]`, installed where the
+    # skills' scripts run (docker/Dockerfile.agent-runtime installs `[skills]`).
+    "datalayer-skills>=0.3.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
     # An Appspec's `samples` (E-06, E-11): an older one refuses the field.

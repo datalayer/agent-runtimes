@@ -1331,7 +1331,9 @@ class TestSkillsLentInTheHarnessFormat:
         assert (page.stat().st_mode & 0o777) == 0o444
         text = page.read_text()
         assert text.startswith("---\nname: crawl\ndescription: Web crawling")
-        assert "lent-to: fake" in text and "module: agent_skills.skills.crawl" in text
+        assert (
+            "lent-to: fake" in text and "module: datalayer_skills.skills.crawl" in text
+        )
         assert "## When to use it" in text and "## Instructions" in text
         # The package's own page is its instructions; nothing of a secret.
         assert "run_skill_script" in text and "fetch_page" in text

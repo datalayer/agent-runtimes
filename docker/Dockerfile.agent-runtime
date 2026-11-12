@@ -53,9 +53,11 @@ COPY package.json pyproject.toml setup.py README.md hatch_build.py ./
 COPY jupyter-config ./jupyter-config
 COPY agent_runtimes ./agent_runtimes
 
-# The skills of the catalogue (the user, 7 November 2026): agent-skills with every
-# skill's dependencies, and what the image and video skills need of the operating
-# system — ffmpeg for the video skill, the libraries Pillow and Chromium load,
+# The skills of the catalogue: datalayer-skills with every skill's dependencies
+# (they moved there from agent-skills, 12 November 2026), and what the image and
+# video skills need of the operating system — ffmpeg for the video skill (its
+# trims, zooms, transcodes and GIFs; the zoom uses ffmpeg's scale and crop
+# filters, nothing more), the libraries Pillow and Chromium load,
 # poppler for PDF pages, fonts for the pages Chromium renders — then Chromium
 # itself, for the snapshots and the recordings.
 RUN apt-get update \
@@ -63,7 +65,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 # With its memory: mem0 and the pgvector store an agent's memories are kept
 # in, in PostgreSQL, past the runtime.
-RUN pip install -e ".[memory]" "agent-skills[skills]>=1.2.0" \
+RUN pip install -e ".[memory]" "datalayer-skills[skills]>=0.3.0" \
     && python -m playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
