@@ -14,7 +14,7 @@ from agent_runtimes.displays.sandbox_snapshots import display_code_sandbox_snaps
 # Create a Typer app for snapshot commands
 app = typer.Typer(
     name="sandbox-snapshots",
-    help="Runtime snapshots management commands",
+    help="Manage runtime snapshots.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

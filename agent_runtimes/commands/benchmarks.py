@@ -18,7 +18,7 @@ from agent_runtimes.commands import evals as evals_commands
 # Create a Typer app for benchmarks commands
 app = typer.Typer(
     name="benchmarks",
-    help="Benchmarks management commands",
+    help="Manage benchmarks.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
