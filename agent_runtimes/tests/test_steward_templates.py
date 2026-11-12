@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The AWS Account Agent's CloudFormation templates, read as AWS reads them:
+"""The CloudFormation templates of Datalayer Steward for AWS, read as AWS reads them:
 the read role grants no action that is not a read; the change role never
 allows IAM, KMS, Organizations, account or billing actions, and sits under
 a permissions boundary that denies them."""
@@ -17,8 +17,8 @@ from cfnlint.api import lint_file
 from cfnlint.decode import cfn_yaml
 
 AWS_DIR = pathlib.Path(__file__).resolve().parents[2] / "aws"
-READ = AWS_DIR / "account-agent-read-role.yaml"
-CHANGE = AWS_DIR / "account-agent-change-role.yaml"
+READ = AWS_DIR / "steward-read-role.yaml"
+CHANGE = AWS_DIR / "steward-change-role.yaml"
 
 #: An action's verb that only reads.
 READ_VERB = re.compile(r"^(Get|List|Describe)")

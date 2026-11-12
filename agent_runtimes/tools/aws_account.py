@@ -3,7 +3,7 @@
 
 """Read an AWS account's cost recommendations and spend, with a read-only role.
 
-The AWS Account Agent reads three of AWS's own cost sources:
+Datalayer Steward for AWS reads three of AWS's own cost sources:
 
 - **Cost Optimization Hub** — AWS's consolidated cost recommendations, each
   with AWS's estimated monthly saving;
@@ -14,7 +14,7 @@ The AWS Account Agent reads three of AWS's own cost sources:
   recommendations and cost anomalies.
 
 Every call is made with the account's **read role**
-(``aws/account-agent-read-role.yaml``), assumed from the runtime's own
+(``aws/steward-read-role.yaml``), assumed from the runtime's own
 credentials — on AgentCore, its execution role — with the organization's
 external id: ``DATALAYER_AWS_ACCOUNT_READ_ROLE_ARN`` and
 ``DATALAYER_AWS_ACCOUNT_EXTERNAL_ID`` name them. Neither set, nothing is read
@@ -49,7 +49,7 @@ ROLE_ARN_ENV = "DATALAYER_AWS_ACCOUNT_READ_ROLE_ARN"
 EXTERNAL_ID_ENV = "DATALAYER_AWS_ACCOUNT_EXTERNAL_ID"
 
 #: The session name the account's CloudTrail shows for each read.
-SESSION_NAME = "datalayer-account-agent"
+SESSION_NAME = "datalayer-steward"
 
 #: How long one assumed session lasts (seconds); renewed a minute before it ends.
 SESSION_SECONDS = 900
@@ -108,7 +108,7 @@ def egress_hosts(regions: Sequence[str] = ACCOUNT_REGIONS) -> List[str]:
 
     Cost Explorer and Cost Optimization Hub in us-east-1; STS and Compute
     Optimizer in each region of ``regions``. The agentspec
-    ``worker-aws-account`` lists exactly these (and the platform's own hosts);
+    ``worker-steward-aws`` lists exactly these (and the platform's own hosts);
     a test holds the two together.
     """
     hosts = [

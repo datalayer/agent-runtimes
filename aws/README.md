@@ -146,14 +146,15 @@ The Datalayer IAM and Runtimes services read it as
 `DATALAYER_AGENTCORE_AWS_SECRET_ACCESS_KEY`, with the account id as
 `DATALAYER_AWS_ACCOUNT_ID`.
 
-## The AWS Account Agent's roles
+## The roles of Datalayer Steward for AWS
 
-The AWS Account Agent (the agentspec `worker-aws-account`) runs in AgentCore
+Datalayer Steward for AWS, the Steward (the agentspec `worker-steward-aws`),
+runs in AgentCore
 in your account and reads the account's cost recommendations and spend. It
 reads with a role of its own, never with its execution role's permissions.
 
-[`account-agent-read-role.yaml`](./account-agent-read-role.yaml) creates one
-role, `DatalayerAccountAgentRead`, assumed only by the AgentCore execution
+[`steward-read-role.yaml`](./steward-read-role.yaml) creates one
+role, `datalayer-steward-read`, assumed only by the AgentCore execution
 role (the `ExecutionRoleArn` output above) with your organization's external
 id. It carries AWS's managed `ViewOnlyAccess` and `SecurityAudit` policies and
 the read actions of Cost Explorer, Cost Optimization Hub, Compute Optimizer,
@@ -165,8 +166,8 @@ not a `Get`, `List` or `Describe`.
 
 ```bash
 aws cloudformation deploy \
-  --template-file aws/account-agent-read-role.yaml \
-  --stack-name datalayer-account-agent-read \
+  --template-file aws/steward-read-role.yaml \
+  --stack-name datalayer-steward-read \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
       ExecutionRoleArn=$EXECUTION_ROLE_ARN \
@@ -182,11 +183,11 @@ Cost Optimization Hub and Compute Optimizer must be opted in to in the account
 For an AWS Organization, deploy the same template in each member account with
 a StackSet (`aws cloudformation create-stack-set … --capabilities
 CAPABILITY_NAMED_IAM`, then `create-stack-instances`); the execution role then
-also needs `sts:AssumeRole` on `arn:aws:iam::*:role/DatalayerAccountAgentRead`.
+also needs `sts:AssumeRole` on `arn:aws:iam::*:role/datalayer-steward-read`.
 
-[`account-agent-change-role.yaml`](./account-agent-change-role.yaml) is
+[`steward-change-role.yaml`](./steward-change-role.yaml) is
 optional and separate: the role an approved fix would be applied with,
-`DatalayerAccountAgentChange`. Each kind of change is off until its parameter
+`datalayer-steward-change`. Each kind of change is off until its parameter
 is `true` (stop an instance, resize an instance, snapshot and delete an
 unattached volume, delete a snapshot, set a bucket's lifecycle, resize a
 database); a permissions boundary denies every IAM, KMS, AWS Organizations,

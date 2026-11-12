@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The AWS Account Agent's evalset over recorded AWS answers.
+"""The evalset of Datalayer Steward for AWS over recorded AWS answers.
 
 Its recorded answers are AWS's shapes (botocore's output models); the tools
 read them through real boto3 clients, which check the requests; a scan is

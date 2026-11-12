@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The AWS Account Agent's evalset, over recorded AWS answers.
+"""The evalset of Datalayer Steward for AWS, over recorded AWS answers.
 
 The agent reads an account through AWS's own recommenders (Cost Optimization
 Hub, Compute Optimizer, Cost Explorer) and records each saving it finds. Here
 the account is a recording: each case of
-``fixtures/aws-account-agent.evalset.json`` says what each read operation
+``fixtures/steward-aws.evalset.json`` says what each read operation
 answers — planted findings (an idle instance, an unattached volume, an
 over-provisioned RDS instance) beside resources that are fine — and the agent
 runs its real tools against it, with its own system prompt, on the model it
@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-EVALSET = Path(__file__).parent / "fixtures" / "aws-account-agent.evalset.json"
+EVALSET = Path(__file__).parent / "fixtures" / "steward-aws.evalset.json"
 
 #: The tools the agent may call in a scan: its readers and its recording.
 ALLOWED_TOOLS = (
@@ -54,7 +54,7 @@ ALLOWED_TOOLS = (
 )
 
 #: The read role the recording stands behind (the tools refuse to read without one).
-RECORDED_ROLE = "arn:aws:iam::123456789012:role/DatalayerAccountAgentRead"
+RECORDED_ROLE = "arn:aws:iam::123456789012:role/datalayer-steward-read"
 
 
 def _output_shape(key: str) -> Any:
@@ -253,16 +253,16 @@ def score(
     }
 
 
-def account_agent(model: Any) -> Any:
-    """The AWS Account Agent as a pydantic-ai agent: its system prompt and its five tools."""
+def steward(model: Any) -> Any:
+    """Datalayer Steward for AWS as a pydantic-ai agent: its system prompt and its five tools."""
     from pydantic_ai import Agent
 
     from agent_runtimes.specs.agents import get_agent_spec
     from agent_runtimes.tools import aws_account, recommendations
 
-    spec = get_agent_spec("worker-aws-account")
+    spec = get_agent_spec("worker-steward-aws")
     if spec is None:
-        raise LookupError("The catalogue has no worker-aws-account agentspec.")
+        raise LookupError("The catalogue has no worker-steward-aws agentspec.")
     return Agent(
         model,
         instructions=spec.system_prompt,
@@ -287,7 +287,7 @@ async def run_case(
     recommendations.forget_recommendations()
     account = RecordedAccount({**defaults, **(case.get("recorded") or {})})
     with account:
-        result = await account_agent(model).run(case["prompt"])
+        result = await steward(model).run(case["prompt"])
     tools_called = [
         part.tool_name
         for message in result.all_messages()
@@ -328,7 +328,7 @@ def _model(name: Optional[str] = None) -> Any:
     from agent_runtimes.models.models import resolve_model_for_inference_provider
     from agent_runtimes.specs.agents import get_agent_spec
 
-    spec = get_agent_spec("worker-aws-account")
+    spec = get_agent_spec("worker-steward-aws")
     return resolve_model_for_inference_provider(
         name or str(spec.model), "datalayer", timeout=300.0
     )
@@ -357,9 +357,9 @@ __all__ = [
     "ALLOWED_TOOLS",
     "EVALSET",
     "RecordedAccount",
-    "account_agent",
     "load_evalset",
     "run_case",
     "run_evalset",
     "score",
+    "steward",
 ]

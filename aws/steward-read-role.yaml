@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  The AWS Account Agent's read role. Datalayer's AWS Account Agent, running
-  in Amazon Bedrock AgentCore in your account, assumes it (from its
+  The read role of Datalayer Steward for AWS. The Steward, running in
+  Amazon Bedrock AgentCore in your account, assumes it (from its
   AgentCore execution role, with your organization's external id) to read
   the account's cost recommendations, spend, utilization, findings and
   inventory. It reads only: AWS's managed ViewOnlyAccess and SecurityAudit
@@ -50,8 +50,8 @@ Resources:
   ReadRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: DatalayerAccountAgentRead
-      Description: Read-only access for Datalayer's AWS Account Agent.
+      RoleName: datalayer-steward-read
+      Description: Read-only access for Datalayer Steward for AWS.
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -68,7 +68,7 @@ Resources:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/job-function/ViewOnlyAccess'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/SecurityAudit'
       Policies:
-        - PolicyName: datalayer-account-agent-read
+        - PolicyName: datalayer-steward-read
           PolicyDocument:
             Version: '2012-10-17'
             Statement:

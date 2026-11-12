@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  The AWS Account Agent's change role, optional and separate from its read
-  role. Create it only if you want the agent to apply fixes a person
+  The change role of Datalayer Steward for AWS, optional and separate from
+  its read role. Create it only if you want the agent to apply fixes a person
   approved. It grants only the kinds of change you turn on below, under a
   permissions boundary that never allows IAM, KMS, AWS Organizations,
   account or billing actions. It is assumed for one approved change at a
@@ -87,7 +87,7 @@ Resources:
   Boundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: The most Datalayer's AWS Account Agent may ever change.
+      Description: The most Datalayer Steward for AWS may ever change.
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -123,8 +123,8 @@ Resources:
   ChangeRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: DatalayerAccountAgentChange
-      Description: Approved fixes by Datalayer's AWS Account Agent, one at a time.
+      RoleName: datalayer-steward-change
+      Description: Approved fixes by Datalayer Steward for AWS, one at a time.
       MaxSessionDuration: 3600
       PermissionsBoundary: !Ref Boundary
       AssumeRolePolicyDocument:
@@ -150,7 +150,7 @@ Resources:
                 aws:TagKeys:
                   - datalayer-recommendation
       Policies:
-        - PolicyName: datalayer-account-agent-change
+        - PolicyName: datalayer-steward-change
           PolicyDocument:
             Version: '2012-10-17'
             Statement:

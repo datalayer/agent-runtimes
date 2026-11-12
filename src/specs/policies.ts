@@ -158,7 +158,7 @@ export const DOGWOOD_APPROVAL_BEFORE_ACCOUNT_CHANGE_POLICY_0_0_1: PolicySpec = {
   version: '0.0.1',
   name: 'Approval before an AWS account change',
   description:
-    'An example of a Dogwood set an administrator writes for an AWS account agent: a change to the account (a fix applied with the change role) is permitted only when a person approved the same recommendation in the session within the hour before it; every other action is left to the rules. Deny by default: without the approval, the change is refused, by the Shield in the runtime and, when the change tool is reached through an AgentCore Gateway, by AgentCore Policy there.',
+    'An example of a Dogwood set an administrator writes for Datalayer Steward for AWS: a change to the account (a fix applied with the change role) is permitted only when a person approved the same recommendation in the session within the hour before it; every other action is left to the rules. Deny by default: without the approval, the change is refused, by the Shield in the runtime and, when the change tool is reached through an AgentCore Gateway, by AgentCore Policy there.',
   enabled: false,
   tags: ['policy', 'organization', 'dogwood', 'example', 'aws'],
   policy: {

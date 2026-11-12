@@ -376,7 +376,7 @@ async def tell_high_severity(recommendation: Mapping[str, Any], session: str) ->
             "notified": False,
             "why": "No application records this session: nobody to tell.",
         }
-    app = recorder.app.name.strip() or "The AWS Account Agent"
+    app = recorder.app.name.strip() or "Datalayer Steward for AWS"
     saving = _money((recommendation.get("estimate") or {}).get("monthly_saving_usd"))
     outcomes = await AppNotifier(
         app=recorder.app,
@@ -803,7 +803,7 @@ async def recommendations_report(days: int = 7, send: bool = True) -> Any:
     text = _report_text(summary)
     sent: List[Dict[str, Any]] = []
     if send:
-        app = recorder.app.name.strip() or "The AWS Account Agent"
+        app = recorder.app.name.strip() or "Datalayer Steward for AWS"
         sent = await AppNotifier(
             app=recorder.app,
             recorder=recorder,

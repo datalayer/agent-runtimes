@@ -39,6 +39,7 @@ BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
     "get-weather": ["read"],
     "github-repositories": ["read"],
     "list-recommendations": ["read"],
+    "recommendations-report": ["read"],
     "record-recommendation": ["read"],
     "runtime-echo": ["read"],
     "runtime-send-mail": ["send"],
@@ -930,7 +931,6 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "odoo-accounting.odoo_accounting_unreconcile_lines": "leave_to_me",
         "odoo-accounting.odoo_accounting_vat_close_check": "do_it",
     },
-    "aws-account-agent": {},
     "bookkeeping-desk": {},
     "change-detection": {
         "earthdata.download_earth_data_granules": "leave_to_me",
@@ -1283,6 +1283,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "shopping-desk": {},
     "sign-in-desk": {},
     "signed-reader": {},
+    "steward-aws": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},
@@ -1299,7 +1300,6 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
 #: application and tool, each condition and the behaviour when it holds.
 APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "accounting": {},
-    "aws-account-agent": {},
     "bookkeeping-desk": {},
     "change-detection": {},
     "code-explainer": {},
@@ -1365,6 +1365,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "shopping-desk": {},
     "sign-in-desk": {},
     "signed-reader": {},
+    "steward-aws": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},

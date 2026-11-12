@@ -24,7 +24,7 @@ export const AWS_COMPUTE_OPTIMIZER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   name: 'AWS Compute Optimizer',
   description:
     "Read AWS Compute Optimizer's findings for EC2 instances, Auto Scaling groups, EBS volumes, Lambda functions, ECS services on Fargate, RDS databases or idle resources in a region — over- and under-provisioned, with the utilization they were judged on and the savings of each option — with the read role; answered as evidence.",
-  tags: ['aws', 'cost', 'account-agent'],
+  tags: ['aws', 'cost', 'steward'],
   enabled: true,
   approval: 'auto',
   timeout: undefined,
@@ -44,7 +44,7 @@ export const AWS_COST_EXPLORER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   name: 'AWS Cost Explorer',
   description:
     "Read the account's spend from AWS Cost Explorer — by service, account, region, usage type or tag — its Savings Plans and Reserved Instance coverage and utilization, AWS's Savings Plans purchase recommendation and Cost Anomaly Detection's anomalies, with the read role; answered as evidence.",
-  tags: ['aws', 'cost', 'account-agent'],
+  tags: ['aws', 'cost', 'steward'],
   enabled: true,
   approval: 'auto',
   timeout: undefined,
@@ -65,7 +65,7 @@ export const AWS_COST_OPTIMIZATION_HUB_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec 
     name: 'AWS Cost Optimization Hub',
     description:
       "Read AWS Cost Optimization Hub's cost recommendations for the account — rightsize, stop, delete, Savings Plans and Reserved Instances, Graviton — each with AWS's estimated monthly saving, highest first, with the read role; answered as evidence (source, call, read time, items).",
-    tags: ['aws', 'cost', 'account-agent'],
+    tags: ['aws', 'cost', 'steward'],
     enabled: true,
     approval: 'auto',
     timeout: undefined,
@@ -406,7 +406,7 @@ export const LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   name: 'List Recommendations',
   description:
     'List the recommendations recorded in this session, highest estimated saving first, by kind (cost or fix) and state, with the sum of their estimated monthly savings.',
-  tags: ['recommendations', 'account-agent'],
+  tags: ['recommendations', 'steward'],
   enabled: true,
   approval: 'auto',
   timeout: undefined,
@@ -426,7 +426,7 @@ export const RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   name: 'Recommendations Report',
   description:
     "Report the deployment's recommendations of the last days — how many were approved, dismissed and are still open, the estimated monthly savings of each and the largest open ones — read from its record, and send it through the application's notification channels.",
-  tags: ['recommendations', 'account-agent'],
+  tags: ['recommendations', 'steward'],
   enabled: true,
   approval: 'auto',
   timeout: undefined,
@@ -446,7 +446,7 @@ export const RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   name: 'Record Recommendation',
   description:
     "Record one recommendation — a cost saving or a technical fix — with the evidence it rests on (each read's source, call, time and values), its estimate and how it was computed, its confidence and its fix as a reviewable change with its rollback; refused when any of them is missing.",
-  tags: ['recommendations', 'account-agent'],
+  tags: ['recommendations', 'steward'],
   enabled: true,
   approval: 'auto',
   timeout: undefined,

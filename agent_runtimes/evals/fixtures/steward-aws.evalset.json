@@ -1,18 +1,18 @@
 {
- "name": "AWS Account Agent: planted cost findings",
- "description": "The AWS Account Agent's scan of one account whose recommenders answer as recorded: an idle t4g.nano instance, an unattached 1 GiB gp3 volume and an over-provisioned db.m5.large RDS instance planted beside an optimized instance, an attached volume and, in the clean case, an optimized database. Each recorded answer is one of AWS's response shapes, checked against botocore's model when the evalset is loaded; the requests the agent sends are checked by the real boto3 clients. Measured: recall of the planted findings, precision (nothing recommended for what is fine), evidence on every recommendation, and no call but the readers' and the recording's.",
+ "name": "Datalayer Steward for AWS: planted cost findings",
+ "description": "The Steward's scan of one account whose recommenders answer as recorded: an idle t4g.nano instance, an unattached 1 GiB gp3 volume and an over-provisioned db.m5.large RDS instance planted beside an optimized instance, an attached volume and, in the clean case, an optimized database. Each recorded answer is one of AWS's response shapes, checked against botocore's model when the evalset is loaded; the requests the agent sends are checked by the real boto3 clients. Measured: recall of the planted findings, precision (nothing recommended for what is fine), evidence on every recommendation, and no call but the readers' and the recording's.",
  "run_environment": "sdk",
  "kind": "batch",
  "category": "cloud-operations",
  "tags": [
   "aws",
   "cost",
-  "account-agent",
+  "steward",
   "recorded"
  ],
  "metadata": {
   "agentspec_ids": [
-   "worker-aws-account"
+   "worker-steward-aws"
   ],
   "account": "123456789012",
   "region": "us-east-1",

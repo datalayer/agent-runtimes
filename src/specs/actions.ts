@@ -52,6 +52,7 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'get-weather': ['read'],
   'github-repositories': ['read'],
   'list-recommendations': ['read'],
+  'recommendations-report': ['read'],
   'record-recommendation': ['read'],
   'runtime-echo': ['read'],
   'runtime-send-mail': ['send'],
@@ -1025,7 +1026,6 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'odoo-accounting.odoo_accounting_unreconcile_lines': 'leave_to_me',
     'odoo-accounting.odoo_accounting_vat_close_check': 'do_it',
   },
-  'aws-account-agent': {},
   'bookkeeping-desk': {},
   'change-detection': {
     'earthdata.download_earth_data_granules': 'leave_to_me',
@@ -1379,6 +1379,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'shopping-desk': {},
   'sign-in-desk': {},
   'signed-reader': {},
+  'steward-aws': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},
@@ -1400,7 +1401,6 @@ export const APP_ESCALATIONS: Record<
   Record<string, AppEscalation[]>
 > = {
   accounting: {},
-  'aws-account-agent': {},
   'bookkeeping-desk': {},
   'change-detection': {},
   'code-explainer': {},
@@ -1466,6 +1466,7 @@ export const APP_ESCALATIONS: Record<
   'shopping-desk': {},
   'sign-in-desk': {},
   'signed-reader': {},
+  'steward-aws': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},

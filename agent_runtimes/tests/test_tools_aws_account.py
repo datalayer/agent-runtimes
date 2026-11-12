@@ -17,7 +17,7 @@ from botocore.stub import ANY, Stubber
 
 from agent_runtimes.tools import aws_account
 
-ROLE = "arn:aws:iam::123456789012:role/DatalayerAccountAgentRead"
+ROLE = "arn:aws:iam::123456789012:role/datalayer-steward-read"
 EXTERNAL = "org-external-id-0123456789"
 
 
@@ -299,7 +299,7 @@ def test_the_assumed_session_is_reused(stubs: _Stubs) -> None:
 def _spec_egress() -> List[str]:
     from agent_runtimes.specs.agents import get_agent_spec
 
-    spec = get_agent_spec("worker-aws-account")
+    spec = get_agent_spec("worker-steward-aws")
     assert spec is not None
     return list(spec.policy["shield"]["egress"])
 

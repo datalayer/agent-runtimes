@@ -336,7 +336,7 @@ async def test_the_record_keeps_the_press_before_the_agent_reads_the_turn(
     session.added.clear()
 
     class Recorder(_Recorder):
-        app = SimpleNamespace(id="aws-account-agent")
+        app = SimpleNamespace(id="steward-aws")
 
         def start(self, uid: str) -> None:
             pass
@@ -384,8 +384,8 @@ class _AppRecorder(_Recorder):
         from types import SimpleNamespace
 
         self.app = SimpleNamespace(
-            id="aws-account-agent",
-            name="AWS Account Agent",
+            id="steward-aws",
+            name="Datalayer Steward for AWS",
             emoji="",
             notifications=["email"],
         )
