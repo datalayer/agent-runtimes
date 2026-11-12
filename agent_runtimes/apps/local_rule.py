@@ -45,8 +45,9 @@ LIVE = ("open", "paused")
 
 
 def this_machine() -> str:
-    """This machine, as a session's file says it: a digest of its name,
-    never the name — a session file is exported and transferred."""
+    """The machine a session's file names: a digest of this one's name,
+    never the name — a session file is exported and transferred.
+    """
     return hashlib.sha256(socket.gethostname().encode()).hexdigest()[:16]
 
 
@@ -54,14 +55,16 @@ def holder() -> Dict[str, Any]:
     """Who holds a session opened by this process: written on its ``session``
     entry (`held_by`) by a runtime started by hand that keeps its sessions in
     files, so that a listing can tell an open session from one whose process
-    is gone."""
+    is gone.
+    """
     return {"pid": os.getpid(), "host": this_machine()}
 
 
 def process_gone(held_by: Any) -> Optional[bool]:
     """Whether the process that held something is gone from this machine:
     ``None`` when that is not known — nobody said who held it, or it was held
-    on another machine."""
+    on another machine.
+    """
     if not isinstance(held_by, Mapping):
         return None
     try:
@@ -113,7 +116,8 @@ def why_over(
     """Why a session the files say is ``open`` or ``paused`` is over, and by
     what: ``("", "")`` when it is not. ``runs`` are the team runs asked
     about, by execution id, each as its file says it or ``None`` when no
-    file keeps it."""
+    file keeps it.
+    """
     if session.get("state") not in LIVE:
         return "", ""
     run = run_of(session)
@@ -134,7 +138,8 @@ def why_not_running(
     session: Mapping[str, Any], *, gone: Callable[[Any], Optional[bool]] = process_gone
 ) -> str:
     """Why a session the files say is ``open`` is not running, ``""`` when
-    it is or when that is not known."""
+    it is or when that is not known.
+    """
     if session.get("state") != "open" or run_of(session):
         return ""
     if gone(session.get("held_by")):
@@ -149,7 +154,8 @@ def decided(
     gone: Callable[[Any], Optional[bool]] = process_gone,
 ) -> Dict[str, Tuple[str, str, str]]:
     """What the rule says of some sessions: ``{uid: (state, why, by)}`` for
-    each one whose state is not what the files say."""
+    each one whose state is not what the files say.
+    """
     runs = {
         run: team_run(run, teams_root)
         for run in {run_of(session) for session in sessions} - {""}
@@ -175,7 +181,8 @@ def reconciled(
 ) -> List[Dict[str, Any]]:
     """Some sessions of a file store as they are answered: each one the rule
     says is over or not running gets its `ended` or `paused` entry in its
-    file first (``store.write``), and is answered so."""
+    file first (``store.write``), and is answered so.
+    """
     found = decided(sessions, teams_root=teams_root, gone=gone)
     if not found:
         return sessions

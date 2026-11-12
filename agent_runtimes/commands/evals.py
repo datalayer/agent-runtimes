@@ -63,7 +63,7 @@ from agent_runtimes.evals.status import is_terminal_run_status
 
 app = typer.Typer(
     name="evals",
-    help="Launch and monitor SaaS evalsets, experiments, runs, and live monitoring.",
+    help="Launch and monitor evalsets, experiments and runs.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -85,7 +85,7 @@ runs_app = typer.Typer(
 )
 launches_app = typer.Typer(
     name="launches",
-    help="Launches: one submission of a benchmark across its experiments (B2-03).",
+    help="Follow the submissions of a benchmark across its experiments.",
     pretty_exceptions_show_locals=False,
 )
 live_app = typer.Typer(
@@ -106,7 +106,7 @@ def evals_callback(ctx: typer.Context) -> None:
 
 adapters_app = typer.Typer(
     name="adapters",
-    help="External frameworks: inspect a source, import it, launch it, reproduce it locally.",
+    help="Inspect, import, launch and reproduce external frameworks.",
     no_args_is_help=True,
 )
 
@@ -1037,8 +1037,10 @@ def evals_run(
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
-    """Run a benchmark: import the spec if needed, one experiment per subject,
-    validate, launch, and follow the launch (B2-15).
+    """Run a benchmark and follow its launch.
+
+    Run a benchmark: import the spec if needed, one experiment per subject,
+    validate, launch, and follow the launch.
 
     On the cloud the platform executes the launch on a pool of sandboxes as
     you, grades it, and keeps the evidence; the command exits 0 when the

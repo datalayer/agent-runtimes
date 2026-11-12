@@ -302,8 +302,9 @@ class FileSessionStore:
     def write(
         self, uid: str, entries: Sequence[Mapping[str, Any]], **body: Any
     ) -> None:
-        """Entries added to a session's file: what :meth:`append` does, for
-        a caller that is not in a loop (the rule that reconciles a listing)."""
+        """Add entries to a session's file: what :meth:`append` does, for
+        a caller that is not in a loop (the rule that reconciles a listing).
+        """
         path = self._file(uid)
         path.parent.mkdir(parents=True, exist_ok=True)
         at = _now()

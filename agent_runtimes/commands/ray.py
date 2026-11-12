@@ -22,7 +22,7 @@ from agent_runtimes.client import AgentClient
 
 app = typer.Typer(
     name="ray",
-    help="Manage Ray clusters and Ray jobs through the Datalayer runtimes service.",
+    help="Manage Ray clusters and Ray jobs.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )
@@ -166,6 +166,7 @@ def clusters_list(
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
 ) -> None:
+    """List Ray clusters."""
     client = _make_client(token=token)
     payload = client.ray_list_clusters(namespace=namespace)
     if raw:
@@ -250,6 +251,7 @@ def clusters_create(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Create a Ray cluster."""
     custom_spec = _load_json(custom_spec_json, "--custom-spec-json")
     payload: dict[str, Any] = {
         "name": name,
@@ -293,6 +295,7 @@ def clusters_get(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Show a Ray cluster."""
     client = _make_client(token=token)
     payload = client.ray_get_cluster(name, namespace=namespace)
     _print_json(payload)
@@ -306,6 +309,7 @@ def clusters_delete(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Delete a Ray cluster."""
     client = _make_client(token=token)
     client.ray_delete_cluster(name, namespace=namespace)
     console.print(f"[green]Cluster deleted:[/green] {name} (ns={namespace})")
@@ -342,6 +346,7 @@ def jobs_submit(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Submit a Ray job."""
     resolved_python_inline = _resolve_python_inline(python_inline)
 
     if bool(entrypoint) == bool(resolved_python_inline):
@@ -395,6 +400,7 @@ def jobs_list(
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
 ) -> None:
+    """List Ray jobs."""
     try:
         client = _make_client(token=token)
         payload = client.ray_list_jobs(namespace=namespace, cluster_name=cluster_name)
@@ -453,6 +459,7 @@ def jobs_status(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Show the status of a Ray job."""
     client = _make_client(token=token)
     payload = client.ray_get_job(name, namespace=namespace)
     _print_json(payload)
@@ -466,6 +473,7 @@ def jobs_delete(
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Delete a Ray job."""
     client = _make_client(token=token)
     client.ray_delete_job(name, namespace=namespace)
     console.print(f"[green]Job deleted:[/green] {name} (ns={namespace})")
@@ -486,6 +494,7 @@ def jobs_logs(
     tail_lines: int = typer.Option(200, "--tail-lines", min=1, max=5000),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
+    """Print the logs of a Ray job."""
     client = _make_client(token=token)
     payload = client.ray_get_job_logs(
         name,
@@ -511,6 +520,7 @@ def jobs_events(
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
 ) -> None:
+    """Show the events of a Ray job."""
     client = _make_client(token=token)
     payload = client.ray_get_job_events(name, namespace=namespace, limit=limit)
     if raw:

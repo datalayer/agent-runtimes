@@ -109,7 +109,12 @@ def _client(server: Optional[str], cloud: bool) -> Any:
     return httpx.Client(base_url=base, headers=headers, timeout=120.0)
 
 
-_clients: Dict[str, Any] = {"make": None}
+_clients: Dict[str, Any] = {"make": None, "record": None}
+
+
+def use_record(read: Any) -> None:
+    """What reads Datalayer's record — ``(params) -> {sessions, has_more}`` — for a test; ``None`` for the real one."""
+    _clients["record"] = read
 
 
 def use_client(make: Any) -> None:
@@ -130,10 +135,48 @@ def _refusal_of(response: Any) -> str:
 
 
 def _ask(client: Any, method: str, path: str, **kwargs: Any) -> Any:
-    response = client.request(method, f"/api/v1/apps/sessions{path}", **kwargs)
+    import httpx
+
+    try:
+        response = client.request(method, f"/api/v1/apps/sessions{path}", **kwargs)
+    except httpx.TransportError:
+        # No runtime there: one sentence, never a traceback.
+        base = str(getattr(client, "base_url", "") or DEFAULT_SERVER).rstrip("/")
+        raise SessionsRefused(
+            f"No runtime answers at {base}. Start one with `agent-runtimes serve`, "
+            "or name it with --server (or AGENT_RUNTIMES_URL)."
+        ) from None
     if response.status_code >= 300:
         raise SessionsRefused(_refusal_of(response))
     return response
+
+
+def _record_listing(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Your sessions in Datalayer's record, asked with your token: ``{sessions, has_more}``.
+
+    A test installs its own through :func:`use_record`.
+    """
+    if _clients["record"] is not None:
+        return _clients["record"](params)
+    import asyncio
+
+    from agent_runtimes.apps.callers import VERIFIER
+    from agent_runtimes.apps.session_store import SessionStoreError, _list_sessions
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    try:
+        _, token = make_client()
+    except NotSignedIn as refused:
+        raise SessionsRefused(f"{refused} Sign in with `datalayer login`.") from None
+
+    async def ask() -> Dict[str, Any]:
+        person = await VERIFIER.verify(token, "")
+        return await _list_sessions(token, {"opened_by": person.uid, **params})
+
+    try:
+        return asyncio.run(ask())
+    except SessionStoreError as refused:
+        raise SessionsRefused(refused.reason) from None
 
 
 def _exit(refused: Exception) -> None:
@@ -690,16 +733,20 @@ def list_sessions(
     terminal the table fits its width, the title cut; piped, it is a
     markdown table.
     """
+    params: Dict[str, Any] = {"limit": limit}
+    if app_id:
+        params["app"] = app_id
+    if archived:
+        params["archived"] = "true"
+    if state:
+        params["state"] = state
     try:
-        client = _client(server, cloud)
-        params: Dict[str, Any] = {"limit": limit}
-        if app_id:
-            params["app"] = app_id
-        if archived:
-            params["archived"] = "true"
-        if state:
-            params["state"] = state
-        answer = _ask(client, "GET", "", params=params).json()
+        if cloud and not (server or os.environ.get("AGENT_RUNTIMES_URL")):
+            # Your sessions on Datalayer are in its record, not on a runtime:
+            # read there, with your token, as the picker's second group does.
+            answer = _record_listing(params)
+        else:
+            answer = _ask(_client(server, cloud), "GET", "", params=params).json()
     except SessionsRefused as refused:
         _exit(refused)
         return

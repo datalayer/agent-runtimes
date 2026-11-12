@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Persisted memory management commands for the Datalayer CLI (platform_admin only).
+"""Persisted memory management commands for the Datalayer CLI.
 
 These commands call the protected admin endpoints exposed by the datalayer-runtimes
 service, which query the pgvector memory database that backs the Datalayer AI
@@ -21,7 +21,7 @@ from agent_runtimes.displays.memories import display_memories, display_memory
 # Create a Typer app for memory commands.
 app = typer.Typer(
     name="memory",
-    help="Persisted agent memory management commands (platform_admin only).",
+    help="Manage persisted agent memory.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

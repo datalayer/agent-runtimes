@@ -594,7 +594,25 @@ try:
         help="Interactive assistant CLI for agent runtimes",
     )
 except Exception as exc:  # noqa: BLE001
-    logger.warning("Chat CLI disabled at startup: %s", exc)
+    # Said where it matters — when the chat is asked for — not before every
+    # command: an install without the chat's dependencies (boto3 for the
+    # default Bedrock models) runs every other command quietly.
+    _chat_unavailable = str(exc)
+
+    @app.command(
+        "chat",
+        help="Interactive assistant CLI for agent runtimes.",
+        context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    )
+    def chat_unavailable() -> None:
+        """Interactive assistant CLI for agent runtimes."""
+        typer.echo(
+            "The chat cannot start in this installation: "
+            f"{_chat_unavailable}. Install its dependencies with "
+            "`pip install 'agent-runtimes[chat,aws]'`.",
+            err=True,
+        )
+        raise typer.Exit(1)
 
 
 @app.command("harnesses")

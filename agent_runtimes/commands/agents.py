@@ -35,7 +35,7 @@ DEFAULT_AGENT_SPEC_ID = "example-simple"
 
 app = typer.Typer(
     name="agents",
-    help="Agent runtime management commands.",
+    help="Manage agent runtimes.",
     invoke_without_command=True,
     pretty_exceptions_show_locals=False,
 )

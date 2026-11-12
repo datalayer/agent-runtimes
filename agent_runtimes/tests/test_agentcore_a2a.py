@@ -420,19 +420,25 @@ async def test_a_team_seat_on_agentcore_records_its_task_as_a_turn_of_a_seat_ses
                 await asyncio.sleep(0.02)
             else:  # pragma: no cover - a hang is the failure
                 raise AssertionError("the seat's task never completed")
+            # The task is stored completed before the worker writes its turn
+            # to the record, and leaving this block stops the worker: the
+            # turn is waited for here, while the worker still runs.
+            for _ in range(200):
+                kept = [
+                    entry
+                    for one in store.described()
+                    for entry in await store.entries(one["uid"])
+                ]
+                if any(entry["kind"] == "turn" for entry in kept):
+                    break
+                await asyncio.sleep(0.02)
 
         # What a control plane reads to delegate with the execution named.
         extensions = [e["uri"] for e in card["capabilities"].get("extensions") or []]
         assert EXTENSION_URI in extensions
         # One session, the seat's, in the record.
         [described] = store.described()
-        # The task says completed before its turn is written to the record:
-        # the turn is waited for, a moment, not read at once.
-        for _ in range(200):
-            entries = await store.entries(described["uid"])
-            if any(entry["kind"] == "turn" for entry in entries):
-                break
-            await asyncio.sleep(0.02)
+        entries = await store.entries(described["uid"])
         [head] = [entry for entry in entries if entry["kind"] == "session"]
         assert head["payload"]["runs_on"] == {
             "kind": "team_run",
