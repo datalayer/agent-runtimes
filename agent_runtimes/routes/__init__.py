@@ -71,6 +71,7 @@ from .mcp_ui import router as mcp_ui_router
 from .notifications import router as notifications_router
 from .protocols import router as protocols_router
 from .sandbox import router as sandbox_router
+from .spaces import router as spaces_router
 from .tool_approvals import legacy_router as tool_approvals_legacy_router
 from .tool_approvals import router as tool_approvals_router
 from .tool_approvals import ws_router as tool_approvals_ws_router
@@ -125,6 +126,7 @@ __all__ = [
     "register_vercel_agent",
     "sandbox_router",
     "set_a2a_app",
+    "spaces_router",
     "start_a2a_task_managers",
     "stop_a2a_task_managers",
     "tool_approvals_legacy_router",
