@@ -351,7 +351,10 @@ def test_the_template_is_an_agent_runtimes_actor() -> None:
     (container,) = body["containers"]
     assert container["image"] == IMAGE
     assert container["command"] == ["agent-runtimes", "serve", "--target", "ate"]
-    assert container["wakeupProbe"] == {"httpGet": {"path": "/ate/wakeup", "port": 80}}
+    assert container["wakeupProbe"] == {
+        "httpGet": {"path": "/ate/wakeup", "port": 80},
+        "timeoutSeconds": 180,
+    }
     env = {item["name"]: item["value"] for item in container["env"]}
     assert env["AGENT_SPEC_ID"] == "crawler"
     assert env["AGENT_RUNTIMES_TARGET"] == "ate"
@@ -376,7 +379,7 @@ def test_the_template_is_an_agent_runtimes_actor() -> None:
     ]
     assert volumes["data"] == {"name": "data", "durableDir": {}}
     assert body["resources"]["limits"] == {
-        "cpuMillicores": "1000",
+        "cpuMillicores": "2000",
         "memoryBytes": str(2 * 1024**3),
     }
     assert body["workerSelector"] == {"matchLabels": {"workload": "agent-runtimes"}}
@@ -511,3 +514,18 @@ def test_the_actor_image_runs_what_the_template_runs_and_stays_lean() -> None:
 def test_the_docs_page_points_at_the_actor_image() -> None:
     page = (ROOT / "docs" / "docs" / "integrations" / "agent-substrate.mdx").read_text()
     assert "docker/Dockerfile.ate" in page
+
+
+def test_the_template_allows_a_slow_first_wake_and_two_cpus_by_default() -> None:
+    # On AWS t3 nodes under gVisor the golden actor did not answer within Agent Substrate's
+    # default 30 s with 1 CPU; it passed in 44 s with 2 CPUs and 180 s (13 November 2026).
+    from agent_runtimes.ate.template import TemplateRequest, actor_template
+
+    image = "registry.example/agent-runtimes-ate@sha256:" + "0" * 64
+    template = actor_template(TemplateRequest(atespace="datalayer-runtimes", name="ai-agents-env", image=image))
+    assert template["containers"][0]["wakeupProbe"]["timeoutSeconds"] == 180
+    assert template["resources"]["limits"]["cpuMillicores"] == "2000"
+    slow = actor_template(TemplateRequest(atespace="a", name="b", image=image, wakeup_timeout_seconds=300))
+    assert slow["containers"][0]["wakeupProbe"]["timeoutSeconds"] == 300
+    with pytest.raises(ValueError):
+        actor_template(TemplateRequest(atespace="a", name="b", image=image, wakeup_timeout_seconds=0))

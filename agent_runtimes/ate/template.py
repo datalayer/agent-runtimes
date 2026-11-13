@@ -69,14 +69,19 @@ class TemplateRequest:
     ``cpu_millicores`` and ``memory_bytes`` size every actor of the template
     (Agent Substrate's ``resources.limits``); ``worker_labels`` selects the
     ``WorkerPool``s it may run on (``workerSelector.matchLabels``).
+    ``wakeup_timeout_seconds`` is how long Agent Substrate waits for the first
+    wakeup probe to answer (its default, 30 s, was too short: on AWS t3 nodes
+    under gVisor the golden actor failed at 30 s with 1 CPU, and passed in
+    44 s with 2 CPUs and 180 s allowed, 13 November 2026).
     """
 
     atespace: str
     name: str
     image: str
     agent_spec_id: str = ""
-    cpu_millicores: int = 1000
+    cpu_millicores: int = 2000
     memory_bytes: int = 2 * 1024**3
+    wakeup_timeout_seconds: int = 180
     worker_labels: Mapping[str, str] = field(default_factory=dict)
     env: Mapping[str, str] = field(default_factory=dict)
     port: int = DEFAULT_PORT
@@ -97,6 +102,8 @@ def _refuse(request: TemplateRequest) -> None:
         )
     if not 0 < request.port < 65536:
         raise ValueError(f"The port is from 1 to 65535, not {request.port}.")
+    if request.wakeup_timeout_seconds <= 0:
+        raise ValueError(f"The wakeup timeout is a number of seconds above zero, not {request.wakeup_timeout_seconds}.")
     if request.cpu_millicores <= 0 or request.memory_bytes <= 0:
         raise ValueError(
             "An actor is sized by both cpuMillicores and memoryBytes, above zero."
@@ -194,7 +201,10 @@ def actor_template(request: TemplateRequest) -> dict[str, Any]:
                 "image": request.image,
                 "command": ["agent-runtimes", "serve", "--target", TARGET],
                 "env": [{"name": name, "value": value} for name, value in env.items()],
-                "wakeupProbe": {"httpGet": {"path": WAKEUP_PATH, "port": request.port}},
+                "wakeupProbe": {
+                    "httpGet": {"path": WAKEUP_PATH, "port": request.port},
+                    "timeoutSeconds": request.wakeup_timeout_seconds,
+                },
                 "volumeMounts": mounts,
             }
         ],

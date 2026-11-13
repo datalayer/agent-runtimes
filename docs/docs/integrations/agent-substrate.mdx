@@ -90,7 +90,10 @@ You need a cluster with Agent Substrate installed (its
    The template runs `agent-runtimes serve --target ate`, probes `/ate/wakeup`,
    mounts the actor's metadata at `/run/ate`, the trust bundle at
    `/run/substrate/certs`, and a durable `/data`, and sizes each actor
-   (`--cpu-millicores`, `--memory-bytes`). `-o yaml` prints YAML.
+   (`--cpu-millicores`, 2000 by default; `--memory-bytes`, 2 GiB). The first
+   wake may take up to `--wakeup-timeout-seconds` (180 by default: Agent
+   Substrate's own 30 s was too short for a golden actor on burstable cloud
+   nodes under gVisor). `-o yaml` prints YAML.
 
 3. Create an actor and give it its egress:
 

@@ -61,7 +61,10 @@ def template(
     agent_spec_id: str = typer.Option(
         "", help="The agentspec served as 'default' (AGENT_SPEC_ID)."
     ),
-    cpu_millicores: int = typer.Option(1000, help="Each actor's CPU, in millicores."),
+    cpu_millicores: int = typer.Option(2000, help="Each actor's CPU, in millicores."),
+    wakeup_timeout_seconds: int = typer.Option(
+        180, help="How long Agent Substrate waits for the first wakeup probe to answer, in seconds."
+    ),
     memory_bytes: int = typer.Option(
         2 * 1024**3, help="Each actor's memory, in bytes."
     ),
@@ -84,6 +87,7 @@ def template(
                 image=image,
                 agent_spec_id=agent_spec_id,
                 cpu_millicores=cpu_millicores,
+                wakeup_timeout_seconds=wakeup_timeout_seconds,
                 memory_bytes=memory_bytes,
                 worker_labels=parse_pairs(worker_label, "worker label"),
                 env=parse_pairs(env, "variable"),
