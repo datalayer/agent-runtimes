@@ -38,7 +38,11 @@ class TestTheCatalogue:
     def test_every_agent_names_its_engine(self) -> None:
         specs = list_agentspecs()
         assert specs
-        assert {spec.runtime_engine for spec in specs} <= {"datalayer", "kagent"}
+        assert {spec.runtime_engine for spec in specs} <= {
+            "datalayer",
+            "kagent",
+            "agentcore",
+        }
 
     def test_the_kagent_example_runs_on_kagent_with_pydantic_ai(self) -> None:
         spec = get_agent_spec("example-kagent")
@@ -54,7 +58,7 @@ class TestTheCatalogue:
 
     def test_a_cog_keeps_the_engine_of_the_agent_it_extends(self) -> None:
         for cog in list_cogs():
-            assert cog.spec.runtime_engine in ("datalayer", "kagent")
+            assert cog.spec.runtime_engine in ("datalayer", "kagent", "agentcore")
 
     def test_the_generated_engines_are_the_yaml_ones(self) -> None:
         agents_dir = _clone_or_skip()
@@ -94,9 +98,13 @@ class TestTheModel:
             == "kagent"
         )
 
+    def test_takes_agentcore(self) -> None:
+        spec = Agentspec(id="a", name="A", description="d", runtimeEngine="agentcore")
+        assert spec.runtime_engine == "agentcore"
+
     def test_refuses_any_other_engine(self) -> None:
         with pytest.raises(ValidationError, match="runtimeEngine|runtime_engine"):
-            Agentspec(id="a", name="A", description="d", runtime_engine="agentcore")
+            Agentspec(id="a", name="A", description="d", runtime_engine="lambda")
 
 
 class TestTheGenerator:
@@ -113,19 +121,21 @@ class TestTheGenerator:
     def test_passes_a_stated_engine(self, check) -> None:
         check({"id": "a", "harness": "pydantic-ai", "runtime_engine": "datalayer"})
         check({"id": "a", "harness": "pydantic-ai", "runtime_engine": "kagent"})
+        check({"id": "a", "harness": "pydantic-ai", "runtime_engine": "agentcore"})
         check({"id": "a", "harness": "codex", "runtime_engine": "datalayer"})
 
     def test_refuses_a_spec_that_names_none(self, check) -> None:
         with pytest.raises(
-            SystemExit, match="a: names no runtime_engine: one of datalayer, kagent"
+            SystemExit,
+            match="a: names no runtime_engine: one of datalayer, kagent, agentcore",
         ):
             check({"id": "a", "harness": "pydantic-ai"})
 
     def test_refuses_an_unknown_engine(self, check) -> None:
         with pytest.raises(
-            SystemExit, match="there is no runtime_engine named 'agentcore'"
+            SystemExit, match="there is no runtime_engine named 'lambda'"
         ):
-            check({"id": "a", "harness": "pydantic-ai", "runtime_engine": "agentcore"})
+            check({"id": "a", "harness": "pydantic-ai", "runtime_engine": "lambda"})
 
     def test_refuses_kagent_on_another_harness(self, check) -> None:
         with pytest.raises(
@@ -133,3 +143,20 @@ class TestTheGenerator:
             match="the runtime_engine 'kagent' runs the harness pydantic-ai, not 'codex'",
         ):
             check({"id": "a", "harness": "codex", "runtime_engine": "kagent"})
+
+    def test_refuses_agentcore_on_another_harness(self, check) -> None:
+        with pytest.raises(
+            SystemExit,
+            match="the runtime_engine 'agentcore' runs the harness pydantic-ai, not 'claude-code'",
+        ):
+            check({"id": "a", "harness": "claude-code", "runtime_engine": "agentcore"})
+
+
+class TestTheStewardOnAgentCore:
+    def test_the_aws_steward_is_the_one_agent_on_agentcore(self) -> None:
+        on_agentcore = [
+            s.id for s in list_agentspecs() if s.runtime_engine == "agentcore"
+        ]
+        assert on_agentcore == ["worker-steward-aws"]
+        spec = get_agent_spec("worker-steward-aws")
+        assert spec is not None and spec.harness == "pydantic-ai"

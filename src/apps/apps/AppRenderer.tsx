@@ -221,6 +221,12 @@ export type AppInstance = {
    * application of nobody's organization.
    */
   organizationUid?: string;
+  /**
+   * What runs and hosts its agent, as its deployment says (`runtime_engine`):
+   * a kagent deployment's runtime is launched on kagent. Unsaid, its agent
+   * spec's engine applies.
+   */
+  runtimeEngine?: 'datalayer' | 'kagent';
 };
 
 export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
@@ -489,6 +495,9 @@ export function appDatalayerCreatePayload(
             version: instance.version ?? 0,
             ...(instance.organizationUid
               ? { organization_uid: instance.organizationUid }
+              : {}),
+            ...(instance.runtimeEngine
+              ? { runtime_engine: instance.runtimeEngine }
               : {}),
           },
         }

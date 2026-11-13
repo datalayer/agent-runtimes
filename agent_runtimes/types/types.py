@@ -2061,6 +2061,10 @@ class AppVoiceSpec(BaseModel):
         return self.enabled and self.output != "off"
 
 
+#: What runs and hosts an agent (``runtime_engine``), the default first.
+RUNTIME_ENGINES: tuple[str, ...] = ("datalayer", "kagent", "agentcore")
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -2261,7 +2265,7 @@ class Agentspec(BaseModel):
         ),
         alias="harness",
     )
-    runtime_engine: Literal["datalayer", "kagent"] = Field(
+    runtime_engine: Literal["datalayer", "kagent", "agentcore"] = Field(
         default="datalayer",
         description=(
             "What runs and hosts this agent. 'datalayer' (default): a Datalayer "
@@ -2271,8 +2275,13 @@ class Agentspec(BaseModel):
             "`agent-runtimes serve --target kagent`), reached through kagent's "
             "A2A gateway at /agents/{namespace}/{name}, each conversation a "
             "session actor of Agent Substrate, suspended when idle and resumed "
-            "on the next message. Distinct from `harness`, which says which "
-            "agent program turns the loop; 'kagent' runs 'pydantic-ai' only."
+            "on the next message. 'agentcore': Amazon Bedrock AgentCore Runtime "
+            "in the AWS account of the organization that launches it, the "
+            "agent-runtimes image serving the spec "
+            "(`agent-runtimes serve --target agentcore`). The spec's engine is "
+            "the default a launch may override. Distinct from `harness`, which "
+            "says which agent program turns the loop; 'kagent' and 'agentcore' "
+            "run 'pydantic-ai' only."
         ),
         alias="runtimeEngine",
     )

@@ -225,6 +225,42 @@ def app_usage_headers(app_instance: Mapping[str, Any] | None) -> dict[str, str]:
     return headers
 
 
+#: The header datalayer-ai-inference reads the engine of a call from, and
+#: stamps on its usage record as ``runtime_engine``. Spelled as
+#: ``datalayer_common.usage_dimensions.RUNTIME_ENGINE_HEADER`` spells it.
+RUNTIME_ENGINE_HEADER = "X-Datalayer-Runtime-Engine"
+
+
+def runtime_engine_headers(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The header naming the engine this runtime runs on, for its model calls.
+
+    Sent by a runtime on AWS AgentCore (``serve --target agentcore``, which
+    writes ``AGENT_RUNTIMES_TARGET=agentcore``): no Datalayer reservation
+    carries it, so each call ai-inference records is the usage of its
+    engine, and the platform's usage reads it as ``runtime_engine:
+    agentcore``. A runtime of Datalayer's or kagent's sends none: its
+    reservation, opened by the Operator, says its engine.
+    """
+    from agent_runtimes.agentcore.settings import TARGET, TARGET_VARIABLE
+
+    env = os.environ if environ is None else environ
+    if (env.get(TARGET_VARIABLE) or "").strip() == TARGET:
+        return {RUNTIME_ENGINE_HEADER: TARGET}
+    return {}
+
+
+def inference_usage_headers(
+    app_instance: Mapping[str, Any] | None,
+    environ: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Every header a model call through ai-inference is metered with.
+
+    The application and deployment it serves (:func:`app_usage_headers`) and
+    the engine it runs on (:func:`runtime_engine_headers`).
+    """
+    return {**app_usage_headers(app_instance), **runtime_engine_headers(environ)}
+
+
 def _create_inference_http_client(
     timeout: Any,
     *,
@@ -581,7 +617,7 @@ def resolve_model_for_inference_provider(
             http_client=_create_inference_http_client(
                 http_timeout,
                 source="datalayer-ai-inference",
-                headers=app_usage_headers(app_instance),
+                headers=inference_usage_headers(app_instance),
             ),
         )
     )

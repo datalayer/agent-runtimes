@@ -5,13 +5,17 @@
 
 /**
  * Every agent of the catalogue says what runs and hosts it: `datalayer`, a
- * Datalayer agent runtime, or `kagent`. The generator writes the spec's
+ * Datalayer agent runtime, `kagent`, or `agentcore` (AWS AgentCore). The generator writes the spec's
  * `runtime_engine` as it is; a spec without one is refused before this.
  */
 
 import { describe, expect, it } from 'vitest';
 import { AGENTSPECS } from '../agents';
-import { RUNTIME_ENGINES, RUNTIME_ENGINE_LABELS } from '../../types';
+import {
+  RUNTIME_ENGINES,
+  RUNTIME_ENGINE_HARNESSES,
+  RUNTIME_ENGINE_LABELS,
+} from '../../types';
 
 describe('runtimeEngine', () => {
   const specs = Object.values(AGENTSPECS);
@@ -29,10 +33,27 @@ describe('runtimeEngine', () => {
     expect(onKagent[0].harness).toBe('pydantic-ai');
   });
 
+  it('is agentcore for the AWS Steward alone, on pydantic-ai', () => {
+    const onAgentCore = specs.filter(
+      spec => spec.runtimeEngine === 'agentcore',
+    );
+    expect(onAgentCore.map(spec => spec.id)).toEqual(['worker-steward-aws']);
+    expect(onAgentCore[0].harness).toBe('pydantic-ai');
+  });
+
   it('has a label for each engine', () => {
+    expect(RUNTIME_ENGINES).toEqual(['datalayer', 'kagent', 'agentcore']);
     expect(RUNTIME_ENGINE_LABELS).toEqual({
       datalayer: 'Datalayer',
       kagent: 'kagent',
+      agentcore: 'AWS AgentCore',
+    });
+  });
+
+  it('runs pydantic-ai only on kagent and AgentCore', () => {
+    expect(RUNTIME_ENGINE_HARNESSES).toEqual({
+      kagent: ['pydantic-ai'],
+      agentcore: ['pydantic-ai'],
     });
   });
 });

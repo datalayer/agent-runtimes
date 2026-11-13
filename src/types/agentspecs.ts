@@ -1968,15 +1968,24 @@ export interface AgentPolicy {
 }
 
 /** The engines that run and host an agent (`runtime_engine`), the default first. */
-export const RUNTIME_ENGINES = ['datalayer', 'kagent'] as const;
+export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
 
-/** What runs and hosts an agent: a Datalayer runtime, or kagent. */
+/** What runs and hosts an agent: a Datalayer runtime, kagent, or AWS AgentCore. */
 export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];
 
 /** How an engine is named to a person. */
 export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
   datalayer: 'Datalayer',
   kagent: 'kagent',
+  agentcore: 'AWS AgentCore',
+};
+
+/** The harnesses an engine can run; an engine absent here runs any. */
+export const RUNTIME_ENGINE_HARNESSES: Partial<
+  Record<RuntimeEngine, readonly string[]>
+> = {
+  kagent: ['pydantic-ai'],
+  agentcore: ['pydantic-ai'],
 };
 
 export interface Agentspec {
@@ -2053,8 +2062,11 @@ export interface Agentspec {
    * running `agent-runtimes serve --target kagent`), reached through kagent's
    * A2A gateway at `/agents/{namespace}/{name}`, each conversation a session
    * actor of Agent Substrate, suspended when idle and resumed on the next
-   * message. Distinct from `harness`, which says which agent program turns
-   * the loop.
+   * message; `agentcore` is Amazon Bedrock AgentCore Runtime in the AWS
+   * account of the organization that launches it. The spec's engine is the
+   * default a launch may override (`runtime_engine` on `POST /runtimes`).
+   * Distinct from `harness`, which says which agent program turns the loop;
+   * `kagent` and `agentcore` run `pydantic-ai` only.
    */
   runtimeEngine?: RuntimeEngine;
   /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */

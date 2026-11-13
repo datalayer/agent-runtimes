@@ -38,6 +38,8 @@ from code_sandboxes.lifecycle import (
 )
 from datalayer_core.utils.defaults import get_default_credits_limit
 
+from agent_runtimes.types.types import RUNTIME_ENGINES
+
 logger = logging.getLogger(__name__)
 
 #: Every verb except `execute`, which needs the kernel protocol rather than REST.
@@ -172,6 +174,7 @@ class RuntimesClient:
         agent_setup: Optional[dict[str, Any]] = None,
         client_id: Optional[str] = None,
         agent_uid: Optional[str] = None,
+        runtime_engine: Optional[str] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -229,6 +232,11 @@ class RuntimesClient:
         agent_uid : Optional[str]
             The agent the runtime runs for, in the client's own naming
             (``<namespace>/<agent>`` for a kagent Agent).
+        runtime_engine : Optional[str]
+            What runs and hosts the agent: ``datalayer``, ``kagent`` or
+            ``agentcore``. It overrides the spec's ``runtime_engine``; none
+            means the spec's. Another value is refused here (`ValueError`),
+            and Runtimes refuses an engine the agent's harness cannot run.
 
         Returns
         -------
@@ -238,6 +246,11 @@ class RuntimesClient:
         if deployment_uid and not app_uid:
             raise ValueError(
                 f"Deployment {deployment_uid} is named without its application: give app_uid."
+            )
+        if runtime_engine is not None and runtime_engine not in RUNTIME_ENGINES:
+            raise ValueError(
+                f"A runtime runs on one of {', '.join(RUNTIME_ENGINES)} "
+                f"(runtime_engine); not on {runtime_engine!r}."
             )
         if app_uid and not app_spec:
             raise ValueError(
@@ -315,6 +328,8 @@ class RuntimesClient:
                 body["agent_spec_id"] = agent_spec_id
             if agent_spec:
                 body["agent_spec"] = agent_spec
+            if runtime_engine:
+                body["runtime_engine"] = runtime_engine
 
             if resolved_billing_entity_uid:
                 body["billing_entity_uid"] = resolved_billing_entity_uid

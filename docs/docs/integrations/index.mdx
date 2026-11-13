@@ -18,6 +18,9 @@ On Kubernetes, an agentspec runs under [kagent](./kagent) (`serve --target
 kagent` behind the kagent bridge, for an agentspec whose `runtime_engine` is
 `kagent`) or as an [Agent Substrate](./agent-substrate) actor
 (`serve --target ate`), suspended when idle and resumed on its next request.
+On AWS, an agentspec whose `runtime_engine` is `agentcore` runs on
+[Amazon Bedrock AgentCore](./agentcore) (`serve --target agentcore`) in the
+AWS account of the organization that launches it.
 
 ## Why Pydantic AI?
 

@@ -52,8 +52,12 @@ tools and the `eval` sandbox, since no Jupyter server runs beside it in the
 actor. Set it as the Harness's `AGENT_SPEC_ID`, with a release of
 agent-runtimes whose catalogue has it.
 
-Any agentspec of the library runs under kagent; `runtime_engine` says where it
-is meant to run, so that a Datalayer plane sends it there (below).
+Any agentspec of the library with the `pydantic-ai` harness runs under kagent;
+`runtime_engine` says where it is meant to run, so that a Datalayer plane
+sends it there (below). A launch may override it: choosing kagent under
+"Where it runs" on Datalayer (an agent's launch, or an application's
+deployment) sends `runtime_engine: kagent` with the launch, whatever the spec
+says, and an agent turned by another harness is refused in a sentence.
 
 ## Harness, AgentTemplate and Agent
 
@@ -267,7 +271,11 @@ kubectl apply -k deploy/kagent-datalayer
   bridge's launch is the runtime behind its Agent's session actor, and any
   other launch of the agent is served on an Agent Substrate actor, as kagent
   serves it, which needs the operator's [ate part](./agent-substrate#on-a-datalayer-plane).
-  The runtime's record says its engine (`runtime_engine`).
+  The engine is the launch's own `runtime_engine` when it names one (a
+  person's choice, or a kagent deployment's), the spec's otherwise.
+  The runtime's record says its engine (`runtime_engine`), and so does the
+  reservation IAM keeps for its usage: the platform's usage lists kagent's
+  runtimes under a tab of their own.
 
 ## Running the pair without kagent
 

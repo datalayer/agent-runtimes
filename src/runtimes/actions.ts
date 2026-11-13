@@ -129,6 +129,12 @@ export async function createRuntime(
   if (options.deploymentUid) {
     body['deployment_uid'] = options.deploymentUid;
   }
+  if (options.runtimeEngine) {
+    // A deployment's engine, overriding its agent spec's: the Operator does
+    // not read the spec of a deployment's launch, so a kagent deployment
+    // reaches kagent only when its launch says so.
+    body['runtime_engine'] = options.runtimeEngine;
+  }
   if (options.appSpec) {
     body['app_spec'] = options.appSpec;
   }

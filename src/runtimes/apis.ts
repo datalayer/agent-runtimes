@@ -7,6 +7,7 @@
  * Runtimes APIs.
  */
 import { ISessionContext } from '@jupyterlab/apputils';
+import type { RuntimeEngine } from '../types/agentspecs';
 import { ServiceManager, Kernel, ServerConnection } from '@jupyterlab/services';
 import { IDisposable } from '@lumino/disposable';
 import { ISignal } from '@lumino/signaling';
@@ -82,6 +83,13 @@ export interface IRuntimeOptions {
    * of an application: one named without `appUid` is refused.
    */
   deploymentUid?: string;
+  /**
+   * What runs and hosts its agent (`datalayer` or `kagent`): a deployment's
+   * own `runtime_engine`, which overrides its agent spec's. Unsaid, the
+   * spec's applies. `agentcore` is never launched this way: AgentCore starts
+   * its agent runtime itself.
+   */
+  runtimeEngine?: RuntimeEngine;
 }
 
 /**

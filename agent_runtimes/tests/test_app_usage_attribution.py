@@ -91,6 +91,29 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
     assert seen[0].headers["authorization"] == "Bearer the-principal-token"
 
 
+def test_a_runtime_on_agentcore_names_its_engine(monkeypatch):
+    """No Datalayer reservation carries an AgentCore runtime: each call says
+    its engine, which ai-inference records as the usage's runtime_engine."""
+    assert models.runtime_engine_headers({"AGENT_RUNTIMES_TARGET": "agentcore"}) == {
+        "X-Datalayer-Runtime-Engine": "agentcore"
+    }
+    assert models.runtime_engine_headers({"AGENT_RUNTIMES_TARGET": "kagent"}) == {}
+    assert models.runtime_engine_headers({}) == {}
+    assert models.inference_usage_headers(
+        DEPLOYMENT, {"AGENT_RUNTIMES_TARGET": "agentcore"}
+    ) == {
+        "X-Datalayer-App-Uid": "01APP",
+        "X-Datalayer-Deployment-Uid": "01DEP",
+        "X-Datalayer-Runtime-Engine": "agentcore",
+    }
+    monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "agentcore")
+    model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
+    assert model.client._client.headers["x-datalayer-runtime-engine"] == "agentcore"
+    monkeypatch.delenv("AGENT_RUNTIMES_TARGET")
+    model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
+    assert "x-datalayer-runtime-engine" not in model.client._client.headers
+
+
 def test_a_model_routed_for_no_application_sends_neither():
     model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
     assert "x-datalayer-app-uid" not in model.client._client.headers
@@ -120,6 +143,7 @@ def test_the_header_names_are_ai_inference_s():
     spelled differently is a call nobody attributes."""
     assert models.APP_UID_HEADER == "X-Datalayer-App-Uid"
     assert models.DEPLOYMENT_UID_HEADER == "X-Datalayer-Deployment-Uid"
+    assert models.RUNTIME_ENGINE_HEADER == "X-Datalayer-Runtime-Engine"
 
 
 def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):

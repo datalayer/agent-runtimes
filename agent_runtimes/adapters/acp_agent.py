@@ -1158,12 +1158,16 @@ class ACPAgent(BaseAgent, ShieldProxy):
             raise HarnessRefused(
                 f"{self.harness.name} calls its model through ai-inference with this runtime's token: {refusal}{after}"
             )
-        from agent_runtimes.models.models import app_instance_of, app_usage_headers
+        from agent_runtimes.models.models import (
+            app_instance_of,
+            inference_usage_headers,
+        )
 
         handle = harness_inference.relay_handle()
         self.agent_env[route.token_variable] = handle
-        # Each call metered under the application and deployment served.
-        headers = app_usage_headers(app_instance_of(self._agent_id))
+        # Each call metered under the application and deployment served, and
+        # the engine this runtime runs on.
+        headers = inference_usage_headers(app_instance_of(self._agent_id))
         base_url = self.agent_env[route.base_url_variable]
         if route.config_variable:
             self.agent_env[route.config_variable] = harness_inference.inline_config(

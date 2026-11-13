@@ -125,7 +125,7 @@ export interface UseAgentOptions {
 
 /** What an application's launch carries besides its environment (R-19). */
 export type AppLaunch = Required<Pick<IRuntimeOptions, 'appSpec'>> &
-  Pick<IRuntimeOptions, 'appUid' | 'deploymentUid'>;
+  Pick<IRuntimeOptions, 'appUid' | 'deploymentUid' | 'runtimeEngine'>;
 
 /**
  * Return type for the useAgents hook.
@@ -1323,6 +1323,8 @@ export function useCreateAgentRuntime() {
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
+          // The person's choice overrides the spec's; none is the spec's.
+          runtime_engine: data.runtimeEngine || undefined,
           user_account_handle: data.userAccountHandle || undefined,
           billing_entity_uid: data.billingEntityUid || undefined,
           billing_entity_type: data.billingEntityType || undefined,

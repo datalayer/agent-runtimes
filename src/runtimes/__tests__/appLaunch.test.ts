@@ -70,6 +70,20 @@ describe('an application’s launch from the browser', () => {
     expect(body.deployment_uid).toBe('01DEPLOYMENT');
   });
 
+  it('sends a kagent deployment’s engine, and none when unsaid', async () => {
+    await createRuntime({
+      environmentName: 'ai-agents-env',
+      creditsLimit: 10,
+      appSpec: APP,
+      appUid: '01APP',
+      deploymentUid: '01DEPLOYMENT',
+      runtimeEngine: 'kagent',
+    });
+    expect(sentBody().runtime_engine).toBe('kagent');
+    await createRuntime({ environmentName: 'ai-agents-env', creditsLimit: 10 });
+    expect(sentBody()).not.toHaveProperty('runtime_engine');
+  });
+
   it('sends the Appspec of an application not saved yet, alone', async () => {
     await createRuntime({
       environmentName: 'ai-agents-env',
@@ -130,6 +144,37 @@ describe('the launch read from the payload the agent is created with', () => {
       appUid: '01APP',
       deploymentUid: '01DEPLOYMENT',
     });
+  });
+
+  it('carries the deployment’s engine, and refuses another or AgentCore', () => {
+    expect(
+      appLaunchOf({
+        app_spec: APP,
+        app_instance: {
+          app_uid: '01APP',
+          deployment_uid: '01DEPLOYMENT',
+          version: 3,
+          runtime_engine: 'kagent',
+        },
+      }),
+    ).toEqual({
+      appSpec: APP,
+      appUid: '01APP',
+      deploymentUid: '01DEPLOYMENT',
+      runtimeEngine: 'kagent',
+    });
+    expect(() =>
+      appLaunchOf({
+        app_spec: APP,
+        app_instance: { runtime_engine: 'lambda' },
+      }),
+    ).toThrow(/one of datalayer, kagent, agentcore/);
+    expect(() =>
+      appLaunchOf({
+        app_spec: APP,
+        app_instance: { runtime_engine: 'agentcore' },
+      }),
+    ).toThrow(/AgentCore starts its agent runtime itself/);
   });
 
   it('leaves out an application or a deployment not named', () => {

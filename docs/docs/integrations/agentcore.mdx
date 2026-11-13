@@ -1,0 +1,57 @@
+---
+title: Amazon Bedrock AgentCore
+---
+
+# Amazon Bedrock AgentCore
+
+[Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) Runtime
+runs an agent in an AWS account: it starts the agent's container on each
+invocation and bills that account. agent-runtimes is one of those containers:
+one image serves every agentspec, the agentspec's id in its environment.
+
+## The agentspec: `runtime_engine: agentcore`
+
+An agentspec says what runs and hosts it on the line after its `harness`
+(see [Agentspecs](../agentspecs#harness-and-runtime-engine)). An agent meant
+for AgentCore says `runtime_engine: agentcore` and keeps the `pydantic-ai`
+harness: AgentCore runs it through the agent-runtimes server. The catalogue's
+AgentCore agent is `worker-steward-aws`, the Datalayer Steward for AWS, which
+reads an AWS account's cost recommendations with a read-only role.
+
+```yaml
+# agentspecs/agents/worker-steward-aws.yaml
+id: worker-steward-aws
+protocol: ag-ui
+harness: pydantic-ai
+runtime_engine: agentcore
+```
+
+The spec's engine is the default: on Datalayer, "Where it runs" offers
+Datalayer, kagent and AWS AgentCore when an agent is launched or an
+application deployed, starts on the spec's engine, and sends the one chosen
+with the launch (`runtime_engine`). AWS AgentCore needs an organization with
+its AWS connection (Settings → AWS AgentCore on Datalayer); a launch without
+one is refused in a sentence naming the organization.
+
+## The server: `serve --target agentcore`
+
+```bash
+AGENT_SPEC_ID=worker-steward-aws agent-runtimes serve --target agentcore
+```
+
+The server listens on every interface, on 8080 unless `AGENTCORE_PORT` says
+otherwise, as AgentCore's contract asks, and serves the agentspec over AG-UI
+(or, created with `serverProtocol: A2A`, as a team seat over A2A on 9000). It
+writes `AGENT_RUNTIMES_TARGET=agentcore`, which chooses AgentCore Identity as
+its identity provider and names its engine on every model call it makes
+through Datalayer's AI inference (`X-Datalayer-Runtime-Engine: agentcore`), so
+the usage recorded for those calls says `runtime_engine: agentcore`.
+
+## Deploying from Python
+
+`agent_runtimes.agentcore.target.AgentCoreTarget` deploys an agentspec as an
+AgentCore agent runtime with your own AWS credentials (boto3's
+`bedrock-agentcore-control`: create, update once `READY`, status, delete) and
+invokes its sessions (`bedrock-agentcore`'s `invoke_agent_runtime`, read as
+`text/event-stream`). On Datalayer, the platform does this for you in the
+organization's account, with the cross-account role its AWS connection names.

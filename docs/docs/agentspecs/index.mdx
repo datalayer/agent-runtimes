@@ -119,13 +119,28 @@ Two fields, one after the other, say what runs an agent:
   or another:
   - `datalayer`: a Datalayer agent runtime, from the platform's pools or
     started on your own machine (`agent-runtimes serve`). Every agent of the
-    catalogue but one.
+    catalogue but two.
   - `kagent`: [kagent](../integrations/kagent). The agent is a kagent `Agent`
     whose `Harness` runs `agent-runtimes serve --target kagent` behind the
     kagent bridge, reached through kagent's A2A gateway at
     `/agents/{namespace}/{name}`; each conversation is a session actor of
     [Agent Substrate](../integrations/agent-substrate), suspended when idle
     and resumed on the next message. It takes the `pydantic-ai` harness only.
+  - `agentcore`: [Amazon Bedrock AgentCore](../integrations/agentcore)
+    Runtime, in the AWS account of the organization that launches it. The
+    agent-runtimes image serves the agentspec (`agent-runtimes serve --target
+    agentcore`) as an AgentCore agent runtime, which AgentCore starts on each
+    invocation and bills to that account. It takes the `pydantic-ai` harness
+    only. The catalogue's AgentCore agent is `worker-steward-aws`.
+
+The spec's engine is the default, not a rule: a launch may run the agent on
+another engine (`runtime_engine` on `POST /runtimes`, which Datalayer's
+"Where it runs" sends when an agent is launched or an application deployed).
+The platform checks the launch's engine as it checks the spec's: one of the
+three, one that can run the agent's harness, and for `agentcore` an
+organization with its AWS connection. What a launch ran on is on the runtime's
+record and on the usage the platform records for it (`runtime_engine`), and
+the platform's usage lists kagent's apart.
 
 ```yaml
 # agentspecs/agents/example-kagent.yaml
@@ -138,7 +153,10 @@ sandbox_variant: eval
 
 The generated catalogues carry it: `Agentspec.runtime_engine` in Python
 (`datalayer` by default for an agent built in code), `runtimeEngine` in
-TypeScript, with `RUNTIME_ENGINES` and `RUNTIME_ENGINE_LABELS`.
+TypeScript, with `RUNTIME_ENGINES`, `RUNTIME_ENGINE_LABELS` and
+`RUNTIME_ENGINE_HARNESSES`. `RuntimesClient.create(runtime_engine=...)` in
+Python and `runtimeEngine` on a runtime's creation in TypeScript send a
+launch's own engine.
 
 ### UX Patterns and Protocol-Oriented Agents
 

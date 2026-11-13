@@ -12,6 +12,7 @@
  */
 
 import type { AppLaunch } from '../../../hooks/useAgentRuntimes';
+import { RUNTIME_ENGINES, type RuntimeEngine } from '../../../types/agentspecs';
 
 /**
  * The launch of the application an agent is created with, or none.
@@ -38,9 +39,26 @@ export function appLaunchOf(
     typeof instance.deployment_uid === 'string' && instance.deployment_uid
       ? instance.deployment_uid
       : undefined;
+  const said = instance.runtime_engine;
+  if (
+    said !== undefined &&
+    said !== '' &&
+    !(RUNTIME_ENGINES as readonly unknown[]).includes(said)
+  ) {
+    throw new Error(
+      `The application's instance runs on ${String(said)}: one of ${RUNTIME_ENGINES.join(', ')} (runtime_engine).`,
+    );
+  }
+  if (said === 'agentcore') {
+    throw new Error(
+      'An application deployed on AWS AgentCore is not launched on a runtime: AgentCore starts its agent runtime itself.',
+    );
+  }
+  const runtimeEngine = said ? (said as RuntimeEngine) : undefined;
   return {
     appSpec: appSpec as Record<string, unknown>,
     ...(appUid ? { appUid } : {}),
     ...(deploymentUid ? { deploymentUid } : {}),
+    ...(runtimeEngine ? { runtimeEngine } : {}),
   };
 }

@@ -78,3 +78,27 @@ def test_a_deployment_without_its_application_is_refused_before_anything_is_aske
     with pytest.raises(ValueError, match="without its application"):
         RuntimesClient(transport).create(credits_limit=1.0, deployment_uid="dep-1")
     assert transport.bodies == []
+
+
+def test_the_launch_s_engine_is_sent_and_unsaid_is_the_spec_s() -> None:
+    """``runtime_engine`` overrides the spec's (a kagent deployment's tick);
+    unsaid, nothing is sent and Runtimes applies the spec's."""
+    transport = _Transport()
+    RuntimesClient(transport).create(
+        environment_name="ai-agents-env", credits_limit=1.0, runtime_engine="kagent"
+    )
+    RuntimesClient(transport).create(
+        environment_name="ai-agents-env", credits_limit=1.0
+    )
+    first, second = transport.bodies
+    assert first["runtime_engine"] == "kagent"
+    assert "runtime_engine" not in second
+
+
+def test_an_engine_that_is_not_one_is_refused_before_anything_is_asked() -> None:
+    transport = _Transport()
+    with pytest.raises(ValueError, match="runs on one of datalayer, kagent, agentcore"):
+        RuntimesClient(transport).create(
+            environment_name="ai-agents-env", credits_limit=1.0, runtime_engine="lambda"
+        )
+    assert transport.bodies == []
