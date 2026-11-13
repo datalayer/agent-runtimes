@@ -30,7 +30,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import {
-  AppearanceControlsWithStore,
+  AppearanceControls,
   Box,
   createThemeStore,
   DatalayerThemeProvider,
@@ -644,7 +644,10 @@ export const AgentDocument: React.FC = () => {
           borderColor="border.default"
           flexShrink={0}
         >
-          <AppearanceControlsWithStore useStore={useAgentDocumentThemeStore} />
+          <AppearanceControls
+            layout="inline"
+            useStore={useAgentDocumentThemeStore}
+          />
         </Box>
         <Box display="flex" flex={1} minHeight={0} overflow="hidden">
           {serviceManager && kernelResolved && (

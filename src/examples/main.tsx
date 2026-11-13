@@ -50,7 +50,7 @@ import {
   Text,
   TextInput,
 } from '@primer/react';
-import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
+import { AppearanceControls } from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
   DATALAYER_IAM_TOKEN_KEY,
@@ -1764,7 +1764,10 @@ const ExampleAppThemed: React.FC<{
 
           {/* Right: theme picker + color mode + logo */}
           <Box display="flex" alignItems="center" gap={3}>
-            <AppearanceControlsWithStore useStore={useExampleThemeStore} />
+            <AppearanceControls
+              layout="inline"
+              useStore={useExampleThemeStore}
+            />
             <Box display="flex" alignItems="center" gap={2}>
               {token ? (
                 <>
