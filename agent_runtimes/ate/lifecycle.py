@@ -10,6 +10,12 @@ does on every resume is call the template's ``wakeupProbe`` until it answers
 the first probe after a quiet spell is one, the ones right behind it (the
 prober polls every millisecond until it is answered) are the same wake.
 
+The quiet spell is measured on both clocks. A restored gVisor sandbox carries
+its monotonic clock on from the snapshot, so the suspend is not on it: the
+first probe of an actor restored from the golden snapshot comes within
+milliseconds, on that clock, of the golden actor's last one. The wall clock
+does move across the suspend.
+
 On each wake the hooks run, in the order they were added. The default ones:
 
 - the actor's identity is read again from its ``systemInfo`` volume, and when
@@ -74,7 +80,10 @@ class WakeTracker:
     environ : MutableMapping[str, str], optional
         The environment the hooks write; ``os.environ`` when not given.
     clock : Callable[[], float], optional
-        The clock of the quiet spell; ``time.monotonic`` when not given.
+        The monotonic clock of the quiet spell; ``time.monotonic`` when not given.
+    wall_clock : Callable[[], float], optional
+        The wall clock of the quiet spell, the one a suspend moves;
+        ``time.time`` when not given.
     quiet_seconds : float
         How long without a probe makes the next one a wake.
     """
@@ -86,14 +95,17 @@ class WakeTracker:
         *,
         environ: Optional[MutableMapping[str, str]] = None,
         clock: Optional[Callable[[], float]] = None,
+        wall_clock: Optional[Callable[[], float]] = None,
         quiet_seconds: float = QUIET_SECONDS,
     ):
         self.system_info_dir = system_info_dir
         self.trust_bundle = trust_bundle
         self._environ = os.environ if environ is None else environ
         self._clock = clock or time.monotonic
+        self._wall_clock = wall_clock or time.time
         self._quiet = quiet_seconds
         self._last_probe: Optional[float] = None
+        self._last_probe_wall: Optional[float] = None
         self._lock = threading.Lock()
         self._hooks: list[WakeHook] = [self._bind_identity, self._bind_trust_bundle]
         self.wakes = 0
@@ -115,10 +127,15 @@ class WakeTracker:
         bool
             Whether this probe was a wake.
         """
-        now = self._clock()
+        now, wall = self._clock(), self._wall_clock()
         with self._lock:
-            woke = self._last_probe is None or now - self._last_probe > self._quiet
-            self._last_probe = now
+            woke = (
+                self._last_probe is None
+                or self._last_probe_wall is None
+                or now - self._last_probe > self._quiet
+                or abs(wall - self._last_probe_wall) > self._quiet
+            )
+            self._last_probe, self._last_probe_wall = now, wall
             if not woke:
                 return False
             self.wakes += 1

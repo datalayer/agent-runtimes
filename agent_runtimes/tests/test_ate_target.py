@@ -178,6 +178,36 @@ def test_each_clone_of_the_golden_snapshot_learns_its_own_runtime(
     assert environ["DATALAYER_RUNTIME_ID"] == UID_B
 
 
+def test_a_restored_snapshot_is_a_wake_though_its_monotonic_clock_did_not_move(
+    tmp_path: Path,
+) -> None:
+    """gVisor restores the monotonic clock where the snapshot left it: the
+    first probe after a restore is milliseconds after the golden actor's last
+    one on that clock, minutes after it on the wall clock."""
+    info = tmp_path / "run-ate"
+    environ: dict[str, str] = {}
+    monotonic, wall = Clock(), Clock()
+    tracker = WakeTracker(
+        str(info),
+        str(tmp_path / "ca.pem"),
+        environ=environ,
+        clock=monotonic,
+        wall_clock=wall,
+    )
+    actor_dir(info, "golden-crawler")
+    assert tracker.probe() is True
+
+    actor_dir(info, actor_name_of_runtime(UID_A))
+    monotonic.now += 0.001
+    wall.now += 150
+    assert tracker.probe() is True
+    assert environ["DATALAYER_RUNTIME_ID"] == UID_A
+    monotonic.now += 0.001
+    wall.now += 0.001
+    assert tracker.probe() is False
+    assert tracker.wakes == 2
+
+
 def test_the_trust_bundle_is_bound_at_wake_without_overriding_another_ca(
     tmp_path: Path,
 ) -> None:
