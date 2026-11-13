@@ -173,8 +173,8 @@ def test_only_environments_that_hold_an_agent_are_offered(
     # The environments are offered in the picker, not here.
     assert not any("ai-agents-env —" in line for line in lines)
     assert any(line.startswith("  ● runtime-9 — ai-agents-env, 1") for line in lines)
-    # The cloud's models are the runtime's, never this machine's keys.
-    assert "not this machine's keys" in lines[-1]
+    # The cloud's models are listed once connected.
+    assert lines[-1] == "Models: /models lists them once connected."
 
     datalayer.credits = None
     assert read_offer(datalayer).credits is None

@@ -74,3 +74,43 @@ def test_the_prompt_binds_ctrl_z_to_leave() -> None:
         for binding in made["key_bindings"].bindings
     ]  # type: ignore[attr-defined]
     assert ("Keys.ControlZ",) in keys
+
+
+def test_unpickable_rows_are_grey_without_a_dash() -> None:
+    import questionary
+
+    from agent_runtimes.loop import launch
+    from agent_runtimes.loop.paused import SEPARATOR
+
+    rows = launch.select_choices(
+        [
+            ("Group", SEPARATOR),
+            ("ai-agents-env — AI Agents, 0.048 credits a minute", "ai-agents-env"),
+            ("modal-cpu — Containers, not priced", "modal-cpu", launch.NO_AGENT),
+        ]
+    )
+    assert isinstance(rows[0], questionary.Separator)
+    assert isinstance(rows[1], questionary.Choice)
+    assert not isinstance(rows[1], questionary.Separator)
+    assert rows[1].value == "ai-agents-env"
+    assert isinstance(rows[2], questionary.Separator)
+    assert rows[2].title == f"modal-cpu — Containers, not priced ({launch.NO_AGENT})"
+    assert not str(rows[2].title).startswith("-")
+    assert ("separator", "fg:#808080") in launch.UNPICKABLE_STYLE
+
+
+def test_an_interrupt_before_the_session_says_goodbye(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import typer
+
+    from agent_runtimes.chat.banner import GOODBYE_MESSAGE
+
+    @cli._goodbye_on_interrupt
+    def picking() -> None:
+        raise KeyboardInterrupt
+
+    with pytest.raises(typer.Exit) as leaving:
+        picking()
+    assert leaving.value.exit_code == 0
+    assert GOODBYE_MESSAGE in capsys.readouterr().out

@@ -1099,7 +1099,7 @@ def _launch_on_datalayer(
 
             if questionary.confirm(
                 "Run it on this machine instead?", default=True
-            ).ask():
+            ).unsafe_ask():
                 return None
         raise typer.Exit(1)
     except CloudRefused as refused:
@@ -1361,7 +1361,26 @@ def run_prompts(
                 signal.signal(sig, handler)
 
 
+def _goodbye_on_interrupt(command: Any) -> Any:
+    """Ctrl-C or Ctrl-Z anywhere in ``loop`` — a picker before the session
+    starts included — stops the server and leaves with the goodbye; click
+    would otherwise swallow the interrupt as "Aborted"."""
+    import functools
+
+    @functools.wraps(command)
+    def leave_kindly(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return command(*args, **kwargs)
+        except KeyboardInterrupt:
+            _cleanup_subprocess()
+            print_goodbye()
+            raise typer.Exit(0)
+
+    return leave_kindly
+
+
 @app.callback(invoke_without_command=True)
+@_goodbye_on_interrupt
 def main_callback(
     ctx: typer.Context,
     query: Optional[List[str]] = typer.Argument(
