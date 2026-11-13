@@ -105,8 +105,10 @@ const TurnPlugin = definePlugin({
 
 function Harness({
   plugins,
+  workspace,
 }: {
   plugins: Parameters<typeof buildReactorFromPlugins>[0];
+  workspace?: unknown;
 }) {
   const reactor = React.useMemo(
     () => buildReactorFromPlugins(plugins),
@@ -115,19 +117,22 @@ function Harness({
   useReactor(reactor);
   return (
     <ThemeProvider>
-      <ReactorSlot slot={LoopSlots.root} />
+      <ReactorSlot slot={LoopSlots.root} props={{ workspace }} />
     </ThemeProvider>
   );
 }
 
 const mounted: { root: ReturnType<typeof createRoot>; el: HTMLElement }[] = [];
 
-async function mount(plugins: Parameters<typeof buildReactorFromPlugins>[0]) {
+async function mount(
+  plugins: Parameters<typeof buildReactorFromPlugins>[0],
+  workspace?: unknown,
+) {
   const el = document.createElement('div');
   document.body.appendChild(el);
   const root = createRoot(el);
   await act(async () => {
-    root.render(<Harness plugins={plugins} />);
+    root.render(<Harness plugins={plugins} workspace={workspace} />);
   });
   mounted.push({ root, el });
   return el;
@@ -605,5 +610,81 @@ describe('the way to the conversation on the page (13 November 2026)', () => {
     expect(el.querySelector('[data-assistant-figure]')).not.toBeNull();
     expect(window.localStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
+  });
+});
+
+describe('a click always leads somewhere to type (13 November 2026)', () => {
+  const words = CHAT_WORDS.en;
+
+  it('opens its own prompt when the page has no composer it can reach, and sends through the workspace', async () => {
+    const sent: string[] = [];
+    const workspace = {
+      submit: async (message: string) => {
+        sent.push(message);
+        return { handled: true };
+      },
+    };
+    const el = await mount(
+      [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
+      workspace,
+    );
+    const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+    await act(async () => figure.click());
+    const prompt = document.querySelector(
+      '[data-assistant-prompt] textarea',
+    ) as HTMLTextAreaElement;
+    expect(prompt).not.toBeNull();
+    expect(prompt.getAttribute('aria-label')).toBe(words.writeToMe);
+    expect(document.activeElement).toBe(prompt);
+    // Not the notice for a composer still starting.
+    expect(document.body.textContent).not.toContain(words.notReadyToWrite);
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )!.set!;
+    await act(async () => {
+      setValue.call(prompt, 'Where does the close stand?');
+      prompt.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      prompt.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      );
+    });
+    expect(sent).toEqual(['Where does the close stand?']);
+    expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
+    // Clicked again, it opens again: the way back is always there.
+    await act(async () => figure.click());
+    expect(document.querySelector('[data-assistant-prompt]')).not.toBeNull();
+    await act(async () => figure.click());
+    expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
+  });
+
+  it('puts the caret in its own workspace’s composer, not in another chat’s on the page', async () => {
+    // Another chat's composer, earlier in the page.
+    const other = document.createElement('div');
+    other.setAttribute('data-chat-composer', '');
+    const otherBox = document.createElement('textarea');
+    other.appendChild(otherBox);
+    document.body.prepend(other);
+    const el = await mount(
+      [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
+      { submit: async () => ({ handled: true }) },
+    );
+    // Its own, inside its workspace.
+    const own = document.createElement('div');
+    own.setAttribute('data-chat-composer', '');
+    const ownBox = document.createElement('textarea');
+    own.appendChild(ownBox);
+    el.appendChild(own);
+    try {
+      const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+      await act(async () => figure.click());
+      expect(document.activeElement).toBe(ownBox);
+      expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
+    } finally {
+      other.remove();
+      own.remove();
+    }
   });
 });

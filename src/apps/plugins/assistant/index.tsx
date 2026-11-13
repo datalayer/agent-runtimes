@@ -32,11 +32,11 @@
  */
 
 import type { AppAvatar } from '../../../types/agentspecs';
-import type { JSX } from 'react';
+import type { FormEvent, JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { definePlugin, signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
-import { Text } from '@primer/react';
+import { Button, Text, Textarea } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import {
@@ -216,21 +216,73 @@ function WaitingApprovals({
   return null;
 }
 
+/** What a click on the character found of its workspace's composer. */
+export type ComposerReach = 'focused' | 'not-ready' | 'none';
+
+/** The composer's editable part: a textarea, or Lexical's editable root. */
+const COMPOSER_EDITABLE =
+  '[data-chat-composer] textarea, [data-chat-composer] [contenteditable]';
+
 /**
- * Take the person to the workspace's composer: the caret in it, scrolled
- * into view. False when it cannot be typed in yet (its runtime is still
- * being assigned) or there is none.
+ * Its own workspace's composer: the nearest one around the character's place
+ * in the page, never another chat's on the same page (the landing's own, a
+ * panel kept mounted out of sight). The first ancestor of `from` that holds
+ * one; the page's first when `from` is not given.
  */
-export function focusComposer(): boolean {
-  const composer = document.querySelector<HTMLElement>(
-    '[data-chat-composer] textarea:not(:disabled), [data-chat-composer] [contenteditable="true"]',
-  );
-  if (!composer) {
+export function ownComposer(from?: HTMLElement | null): HTMLElement | null {
+  for (let node = from?.parentElement; node; node = node.parentElement) {
+    const found = node.querySelector<HTMLElement>(COMPOSER_EDITABLE);
+    if (found) {
+      return found;
+    }
+  }
+  return from ? null : document.querySelector<HTMLElement>(COMPOSER_EDITABLE);
+}
+
+/** Whether a person sees the element: on screen and not covered there. */
+function seen(element: HTMLElement): boolean {
+  // No boxes at all: a page without layout (a test's DOM); an element that
+  // is not displayed takes no focus, which the caller has already checked.
+  if (element.getClientRects().length === 0) {
+    return true;
+  }
+  const box = element.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) {
     return false;
   }
-  composer.scrollIntoView?.({ block: 'nearest' });
-  composer.focus();
-  return document.activeElement === composer;
+  const x = box.left + Math.min(box.width / 2, 24);
+  const y = box.top + box.height / 2;
+  if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+    return false;
+  }
+  // Without layout (a test's DOM) nothing is said to cover it.
+  const top = document.elementFromPoint?.(x, y);
+  return !top || element.contains(top) || top.contains(element);
+}
+
+/**
+ * Take the person to its workspace's composer: the caret in it, scrolled into
+ * view, when one is seen there (`focused`); `not-ready` while it cannot be
+ * typed in yet (its runtime is still being assigned); `none` when there is
+ * none it can reach — none on the page, or one out of sight in a frame or a
+ * closed panel — and the character's own prompt is offered instead.
+ */
+export function focusComposer(from?: HTMLElement | null): ComposerReach {
+  const editable = ownComposer(from);
+  if (!editable) {
+    return 'none';
+  }
+  const disabled =
+    (editable instanceof HTMLTextAreaElement && editable.disabled) ||
+    editable.getAttribute('contenteditable') === 'false';
+  if (disabled) {
+    return 'not-ready';
+  }
+  editable.scrollIntoView?.({ block: 'nearest' });
+  editable.focus();
+  return document.activeElement === editable && seen(editable)
+    ? 'focused'
+    : 'none';
 }
 
 /** The room the character keeps from the window's edges, in pixels. */
@@ -300,6 +352,90 @@ function useCornerBottom(enabled: boolean, size: number): number {
     };
   }, [enabled, size]);
   return bottom;
+}
+
+/** The height of the character's own prompt, for its place above a dragged character. */
+const PROMPT_HEIGHT = 120;
+
+/**
+ * The character's own prompt (13 November 2026): opened by a click when its
+ * page has no composer it can reach — the Playground's frame, a closed panel —
+ * so that a click always leads somewhere to type. Sent through the
+ * workspace's `submit`, as its composer sends; Escape closes it.
+ */
+function AssistantPrompt({
+  place,
+  label,
+  send,
+  onSend,
+  onClose,
+}: {
+  place: { left?: string; top?: string; right?: string; bottom?: string };
+  label: string;
+  send: string;
+  onSend: (message: string) => void;
+  onClose: () => void;
+}): JSX.Element {
+  const [text, setText] = useState('');
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+  const message = text.trim();
+  return (
+    <Box
+      as="form"
+      data-assistant-prompt=""
+      position="fixed"
+      {...place}
+      zIndex={1001}
+      width={320}
+      maxWidth="calc(100vw - 32px)"
+      p={2}
+      borderRadius={2}
+      border="1px solid"
+      borderColor="border.default"
+      bg="canvas.overlay"
+      boxShadow="shadow.large"
+      onSubmit={(event: FormEvent) => {
+        event.preventDefault();
+        if (message) {
+          onSend(message);
+        }
+      }}
+    >
+      <Textarea
+        ref={ref}
+        block
+        rows={3}
+        resize="none"
+        aria-label={label}
+        placeholder={label}
+        value={text}
+        onChange={event => setText(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Escape') {
+            onClose();
+          } else if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (message) {
+              onSend(message);
+            }
+          }
+        }}
+      />
+      <Box display="flex" justifyContent="flex-end" mt={2}>
+        <Button
+          type="submit"
+          size="small"
+          variant="primary"
+          disabled={!message}
+        >
+          {send}
+        </Button>
+      </Box>
+    </Box>
+  );
 }
 
 /** How long *You can write to me as soon as I am ready* stays, in ms. */
@@ -437,6 +573,8 @@ export function LoopAssistant({
   const cornerBottom = useCornerBottom(!onPageLayout && !drag.position, SIZE);
   // Clicked while its composer cannot be typed in yet: said in its balloon.
   const [notReady, setNotReady] = useState(false);
+  // Its own prompt is open: the page has no composer it can reach.
+  const [asking, setAsking] = useState(false);
   useEffect(() => {
     if (!notReady) {
       return;
@@ -557,7 +695,14 @@ export function LoopAssistant({
     if (saying) {
       setHeardId(saying.id);
     }
-    setNotReady(!focusComposer());
+    if (asking) {
+      setAsking(false);
+      return;
+    }
+    const reach = focusComposer(stageRef.current);
+    setNotReady(reach === 'not-ready');
+    // No composer of its own in sight: its own prompt, beside it.
+    setAsking(reach === 'none' && Boolean(workspace?.submit));
   };
   const onDismiss = (next: AssistantAway) => {
     keepAway(next);
@@ -572,6 +717,28 @@ export function LoopAssistant({
       {appId && signedIn ? (
         <WaitingApprovals appId={appId} onWaiting={setApproval} />
       ) : null}
+      {asking && workspace?.submit ? (
+        <AssistantPrompt
+          place={
+            drag.position
+              ? {
+                  left: `${drag.position.left}px`,
+                  top: `${Math.max(8, drag.position.top - PROMPT_HEIGHT - 8)}px`,
+                }
+              : {
+                  right: `${CORNER}px`,
+                  bottom: `${cornerBottom + SIZE + 8}px`,
+                }
+          }
+          label={chatText.writeToMe}
+          send={chatText.send}
+          onSend={message => {
+            setAsking(false);
+            void workspace.submit(message);
+          }}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
       <AssistantStage
         character={chosen.character}
         state={state}
@@ -583,7 +750,7 @@ export function LoopAssistant({
         }
         stageRef={stageRef}
         onDragStart={drag.onHandlePointerDown}
-        open={open}
+        open={open || asking}
         onToggle={onToggle}
         balloon={balloon}
         balloonDisplay={display}

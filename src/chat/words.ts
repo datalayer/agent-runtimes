@@ -124,6 +124,8 @@ export type ChatWords = {
   notReadyToWrite: string;
   /** The × that hides the balloon. */
   hideBalloon: string;
+  /** Its own prompt, opened when no composer is in reach. */
+  writeToMe: string;
   /** It waits on the person's yes. */
   waitingForYou: string;
   /** Its deployment is paused. */
@@ -218,6 +220,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Click me to write to me.',
     notReadyToWrite: 'You can write to me as soon as I am ready.',
     hideBalloon: 'Hide the balloon',
+    writeToMe: 'Write to me…',
     waitingForYou: 'Waiting for you',
     paused: 'Paused — it answers again once it is resumed.',
     moreWaiting: count => `${count} more`,
@@ -309,6 +312,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Cliquez sur moi pour m’écrire.',
     notReadyToWrite: 'Vous pourrez m’écrire dès que je serai prêt.',
     hideBalloon: 'Masquer la bulle',
+    writeToMe: 'Écrivez-moi…',
     waitingForYou: 'Il vous attend',
     paused: 'En pause — il répondra de nouveau une fois relancé.',
     moreWaiting: count => `${count} de plus`,
@@ -401,6 +405,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Haz clic en mí para escribirme.',
     notReadyToWrite: 'Podrás escribirme en cuanto esté listo.',
     hideBalloon: 'Ocultar el globo',
+    writeToMe: 'Escríbeme…',
     waitingForYou: 'Te está esperando',
     paused: 'En pausa: responderá de nuevo cuando se reanude.',
     moreWaiting: count => `${count} más`,
@@ -493,6 +498,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Klick mich an, um mir zu schreiben.',
     notReadyToWrite: 'Du kannst mir schreiben, sobald ich bereit bin.',
     hideBalloon: 'Sprechblase ausblenden',
+    writeToMe: 'Schreib mir…',
     waitingForYou: 'Wartet auf dich',
     paused: 'Pausiert – antwortet wieder, sobald es fortgesetzt wird.',
     moreWaiting: count => `${count} weitere`,
@@ -586,6 +592,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Cliccami per scrivermi.',
     notReadyToWrite: 'Potrai scrivermi appena sarò pronto.',
     hideBalloon: 'Nascondi il fumetto',
+    writeToMe: 'Scrivimi…',
     waitingForYou: 'Ti sta aspettando',
     paused: 'In pausa: risponderà di nuovo quando verrà ripreso.',
     moreWaiting: count => `altri ${count}`,
@@ -679,6 +686,7 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     clickToWrite: 'Clique em mim para me escrever.',
     notReadyToWrite: 'Você poderá me escrever assim que eu estiver pronto.',
     hideBalloon: 'Ocultar o balão',
+    writeToMe: 'Escreva para mim…',
     waitingForYou: 'Esperando por você',
     paused: 'Em pausa — volta a responder quando for retomado.',
     moreWaiting: count => `mais ${count}`,
