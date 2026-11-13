@@ -288,10 +288,20 @@ def test_the_generator_writes_an_agents_voice_whole_and_only_when_said():
                 "version": "0.0.1",
                 "name": "Desk",
                 "description": "d",
+                "runtime_engine": "datalayer",
                 "voice": {"enabled": True, "output": "always", "language": "fr-FR"},
             },
         ),
-        ("", {"id": "quiet", "version": "0.0.1", "name": "Quiet", "description": "q"}),
+        (
+            "",
+            {
+                "id": "quiet",
+                "version": "0.0.1",
+                "name": "Quiet",
+                "description": "q",
+                "runtime_engine": "datalayer",
+            },
+        ),
     ]
     whole = {
         "enabled": True,

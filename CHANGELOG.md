@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.38 is 1.6.37, released.** 1.6.37 never published: its gate failed on `test_voice`, whose generator fixture named no `runtime_engine`, which the generator now refuses; the fixture says `datalayer`.
 - **1.6.37 is the release of this line since 1.6.36**: `runtime_engine` on every agentspec, with agentspecs 0.0.182 as the floor, and `deploy/kagent`'s Harness serving `example-kagent` (was `example-blank`).
 - **`runtime_engine` on every agentspec, after `harness`: `datalayer` or `kagent`.** `Agentspec.runtime_engine` (`datalayer` by default for an agent built in code, alias `runtimeEngine`) and `runtimeEngine` in TypeScript, with `RUNTIME_ENGINES` and `RUNTIME_ENGINE_LABELS`. The generator refuses a spec that names no engine, an unknown one, or `kagent` on a harness other than `pydantic-ai`. `example-kagent`, the catalogue's agent for kagent. Docs: the agentspecs page (Harness and Runtime Engine), the kagent page (the agentspec, the Harness, AgentTemplate and Agent, each conversation an actor, the A2A path, a Datalayer plane), the Agent Substrate page (golden snapshots, suspend and resume, a Datalayer plane).
 - **1.6.36 is the release of this line since 1.6.35**: the kagent image's `ui` extra, the Agent Substrate wake after a restore and the evals adapters' tracebacks (below).
