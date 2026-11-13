@@ -1223,8 +1223,8 @@ def launch_cloud(
         # platform ignores it for an unmetered runtime.
         reserved = choose_minutes(chosen, minutes=minutes, can_ask=False)
         status(
-            f"Launching {label or agent_id} on Datalayer ({chosen.name}, unmetered: "
-            "no credits, never expires)…"
+            f"Launching {label or agent_id} on Datalayer ({chosen.name}, billed: "
+            "it runs until its reservation ends)…"
         )
     else:
         reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
