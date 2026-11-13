@@ -92,20 +92,29 @@ def _cleanup_subprocess_with_spinner(app: bool = False) -> None:
 
 
 def _signal_handler(signum: int, frame: Any) -> None:
-    """Handle signals by cleaning up subprocess and exiting."""
+    """Handle SIGTERM by cleaning up subprocess and exiting."""
     _cleanup_subprocess()
     # Re-raise with default handler for proper exit
     signal.signal(signum, signal.SIG_DFL)
     os.kill(os.getpid(), signum)
 
 
+def _leave_handler(signum: int, frame: Any) -> None:
+    """Ctrl-C and Ctrl-Z leave `loop` the way /exit does, with its goodbye.
+
+    Raised as a KeyboardInterrupt, the press reaches the paths that stop the
+    server and say goodbye; killed by the default handler, the process died
+    silent (Ctrl-C), or stopped its server and suspended itself (Ctrl-Z).
+    """
+    raise KeyboardInterrupt
+
+
 # Register cleanup handlers
 atexit.register(_cleanup_subprocess)
-signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGINT, _leave_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
-# SIGTSTP (Ctrl+Z) - we need to handle specially
 try:
-    signal.signal(signal.SIGTSTP, _signal_handler)
+    signal.signal(signal.SIGTSTP, _leave_handler)
 except (AttributeError, OSError):
     pass  # SIGTSTP not available on Windows
 

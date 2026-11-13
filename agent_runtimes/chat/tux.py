@@ -691,6 +691,13 @@ class CliTux:
             # menu, per-argument completion, and one binding per shortcut.
             completer = build_completer(self.command_registry)
             key_bindings = build_key_bindings(self.command_registry)
+
+            # In the prompt's raw mode Ctrl-Z is a key, not SIGTSTP: it leaves
+            # `loop` as Ctrl-C does, with the goodbye.
+            @key_bindings.add("c-z")
+            def _leave(event: Any) -> None:
+                event.app.exit(exception=KeyboardInterrupt())
+
             self.prompt_session = PromptSession(
                 completer=completer,
                 style=self.prompt_style,
@@ -719,10 +726,9 @@ class CliTux:
                 else None
             )
             return line
-        except EOFError:
+        except (EOFError, KeyboardInterrupt):
+            # Ctrl-D, Ctrl-C and Ctrl-Z (bound below) leave with the goodbye.
             return "/exit"
-        except KeyboardInterrupt:
-            return ""
 
     async def handle_command(self, user_input: str) -> Optional[str]:
         """Handle a slash command.
