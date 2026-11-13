@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -476,3 +477,37 @@ def test_the_command_refuses_a_tag_in_a_sentence() -> None:
         ],
     )
     assert result.exit_code != 0
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_the_actor_image_runs_what_the_template_runs_and_stays_lean() -> None:
+    # docker/Dockerfile.ate: the template's command on PATH, the extras the app
+    # imports, a release whose wakeup probe binds the identity after a restore,
+    # port 80, and nothing that would make every restore slower.
+    dockerfile = (ROOT / "docker" / "Dockerfile.ate").read_text()
+    body = actor_template(
+        TemplateRequest(atespace="agents", name="crawler", image=IMAGE)
+    )
+    command = body["containers"][0]["command"]
+    cmd = re.search(r"^CMD (\[.*\])$", dockerfile, re.M)
+    assert cmd and json.loads(cmd.group(1)) == command
+    assert re.search(r"^ENV PATH=/opt/agent-runtimes/bin:", dockerfile, re.M)
+    extras = re.search(r"^ARG AGENT_RUNTIMES_EXTRAS=(\S+)$", dockerfile, re.M)
+    assert extras and {"a2a", "ui"} <= set(extras.group(1).split(","))
+    version = re.search(
+        r"^ARG AGENT_RUNTIMES_VERSION=(\d+)\.(\d+)\.(\d+)$", dockerfile, re.M
+    )
+    assert version and tuple(map(int, version.groups())) >= (1, 6, 36)
+    assert re.search(r"^EXPOSE 80$", dockerfile, re.M)
+    lowered = "\n".join(
+        line for line in dockerfile.lower().splitlines() if not line.startswith("#")
+    )
+    for heavy in ("nodejs", "npm", "chromium", "playwright", "apt-get"):
+        assert heavy not in lowered, heavy
+
+
+def test_the_docs_page_points_at_the_actor_image() -> None:
+    page = (ROOT / "docs" / "docs" / "integrations" / "agent-substrate.mdx").read_text()
+    assert "docker/Dockerfile.ate" in page

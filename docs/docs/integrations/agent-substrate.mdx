@@ -58,8 +58,21 @@ You need a cluster with Agent Substrate installed (its
 [quickstart](https://ate.dev/docs/get-started/quickstart/)), `kubectl ate`, a
 `WorkerPool`, and an atespace.
 
-1. Push an Agent Runtimes image (for instance `docker/Dockerfile.agent-runtime`)
-   and note its **digest**. Templates take images by digest only.
+1. Build and push the actor image, `docker/Dockerfile.ate`, and note its
+   **digest**. Templates take images by digest only.
+
+   ```bash
+   docker build -f docker/Dockerfile.ate \
+     --build-arg AGENT_RUNTIMES_VERSION=1.6.36 \
+     -t registry.example.com/agent-runtimes-ate:1.6.36 .
+   docker push registry.example.com/agent-runtimes-ate:1.6.36
+   ```
+
+   It installs Agent Runtimes from PyPI (1.6.36 or later) with the `a2a`, `ui`,
+   `openai`, `anthropic` and `aws` extras, and nothing else: no Node.js, no
+   Chromium. Agent Substrate snapshots an actor's memory and filesystem on
+   suspend and restores them on resume, so a lean image resumes faster;
+   `docker/Dockerfile.agent-runtime` works too, several times slower to restore.
 
 2. Render the template and create it:
 

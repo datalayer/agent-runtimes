@@ -1,0 +1,58 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# The image an Agent Substrate (https://ate.dev) actor runs: one image for
+# every agentspec, the agentspec named in the ActorTemplate's environment
+# (AGENT_SPEC_ID). `agent-runtimes-ate template` renders that template; its
+# command is `agent-runtimes serve --target ate`, the same as this image's.
+#
+# Lean like Dockerfile.agentcore and Dockerfile.kagent: no Node.js, no
+# Chromium, no memory extra. Agent Substrate snapshots an actor's memory and
+# filesystem on suspend and restores them on resume, so every megabyte of the
+# image is paid again at each restore: Dockerfile.agent-runtime, with Node.js
+# and Chromium, restores several times slower.
+#
+# Templates take images by digest only: push it, then name it by digest in
+# `agent-runtimes-ate template --image <repository>@sha256:<digest>`.
+
+ARG PYTHON_VERSION=3.11
+
+FROM python:${PYTHON_VERSION}-slim
+
+# 1.6.36 is the first release whose wakeup probe binds the identity after a
+# restore from a snapshot.
+ARG AGENT_RUNTIMES_VERSION=1.6.36
+# `ui` (ag-ui-protocol) is not optional: agent_runtimes.app imports the AG-UI
+# transport whatever the protocol served.
+ARG AGENT_RUNTIMES_EXTRAS=a2a,ui,openai,anthropic,aws
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN python -m venv /opt/agent-runtimes \
+    && /opt/agent-runtimes/bin/pip install \
+        "agent-runtimes[${AGENT_RUNTIMES_EXTRAS}]==${AGENT_RUNTIMES_VERSION}" \
+    && /opt/agent-runtimes/bin/agent-runtimes --help > /dev/null
+
+# /data is the actor's durable volume (the template mounts it); /run/ate its
+# metadata, read at each wake.
+RUN mkdir -p /home/agent /data
+
+ENV PATH=/opt/agent-runtimes/bin:${PATH} \
+    HOME=/home/agent
+
+WORKDIR /home/agent
+
+LABEL org.opencontainers.image.title="agent-runtimes-ate" \
+      org.opencontainers.image.description="agent-runtimes as an Agent Substrate actor" \
+      org.opencontainers.image.source="https://github.com/datalayer/agent-runtimes" \
+      org.opencontainers.image.licenses="BSD-3-Clause" \
+      org.opencontainers.image.version="${AGENT_RUNTIMES_VERSION}"
+
+# 80: every protocol agent-runtimes serves, the wakeup probe (/ate/wakeup) and
+# the identity (/ate/identity). ATE_PORT changes it.
+EXPOSE 80
+
+CMD ["agent-runtimes", "serve", "--target", "ate"]
