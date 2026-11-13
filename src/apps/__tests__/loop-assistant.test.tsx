@@ -30,7 +30,9 @@ import {
 import {
   LoopAssistantPlugin,
   assistantStateOfTurn,
+  cornerBottomAbove,
 } from '../plugins/assistant';
+import { CHAT_WORDS } from '../../chat/words';
 import {
   LoopAssistantCharacter,
   LoopAssistantMenu,
@@ -506,5 +508,102 @@ describe('the balloon’s history, from the chat’s conversation', () => {
     expect(
       list?.querySelector('[data-chat-message="user"]')?.textContent,
     ).toContain('What did you find?');
+  });
+});
+
+describe('the way to the conversation on the page (13 November 2026)', () => {
+  const words = CHAT_WORDS.en;
+
+  it('stands above its own composer when the composer reaches its corner, never over it', () => {
+    const view = { width: 1440, height: 1000 };
+    // The composer clear of the corner: it stays in the corner.
+    expect(
+      cornerBottomAbove(
+        [{ left: 16, right: 1424, top: 784, bottom: 880 }],
+        view,
+        88,
+      ),
+    ).toBe(24);
+    // After the first message the composer moved down into the corner:
+    // the character stands just above it, where it stepped aside before.
+    expect(
+      cornerBottomAbove(
+        [{ left: 16, right: 1424, top: 820, bottom: 916 }],
+        view,
+        88,
+      ),
+    ).toBe(1000 - 820 + 8);
+    // A composer on the left of the page leaves the corner alone.
+    expect(
+      cornerBottomAbove(
+        [{ left: 16, right: 700, top: 820, bottom: 916 }],
+        view,
+        88,
+      ),
+    ).toBe(24);
+  });
+
+  it('invites a click that puts the caret in the composer, and says so when it cannot be typed in yet', async () => {
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      LoopAssistantPlugin,
+    ]);
+    const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+    // Its runtime is still being assigned: the composer is greyed.
+    const composer = document.createElement('div');
+    composer.setAttribute('data-chat-composer', '');
+    const textarea = document.createElement('textarea');
+    textarea.disabled = true;
+    composer.appendChild(textarea);
+    document.body.appendChild(composer);
+    try {
+      await act(async () => figure.click());
+      expect(document.body.textContent).toContain(words.notReadyToWrite);
+      expect(document.activeElement).not.toBe(textarea);
+      // Ready: the click puts the caret in it.
+      textarea.disabled = false;
+      await act(async () => figure.click());
+      expect(document.activeElement).toBe(textarea);
+      expect(document.body.textContent).not.toContain(words.notReadyToWrite);
+    } finally {
+      composer.remove();
+    }
+  });
+
+  it('hides its balloon with the ×, and stays on the page to be clicked again', async () => {
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      LoopAssistantPlugin,
+    ]);
+    const stage = el.querySelector('[data-assistant-state]') as HTMLElement;
+    await act(async () => {
+      stage.dispatchEvent(
+        new MouseEvent('mouseover', {
+          bubbles: true,
+          relatedTarget: document.body,
+        }),
+      );
+    });
+    expect(el.querySelector('[data-speech-balloon]')).not.toBeNull();
+    expect(document.body.textContent).toContain(words.clickToWrite);
+    const hide = el.querySelector(
+      '[data-assistant-hide-balloon]',
+    ) as HTMLElement;
+    // Primer's IconButton names itself through its tooltip.
+    const named =
+      hide.getAttribute('aria-label') ??
+      document.getElementById(hide.getAttribute('aria-labelledby') ?? '')
+        ?.textContent;
+    expect(named).toBe(words.hideBalloon);
+    // No *Send away* menu behind the × while its balloon is up.
+    expect(el.querySelector('[data-assistant-dismiss]')).toBeNull();
+    await act(async () => hide.click());
+    expect(el.querySelector('[data-speech-balloon]')).toBeNull();
+    // Still there, not sent away.
+    expect(el.querySelector('[data-assistant-figure]')).not.toBeNull();
+    expect(window.localStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
   });
 });

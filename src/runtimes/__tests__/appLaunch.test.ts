@@ -197,11 +197,14 @@ describe('the hook and the bridge', () => {
   const src = join(__dirname, '..', '..');
   const read = (file: string) => readFileSync(join(src, file), 'utf8');
 
-  it('launches an application’s runtime with it, and never reuses one', () => {
+  it('launches an application’s runtime with it, and reuses only its deployment’s', () => {
     const hook = read('hooks/useAgentRuntimes.ts');
     expect(hook).toContain('...appLaunch,');
-    // A running runtime was not launched for the application.
-    const lookup = hook.slice(hook.indexOf('if (appLaunch) {'));
+    // Without a deployment (a Preview), a running runtime was not launched
+    // for the application: none is looked for.
+    const lookup = hook.slice(
+      hook.indexOf('if (appLaunch && !deploymentUid) {'),
+    );
     expect(lookup).toContain('setLookedForExisting(true);');
     expect(lookup.indexOf('return;')).toBeLessThan(
       lookup.indexOf('listRuntimes'),
@@ -219,5 +222,49 @@ describe('the hook and the bridge', () => {
     const bridge = read('apps/plugins/agents/DatalayerAgentBridge.tsx');
     expect(bridge).toContain('appLaunchOf(createPayload)');
     expect(bridge).toContain('...(appLaunch ? { appLaunch } : {})');
+  });
+});
+
+describe('one runtime per visit to a deployment (13 November 2026)', () => {
+  it('goes on with the runtime launched for the same deployment, never another’s, never an expired one', async () => {
+    const { reusesAppRuntime } = await import('../../hooks/useAgentRuntimes');
+    const now = 1_794_588_000;
+    const mine = {
+      ingress: 'https://r1/jupyter/server/pool/01',
+      deployment_uid: 'deployment-1',
+      expired_at: String(now + 3600),
+    };
+    expect(reusesAppRuntime(mine, 'deployment-1', now)).toBe(true);
+    // Launched for another deployment: not given this one's secrets.
+    expect(reusesAppRuntime(mine, 'deployment-2', now)).toBe(false);
+    // A bare runtime, launched for no application.
+    expect(
+      reusesAppRuntime({ ...mine, deployment_uid: null }, 'deployment-1', now),
+    ).toBe(false);
+    // About to expire, or without an address yet.
+    expect(
+      reusesAppRuntime(
+        { ...mine, expired_at: String(now + 30) },
+        'deployment-1',
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      reusesAppRuntime({ ...mine, ingress: '' }, 'deployment-1', now),
+    ).toBe(false);
+  });
+
+  it('looks for it before launching, and never launches while another mount’s launch is in flight', () => {
+    const hook = readFileSync(
+      join(__dirname, '..', '..', 'hooks', 'useAgentRuntimes.ts'),
+      'utf8',
+    );
+    expect(hook).toContain('if (appLaunch && !deploymentUid) {');
+    expect(hook).toContain(
+      'return reusesAppRuntime(rt, deploymentUid, nowSeconds);',
+    );
+    expect(hook).toMatch(
+      /!runtime &&[\s\S]{0,400}!isLaunching &&[\s\S]{0,80}!hasAutoStarted\.current/,
+    );
   });
 });

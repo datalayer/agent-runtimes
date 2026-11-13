@@ -690,6 +690,13 @@ export interface AssistantStageProps {
    */
   stayPut?: boolean;
   /**
+   * The × beside the character hides its balloon while one is shown, rather
+   * than sending the character away: the way back to the conversation
+   * stays on the page. The balloon comes back with new words, or when the
+   * pointer comes back to the character; sending it away stays in its menu.
+   */
+  dismissHidesBalloon?: boolean;
+  /**
    * The agent's own name, used in place of the character's by its menu and
    * its *Send … away*: `Sales`, where the character is a paper clip.
    */
@@ -757,6 +764,7 @@ export function AssistantStage({
   decide,
   mouthLevel,
   stayPut = false,
+  dismissHidesBalloon = false,
   balloonDisplay = 'history',
   expandTarget,
   expandOnArrival = false,
@@ -878,8 +886,22 @@ export function AssistantStage({
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);
+  // The words whose balloon the × hid: hidden until the words change or the
+  // pointer comes back to the character.
+  const [hushed, setHushed] = useState<string | null>(null);
+  const wasHovered = useRef(hovered);
+  useEffect(() => {
+    if (hovered && !wasHovered.current) {
+      setHushed(null);
+    }
+    wasHovered.current = hovered;
+  }, [hovered]);
   const showBalloon =
-    !aside && !open && !!balloon && (hovered || insist || deciding);
+    !aside &&
+    !open &&
+    !!balloon &&
+    !(hushed !== null && balloon.text === hushed && !deciding) &&
+    (hovered || insist || deciding);
   // Suggestions while it waits for a question.
   const waitsForQuestion =
     (state === 'idle' || state === 'greeting') &&
@@ -1267,7 +1289,27 @@ export function AssistantStage({
           />
         )}
       </Box>
-      {(hovered || menuOpen) && !aside && state !== 'goodbye' && (
+      {dismissHidesBalloon &&
+      showBalloon &&
+      !menuOpen &&
+      balloon &&
+      state !== 'goodbye' ? (
+        <Box position="absolute" top="-6px" right="-6px">
+          <IconButton
+            icon={XIcon}
+            aria-label={chatText.hideBalloon}
+            size="small"
+            variant="invisible"
+            data-assistant-hide-balloon=""
+            onClick={() => setHushed(balloon.text)}
+            sx={{
+              bg: 'canvas.default',
+              borderRadius: '50%',
+              boxShadow: 'shadow.small',
+            }}
+          />
+        </Box>
+      ) : (hovered || menuOpen) && !aside && state !== 'goodbye' ? (
         <Box position="absolute" top="-6px" right="-6px">
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <ActionMenu.Anchor>
@@ -1299,7 +1341,7 @@ export function AssistantStage({
             </ActionMenu.Overlay>
           </ActionMenu>
         </Box>
-      )}
+      ) : null}
       <AssistantContextMenu
         at={menuAt}
         items={menuItems}

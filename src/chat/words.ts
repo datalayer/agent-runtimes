@@ -116,6 +116,14 @@ export type ChatWords = {
   // The assistant's balloon.
   /** An approval waits and cannot be answered in the balloon itself. */
   waitingOpen: string;
+  /** Its invitation when the conversation opens in a panel. */
+  clickToOpen: string;
+  /** Its invitation when the conversation is on the page, its composer below. */
+  clickToWrite: string;
+  /** Clicked while its composer cannot be typed in yet. */
+  notReadyToWrite: string;
+  /** The × that hides the balloon. */
+  hideBalloon: string;
   /** It waits on the person's yes. */
   waitingForYou: string;
   /** Its deployment is paused. */
@@ -206,6 +214,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Connect',
     decline: 'Decline',
     waitingOpen: 'Waiting for you — open the conversation to answer.',
+    clickToOpen: 'Click me to open the conversation.',
+    clickToWrite: 'Click me to write to me.',
+    notReadyToWrite: 'You can write to me as soon as I am ready.',
+    hideBalloon: 'Hide the balloon',
     waitingForYou: 'Waiting for you',
     paused: 'Paused — it answers again once it is resumed.',
     moreWaiting: count => `${count} more`,
@@ -293,6 +305,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Connecter',
     decline: 'Refuser',
     waitingOpen: 'Il vous attend — ouvrez la conversation pour répondre.',
+    clickToOpen: 'Cliquez sur moi pour ouvrir la conversation.',
+    clickToWrite: 'Cliquez sur moi pour m’écrire.',
+    notReadyToWrite: 'Vous pourrez m’écrire dès que je serai prêt.',
+    hideBalloon: 'Masquer la bulle',
     waitingForYou: 'Il vous attend',
     paused: 'En pause — il répondra de nouveau une fois relancé.',
     moreWaiting: count => `${count} de plus`,
@@ -381,6 +397,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Conectar',
     decline: 'Rechazar',
     waitingOpen: 'Te está esperando: abre la conversación para responder.',
+    clickToOpen: 'Haz clic en mí para abrir la conversación.',
+    clickToWrite: 'Haz clic en mí para escribirme.',
+    notReadyToWrite: 'Podrás escribirme en cuanto esté listo.',
+    hideBalloon: 'Ocultar el globo',
     waitingForYou: 'Te está esperando',
     paused: 'En pausa: responderá de nuevo cuando se reanude.',
     moreWaiting: count => `${count} más`,
@@ -469,6 +489,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Verbinden',
     decline: 'Ablehnen',
     waitingOpen: 'Wartet auf dich – öffne das Gespräch, um zu antworten.',
+    clickToOpen: 'Klick mich an, um das Gespräch zu öffnen.',
+    clickToWrite: 'Klick mich an, um mir zu schreiben.',
+    notReadyToWrite: 'Du kannst mir schreiben, sobald ich bereit bin.',
+    hideBalloon: 'Sprechblase ausblenden',
     waitingForYou: 'Wartet auf dich',
     paused: 'Pausiert – antwortet wieder, sobald es fortgesetzt wird.',
     moreWaiting: count => `${count} weitere`,
@@ -558,6 +582,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Collega',
     decline: 'Rifiuta',
     waitingOpen: 'Ti sta aspettando: apri la conversazione per rispondere.',
+    clickToOpen: 'Cliccami per aprire la conversazione.',
+    clickToWrite: 'Cliccami per scrivermi.',
+    notReadyToWrite: 'Potrai scrivermi appena sarò pronto.',
+    hideBalloon: 'Nascondi il fumetto',
     waitingForYou: 'Ti sta aspettando',
     paused: 'In pausa: risponderà di nuovo quando verrà ripreso.',
     moreWaiting: count => `altri ${count}`,
@@ -647,6 +675,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     connect: 'Conectar',
     decline: 'Recusar',
     waitingOpen: 'Esperando por você — abra a conversa para responder.',
+    clickToOpen: 'Clique em mim para abrir a conversa.',
+    clickToWrite: 'Clique em mim para me escrever.',
+    notReadyToWrite: 'Você poderá me escrever assim que eu estiver pronto.',
+    hideBalloon: 'Ocultar o balão',
     waitingForYou: 'Esperando por você',
     paused: 'Em pausa — volta a responder quando for retomado.',
     moreWaiting: count => `mais ${count}`,

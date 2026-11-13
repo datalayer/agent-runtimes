@@ -128,6 +128,27 @@ export type AppLaunch = Required<Pick<IRuntimeOptions, 'appSpec'>> &
   Pick<IRuntimeOptions, 'appUid' | 'deploymentUid' | 'runtimeEngine'>;
 
 /**
+ * Whether a listed runtime is one an application's deployment goes on with:
+ * launched for that deployment (its secrets given at launch, R-19) and not
+ * expired. One per visitor: the listing is the caller's own runtimes.
+ */
+export function reusesAppRuntime(
+  runtime: {
+    deployment_uid?: string | null;
+    expired_at?: string | number | null;
+    ingress?: string;
+  },
+  deploymentUid: string,
+  nowSeconds: number,
+): boolean {
+  if (!runtime.ingress || runtime.deployment_uid !== deploymentUid) {
+    return false;
+  }
+  const expires = Number(runtime.expired_at ?? 0);
+  return !expires || expires > nowSeconds + 60;
+}
+
+/**
  * Return type for the useAgents hook.
  */
 export interface UseAgentReturn {
@@ -984,9 +1005,13 @@ export function useAgentRuntimes(
     if (!hasSpec || runtime || lifecycleStatus !== 'idle') {
       return;
     }
-    if (appLaunch) {
-      // An application's runtime is launched for it (R-19): a running one
-      // was not given its connections' secrets, so none is looked for.
+    // An application's runtime is launched for it (R-19), given its
+    // connections' secrets: a running one launched for another spec was not,
+    // so only one launched for the same deployment is gone on with. Each
+    // visit used to launch its own, and a reload while the first was still
+    // being assigned paid for two (13 November 2026).
+    const deploymentUid = appLaunch?.deploymentUid;
+    if (appLaunch && !deploymentUid) {
       setLookedForExisting(true);
       return;
     }
@@ -1001,9 +1026,13 @@ export function useAgentRuntimes(
         const { listRuntimes } = await import('../api/runtimes/runtimes');
         const runtimesResponse = await listRuntimes(token, runtimesUrl);
         const runtimes = runtimesResponse.runtimes || [];
+        const nowSeconds = Date.now() / 1000;
         const aiAgentRuntimes = runtimes.filter(rt => {
           if (rt.environment?.name !== 'ai-agents-env') {
             return false;
+          }
+          if (deploymentUid) {
+            return reusesAppRuntime(rt, deploymentUid, nowSeconds);
           }
           if (!agentSpecId) {
             return true;
@@ -1101,6 +1130,10 @@ export function useAgentRuntimes(
       // race it: two runtimes for one spec, and whichever answered last wins.
       lookedForExisting &&
       !runtime &&
+      // Another mount's launch still in flight (the workspace rebuilt while
+      // its runtime was being assigned): its runtime is this one's too, read
+      // from the store once it lands, never a second launch.
+      !isLaunching &&
       !hasAutoStarted.current &&
       lifecycleStatus === 'idle'
     ) {
@@ -1112,6 +1145,7 @@ export function useAgentRuntimes(
     autoStart,
     lookedForExisting,
     runtime,
+    isLaunching,
     lifecycleStatus,
     launchRuntime,
   ]);

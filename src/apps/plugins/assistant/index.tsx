@@ -216,13 +216,94 @@ function WaitingApprovals({
   return null;
 }
 
-/** Take the person to the workspace's composer. */
-function focusComposer(): void {
+/**
+ * Take the person to the workspace's composer: the caret in it, scrolled
+ * into view. False when it cannot be typed in yet (its runtime is still
+ * being assigned) or there is none.
+ */
+export function focusComposer(): boolean {
   const composer = document.querySelector<HTMLElement>(
-    '[data-chat-composer] textarea, [data-chat-composer] [contenteditable="true"]',
+    '[data-chat-composer] textarea:not(:disabled), [data-chat-composer] [contenteditable="true"]',
   );
-  composer?.focus();
+  if (!composer) {
+    return false;
+  }
+  composer.scrollIntoView?.({ block: 'nearest' });
+  composer.focus();
+  return document.activeElement === composer;
 }
+
+/** The room the character keeps from the window's edges, in pixels. */
+const CORNER = 24;
+/** The gap between the character and a composer it stands above. */
+const ABOVE_COMPOSER_GAP = 8;
+
+/**
+ * How far from the window's bottom the character stands in its corner: at
+ * `CORNER`, or just above its own conversation's composer when that composer
+ * reaches the corner. Without this it stood over the composer, and stepped
+ * aside for it (T-27) for as long as the composer stayed there — after the
+ * first message, for good, as the composer moved down into its corner.
+ */
+export function cornerBottomAbove(
+  composers: readonly Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>[],
+  view: { width: number; height: number },
+  size: number,
+): number {
+  const left = view.width - CORNER - size;
+  const right = view.width - CORNER;
+  let bottom = CORNER;
+  for (const box of composers) {
+    const meets =
+      box.right > left &&
+      box.left < right &&
+      box.bottom > view.height - CORNER - size &&
+      box.top < view.height - CORNER;
+    if (meets) {
+      bottom = Math.max(bottom, view.height - box.top + ABOVE_COMPOSER_GAP);
+    }
+  }
+  return Math.round(bottom);
+}
+
+/** How often the composer's place is read: it grows as words are typed. */
+const COMPOSER_CHECK_MS = 400;
+
+/** `cornerBottomAbove`, read from the page while `enabled`. */
+function useCornerBottom(enabled: boolean, size: number): number {
+  const [bottom, setBottom] = useState(CORNER);
+  useEffect(() => {
+    if (!enabled) {
+      setBottom(CORNER);
+      return;
+    }
+    const check = () => {
+      const boxes = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-chat-composer]'),
+      )
+        .map(element => element.getBoundingClientRect())
+        .filter(box => box.width > 0 && box.height > 0);
+      setBottom(
+        cornerBottomAbove(
+          boxes,
+          { width: window.innerWidth, height: window.innerHeight },
+          size,
+        ),
+      );
+    };
+    check();
+    const timer = window.setInterval(check, COMPOSER_CHECK_MS);
+    window.addEventListener('resize', check);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('resize', check);
+    };
+  }, [enabled, size]);
+  return bottom;
+}
+
+/** How long *You can write to me as soon as I am ready* stays, in ms. */
+const NOT_READY_MS = 6000;
 
 export function LoopAssistant({
   app,
@@ -351,6 +432,18 @@ export function LoopAssistant({
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });
+  // In its corner, above its own conversation's composer when that reaches
+  // the corner (the conversation on the page, not in a panel).
+  const cornerBottom = useCornerBottom(!onPageLayout && !drag.position, SIZE);
+  // Clicked while its composer cannot be typed in yet: said in its balloon.
+  const [notReady, setNotReady] = useState(false);
+  useEffect(() => {
+    if (!notReady) {
+      return;
+    }
+    const timer = setTimeout(() => setNotReady(false), NOT_READY_MS);
+    return () => clearTimeout(timer);
+  }, [notReady]);
   // Offered only when the agent decides: the runtime says it.
   const decide = useDecisionAsker(
     decisions?.serverUrl
@@ -437,20 +530,34 @@ export function LoopAssistant({
                       setFresh(false);
                     },
                   })
-                : withHistory({ text: 'Click me to open the conversation.' });
+                : notReady
+                  ? { text: chatText.notReadyToWrite }
+                  : withHistory({
+                      // On a page layout the conversation opens in its
+                      // panel; elsewhere it is on the page, its composer
+                      // below, where a click puts the caret.
+                      text: onPageLayout
+                        ? chatText.clickToOpen
+                        : chatText.clickToWrite,
+                    });
   const insist =
     state === 'greeting' ||
     presence === 'waiting' ||
     (!!approval && state !== 'paused') ||
     !!tool ||
     (current && atWork) ||
-    (unheard && (state === 'speaking' || fresh));
+    (unheard && (state === 'speaking' || fresh)) ||
+    notReady;
   const onToggle = () => {
     if (onPageLayout) {
       togglePagePanel();
-    } else {
-      focusComposer();
+      return;
     }
+    // Its words heard once the caret is in the composer.
+    if (saying) {
+      setHeardId(saying.id);
+    }
+    setNotReady(!focusComposer());
   };
   const onDismiss = (next: AssistantAway) => {
     keepAway(next);
@@ -472,7 +579,7 @@ export function LoopAssistant({
         place={
           drag.position
             ? { left: `${drag.position.left}px`, top: `${drag.position.top}px` }
-            : { right: '24px', bottom: '24px' }
+            : { right: `${CORNER}px`, bottom: `${cornerBottom}px` }
         }
         stageRef={stageRef}
         onDragStart={drag.onHandlePointerDown}
@@ -482,6 +589,9 @@ export function LoopAssistant({
         balloonDisplay={display}
         insist={insist}
         onDismiss={onDismiss}
+        // Its × hides the balloon; sending it away is in its menu, so the
+        // way back to the conversation is never taken by a click on the ×.
+        dismissHidesBalloon
         decide={decide}
         onResetPosition={drag.position ? drag.reset : undefined}
         onBalloonDisplayChange={setChosenDisplay}
