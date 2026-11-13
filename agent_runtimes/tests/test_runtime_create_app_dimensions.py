@@ -102,3 +102,46 @@ def test_an_engine_that_is_not_one_is_refused_before_anything_is_asked() -> None
             environment_name="ai-agents-env", credits_limit=1.0, runtime_engine="lambda"
         )
     assert transport.bodies == []
+
+
+def test_a_deployment_s_runtime_carries_its_public_address() -> None:
+    """The Operator puts the address on the runtime, so anybody's agent page
+    sends its visitor to ``/apps/<slug>`` (or ``/apps/<slug>/preview/<n>``)."""
+    transport = _Transport()
+    common: dict[str, Any] = dict(
+        environment_name="ai-agents-env",
+        credits_limit=1.0,
+        app_uid="app-1",
+        deployment_uid="dep-1",
+        app_spec={"name": "Tick"},
+    )
+    RuntimesClient(transport).create(**common, deployment_slug="desk")
+    RuntimesClient(transport).create(
+        **common, deployment_slug="desk", deployment_preview_version=4
+    )
+    RuntimesClient(transport).create(**common)
+    hosted, preview, unsaid = transport.bodies
+    assert hosted["deployment_slug"] == "desk"
+    assert "deployment_preview_version" not in hosted
+    assert (preview["deployment_slug"], preview["deployment_preview_version"]) == (
+        "desk",
+        4,
+    )
+    assert "deployment_slug" not in unsaid
+
+
+def test_an_address_without_its_deployment_is_refused_before_anything_is_asked() -> (
+    None
+):
+    transport = _Transport()
+    with pytest.raises(ValueError, match="without its deployment"):
+        RuntimesClient(transport).create(credits_limit=1.0, deployment_slug="desk")
+    with pytest.raises(ValueError, match="without its deployment's slug"):
+        RuntimesClient(transport).create(
+            credits_limit=1.0,
+            app_uid="app-1",
+            deployment_uid="dep-1",
+            app_spec={"name": "Tick"},
+            deployment_preview_version=2,
+        )
+    assert transport.bodies == []
