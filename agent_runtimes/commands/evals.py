@@ -108,6 +108,7 @@ adapters_app = typer.Typer(
     name="adapters",
     help="Inspect, import, launch and reproduce external frameworks.",
     no_args_is_help=True,
+    pretty_exceptions_show_locals=False,
 )
 
 INSPECTION_POLL_SECONDS = 2.0
