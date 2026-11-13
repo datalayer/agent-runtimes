@@ -28,7 +28,9 @@ FROM python:${PYTHON_VERSION}-slim
 # No default: the release named must have `serve --target kagent` (the first
 # one after 1.6.34).
 ARG AGENT_RUNTIMES_VERSION
-ARG AGENT_RUNTIMES_EXTRAS=a2a,openai,anthropic,aws
+# `ui` (ag-ui-protocol) is not optional: agent_runtimes.app imports the AG-UI
+# transport whatever the protocol served.
+ARG AGENT_RUNTIMES_EXTRAS=a2a,ui,openai,anthropic,aws
 ARG KAGENT_VERSION=1.0.1
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

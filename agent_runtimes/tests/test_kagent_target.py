@@ -455,3 +455,22 @@ def test_no_key_is_in_the_manifests() -> None:
             assert "apiKey" not in spec
         text = (DEPLOY / name).read_text()
         assert not re.search(r"(sk-[A-Za-z0-9]{8,}|eyJ[A-Za-z0-9_-]{10,})", text), name
+
+
+def test_the_image_installs_the_extras_the_app_imports() -> None:
+    # agent_runtimes.app imports the AG-UI transport (ag_ui) whatever protocol
+    # is served: an image without the `ui` extra stops at import, the bridge's
+    # /readyz never answers, and kagent's golden build fails on its wakeup probe.
+    root = Path(__file__).resolve().parents[2]
+    dockerfile = (root / "docker" / "Dockerfile.kagent").read_text()
+    declared = re.search(r"^ARG AGENT_RUNTIMES_EXTRAS=(\S+)$", dockerfile, re.M)
+    assert declared, "Dockerfile.kagent declares no AGENT_RUNTIMES_EXTRAS default"
+    extras = set(declared.group(1).split(","))
+    assert {"a2a", "ui"} <= extras
+    pyproject = (root / "pyproject.toml").read_text()
+    ui = re.search(r"^ui = \[(.*?)^\]", pyproject, re.M | re.S)
+    assert ui and "ag-ui-protocol" in ui.group(1)
+    agui = (
+        root / "agent_runtimes" / "transports" / "agui_authorizations.py"
+    ).read_text()
+    assert re.search(r"^from ag_ui\.", agui, re.M)
