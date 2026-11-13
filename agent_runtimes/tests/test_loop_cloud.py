@@ -269,7 +269,7 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
         launch.launch_cloud("crawler", runtime="runtime-0", can_ask=False)
 
 
-def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
+def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
     datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     asked: List[str] = []
@@ -286,15 +286,16 @@ def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
     )
     try:
         assert asked == [
-            "In which environment? (only those that can launch an agent can be picked)"
+            "In which environment? (only those that can launch an agent can be picked)",
+            launch.AGENTSPEC_QUESTION,
         ]
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
             "agent_spec_id": "example-simple",
         }
-        # The default agent, said once, with how to choose another.
-        assert len(notes) == 1 and "example-simple" in notes[0] and "-a" in notes[0]
+        # Picked, so not said as a default.
+        assert not any("example-simple" in line for line in notes)
         assert started.agent_spec_id == "example-simple"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
@@ -816,3 +817,42 @@ def test_the_cli_says_the_setup_from_its_options() -> None:
         "without_mcp_servers": True,
         "without_skills": ["github", "crawl"],
     }
+
+
+def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
+    from types import SimpleNamespace as Spec
+
+    specs = [
+        Spec(
+            id="worker-crawler",
+            enabled=True,
+            description="Crawls.",
+            runtime_engine="datalayer",
+        ),
+        Spec(
+            id="example-simple",
+            enabled=True,
+            description="Simple.",
+            runtime_engine="datalayer",
+        ),
+        Spec(
+            id="example-kagent", enabled=True, description="", runtime_engine="kagent"
+        ),
+        Spec(id="off", enabled=False, description="Off.", runtime_engine="datalayer"),
+    ]
+    assert launch.agentspec_choices(specs) == [
+        ("example-kagent (runs on kagent)", "example-kagent"),
+        ("example-simple — Simple.", "example-simple"),
+        ("worker-crawler — Crawls.", "worker-crawler"),
+    ]
+    seen: List[str] = []
+
+    def ask(question: str, choices: list, default: str) -> str:
+        seen.append(default)
+        return "worker-crawler"
+
+    assert launch.choose_agentspec(specs, can_ask=True, ask=ask) == "worker-crawler"
+    assert seen == ["example-simple"]
+    assert launch.choose_agentspec(specs, can_ask=False) == "example-simple"
+    with pytest.raises(KeyboardInterrupt):
+        launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)

@@ -739,6 +739,54 @@ def choose_environment(
     return by_name[answer]
 
 
+#: The question of the agent a new runtime is configured from.
+AGENTSPEC_QUESTION = (
+    "Which agent? (its agentspec configures the runtime; -a <agentspec> to name one)"
+)
+
+
+def agentspec_choices(specs: list[Any]) -> list[tuple[str, str]]:
+    """The enabled agentspecs as offered on Datalayer, by id, each with its description.
+
+    The runtime reaches the models through Datalayer: none is held back for
+    this machine's keys, as the local picker does.
+    """
+    choices = []
+    for spec in sorted(
+        (s for s in specs if getattr(s, "enabled", False)), key=lambda s: s.id
+    ):
+        about = " ".join(str(getattr(spec, "description", "") or "").split())
+        about = about if len(about) <= 50 else about[:47].rstrip() + "..."
+        engine = str(getattr(spec, "runtime_engine", "") or "datalayer")
+        on = "" if engine == "datalayer" else f" (runs on {engine})"
+        choices.append(
+            (f"{spec.id} — {about}{on}" if about else f"{spec.id}{on}", spec.id)
+        )
+    return choices
+
+
+def choose_agentspec(
+    specs: list[Any],
+    *,
+    can_ask: bool,
+    ask: Optional[Callable[..., Optional[str]]] = None,
+) -> str:
+    """The agentspec of a new cloud runtime: the person's pick, ``example-simple`` proposed.
+
+    Without somebody to ask, or with no enabled agentspec to offer, it is
+    ``example-simple``.
+    """
+    choices = agentspec_choices(specs)
+    if not can_ask or not choices:
+        return DEFAULT_CLOUD_AGENTSPEC
+    ids = [value for _, value in choices]
+    default = DEFAULT_CLOUD_AGENTSPEC if DEFAULT_CLOUD_AGENTSPEC in ids else ids[0]
+    answer = (ask or _select)(AGENTSPEC_QUESTION, choices, default)
+    if answer is None:
+        raise KeyboardInterrupt
+    return answer
+
+
 def credits_for(environment: Any, minutes: int) -> float:
     """The most a reservation can cost, in credits."""
     return float(getattr(environment, "burning_rate", 0.0) or 0.0) * 60.0 * minutes
@@ -1155,11 +1203,18 @@ def launch_cloud(
         offer.environments, environment=environment, can_ask=asking
     )
     if not agent_id:
-        agent_id = DEFAULT_CLOUD_AGENTSPEC
-        note(
-            f"The runtime's agent is {agent_id}, the agent loop starts with: "
-            "a runtime is configured from an agentspec. -a <agentspec> for another."
-        )
+        if asking:
+            # The person picks the agent its runtime is configured from (the
+            # user, 13 November 2026), example-simple proposed.
+            from agent_runtimes.specs.agents import list_agentspecs
+
+            agent_id = choose_agentspec(list_agentspecs(), can_ask=True)
+        else:
+            agent_id = DEFAULT_CLOUD_AGENTSPEC
+            note(
+                f"The runtime's agent is {agent_id}, the agent loop starts with: "
+                "a runtime is configured from an agentspec. -a <agentspec> for another."
+            )
     unmetered = unmetered_launch()
     if unmetered:
         # DATALAYER_MAGIC_API_KEY is set: the runtime is sent it, consumes no
@@ -1292,7 +1347,7 @@ def finish_cloud(
         answer = (ask or _confirm)(
             f"Stop the {launch.said} {launch.runtime_name}? "
             + (
-                "It is not billed: it runs until its reservation ends."
+                "It is billed and runs until its reservation ends."
                 if launch.unmetered
                 else "It is billed until you do."
             ),

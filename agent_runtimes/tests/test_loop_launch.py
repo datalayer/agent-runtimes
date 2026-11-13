@@ -494,14 +494,14 @@ def test_a_stop_says_where_and_what_it_stops() -> None:
         "Stop the cloud agent runtime runtime-1? It is billed until you do."
     ]
     assert said == ["Stopped cloud agent runtime runtime-1."]
-    # An application's, not billed: both are said.
+    # An application's, unmetered: billed until its reservation ends.
     launch = _launched(FakeClient())
     launch.app, launch.unmetered = True, True
     asked.clear()
     said.clear()
     finish_cloud(launch, can_ask=True, ask=ask, say=said.append)
     assert asked == [
-        "Stop the cloud app runtime runtime-1? It is not billed: it runs until its reservation ends."
+        "Stop the cloud app runtime runtime-1? It is billed and runs until its reservation ends."
     ]
     assert said == ["Stopped cloud app runtime runtime-1."]
     # Kept, and given back after a pause: the same words.
