@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.41 is the release of this line since 1.6.40**: a turn's provenance names a thread only when the host has one.
+- **Hosts: `TurnProvenance.thread` is optional.** A WhatsApp chat or group sends none (its place names it), as the runtime's own model already allowed (`thread: str = ""`).
 - **1.6.40 is the release of this line since 1.6.39**, with agentspecs 0.0.183 as the floor.
 - **`runtime_engine: agentcore`, the third engine**, and a launch's own engine overriding its spec's: `RuntimesClient.create(runtime_engine=...)` (`datalayer`, `kagent` or `agentcore`; another is refused), the same on the TypeScript launch; the Steward for AWS runs on AgentCore. Docs: the agentspecs page and the AgentCore integration page.
 - **loop: an unmetered launch says it is billed** and runs until its reservation ends, as its stop question does.
