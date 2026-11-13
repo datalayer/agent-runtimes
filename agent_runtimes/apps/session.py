@@ -64,6 +64,7 @@ from agent_runtimes.apps.rules import Decision
 from agent_runtimes.apps.uploads import accepts
 from agent_runtimes.specs.ui import SurfaceComponents
 from agent_runtimes.types import AppSpec
+from agent_runtimes.utils.ulid import new_ulid
 
 # --- what the user sees ---------------------------------------------------------
 
@@ -873,7 +874,7 @@ class Session:
         self.app = app
         """The application, as its spec says it."""
         self._platform = platform
-        self.uid = uid or _new_id()
+        self.uid = uid or new_ulid()
         """The session's uid: its conversation, and its record — the one word
         for it, on the wire and in the record alike (P-11)."""
         self.opened_by = opened_by

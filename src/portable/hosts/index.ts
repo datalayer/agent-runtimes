@@ -64,7 +64,6 @@ export {
   type TurnProvenance,
   type TurnStream,
 } from './agentClient';
-export { hostSessionUid } from './sessionUid';
 export {
   DATALAYER_ONLY,
   MAIL_WORDS,

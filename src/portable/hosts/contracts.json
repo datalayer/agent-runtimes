@@ -202,10 +202,10 @@
       "agent": "agent-desk",
       "deployment_uid": "dep-1",
       "opener": "Summarize the launch risks",
-      "session": "slack-T0-C0-1700000000-000001",
       "external_event_id": "Ev0123",
       "user_token": ""
     },
+    "session": "A start names no session: the runtime mints its uid (a ULID) and names it in the turn event's session, on the first run and on its replay; the host keeps it and sends the next messages to it.",
     "message_request": {
       "text": "And the costs?",
       "external_event_id": "Ev0124"
@@ -507,7 +507,7 @@
     }
   },
   "discord": {
-    "about": "Discord's forms of the generic contracts: the installation is <application_id>:<guild_id>, a member is their snowflake, a thread is sent as its parent channel, the session uid is hostSessionUid(\"discord\", [application, guild, channel, thread]).",
+    "about": "Discord's forms of the generic contracts: the installation is <application_id>:<guild_id>, a member is their snowflake, a thread is sent as its parent channel; the session uid is the runtime's, kept by the service against its thread.",
     "application_id": "123456789012345678",
     "guild_id": "234567890123456789",
     "bind_request": {
@@ -539,15 +539,6 @@
         "id": "678901234567890123"
       }
     },
-    "session": {
-      "parts": [
-        "123456789012345678",
-        "234567890123456789",
-        "345678901234567890",
-        "456789012345678901"
-      ],
-      "uid": "discord-15beb80510370bbe027882df9d4d4666925017df"
-    },
     "target": {
       "applicationId": "123456789012345678",
       "channelId": "345678901234567890",
@@ -558,7 +549,7 @@
     }
   },
   "whatsapp": {
-    "about": "WhatsApp's forms of the generic contracts: the installation is <waba_id>:<phone_number_id>, one per connected business number; a person is their business-scoped user id (BSUID: a country code, a period and up to 128 characters; never the phone number), which the external id pattern admits as it is, no hash in between; a 1:1 chat is a direct place named by the BSUID, a group a channel named by its group id; the session uid is hostSessionUid(\"whatsapp\", [waba_id, phone_number_id, user_id]) for a chat and [waba_id, phone_number_id, group_id] for a group; a turn's provenance names the message by its wamid.",
+    "about": "WhatsApp's forms of the generic contracts: the installation is <waba_id>:<phone_number_id>, one per connected business number; a person is their business-scoped user id (BSUID: a country code, a period and up to 128 characters; never the phone number), which the external id pattern admits as it is, no hash in between; a 1:1 chat is a direct place named by the BSUID, a group a channel named by its group id; the session uid is the runtime's, kept by the service against its chat or group; a turn's provenance names the message by its wamid.",
     "waba_id": "102290129340398",
     "phone_number_id": "106540352242922",
     "bind_request": {
@@ -583,22 +574,6 @@
         "kind": "channel",
         "id": "120363025246125486"
       }
-    },
-    "session": {
-      "parts": [
-        "102290129340398",
-        "106540352242922",
-        "US.13491208655302741918"
-      ],
-      "uid": "whatsapp-870e7e8165519947ec9c7df03d378b342cee380e"
-    },
-    "group_session": {
-      "parts": [
-        "102290129340398",
-        "106540352242922",
-        "120363025246125486"
-      ],
-      "uid": "whatsapp-49aeadff03b2d02e6359121f9a55bae904640b35"
     },
     "provenance": {
       "host_kind": "whatsapp",

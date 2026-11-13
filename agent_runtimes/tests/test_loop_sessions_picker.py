@@ -694,6 +694,16 @@ def test_a_new_sessions_uid_is_a_ulid_wherever_it_is_minted() -> None:
     assert is_ulid(conversation.thread_id)
     conversation.clear()
     assert is_ulid(conversation.thread_id)
+    # An application's session opened in this process (a terminal, a test),
+    # named by nobody.
+    from agent_runtimes.apps import AppHost, Application
+    from agent_runtimes.apps.session import MemoryChannel
+
+    host = AppHost(Application(id="desk", agent="example-simple"), MemoryChannel())
+    try:
+        assert is_ulid(host._session().uid)
+    finally:
+        host.dispose()
     # The shapes minted before are still session uids, and so is a ULID.
     for uid in (
         first,

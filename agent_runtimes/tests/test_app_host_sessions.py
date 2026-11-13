@@ -27,6 +27,7 @@ from agent_runtimes.apps.callers import Caller, CallerRefused, CallerVerifier
 from agent_runtimes.routes import apps as routes
 from agent_runtimes.tests import test_app_sessions as base
 from agent_runtimes.tests.test_app_sessions import ASSISTANT, Runtime, as_, events_of
+from agent_runtimes.utils.ulid import is_ulid
 
 runtime = base.runtime
 remote = base.remote
@@ -365,33 +366,38 @@ def test_a_turn_carries_its_provenance_as_the_contract_says(
     provenance = turn["optional_request"]["provenance"]
     assert turn["provenance_limit_bytes"] == routes.PROVENANCE_LIMIT_BYTES
     runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
-    session = CONTRACTS["discord"]["session"]["uid"]
+    # A host names no session: the runtime mints it.
     first = _turn(
         events_of(
             _start(
                 remote,
                 "host:alice:dep-1",
-                session,
+                "",
                 external_event_id="discord:1",
                 provenance=provenance,
             )
         )
     )
-    assert first["replayed"] is False and first["session"] == session
-    again = _start(
-        remote,
-        "host:alice:dep-1",
-        session,
-        external_event_id="discord:1",
-        provenance=provenance,
+    session = first["session"]
+    assert first["replayed"] is False and is_ulid(session)
+    again = _turn(
+        events_of(
+            _start(
+                remote,
+                "host:alice:dep-1",
+                "",
+                external_event_id="discord:1",
+                provenance=provenance,
+            )
+        )
     )
-    assert _turn(events_of(again))["replayed"] is True
+    assert again["replayed"] is True and again["session"] == session
     elsewhere = {**provenance, "place": {"kind": "direct", "id": "678901234567890123"}}
     assert (
         _start(
             remote,
             "host:alice:dep-1",
-            session,
+            "",
             external_event_id="discord:1",
             provenance=elsewhere,
         ).status_code
@@ -437,22 +443,21 @@ def test_a_whatsapp_turn_carries_its_chat_and_its_message(
 ) -> None:
     """WhatsApp's forms of the contract: a 1:1 chat is a direct place named
     by the person's business-scoped user id — the longest one too — a group a
-    channel, and the message its wamid; the session uid is the contract's."""
+    channel, and the message its wamid; the session uid is the runtime's."""
     whatsapp = CONTRACTS["whatsapp"]
     runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
-    session = whatsapp["session"]["uid"]
     first = _turn(
         events_of(
             _start(
                 remote,
                 "host:alice:dep-1",
-                session,
+                "",
                 external_event_id=whatsapp["provenance"]["message_id"],
                 provenance=whatsapp["provenance"],
             )
         )
     )
-    assert first["replayed"] is False and first["session"] == session
+    assert first["replayed"] is False and is_ulid(first["session"])
     longest = {
         **whatsapp["provenance"],
         "place": {"kind": "direct", "id": whatsapp["external_user_id_longest"]},
@@ -462,7 +467,7 @@ def test_a_whatsapp_turn_carries_its_chat_and_its_message(
         _start(
             remote,
             "host:alice:dep-1",
-            "whatsapp-longest-0001",
+            "",
             external_event_id="wamid.longest",
             provenance=longest,
         ).status_code
@@ -476,17 +481,18 @@ def test_a_whatsapp_turn_carries_its_chat_and_its_message(
     started = _start(
         remote,
         "host:alice:dep-1",
-        whatsapp["group_session"]["uid"],
+        "",
         external_event_id="wamid.group",
         provenance=group,
     )
-    assert _turn(events_of(started))["session"] == whatsapp["group_session"]["uid"]
+    group_session = _turn(events_of(started))["session"]
+    assert is_ulid(group_session) and group_session != first["session"]
     too_long = {**longest, "place": {"kind": "direct", "id": "U" * 256}}
     assert (
         _start(
             remote,
             "host:alice:dep-1",
-            "whatsapp-refused-0001",
+            "",
             external_event_id="wamid.refused",
             provenance=too_long,
         ).status_code
@@ -527,8 +533,9 @@ def test_an_external_turn_holds_to_the_shared_contract(
     sessions = "/api/v1/apps/sessions"
     first = _turn(events_of(remote.post(sessions, headers=who, json=start)))
     assert sorted(first) == sorted(event["value_keys"])
-    assert (first["session"], first["external_event_id"], first["replayed"]) == (
-        start["session"],
+    # It names no session: the turn event names the one the runtime minted.
+    assert "session" not in start and is_ulid(first["session"])
+    assert (first["external_event_id"], first["replayed"]) == (
         start["external_event_id"],
         False,
     )
@@ -536,6 +543,7 @@ def test_an_external_turn_holds_to_the_shared_contract(
     again = _turn(events_of(remote.post(sessions, headers=who, json=start)))
     assert sorted(again) == sorted(event["value_keys"])
     assert (again["turn"], again["replayed"]) == (first["turn"], True)
+    assert again["session"] == first["session"]
     assert len(model.prompts) == 1
     # The same event id, another request: 409, nothing run.
     assert (
@@ -547,7 +555,7 @@ def test_an_external_turn_holds_to_the_shared_contract(
     assert len(model.prompts) == 1
 
     keyed = {**who, CONTRACTS["headers"]["idempotency_key"]: "k-contract"}
-    messages = f"{sessions}/{start['session']}/messages"
+    messages = f"{sessions}/{first['session']}/messages"
     said = _turn(events_of(remote.post(messages, headers=keyed, json=message)))
     assert sorted(said) == sorted(event["value_keys"])
     assert (said["external_event_id"], said["replayed"]) == (

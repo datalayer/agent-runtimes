@@ -8,8 +8,9 @@
  * started or sent on the deployment's session API (idempotent by the host's
  * event id), its AG-UI stream reduced to semantic events, and its session
  * mapped to the host's thread so approvals and completions are delivered.
- * What is the host's own (its thread key, the
- * session uid, the place, the delivery target, its words) is injected as a
+ * A new session's uid is the runtime's (a ULID), named back in the stream;
+ * the host keeps it against its thread. What is the host's own (its thread
+ * key, the place, the delivery target, its words) is injected as a
  * `HostShape`. Moved from the Slack service (DC-004).
  *
  * @module portable/hosts/agentClient
@@ -41,12 +42,13 @@ export type HostTurnRequest<P> = Readonly<{
   principalId: string;
   prompt: string;
   provenance: P;
-  sessionId?: string;
   /**
-   * How many sessions the thread had before (an explicit start over or
-   * another application): a new session's uid is derived with it.
+   * The session the thread runs, as the host keeps it: a message to it.
+   * Without one, the turn opens a new session, whose uid the runtime mints
+   * (a ULID) and names back in the turn's `loop.turn` event; the host keeps
+   * it against its thread from `TurnStream.sessionId`.
    */
-  sessionGeneration?: number;
+  sessionId?: string;
   /**
    * The host user never linked: exchanged as a visitor, which ai-agents
    * answers only when the installation's owner opened it to visitors and the
@@ -95,13 +97,12 @@ export type TurnProvenance = Readonly<{
 }>;
 
 /**
- * What is the host's own in a turn: the session uid its thread derives
- * (`hostSessionUid`), the place Datalayer checks the channel policy against,
- * the delivery target handed back with every delivery, the provenance sent
- * with the turn, and what is said when its installation holds no host key.
+ * What is the host's own in a turn: the place Datalayer checks the channel
+ * policy against, the delivery target handed back with every delivery, the
+ * provenance sent with the turn, and what is said when its installation
+ * holds no host key.
  */
 export type HostShape<P> = Readonly<{
-  sessionUidOf(request: HostTurnRequest<P>): string;
   placeOf(request: HostTurnRequest<P>): Place;
   targetOf(request: HostTurnRequest<P>): Record<string, unknown>;
   /** The turn's provenance; a host that sends none leaves it out. */
@@ -405,7 +406,6 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
   async startTurn(request: HostTurnRequest<P>): Promise<TurnStream> {
     const host = await this.credentials.forTurn(request);
     assertTrustedStreamUrl(this.apiUrl, host.sessionApiUrl);
-    const sessionId = request.sessionId ?? this.shape.sessionUidOf(request);
     const provenance = this.shape.provenanceOf?.(request);
     const headers = {
       accept: 'text/event-stream',
@@ -415,7 +415,7 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
     };
     const response = request.sessionId
       ? await this.fetchImplementation(
-          `${host.sessionApiUrl}/${encodeURIComponent(sessionId)}/messages`,
+          `${host.sessionApiUrl}/${encodeURIComponent(request.sessionId)}/messages`,
           {
             body: JSON.stringify({
               external_event_id: request.externalEventId,
@@ -432,7 +432,6 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
             deployment_uid: host.deploymentUid,
             external_event_id: request.externalEventId,
             opener: request.prompt,
-            session: sessionId,
             ...(host.userToken ? { user_token: host.userToken } : {}),
             ...(provenance ? { provenance } : {}),
           }),
@@ -449,6 +448,20 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
         'The turn',
       );
     }
+    const events = agUiEventsOf(response.body)[Symbol.asyncIterator]();
+    // A new session is named by the runtime: its `loop.turn` event, the
+    // first or second of the stream (after `loop.session`), on a first run
+    // and on a retry's replay alike.
+    const head: AgUiEvent[] = [];
+    let sessionId = request.sessionId;
+    while (!sessionId) {
+      const next = await events.next();
+      if (next.done) {
+        throw new Error('Datalayer named no session for the turn.');
+      }
+      head.push(next.value);
+      sessionId = turnOf(next.value)?.session || undefined;
+    }
     const hostKey =
       host.bindable && this.hostKeyFor
         ? await this.hostKeyFor(request)
@@ -460,7 +473,23 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
     return {
       run,
       sessionId,
-      updates: this.#updates(response.body, host, sessionId, run),
+      updates: this.#updates(
+        (async function* () {
+          try {
+            yield* head;
+            for (;;) {
+              const next = await events.next();
+              if (next.done) return;
+              yield next.value;
+            }
+          } finally {
+            await events.return?.();
+          }
+        })(),
+        host,
+        sessionId,
+        run,
+      ),
     };
   }
 
@@ -530,13 +559,13 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
   }
 
   async *#updates(
-    body: ReadableStream<Uint8Array>,
+    events: AsyncIterable<AgUiEvent>,
     host: HostSession,
     sessionId: string,
     run: { id?: string },
   ): AsyncIterable<SemanticEvent> {
     const tools = new Map<string, string>();
-    for await (const event of agUiEventsOf(body)) {
+    for await (const event of events) {
       const turn = turnOf(event);
       if (turn?.turn) {
         run.id = turn.turn;

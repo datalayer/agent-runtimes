@@ -28,7 +28,6 @@ import {
   type HostTurnRequest,
 } from '../agentClient';
 import { HostRefusedError } from '../client';
-import { hostSessionUid } from '../sessionUid';
 
 const contracts = JSON.parse(
   readFileSync(join(__dirname, '..', 'contracts.json'), 'utf8'),
@@ -58,17 +57,6 @@ const NOT_BOUND = 'This server is not connected to Datalayer.';
 const shape: HostShape<Thread> = {
   notBound: NOT_BOUND,
   placeOf: request => ({ id: request.provenance.channel, kind: 'channel' }),
-  sessionUidOf: request =>
-    hostSessionUid(
-      'discord',
-      [
-        request.provenance.app,
-        request.provenance.guild,
-        request.provenance.channel,
-        request.provenance.thread,
-      ],
-      request.sessionGeneration,
-    ),
   targetOf: request => ({
     channelId: request.provenance.channel,
     userId: request.externalUserId,
@@ -83,6 +71,9 @@ const request: HostTurnRequest<Thread> = {
   prompt: 'Summarize the launch risks',
   provenance: { app: 'A', guild: 'G', channel: 'C', thread: 'T' },
 };
+
+/** A session's uid as the runtime mints it: a ULID. */
+const MINTED = '01KA1B2C3D4E5F6G7H8J9K0M1N';
 
 const exchanged = {
   success: true,
@@ -152,8 +143,8 @@ describe('the host agent client', () => {
     ).toThrow(/untrusted stream URL/);
   });
 
-  it("exchanges the host key with the shape's place, runs the turn once and maps the thread with the shape's target", async () => {
-    const session = shape.sessionUidOf(request);
+  it("exchanges the host key with the shape's place, runs the turn once on the session the runtime names and maps the thread with the shape's target", async () => {
+    const session = MINTED;
     const { calls, fetchImplementation } = wire({
       [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
         Response.json(exchanged),
@@ -191,7 +182,6 @@ describe('the host agent client', () => {
     const seen = await collect<SemanticEvent>(turn.updates);
 
     expect(turn.sessionId).toBe(session);
-    expect(session).toMatch(/^discord-[0-9a-f]{40}$/);
     const [exchange, start, bind] = calls;
     expect(exchange?.headers[contracts.headers.host_key!]).toBe('dlhk_key');
     expect(exchange?.body).toEqual({
@@ -207,6 +197,8 @@ describe('the host agent client', () => {
     ).toEqual(Object.keys(exchange?.body as object).sort());
     expect(start?.headers.authorization).toBe('Bearer host-token');
     expect(start?.headers[contracts.headers.idempotency_key!]).toBe('ix-1');
+    // The host names no session: the runtime mints it.
+    expect(start?.body).not.toHaveProperty('session');
     expect(Object.keys(start?.body as object).sort()).toEqual(
       Object.keys(contracts.external_turn.start_request)
         .filter(key => key !== 'user_token')
@@ -249,12 +241,23 @@ describe('the host agent client', () => {
         thread: one.provenance.thread,
       }),
     };
-    const session = withProvenance.sessionUidOf(request);
     const { calls, fetchImplementation } = wire({
       [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
         Response.json(exchanged),
       [`POST ${exchanged.session_api.url}`]: () =>
-        sse({ type: 'RUN_FINISHED' }),
+        sse(
+          {
+            type: 'CUSTOM',
+            name: 'loop.turn',
+            value: {
+              session: MINTED,
+              turn: 't1',
+              replayed: false,
+              state: 'running',
+            },
+          },
+          { type: 'RUN_FINISHED' },
+        ),
       [`POST ${exchanged.session_api.url}/S1/messages`]: () =>
         sse({ type: 'RUN_FINISHED' }),
     });
@@ -288,7 +291,6 @@ describe('the host agent client', () => {
       (contracts.external_turn as unknown as { provenance_limit_bytes: number })
         .provenance_limit_bytes,
     );
-    expect(session).toMatch(/^discord-/);
   });
 
   it('answers a replayed turn from the session, running nothing again', async () => {
@@ -331,6 +333,69 @@ describe('the host agent client', () => {
       { kind: 'completion', text: 'Option B is safer.' },
     ]);
     expect(calls.map(call => call.method)).toEqual(['POST', 'POST', 'GET']);
+  });
+
+  it('answers a retried first turn with the session the runtime minted then, running nothing again', async () => {
+    const thread = `${exchanged.session_api.url}/${MINTED}`;
+    const { calls, fetchImplementation } = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(exchanged),
+      [`POST ${exchanged.session_api.url}`]: () =>
+        sse({
+          type: 'CUSTOM',
+          name: 'loop.turn',
+          value: {
+            session: MINTED,
+            turn: 't1',
+            replayed: true,
+            state: 'finished',
+          },
+        }),
+      [`GET ${thread}/messages`]: () =>
+        Response.json({
+          messages: [{ role: 'assistant', content: 'Option B is safer.' }],
+        }),
+    });
+    const client = new HttpAgentClient(
+      API,
+      new HostKeyCredentials(
+        API,
+        async () => 'dlhk_key',
+        shape,
+        fetchImplementation,
+      ),
+      shape,
+      fetchImplementation,
+    );
+    const turn = await client.startTurn(request);
+    expect(turn.sessionId).toBe(MINTED);
+    expect(await collect(turn.updates)).toEqual([
+      { kind: 'completion', text: 'Option B is safer.' },
+    ]);
+    expect(calls.map(call => call.method)).toEqual(['POST', 'POST', 'GET']);
+  });
+
+  it('refuses a new session the runtime does not name', async () => {
+    const { fetchImplementation } = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(exchanged),
+      [`POST ${exchanged.session_api.url}`]: () =>
+        sse({ type: 'RUN_FINISHED' }),
+    });
+    const client = new HttpAgentClient(
+      API,
+      new HostKeyCredentials(
+        API,
+        async () => 'dlhk_key',
+        shape,
+        fetchImplementation,
+      ),
+      shape,
+      fetchImplementation,
+    );
+    await expect(client.startTurn(request)).rejects.toThrow(
+      'Datalayer named no session for the turn.',
+    );
   });
 
   it('exchanges as a visitor when the host user never linked, as the contract says (WHATSAPP WA-03)', async () => {
@@ -415,7 +480,7 @@ describe('the host agent client', () => {
   });
 
   it("maps the session again with the shape's target as the speaker, or says nothing binds", async () => {
-    const session = shape.sessionUidOf(request);
+    const session = MINTED;
     const { calls, fetchImplementation } = wire({
       [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
         Response.json(exchanged),
@@ -689,7 +754,6 @@ describe('a refused turn', () => {
       'https://r1.example',
       new DevelopmentCredentials('https://r1.example', 't', fetchImpl),
       {
-        sessionUidOf: () => 'session-1',
         placeOf: () => 'p',
         targetOf: () => ({}),
       } as unknown as HostShape<unknown>,
