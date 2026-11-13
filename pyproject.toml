@@ -64,7 +64,7 @@ dependencies = [
     # `datalayer_skills.skills.<name>`; the memory skills since 0.2.0. Each skill's own
     # dependencies are the extras `datalayer-skills[skills-<name>]`, installed where the
     # skills' scripts run (docker/Dockerfile.agent-runtime installs `[skills]`).
-    "datalayer-skills>=0.3.0",
+    "datalayer-skills>=0.4.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
     # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
