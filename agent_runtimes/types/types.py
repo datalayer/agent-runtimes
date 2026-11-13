@@ -2261,6 +2261,21 @@ class Agentspec(BaseModel):
         ),
         alias="harness",
     )
+    runtime_engine: Literal["datalayer", "kagent"] = Field(
+        default="datalayer",
+        description=(
+            "What runs and hosts this agent. 'datalayer' (default): a Datalayer "
+            "agent runtime, from the platform's pools or on your own machine. "
+            "'kagent': kagent, a Kubernetes control plane for agents — a kagent "
+            "Agent (an AgentTemplate and a Harness running "
+            "`agent-runtimes serve --target kagent`), reached through kagent's "
+            "A2A gateway at /agents/{namespace}/{name}, each conversation a "
+            "session actor of Agent Substrate, suspended when idle and resumed "
+            "on the next message. Distinct from `harness`, which says which "
+            "agent program turns the loop; 'kagent' runs 'pydantic-ai' only."
+        ),
+        alias="runtimeEngine",
+    )
 
     sandbox_variant: Optional[str] = Field(
         default=None,

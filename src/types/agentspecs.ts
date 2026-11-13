@@ -1967,6 +1967,18 @@ export interface AgentPolicy {
   shield?: AgentShieldFirewall;
 }
 
+/** The engines that run and host an agent (`runtime_engine`), the default first. */
+export const RUNTIME_ENGINES = ['datalayer', 'kagent'] as const;
+
+/** What runs and hosts an agent: a Datalayer runtime, or kagent. */
+export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];
+
+/** How an engine is named to a person. */
+export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
+  datalayer: 'Datalayer',
+  kagent: 'kagent',
+};
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -2032,6 +2044,19 @@ export interface Agentspec {
    * which says how a client and an agent talk rather than what runs the loop.
    */
   harness?: string;
+  /**
+   * What runs and hosts this agent.
+   *
+   * `datalayer` (the default) is a Datalayer agent runtime, from the
+   * platform's pools or on your own machine; `kagent` is kagent, a Kubernetes
+   * control plane for agents: a kagent Agent (an AgentTemplate and a Harness
+   * running `agent-runtimes serve --target kagent`), reached through kagent's
+   * A2A gateway at `/agents/{namespace}/{name}`, each conversation a session
+   * actor of Agent Substrate, suspended when idle and resumed on the next
+   * message. Distinct from `harness`, which says which agent program turns
+   * the loop.
+   */
+  runtimeEngine?: RuntimeEngine;
   /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */

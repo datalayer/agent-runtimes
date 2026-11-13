@@ -2917,10 +2917,8 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "properties": {
                     "voice": {
                         "type": "string",
-                        "title": "The brand's voice",
-                        "in a sentence": None,
-                        "default": "Plain",
-                        "warm and specific; never hype.": None,
+                        "title": "The brand's voice, in a sentence",
+                        "default": "Plain, warm and specific; never hype.",
                     },
                     "networks": {
                         "type": "string",

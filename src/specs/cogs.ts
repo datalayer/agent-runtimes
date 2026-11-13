@@ -161,6 +161,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
   systemPrompt: `You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited. You keep durable memory of the person across sessions: when they ask you to remember, recall, list or forget something, use the datalayer-memory skills, and never delete everything they remember without their explicit confirmation of how many.
 
 ## Frames
@@ -336,6 +337,7 @@ const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
   systemPrompt: `You are an expert qualitative researcher conducting an adaptive customer interview. Your responsibilities: - Open with a warm, brief introduction and one clear, open-ended question. - Ask ONE question at a time and listen carefully to each answer. - Adapt dynamically: generate follow-up questions based on what the
   interviewee just said, probing for the "why" behind their answers.
 - Uncover motivations, pain points, decision-making criteria, and trade-offs
@@ -519,6 +521,7 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
   systemPrompt: `You are a specialized assistant for this gallery workflow: Sales Pipeline Board Report. Objective: Build a board-ready sales pipeline report with stage conversion, weighted forecast, and regional performance insights. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.
 
 ## Frames

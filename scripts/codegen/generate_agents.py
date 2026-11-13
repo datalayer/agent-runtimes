@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
+from agentspecs_clone import import_from_clone  # noqa: E402
 from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
 from generate_decisions import apply_agent_decisions
 from versioning import (
@@ -306,6 +307,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     check_model_additionals(resolved, load_model_ids(specs_dir))
     check_protocols(resolved, load_protocol_ids(specs_dir))
     check_harnesses(resolved, load_harnesses(specs_dir))
+    check_runtime_engines(resolved, specs_dir)
     check_voices(resolved)
     check_identities(resolved, load_identity_ids(specs_dir))
     # Decisions: an agent decides only when its spec names one; it brings `decide`.
@@ -454,6 +456,28 @@ def check_harnesses(
             )
     if problems:
         raise SystemExit("\n".join(problems))
+
+
+def check_runtime_engines(
+    specs: List[tuple[str, Dict[str, Any]]], specs_dir: Path
+) -> None:
+    """Refuse an agent that names no runtime engine, an unknown one, or one that cannot run its harness."""
+    engines = import_from_clone(specs_dir, "runtime_engines")
+    problems = [
+        problem
+        for _, spec in specs
+        for problem in engines.agent_runtime_engine_problems(spec)
+    ]
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+def runtime_engine_of(spec: Dict[str, Any]) -> str:
+    """The spec's `runtime_engine`: every spec states it (`check_runtime_engines`)."""
+    engine = spec.get("runtime_engine")
+    if not engine:
+        raise SystemExit(f"{spec.get('id')}: names no runtime_engine")
+    return str(engine)
 
 
 def load_model_ids(specs_dir: Path) -> set[str]:
@@ -667,6 +691,7 @@ from agent_runtimes.types import (
             # and a spec that says nothing is run by the server-side harness
             # that has always run it.
             harness = spec.get("harness") or "pydantic-ai"
+            runtime_engine = runtime_engine_of(spec)
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -787,6 +812,7 @@ from agent_runtimes.types import (
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     sandbox_variant={sandbox_variant_str},
     harness="{harness}",
+    runtime_engine="{runtime_engine}",
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
     goal={goal_str},
@@ -1309,6 +1335,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 f"'{sandbox_variant}'" if sandbox_variant else "undefined"
             )
             harness = spec.get("harness") or "pydantic-ai"
+            runtime_engine = runtime_engine_of(spec)
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -1376,6 +1403,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
     sandboxVariant: {sandbox_variant_ts},
     harness: '{harness}',
+    runtimeEngine: '{runtime_engine}',
     systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
     systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
     goal: {goal_ts},

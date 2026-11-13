@@ -88,7 +88,14 @@ class TestTheCogCatalogue:
         cog = COG_CATALOGUE["cog-crawler"]
         assert isinstance(cog.spec, Agentspec)
         assert (cog.spec.id, cog.spec.name) == ("cog-crawler", "Crawler Cog")
-        for inherited in ("model", "harness", "sandbox_variant", "icon", "color"):
+        for inherited in (
+            "model",
+            "harness",
+            "runtime_engine",
+            "sandbox_variant",
+            "icon",
+            "color",
+        ):
             assert getattr(cog.spec, inherited) == getattr(agent, inherited)
         # The Frame's skill is added to the agent's.
         assert _ids(cog.spec.skills) == [*_ids(agent.skills), "crawl:0.0.1"]
