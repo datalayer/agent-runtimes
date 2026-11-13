@@ -15,7 +15,7 @@ spec:
     command: ["/opt/kagent-bridge/bin/python", "-I", "/opt/kagent-bridge/bridge.py"]
   env:
     - name: AGENT_SPEC_ID
-      value: example-blank
+      value: example-kagent
   substrate:
     workerPoolRef:
       name: kagent-default
