@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **`runtime_engine` on every agentspec, after `harness`: `datalayer` or `kagent`.** `Agentspec.runtime_engine` (`datalayer` by default for an agent built in code, alias `runtimeEngine`) and `runtimeEngine` in TypeScript, with `RUNTIME_ENGINES` and `RUNTIME_ENGINE_LABELS`. The generator refuses a spec that names no engine, an unknown one, or `kagent` on a harness other than `pydantic-ai`. `example-kagent`, the catalogue's agent for kagent. Docs: the agentspecs page (Harness and Runtime Engine), the kagent page (the agentspec, the Harness, AgentTemplate and Agent, each conversation an actor, the A2A path, a Datalayer plane), the Agent Substrate page (golden snapshots, suspend and resume, a Datalayer plane).
 - **1.6.36 is the release of this line since 1.6.35**: the kagent image's `ui` extra, the Agent Substrate wake after a restore and the evals adapters' tracebacks (below).
 - **The kagent image installs the `ui` extra.** `agent_runtimes.app` imports the AG-UI transport whatever protocol is served; without it agent-runtimes stopped at import in the actor and kagent's golden build failed on its wakeup probe.
 - **Agent Substrate: a resume from a snapshot is a wake.** A restored gVisor sandbox carries its monotonic clock on from the snapshot, so the first wakeup probe after a restore was not taken for a wake and the actor kept the golden actor's identity; the quiet spell is now measured on the wall clock as well, which a suspend moves.

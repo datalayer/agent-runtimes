@@ -121,6 +121,62 @@ You need a cluster with Agent Substrate installed (its
    proxy. The first request resumes a suspended actor.
    `kubectl ate suspend actor crawler-1 -a agents` suspends it again.
 
+## Golden snapshots, suspend and resume
+
+A template's first actor is booted, probed through its `wakeupProbe` and
+snapshotted: the **golden snapshot**. Every actor created from the template
+starts from that memory image rather than booting, which is why the identity
+is read at each wake (above). Agent Substrate suspends an idle actor to a
+snapshot of its memory and files, and resumes it when a request reaches it
+through the router; suspend and resume keep the process, its open files and
+its child processes.
+
+In our runs on AWS (a 1.01 GB image from `docker/Dockerfile.ate`, gVisor
+workers): the golden snapshot took 34 to 55 s; a suspend 0.4 to 3.7 s; a
+resume on a request through the platform's ingress 0.68 s the first time and
+0.35 s warm (0.24 to 1.01 s on kind), a warm request 6 to 10 ms; an AG-UI run
+on a suspended actor streamed its first answer in 0.4 s; a WebSocket opened
+through the same path in 0.39 s.
+
+## On a Datalayer plane
+
+A Datalayer runtime can be an actor rather than a Pod, with the same credits
+reservation and the same record, known by its uid.
+
+- **`p up datalayer-ate`** reuses the cluster's Substrate when one is there
+  (kagent's) or installs Agent Substrate 1.0.0, then makes the runtimes'
+  gVisor `WorkerPool` (`datalayer-ate`, 2 workers by default), the atespace
+  `datalayer-runtimes` with the operator as its editor, and the ingress proxy.
+  It first checks the cluster has the certificate feature gates, and stops in
+  a sentence otherwise. `p down datalayer-ate` removes what it made.
+- **The ingress** is `/ate-runtimes/<uid>/` on the runtimes' host. A proxy
+  presents its pod certificate to Agent Substrate's router and sets
+  `ate-target-actor: datalayer-runtimes/rt-<uid>` from the path, replacing any
+  the caller sent; HTTP, cookies and WebSockets pass through, and the request
+  resumes a suspended actor.
+- **The operator's ate part** (`DATALAYER_OPERATOR_ATE_ENABLED=true`, with
+  `DATALAYER_OPERATOR_ATE_ENDPOINT` and `DATALAYER_OPERATOR_ATE_INGRESS_URL`)
+  serves a launch on an actor named `rt-<uid>`, from the template named like
+  its environment (made with `agent-runtimes-ate template`, refused in a
+  sentence when missing): every launch of an environment listed in
+  `DATALAYER_OPERATOR_ATE_ENVIRONMENTS`, and every launch of an agent whose
+  `runtime_engine` is `kagent` (with the operator's kagent part on, see
+  [kagent](./kagent#on-a-datalayer-plane)), whatever its environment. The
+  reservation is opened before the actor and closed with it; it pauses while
+  the actor is suspended and resumes when it runs, so a person pays only while
+  it runs; after an operator restart the actors are taken back from Agent
+  Substrate and IAM. An actor mounts only its template's volumes: a home
+  folder, a Volume or a user environment is refused by name.
+
+To make a plane's template, for the environment `ai-agents-env`:
+
+```bash
+agent-runtimes-ate template --atespace datalayer-runtimes --name ai-agents-env \
+  --image <registry>/agent-runtimes-ate@sha256:<digest> \
+  --agent-spec-id example-simple --wakeup-timeout-seconds 180 \
+  | kubectl ate create actor-template -f -
+```
+
 ## Command reference
 
 ```bash

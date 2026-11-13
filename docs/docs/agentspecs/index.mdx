@@ -106,6 +106,40 @@ serves the same bundle from `GET /plugins/agent-tools` so a server can learn
 them too. A plugin with a richer in-page implementation of a tool contributes
 it under the same name, and the chat lets it win.
 
+### Harness and Runtime Engine
+
+Two fields, one after the other, say what runs an agent:
+
+- `harness`: which agent program turns its loop. `pydantic-ai` (the default)
+  and `vercel-ai` are built in; any other value is a coding agent of the
+  harness catalogue, driven over ACP behind the Shield (see
+  [Harnesses](../harnesses)).
+- `runtime_engine`: what runs and hosts that program. Every agentspec says it,
+  on the line after `harness`, and the generator refuses one that names none
+  or another:
+  - `datalayer`: a Datalayer agent runtime, from the platform's pools or
+    started on your own machine (`agent-runtimes serve`). Every agent of the
+    catalogue but one.
+  - `kagent`: [kagent](../integrations/kagent). The agent is a kagent `Agent`
+    whose `Harness` runs `agent-runtimes serve --target kagent` behind the
+    kagent bridge, reached through kagent's A2A gateway at
+    `/agents/{namespace}/{name}`; each conversation is a session actor of
+    [Agent Substrate](../integrations/agent-substrate), suspended when idle
+    and resumed on the next message. It takes the `pydantic-ai` harness only.
+
+```yaml
+# agentspecs/agents/example-kagent.yaml
+id: example-kagent
+model: "bedrock:us.anthropic.claude-sonnet-4-6"
+harness: pydantic-ai
+runtime_engine: kagent
+sandbox_variant: eval
+```
+
+The generated catalogues carry it: `Agentspec.runtime_engine` in Python
+(`datalayer` by default for an agent built in code), `runtimeEngine` in
+TypeScript, with `RUNTIME_ENGINES` and `RUNTIME_ENGINE_LABELS`.
+
 ### UX Patterns and Protocol-Oriented Agents
 
 Use transport and UI configuration in specs to power GenUI experiences and

@@ -14,6 +14,11 @@ Agent Runtimes also provides a model-safe integration with
 consume the same PAP SDK profile and expose verified public summaries while
 authorization and Session secrets stay in host services.
 
+On Kubernetes, an agentspec runs under [kagent](./kagent) (`serve --target
+kagent` behind the kagent bridge, for an agentspec whose `runtime_engine` is
+`kagent`) or as an [Agent Substrate](./agent-substrate) actor
+(`serve --target ate`), suspended when idle and resumed on its next request.
+
 ## Why Pydantic AI?
 
 We chose Pydantic AI as our foundation because it provides:
