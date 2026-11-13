@@ -9,6 +9,9 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.40 is the release of this line since 1.6.39**, with agentspecs 0.0.183 as the floor.
+- **`runtime_engine: agentcore`, the third engine**, and a launch's own engine overriding its spec's: `RuntimesClient.create(runtime_engine=...)` (`datalayer`, `kagent` or `agentcore`; another is refused), the same on the TypeScript launch; the Steward for AWS runs on AgentCore. Docs: the agentspecs page and the AgentCore integration page.
+- **loop: an unmetered launch says it is billed** and runs until its reservation ends, as its stop question does.
 - **1.6.39 is the release of this line since 1.6.38**: the loop's pickers, a chat host's sessions named by the runtime, the agent picker on Datalayer and `/browser` handing the page where the session runs (below).
 - **loop: unpickable environments drawn grey with why.** An environment that cannot launch an agent shows greyed with the reason, with no `- ` separator rows; Ctrl-C and Ctrl-Z at a picker before the session leave with the goodbye instead of "Cancelled by user"; the Models line says `/models` lists them once connected.
 - **Hosts: a chat host's new session is named by the runtime**, a ULID as every session's. The host kit's `startTurn` sends no session on a new one, reads its uid from the turn's `loop.turn` event (a retried first turn still answers the original session) and hands it back in `TurnStream.sessionId`; `hostSessionUid` and `sessionUidOf` are gone from `src/portable`, and `contracts.json` follows. A host built on 1.6.38 or earlier must take 1.6.39 with its client.
