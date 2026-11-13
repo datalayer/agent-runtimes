@@ -35,8 +35,9 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
@@ -157,7 +158,7 @@ def dataset_in(client: Any, space_uid: str, collection: str) -> Any:
     """The Dataset of that name in the Space, created when there is none."""
     from datalayer_core.models.contents import ContentSourceCreate
 
-    cursor: Optional[str] = None
+    cursor: str | None = None
     while True:
         page = client.list_content_sources(
             kind="dataset", space_uid=space_uid, cursor=cursor, limit=200
@@ -358,7 +359,7 @@ async def save_file_to_space(
             raise HTTPException(
                 status_code=refused.status_code, detail=str(refused)
             ) from refused
-        except Exception as error:  # noqa: BLE001 - Contents' or Spacer's refusal, said
+        except Exception as error:  # Contents' or Spacer's refusal, said
             logger.warning("A file could not be kept in the Space: %s", error)
             raise HTTPException(
                 status_code=502,

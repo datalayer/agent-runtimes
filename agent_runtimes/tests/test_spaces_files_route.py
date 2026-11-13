@@ -11,6 +11,7 @@ Datalayer client is a fake answering the real generated models of Contents.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -115,7 +116,7 @@ class FakeClient:
     def upload_dataset_file(
         self, local_path, dataset_uid, path, **options
     ) -> TransferView:
-        data = open(local_path, "rb").read()
+        data = Path(local_path).read_bytes()
         self.uploads.append(
             {"dataset": dataset_uid, "path": path, "data": data, **options}
         )
