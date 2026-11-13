@@ -146,12 +146,23 @@ export type AgentsConfig = {
    */
   datalayerVisitors?: DatalayerVisitors;
   /**
-   * A deployment kept on a runtime of its own (R-33): its agent is
-   * already there, made from the deployment record when the runtime started,
-   * so nothing is allocated or created, and the chat speaks to it with the
-   * person's own token. `url` is the runtime's agent-runtimes address.
+   * An agent already on a runtime of its own, so nothing is allocated or
+   * created: a deployment kept there (R-33), its agent made from the
+   * deployment record when the runtime started, which the chat speaks to
+   * with the person's own token; or the runtime a terminal session runs on,
+   * handed over by `/browser`, reached through the terminal's relay, which
+   * adds the token itself. `url` is the runtime's agent-runtimes address.
+   *
+   * `jupyter` is the runtime's Jupyter server, when the page opens notebooks
+   * on it: its base URL (the ingress) and its own token. Given, the sandbox
+   * is reported running there; absent, the chat is all the page talks to.
+   * `name` is the runtime's.
    */
-  datalayerKept?: { url: string };
+  datalayerKept?: {
+    url: string;
+    name?: string;
+    jupyter?: { url: string; token: string };
+  };
   /**
    * An embed token for the application (R-20): what an embedded
    * application's chat speaks to its session with, for a visitor the platform
@@ -161,8 +172,10 @@ export type AgentsConfig = {
   embedToken?: string;
   /**
    * The target is the host's decision, not the reader's: started there even
-   * with the control hidden. For an application that runs where it is
-   * deployed; a workspace leaves it unset.
+   * with the control hidden, and, with the control shown, every other target
+   * held in it with the reason (`heldTargetReason`). For an application that
+   * runs where it is deployed, and for a session handed over from the
+   * terminal, which runs where it was started; a workspace leaves it unset.
    */
   targetFixed?: boolean;
 };
@@ -227,6 +240,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
             'local',
           config.serverUrl,
         ),
+        targetFixed: config.targetFixed,
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
         // The capacity plugins' say, read at switch time — lazily, because a

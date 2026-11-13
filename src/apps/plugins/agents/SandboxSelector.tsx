@@ -135,7 +135,11 @@ export function SandboxSelector(_props: {
           // Held here: drawn, said why on hover, not taken. `aria-disabled`
           // rather than `disabled`: a disabled button takes no pointer, and
           // its reason would never be read.
-          const held = heldTargetReason(entry, service?.serverUrl ?? '');
+          const held = heldTargetReason(
+            entry,
+            service?.serverUrl ?? '',
+            service?.fixedTarget,
+          );
           return (
             <SegmentedControl.Button
               key={entry}

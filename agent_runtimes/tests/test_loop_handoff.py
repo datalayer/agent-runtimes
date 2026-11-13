@@ -71,7 +71,12 @@ class TestEndpoints:
 
         response = asyncio.run(
             create_handoff(
-                "sess-42", HandoffRequest(agent_id="loop-shell", view="sandbox")
+                "sess-42",
+                HandoffRequest(
+                    agent_id="loop-shell",
+                    view="sandbox",
+                    runtime={"where": "local"},
+                ),
             )
         )
 
@@ -79,6 +84,42 @@ class TestEndpoints:
         session = asyncio.run(exchange_handoff(response.code))
         assert session["session_id"] == "sess-42"
         assert session["view"] == "sandbox"
+        assert session["runtime"]["where"] == "local"
+
+    def test_a_datalayer_runtime_travels_in_the_exchange_not_the_url(self) -> None:
+        from agent_runtimes.routes.loop import (
+            HandoffRequest,
+            create_handoff,
+            exchange_handoff,
+        )
+
+        runtime = {
+            "where": "datalayer",
+            "name": "ai-agents-pool-abc",
+            "jupyter_url": "https://r1.example/jupyter/server/pool/abc",
+            "jupyter_token": "secret-runtime-token",
+        }
+        response = asyncio.run(
+            create_handoff(
+                "sess-7",
+                HandoffRequest(agent_id="cloud", view="notebook", runtime=runtime),
+            )
+        )
+
+        # The token is redeemed once, by the page; the URL never carries it.
+        assert "secret-runtime-token" not in response.url
+        assert asyncio.run(exchange_handoff(response.code))["runtime"] == runtime
+
+    def test_a_handoff_says_where_the_agent_runs(self) -> None:
+        from pydantic import ValidationError
+
+        from agent_runtimes.routes.loop import HandoffRequest
+
+        with pytest.raises(ValidationError):
+            HandoffRequest(agent_id="cloud")
+        # On Datalayer the page needs the runtime's Jupyter: refused without it.
+        with pytest.raises(ValidationError):
+            HandoffRequest(agent_id="cloud", runtime={"where": "datalayer"})
 
     def test_a_bad_code_is_a_404(self) -> None:
         from fastapi import HTTPException
@@ -88,6 +129,50 @@ class TestEndpoints:
         with pytest.raises(HTTPException) as caught:
             asyncio.run(exchange_handoff("nope"))
         assert caught.value.status_code == 404
+
+
+class TestHandoffRuntime:
+    def _tux(self, **kwargs: object) -> "CliTux":
+        values: dict[str, object] = {
+            "where": None,
+            "jupyter_url": None,
+            "cloud_runtime": None,
+        }
+        values.update(kwargs)
+        return cast("CliTux", SimpleNamespace(**values))
+
+    def test_a_local_session_is_handed_over_as_local(self) -> None:
+        from agent_runtimes.chat.commands.browser import _handoff_runtime
+
+        assert _handoff_runtime(
+            self._tux(jupyter_url="http://127.0.0.1:8888?token=t")
+        ) == {"where": "local"}
+
+    def test_a_cloud_session_names_its_runtime_and_jupyter(self) -> None:
+        from agent_runtimes.chat.commands.browser import _handoff_runtime
+
+        runtime = _handoff_runtime(
+            self._tux(
+                where="abc on Datalayer (ai-agents)",
+                cloud_runtime="abc",
+                jupyter_url="https://r1.example/jupyter/server/pool/abc/?token=tok",
+            )
+        )
+
+        assert runtime == {
+            "where": "datalayer",
+            "name": "abc",
+            "jupyter_url": "https://r1.example/jupyter/server/pool/abc",
+            "jupyter_token": "tok",
+        }
+
+    def test_a_cloud_session_without_its_jupyter_is_refused(self) -> None:
+        from agent_runtimes.chat.commands.browser import _handoff_runtime
+
+        with pytest.raises(ValueError, match="no notebook to open"):
+            _handoff_runtime(
+                self._tux(where="abc on Datalayer (ai-agents)", cloud_runtime="abc")
+            )
 
 
 class TestBrowserCommand:

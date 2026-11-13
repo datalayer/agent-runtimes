@@ -48,6 +48,11 @@ import { ChatPlugin } from './apps/plugins/chat';
 import { A2uiPlugin } from './apps/plugins/a2ui';
 import { AgentspecsPlugin } from './apps/plugins/agentspecs';
 import { AgentsPlugin } from './apps/plugins/agents';
+import {
+  agentsConfigOf,
+  sessionRuntimeOf,
+  type SessionRuntime,
+} from './apps/plugins/agents/handoffRuntime';
 import { ModelsPlugin } from './apps/plugins/models';
 import { DocumentPlugin } from './apps/plugins/document';
 import { NotebookPlugin } from './apps/plugins/notebook';
@@ -67,6 +72,8 @@ type Session = {
   model?: string;
   view?: string;
   sandbox: SandboxSnapshot;
+  /** Absent for a page opened without a handoff: nothing said where. */
+  runtime?: SessionRuntime;
 };
 
 /**
@@ -91,6 +98,7 @@ async function resolveSession(serverUrl: string): Promise<Session> {
     return fallback;
   }
 
+  let session: Awaited<ReturnType<Response['json']>>;
   try {
     const response = await fetch(
       `${serverUrl}/api/v1/loop/handoff/exchange?code=${encodeURIComponent(handoff)}`,
@@ -99,38 +107,42 @@ async function resolveSession(serverUrl: string): Promise<Session> {
     if (!response.ok) {
       return fallback;
     }
-    const session = await response.json();
-
-    params.delete('handoff');
-    const query = params.toString();
-    window.history.replaceState(
-      {},
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}`,
-    );
-
-    return {
-      serverUrl,
-      agentId: session.agent_id ?? fallback.agentId,
-      conversationId: session.conversation_id ?? undefined,
-      model: session.model ?? undefined,
-      view: session.view ?? view,
-      sandbox: {
-        state: session.sandbox?.sandbox_running ? 'running' : 'idle',
-        variant: session.sandbox?.variant,
-        kernelId: session.sandbox?.kernel_id,
-        jupyterUrl: session.sandbox?.jupyter_url,
-      },
-    };
+    session = await response.json();
   } catch {
     // A handoff that cannot be redeemed is not a reason to show nothing: the
     // page still opens, just without the terminal's conversation.
     return fallback;
   }
+
+  params.delete('handoff');
+  const query = params.toString();
+  window.history.replaceState(
+    {},
+    '',
+    `${window.location.pathname}${query ? `?${query}` : ''}`,
+  );
+
+  return {
+    serverUrl,
+    agentId: session.agent_id ?? fallback.agentId,
+    conversationId: session.conversation_id ?? undefined,
+    model: session.model ?? undefined,
+    view: session.view ?? view,
+    sandbox: {
+      state: session.sandbox?.sandbox_running ? 'running' : 'idle',
+      variant: session.sandbox?.variant,
+      kernelId: session.sandbox?.kernel_id,
+      jupyterUrl: session.sandbox?.jupyter_url,
+    },
+    // Redeemed but not saying where it runs is a server out of step with
+    // this page: said on the page, rather than guessed at (`sessionRuntimeOf`).
+    runtime: sessionRuntimeOf(session.runtime),
+  };
 }
 
 function LoopPage(): JSX.Element {
   const [session, setSession] = useState<Session | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const { colorMode, theme } = useThemeStore();
   const systemColorMode = useSystemColorMode();
   const resolvedMode = colorMode === 'auto' ? systemColorMode : colorMode;
@@ -145,7 +157,9 @@ function LoopPage(): JSX.Element {
 
   useEffect(() => {
     const serverUrl = window.location.origin;
-    void resolveSession(serverUrl).then(setSession);
+    resolveSession(serverUrl).then(setSession, (error: unknown) =>
+      setFailure(error instanceof Error ? error.message : String(error)),
+    );
   }, []);
 
   return (
@@ -169,12 +183,11 @@ function LoopPage(): JSX.Element {
               // server it talks to.
               extensions={[
                 ChatPlugin,
-                configurePlugin(AgentsPlugin, {
-                  serverUrl: session.serverUrl,
-                  // A session handed over from the terminal is server-backed;
-                  // the header control can move it from there.
-                  target: 'local',
-                }),
+                // Where the terminal's session runs, and only there.
+                configurePlugin(
+                  AgentsPlugin,
+                  agentsConfigOf(session.serverUrl, session.runtime),
+                ),
                 NotebookPlugin,
                 DocumentPlugin,
                 A2uiPlugin,
@@ -182,6 +195,10 @@ function LoopPage(): JSX.Element {
                 ModelsPlugin,
               ]}
             />
+          ) : failure ? (
+            <Box p={4} color="danger.fg">
+              {failure}
+            </Box>
           ) : null}
         </Box>
       </QueryClientProvider>

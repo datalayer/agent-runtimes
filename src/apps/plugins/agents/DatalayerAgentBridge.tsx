@@ -193,11 +193,17 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       }
     }
     if (already) {
+      // The runtime's Jupyter, when the host gave it — a terminal session
+      // handed over by `/browser` does: the notebook opens on it, as the
+      // terminal's `/notebook` does. Without it the agent is already on its
+      // runtime and the chat is all the page talks to.
+      const jupyter = visitors ? undefined : kept?.jupyter;
       service.report({
         variant: 'datalayer',
-        // No sandbox reported: the agent is already on its runtime, and the
-        // chat is all the page talks to.
-        sandbox_running: false,
+        sandbox_running: Boolean(jupyter),
+        ...(jupyter
+          ? { jupyter_url: jupyter.url, jupyter_token: jupyter.token }
+          : {}),
         agent_base_url: already,
       });
       return;
@@ -243,6 +249,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     status,
     error,
     already,
+    kept,
     visitors,
     visitorAgent,
   ]);

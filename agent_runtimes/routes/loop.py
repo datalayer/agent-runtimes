@@ -20,10 +20,10 @@ import logging
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,46 @@ class HandoffStore:
 handoffs = HandoffStore()
 
 
+class HandoffRuntime(BaseModel):
+    """Where the session's agent runs, and how the page reaches its Jupyter server.
+
+    The page cannot work this out for itself: on Datalayer it is served through
+    the terminal's relay at ``http://127.0.0.1:<port>``, which looks exactly
+    like a local server, and the relay carries no WebSocket — so a page that
+    guessed *Local* waited for a sandbox status that never came. The terminal
+    knows, and says so here.
+
+    The Jupyter token travels in this payload, never in the page's URL: the
+    exchange returns it once, to the page that redeems the code (see this
+    module's docstring).
+    """
+
+    where: Literal["local", "datalayer"] = Field(
+        description="local: the agent runs on this machine; datalayer: on a "
+        "Datalayer runtime, reached through the terminal's relay"
+    )
+    name: Optional[str] = Field(
+        default=None, description="The Datalayer runtime's name"
+    )
+    jupyter_url: Optional[str] = Field(
+        default=None, description="The runtime's Jupyter base URL (its ingress)"
+    )
+    jupyter_token: Optional[str] = Field(
+        default=None, description="The runtime's own Jupyter server token"
+    )
+
+    @model_validator(mode="after")
+    def _datalayer_names_its_jupyter(self) -> "HandoffRuntime":
+        if self.where == "datalayer" and not (
+            self.name and self.jupyter_url and self.jupyter_token
+        ):
+            raise ValueError(
+                "A session on Datalayer is handed over with its runtime's name, "
+                "Jupyter base URL and token."
+            )
+        return self
+
+
 class HandoffRequest(BaseModel):
     """What the terminal knows about the session it is handing over."""
 
@@ -116,6 +156,9 @@ class HandoffRequest(BaseModel):
     )
     sandbox: dict[str, Any] = Field(
         default_factory=dict, description="Sandbox facts as the terminal sees them"
+    )
+    runtime: HandoffRuntime = Field(
+        description="Where the agent runs: the page takes that place and no other"
     )
 
 
@@ -139,9 +182,15 @@ async def create_handoff(session_id: str, body: HandoffRequest) -> HandoffRespon
             "model": body.model,
             "view": body.view,
             "sandbox": body.sandbox,
+            "runtime": body.runtime.model_dump(),
         },
     )
-    logger.info("Minted a handoff for session %s (view=%s)", session_id, body.view)
+    logger.info(
+        "Minted a handoff for session %s (view=%s, where=%s)",
+        session_id,
+        body.view,
+        body.runtime.where,
+    )
     return HandoffResponse(
         code=code,
         expires_at=expires_at,

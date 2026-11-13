@@ -89,6 +89,11 @@ export const SANDBOX_TARGETS: readonly SandboxTarget[] = [
  * Why a target is shown but not offered here — said on it — or nothing when
  * it is offered.
  *
+ * A host that fixed the target (`fixed`) offers that one and no other: a
+ * session the terminal handed over runs where it was started — on a Datalayer
+ * runtime, or on this machine — and the page cannot move it. The others stay
+ * in the switch, held, saying so.
+ *
  * *Local* is a local agent with the Jupyter server it starts beside itself,
  * and a web page has no machine of the reader's to start them on. Decided
  * 2026-10-10 (Eric): not offered on the web for now, and left in the switch,
@@ -99,7 +104,11 @@ export const SANDBOX_TARGETS: readonly SandboxTarget[] = [
 export function heldTargetReason(
   target: SandboxTarget,
   serverUrl: string,
+  fixed?: SandboxTarget,
 ): string | undefined {
+  if (fixed && target !== fixed) {
+    return `This session runs on ${TARGET_SPECS[fixed].label}: it cannot be moved from here.`;
+  }
   // A host that names its own agent-runtimes server — `app.mount`, `loop apps
   // run --web` (P-08, P-25) — is not asking for the reader's machine:
   // Local is that server, and it is offered. Held, every message of a page
@@ -193,6 +202,8 @@ export function targetRunsAgentInPage(target: SandboxTarget): boolean {
 export type SwitchableSandboxService = SandboxService & {
   /** Where the sandbox currently runs. */
   readonly target: ReadonlySignal<SandboxTarget>;
+  /** The one target offered, when the host fixed it; every other is held. */
+  readonly fixedTarget?: SandboxTarget;
   /** Move it. Disconnects the old backing before starting the new one. */
   setTarget: (target: SandboxTarget) => Promise<void>;
   /** The in-browser services, when the browser is the active target. */
@@ -204,6 +215,11 @@ export type SwitchableSandboxService = SandboxService & {
 export type SwitchableConfig = {
   serverUrl: string;
   initialTarget?: SandboxTarget;
+  /**
+   * Whether the initial target is the only one: the host decided where the
+   * agent runs, and the reader cannot move it (`heldTargetReason`).
+   */
+  targetFixed?: boolean;
   /**
    * Agent to create when Local is selected.
    *
@@ -234,11 +250,13 @@ export type SwitchableConfig = {
 export function createSwitchableSandboxService({
   serverUrl,
   initialTarget = 'local',
+  targetFixed = false,
   kernelSource,
   localAgent,
   blueprint,
 }: SwitchableConfig): SwitchableSandboxService {
   const target: Signal<SandboxTarget> = signal(initialTarget);
+  const fixedTarget = targetFixed ? initialTarget : undefined;
 
   // Both implementations exist from the start, but neither connects until it is
   // the active one — a Pyodide kernel that nobody asked for is megabytes of
@@ -379,6 +397,7 @@ export function createSwitchableSandboxService({
         : ('server' as const);
     },
     target,
+    fixedTarget,
     snapshot,
     status,
     ready,
@@ -452,7 +471,7 @@ export function createSwitchableSandboxService({
         return;
       }
       // Held here: refused whoever asks, not only by the switch's button.
-      const held = heldTargetReason(next, serverUrl);
+      const held = heldTargetReason(next, serverUrl, fixedTarget);
       if (held) {
         throw new Error(held);
       }

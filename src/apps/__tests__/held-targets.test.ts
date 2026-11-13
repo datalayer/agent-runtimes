@@ -81,8 +81,8 @@ describe('Local, on the web', () => {
       join(__dirname, '..', 'plugins', 'agents', 'SandboxSelector.tsx'),
       'utf8',
     );
-    expect(selector).toContain(
-      "const held = heldTargetReason(entry, service?.serverUrl ?? '');",
+    expect(selector).toMatch(
+      /const held = heldTargetReason\(\s*entry,\s*service\?\.serverUrl \?\? '',\s*service\?\.fixedTarget,\s*\);/,
     );
     // `aria-disabled`, not `disabled`: a disabled button takes no pointer,
     // and its reason would never be read.

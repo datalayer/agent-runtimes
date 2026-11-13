@@ -98,7 +98,7 @@ describe('the Datalayer target', () => {
     expect(bridge).toContain('agentsConfig?.datalayerKept');
     expect(bridge).toContain('autoStart: onDatalayer && !already');
     expect(bridge).toContain('agent_base_url: already');
-    expect(read('plugin.ts')).toContain('datalayerKept?: { url: string }');
+    expect(read('plugin.ts')).toMatch(/datalayerKept\?: \{\s*url: string;/);
   });
 
   it('has a visitor’s agent made before the page follows the runtime (D-15)', () => {
