@@ -66,6 +66,7 @@ import { shippedAssistantCharacter } from './catalogue';
 import {
   BalloonHistoryLarge,
   SpeechBalloon,
+  type BalloonPromptConfig,
   type BalloonSuggestion,
 } from './SpeechBalloon';
 import { conversationHeaderText } from './BalloonParts';
@@ -697,6 +698,14 @@ export interface AssistantStageProps {
    */
   dismissHidesBalloon?: boolean;
   /**
+   * Its balloon's own prompt line (13 November 2026): a click on the
+   * character opens the balloon with the caret in it, and the balloon stays
+   * until Escape, the ×, or another click; what is sent goes to `onSend`.
+   * The page's composer, when it has one, is still there: this is the way
+   * to write to it from where it stands.
+   */
+  prompt?: Omit<BalloonPromptConfig, 'onClose' | 'focusKey'>;
+  /**
    * The agent's own name, used in place of the character's by its menu and
    * its *Send … away*: `Sales`, where the character is a paper clip.
    */
@@ -765,6 +774,7 @@ export function AssistantStage({
   mouthLevel,
   stayPut = false,
   dismissHidesBalloon = false,
+  prompt,
   balloonDisplay = 'history',
   expandTarget,
   expandOnArrival = false,
@@ -896,12 +906,16 @@ export function AssistantStage({
     }
     wasHovered.current = hovered;
   }, [hovered]);
+  // Opened by a click, with its prompt: it stays until closed.
+  const [pinned, setPinned] = useState(false);
+  const [promptFocus, setPromptFocus] = useState(0);
   const showBalloon =
     !aside &&
     !open &&
     !!balloon &&
-    !(hushed !== null && balloon.text === hushed && !deciding) &&
-    (hovered || insist || deciding);
+    (pinned ||
+      (!(hushed !== null && balloon.text === hushed && !deciding) &&
+        (hovered || insist || deciding)));
   // Suggestions while it waits for a question.
   const waitsForQuestion =
     (state === 'idle' || state === 'greeting') &&
@@ -1132,6 +1146,20 @@ export function AssistantStage({
             history={balloon.history}
             onExpand={expand ?? undefined}
             expandTitle={visual?.title}
+            prompt={
+              prompt
+                ? {
+                    ...prompt,
+                    focusKey: promptFocus,
+                    onClose: () => {
+                      // Closed as the × closes it: until new words.
+                      setPinned(false);
+                      setHushed(balloon.text);
+                      characterRef.current?.focus();
+                    },
+                  }
+                : undefined
+            }
             onExpandHistory={
               historyVisual
                 ? () => {
@@ -1221,6 +1249,18 @@ export function AssistantStage({
           ) {
             return;
           }
+          if (prompt) {
+            // Its balloon, the caret in its prompt; clicked again, put away.
+            if (pinned && showBalloon) {
+              setPinned(false);
+              setHushed(balloon?.text ?? null);
+            } else {
+              setHushed(null);
+              setPinned(true);
+              setPromptFocus(n => n + 1);
+            }
+            return;
+          }
           (onCharacterClick ?? onToggle)();
         }}
         display="block"
@@ -1301,7 +1341,10 @@ export function AssistantStage({
             size="small"
             variant="invisible"
             data-assistant-hide-balloon=""
-            onClick={() => setHushed(balloon.text)}
+            onClick={() => {
+              setHushed(balloon.text);
+              setPinned(false);
+            }}
             sx={{
               bg: 'canvas.default',
               borderRadius: '50%',

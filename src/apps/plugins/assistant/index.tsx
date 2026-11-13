@@ -32,11 +32,11 @@
  */
 
 import type { AppAvatar } from '../../../types/agentspecs';
-import type { FormEvent, JSX } from 'react';
+import type { JSX, RefObject } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { definePlugin, signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
-import { Button, Text, Textarea } from '@primer/react';
+import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import {
@@ -265,7 +265,8 @@ function seen(element: HTMLElement): boolean {
  * view, when one is seen there (`focused`); `not-ready` while it cannot be
  * typed in yet (its runtime is still being assigned); `none` when there is
  * none it can reach — none on the page, or one out of sight in a frame or a
- * closed panel — and the character's own prompt is offered instead.
+ * closed panel. Used when there is no workspace to send to: with one, a click
+ * opens the balloon's own prompt.
  */
 export function focusComposer(from?: HTMLElement | null): ComposerReach {
   const editable = ownComposer(from);
@@ -354,92 +355,32 @@ function useCornerBottom(enabled: boolean, size: number): number {
   return bottom;
 }
 
-/** The height of the character's own prompt, for its place above a dragged character. */
-const PROMPT_HEIGHT = 120;
+/** How often its composer is read for whether it takes words yet. */
+const READY_CHECK_MS = 500;
 
 /**
- * The character's own prompt (13 November 2026): opened by a click when its
- * page has no composer it can reach — the Playground's frame, a closed panel —
- * so that a click always leads somewhere to type. Sent through the
- * workspace's `submit`, as its composer sends; Escape closes it.
+ * Whether its workspace's composer is there and cannot be typed in yet (its
+ * runtime still being assigned): the balloon's prompt is then disabled, said
+ * so. No composer at all is not that: the prompt sends through the
+ * workspace, which holds a message until the chat is ready.
  */
-function AssistantPrompt({
-  place,
-  label,
-  send,
-  onSend,
-  onClose,
-}: {
-  place: { left?: string; top?: string; right?: string; bottom?: string };
-  label: string;
-  send: string;
-  onSend: (message: string) => void;
-  onClose: () => void;
-}): JSX.Element {
-  const [text, setText] = useState('');
-  const ref = useRef<HTMLTextAreaElement>(null);
+function useComposerNotReady(stageRef: RefObject<HTMLElement | null>): boolean {
+  const [notReady, setNotReady] = useState(false);
   useEffect(() => {
-    ref.current?.focus();
-  }, []);
-  const message = text.trim();
-  return (
-    <Box
-      as="form"
-      data-assistant-prompt=""
-      position="fixed"
-      {...place}
-      zIndex={1001}
-      width={320}
-      maxWidth="calc(100vw - 32px)"
-      p={2}
-      borderRadius={2}
-      border="1px solid"
-      borderColor="border.default"
-      bg="canvas.overlay"
-      boxShadow="shadow.large"
-      onSubmit={(event: FormEvent) => {
-        event.preventDefault();
-        if (message) {
-          onSend(message);
-        }
-      }}
-    >
-      <Textarea
-        ref={ref}
-        block
-        rows={3}
-        resize="none"
-        aria-label={label}
-        placeholder={label}
-        value={text}
-        onChange={event => setText(event.target.value)}
-        onKeyDown={event => {
-          if (event.key === 'Escape') {
-            onClose();
-          } else if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            if (message) {
-              onSend(message);
-            }
-          }
-        }}
-      />
-      <Box display="flex" justifyContent="flex-end" mt={2}>
-        <Button
-          type="submit"
-          size="small"
-          variant="primary"
-          disabled={!message}
-        >
-          {send}
-        </Button>
-      </Box>
-    </Box>
-  );
+    const check = () => {
+      const editable = ownComposer(stageRef.current);
+      setNotReady(
+        !!editable &&
+          ((editable instanceof HTMLTextAreaElement && editable.disabled) ||
+            editable.getAttribute('contenteditable') === 'false'),
+      );
+    };
+    check();
+    const timer = window.setInterval(check, READY_CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, [stageRef]);
+  return notReady;
 }
-
-/** How long *You can write to me as soon as I am ready* stays, in ms. */
-const NOT_READY_MS = 6000;
 
 export function LoopAssistant({
   app,
@@ -571,17 +512,8 @@ export function LoopAssistant({
   // In its corner, above its own conversation's composer when that reaches
   // the corner (the conversation on the page, not in a panel).
   const cornerBottom = useCornerBottom(!onPageLayout && !drag.position, SIZE);
-  // Clicked while its composer cannot be typed in yet: said in its balloon.
-  const [notReady, setNotReady] = useState(false);
-  // Its own prompt is open: the page has no composer it can reach.
-  const [asking, setAsking] = useState(false);
-  useEffect(() => {
-    if (!notReady) {
-      return;
-    }
-    const timer = setTimeout(() => setNotReady(false), NOT_READY_MS);
-    return () => clearTimeout(timer);
-  }, [notReady]);
+  // Its composer cannot take words yet: the balloon's prompt says so.
+  const notReady = useComposerNotReady(stageRef);
   // Offered only when the agent decides: the runtime says it.
   const decide = useDecisionAsker(
     decisions?.serverUrl
@@ -668,24 +600,22 @@ export function LoopAssistant({
                       setFresh(false);
                     },
                   })
-                : notReady
-                  ? { text: chatText.notReadyToWrite }
-                  : withHistory({
-                      // On a page layout the conversation opens in its
-                      // panel; elsewhere it is on the page, its composer
-                      // below, where a click puts the caret.
-                      text: onPageLayout
-                        ? chatText.clickToOpen
-                        : chatText.clickToWrite,
-                    });
+                : withHistory({
+                    // A click opens its balloon with the caret in its
+                    // prompt; without a workspace to send to, it opens the
+                    // conversation (its panel on a page layout).
+                    text:
+                      workspace?.submit || !onPageLayout
+                        ? chatText.clickToWrite
+                        : chatText.clickToOpen,
+                  });
   const insist =
     state === 'greeting' ||
     presence === 'waiting' ||
     (!!approval && state !== 'paused') ||
     !!tool ||
     (current && atWork) ||
-    (unheard && (state === 'speaking' || fresh)) ||
-    notReady;
+    (unheard && (state === 'speaking' || fresh));
   const onToggle = () => {
     if (onPageLayout) {
       togglePagePanel();
@@ -695,15 +625,23 @@ export function LoopAssistant({
     if (saying) {
       setHeardId(saying.id);
     }
-    if (asking) {
-      setAsking(false);
-      return;
-    }
-    const reach = focusComposer(stageRef.current);
-    setNotReady(reach === 'not-ready');
-    // No composer of its own in sight: its own prompt, beside it.
-    setAsking(reach === 'none' && Boolean(workspace?.submit));
+    focusComposer(stageRef.current);
   };
+  // Its balloon's own prompt, sent as its composer sends (13 November 2026).
+  const submit = workspace?.submit;
+  const prompt = submit
+    ? {
+        label: chatText.writeToMe,
+        send: chatText.send,
+        notReady: notReady ? chatText.notReadyToWrite : undefined,
+        onSend: (message: string) => {
+          if (saying) {
+            setHeardId(saying.id);
+          }
+          void submit(message);
+        },
+      }
+    : undefined;
   const onDismiss = (next: AssistantAway) => {
     keepAway(next);
     setLeaving(true);
@@ -717,28 +655,6 @@ export function LoopAssistant({
       {appId && signedIn ? (
         <WaitingApprovals appId={appId} onWaiting={setApproval} />
       ) : null}
-      {asking && workspace?.submit ? (
-        <AssistantPrompt
-          place={
-            drag.position
-              ? {
-                  left: `${drag.position.left}px`,
-                  top: `${Math.max(8, drag.position.top - PROMPT_HEIGHT - 8)}px`,
-                }
-              : {
-                  right: `${CORNER}px`,
-                  bottom: `${cornerBottom + SIZE + 8}px`,
-                }
-          }
-          label={chatText.writeToMe}
-          send={chatText.send}
-          onSend={message => {
-            setAsking(false);
-            void workspace.submit(message);
-          }}
-          onClose={() => setAsking(false)}
-        />
-      ) : null}
       <AssistantStage
         character={chosen.character}
         state={state}
@@ -750,7 +666,7 @@ export function LoopAssistant({
         }
         stageRef={stageRef}
         onDragStart={drag.onHandlePointerDown}
-        open={open || asking}
+        open={open}
         onToggle={onToggle}
         balloon={balloon}
         balloonDisplay={display}
@@ -759,6 +675,7 @@ export function LoopAssistant({
         // Its × hides the balloon; sending it away is in its menu, so the
         // way back to the conversation is never taken by a click on the ×.
         dismissHidesBalloon
+        prompt={prompt}
         decide={decide}
         onResetPosition={drag.position ? drag.reset : undefined}
         onBalloonDisplayChange={setChosenDisplay}

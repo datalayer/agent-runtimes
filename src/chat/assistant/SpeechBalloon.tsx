@@ -34,7 +34,7 @@
 
 import type { JSX, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Button, IconButton, Text } from '@primer/react';
+import { Button, IconButton, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CheckIcon, CopyIcon, XIcon } from '@primer/octicons-react';
 import type { BalloonApproval } from './state';
@@ -97,7 +97,94 @@ export function BalloonSuggestions({
   );
 }
 
+/**
+ * The balloon's own prompt (13 November 2026): a line to type in, *Send*
+ * beside it, Enter sends and Escape closes, whatever the page around it.
+ * Disabled with `notReady` as its words while the conversation cannot take
+ * a message yet.
+ */
+export type BalloonPromptConfig = {
+  /** Its words while empty, and its accessible name. */
+  label: string;
+  /** The button's word. */
+  send: string;
+  /** Said in it, disabled, while it cannot take a message yet. */
+  notReady?: string;
+  onSend: (message: string) => void;
+  onClose: () => void;
+  /** Changed to put the caret in it: each click on the character. */
+  focusKey?: number;
+};
+
+/** The balloon's own prompt line. */
+export function BalloonPrompt({
+  label,
+  send,
+  notReady,
+  onSend,
+  onClose,
+  focusKey = 0,
+}: BalloonPromptConfig): JSX.Element {
+  const [text, setText] = useState('');
+  const ref = useRef<HTMLInputElement>(null);
+  const disabled = Boolean(notReady);
+  useEffect(() => {
+    if (focusKey > 0 && !disabled) {
+      ref.current?.focus();
+    }
+  }, [focusKey, disabled]);
+  const message = text.trim();
+  const sendIt = () => {
+    if (message && !disabled) {
+      onSend(message);
+      setText('');
+    }
+  };
+  return (
+    <Box
+      as="form"
+      data-balloon-prompt=""
+      display="flex"
+      gap={1}
+      mt={2}
+      onSubmit={(event: { preventDefault: () => void }) => {
+        event.preventDefault();
+        sendIt();
+      }}
+      onClick={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
+    >
+      <TextInput
+        ref={ref}
+        size="small"
+        block
+        aria-label={notReady ?? label}
+        placeholder={notReady ?? label}
+        disabled={disabled}
+        value={text}
+        onChange={event => setText(event.target.value)}
+        onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+        sx={{ flex: 1, minWidth: 0 }}
+      />
+      <Button
+        type="submit"
+        size="small"
+        variant="primary"
+        disabled={disabled || !message}
+      >
+        {send}
+      </Button>
+    </Box>
+  );
+}
+
 export interface SpeechBalloonProps {
+  /** Its own prompt line, under everything else. */
+  prompt?: BalloonPromptConfig;
   text: string;
   /** There is more than the balloon holds. */
   more?: boolean;
@@ -341,6 +428,7 @@ export function SpeechBalloon({
   waiting = false,
   fullText,
   onExpandHistory,
+  prompt,
 }: SpeechBalloonProps): JSX.Element {
   const chatText = useChatWords();
   // *more*: the words whole, when they were cut or overflow their lines.
@@ -376,7 +464,7 @@ export function SpeechBalloon({
       data-speech-balloon=""
       data-balloon-display={display}
       maxWidth={
-        wide || listed || offered || whole || (current && attachment)
+        wide || listed || offered || whole || prompt || (current && attachment)
           ? 300
           : current
             ? 260
@@ -398,7 +486,12 @@ export function SpeechBalloon({
         position: 'absolute',
         [align]: 0,
         width:
-          wide || listed || offered || whole || (current && attachment)
+          wide ||
+          listed ||
+          offered ||
+          whole ||
+          prompt ||
+          (current && attachment)
             ? 300
             : 'max-content',
         bg: 'canvas.overlay',
@@ -630,6 +723,7 @@ export function SpeechBalloon({
       ) : null}
       {!current ? <ToolLineAnnouncer line={tool} /> : null}
       {decide && <DecisionAsk ask={decide} onActiveChange={onDecisionActive} />}
+      {prompt ? <BalloonPrompt {...prompt} /> : null}
     </Box>
   );
 }

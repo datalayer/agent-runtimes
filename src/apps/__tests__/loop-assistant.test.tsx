@@ -548,34 +548,6 @@ describe('the way to the conversation on the page (13 November 2026)', () => {
     ).toBe(24);
   });
 
-  it('invites a click that puts the caret in the composer, and says so when it cannot be typed in yet', async () => {
-    const el = await mount([
-      AssistantCharactersPlugin,
-      TurnPlugin,
-      LoopAssistantPlugin,
-    ]);
-    const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
-    // Its runtime is still being assigned: the composer is greyed.
-    const composer = document.createElement('div');
-    composer.setAttribute('data-chat-composer', '');
-    const textarea = document.createElement('textarea');
-    textarea.disabled = true;
-    composer.appendChild(textarea);
-    document.body.appendChild(composer);
-    try {
-      await act(async () => figure.click());
-      expect(document.body.textContent).toContain(words.notReadyToWrite);
-      expect(document.activeElement).not.toBe(textarea);
-      // Ready: the click puts the caret in it.
-      textarea.disabled = false;
-      await act(async () => figure.click());
-      expect(document.activeElement).toBe(textarea);
-      expect(document.body.textContent).not.toContain(words.notReadyToWrite);
-    } finally {
-      composer.remove();
-    }
-  });
-
   it('hides its balloon with the ×, and stays on the page to be clicked again', async () => {
     const el = await mount([
       AssistantCharactersPlugin,
@@ -613,78 +585,139 @@ describe('the way to the conversation on the page (13 November 2026)', () => {
   });
 });
 
-describe('a click always leads somewhere to type (13 November 2026)', () => {
+describe('the balloon carries its own prompt (13 November 2026)', () => {
   const words = CHAT_WORDS.en;
 
-  it('opens its own prompt when the page has no composer it can reach, and sends through the workspace', async () => {
+  function composerOf(disabled = false) {
+    const composer = document.createElement('div');
+    composer.setAttribute('data-chat-composer', '');
+    const box = document.createElement('textarea');
+    box.disabled = disabled;
+    composer.appendChild(box);
+    return { composer, box };
+  }
+
+  function workspaceSending() {
     const sent: string[] = [];
-    const workspace = {
-      submit: async (message: string) => {
-        sent.push(message);
-        return { handled: true };
+    return {
+      sent,
+      workspace: {
+        submit: async (message: string) => {
+          sent.push(message);
+          return { handled: true };
+        },
       },
     };
+  }
+
+  const balloonInput = () =>
+    document.querySelector(
+      '[data-speech-balloon] [data-balloon-prompt] input',
+    ) as HTMLInputElement | null;
+
+  async function type(input: HTMLInputElement, text: string) {
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value',
+    )!.set!;
+    await act(async () => {
+      setValue.call(input, text);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      input
+        .closest('form')!
+        .dispatchEvent(
+          new Event('submit', { bubbles: true, cancelable: true }),
+        );
+    });
+  }
+
+  async function playOn(page: 'with its composer' | 'without one') {
+    const { sent, workspace } = workspaceSending();
+    const own = composerOf();
     const el = await mount(
       [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
       workspace,
     );
+    if (page === 'with its composer') {
+      el.appendChild(own.composer);
+    }
     const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+    // Its words say what a click does.
+    expect(figure.closest('[data-assistant-state]')).not.toBeNull();
     await act(async () => figure.click());
-    const prompt = document.querySelector(
-      '[data-assistant-prompt] textarea',
-    ) as HTMLTextAreaElement;
-    expect(prompt).not.toBeNull();
-    expect(prompt.getAttribute('aria-label')).toBe(words.writeToMe);
-    expect(document.activeElement).toBe(prompt);
-    // Not the notice for a composer still starting.
-    expect(document.body.textContent).not.toContain(words.notReadyToWrite);
-    const setValue = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      'value',
-    )!.set!;
+    const input = balloonInput();
+    expect(input).not.toBeNull();
+    expect(input!.getAttribute('placeholder')).toBe(words.writeToMe);
+    // The caret in the balloon's line, not in the page's composer.
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(own.box);
+    await type(input!, 'Where does the close stand?');
+    expect(sent).toEqual(['Where does the close stand?']);
+    // Still open, emptied, for what comes next.
+    expect(balloonInput()?.value).toBe('');
+    // Escape closes it; a click opens it again; another click puts it away.
     await act(async () => {
-      setValue.call(prompt, 'Where does the close stand?');
-      prompt.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await act(async () => {
-      prompt.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      balloonInput()!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
       );
     });
-    expect(sent).toEqual(['Where does the close stand?']);
-    expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
-    // Clicked again, it opens again: the way back is always there.
+    expect(balloonInput()).toBeNull();
     await act(async () => figure.click());
-    expect(document.querySelector('[data-assistant-prompt]')).not.toBeNull();
+    expect(balloonInput()).not.toBeNull();
     await act(async () => figure.click());
-    expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
+    expect(balloonInput()).toBeNull();
+    own.composer.remove();
+  }
+
+  it('on a page with its own prompt box: a click opens the balloon, the caret in its line, and sends into the conversation', async () => {
+    await playOn('with its composer');
   });
 
-  it('puts the caret in its own workspace’s composer, not in another chat’s on the page', async () => {
-    // Another chat's composer, earlier in the page.
-    const other = document.createElement('div');
-    other.setAttribute('data-chat-composer', '');
-    const otherBox = document.createElement('textarea');
-    other.appendChild(otherBox);
-    document.body.prepend(other);
-    const el = await mount(
-      [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
-      { submit: async () => ({ handled: true }) },
-    );
-    // Its own, inside its workspace.
-    const own = document.createElement('div');
-    own.setAttribute('data-chat-composer', '');
-    const ownBox = document.createElement('textarea');
-    own.appendChild(ownBox);
-    el.appendChild(own);
+  it('on a page without one (the Playground’s frame): the same', async () => {
+    await playOn('without one');
+  });
+
+  it('is disabled, and says so, while the conversation cannot take words yet', async () => {
+    const { sent, workspace } = workspaceSending();
+    // Its runtime is still being assigned: the page's composer is greyed.
+    const own = composerOf(true);
+    document.body.appendChild(own.composer);
+    try {
+      const el = await mount(
+        [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
+        workspace,
+      );
+      const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+      await act(async () => figure.click());
+      const input = balloonInput()!;
+      expect(input.disabled).toBe(true);
+      expect(input.getAttribute('placeholder')).toBe(words.notReadyToWrite);
+      expect(sent).toEqual([]);
+    } finally {
+      own.composer.remove();
+    }
+  });
+
+  it('without a workspace to send to, a click puts the caret in its own workspace’s composer, not another chat’s', async () => {
+    const other = composerOf();
+    document.body.prepend(other.composer);
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      LoopAssistantPlugin,
+    ]);
+    const own = composerOf();
+    el.appendChild(own.composer);
     try {
       const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
       await act(async () => figure.click());
-      expect(document.activeElement).toBe(ownBox);
-      expect(document.querySelector('[data-assistant-prompt]')).toBeNull();
+      expect(document.activeElement).toBe(own.box);
+      expect(balloonInput()).toBeNull();
     } finally {
-      other.remove();
-      own.remove();
+      other.composer.remove();
+      own.composer.remove();
     }
   });
 });
