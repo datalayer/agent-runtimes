@@ -87,12 +87,15 @@ export type Place = Readonly<{ kind: 'channel' | 'direct'; id: string }>;
 /**
  * Where a turn comes from, as the session API takes it on the turn itself
  * (`provenance`, at most 1 KiB): the host's
- * kind, the place, the thread and the message.
+ * kind, the place, the thread and the message. A host whose place names its
+ * conversation (a WhatsApp chat or group) sends no thread, as the session
+ * API's own `TurnProvenance` (a `thread` of `""` by default) and this kit's
+ * WhatsApp contract say.
  */
 export type TurnProvenance = Readonly<{
   host_kind: string;
   place: Place;
-  thread: string;
+  thread?: string;
   message_id: string;
 }>;
 
