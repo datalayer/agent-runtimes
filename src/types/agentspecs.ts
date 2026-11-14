@@ -1004,6 +1004,11 @@ export interface AppConnectionSpec {
   as: 'owner' | 'user';
   /** The tools it may use, by name or pattern; all when empty. */
   only: string[];
+  /**
+   * Whether it runs without this connection when its secrets are not set up,
+   * as its agent does (agentspecs 0.0.189): only a server its agent says optional.
+   */
+  optional?: boolean;
 }
 
 /** How a Personal Agent Protocol company is reached (PAP §3.1). */
