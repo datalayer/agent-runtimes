@@ -208,12 +208,11 @@ class TestTheHostedDatalayerServer:
         headers = MCP_SERVER_CATALOG["datalayer"].headers or {}
         assert headers["Authorization"] == "Bearer ${DATALAYER_API_KEY}"
 
-    def test_it_is_off_by_default(self) -> None:
-        """Every other server here reaches something outside Datalayer. This
-        one reaches *this* platform, and an agent in a Datalayer sandbox
-        already has the notebook it was given — enabling it says "act on my
-        other notebooks too", which is a choice rather than a discovery."""
-        assert MCP_SERVER_CATALOG["datalayer"].enabled is False
+    def test_it_is_enabled_in_the_catalogue(self) -> None:
+        """In the catalogue for everyone signed in (the user, 14 November
+        2026): an agent adds it, with its owner's DATALAYER_API_KEY, to act on
+        the owner's other notebooks."""
+        assert MCP_SERVER_CATALOG["datalayer"].enabled is True
 
     def test_the_token_is_required_and_named(self) -> None:
         assert MCP_SERVER_CATALOG["datalayer"].required_env_vars == [

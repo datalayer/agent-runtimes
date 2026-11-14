@@ -219,7 +219,7 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
   args: [],
   headers: { Authorization: 'Bearer ${DATALAYER_API_KEY}' },
   transport: 'streamable-http',
-  enabled: false,
+  enabled: true,
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
