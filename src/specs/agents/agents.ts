@@ -7088,7 +7088,7 @@ export const WORKER_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Work with Odoo accounting data to reconcile invoices and payments, analyze journal balances, and prepare close-ready summaries.`,
   tags: ['accounting', 'agent-worker', 'finance', 'reconciliation'],
   domain: 'accounting',
-  enabled: false,
+  enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
