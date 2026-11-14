@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.6.43",
+  "version": "1.6.44",
   "type": "module",
   "workspaces": [
     ".",
@@ -375,6 +375,7 @@
   },
   "overrides": {
     "@a2ui/web_core": "0.12.0",
+    "@ag-ui/langgraph": "0.0.45",
     "@langchain/core": "^0.3.80",
     "@ai-sdk/react": "4.0.93",
     "@microsoft/fast-colors": "5.3.1",

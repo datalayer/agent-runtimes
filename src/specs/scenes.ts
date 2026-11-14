@@ -1596,7 +1596,7 @@ export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Asks Ada to sign in at Manzanita, on Manzanita’s own page.',
       card: {
         kind: 'sign-in',
-        title: 'Sign in at Manzanita Outfitters',
+        title: 'Sign in at Manzanita Outfitters (manzanita.example)',
         rows: [],
         lines: [
           'Your agent asks to see your orders.',
@@ -1747,7 +1747,7 @@ export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
       says: 'Every operation is Ada’s to approve: it waits for her.',
       card: {
         kind: 'approval',
-        title: 'Manzanita Outfitters asks you to confirm',
+        title: 'Manzanita Outfitters (manzanita.example) asks you to confirm',
         rows: [
           ['Order', 'ord_7Hk2'],
           ['Price difference', 'USD 70.00'],
@@ -1918,7 +1918,7 @@ export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
       says: 'Passes the bank’s proposal on, quoting it as written.',
       card: {
         kind: 'approval',
-        title: 'Ledgerly asks you to confirm',
+        title: 'Ledgerly (ledgerly.example) asks you to confirm',
         rows: [
           ['Amount', 'EUR 1250.00'],
           ['To', 'Acme GmbH'],
@@ -2093,7 +2093,7 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Asks Sam to sign in at Exchange desk, with his Datalayer account.',
       card: {
         kind: 'sign-in',
-        title: 'Sign in at Exchange desk',
+        title: 'Sign in at Exchange desk (exchange-desk.apps.datalayer.ai)',
         rows: [],
         lines: [
           'With your Datalayer account, on Datalayer’s page: the agent never sees your password.',
@@ -2112,7 +2112,8 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Proposes the exchange in the Maker’s own words: “Exchange order ord_7Hk2 for size L.”',
       card: {
         kind: 'approval',
-        title: 'Exchange desk asks you to confirm',
+        title:
+          'Exchange desk (exchange-desk.apps.datalayer.ai) asks you to confirm',
         rows: [
           ['Order', 'ord_7Hk2'],
           ['Size', 'L'],
