@@ -35,6 +35,7 @@ from personal_agent_protocol.demo.manzanita import CONFIG, DOMAIN, ManzanitaPlug
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -65,7 +66,9 @@ async def explain_conversation_control() -> dict[str, Any]:
     network.add(atlas.domain, atlas.website())
     # Manzanita, this time with a support desk staffed (`humans_available`).
     shop = build_company(
-        replace(CONFIG, humans_available=True),
+        replace(
+            CONFIG, humans_available=True, protocol_versions=(pap_protocol_version(),)
+        ),
         http_client=network.client(),
         address_resolver=network.resolve,
         plugins=[
@@ -78,7 +81,9 @@ async def explain_conversation_control() -> dict[str, Any]:
     reactor = personal_agent_reactor(
         PersonalAgentHost(atlas, clock), network=network, http_client=http
     )
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover(DOMAIN)
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None

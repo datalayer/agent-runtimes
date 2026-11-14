@@ -21,6 +21,7 @@ from pydantic import SecretStr
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 
 class SessionJwts:
@@ -76,6 +77,8 @@ async def demonstrate_conversation() -> dict[str, object]:
         # A Session is local: signed out, and with no request sent.
         session = await SessionClient(reactor=reactor, http_client=http).start(
             client_id="https://assistant.example/agent.json",
+            # The one PAP version Agent Runtimes speaks, named in `Poppy-Version`.
+            protocol_version=pap_protocol_version(),
             pairwise_user_id="usr_host_only_example",
             issuer="https://auth.shop.example",
             tenant_id="demo",

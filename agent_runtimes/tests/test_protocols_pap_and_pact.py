@@ -57,7 +57,7 @@ def test_one_question_two_protocols_one_record(secrets: list[str]) -> None:
     result = asyncio.run(built.application.tools[tool.name]())
 
     assert result["answers"] == [
-        "Manzanita Outfitters: Your order ord_7Hk2: Ridge Jacket, size M, delivered.",
+        "Manzanita Outfitters (manzanita.example): Your order ord_7Hk2: Ridge Jacket, size M, delivered.",
         "Example Air Support: Your booking AB123 flies on 2026-11-02.",
     ]
     events = [(e["protocol"], e["event"]) for e in result["record"]]

@@ -3,7 +3,7 @@
   "title": "Conversation control",
   "description": "A Direct Conversation under an open one, a handoff to a person at Manzanita, and closing, through the real ConversationClient.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.33.0",
+  "sdk": "personal-agent-protocol 0.35.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.4",
+              "protocol_version": "1.0",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -138,7 +138,13 @@
               "extensions": {
                 "operations": [
                   {
-                    "version": "3"
+                    "version": "3",
+                    "endpoint": "https://manzanita.example/poppy/operations"
+                  }
+                ],
+                "browser-control": [
+                  {
+                    "version": "1"
                   }
                 ],
                 "links": [
@@ -324,7 +330,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_MC3GdLl8YxsI_ZKegETKJg",
+              "id": "req_LLLmcYB5bzIirQntMot-Vw",
               "message": {
                 "author": {
                   "type": "agent"
@@ -345,7 +351,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_MC3GdLl8YxsI_ZKegETKJg",
+                    "id": "req_LLLmcYB5bzIirQntMot-Vw",
                     "author": {
                       "type": "agent"
                     },
@@ -363,7 +369,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_MC3GdLl8YxsI_ZKegETKJg",
+                    "as_of_request": "req_LLLmcYB5bzIirQntMot-Vw",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
                 }
@@ -447,7 +453,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_hE8_3oK70Dwy61Vf8E34rA",
+              "id": "req_Jqx-DonXePKN5MTI4jARCg",
               "message": {
                 "author": {
                   "type": "human"
@@ -530,7 +536,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_nm0Kd_Mr4HQGQAr8mCxsHQ",
+              "id": "req_U9eGZtKmBwLx7F36wNuEmg",
               "message": {
                 "author": {
                   "type": "agent"
@@ -620,7 +626,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_N2F9lnQYEq086m0J47M3gA"
+              "id": "req_82REnQLIvdqAy4rWnNpU0Q"
             }
           },
           "response": {
@@ -646,7 +652,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_e-DNA22y7J5CBtN5MiWeKg"
+              "id": "req_ECnWwJaCGJ0sbgHTTcDJ6g"
             }
           },
           "response": {
@@ -683,7 +689,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_MC3GdLl8YxsI_ZKegETKJg",
+                    "id": "req_LLLmcYB5bzIirQntMot-Vw",
                     "author": {
                       "type": "agent"
                     },
@@ -701,7 +707,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_MC3GdLl8YxsI_ZKegETKJg",
+                    "as_of_request": "req_LLLmcYB5bzIirQntMot-Vw",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
                 },
@@ -813,7 +819,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_oqILBSDxAkeqMK3JN0gBaA"
+              "id": "req_yv-KpU0fdGJvSXikjqyjow"
             }
           },
           "response": {

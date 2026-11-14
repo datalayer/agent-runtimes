@@ -73,10 +73,19 @@ class CompanyServiceTickets:
         return body if isinstance(body, dict) else None
 
 
-def _version() -> str:
-    from personal_agent_protocol import PROTOCOL_PROFILE  # noqa: PLC0415
+def pap_protocol_version() -> str:
+    """The one PAP version a runtime speaks: the newest its SDK implements (the 1.0 draft
+    with personal-agent-protocol 0.35). Announced and accepted alone, as a personal agent
+    and as a company: a company on an older version is refused, never negotiated down to.
+    """
+    from personal_agent_protocol import AVAILABLE_PROTOCOL_VERSIONS  # noqa: PLC0415
+    from personal_agent_protocol.models import parse_version  # noqa: PLC0415
 
-    return str(PROTOCOL_PROFILE)
+    return max(AVAILABLE_PROTOCOL_VERSIONS, key=parse_version)
+
+
+def _version() -> str:
+    return pap_protocol_version()
 
 
 class PapPlugin:
@@ -93,7 +102,7 @@ class PapPlugin:
                 version=_version(),
                 roles=("personal-agent", "company"),
                 status="implemented",
-                specification="https://personalagentprotocol.org/docs/0.4/spec",
+                specification="https://personalagentprotocol.org/docs/spec",
                 plugin=PLUGIN,
                 catalogue="pap",
                 points=POINTS,
@@ -125,6 +134,7 @@ def plugin() -> tuple[PluginManifest, PapPlugin]:
 
 __all__ = [
     "OPERATION_TICKETS",
+    "pap_protocol_version",
     "PLUGIN",
     "POINTS",
     "CompanyServiceTickets",

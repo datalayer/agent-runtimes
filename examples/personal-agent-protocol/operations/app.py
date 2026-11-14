@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import httpx
@@ -20,23 +21,28 @@ from personal_agent_protocol import (
     generate_request_id,
     operations_content,
 )
+from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
+    ClockPlugin,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
     ScriptedApprovals,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.northwind import ACCOUNT, DOMAIN, northwind
+from personal_agent_protocol.demo.northwind import ACCOUNT, DOMAIN, NorthwindPlugin
+from personal_agent_protocol.demo.northwind import CONFIG as NORTHWIND
 from personal_agent_protocol.operations import (
     OperationError,
     OperationsClient,
     operations_negotiated,
     terms_differences,
 )
+from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_northwind_00000"
@@ -79,6 +85,25 @@ app = Application(
 )
 
 
+def northwind(
+    network: InProcessNetwork, clock: MutableClock
+) -> tuple[Any, NorthwindPlugin]:
+    """Northwind Bank, the SDK's demo bank, at the one PAP version Agent Runtimes speaks."""
+
+    plugin = NorthwindPlugin()
+    service = build_company(
+        replace(NORTHWIND, protocol_versions=(pap_protocol_version(),)),
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (PluginManifest(name="northwind", version="1"), plugin),
+            (PluginManifest(name="northwind-clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(DOMAIN, company_app(service))
+    return service, plugin
+
+
 @app.tool(does="read")
 async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthrough, in order
     """Ask, approve, revise, and recover a payment; return safe evidence."""
@@ -96,7 +121,9 @@ async def explain_operations() -> dict[str, Any]:  # noqa: C901 - one walkthroug
     ada = ScriptedApprovals(False, True, True)
     host = PersonalAgentHost(atlas, clock, approvals=ada)
     reactor = personal_agent_reactor(host, network=network, http_client=http)
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover(DOMAIN)
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None

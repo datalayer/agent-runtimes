@@ -19,7 +19,7 @@ const SAMPLE_DOMAIN = 'shop.example';
 const sampleCompany = (domain: string): DiscoveredCompany => ({
   discoveryUrl: `https://${domain}/.well-known/poppy.json`,
   document: parseDiscoveryDocument({
-    protocol_version: '0.4',
+    protocol_version: '1.0',
     organization: { name: 'Example Shop', domain },
     auth: {
       issuer: `https://auth.${domain}`,
@@ -43,10 +43,10 @@ const sampleCompany = (domain: string): DiscoveredCompany => ({
         description: 'Read the catalogue',
       },
     ],
-    // Draft 0.4 §3.3: an entry per version it supports; a Session declares the one it implements.
+    // Draft 1.0 §3.3: an entry per version it supports; a Session declares the one it implements.
     extensions: { operations: [{ version: '1' }, { version: '2' }] },
   }),
-  // Direct and Device are what the issuer's grants say (draft 0.4 §3.2).
+  // Direct and Device are what the issuer's grants say (draft 1.0 §3.2).
   oauthMetadata: parseOAuthServerMetadata({
     issuer: `https://auth.${domain}`,
     token_endpoint: `https://auth.${domain}/token`,
@@ -93,7 +93,7 @@ const PapCompanyDiscoveryView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Company discovery"
       title="Discover capabilities, not credentials"
-      description="The PAP parser validates the discovery document and the issuer's metadata (draft 0.4); Agent Runtimes then projects them into a model-safe summary: the sign-ins the issuer's grants offer, the company's own scopes with their hints, and the domains its issuer protects. Change the sample domain to see issuer and discovery binding move together."
+      description="The PAP parser validates the discovery document and the issuer's metadata (draft 1.0); Agent Runtimes then projects them into a model-safe summary: the sign-ins the issuer's grants offer, the company's own scopes with their hints, and the domains its issuer protects. Change the sample domain to see issuer and discovery binding move together."
     >
       <Box
         display="flex"

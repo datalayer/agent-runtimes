@@ -59,7 +59,7 @@ from personal_agent_protocol.reactor import resolve_addresses
 from reactor import PluginManifest
 
 from agent_runtimes.apps.pap_company import PAP_META_KEY, summary_of
-from agent_runtimes.protocols.pap import OPERATION_TICKETS
+from agent_runtimes.protocols.pap import OPERATION_TICKETS, pap_protocol_version
 
 #: How long a perform turn's ticket can be redeemed.
 TICKET_LIFETIME_SECONDS = 300.0
@@ -167,7 +167,8 @@ def _scope_hints(company: Any) -> dict[str, tuple[str, bool]]:
 
 def _excluded_tasks(company: Any) -> tuple[dict[str, Any], ...]:
     """The tasks it does not offer through the protocol, as the tasks response lists them
-    for each Session (PAP 0.4 §9)."""
+    for each Session (PAP 1.0 §9).
+    """
     return tuple(
         task.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
         for task in company.excluded_tasks
@@ -440,6 +441,9 @@ class PapCompanyCapability:
         self.config = CompanyConfig(
             name=name,
             domain=domain,
+            # The one PAP version a runtime speaks (the newest its SDK implements): poppy.json
+            # is its document and nothing else is served; a request in another is refused.
+            protocol_versions=(pap_protocol_version(),),
             scopes=scopes,
             # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
             scope_descriptions={

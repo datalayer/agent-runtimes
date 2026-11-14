@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
@@ -29,9 +30,10 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -61,13 +63,17 @@ async def explain_account_tokens() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, _ = manzanita(network, clock)
+    shop, _ = manzanita(
+        network,
+        clock,
+        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+    )
     http = network.client()
     host = PersonalAgentHost(atlas, clock)
     reactor = personal_agent_reactor(host, network=network, http_client=http)
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-        "manzanita.example"
-    )
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover("manzanita.example")
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None

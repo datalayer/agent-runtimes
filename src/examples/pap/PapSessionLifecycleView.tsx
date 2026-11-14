@@ -16,6 +16,7 @@ import {
   SessionSigners,
   buildPapReactor,
 } from '@datalayer/personal-agent-protocol';
+import { PAP_PROTOCOL_VERSION } from '../../pap';
 import { PapExamplePage, PapResult } from './PapExamplePage';
 
 type SessionSummary = {
@@ -82,6 +83,8 @@ const PapSessionLifecycleView: React.FC = () => {
         pairwiseUserId: 'usr_host_only_example',
         issuer: 'https://company.example',
         tenantId: 'example-tenant',
+        // The one PAP version Agent Runtimes speaks, named in Poppy-Version.
+        protocolVersion: PAP_PROTOCOL_VERSION,
       });
       const requestsToStartASession = calls;
       const sid = session.sid;
@@ -112,7 +115,7 @@ const PapSessionLifecycleView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Session"
       title="Start and restart a Session without giving credentials to the agent"
-      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (draft 0.4) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key and names its protocol version in Poppy-Version. Answered session_ended, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
+      description="This Reactor view drives the real PAP SessionClient and SessionFetchClient (draft 1.0) against a deterministic company transport. A Session is local: a random sid, and no request. Every request carries a fresh Poppy-Session JWT signed with a delegated key and names its protocol version in Poppy-Version. Answered session_ended, it starts again once, with a new sid and the same User ID. Only lifecycle evidence enters React state."
     >
       <Box
         display="flex"

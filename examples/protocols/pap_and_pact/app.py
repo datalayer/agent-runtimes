@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from typing import Any, Mapping
 
 import httpx
@@ -42,6 +43,7 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
+from personal_agent_protocol.demo.manzanita import CONFIG as MANZANITA
 from personal_agent_protocol.demo.manzanita import manzanita
 from reactor import PluginManifest
 
@@ -57,6 +59,7 @@ from agent_runtimes.protocols.pact.plugin import (
     signer_of,
 )
 from agent_runtimes.protocols.pact.provider import ExampleAir
+from agent_runtimes.protocols.pap import pap_protocol_version
 from agent_runtimes.protocols.web_bot_auth import LocalSigner
 
 TENANT = "atlas-demo"
@@ -130,7 +133,11 @@ async def _at_manzanita(record: Record) -> str:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, _ = manzanita(network, clock)
+    shop, _ = manzanita(
+        network,
+        clock,
+        config=replace(MANZANITA, protocol_versions=(pap_protocol_version(),)),
+    )
     host = PersonalAgentHost(atlas, clock)
     async with network.client() as http:
         reactor = personal_agent_reactor(host, network=network, http_client=http)
@@ -143,10 +150,13 @@ async def _at_manzanita(record: Record) -> str:
                 id=generate_request_id(reactor), author=Author(type="human"), text=text
             )
 
-        company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-            "manzanita.example"
-        )
-        name = company.document.organization.name
+        company = await DiscoveryClient(
+            reactor=reactor,
+            http_client=http,
+            protocol_versions=(pap_protocol_version(),),
+        ).discover("manzanita.example")
+        # The domain beside the name: the name is unconfirmed (PAP 1.0 §10.3).
+        name = company.document.organization.label
         metadata = company.oauth_metadata
         assert metadata is not None and metadata.device_authorization_endpoint
         assert company.document.agent is not None

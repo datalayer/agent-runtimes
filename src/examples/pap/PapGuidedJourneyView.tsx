@@ -73,7 +73,7 @@ const STEPS: readonly JourneyStep[] = [
     channel: 'Discovery',
     messages: conversationStart,
     facts: [
-      { label: 'Publishes', value: 'poppy.json · draft 0.4' },
+      { label: 'Publishes', value: 'poppy.json · draft 1.0' },
       { label: 'Returns', value: 'Company conversation agent' },
       { label: 'Sign-in', value: "Northstar's own page" },
     ],
@@ -83,7 +83,7 @@ const STEPS: readonly JourneyStep[] = [
     request: 'Accept: application/json',
     response: `200 OK
 {
-  "protocol_version": "0.4",
+  "protocol_version": "1.0",
   "organization": { "name": "Northstar Outfitters" },
   "auth": {
     "issuer": "https://auth.northstar.example",
@@ -116,7 +116,7 @@ const STEPS: readonly JourneyStep[] = [
     target: 'https://api.northstar.example/poppy/conversations',
     detailLabel: 'Atlas → company agent',
     request: `Poppy-Session: [fresh JWT, naming the sid, signed with a delegated key]
-Poppy-Version: 0.4
+Poppy-Version: 1.0
 Content-Type: application/json
 
 {
@@ -192,7 +192,7 @@ Location: https://atlas.example/oauth/callback
     detailLabel: 'Atlas ↔ company agent',
     request: `Authorization: Bearer [host-only access token]
 Poppy-Session: [fresh JWT]
-Poppy-Version: 0.4
+Poppy-Version: 1.0
 Content-Type: application/json
 
 {
@@ -248,7 +248,7 @@ Content-Type: application/json
     detailLabel: 'Atlas ↔ company agent',
     request: `Authorization: Bearer [host-only access token]
 Poppy-Session: [fresh JWT]
-Poppy-Version: 0.4
+Poppy-Version: 1.0
 Content-Type: application/json
 
 {
@@ -306,7 +306,7 @@ const runJourney = async (): Promise<
   readonly (readonly JourneyMessage[])[]
 > => {
   parseDiscoveryDocument({
-    protocol_version: '0.4',
+    protocol_version: '1.0',
     organization: { name: 'Northstar Outfitters', domain: 'northstar.example' },
     auth: {
       issuer: 'https://auth.northstar.example',
@@ -324,7 +324,7 @@ const runJourney = async (): Promise<
       ],
     },
   });
-  // Direct Sign-In is what the issuer's grants offer (draft 0.4 §3.2).
+  // Direct Sign-In is what the issuer's grants offer (draft 1.0 §3.2).
   parseOAuthServerMetadata({
     issuer: 'https://auth.northstar.example',
     token_endpoint: 'https://auth.northstar.example/oauth/token',
@@ -357,7 +357,7 @@ const runJourney = async (): Promise<
         headers: { 'content-type': 'application/json' },
       });
     }
-    // The request's id is top-level, the message's own (draft 0.4 §8.3).
+    // The request's id is top-level, the message's own (draft 1.0 §8.3).
     const incoming = JSON.parse(String(init?.body ?? '{}')) as {
       id?: string;
     };
@@ -380,7 +380,7 @@ const runJourney = async (): Promise<
         ],
         cursor: `cursor_${index + 1}`,
         has_more: false,
-        // Draft 0.4 §8.7: the four state fields.
+        // Draft 1.0 §8.7: the four state fields.
         working: false,
         handoff: 'none',
         responder: 'agent',

@@ -77,9 +77,15 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     ScriptedApprovals,
     ScriptedInput,
+    one_origin,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.ledgerly import ledgerly
+from personal_agent_protocol.demo.ledgerly import CONFIG as LEDGERLY_CONFIG
+from personal_agent_protocol.demo.ledgerly import DOMAIN as LEDGERLY
+from personal_agent_protocol.demo.ledgerly import (
+    LedgerlyAsPersonalAgent,
+    LedgerlyPlugin,
+)
 from personal_agent_protocol.demo.manzanita import (
     ADA,
     ADA_CODE,
@@ -89,6 +95,40 @@ from personal_agent_protocol.demo.manzanita import (
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.mediated import MediatedSignInClient
 from reactor import PluginManifest
+
+from agent_runtimes.protocols.pap import pap_protocol_version
+
+
+def ledgerly_at(
+    network: Any, clock: MutableClock
+) -> tuple[Any, LedgerlyAsPersonalAgent]:
+    """Ledgerly as a company at the one PAP version Agent Runtimes speaks; its own personal
+    agent at Northwind is the SDK's, on the SDK's default version.
+    """
+
+    at_northwind = LedgerlyAsPersonalAgent(network, clock)
+    service = build_company(
+        replace(LEDGERLY_CONFIG, protocol_versions=(pap_protocol_version(),)),
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (
+                PluginManifest(name="ledgerly", version="1"),
+                LedgerlyPlugin(at_northwind),
+            ),
+            (PluginManifest(name="ledgerly-clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(
+        LEDGERLY,
+        one_origin(
+            at_northwind.identity.website(),
+            company_app(service),
+            (at_northwind.identity.path, "/jwks.json"),
+        ),
+    )
+    return service, at_northwind
+
 
 ROOT = Path(__file__).parents[3]
 OUTPUT = ROOT / "src" / "examples" / "pap" / "traces"
@@ -527,7 +567,11 @@ class World:
         self.plugin = ManzanitaPlugin()
         self.network.caller = "manzanita"
         self.shop = build_company(
-            replace(CONFIG, humans_available=humans),
+            replace(
+                CONFIG,
+                humans_available=humans,
+                protocol_versions=(pap_protocol_version(),),
+            ),
             http_client=self.network.client(),
             address_resolver=self.network.resolve,
             plugins=[
@@ -559,7 +603,9 @@ class World:
 
     async def discover(self) -> None:
         self.company = await DiscoveryClient(
-            reactor=self.reactor, http_client=self.http
+            reactor=self.reactor,
+            http_client=self.http,
+            protocol_versions=(pap_protocol_version(),),
         ).discover(CONFIG.domain)
         self.metadata = self.company.oauth_metadata
         self.endpoint = self.company.document.agent.protocols[0].endpoint
@@ -1251,7 +1297,7 @@ async def two_companies() -> Trace:
     network.caller = "northwind"
     bank, bank_plugin = northwind(network, clock)
     network.caller = "ledgerly"
-    firm, at_northwind = ledgerly(network, clock)
+    firm, at_northwind = ledgerly_at(network, clock)
     network.caller = "atlas"
     http = network.client()
     host = PersonalAgentHost(atlas, clock, approvals=ScriptedApprovals(always=True))
@@ -1295,9 +1341,9 @@ async def two_companies() -> Trace:
             "northwind": await company_facts(bank, "ledgerly.example/poppy/agent.json"),
         }
 
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-        "ledgerly.example"
-    )
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover("ledgerly.example")
     metadata = company.oauth_metadata
     session = await SessionClient(reactor=reactor, http_client=http).start(
         client_id=atlas.client_id,

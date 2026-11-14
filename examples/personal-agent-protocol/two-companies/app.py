@@ -10,6 +10,7 @@ agent at Northwind Bank. Every approval is an Operation, and Ada is asked about 
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
@@ -23,20 +24,29 @@ from personal_agent_protocol import (
     generate_request_id,
     operations_content,
 )
+from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
+    ClockPlugin,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
     ScriptedApprovals,
+    one_origin,
     personal_agent_reactor,
 )
+from personal_agent_protocol.demo.ledgerly import CONFIG as LEDGERLY_CONFIG
 from personal_agent_protocol.demo.ledgerly import DOMAIN as LEDGERLY
-from personal_agent_protocol.demo.ledgerly import ledgerly
+from personal_agent_protocol.demo.ledgerly import (
+    LedgerlyAsPersonalAgent,
+    LedgerlyPlugin,
+)
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.operations import OperationsClient
+from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_ledgerly_00000000"
@@ -55,6 +65,37 @@ app = Application(
         "a company-to-company protocol. Never expose tokens, codes, or Session JWTs."
     ),
 )
+
+
+def ledgerly(
+    network: InProcessNetwork, clock: MutableClock
+) -> tuple[Any, LedgerlyAsPersonalAgent]:
+    """Ledgerly, the SDK's demo firm, as a company at the one PAP version Agent Runtimes
+    speaks. Its own personal agent at Northwind is the SDK's, on the SDK's default version.
+    """
+
+    at_northwind = LedgerlyAsPersonalAgent(network, clock)
+    service = build_company(
+        replace(LEDGERLY_CONFIG, protocol_versions=(pap_protocol_version(),)),
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (
+                PluginManifest(name="ledgerly", version="1"),
+                LedgerlyPlugin(at_northwind),
+            ),
+            (PluginManifest(name="ledgerly-clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(
+        LEDGERLY,
+        one_origin(
+            at_northwind.identity.website(),
+            company_app(service),
+            (at_northwind.identity.path, "/jwks.json"),
+        ),
+    )
+    return service, at_northwind
 
 
 @app.tool(does="read")
@@ -76,9 +117,9 @@ async def run_two_companies() -> dict[str, Any]:
     operations = OperationsClient(reactor=reactor)
 
     # Atlas signs Ada in to Ledgerly (Device Sign-In on Ledgerly's page).
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-        LEDGERLY
-    )
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover(LEDGERLY)
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None

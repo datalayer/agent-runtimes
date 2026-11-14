@@ -21,7 +21,7 @@ class CompanyClient:
             discovery_url="https://shop.example/.well-known/poppy.json",
             document=DiscoveryDocument.model_validate(
                 {
-                    "protocol_version": "0.4",
+                    "protocol_version": "1.0",
                     "organization": {"name": "Example Shop", "domain": "shop.example"},
                     "auth": {
                         "issuer": "https://auth.shop.example",
@@ -108,6 +108,9 @@ async def test_company_summary_contains_capabilities_but_no_endpoints() -> None:
     summary = await capability.discover_company("shop.example")
 
     assert summary.organization == "Example Shop"
+    # The domain beside the unconfirmed name (PAP 1.0 §10.3).
+    assert summary.label == "Example Shop (shop.example)"
+    assert summary.protocol_version == "1.0"
     assert summary.sign_in == ("direct",)
     assert summary.scopes == {"catalogue:read": "Read the catalogue"}
     assert summary.scope_hints["catalogue:read"].changes == "none"

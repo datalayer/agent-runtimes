@@ -197,6 +197,9 @@ async def test_a_personal_agent_works_with_the_application_as_a_company(
             )
             summary = await pap.discover_company(DOMAIN)
             assert summary.organization == "Order Desk"
+            # The runtime's company and personal agent both speak the 1.0 draft alone.
+            assert summary.protocol_version == "1.0"
+            assert summary.label == f"Order Desk ({DOMAIN})"
             assert summary.sign_in == ("device",)
             assert summary.extensions == {"operations": "3"}
             # Its own scopes, what each allows and the Maker's hints (draft 0.3 §4.4).

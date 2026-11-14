@@ -3,7 +3,7 @@
   "title": "Mediated Sign-In",
   "description": "Ada signs in to Manzanita without leaving Atlas: the host's protected input collects the fields Manzanita declares in its mediated-sign-in extension and sends them to Manzanita's token endpoint, once, as an extension grant.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.33.0",
+  "sdk": "personal-agent-protocol 0.35.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.4",
+              "protocol_version": "1.0",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -138,7 +138,13 @@
               "extensions": {
                 "operations": [
                   {
-                    "version": "3"
+                    "version": "3",
+                    "endpoint": "https://manzanita.example/poppy/operations"
+                  }
+                ],
+                "browser-control": [
+                  {
+                    "version": "1"
                   }
                 ],
                 "links": [

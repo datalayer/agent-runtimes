@@ -47,6 +47,7 @@ from personal_agent_protocol import (
     operations_negotiated,
     resolve_pairwise_user_id,
 )
+from personal_agent_protocol.errors import DiscoveryError
 from personal_agent_protocol.extensions import (
     SUPPORTED_EXTENSIONS,
     negotiate_extensions,
@@ -62,6 +63,8 @@ from personal_agent_protocol.models import (
 from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
+
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 
 class PapScopeHint(BaseModel):
@@ -80,6 +83,9 @@ class PapCompanySummary(BaseModel):
 
     organization: str
     domain: str
+    #: The name with the domain beside it (``Organization.label``): the name is what the
+    #: domain says about itself, unconfirmed (PAP 1.0 §10.3), so it is never shown alone.
+    label: str
     protocol_version: str
     issuer: str | None
     #: Direct and Device as the issuer's ``grant_types_supported`` offers them,
@@ -149,6 +155,7 @@ def _company_summary(company: DiscoveredCompany) -> PapCompanySummary:
     return PapCompanySummary(
         organization=document.organization.name,
         domain=document.organization.domain,
+        label=document.organization.label,
         protocol_version=document.protocol_version,
         issuer=metadata.issuer if metadata is not None else None,
         sign_in=tuple(sign_in),
@@ -289,7 +296,9 @@ class PapCapabilityError(Exception):
 
     ``code``: ``no_host`` (no PAP Reactor was given), ``no_conversation``,
     ``unknown_operation``, ``no_operations``,
-    ``no_approval_surface``, ``approval_surface_ambiguous``, ``approval_failed``.
+    ``no_approval_surface``, ``approval_surface_ambiguous``, ``approval_failed``,
+    ``unsupported_protocol_version`` (the company does not speak the one PAP version a
+    runtime speaks, :func:`~agent_runtimes.protocols.pap.pap_protocol_version`).
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -377,7 +386,11 @@ class PapPersonalAgentCapability:
         self._links: dict[tuple[str, str], _Link] = {}
         hosted = {"reactor": reactor, "http_client": http_client} if reactor else {}
         if company_client is None:
-            self._owned_company: DiscoveryClient | None = DiscoveryClient(**hosted)
+            # The one version a runtime speaks (the newest its SDK implements): a company
+            # serving only older ones is refused at discovery, never negotiated down to.
+            self._owned_company: DiscoveryClient | None = DiscoveryClient(
+                **hosted, protocol_versions=(pap_protocol_version(),)
+            )
             self._company: _CompanyClient = self._owned_company
         else:
             self._owned_company = None
@@ -408,7 +421,20 @@ class PapPersonalAgentCapability:
     async def discover_company(self, domain: str) -> PapCompanySummary:
         """Discover and validate a company, then return public capabilities only."""
 
-        return _company_summary(await self._company.discover(domain))
+        return _company_summary(await self._discover(domain))
+
+    async def _discover(self, domain: str) -> DiscoveredCompany:
+        """The company verified at the one PAP version a runtime speaks; refused otherwise."""
+        try:
+            return await self._company.discover(domain)
+        except DiscoveryError as error:
+            if error.code == "unsupported_protocol_version":
+                raise PapCapabilityError(
+                    "unsupported_protocol_version",
+                    f"{domain} does not speak PAP {pap_protocol_version()}, the only version "
+                    "this agent speaks: nothing is sent",
+                ) from error
+            raise
 
     async def inspect_agent(self, client_id: str) -> PapAgentIdentitySummary:
         """Verify client metadata and public JWKS, then return a safe identity summary."""
@@ -441,7 +467,7 @@ class PapPersonalAgentCapability:
     async def _link(self, user_id: str, domain: str) -> _Link:
         """What this person holds at the company, its verified issuer unchanged."""
         reactor, _, _ = self._host()
-        company = await self._company.discover(domain)
+        company = await self._discover(domain)
         link = self._links.get((user_id, domain))
         if link is not None:
             # A company that stops or starts having an issuer has changed too, even
@@ -511,7 +537,8 @@ class PapPersonalAgentCapability:
         """
         reactor, _, _ = self._host()
         link = await self._link(user_id, domain)
-        name = link.company.document.organization.name
+        # The company as the person knows it: its domain beside the unconfirmed name (§10.3).
+        name = link.company.document.organization.label
         if link.company.document.agent is None:
             raise PapCapabilityError(
                 "no_conversation", f"{domain} has no agent to talk to"

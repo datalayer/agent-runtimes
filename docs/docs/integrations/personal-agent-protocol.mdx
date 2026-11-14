@@ -7,30 +7,31 @@ title: Personal Agent Protocol
 
 Agent Runtimes depends on Personal Agent Protocol (PAP, or Poppy) in Python
 and TypeScript: `personal-agent-protocol[ui]` and
-`@datalayer/personal-agent-protocol` (0.29.0, implementing
-[draft 0.3](https://personalagentprotocol.org/docs/0.3/spec) as of its revision
-2026-10-30, the
-[Operations extension](https://personalagentprotocol.org/docs/0.3/extensions/operations)
-version 2 and the Mediated Sign-In extension version 1; see the SDKs'
-[protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/)).
-At that draft:
+`@datalayer/personal-agent-protocol` (0.35, `>=0.35.0,<0.36`). It speaks one
+version of the protocol, the newest its SDK implements: the
+[1.0 draft](https://personalagentprotocol.org/docs/spec) as of upstream
+`c71f515` (2026-11-11), with the Operations extension version 3 and the
+Mediated Sign-In extension version 1; see the SDKs'
+[protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/).
+`agent_runtimes.protocols.pap.pap_protocol_version()` (TypeScript:
+`PAP_PROTOCOL_VERSION`) names it.
 
-- A **Session** is local: the agent chooses a random `sid` for a pairwise User
-  ID, and no request is sent. Every request to a company carries a fresh
-  `Poppy-Session` JWT naming it. A company that answers `invalid_session` gets
-  one new Session, then the agent stops.
-- That JWT is signed with a **delegated key**, one per User ID at one company,
-  which a key in the agent's `jwks_uri` vouches for with a delegation naming no
-  person and no company.
-- Sign-in is **plain OAuth**: a Bearer access token for the account, and a
-  refresh token the host keeps by reference. A sign-in names no Session, and a
-  refresh gets a token any of the person's Sessions uses. The issuer comes from
-  the domain's protected resource metadata.
-- **Operations version 2**: a company answers an action with an operation, whose
-  `revision` is opaque. The agent asks the person about every operation, never
-  approves one for them, and sends their approval as a retry of the same request.
-- **Mediated Sign-In** is an extension grant at the token endpoint, offered with
-  `extensions["mediated-sign-in"]`.
+- **One version, both roles.** As a personal agent, discovery asks for that
+  version alone (`DiscoveryClient(protocol_versions=...)`): a company that serves
+  only an older one is refused with `unsupported_protocol_version`, naming the
+  version spoken, and nothing is sent; it is never negotiated down to. As a
+  company (`PapCompanyCapability`), `poppy.json` is that version's document and a
+  request in another `Poppy-Version` is refused.
+- Every request with the Session header names that version in `Poppy-Version`
+  and the extensions its Session declares in `Poppy-Extensions`.
+- **The domain beside the name.** Nothing in `poppy.json` confirms that a domain
+  belongs to the company in `organization.name` (§10.3): a summary carries
+  `label` (`Organization.label`, `Name (domain)`), and what the person is shown
+  names the company by its label or its domain, never the name alone.
+- **Operations version 3**: a company answers an action with an operation whose
+  `terms` are its own values; the agent asks the person about it (or approves on a
+  standing permission that covers its terms), every approval says its `approver`,
+  and a company may decline an approval.
 
 The protocol itself is specified by the
 [Personal Agent Protocol organization on GitHub](https://github.com/personal-agent-protocol):

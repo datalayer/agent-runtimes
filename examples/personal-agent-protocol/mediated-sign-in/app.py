@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import AuthorizationError, DiscoveryClient
@@ -16,7 +17,7 @@ from personal_agent_protocol.demo.kit import (
     ScriptedInput,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import ADA, ADA_CODE, manzanita
+from personal_agent_protocol.demo.manzanita import ADA, ADA_CODE, CONFIG, manzanita
 from personal_agent_protocol.mediated import (
     MEDIATED_EXTENSION,
     MediatedSignInClient,
@@ -25,6 +26,7 @@ from personal_agent_protocol.mediated import (
 from personal_agent_protocol.models import ExtensionDescriptor
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-demo"
 
@@ -52,7 +54,11 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(
+        network,
+        clock,
+        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+    )
     http = network.client()
     # The host's trusted input surface (`pap.protectedInput`). In a real host the user
     # types into it; here a script answers: her credentials, a wrong code, the right one.
@@ -60,9 +66,9 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
     host = PersonalAgentHost(atlas, clock, protected_input=typed)
     reactor = personal_agent_reactor(host, network=network, http_client=http)
 
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
-        "manzanita.example"
-    )
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover("manzanita.example")
     offered = mediated_sign_in(company)
     if offered is None or company.oauth_metadata is None:
         raise RuntimeError("the example world is incomplete")

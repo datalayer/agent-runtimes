@@ -32,10 +32,15 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG as MANZANITA_0_4
+from personal_agent_protocol.demo.manzanita import manzanita
 from reactor import PluginManifest
 
 from agent_runtimes.pap import PapCapabilityError, PapPersonalAgentCapability
+from agent_runtimes.protocols.pap import pap_protocol_version
+
+# The reference company at the one version a runtime speaks (the newest the SDK has).
+CONFIG = replace(MANZANITA_0_4, protocol_versions=(pap_protocol_version(),))
 
 DOMAIN = "manzanita.example"
 
@@ -85,7 +90,7 @@ def _capability(
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, _ = manzanita(network, clock, config=config)
+    shop, _ = manzanita(network, clock, config=CONFIG if config is None else config)
     host = PersonalAgentHost(atlas, clock)
     http = network.client()
     reactor = personal_agent_reactor(
@@ -378,7 +383,7 @@ async def test_scopes_beyond_the_offer_are_not_asked(tmp_path: Path) -> None:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(network, clock, config=CONFIG)
     http = network.client()
     reactor = personal_agent_reactor(
         PersonalAgentHost(atlas, clock),
@@ -477,3 +482,24 @@ async def test_what_it_says_is_sent_as_the_agents_words(
         for reply in answer.replies
     ]
     assert replies and {reply.author for reply in replies} == {"agent"}
+
+
+@pytest.mark.asyncio
+async def test_it_speaks_the_newest_version_alone(tmp_path: Path) -> None:
+    """The 1.0 draft, the newest the SDK has: its Session says it; a company on 0.4 alone is
+    refused at discovery, naming the version spoken, and nothing is sent."""
+    assert pap_protocol_version() == "1.0"
+    capability, _, _ = _capability(None, tmp_path)
+    summary = await capability.discover_company(DOMAIN)
+    assert summary.protocol_version == "1.0"
+    assert summary.label == f"Manzanita Outfitters ({DOMAIN})"
+    answer = await capability.ask(DOMAIN, "Do you sell jackets?", user_id="ada")
+    assert answer.company == summary.label
+    session = capability._links[("ada", DOMAIN)].session
+    assert session is not None and session.protocol_version == "1.0"
+
+    older, _, _ = _capability(None, tmp_path / "older", MANZANITA_0_4)
+    with pytest.raises(PapCapabilityError) as refused:
+        await older.discover_company(DOMAIN)
+    assert refused.value.code == "unsupported_protocol_version"
+    assert "PAP 1.0" in str(refused.value)

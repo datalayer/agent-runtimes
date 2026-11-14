@@ -10,12 +10,12 @@ import {
   type JsonWebKeySet,
 } from '@datalayer/personal-agent-protocol';
 import { describe, expect, it, vi } from 'vitest';
-import { PapPersonalAgentCapability } from './index';
+import { PAP_PROTOCOL_VERSION, PapPersonalAgentCapability } from './index';
 
 const company: DiscoveredCompany = {
   discoveryUrl: 'https://shop.example/.well-known/poppy.json',
   document: {
-    protocol_version: '0.4',
+    protocol_version: '1.0',
     organization: { name: 'Example Shop', domain: 'shop.example' },
     auth: {
       issuer: 'https://auth.shop.example',
@@ -75,14 +75,21 @@ const keys: JsonWebKeySet = {
 
 describe('PapPersonalAgentCapability', () => {
   it('returns company capabilities without remote endpoints', async () => {
-    const capability = new PapPersonalAgentCapability({
-      discover: vi.fn().mockResolvedValue(company),
-    });
+    const discover = vi.fn().mockResolvedValue(company);
+    const capability = new PapPersonalAgentCapability({ discover });
 
     const summary = await capability.discoverCompany('shop.example');
 
+    // At the one version Agent Runtimes speaks, the newest the SDK has.
+    expect(PAP_PROTOCOL_VERSION).toBe('1.0');
+    expect(discover).toHaveBeenCalledWith('shop.example', {
+      protocolVersions: ['1.0'],
+    });
     expect(summary).toMatchObject({
       organization: 'Example Shop',
+      // The domain beside the unconfirmed name (PAP 1.0 §10.3).
+      label: 'Example Shop (shop.example)',
+      protocolVersion: '1.0',
       signIn: ['direct'],
       scopes: { 'catalogue:read': 'Read the catalogue' },
       scopeHints: {

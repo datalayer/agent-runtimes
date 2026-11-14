@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.43 is the release of this line since 1.6.42**: PAP 1.0 draft alone, personal-agent-protocol 0.35 as the floor.
+- **PAP: the 1.0 draft, spoken alone.** `agent_runtimes.protocols.pap.pap_protocol_version()` (TypeScript `PAP_PROTOCOL_VERSION`) is the newest version the SDK implements (`1.0` with personal-agent-protocol 0.35, upstream `c71f515`). `PapPersonalAgentCapability` discovers companies at it alone (`DiscoveryClient(protocol_versions=...)`, `discoverCompany(domain, { protocolVersions })`) and its Sessions name it in `Poppy-Version`; a company serving only an older version is refused with `PapCapabilityError("unsupported_protocol_version")`, naming the version spoken, and nothing is sent. `PapCompanyCapability` serves it alone (`CompanyConfig(protocol_versions=...)`). The protocol description and the catalogue entry say `1.0` (`draft 1.0`). No fallback to 0.4.
+- **PAP: the domain beside a company's name** (spec §10.3). `PapCompanySummary.label` (`Organization.label`, `organizationLabel`): `Name (domain)`; a conversation answer (`PapAnswer.company`) names the company by it.
+- **PAP examples at the 1.0 draft**: every demo company is built at it and every personal agent discovers it alone; the UI traces regenerated with SDK 0.35.0; the integration page and the examples' README say the one version spoken.
 - **1.6.42 is the release of this line since 1.6.41**: a deployment's runtime carries its public address.
 - **`RuntimesClient.create(deployment_slug=..., deployment_preview_version=...)`**: the address of the deployment a runtime is launched for (`/apps/<slug>`, or `/apps/<slug>/preview/<version>`), which the Operator puts on the runtime and answers with it, so anybody's agent page sends the runtime's visitor to the application. A slug without `deployment_uid`, or a preview version without a slug, is refused before anything is asked. The scheduler sends it for a woken deployment's runtime.
 - **1.6.41 is the release of this line since 1.6.40**: a turn's provenance names a thread only when the host has one.

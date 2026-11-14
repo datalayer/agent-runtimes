@@ -3,7 +3,7 @@
   "title": "Two companies working together",
   "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is Ada's. This is composition: draft 0.4 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.33.0",
+  "sdk": "personal-agent-protocol 0.35.0",
   "parties": [
     {
       "id": "user",
@@ -115,7 +115,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.4",
+              "protocol_version": "1.0",
               "organization": {
                 "name": "Ledgerly",
                 "domain": "ledgerly.example"
@@ -544,7 +544,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_pMQP06OhGpHnbJB-3EndYg",
+              "id": "req_vYutOtJ2qQuU-yO4gpnqBw",
               "message": {
                 "author": {
                   "type": "human"
@@ -565,7 +565,7 @@
                   "created_at": "2026-10-11T09:00:05Z",
                   "type": "message",
                   "message": {
-                    "id": "req_pMQP06OhGpHnbJB-3EndYg",
+                    "id": "req_vYutOtJ2qQuU-yO4gpnqBw",
                     "author": {
                       "type": "human"
                     },
@@ -583,7 +583,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_pMQP06OhGpHnbJB-3EndYg",
+                    "as_of_request": "req_vYutOtJ2qQuU-yO4gpnqBw",
                     "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter the code shown with this message. Tell me when done.",
                     "data": {
                       "connect": {
@@ -1071,7 +1071,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_CqSVKU9-LmCqTCJe7FQUgA",
+              "id": "req_NhXxaDutQvqutSVPmWpDNg",
               "message": {
                 "author": {
                   "type": "human"
@@ -1092,7 +1092,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_CqSVKU9-LmCqTCJe7FQUgA",
+                    "id": "req_NhXxaDutQvqutSVPmWpDNg",
                     "author": {
                       "type": "human"
                     },
@@ -1110,7 +1110,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_CqSVKU9-LmCqTCJe7FQUgA",
+                    "as_of_request": "req_NhXxaDutQvqutSVPmWpDNg",
                     "text": "Northwind Bank asks approval for this payment.",
                     "extensions": {
                       "operations": {
@@ -1194,7 +1194,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_JyiGOChf_Zl9KQ2DkxSrJw",
+              "id": "req_9QIZXi7HZJa3RNGrypsikg",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1215,7 +1215,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_JyiGOChf_Zl9KQ2DkxSrJw",
+                    "id": "req_9QIZXi7HZJa3RNGrypsikg",
                     "author": {
                       "type": "agent"
                     },
@@ -1233,7 +1233,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_JyiGOChf_Zl9KQ2DkxSrJw",
+                    "as_of_request": "req_9QIZXi7HZJa3RNGrypsikg",
                     "text": "Ready to pay INV-0042.",
                     "extensions": {
                       "operations": {
@@ -1409,7 +1409,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_T1V3E9OUnVO5BCckFnm72g",
+              "id": "req_c-QcE1Wd2ItKx7n4T0o7UQ",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1439,7 +1439,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_T1V3E9OUnVO5BCckFnm72g",
+                    "id": "req_c-QcE1Wd2ItKx7n4T0o7UQ",
                     "author": {
                       "type": "agent"
                     },
@@ -1466,7 +1466,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_T1V3E9OUnVO5BCckFnm72g",
+                    "as_of_request": "req_c-QcE1Wd2ItKx7n4T0o7UQ",
                     "text": "Northwind Bank: Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
                     "data": {
                       "bank_reference": "NW-0001"
@@ -1498,7 +1498,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_z-aYm9dCe1d2bErLGg8Zng",
+              "id": "req_f3k-NJgNiufNuGSkqMj7lg",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1527,7 +1527,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_JyiGOChf_Zl9KQ2DkxSrJw",
+                    "id": "req_9QIZXi7HZJa3RNGrypsikg",
                     "author": {
                       "type": "agent"
                     },
@@ -1545,7 +1545,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_JyiGOChf_Zl9KQ2DkxSrJw",
+                    "as_of_request": "req_9QIZXi7HZJa3RNGrypsikg",
                     "text": "Ready to pay INV-0042.",
                     "extensions": {
                       "operations": {
@@ -1573,7 +1573,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_z-aYm9dCe1d2bErLGg8Zng",
+                    "id": "req_f3k-NJgNiufNuGSkqMj7lg",
                     "author": {
                       "type": "agent"
                     },
@@ -1599,7 +1599,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_z-aYm9dCe1d2bErLGg8Zng",
+                    "as_of_request": "req_f3k-NJgNiufNuGSkqMj7lg",
                     "text": "Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
                     "data": {
                       "bank_reference": "NW-0001"
@@ -1770,7 +1770,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_bovnfdS3S_JgOHVbHglrGw",
+              "id": "req_QkRkXLBCPW-hKDOXyxElNw",
               "message": {
                 "author": {
                   "type": "human"
@@ -1791,7 +1791,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_bovnfdS3S_JgOHVbHglrGw",
+                    "id": "req_QkRkXLBCPW-hKDOXyxElNw",
                     "author": {
                       "type": "human"
                     },
@@ -1809,7 +1809,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_bovnfdS3S_JgOHVbHglrGw",
+                    "as_of_request": "req_QkRkXLBCPW-hKDOXyxElNw",
                     "text": "Northwind Bank asks approval for this payment.",
                     "extensions": {
                       "operations": {
@@ -1859,7 +1859,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_BhJgASlbuXqQpKcJ-9EYfQ",
+              "id": "req_RjYhoBJ5ENHueY1nKrgZNA",
               "message": {
                 "author": {
                   "type": "agent"
@@ -1880,7 +1880,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_BhJgASlbuXqQpKcJ-9EYfQ",
+                    "id": "req_RjYhoBJ5ENHueY1nKrgZNA",
                     "author": {
                       "type": "agent"
                     },
@@ -1898,7 +1898,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_BhJgASlbuXqQpKcJ-9EYfQ",
+                    "as_of_request": "req_RjYhoBJ5ENHueY1nKrgZNA",
                     "text": "Ready to pay INV-0043.",
                     "extensions": {
                       "operations": {

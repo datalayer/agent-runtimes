@@ -10,6 +10,7 @@ approved exchange, and finally narrowing and revoking the refresh token.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
@@ -32,10 +33,11 @@ from personal_agent_protocol.demo.kit import (
     ScriptedApprovals,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import DOMAIN, manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, DOMAIN, manzanita
 from personal_agent_protocol.operations import OperationsClient, operations_negotiated
 
 from agent_runtimes.apps import Application
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -65,7 +67,11 @@ async def run_manzanita_journey() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, shop_plugin = manzanita(network, clock)
+    shop, shop_plugin = manzanita(
+        network,
+        clock,
+        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+    )
     http = network.client()
     approvals = ScriptedApprovals(
         always=True
@@ -84,7 +90,9 @@ async def run_manzanita_journey() -> dict[str, Any]:
         )
 
     # Discovery and a signed-out Session.
-    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
+    company = await DiscoveryClient(
+        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
+    ).discover(DOMAIN)
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None
@@ -97,7 +105,8 @@ async def run_manzanita_journey() -> dict[str, Any]:
         tenant_id=TENANT,
         company=company,
     )
-    name = company.document.organization.name
+    # The domain beside the name: the name is unconfirmed (PAP 1.0 §10.3).
+    name = company.document.organization.label
     steps.append(f"discovered {name}; signed-out Session, its ID chosen here")
 
     # A question only a signed-in user can have answered.
