@@ -69,9 +69,11 @@ describe('the instant checks', () => {
     expect(checks['inbox-triage'].setup).toEqual([
       'The agent “worker-mail-triage:0.0.1” is not enabled.',
     ]);
-    // Its MCP server is on since agentspecs 0.0.162; its agent is not.
-    expect(checks['accounting'].setup).toEqual([
-      'The agent “worker-accountant:0.0.1” is not enabled.',
+    // Its MCP server is on since agentspecs 0.0.162, its agent since 0.0.184.
+    expect(checks['accounting'].setup).toEqual([]);
+    // Its agent is out of the galleries since agentspecs 0.0.186: it still runs.
+    expect(checks['quote-calculator'].setup).toEqual([
+      'The agent “jupyter-data-analyst:0.0.1” is not enabled.',
     ]);
   });
 

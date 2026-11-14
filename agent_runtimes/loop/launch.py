@@ -771,10 +771,12 @@ def choose_agentspec(
     can_ask: bool,
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> str:
-    """The agentspec of a new cloud runtime: the person's pick, ``example-simple`` proposed.
+    """The agentspec of a new cloud runtime: the person's pick among the enabled ones.
 
-    Without somebody to ask, or with no enabled agentspec to offer, it is
-    ``example-simple``.
+    The catalogue's enabled agents are offered (the home page's five since
+    agentspecs 0.0.186), ``example-simple`` proposed when it is one of them,
+    the first otherwise. Without somebody to ask, or with no enabled agentspec
+    to offer, it is ``example-simple``, which runs though it is not offered.
     """
     choices = agentspec_choices(specs)
     if not can_ask or not choices:
@@ -1205,7 +1207,7 @@ def launch_cloud(
     if not agent_id:
         if asking:
             # The person picks the agent its runtime is configured from (the
-            # user, 13 November 2026), example-simple proposed.
+            # user, 13 November 2026), among the agents the catalogue enables.
             from agent_runtimes.specs.agents import list_agentspecs
 
             agent_id = choose_agentspec(list_agentspecs(), can_ask=True)

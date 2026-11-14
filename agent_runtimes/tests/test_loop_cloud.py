@@ -292,11 +292,12 @@ def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
-            "agent_spec_id": "example-simple",
+            "agent_spec_id": "worker-accountant",
         }
-        # Picked, so not said as a default.
-        assert not any("example-simple" in line for line in notes)
-        assert started.agent_spec_id == "example-simple"
+        # The catalogue's enabled agents are offered (agentspecs 0.0.186: the home
+        # page's five), the first proposed. Picked, so not said as a default.
+        assert not any("worker-accountant" in line for line in notes)
+        assert started.agent_spec_id == "worker-accountant"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
         started.relay.stop()
@@ -856,3 +857,20 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
     assert launch.choose_agentspec(specs, can_ask=False) == "example-simple"
     with pytest.raises(KeyboardInterrupt):
         launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)
+
+
+def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
+    """agentspecs 0.0.186 (the user, 14 November 2026): the cloud picker and the
+    local one offer the agents the catalogue enables, the home page's five."""
+    from agent_runtimes.chat import cli
+    from agent_runtimes.specs.agents import list_agentspecs
+
+    five = [
+        "worker-accountant",
+        "worker-marketer",
+        "worker-shopper",
+        "worker-steward-aws",
+        "worker-terra",
+    ]
+    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == five
+    assert cli.enabled_agentspec_ids() == five

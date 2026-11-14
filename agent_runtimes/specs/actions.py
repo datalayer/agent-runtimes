@@ -794,6 +794,19 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     "salesforce": ServerActionsSpec.model_validate(
         {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
+    "shopify": ServerActionsSpec.model_validate(
+        {
+            "checked": "2026-11-14",
+            "default": [],
+            "tools": {
+                "search_catalog": ["read"],
+                "lookup_catalog": ["read"],
+                "get_product": ["read"],
+            },
+            "conditions": {},
+            "signs": {},
+        }
+    ),
     "slack": ServerActionsSpec.model_validate(
         {
             "checked": "2026-10-02",
@@ -984,6 +997,11 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "data-quality": {},
     "decide": {},
     "deck-maker": {},
+    "demo-accountant": {},
+    "demo-aws-steward": {},
+    "demo-marketer": {},
+    "demo-shopper": {},
+    "demo-terra": {},
     "disaster-assessment": {
         "earthdata.download_earth_data_granules": "leave_to_me",
         "earthdata.search_earth_datagranules": "do_it",
@@ -1357,6 +1375,11 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "data-quality": {},
     "decide": {},
     "deck-maker": {},
+    "demo-accountant": {},
+    "demo-aws-steward": {},
+    "demo-marketer": {},
+    "demo-shopper": {},
+    "demo-terra": {},
     "disaster-assessment": {},
     "errand-runner": {},
     "event-response": {},

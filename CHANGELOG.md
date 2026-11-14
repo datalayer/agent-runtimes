@@ -9,6 +9,10 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.48 is the release of this line since 1.6.47**, with agentspecs 0.0.186 as the floor: an application naming worker-shopper, worker-terra or the shopify server is no longer refused (`AppNotRunnable`, the floor 0.0.183 predated them); the Shopper names Datalayer's UCP agent profile, <https://datalayer.ai/ucp/profile.json>, in every Shopify catalogue call (99f8ae0c); the shopify server's tools classed (`actions`).
+- **Five agents offered, the home page's.** The catalogue enables worker-marketer, worker-shopper, worker-terra, worker-accountant and worker-steward-aws alone (agentspecs 0.0.186), and loop's pickers read that flag: the local picker lists the enabled agents with no second list (`DEFAULT_AGENTSPEC_CONTEXT_IDS` is gone; `LOOP_AGENTSPEC_CONTEXT_IDS` still overrides), the first proposed; the cloud picker offers the same five, `example-simple` staying the default of a launch nobody is asked about. A disabled agent still runs by id, and an application naming one runs, its setup saying the agent is not enabled.
+- **The home page's live demos in the catalogue**: `demo-marketer`, `demo-shopper`, `demo-terra`, `demo-accountant` and `demo-aws-steward` (agentspecs 0.0.186), regenerated.
+
 - **1.6.47 is the release of this line since 1.6.46**: Shopper (worker-shopper, with the Shopify Global Catalog MCP server `shopify`) and Terra (worker-terra, on the earthdata server) in the catalogue (c267a197); worker-accountant enabled (904381c1); `<datalayer-app>` names no member after an attribute, so React 19 no longer overwrites `api()` (7549154f); a signed-out visitor's chat makes no failing call and retries an unreachable visitors' runtime (951d8df6).
 - **1.6.46 is the release of this line since 1.6.45**: the "Floating draggable" chat over a notebook or a document draws its drag handle again (de99570f).
 - **1.6.45 is the release of this line since 1.6.44**: Datalayer's own MCP server enabled in the catalogue (agentspecs aef6575), so the platform's images roll with it beside the PAP 1.0 draft.

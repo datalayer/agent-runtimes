@@ -120,7 +120,12 @@ class TestTheCatalogue:
         # Gmail's server is offered since agentspecs 0.0.128; its worker is out of the
         # picker since agentspecs 0.0.164 (enabled: false), so the setup names it.
         assert triage.setup == ["The agent 'worker-mail-triage:0.0.1' is not enabled."]
-        assert any("not enabled" in line for line in APP_CATALOGUE["accounting"].setup)
+        # worker-accountant is enabled since agentspecs 0.0.184, jupyter-data-analyst
+        # out of the galleries since 0.0.186.
+        assert APP_CATALOGUE["accounting"].setup == []
+        assert APP_CATALOGUE["quote-calculator"].setup == [
+            "The agent 'jupyter-data-analyst:0.0.1' is not enabled."
+        ]
         assert APP_CATALOGUE["web-research"].setup == []
         assert APP_CATALOGUE["web-research"].interface.layout == "chat"
 
@@ -365,7 +370,8 @@ class TestWhatARuleDecides:
             )
 
     def test_an_application_has_a_face_and_its_permissions(self) -> None:
-        faces = [found.emoji for found in list_apps()]
+        # A home page demo (tagged `demo`) keeps the face the home page shows.
+        faces = [found.emoji for found in list_apps() if "demo" not in found.tags]
         assert len(set(faces)) == len(faces)
         permissions = APP_CATALOGUE["inbox-triage"].permissions
         assert permissions.spaces == []

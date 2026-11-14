@@ -2510,7 +2510,6 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   live: '',
   setup: [
     "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
-    "The agent 'worker-accountant:0.0.1' is not enabled.",
   ],
   played: {
     at: '2026-10-29T14:00:28+00:00',
