@@ -102,6 +102,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   ],
   domain: 'market-analyst',
   enabled: true,
+  listed: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
@@ -293,6 +294,7 @@ const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   tags: ['research', 'customer-support', 'analysis', 'cog'],
   domain: 'market-analyst',
   enabled: true,
+  listed: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
@@ -493,6 +495,7 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   ],
   domain: 'market-analyst',
   enabled: false,
+  listed: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [

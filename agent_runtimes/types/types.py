@@ -2086,6 +2086,14 @@ class Agentspec(BaseModel):
         validation_alias=AliasChoices("domain", "vertical"),
     )
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
+    listed: bool = Field(
+        default=True,
+        description=(
+            "Whether the pickers offer the agent (the new agent page, the chats, "
+            "the assign menu, loop's pickers): an enabled agent that is not "
+            "listed runs by id and as a default, without being offered"
+        ),
+    )
     model: Optional[str] = Field(
         default=None,
         description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
@@ -2151,6 +2159,11 @@ class Agentspec(BaseModel):
         if value is None or value == "":
             return "local"
         return value
+
+    @property
+    def offered(self) -> bool:
+        """Whether the pickers offer it: the catalogue enables it and lists it."""
+        return self.enabled and self.listed
 
     @model_validator(mode="after")
     def _decisions_bring_decide(self) -> "Agentspec":

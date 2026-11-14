@@ -1592,7 +1592,7 @@ export const DATA_QUALITY_APP_0_0_3: AppSpec = {
   emoji: '🧹',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const DECIDE_APP_0_0_2: AppSpec = {
@@ -1737,7 +1737,7 @@ export const DECIDE_APP_0_0_2: AppSpec = {
   emoji: '⚖️',
   avatar: '',
   banner: '',
-  setup: ["The agent 'example-simple:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const DECK_MAKER_APP_0_0_1: AppSpec = {
@@ -4221,7 +4221,7 @@ export const MODEL_CHOICE_APP_0_0_3: AppSpec = {
   emoji: '🧠',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const MONTH_END_CLOSE_APP_0_0_2: AppSpec = {
@@ -5487,7 +5487,7 @@ export const QUOTE_CALCULATOR_APP_0_0_6: AppSpec = {
   emoji: '🧮',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const REPORT_FROM_A_FILE_APP_0_0_5: AppSpec = {
@@ -5782,7 +5782,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_5: AppSpec = {
   emoji: '📑',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const RETURNS_DESK_APP_0_0_2: AppSpec = {
@@ -6461,7 +6461,7 @@ export const SHIP_OR_FIX_APP_0_0_3: AppSpec = {
   emoji: '🚢',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const SHOP_CONCIERGE_APP_0_0_2: AppSpec = {
@@ -7370,7 +7370,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_3: AppSpec = {
   emoji: '🚚',
   avatar: '',
   banner: '',
-  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+  setup: [],
 };
 
 export const SUPPORT_DESK_APP_0_0_5: AppSpec = {

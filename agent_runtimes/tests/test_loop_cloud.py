@@ -840,6 +840,13 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
             id="example-kagent", enabled=True, description="", runtime_engine="kagent"
         ),
         Spec(id="off", enabled=False, description="Off.", runtime_engine="datalayer"),
+        Spec(
+            id="unlisted",
+            enabled=True,
+            listed=False,
+            description="Runs by id.",
+            runtime_engine="datalayer",
+        ),
     ]
     assert launch.agentspec_choices(specs) == [
         ("example-kagent (runs on kagent)", "example-kagent"),
@@ -860,10 +867,11 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
 
 
 def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
-    """agentspecs 0.0.186 (the user, 14 November 2026): the cloud picker and the
-    local one offer the agents the catalogue enables, the home page's five."""
+    """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
+    local one offer the agents the catalogue enables and lists, the home page's
+    five; example-simple, enabled and not listed, stays the neutral default."""
     from agent_runtimes.chat import cli
-    from agent_runtimes.specs.agents import list_agentspecs
+    from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 
     five = [
         "worker-accountant",
@@ -873,4 +881,7 @@ def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
         "worker-terra",
     ]
     assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == five
-    assert cli.enabled_agentspec_ids() == five
+    assert cli.offered_agentspec_ids() == five
+    simple = get_agent_spec("example-simple")
+    assert simple is not None and simple.enabled and not simple.listed
+    assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"

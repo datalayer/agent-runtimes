@@ -71,10 +71,9 @@ describe('the instant checks', () => {
     ]);
     // Its MCP server is on since agentspecs 0.0.162, its agent since 0.0.184.
     expect(checks['accounting'].setup).toEqual([]);
-    // Its agent is out of the galleries since agentspecs 0.0.186: it still runs.
-    expect(checks['quote-calculator'].setup).toEqual([
-      'The agent “jupyter-data-analyst:0.0.1” is not enabled.',
-    ]);
+    // Its agent is enabled and out of the pickers since agentspecs 0.0.187
+    // (listed: false): nothing to set up.
+    expect(checks['quote-calculator'].setup).toEqual([]);
   });
 
   it('pass an application that only reads, and tell it its tests decide', () => {

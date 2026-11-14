@@ -638,11 +638,15 @@ def _spec_has_valid_env(spec: Any, available_model_ids: set[str] | None = None) 
     return True
 
 
-def enabled_agentspec_ids() -> list[str]:
-    """The ids of the agents the catalogue enables, sorted: the ones loop offers."""
+def offered_agentspec_ids() -> list[str]:
+    """The ids of the agents the catalogue offers, sorted: the ones loop offers.
+
+    Enabled and listed: an enabled agent kept out of the pickers (``listed:
+    false``, agentspecs 0.0.187), as ``example-simple``, runs by id only.
+    """
     from agent_runtimes.specs.agents import list_agentspecs
 
-    return sorted(spec.id for spec in list_agentspecs() if spec.enabled)
+    return sorted(spec.id for spec in list_agentspecs() if spec.offered)
 
 
 def _parse_agentspec_context_ids() -> list[str]:
@@ -652,14 +656,14 @@ def _parse_agentspec_context_ids() -> list[str]:
     - ``LOOP_AGENTSPEC_CONTEXT_IDS``
     - ``DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS``
 
-    Without an override, the agents the catalogue enables: what the agentspecs
-    say is offered is the whole of the list, with no second one here.
+    Without an override, the agents the catalogue enables and lists: what the
+    agentspecs say is offered is the whole of the list, with no second one here.
     """
     raw = os.environ.get("LOOP_AGENTSPEC_CONTEXT_IDS") or os.environ.get(
         "DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS"
     )
     if raw is None:
-        return enabled_agentspec_ids()
+        return offered_agentspec_ids()
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 

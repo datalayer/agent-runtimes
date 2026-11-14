@@ -745,16 +745,25 @@ AGENTSPEC_QUESTION = (
 )
 
 
-def agentspec_choices(specs: list[Any]) -> list[tuple[str, str]]:
-    """The enabled agentspecs as offered on Datalayer, by id, each with its description.
+def _offered(spec: Any) -> bool:
+    """Whether the pickers offer an agentspec: enabled, and not kept out (``listed``)."""
+    return (
+        bool(getattr(spec, "enabled", False))
+        and getattr(spec, "listed", True) is not False
+    )
 
-    The runtime reaches the models through Datalayer: none is held back for
-    this machine's keys, as the local picker does.
+
+def agentspec_choices(specs: list[Any]) -> list[tuple[str, str]]:
+    """The agentspecs offered on Datalayer, by id, each with its description.
+
+    Those the catalogue enables and lists: an enabled agent kept out of the
+    pickers (``listed: false``, agentspecs 0.0.187), as ``example-simple``,
+    runs by id without being offered. The runtime reaches the models through
+    Datalayer: none is held back for this machine's keys, as the local picker
+    does.
     """
     choices = []
-    for spec in sorted(
-        (s for s in specs if getattr(s, "enabled", False)), key=lambda s: s.id
-    ):
+    for spec in sorted((s for s in specs if _offered(s)), key=lambda s: s.id):
         about = " ".join(str(getattr(spec, "description", "") or "").split())
         about = about if len(about) <= 50 else about[:47].rstrip() + "..."
         engine = str(getattr(spec, "runtime_engine", "") or "datalayer")
@@ -771,12 +780,13 @@ def choose_agentspec(
     can_ask: bool,
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> str:
-    """The agentspec of a new cloud runtime: the person's pick among the enabled ones.
+    """The agentspec of a new cloud runtime: the person's pick among the offered ones.
 
-    The catalogue's enabled agents are offered (the home page's five since
-    agentspecs 0.0.186), ``example-simple`` proposed when it is one of them,
-    the first otherwise. Without somebody to ask, or with no enabled agentspec
-    to offer, it is ``example-simple``, which runs though it is not offered.
+    The catalogue's enabled and listed agents are offered (the home page's
+    five), ``example-simple`` proposed when it is one of them, the first
+    otherwise. Without somebody to ask, or with no agentspec to offer, it is
+    ``example-simple``, the neutral default: enabled, not listed (agentspecs
+    0.0.187), so it runs though it is not offered.
     """
     choices = agentspec_choices(specs)
     if not can_ask or not choices:

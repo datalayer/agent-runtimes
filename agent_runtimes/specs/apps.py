@@ -1447,7 +1447,7 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🧹",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -1577,7 +1577,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "⚖️",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'example-simple:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -3892,7 +3892,7 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🧠",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -5017,7 +5017,7 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
         "emoji": "🧮",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -5260,7 +5260,7 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "📑",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -5908,7 +5908,7 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🚢",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -6762,7 +6762,7 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🚚",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 

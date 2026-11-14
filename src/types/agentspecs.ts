@@ -1967,6 +1967,14 @@ export interface AgentPolicy {
   shield?: AgentShieldFirewall;
 }
 
+/**
+ * Whether the pickers offer an agent: the catalogue enables it and does not
+ * keep it out (`listed: false`), as the home page's five since agentspecs 0.0.187.
+ */
+export const isAgentspecOffered = (
+  spec: Pick<Agentspec, 'enabled' | 'listed'> | undefined | null,
+): boolean => spec?.enabled === true && spec.listed !== false;
+
 /** The engines that run and host an agent (`runtime_engine`), the default first. */
 export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
 
@@ -2007,6 +2015,12 @@ export interface Agentspec {
   domain?: string;
   /** Whether the agent is enabled */
   enabled: boolean;
+  /**
+   * Whether the pickers offer the agent (the new agent page, the chats, the
+   * assign menu, loop's pickers), true unless said: an enabled agent that is
+   * not listed runs by id and as a default, without being offered.
+   */
+  listed?: boolean;
   /** AI model identifier to use for this agent */
   model?: string;
   /**

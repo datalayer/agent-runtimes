@@ -165,10 +165,9 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
-    # Its agent, example-simple, is out of the galleries since agentspecs 0.0.186.
-    assert reports["decide"].setup == [
-        "The agent 'example-simple:0.0.1' is not enabled."
-    ]
+    # Its agent, example-simple, the neutral default: enabled, out of the pickers
+    # since agentspecs 0.0.187 (listed: false).
+    assert reports["decide"].setup == []
     # The home page's demos run on the five agents the catalogue enables.
     for demo in ("marketer", "shopper", "terra", "accountant", "aws-steward"):
         assert reports[f"demo-{demo}"].setup == [], demo
