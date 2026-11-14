@@ -514,6 +514,38 @@ def check_model_additionals(
         raise SystemExit("\n".join(problems))
 
 
+def optional_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
+    """What an agent starts without (agentspecs 0.0.188), by id without version.
+
+    Refuses an entry that is not among the agent's own MCP servers or skills,
+    and a group naming what is not optional: the catalogue says it once.
+    """
+    optional = spec.get("optional")
+    if optional is None:
+        return None
+    base = lambda ref: str(ref).split(":")[0]  # noqa: E731
+    servers = [base(ref) for ref in optional.get("mcp_servers") or []]
+    skills = [base(ref) for ref in optional.get("skills") or []]
+    own_servers = {base(ref) for ref in spec.get("mcp_servers") or []}
+    own_skills = {base(ref) for ref in spec.get("skills") or []}
+    agent = spec.get("id")
+    for kind, named, own in (
+        ("MCP server", servers, own_servers),
+        ("skill", skills, own_skills),
+    ):
+        for ref in named:
+            if ref not in own:
+                raise SystemExit(f"{agent}: optional {kind} {ref} is not its own")
+    groups = [
+        [base(ref) for ref in group] for group in optional.get("at_least_one") or []
+    ]
+    for group in groups:
+        for ref in group:
+            if ref not in servers and ref not in skills:
+                raise SystemExit(f"{agent}: {ref} in at_least_one is not optional")
+    return {"mcp_servers": servers, "skills": skills, "at_least_one": groups}
+
+
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
     """Generate Python code from agent specifications."""
     # Header
@@ -665,6 +697,10 @@ from agent_runtimes.types import (
                 if model_additionals
                 else ""
             )
+            optional = optional_of(spec)
+            optional_py_line = (
+                f"    optional={_fmt_py_literal(optional)},\n" if optional else ""
+            )
             voice = voice_of(spec)
             voice_py_line = (
                 f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
@@ -797,7 +833,7 @@ from agent_runtimes.types import (
     domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
     listed={spec.get("listed", True)},
-    model={model_str},
+{optional_py_line}    model={model_str},
 {model_additionals_py_line}    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
@@ -1066,6 +1102,9 @@ def generate_typescript_code(
 import type { Agentspec } from '"""
     code += types_import_path
     code += """';
+import { isAgentspecComponentOptional } from '"""
+    code += types_import_path
+    code += """';
 """
 
     # Only add MCP server imports if needed
@@ -1309,6 +1348,20 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 if model_additionals
                 else ""
             )
+            optional = optional_of(spec)
+            optional_ts_line = (
+                "    optional: "
+                + _fmt_ts_literal(
+                    {
+                        "mcpServers": optional["mcp_servers"],
+                        "skills": optional["skills"],
+                        "atLeastOne": optional["at_least_one"],
+                    }
+                )
+                + ",\n"
+                if optional
+                else ""
+            )
             voice = voice_of(spec)
             voice_ts_line = (
                 f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
@@ -1390,7 +1443,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     listed: {str(spec.get("listed", True)).lower()},
-    model: {model_ts},
+{optional_ts_line}    model: {model_ts},
 {model_additionals_ts_line}{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     backendTools: [{tools_str}],
@@ -1487,17 +1540,20 @@ export function listAgentspecs(prefix?: string): Agentspec[] {
  * Collect all required environment variables for an agent spec.
  *
  * Iterates over the spec's MCP servers and skills and returns the
- * deduplicated union of their `requiredEnvVars` arrays.
+ * deduplicated union of their `requiredEnvVars` arrays, without those of
+ * the servers and skills it starts without (`optional`, agentspecs 0.0.188).
  */
 export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
     const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {
+    if (isAgentspecComponentOptional(spec, 'mcpServer', server.id)) continue;
     for (const v of server.requiredEnvVars ?? []) {
             vars.add(baseEnvVar(v));
     }
   }
   for (const skill of spec.skills) {
+    if (isAgentspecComponentOptional(spec, 'skill', skill.id)) continue;
     for (const v of skill.requiredEnvVars ?? []) {
             vars.add(baseEnvVar(v));
     }
@@ -1742,6 +1798,7 @@ __all__ = ["AGENTSPECS", "get_agent_spec", "list_agentspecs"]
  */
 
 import type { Agentspec } from '../../types';
+import { isAgentspecComponentOptional } from '../../types';
 
 """
 
@@ -1799,16 +1856,19 @@ export function listAgentspecs(prefix?: string): Agentspec[] {
 }
 
 /**
- * Collect all required environment variables for an agent spec.
+ * Collect all required environment variables for an agent spec, without
+ * those of the servers and skills it starts without (`optional`).
  */
 export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   for (const server of spec.mcpServers) {
+    if (isAgentspecComponentOptional(spec, 'mcpServer', server.id)) continue;
     for (const v of server.requiredEnvVars ?? []) {
       vars.add(v);
     }
   }
   for (const skill of spec.skills) {
+    if (isAgentspecComponentOptional(spec, 'skill', skill.id)) continue;
     for (const v of skill.requiredEnvVars ?? []) {
       vars.add(v);
     }

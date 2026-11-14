@@ -2065,6 +2065,24 @@ async def create_agent(
                 Literal["local", "datalayer"], override_provider
             )
 
+        # What it declares optional and is not set up for is left out, and
+        # it is told which (agentspecs 0.0.188, the user, 14 November 2026).
+        left_out = declared_by_it.left_out(
+            lambda name: bool((os.environ.get(name) or "").strip())
+        )
+        if left_out:
+            request.skills = [
+                skill
+                for skill in request.skills
+                if _ref_id_of(skill) not in left_out.skills
+            ]
+            request.system_prompt = f"{request.system_prompt}\n\n{left_out.sentence()}"
+            logger.info(
+                "Agent %s starts without %s (their secrets are not set up)",
+                agent_id,
+                sorted(left_out.servers) + sorted(left_out.skills),
+            )
+
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
         non_mcp_toolsets = []
@@ -2217,6 +2235,13 @@ async def create_agent(
             request.memory, request.memory_config = agent_memory(
                 running_app, request.app_instance
             )
+        if left_out.servers:
+            selected_mcp_servers = [
+                server
+                for server in selected_mcp_servers
+                if _ref_id_of(server.id) not in left_out.servers
+            ]
+            request.selected_mcp_servers = selected_mcp_servers
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset
@@ -5838,6 +5863,13 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     return declared.as_names()
 
 
+def _ref_id_of(ref: Any) -> str:
+    """An id without its version: ``crawl:0.0.1`` → ``crawl``."""
+    text = str(getattr(ref, "id", ref) or "").strip()
+    base, _, version = text.rpartition(":")
+    return base if base and "." in version else text
+
+
 def _mcp_server_ids_of(agent_id: str) -> list[str]:
     """The ids of the MCP servers the agent runs with a process, in order."""
     entry = _agents.get(agent_id)
@@ -6096,6 +6128,14 @@ async def configure_from_spec_endpoint(
     # is managed independently and should not trigger an agent restart.
     new_spec_dict = create_request.model_dump()
     new_spec_dict.pop("jupyter_sandbox", None)
+    # What it starts without is part of what it is: a secret set up since
+    # the last configure recreates the agent with what it brings.
+    left_out_now = declared.left_out(
+        lambda name: bool((os.environ.get(name) or "").strip())
+    )
+    new_spec_dict["left_out"] = sorted(left_out_now.servers) + sorted(
+        left_out_now.skills
+    )
 
     # ── 5. Compare with stored spec — restart only if changed ────────
     stored_spec = _agentspecs.get(target_agent_name)

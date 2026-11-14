@@ -759,17 +759,25 @@ def _pick_agentspec_interactive() -> str:
                 if len(desc_line) > 70:
                     desc_line = desc_line[:67] + "..."
                 print(f"       {GRAY}{desc_line}{RESET}")
-            # Show required env vars with availability status
+            # Show required env vars with availability status; those of the
+            # servers it starts without (`optional`) are said so, never red.
+            optional_servers = set(spec.optional.mcp_servers if spec.optional else [])
             env_vars: set[str] = set()
+            optional_vars: set[str] = set()
             for mcp in spec.mcp_servers:
-                env_vars.update(mcp.required_env_vars)
-            if env_vars:
+                (optional_vars if mcp.id in optional_servers else env_vars).update(
+                    mcp.required_env_vars
+                )
+            if env_vars or optional_vars:
                 env_parts: list[str] = []
                 for var in sorted({_env_var_name(v) for v in env_vars}):
                     if os.environ.get(var):
                         env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
                     else:
                         env_parts.append(f"{RED}{var}{RESET}")
+                for var in sorted({_env_var_name(v) for v in optional_vars}):
+                    color = GREEN_LIGHT if os.environ.get(var) else GRAY
+                    env_parts.append(f"{color}{var} (optional){RESET}")
                 print(f"       {' '.join(env_parts)}")
 
             model_ref = str(getattr(spec, "model", "") or "")

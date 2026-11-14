@@ -357,6 +357,45 @@ def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:
     return frozenset(name for name in (env_name(ref) for ref in spec.envvars) if name)
 
 
+def server_consumer(server_id: str) -> str:
+    """How an MCP server is named among the consumers: ``the MCP server x``."""
+    return f"the MCP server {server_id}"
+
+
+def skill_consumer(skill_id: str) -> str:
+    """How a skill is named among the consumers: ``the skill crawl``."""
+    return f"the skill {skill_id}"
+
+
+@dataclass(frozen=True)
+class LeftOut:
+    """What an agent starts without: its optional consumers not set up."""
+
+    #: By MCP server id and skill id: the secrets it lacks, sorted.
+    servers: Dict[str, List[str]] = field(default_factory=dict)
+    skills: Dict[str, List[str]] = field(default_factory=dict)
+
+    def __bool__(self) -> bool:
+        return bool(self.servers or self.skills)
+
+    def sentence(self) -> str:
+        """What the agent is told, in its instructions: what is off and why."""
+        parts = [
+            f"{server_consumer(key)} (no {', '.join(names)})"
+            for key, names in self.servers.items()
+        ] + [
+            f"{skill_consumer(key)} (no {', '.join(names)})"
+            for key, names in self.skills.items()
+        ]
+        return (
+            "Started without what the person has not set up: "
+            + "; ".join(parts)
+            + ". Their tools are not yours in this run: when asked for what "
+            "they do, say that you cannot, and that the person sets up the "
+            "secrets named here to give them to you."
+        )
+
+
 @dataclass(frozen=True)
 class DeclaredSecrets:
     """The secrets a runtime's specs declare, by who uses them."""
@@ -379,6 +418,11 @@ class DeclaredSecrets:
     platform: FrozenSet[str] = frozenset()
     #: Whether these were read for a deployment: reserved names are refused.
     for_a_deployment: bool = False
+    #: Consumers the agent starts without when they are not set up (its spec's
+    #: ``optional``, agentspecs 0.0.188): never refused, left out.
+    optional: FrozenSet[str] = frozenset()
+    #: Groups of optional consumers: of each, one at least must be set up.
+    at_least_one: Tuple[FrozenSet[str], ...] = ()
 
     @property
     def runtime(self) -> FrozenSet[str]:
@@ -408,12 +452,20 @@ class DeclaredSecrets:
             offered=self.offered | other.offered,
             platform=self.platform | other.platform,
             for_a_deployment=self.for_a_deployment or other.for_a_deployment,
+            optional=self.optional | other.optional,
+            at_least_one=self.at_least_one
+            + tuple(g for g in other.at_least_one if g not in self.at_least_one),
         )
+
+    def _set_up(self, consumer: str, available: Callable[[str], bool]) -> bool:
+        return all(available(name) for name in self.consumers.get(consumer, ()))
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot be set up, a sentence per secret that is not there."""
         sentences: List[str] = []
         for consumer, needed in sorted(self.consumers.items()):
+            if consumer in self.optional:
+                continue  # Left out when it is not set up, never refused.
             for name in sorted(needed):
                 if not available(name):
                     sentences.append(
@@ -421,7 +473,33 @@ class DeclaredSecrets:
                         "runtime was not given: add it to the account's secrets "
                         "(or set it before a local run), then configure it again."
                     )
+        for group in self.at_least_one:
+            if not any(self._set_up(consumer, available) for consumer in group):
+                sentences.append(
+                    f"{who} is not set up: it needs one at least of "
+                    f"{', '.join(sorted(group))}, and none was given its "
+                    "secrets: add those of one to the account's secrets, then "
+                    "configure it again."
+                )
         return sentences
+
+    def left_out(self, available: Callable[[str], bool]) -> LeftOut:
+        """The optional consumers not set up, which the agent starts without."""
+        servers: Dict[str, List[str]] = {}
+        skills: Dict[str, List[str]] = {}
+        for consumer in sorted(self.optional):
+            lacking = sorted(
+                name for name in self.consumers.get(consumer, ()) if not available(name)
+            )
+            if not lacking:
+                continue
+            for prefix, into in (
+                (server_consumer(""), servers),
+                (skill_consumer(""), skills),
+            ):
+                if consumer.startswith(prefix):
+                    into[consumer[len(prefix) :]] = lacking
+        return LeftOut(servers=servers, skills=skills)
 
     def kernel_refused(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot run here, a sentence per secret its kernel would need.
@@ -477,6 +555,8 @@ def declared_secrets(
     held: Set[str] = set()
     offered: Set[str] = set()
     platform: Set[str] = set()
+    optional: Set[str] = set()
+    at_least_one: List[FrozenSet[str]] = []
     seen_agents: Set[str] = set()
     for_a_deployment = on_a_deployment(app_instance)
 
@@ -521,7 +601,7 @@ def declared_secrets(
             platform.update((names | sandbox) & CATALOGUE_MAY_DECLARE)
         servers[server_id] = servers.get(server_id, frozenset()) | names
         if names:
-            consumers.setdefault(f"the MCP server {server_id}", set()).update(names)
+            consumers.setdefault(server_consumer(server_id), set()).update(names)
         kernel.update(sandbox)
         offered.update(sandbox)
 
@@ -536,8 +616,31 @@ def declared_secrets(
                 raise ReservedSecretName(
                     _reserved_sentence(f"The skill {label}", reserved)
                 )
-            consumers.setdefault(f"the skill {label}", set()).update(names)
+            consumers.setdefault(skill_consumer(label), set()).update(names)
             kernel.update(names)
+
+    def add_optional(said: Any) -> None:
+        """The agent's ``optional``: what it starts without, and its groups."""
+        if not said:
+            return
+        named: Dict[str, str] = {}
+        for key, consumer in (
+            (("mcp_servers", "mcpServers"), server_consumer),
+            (("skills",), skill_consumer),
+        ):
+            for ref in _get(said, *key) or []:
+                named[_ref_id(ref)] = consumer(_ref_id(ref))
+        optional.update(named.values())
+        for group in _get(said, "at_least_one", "atLeastOne") or []:
+            unknown = [str(ref) for ref in group if _ref_id(ref) not in named]
+            if unknown:
+                raise ValueError(
+                    f"optional.at_least_one names {', '.join(unknown)}, which "
+                    "optional does not: a group names optional entries alone."
+                )
+            members = frozenset(named[_ref_id(ref)] for ref in group)
+            if members and members not in at_least_one:
+                at_least_one.append(members)
 
     def add_agent(spec: Any, *, again: bool = False) -> None:
         if spec is None:
@@ -557,6 +660,7 @@ def declared_secrets(
             )
         for skill in _get(spec, "skills") or []:
             add_skill(skill)
+        add_optional(_get(spec, "optional"))
         harness_id = str(_get(spec, "harness") or "")
         if harness_id:
             names = _harness_env_names(harness_id)
@@ -610,6 +714,8 @@ def declared_secrets(
         offered=frozenset(offered),
         platform=frozenset(platform),
         for_a_deployment=for_a_deployment,
+        optional=frozenset(optional),
+        at_least_one=tuple(at_least_one),
     )
 
 
@@ -700,6 +806,7 @@ __all__ = [
     "RESERVED_NAMES",
     "RESERVED_PREFIXES",
     "DeclaredSecrets",
+    "LeftOut",
     "ReservedSecretName",
     "as_the_catalogue_wrote_it",
     "declared_secrets",
@@ -716,5 +823,7 @@ __all__ = [
     "refuse_reserved",
     "refuse_server_names",
     "sandbox_env_names",
+    "server_consumer",
     "server_env_names",
+    "skill_consumer",
 ]

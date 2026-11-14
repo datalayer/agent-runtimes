@@ -1975,6 +1975,46 @@ export const isAgentspecOffered = (
   spec: Pick<Agentspec, 'enabled' | 'listed'> | undefined | null,
 ): boolean => spec?.enabled === true && spec.listed !== false;
 
+/**
+ * What an agent starts without (agentspecs 0.0.188, the user, 14 November
+ * 2026): MCP servers and skills of its own, by id without version. One whose
+ * secrets are not set up is left out, and the agent told which, instead of
+ * holding the start back; of each group of `atLeastOne`, one must be set up.
+ */
+export interface AgentspecOptional {
+  mcpServers: string[];
+  skills: string[];
+  atLeastOne: string[][];
+}
+
+/** A component of an agent: one of its MCP servers or skills. */
+export type AgentspecComponentKind = 'mcpServer' | 'skill';
+
+const componentIdOf = (ref: string): string => String(ref ?? '').split(':')[0];
+
+/** Whether the agent starts without this MCP server or skill when its secrets are not set up. */
+export const isAgentspecComponentOptional = (
+  spec: Pick<Agentspec, 'optional'> | undefined | null,
+  kind: AgentspecComponentKind,
+  id: string,
+): boolean => {
+  const listed =
+    kind === 'mcpServer' ? spec?.optional?.mcpServers : spec?.optional?.skills;
+  return (listed ?? []).includes(componentIdOf(id));
+};
+
+/**
+ * The groups of an agent's optional components none of which is set up:
+ * each names its members by id. `isSetUp` says whether one is, by id.
+ */
+export const unmetAgentspecGroups = (
+  spec: Pick<Agentspec, 'optional'> | undefined | null,
+  isSetUp: (id: string) => boolean,
+): string[][] =>
+  (spec?.optional?.atLeastOne ?? []).filter(
+    group => !group.some(id => isSetUp(componentIdOf(id))),
+  );
+
 /** The engines that run and host an agent (`runtime_engine`), the default first. */
 export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
 
@@ -2021,6 +2061,12 @@ export interface Agentspec {
    * not listed runs by id and as a default, without being offered.
    */
   listed?: boolean;
+  /**
+   * What the agent starts without (agentspecs 0.0.188): its MCP servers and
+   * skills, by id, left out when their secrets are not set up, and groups of
+   * which one must be.
+   */
+  optional?: AgentspecOptional;
   /** AI model identifier to use for this agent */
   model?: string;
   /**

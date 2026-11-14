@@ -1948,11 +1948,11 @@ DEMO_MARKETER_APP_0_0_2 = AppSpec.model_validate(
         "version": "0.0.2",
         "name": "Marketer",
         "kind": "chat",
-        "description": "Plans a campaign and drafts the posts for X, Bluesky, LinkedIn and Discord in a brand's voice, and reads what came back: a demo on an example brand that posts nothing.",
+        "description": "Plans a campaign and drafts the posts for X, Bluesky and Discord in a brand's voice, and reads what came back: a demo on an example brand that posts nothing.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-marketer:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Marketer. You are connected to no network and you have no memory here: you publish, reply, like, follow and message nothing, and you use no tool. When asked to post, show the draft and say that in the real Marketer it would wait for the person's approval and go out through their own connection. Unless the visitor names their own brand, work for the example brand Harbor & Pine, a small coffee roaster in Lisbon that sells beans online; its voice is plain, warm and specific, never hype; its goal this quarter is 300 new subscribers to its monthly bean box. Draft each post for its network: X short and sharp (under 280 characters), Bluesky conversational, LinkedIn professional, Discord a message to a community that talks back. When asked what came back, read only this example of last week and say it is an example: X, 4 posts, 18,400 impressions, 212 likes, 31 reposts, the best the roast-day video (9,100 impressions); Bluesky, 3 posts, 96 likes, 22 replies, mostly questions about decaf; LinkedIn, 1 post on the new Brazilian lot, 3,900 impressions, 61 reactions, 4 comments; Discord, 47 messages in the brewing channel, 12 members asking for a grinder guide; bean box sign-ups, 41. Never invent a number that is not in this example.",
+        "instructions": "This is Datalayer's public demo of the Marketer. You are connected to no network and you have no memory here: you publish, reply, like, follow and message nothing, and you use no tool. When asked to post, show the draft and say that in the real Marketer it would wait for the person's approval and go out through their own connection. Unless the visitor names their own brand, work for the example brand Harbor & Pine, a small coffee roaster in Lisbon that sells beans online; its voice is plain, warm and specific, never hype; its goal this quarter is 300 new subscribers to its monthly bean box. Draft each post for its network: X short and sharp (under 280 characters), Bluesky conversational, Discord a message to a community that talks back. When asked what came back, read only this example of last week and say it is an example: X, 4 posts, 18,400 impressions, 212 likes, 31 reposts, the best the roast-day video (9,100 impressions); Bluesky, 3 posts, 96 likes, 22 replies, mostly questions about decaf; Discord, 47 messages in the brewing channel, 12 members asking for a grinder guide; bean box sign-ups, 41. Never invent a number that is not in this example.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -1977,11 +1977,11 @@ DEMO_MARKETER_APP_0_0_2 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "rose",
             "theme": None,
-            "welcome": "I'm the Marketer, in a demo: I plan a campaign and draft the posts for X, Bluesky, LinkedIn and Discord in one voice, for the example coffee roaster Harbor & Pine or for your brand. I post nothing here.",
+            "welcome": "I'm the Marketer, in a demo: I plan a campaign and draft the posts for X, Bluesky and Discord in one voice, for the example coffee roaster Harbor & Pine or for your brand. I post nothing here.",
             "starters": [
                 {
                     "label": "Plan a launch",
-                    "message": "Plan a two-week launch of Harbor & Pine's decaf bean box across X, Bluesky, LinkedIn and Discord, with one goal and a post a day.",
+                    "message": "Plan a two-week launch of Harbor & Pine's decaf bean box across X, Bluesky and Discord, with one goal and a post a day.",
                 },
                 {
                     "label": "Draft today's post",
@@ -3465,7 +3465,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "version": "0.0.1",
         "name": "Marketer",
         "kind": "chat",
-        "description": "Plans a campaign and drafts the posts for X, Bluesky, LinkedIn and Discord in your brand's voice, reads what comes back, remembers what worked, and publishes only what you approved.",
+        "description": "Plans a campaign and drafts the posts for X, Bluesky and Discord in your brand's voice, reads what comes back, remembers what worked, and publishes only what you approved.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-marketer:0.0.1",
         "team": "",
@@ -3479,7 +3479,6 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "x:0.0.1", "access": "read", "as": "owner", "only": []},
             {"server": "bluesky:0.0.1", "access": "write", "as": "owner", "only": []},
-            {"server": "linkedin:0.0.1", "access": "write", "as": "owner", "only": []},
             {"server": "discord:0.0.1", "access": "write", "as": "owner", "only": []},
         ],
         "protocols": [],
@@ -3534,7 +3533,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             "starters": [
                 {
                     "label": "Plan a launch",
-                    "message": "Plan a two-week launch campaign for our new feature across X, Bluesky, LinkedIn and our Discord, with one goal and a post a day.",
+                    "message": "Plan a two-week launch campaign for our new feature across X, Bluesky and our Discord, with one goal and a post a day.",
                 },
                 {
                     "label": "Draft today's post",
@@ -3560,13 +3559,8 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                     "networks": {
                         "type": "string",
                         "title": "Where to post",
-                        "enum": [
-                            "All four",
-                            "X and Bluesky",
-                            "LinkedIn only",
-                            "Discord only",
-                        ],
-                        "default": "All four",
+                        "enum": ["All three", "X and Bluesky", "Discord only"],
+                        "default": "All three",
                     },
                 },
             },
@@ -3598,8 +3592,8 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                     "expect": "It drafts nothing it cannot show, asks what the claim rests on, and publishes nothing without approval.",
                 },
                 {
-                    "ask": "Draft a LinkedIn post announcing our Stages feature from these notes.",
-                    "expect": "It drafts in the brand's voice for LinkedIn alone, shows the text, and waits for approval before publishing.",
+                    "ask": "Draft a Bluesky post announcing our Stages feature from these notes.",
+                    "expect": "It drafts in the brand's voice for Bluesky alone, shows the text, and waits for approval before publishing.",
                 },
                 {
                     "ask": "How did last week's posts do?",
@@ -3610,7 +3604,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Not played live yet: X reads with a bearer token today; Bluesky and LinkedIn wait for the runtime image that carries their servers and, for LinkedIn, a signed-in session; Discord's runs in Docker."
+                    "Not played live yet: X reads with a bearer token today; Bluesky waits for the runtime image that carries its server; Discord's runs in Docker."
                 ],
             },
         },
@@ -3625,7 +3619,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
-        "goal": "Grow my audience honestly: one voice across X, Bluesky, LinkedIn and Discord, posts that serve a stated campaign goal, nothing published without my approval, and a memory of what worked.",
+        "goal": "Grow my audience honestly: one voice across X, Bluesky and Discord, posts that serve a stated campaign goal, nothing published without my approval, and a memory of what worked.",
         "triggers": [],
         "memory": "mem0",
         "notifications": [],

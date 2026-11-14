@@ -2065,6 +2065,20 @@ class AppVoiceSpec(BaseModel):
 RUNTIME_ENGINES: tuple[str, ...] = ("datalayer", "kagent", "agentcore")
 
 
+class AgentspecOptional(BaseModel):
+    """What an agent starts without (agentspecs 0.0.188, the user, 14 November 2026).
+
+    MCP servers and skills of the agent's own, by id without version: one
+    whose secrets are not set up is left out, and the agent told which,
+    instead of holding the start back. ``at_least_one`` lists groups of these
+    of which one at least must be set up.
+    """
+
+    mcp_servers: List[str] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+    at_least_one: List[List[str]] = Field(default_factory=list)
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -2092,6 +2106,13 @@ class Agentspec(BaseModel):
             "Whether the pickers offer the agent (the new agent page, the chats, "
             "the assign menu, loop's pickers): an enabled agent that is not "
             "listed runs by id and as a default, without being offered"
+        ),
+    )
+    optional: Optional[AgentspecOptional] = Field(
+        default=None,
+        description=(
+            "The MCP servers and skills the agent starts without when their "
+            "secrets are not set up, and groups of which one must be"
         ),
     )
     model: Optional[str] = Field(

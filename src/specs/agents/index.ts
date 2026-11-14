@@ -10,6 +10,7 @@
  */
 
 import type { Agentspec } from '../../types';
+import { isAgentspecComponentOptional } from '../../types';
 
 import { AGENTSPECS as ROOT_AGENTS } from './agents';
 
@@ -48,16 +49,19 @@ export function listAgentspecs(prefix?: string): Agentspec[] {
 }
 
 /**
- * Collect all required environment variables for an agent spec.
+ * Collect all required environment variables for an agent spec, without
+ * those of the servers and skills it starts without (`optional`).
  */
 export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   for (const server of spec.mcpServers) {
+    if (isAgentspecComponentOptional(spec, 'mcpServer', server.id)) continue;
     for (const v of server.requiredEnvVars ?? []) {
       vars.add(v);
     }
   }
   for (const skill of spec.skills) {
+    if (isAgentspecComponentOptional(spec, 'skill', skill.id)) continue;
     for (const v of skill.requiredEnvVars ?? []) {
       vars.add(v);
     }
