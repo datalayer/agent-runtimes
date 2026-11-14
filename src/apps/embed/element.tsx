@@ -402,7 +402,7 @@ export function defineDatalayerAppElement(
       if (name === 'token' && this.frame?.contentWindow && after) {
         this.frame.contentWindow.postMessage(
           { type: EMBED_MESSAGES.token, token: after },
-          this.origin(),
+          this.originUrl(),
         );
         return;
       }
@@ -424,7 +424,12 @@ export function defineDatalayerAppElement(
       void this.load();
     }
 
-    private origin(): string {
+    // No member is named after an attribute (app, origin, token, api…): React 19
+    // sets a prop as a property once the element is defined, and a method of
+    // that name was overwritten by its string ("this.api is not a function" on
+    // a remount, 14 November 2026). token and userToken are accessors that
+    // write the attribute, so a property set lands where an attribute would.
+    private originUrl(): string {
       return (
         this.getAttribute('origin') ||
         scriptOrigin ||
@@ -488,7 +493,10 @@ export function defineDatalayerAppElement(
           app,
         });
         if (visitor.kind === 'decision') {
-          return { kind: 'frame', src: frameSrcOf(this.origin(), visitor.app) };
+          return {
+            kind: 'frame',
+            src: frameSrcOf(this.originUrl(), visitor.app),
+          };
         }
         if (visitor.kind === 'said') {
           return { kind: 'said', text: visitor.text };
@@ -496,8 +504,8 @@ export function defineDatalayerAppElement(
         return { kind: 'spec', app: visitor.app, visitors: visitor.visitors };
       }
       return readEmbeddedApp({
-        api: this.api(),
-        origin: this.origin(),
+        api: this.spacerUrl(),
+        origin: this.originUrl(),
         app,
         token,
       });
@@ -517,7 +525,7 @@ export function defineDatalayerAppElement(
     /**
      * ai-agents, where a visitor's address is read and beside which the
      * visitors' runtime answers: the `api` attribute, else the platform's,
-     * else the AI plane's (`DEFAULT_API`). Not Spacer's address (`api()`),
+     * else the AI plane's (`DEFAULT_API`). Not Spacer's address (`spacerUrl()`),
      * which lives on another plane.
      */
     private agents(): string {
@@ -543,7 +551,7 @@ export function defineDatalayerAppElement(
     }
 
     /** Spacer, where an application is read with its embed token: the `api` attribute, else the platform's, else prod1's. */
-    private api(): string {
+    private spacerUrl(): string {
       return (
         this.getAttribute('api') ||
         coreStore.getState().configuration?.spacerUrl ||
@@ -711,7 +719,7 @@ export function defineDatalayerAppElement(
       if (!this.frame || event.source !== this.frame.contentWindow) {
         return;
       }
-      if (event.origin !== this.origin()) {
+      if (event.origin !== this.originUrl()) {
         return;
       }
       const data = (event.data ?? {}) as {
