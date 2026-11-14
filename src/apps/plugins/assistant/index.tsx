@@ -90,6 +90,7 @@ import type {
   BalloonToolLine,
 } from '../../../chat/assistant/toolLine';
 import { useChatWords } from '../../../chat/ChatLanguage';
+import { useChatAvailability } from '../../../chat/base/ChatAvailability';
 
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
@@ -514,6 +515,9 @@ export function LoopAssistant({
   const cornerBottom = useCornerBottom(!onPageLayout && !drag.position, SIZE);
   // Its composer cannot take words yet: the balloon's prompt says so.
   const notReady = useComposerNotReady(stageRef);
+  // Its host switched its conversation off (an application paused, a model
+  // not served): the balloon's prompt is off too, with the host's reason.
+  const availability = useChatAvailability();
   // Offered only when the agent decides: the runtime says it.
   const decide = useDecisionAsker(
     decisions?.serverUrl
@@ -633,7 +637,11 @@ export function LoopAssistant({
     ? {
         label: chatText.writeToMe,
         send: chatText.send,
-        notReady: notReady ? chatText.notReadyToWrite : undefined,
+        notReady: availability.disabled
+          ? (availability.disableReason ?? chatText.notReadyToWrite)
+          : notReady
+            ? chatText.notReadyToWrite
+            : undefined,
         onSend: (message: string) => {
           if (saying) {
             setHeardId(saying.id);

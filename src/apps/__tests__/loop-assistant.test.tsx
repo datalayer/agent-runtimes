@@ -33,6 +33,7 @@ import {
   cornerBottomAbove,
 } from '../plugins/assistant';
 import { CHAT_WORDS } from '../../chat/words';
+import { ChatAvailabilityProvider } from '../../chat/base/ChatAvailability';
 import {
   LoopAssistantCharacter,
   LoopAssistantMenu,
@@ -127,12 +128,23 @@ const mounted: { root: ReturnType<typeof createRoot>; el: HTMLElement }[] = [];
 async function mount(
   plugins: Parameters<typeof buildReactorFromPlugins>[0],
   workspace?: unknown,
+  /** What its host says of its conversation (`ChatAvailabilityProvider`). */
+  availability?: { disabled: boolean; disableReason?: string },
 ) {
   const el = document.createElement('div');
   document.body.appendChild(el);
   const root = createRoot(el);
+  const harness = <Harness plugins={plugins} workspace={workspace} />;
   await act(async () => {
-    root.render(<Harness plugins={plugins} workspace={workspace} />);
+    root.render(
+      availability ? (
+        <ChatAvailabilityProvider {...availability}>
+          {harness}
+        </ChatAvailabilityProvider>
+      ) : (
+        harness
+      ),
+    );
   });
   mounted.push({ root, el });
   return el;
@@ -698,6 +710,22 @@ describe('the balloon carries its own prompt (13 November 2026)', () => {
     } finally {
       own.composer.remove();
     }
+  });
+
+  it('is disabled with its host’s reason while its host switched the conversation off (an application paused)', async () => {
+    const { sent, workspace } = workspaceSending();
+    const reason = 'Paused: deploy it again to write to it.';
+    const el = await mount(
+      [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin],
+      workspace,
+      { disabled: true, disableReason: reason },
+    );
+    const figure = el.querySelector('[data-assistant-figure]') as HTMLElement;
+    await act(async () => figure.click());
+    const input = balloonInput()!;
+    expect(input.disabled).toBe(true);
+    expect(input.getAttribute('placeholder')).toBe(reason);
+    expect(sent).toEqual([]);
   });
 
   it('without a workspace to send to, a click puts the caret in its own workspace’s composer, not another chat’s', async () => {
