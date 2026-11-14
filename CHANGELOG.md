@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.47 is the release of this line since 1.6.46**: Shopper (worker-shopper, with the Shopify Global Catalog MCP server `shopify`) and Terra (worker-terra, on the earthdata server) in the catalogue (c267a197); worker-accountant enabled (904381c1); `<datalayer-app>` names no member after an attribute, so React 19 no longer overwrites `api()` (7549154f); a signed-out visitor's chat makes no failing call and retries an unreachable visitors' runtime (951d8df6).
 - **1.6.46 is the release of this line since 1.6.45**: the "Floating draggable" chat over a notebook or a document draws its drag handle again (de99570f).
 - **1.6.45 is the release of this line since 1.6.44**: Datalayer's own MCP server enabled in the catalogue (agentspecs aef6575), so the platform's images roll with it beside the PAP 1.0 draft.
 - **1.6.44 is the release of this line since 1.6.42**; 1.6.43 was tagged but never published: its build job's `npm install` failed with ERESOLVE, `@ag-ui/langgraph` 0.0.46 (published 13 November 2026, a peer of `@copilotkit/runtime`) asking for `@ag-ui/client>=1.0.0`. The overrides hold `@ag-ui/langgraph` at 0.0.45. It carries 1.6.43's PAP changes below.
