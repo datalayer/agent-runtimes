@@ -38,7 +38,8 @@ import {
 } from '@datalayer/reactor/ui';
 import { UiSocket } from '@datalayer/reactor/ui/ws';
 import { SkeletonText } from '@primer/react/experimental';
-import { SidebarExpandIcon } from '@primer/octicons-react';
+import { GrabberIcon, SidebarExpandIcon } from '@primer/octicons-react';
+import { useViewportDrag } from '../useViewportDrag';
 import type { KernelMessage } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
@@ -1116,6 +1117,33 @@ function ChatBaseInner({
   // The two smaller floating modes share the compact card over a surface.
   const compactFloating =
     chatViewMode === 'floating-small' || chatViewMode === 'floating-draggable';
+  // "Floating draggable" over a surface: the card moves about the viewport by
+  // its handle, at the size it had when taken (the user, 14 November 2026: the
+  // handle had gone from the agent page's floating chat).
+  const draggableFloating =
+    surfaceChatFloating && chatViewMode === 'floating-draggable';
+  const floatingChatRef = useRef<HTMLDivElement>(null);
+  const floatingDrag = useViewportDrag(floatingChatRef);
+  const resetFloatingDrag = floatingDrag.reset;
+  const floatingSize = useRef<{ width: number; height: number } | null>(null);
+  const onFloatingHandlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const box = floatingChatRef.current;
+      if (box) {
+        floatingSize.current = {
+          width: box.offsetWidth,
+          height: box.offsetHeight,
+        };
+      }
+      floatingDrag.onHandlePointerDown(event);
+    },
+    [floatingDrag],
+  );
+  useEffect(() => {
+    if (!draggableFloating) {
+      resetFloatingDrag();
+    }
+  }, [draggableFloating, resetFloatingDrag]);
 
   // Notebook frontend tools are always created (hooks must be unconditional)
   // but only merged into the tools sent to the agent while the notebook is
@@ -5611,6 +5639,7 @@ function ChatBaseInner({
               depending on the selected chat view mode. */}
           {!surfaceCollapsed && (
             <Box
+              ref={floatingChatRef}
               sx={
                 surfaceChatFloating
                   ? {
@@ -5621,6 +5650,20 @@ function ChatBaseInner({
                       ...(compactFloating
                         ? { bottom: 16, height: '62%' }
                         : { top: 16, bottom: 16 }),
+                      // Where it was put down, in the viewport.
+                      ...(draggableFloating && floatingDrag.position
+                        ? {
+                            position: 'fixed',
+                            left: floatingDrag.position.left,
+                            top: floatingDrag.position.top,
+                            right: 'auto',
+                            bottom: 'auto',
+                            maxWidth: 'none',
+                            width: floatingSize.current?.width ?? 360,
+                            height: floatingSize.current?.height ?? '62vh',
+                            zIndex: 1000,
+                          }
+                        : {}),
                       display: 'flex',
                       flexDirection: 'column',
                       minHeight: 0,
@@ -5645,6 +5688,30 @@ function ChatBaseInner({
                     }
               }
             >
+              {/* The handle "Floating draggable" is moved by. */}
+              {draggableFloating && (
+                <Box
+                  onPointerDown={onFloatingHandlePointerDown}
+                  aria-label="Move the chat"
+                  data-chat-drag-handle=""
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  flexShrink={0}
+                  height={18}
+                  sx={{
+                    cursor: 'grab',
+                    color: 'fg.subtle',
+                    bg: 'canvas.subtle',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.muted',
+                    touchAction: 'none',
+                    '&:active': { cursor: 'grabbing' },
+                  }}
+                >
+                  <GrabberIcon size={16} />
+                </Box>
+              )}
               {/* Header lives inside the chat column when a companion surface
                   is shown so it follows the chat body across all view modes. */}
               {chatHeaderElement}
