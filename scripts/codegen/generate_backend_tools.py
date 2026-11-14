@@ -135,6 +135,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'        package="{runtime["package"]}",',
                 f'        method="{runtime["method"]}",',
                 "    ),",
+                *(
+                    [f"    linked_accounts={_fmt_list(spec['linked_accounts'])},"]
+                    if spec.get("linked_accounts")
+                    else []
+                ),
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 ")",
@@ -238,6 +243,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"    package: '{runtime['package']}',",
                 f"    method: '{runtime['method']}',",
                 "  },",
+                *(
+                    [f"  linkedAccounts: {json.dumps(list(spec['linked_accounts']))},"]
+                    if spec.get("linked_accounts")
+                    else []
+                ),
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 "};",

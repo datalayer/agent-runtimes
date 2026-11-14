@@ -39,6 +39,11 @@ export interface BackendToolSpec {
   requiresApproval?: boolean;
   /** Runtime binding metadata */
   runtime: BackendToolRuntimeSpec;
+  /**
+   * The accounts the person links in Settings that set it up, one of them
+   * enough (`x`, `bluesky`; agentspecs 0.0.189): no secret is pasted for it.
+   */
+  linkedAccounts?: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
   /** Drawn where there is no icon */

@@ -517,8 +517,10 @@ def check_model_additionals(
 def optional_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
     """What an agent starts without (agentspecs 0.0.188), by id without version.
 
-    Refuses an entry that is not among the agent's own MCP servers or skills,
-    and a group naming what is not optional: the catalogue says it once.
+    Refuses an entry that is not among the agent's own MCP servers, skills or
+    backend tools (a backend tool set up by a linked account, 0.0.189), and a
+    group naming what is not optional: the catalogue says it once. The backend
+    tools are said only when there are some, so the other agents read as before.
     """
     optional = spec.get("optional")
     if optional is None:
@@ -526,12 +528,15 @@ def optional_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
     base = lambda ref: str(ref).split(":")[0]  # noqa: E731
     servers = [base(ref) for ref in optional.get("mcp_servers") or []]
     skills = [base(ref) for ref in optional.get("skills") or []]
+    tools = [base(ref) for ref in optional.get("backend_tools") or []]
     own_servers = {base(ref) for ref in spec.get("mcp_servers") or []}
     own_skills = {base(ref) for ref in spec.get("skills") or []}
+    own_tools = {base(ref) for ref in spec.get("backend_tools") or []}
     agent = spec.get("id")
     for kind, named, own in (
         ("MCP server", servers, own_servers),
         ("skill", skills, own_skills),
+        ("backend tool", tools, own_tools),
     ):
         for ref in named:
             if ref not in own:
@@ -541,9 +546,13 @@ def optional_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
     ]
     for group in groups:
         for ref in group:
-            if ref not in servers and ref not in skills:
+            if ref not in servers and ref not in skills and ref not in tools:
                 raise SystemExit(f"{agent}: {ref} in at_least_one is not optional")
-    return {"mcp_servers": servers, "skills": skills, "at_least_one": groups}
+    said: Dict[str, Any] = {"mcp_servers": servers, "skills": skills}
+    if tools:
+        said["backend_tools"] = tools
+    said["at_least_one"] = groups
+    return said
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -1355,6 +1364,11 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                     {
                         "mcpServers": optional["mcp_servers"],
                         "skills": optional["skills"],
+                        **(
+                            {"backendTools": optional["backend_tools"]}
+                            if optional.get("backend_tools")
+                            else {}
+                        ),
                         "atLeastOne": optional["at_least_one"],
                     }
                 )

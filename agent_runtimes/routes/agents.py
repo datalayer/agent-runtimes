@@ -2076,11 +2076,19 @@ async def create_agent(
                 for skill in request.skills
                 if _ref_id_of(skill) not in left_out.skills
             ]
+            # A posting tool whose account the person has not linked (0.0.189).
+            request.backend_tools = [
+                tool
+                for tool in request.backend_tools
+                if _ref_id_of(tool) not in left_out.tools
+            ]
             request.system_prompt = f"{request.system_prompt}\n\n{left_out.sentence()}"
             logger.info(
-                "Agent %s starts without %s (their secrets are not set up)",
+                "Agent %s starts without %s (not set up)",
                 agent_id,
-                sorted(left_out.servers) + sorted(left_out.skills),
+                sorted(left_out.servers)
+                + sorted(left_out.skills)
+                + sorted(left_out.tools),
             )
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
@@ -6133,8 +6141,10 @@ async def configure_from_spec_endpoint(
     left_out_now = declared.left_out(
         lambda name: bool((os.environ.get(name) or "").strip())
     )
-    new_spec_dict["left_out"] = sorted(left_out_now.servers) + sorted(
-        left_out_now.skills
+    new_spec_dict["left_out"] = (
+        sorted(left_out_now.servers)
+        + sorted(left_out_now.skills)
+        + sorted(left_out_now.tools)
     )
 
     # ── 5. Compare with stored spec — restart only if changed ────────

@@ -42,6 +42,7 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
                 "access": "read",
                 "as": "owner",
                 "only": [],
+                "optional": False,
             }
         ],
         "protocols": [],
@@ -601,7 +602,13 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [
-            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+            {
+                "server": "earthdata:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
         ],
         "protocols": [],
         "ui": [
@@ -899,7 +906,13 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [
-            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+            {
+                "server": "earthdata:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
         ],
         "protocols": [],
         "ui": [
@@ -2341,7 +2354,13 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [
-            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+            {
+                "server": "earthdata:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
         ],
         "protocols": [],
         "ui": [
@@ -3103,6 +3122,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
                 "access": "write",
                 "as": "user",
                 "only": ["*gmail*"],
+                "optional": False,
             }
         ],
         "protocols": [],
@@ -3477,9 +3497,27 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "context": ["marketing:0.0.1"],
         "contents": [],
         "connections": [
-            {"server": "x:0.0.1", "access": "read", "as": "owner", "only": []},
-            {"server": "bluesky:0.0.1", "access": "write", "as": "owner", "only": []},
-            {"server": "discord:0.0.1", "access": "write", "as": "owner", "only": []},
+            {
+                "server": "x:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": True,
+            },
+            {
+                "server": "bluesky:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": True,
+            },
+            {
+                "server": "discord:0.0.1",
+                "access": "write",
+                "as": "owner",
+                "only": [],
+                "optional": True,
+            },
         ],
         "protocols": [],
         "ui": [{"plugin": "chat", "renderer": None}],
@@ -3604,7 +3642,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Not played live yet: X reads with a bearer token today; Bluesky waits for the runtime image that carries its server; Discord's runs in Docker."
+                    "Not played live yet: X reads with a bearer token; posting to X and Bluesky on the linked accounts waits for the runtime image that carries the posting tools; Discord's runs in Docker."
                 ],
             },
         },
@@ -3914,6 +3952,7 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
                 "access": "read",
                 "as": "owner",
                 "only": [],
+                "optional": False,
             }
         ],
         "protocols": [],
@@ -7218,7 +7257,13 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
         "context": ["web-research:0.0.1"],
         "contents": [],
         "connections": [
-            {"server": "tavily:0.0.1", "access": "read", "as": "owner", "only": []}
+            {
+                "server": "tavily:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
         ],
         "protocols": [],
         "ui": [{"plugin": "chat", "renderer": None}],

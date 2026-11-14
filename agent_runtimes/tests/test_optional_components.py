@@ -41,13 +41,25 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     assert marketer is not None and marketer.optional is not None
     assert marketer.optional.mcp_servers == ["x", "bluesky", "discord"]
     assert marketer.optional.skills == ["crawl", "github"]
-    assert marketer.optional.at_least_one == [["x", "bluesky", "discord"]]
+    # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
+    assert marketer.optional.backend_tools == ["social-post-x", "social-post-bluesky"]
+    assert marketer.optional.at_least_one == [
+        ["x", "bluesky", "discord", "social-post-x", "social-post-bluesky"]
+    ]
     assert "linkedin" not in [server.id for server in marketer.mcp_servers]
     assert "LinkedIn" not in (marketer.system_prompt or "")
     shopper = get_agent_spec("worker-shopper")
     assert shopper is not None and shopper.optional is not None
     assert shopper.optional.skills == ["crawl"]
     assert get_agent_spec("worker-terra").optional is None
+
+
+@pytest.fixture(autouse=True)
+def nothing_linked(monkeypatch):
+    """No X or Bluesky account linked: the networks are their secrets alone here."""
+    from agent_runtimes.tools import social
+
+    monkeypatch.setattr(social, "_state", {**social._state, "accounts": {}})
 
 
 def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
@@ -63,8 +75,9 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     group = [sentence for sentence in nothing if "one at least of" in sentence]
     assert group == [
         "Marketer is not set up: it needs one at least of the MCP server bluesky, "
-        "the MCP server discord, the MCP server x, and none was given its secrets: "
-        "add those of one to the account's secrets, then configure it again."
+        "the MCP server discord, the MCP server x, the backend tool social-post-bluesky, "
+        "the backend tool social-post-x, and none was given its secrets: add those of "
+        "one to the account's secrets or link its account in Settings, then configure it again."
     ]
     for server, names in NETWORKS.items():
         one = declared.missing(_having(names), who="Marketer")
@@ -82,12 +95,17 @@ def test_what_is_not_set_up_is_left_out_and_said():
         "discord": NETWORKS["discord"],
     }
     assert left.skills == {"crawl": ["TAVILY_API_KEY"]}
+    assert left.tools == {
+        "social-post-bluesky": ["a linked Bluesky account"],
+        "social-post-x": ["a linked X account"],
+    }
     sentence = left.sentence()
     assert "the MCP server bluesky (no BLUESKY_APP_PASSWORD" in sentence
     assert "the skill crawl (no TAVILY_API_KEY)" in sentence
     assert "say that you cannot" in sentence
     everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN", "TAVILY_API_KEY"]
-    assert not declared.left_out(_having(everything))
+    assert not declared.left_out(_having(everything)).servers
+    assert not declared.left_out(_having(everything)).skills
 
 
 def test_a_required_one_still_refuses_the_start():

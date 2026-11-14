@@ -192,6 +192,14 @@ class BackendToolSpec(BaseModel):
         ...,
         description="Runtime binding metadata",
     )
+    linked_accounts: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The accounts the person links in Settings that set it up, one of "
+            "them enough (``x``, ``bluesky``; agentspecs 0.0.189): no secret is "
+            "pasted for it"
+        ),
+    )
     icon: Optional[str] = Field(
         default=None,
         description="The icon, <package>:<name> (agentspecs.marks)",
@@ -2076,6 +2084,9 @@ class AgentspecOptional(BaseModel):
 
     mcp_servers: List[str] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
+    #: Backend tools set up by an account the person linked (``linked_accounts``,
+    #: agentspecs 0.0.189): the posting tools, left out while it is not linked.
+    backend_tools: List[str] = Field(default_factory=list)
     at_least_one: List[List[str]] = Field(default_factory=list)
 
 

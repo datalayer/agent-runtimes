@@ -23,7 +23,10 @@ def test_the_catalogue_is_the_backend_tools_and_every_one_runs_on_the_runtime() 
     assert "decide" in BACKEND_TOOL_CATALOG
     for spec in BACKEND_TOOL_CATALOG.values():
         assert spec.runtime.language == "python"
-        assert spec.icon and spec.icon.startswith("@primer/octicons-react:")
+        # An octicon, or a mark of Datalayer's icons (agentspecs.marks): X and Bluesky have theirs.
+        assert spec.icon and spec.icon.startswith(
+            ("@primer/octicons-react:", "@datalayer/icons-react:")
+        )
     assert get_backend_tool_spec("runtime-echo:0.0.1") is not None
 
 

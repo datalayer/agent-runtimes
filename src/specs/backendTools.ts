@@ -518,6 +518,68 @@ export const RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '🛡️',
 };
 
+export const SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-accounts',
+  version: '0.0.1',
+  name: 'Social Accounts',
+  description:
+    "Read which of X and Bluesky the person linked in Settings, and the handle of each, through Datalayer's IAM; no account's token ever reaches the agent.",
+  tags: ['social', 'datalayer-social'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'social_accounts',
+  },
+  icon: '@primer/octicons-react:person',
+  emoji: '🪪',
+};
+
+export const SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-post-bluesky',
+  version: '0.0.1',
+  name: 'Post to Bluesky',
+  description:
+    "Publish one post on the person's own Bluesky account, linked in Settings, with up to four PNG or JPEG images and their alt text, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'post_to_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '🦋',
+};
+
+export const SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-post-x',
+  version: '0.0.1',
+  name: 'Post to X',
+  description:
+    "Publish one post on the person's own X account, linked in Settings, with up to four PNG or JPEG images, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'post_to_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@datalayer/icons-react:x',
+  emoji: '✖️',
+};
+
 export const UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'update-plan-step',
   version: '0.0.1',
@@ -571,6 +633,9 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+  'social-accounts': SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,
+  'social-post-bluesky': SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-post-x': SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1,
   'update-plan-step': UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 };
 

@@ -1984,22 +1984,32 @@ export const isAgentspecOffered = (
 export interface AgentspecOptional {
   mcpServers: string[];
   skills: string[];
+  /**
+   * Backend tools set up by an account the person links in Settings
+   * (`linkedAccounts`, agentspecs 0.0.189): the posting tools of
+   * datalayer-social, left out while that account is not linked.
+   */
+  backendTools?: string[];
   atLeastOne: string[][];
 }
 
-/** A component of an agent: one of its MCP servers or skills. */
-export type AgentspecComponentKind = 'mcpServer' | 'skill';
+/** A component of an agent: one of its MCP servers, skills or backend tools. */
+export type AgentspecComponentKind = 'mcpServer' | 'skill' | 'backendTool';
 
 const componentIdOf = (ref: string): string => String(ref ?? '').split(':')[0];
 
-/** Whether the agent starts without this MCP server or skill when its secrets are not set up. */
+/** Whether the agent starts without this MCP server, skill or backend tool when it is not set up. */
 export const isAgentspecComponentOptional = (
   spec: Pick<Agentspec, 'optional'> | undefined | null,
   kind: AgentspecComponentKind,
   id: string,
 ): boolean => {
   const listed =
-    kind === 'mcpServer' ? spec?.optional?.mcpServers : spec?.optional?.skills;
+    kind === 'mcpServer'
+      ? spec?.optional?.mcpServers
+      : kind === 'skill'
+        ? spec?.optional?.skills
+        : spec?.optional?.backendTools;
   return (listed ?? []).includes(componentIdOf(id));
 };
 

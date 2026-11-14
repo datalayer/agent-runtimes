@@ -367,6 +367,34 @@ def skill_consumer(skill_id: str) -> str:
     return f"the skill {skill_id}"
 
 
+def tool_consumer(tool_id: str) -> str:
+    """How a backend tool is named among the consumers: ``the backend tool social-post-x``."""
+    return f"the backend tool {tool_id}"
+
+
+def _catalog_tool_linked(tool_id: str) -> FrozenSet[str]:
+    """The accounts a backend tool of the catalogue is set up by (``linked_accounts``), or none."""
+    try:
+        from agent_runtimes.specs.backend_tools import BACKEND_TOOL_CATALOG
+    except ImportError:  # pragma: no cover - the generated catalogue
+        return frozenset()
+    for spec in BACKEND_TOOL_CATALOG.values():
+        if spec.id == tool_id:
+            return frozenset(getattr(spec, "linked_accounts", None) or [])
+    return frozenset()
+
+
+def account_linked(account: str) -> bool:
+    """Whether the person linked this account in Settings, as the runtime last read it."""
+    from agent_runtimes.tools.social import is_linked
+
+    return is_linked(account)
+
+
+#: What a backend tool set up by a linked account lacks, said to the agent.
+_LINKED_WORDS = {"x": "a linked X account", "bluesky": "a linked Bluesky account"}
+
+
 @dataclass(frozen=True)
 class LeftOut:
     """What an agent starts without: its optional consumers not set up."""
@@ -374,25 +402,35 @@ class LeftOut:
     #: By MCP server id and skill id: the secrets it lacks, sorted.
     servers: Dict[str, List[str]] = field(default_factory=dict)
     skills: Dict[str, List[str]] = field(default_factory=dict)
+    #: By backend tool id: the linked account it lacks (agentspecs 0.0.189).
+    tools: Dict[str, List[str]] = field(default_factory=dict)
 
     def __bool__(self) -> bool:
-        return bool(self.servers or self.skills)
+        return bool(self.servers or self.skills or self.tools)
 
     def sentence(self) -> str:
         """What the agent is told, in its instructions: what is off and why."""
-        parts = [
-            f"{server_consumer(key)} (no {', '.join(names)})"
-            for key, names in self.servers.items()
-        ] + [
-            f"{skill_consumer(key)} (no {', '.join(names)})"
-            for key, names in self.skills.items()
-        ]
+        parts = (
+            [
+                f"{server_consumer(key)} (no {', '.join(names)})"
+                for key, names in self.servers.items()
+            ]
+            + [
+                f"{skill_consumer(key)} (no {', '.join(names)})"
+                for key, names in self.skills.items()
+            ]
+            + [
+                f"{tool_consumer(key)} (no {' or '.join(names)})"
+                for key, names in self.tools.items()
+            ]
+        )
         return (
             "Started without what the person has not set up: "
             + "; ".join(parts)
             + ". Their tools are not yours in this run: when asked for what "
             "they do, say that you cannot, and that the person sets up the "
-            "secrets named here to give them to you."
+            "secrets named here, or links the account in Settings, to give "
+            "them to you."
         )
 
 
@@ -423,6 +461,13 @@ class DeclaredSecrets:
     optional: FrozenSet[str] = frozenset()
     #: Groups of optional consumers: of each, one at least must be set up.
     at_least_one: Tuple[FrozenSet[str], ...] = ()
+    #: Consumers set up by an account the person linked in Settings, one of
+    #: them enough (a backend tool's ``linked_accounts``, agentspecs 0.0.189):
+    #: ``the backend tool social-post-x`` → ``{x}``. No secret is theirs.
+    linked: Dict[str, FrozenSet[str]] = field(default_factory=dict)
+    #: Whether ``at_least_one`` was decided by an application, through its own
+    #: connections: merged with an agent's alone, the application's wins.
+    groups_of_an_app: bool = False
 
     @property
     def runtime(self) -> FrozenSet[str]:
@@ -453,11 +498,22 @@ class DeclaredSecrets:
             platform=self.platform | other.platform,
             for_a_deployment=self.for_a_deployment or other.for_a_deployment,
             optional=self.optional | other.optional,
-            at_least_one=self.at_least_one
-            + tuple(g for g in other.at_least_one if g not in self.at_least_one),
+            at_least_one=(
+                other.at_least_one
+                if other.groups_of_an_app and not self.groups_of_an_app
+                else self.at_least_one
+                if self.groups_of_an_app and not other.groups_of_an_app
+                else self.at_least_one
+                + tuple(g for g in other.at_least_one if g not in self.at_least_one)
+            ),
+            linked={**self.linked, **other.linked},
+            groups_of_an_app=self.groups_of_an_app or other.groups_of_an_app,
         )
 
     def _set_up(self, consumer: str, available: Callable[[str], bool]) -> bool:
+        if consumer in self.linked:
+            # Set up by a linked account, read off IAM with the runtime's social token.
+            return any(account_linked(account) for account in self.linked[consumer])
         return all(available(name) for name in self.consumers.get(consumer, ()))
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
@@ -478,8 +534,13 @@ class DeclaredSecrets:
                 sentences.append(
                     f"{who} is not set up: it needs one at least of "
                     f"{', '.join(sorted(group))}, and none was given its "
-                    "secrets: add those of one to the account's secrets, then "
-                    "configure it again."
+                    "secrets: add those of one to the account's secrets"
+                    + (
+                        " or link its account in Settings"
+                        if any(consumer in self.linked for consumer in group)
+                        else ""
+                    )
+                    + ", then configure it again."
                 )
         return sentences
 
@@ -487,7 +548,15 @@ class DeclaredSecrets:
         """The optional consumers not set up, which the agent starts without."""
         servers: Dict[str, List[str]] = {}
         skills: Dict[str, List[str]] = {}
+        tools: Dict[str, List[str]] = {}
         for consumer in sorted(self.optional):
+            if consumer in self.linked:
+                if not self._set_up(consumer, available):
+                    tools[consumer[len(tool_consumer("")) :]] = [
+                        _LINKED_WORDS.get(account, f"a linked {account} account")
+                        for account in sorted(self.linked[consumer])
+                    ]
+                continue
             lacking = sorted(
                 name for name in self.consumers.get(consumer, ()) if not available(name)
             )
@@ -499,7 +568,7 @@ class DeclaredSecrets:
             ):
                 if consumer.startswith(prefix):
                     into[consumer[len(prefix) :]] = lacking
-        return LeftOut(servers=servers, skills=skills)
+        return LeftOut(servers=servers, skills=skills, tools=tools)
 
     def kernel_refused(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot run here, a sentence per secret its kernel would need.
@@ -557,6 +626,7 @@ def declared_secrets(
     platform: Set[str] = set()
     optional: Set[str] = set()
     at_least_one: List[FrozenSet[str]] = []
+    linked: Dict[str, FrozenSet[str]] = {}
     seen_agents: Set[str] = set()
     for_a_deployment = on_a_deployment(app_instance)
 
@@ -627,6 +697,7 @@ def declared_secrets(
         for key, consumer in (
             (("mcp_servers", "mcpServers"), server_consumer),
             (("skills",), skill_consumer),
+            (("backend_tools", "backendTools"), tool_consumer),
         ):
             for ref in _get(said, *key) or []:
                 named[_ref_id(ref)] = consumer(_ref_id(ref))
@@ -660,6 +731,13 @@ def declared_secrets(
             )
         for skill in _get(spec, "skills") or []:
             add_skill(skill)
+        for tool in _get(spec, "backend_tools", "backendTools") or []:
+            tool_id = _ref_id(
+                tool if isinstance(tool, str) else _get(tool, "id", "name")
+            )
+            accounts = _catalog_tool_linked(tool_id)
+            if accounts:
+                linked[tool_consumer(tool_id)] = accounts
         add_optional(_get(spec, "optional"))
         harness_id = str(_get(spec, "harness") or "")
         if harness_id:
@@ -690,8 +768,28 @@ def declared_secrets(
             if hasattr(app_spec, "model_dump")
             else app_spec
         )
+        app_optional: Set[str] = set()
         for connection in _get(app, "connections") or []:
             add_server(_ref_id(_get(connection, "server")))
+            if _get(connection, "optional") is True:
+                app_optional.add(server_consumer(_ref_id(_get(connection, "server"))))
+        optional.update(app_optional)
+        # An application follows its agent's groups through its own connections
+        # (agentspecs 0.0.189): a group none of whose servers it connects to is
+        # one it reaches none of — the Marketer's demo connects to no network
+        # and needs none —, and a group it does connect to keeps its linked
+        # accounts beside its connections.
+        connected = {
+            server_consumer(_ref_id(_get(connection, "server")))
+            for connection in _get(app, "connections") or []
+        }
+        at_least_one = [
+            frozenset(
+                member for member in group if member in connected or member in linked
+            )
+            for group in at_least_one
+            if group & connected
+        ]
         deployment = _get(app, "deployment") or {}
         embedded = _get(deployment, "embedded") or {}
         host = _get(embedded, "host") or {}
@@ -716,6 +814,8 @@ def declared_secrets(
         for_a_deployment=for_a_deployment,
         optional=frozenset(optional),
         at_least_one=tuple(at_least_one),
+        linked=linked,
+        groups_of_an_app=app_spec is not None,
     )
 
 
@@ -826,4 +926,6 @@ __all__ = [
     "server_consumer",
     "server_env_names",
     "skill_consumer",
+    "tool_consumer",
+    "account_linked",
 ]

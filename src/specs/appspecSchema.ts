@@ -364,6 +364,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Only',
           type: 'array',
         },
+        optional: {
+          default: false,
+          description:
+            "Whether it runs without this connection when its secrets are not set up, as its agent does (the agent's `optional`, whose `at_least_one` groups it follows): only a server its agent says optional",
+          title: 'Optional',
+          type: 'boolean',
+        },
       },
       required: ['server'],
       title: 'AppConnection',

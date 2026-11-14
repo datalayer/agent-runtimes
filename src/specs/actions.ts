@@ -57,6 +57,9 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'runtime-echo': ['read'],
   'runtime-send-mail': ['send'],
   'runtime-sensitive-echo': ['read'],
+  'social-accounts': ['read'],
+  'social-post-bluesky': ['publish'],
+  'social-post-x': ['publish'],
   'update-plan-step': ['read'],
 };
 
@@ -1229,8 +1232,8 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'live-shop-chat': {},
   marketer: {
     'bluesky.convert-url-to-uri': 'do_it',
-    'bluesky.create-post': 'ask_first',
-    'bluesky.follow-user': 'ask_first',
+    'bluesky.create-post': 'leave_to_me',
+    'bluesky.follow-user': 'leave_to_me',
     'bluesky.get-feed-posts': 'do_it',
     'bluesky.get-followers': 'do_it',
     'bluesky.get-follows': 'do_it',
@@ -1242,7 +1245,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'bluesky.get-timeline-posts': 'do_it',
     'bluesky.get-trends': 'do_it',
     'bluesky.get-user-posts': 'do_it',
-    'bluesky.like-post': 'ask_first',
+    'bluesky.like-post': 'leave_to_me',
     'bluesky.search-feeds': 'do_it',
     'bluesky.search-people': 'do_it',
     'bluesky.search-posts': 'do_it',

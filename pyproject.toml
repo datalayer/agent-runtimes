@@ -106,7 +106,8 @@ dependencies = [
     # application is validated against; five agents enabled, the home page's; the home page's demos.
     # 1.6.49 with agentspecs 0.0.187: `listed` — example-simple and six others enabled, out of the pickers.
     # 1.6.50 with agentspecs 0.0.188: `optional` — what an agent starts without; the Marketer drops LinkedIn.
-    "agentspecs>=0.0.188",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.51 with agentspecs 0.0.189: datalayer-social — posting on the linked accounts through IAM; optional connections.
+    "agentspecs>=0.0.189",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
