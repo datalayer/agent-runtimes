@@ -15,6 +15,8 @@ import {
   ensureVisitorAgent,
   fetchBattleToken,
   fetchVisitorAgent,
+  VisitorRuntimeUnreachable,
+  visitorRetrySeconds,
   fetchVisitorToken,
   isVisitorId,
   keptVisitorId,
@@ -223,6 +225,37 @@ describe("a visitor's agent (D-15)", () => {
         }),
       ),
     ).rejects.toThrow('Without an account it is not run.');
+  });
+
+  it('says a network failure or a 5xx as unreachable, to be tried again, and a refusal not', async () => {
+    const failed = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    const network = fetchVisitorAgent(VISITORS.url, 'visitor-token', failed);
+    await expect(network).rejects.toBeInstanceOf(VisitorRuntimeUnreachable);
+    await expect(network).rejects.toThrow(
+      'The visitors’ runtime could not be reached (Failed to fetch).',
+    );
+    await expect(
+      fetchVisitorAgent(
+        VISITORS.url,
+        'visitor-token',
+        answers({ [AGENT_URL]: [502, {}] }),
+      ),
+    ).rejects.toBeInstanceOf(VisitorRuntimeUnreachable);
+    await expect(
+      ensureVisitorAgent(VISITORS, 'helpdesk', failed),
+    ).rejects.toBeInstanceOf(VisitorRuntimeUnreachable);
+    await expect(
+      fetchVisitorAgent(
+        VISITORS.url,
+        'visitor-token',
+        answers({ [AGENT_URL]: [401, { detail: 'Not run.' }] }),
+      ),
+    ).rejects.not.toBeInstanceOf(VisitorRuntimeUnreachable);
+    expect([1, 2, 3, 4, 5, 9].map(visitorRetrySeconds)).toEqual([
+      2, 4, 8, 16, 30, 30,
+    ]);
   });
 
   it('is made before the page follows it, and checked to run the application drawn', async () => {

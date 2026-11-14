@@ -114,16 +114,17 @@ describe('a chat held to the application’s own routes', () => {
     const unmount = await mount({ ownRoutesOnly: true });
     expect(paths()).not.toContain('/api/v1/tool-approvals/ws');
     expect(paths()).not.toContain('/api/v1/configure/sandbox/ws');
-    // Every socket it opens on the runtime is the application's own (the
-    // platform's approvals, at ai-agents, are elsewhere).
+    // Nor the platform's approvals at ai-agents: its token is not one
+    // ai-agents takes (a 403 for a visitor's, 14 November 2026).
+    expect(paths()).not.toContain('/api/ai-agents/v1/ws');
+    // Before a run it opens nothing on the runtime: the ui socket waits for
+    // the run's session — opened as the adapter connected, the runtime
+    // refused it ("No session … is held here", 14 November 2026).
     const onRuntime = opened
       .map(url => new URL(url))
       .filter(url => url.host === new URL(SERVER).host)
       .map(url => url.pathname);
-    expect(onRuntime.length).toBeGreaterThan(0);
-    for (const path of onRuntime) {
-      expect(path).toMatch(/^\/api\/v1\/apps\//);
-    }
+    expect(onRuntime).toEqual([]);
     await unmount();
   });
 

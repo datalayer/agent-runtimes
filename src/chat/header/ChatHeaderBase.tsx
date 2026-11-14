@@ -14,7 +14,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Label, Text, Truncate } from '@primer/react';
+import { Heading, IconButton, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   KernelIndicator,
@@ -286,13 +286,6 @@ export function ChatBaseHeader({
               )}
             </Box>
           )}
-          {/* Why the chat is off, next to what it is. Said plainly rather
-              than implied by a dead input box. */}
-          {disableReason && (
-            <Label variant="attention" sx={{ flexShrink: 0 }}>
-              {disableReason}
-            </Label>
-          )}
           {/* Inline header content (e.g., protocol label) */}
           {headerContent}
           {showInformation && (
@@ -360,6 +353,26 @@ export function ChatBaseHeader({
           {headerActions}
         </Box>
       </Box>
+      {/* Why the chat is off, under what it is, wrapped on its own line.
+          Said plainly rather than implied by a dead input box. In the title
+          row a long sentence that would not shrink squeezed the title to
+          nothing and was drawn over it ("arketer", 14 November 2026). */}
+      {disableReason && (
+        <Box px={padding} pb={2} mt={-1}>
+          <Text
+            role="status"
+            data-chat-disable-reason=""
+            sx={{
+              display: 'block',
+              fontSize: 1,
+              color: 'attention.fg',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {disableReason}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }

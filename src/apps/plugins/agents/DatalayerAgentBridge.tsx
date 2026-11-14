@@ -30,7 +30,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 
 import { useAgentRuntimes } from '../../../hooks/useAgentRuntimes';
-import { ensureVisitorAgent } from '../../apps/visitorToken';
+import {
+  ensureVisitorAgent,
+  VisitorRuntimeUnreachable,
+  visitorRetrySeconds,
+} from '../../apps/visitorToken';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
 import { appLaunchOf } from './appLaunch';
@@ -88,21 +92,45 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       return;
     }
     let current = true;
-    ensureVisitorAgent(visitors, visitorAppId)
-      .then(() => {
-        if (current) {
-          setVisitorAgent({ ready: true });
-        }
-      })
-      .catch((error: unknown) => {
-        if (current) {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    /*
+     * Tried again while the visitors' runtime cannot be reached — a reup
+     * rolling it, a refused preflight, a network change — rather than a
+     * dead chat that said "Failed to fetch" until the page was reloaded
+     * (14 November 2026). The sentence says what failed and when it is
+     * tried again; a refusal in the runtime's own sentence is said once.
+     */
+    const ask = () => {
+      ensureVisitorAgent(visitors, visitorAppId)
+        .then(() => {
+          if (current) {
+            setVisitorAgent({ ready: true });
+          }
+        })
+        .catch((error: unknown) => {
+          if (!current) {
+            return;
+          }
+          const said = error instanceof Error ? error.message : String(error);
+          if (!(error instanceof VisitorRuntimeUnreachable)) {
+            setVisitorAgent({ error: said });
+            return;
+          }
+          attempt += 1;
+          const seconds = visitorRetrySeconds(attempt);
           setVisitorAgent({
-            error: error instanceof Error ? error.message : String(error),
+            error: `${said} Trying again in ${seconds} s.`,
           });
-        }
-      });
+          retry = setTimeout(ask, seconds * 1000);
+        });
+    };
+    ask();
     return () => {
       current = false;
+      if (retry) {
+        clearTimeout(retry);
+      }
     };
     // By what it is, not by the host's object.
     // eslint-disable-next-line react-hooks/exhaustive-deps

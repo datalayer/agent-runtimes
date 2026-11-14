@@ -1830,8 +1830,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const threadUid = workspace.thread || chatThread?.id || '';
   const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
   const [factsTick, setFactsTick] = useState(0);
+  // The thread a turn was sent on here: the runtime holds its session from
+  // then on. Before it — a visit before its first message — the runtime
+  // holds none, and asking answered an error (a 502 on the visitors'
+  // runtime, 14 November 2026).
+  const sentOn = useRef('');
   useEffect(() => {
-    if (!runsApp || !agentServerUrl || !threadUid || busy) {
+    if (busy && threadUid) {
+      sentOn.current = threadUid;
+    }
+  }, [busy, threadUid]);
+  const held =
+    Boolean(givenThread?.fromRuntime) ||
+    Boolean(workspace.thread && workspace.thread === threadUid) ||
+    sentOn.current === threadUid;
+  useEffect(() => {
+    if (!runsApp || !agentServerUrl || !threadUid || busy || !held) {
       return undefined;
     }
     let current = true;
@@ -1842,7 +1856,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     return () => {
       current = false;
     };
-  }, [runsApp, agentServerUrl, threadUid, busy, factsTick, sessionsClient]);
+  }, [
+    runsApp,
+    agentServerUrl,
+    threadUid,
+    busy,
+    held,
+    factsTick,
+    sessionsClient,
+  ]);
   /* What an action said — a swap's sentence, a refusal as the runtime said
      it — shown above the conversation until dismissed; and the picker and
      the file an action asks with (`choose`, `pickFile`). */
@@ -1991,8 +2013,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * need one, and a browser agent has none — hence the menus below being
    * gated on the data rather than switched on unconditionally.
    */
+  // Only once there is a server to ask (an AG-UI endpoint): while its
+  // address is pending — a visitor's token being minted — `useConfig` with
+  // no endpoint asked a Jupyter server's `configure`, a developer's
+  // localhost on a public page (connection refused, 14 November 2026).
   const configQuery = useConfig(
-    !inPage,
+    !inPage && protocol?.type === 'ag-ui',
     protocol?.type === 'ag-ui' ? protocol.configEndpoint : undefined,
     undefined,
     agentId,

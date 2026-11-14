@@ -1587,6 +1587,12 @@ function ChatBaseInner({
     if (!aiAgentsAuthToken) {
       return;
     }
+    // A deployment's runtime and the visitors' answer only the application's
+    // own routes (OwnRoutesOnly): their token — a visitor's, an embed's — is
+    // not one ai-agents takes, and the socket was refused (403).
+    if (protocolConfig?.ownRoutesOnly) {
+      return;
+    }
 
     const wsUrl = toWsUrl(
       aiAgentsBaseUrl,
@@ -1748,6 +1754,7 @@ function ChatBaseInner({
     pendingApprovalsProp,
     aiAgentsBaseUrl,
     aiAgentsAuthToken,
+    protocolConfig?.ownRoutesOnly,
     activeAgentId,
     isSuppressedPending,
     reconcileResolvedApprovalInStore,
@@ -3668,7 +3675,12 @@ function ChatBaseInner({
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
       // The run's session is there once it answers: its ui socket opens.
-      ensureUiSocketRef.current();
+      // Not on the adapter's own connection events: it says `connected` as
+      // it is made, before any run, and the runtime then refused the socket
+      // ("No session … is held here", 14 November 2026).
+      if (event.type !== 'connected' && event.type !== 'disconnected') {
+        ensureUiSocketRef.current();
+      }
       /*
        * Nothing more from a turn the reader has stopped.
        *

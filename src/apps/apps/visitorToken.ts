@@ -104,7 +104,9 @@ async function mintVisitorToken(
   fetcher: typeof fetch,
 ): Promise<MintedVisitorToken> {
   const base = inferenceUrl.replace(/\/+$/, '');
-  const response = await fetcher(
+  const response = await reached(
+    fetcher,
+    'Datalayer’s inference, which gives a visitor’s key,',
     `${base}/api/ai-inference/v1/anonymous/token`,
     {
       method: 'POST',
@@ -269,6 +271,48 @@ export function visitorAgentOf(app: string): string {
   return `at-${slug}`;
 }
 
+/**
+ * The visitors' runtime, or ai-inference beside it, could not be reached —
+ * the network failed (a CORS preflight refused while the runtime rolls) or
+ * it answered 5xx: worth trying again, unlike a refusal in its sentence.
+ */
+export class VisitorRuntimeUnreachable extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'VisitorRuntimeUnreachable';
+  }
+}
+
+/** Seconds before the visitors' runtime is asked again, after `attempt` failures: 2, 4, 8, 16, then every 30. */
+export function visitorRetrySeconds(attempt: number): number {
+  return Math.min(30, 2 ** Math.max(1, attempt));
+}
+
+/** A fetch that says a network failure as `VisitorRuntimeUnreachable`, naming what was asked. */
+async function reached(
+  fetcher: typeof fetch,
+  what: string,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetcher(url, init);
+  } catch (error) {
+    throw new VisitorRuntimeUnreachable(
+      `${what} could not be reached (${
+        error instanceof Error ? error.message : String(error)
+      }).`,
+    );
+  }
+  if (response.status >= 500) {
+    throw new VisitorRuntimeUnreachable(
+      `${what} did not answer (HTTP ${response.status}).`,
+    );
+  }
+  return response;
+}
+
 /** The agent the visitors' runtime holds for a visitor, and the application it runs. */
 export type VisitorAgent = { agent: string; appId: string };
 
@@ -285,10 +329,12 @@ export async function fetchVisitorAgent(
   fetcher: typeof fetch = fetch,
 ): Promise<VisitorAgent> {
   const base = runtimeUrl.replace(/\/+$/, '');
-  const response = await fetcher(`${base}/api/v1/apps/visitors/agent`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await reached(
+    fetcher,
+    'The visitors’ runtime',
+    `${base}/api/v1/apps/visitors/agent`,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+  );
   const body = (await response.json().catch(() => ({}))) as {
     agent?: string;
     app_id?: string;
