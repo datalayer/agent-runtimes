@@ -408,7 +408,7 @@ async def give_social_token_endpoint(
         "note": (
             f"Linked: {', '.join(linked)}."
             if linked
-            else "No X or Bluesky account is linked."
+            else "No X, Bluesky or LinkedIn account is linked."
             if accounts is not None
             else "The linked accounts could not be read."
         ),

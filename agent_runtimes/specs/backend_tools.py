@@ -496,7 +496,7 @@ SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="social-accounts",
     version="0.0.1",
     name="Social Accounts",
-    description="Read which of X and Bluesky the person linked in Settings, and the handle of each, through Datalayer's IAM; no account's token ever reaches the agent.",
+    description="Read which of X, Bluesky and LinkedIn the person linked in Settings, and the handle or name of each, through Datalayer's IAM; no account's token ever reaches the agent.",
     tags=["social", "datalayer-social"],
     enabled=True,
     approval="auto",
@@ -509,6 +509,26 @@ SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     ),
     icon="@primer/octicons-react:person",
     emoji="🪪",
+)
+
+SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-comment-linkedin",
+    version="0.0.1",
+    name="Comment on LinkedIn",
+    description="Comment as the person under one LinkedIn post they name by its address, through Datalayer's IAM; it waits for the person's approval every time.",
+    tags=["social", "linkedin", "datalayer-social"],
+    enabled=True,
+    approval="manual",
+    timeout=None,
+    requires_approval=True,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="comment_on_linkedin",
+    ),
+    linked_accounts=["linkedin"],
+    icon="@datalayer/icons-react:linked-in",
+    emoji="💬",
 )
 
 SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
@@ -529,6 +549,26 @@ SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     linked_accounts=["bluesky"],
     icon="@datalayer/icons-react:bluesky",
     emoji="🦋",
+)
+
+SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-post-linkedin",
+    version="0.0.1",
+    name="Post to LinkedIn",
+    description="Publish one post on the person's own LinkedIn profile, linked in Settings, with one PNG or JPEG image and its alt text, through Datalayer's IAM; it waits for the person's approval every time.",
+    tags=["social", "linkedin", "datalayer-social"],
+    enabled=True,
+    approval="manual",
+    timeout=None,
+    requires_approval=True,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="post_to_linkedin",
+    ),
+    linked_accounts=["linkedin"],
+    icon="@datalayer/icons-react:linked-in",
+    emoji="💼",
 )
 
 SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
@@ -601,7 +641,9 @@ BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
     "runtime-send-mail": RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
     "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
     "social-accounts": SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,
+    "social-comment-linkedin": SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
     "social-post-bluesky": SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+    "social-post-linkedin": SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
     "social-post-x": SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1,
     "update-plan-step": UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 }

@@ -45,7 +45,9 @@ BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
     "runtime-send-mail": ["send"],
     "runtime-sensitive-echo": ["read"],
     "social-accounts": ["read"],
+    "social-comment-linkedin": ["publish"],
     "social-post-bluesky": ["publish"],
+    "social-post-linkedin": ["publish"],
     "social-post-x": ["publish"],
     "update-plan-step": ["read"],
 }

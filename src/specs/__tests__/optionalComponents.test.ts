@@ -24,10 +24,23 @@ describe('an agent’s optional servers and skills', () => {
     expect(marketer.optional).toEqual({
       mcpServers: ['x', 'bluesky', 'discord'],
       skills: ['crawl', 'github'],
-      // Set up by an X or Bluesky account linked in Settings (agentspecs 0.0.189).
-      backendTools: ['social-post-x', 'social-post-bluesky'],
+      // Set up by an X, Bluesky or LinkedIn account linked in Settings
+      // (agentspecs 0.0.189, LinkedIn 0.0.190).
+      backendTools: [
+        'social-post-x',
+        'social-post-bluesky',
+        'social-post-linkedin',
+        'social-comment-linkedin',
+      ],
       atLeastOne: [
-        ['x', 'bluesky', 'discord', 'social-post-x', 'social-post-bluesky'],
+        [
+          'x',
+          'bluesky',
+          'discord',
+          'social-post-x',
+          'social-post-bluesky',
+          'social-post-linkedin',
+        ],
       ],
     });
     expect(
@@ -64,12 +77,22 @@ describe('an agent’s optional servers and skills', () => {
 
   it('say a group none of which is set up', () => {
     expect(unmetAgentspecGroups(marketer, () => false)).toEqual([
-      ['x', 'bluesky', 'discord', 'social-post-x', 'social-post-bluesky'],
+      [
+        'x',
+        'bluesky',
+        'discord',
+        'social-post-x',
+        'social-post-bluesky',
+        'social-post-linkedin',
+      ],
     ]);
     expect(unmetAgentspecGroups(marketer, id => id === 'discord')).toEqual([]);
     // A linked Bluesky account sets up its posting tool, which counts for the group.
     expect(
       unmetAgentspecGroups(marketer, id => id === 'social-post-bluesky'),
+    ).toEqual([]);
+    expect(
+      unmetAgentspecGroups(marketer, id => id === 'social-post-linkedin'),
     ).toEqual([]);
     expect(unmetAgentspecGroups(undefined, () => false)).toEqual([]);
   });

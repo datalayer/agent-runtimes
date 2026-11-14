@@ -392,7 +392,11 @@ def account_linked(account: str) -> bool:
 
 
 #: What a backend tool set up by a linked account lacks, said to the agent.
-_LINKED_WORDS = {"x": "a linked X account", "bluesky": "a linked Bluesky account"}
+_LINKED_WORDS = {
+    "x": "a linked X account",
+    "bluesky": "a linked Bluesky account",
+    "linkedin": "a linked LinkedIn account",
+}
 
 
 @dataclass(frozen=True)

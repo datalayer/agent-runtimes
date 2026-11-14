@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""datalayer-social: post to X and Bluesky on the person's linked accounts, through IAM.
+"""datalayer-social: post to X, Bluesky and LinkedIn on the person's linked accounts, through IAM.
 
-The person links X and Bluesky in Datalayer's Settings; IAM keeps the accounts'
-tokens — X's grant, which it refreshes, and the Bluesky session bound to a key
-only IAM holds — and hands them to nobody. This runtime holds a **social
+The person links X, Bluesky and LinkedIn in Datalayer's Settings; IAM keeps the
+accounts' tokens — X's grant, which it refreshes, the Bluesky session bound to a
+key only IAM holds, LinkedIn's posting grant — and hands them to nobody. This runtime holds a **social
 token** instead (decided 14 November 2026): the person's own token, narrowed by
 IAM to its social routes and to this runtime while it runs, given by the
 companion as the runtime is assigned (``PUT /api/v1/configure/social/token``).
@@ -13,11 +13,20 @@ It lasts fifteen minutes; the runtime renews it with itself ahead of its expiry
 (``POST /api/iam/v1/social/runtime-token/renew``), and IAM refuses it the moment
 the runtime ends.
 
-Three tools, no secret pasted for any:
+The tools, no secret pasted for any:
 
 - ``social_accounts`` reads which accounts are linked, and as whom (``read``);
-- ``post_to_x`` and ``post_to_bluesky`` publish one post, with images
-  (``publish``, ``approval: manual``: each waits for the person's word).
+- ``post_to_x``, ``post_to_bluesky`` and ``post_to_linkedin`` publish one post,
+  with images (``publish``, ``approval: manual``: each waits for the person's
+  word);
+- ``comment_on_linkedin`` comments as the person under a LinkedIn post they
+  name (``send``, ``approval: manual``).
+
+LinkedIn lets Datalayer's application post and comment as the member and read
+the member's profile, nothing more (14 November 2026): reading the member's
+posts, the comments and reactions on them, or an organization page needs
+LinkedIn's Community Management API, which Datalayer has not been granted. So
+there is no tool that reads LinkedIn posts, and the agent says so.
 
 The token is never logged, and an account's token never reaches this process.
 """
@@ -39,10 +48,12 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "MAX_IMAGES",
+    "comment_on_linkedin",
     "give_social_token",
     "is_linked",
     "linked_accounts",
     "post_to_bluesky",
+    "post_to_linkedin",
     "post_to_x",
     "refresh_linked_accounts",
     "social_accounts",
@@ -56,15 +67,22 @@ MAX_IMAGES = 4
 RENEW_BEFORE_SECONDS = 180
 
 #: The largest image each network takes, in bytes.
-_MAX_IMAGE_BYTES = {"x": 5 * 1024 * 1024, "bluesky": 1_000_000}
+_MAX_IMAGE_BYTES = {
+    "x": 5 * 1024 * 1024,
+    "bluesky": 1_000_000,
+    "linkedin": 8 * 1024 * 1024,
+}
+
+#: The accounts IAM says are linked, as ``GET /social/accounts`` names them.
+ACCOUNTS = ("x", "bluesky", "linkedin")
 
 _IMAGE_TYPES = {"image/png", "image/jpeg"}
 
 #: The sentence a tool answers when the runtime holds no social token.
 NO_TOKEN = (
     "This runtime was given no social token, so it posts nowhere: it is given one "
-    "when the person launches it on Datalayer, and the person links X or Bluesky "
-    "in Settings."
+    "when the person launches it on Datalayer, and the person links X, Bluesky or "
+    "LinkedIn in Settings."
 )
 
 _lock = threading.Lock()
@@ -185,9 +203,7 @@ async def refresh_linked_accounts() -> Optional[Dict[str, Any]]:
     answer = await _iam("GET", "/api/iam/v1/social/accounts")
     if isinstance(answer, str) or answer.status_code != 200:
         return None
-    accounts = {
-        key: value for key, value in answer.json().items() if key in ("x", "bluesky")
-    }
+    accounts = {key: value for key, value in answer.json().items() if key in ACCOUNTS}
     with _lock:
         _state["accounts"] = accounts
     return accounts
@@ -199,26 +215,26 @@ def linked_accounts() -> Optional[Dict[str, Any]]:
 
 
 def is_linked(account: str) -> bool:
-    """Whether the person linked this account (``x``, ``bluesky``), as last read."""
+    """Whether the person linked this account (``x``, ``bluesky``, ``linkedin``), as last read."""
     accounts = _state.get("accounts") or {}
     return bool((accounts.get(account) or {}).get("linked"))
 
 
 async def social_accounts() -> Any:
-    """Read which of X and Bluesky the person linked in Settings, and as whom.
+    """Read which of X, Bluesky and LinkedIn the person linked in Settings, and as whom.
 
     Returns:
-        ``{"x": {"linked", "username", "url"}, "bluesky": {"linked", "handle", "did"}}``,
-        or a sentence when this runtime cannot ask.
+        ``{"x": {"linked", "username", "url"}, "bluesky": {"linked", "handle", "did"},
+        "linkedin": {"linked", "name", "expires_at"}}`` — LinkedIn says
+        ``reconnect`` when its posting grant lapsed — or a sentence when this
+        runtime cannot ask.
     """
     answer = await _iam("GET", "/api/iam/v1/social/accounts")
     if isinstance(answer, str):
         return answer
     if answer.status_code != 200:
         return f"IAM did not say which accounts are linked ({answer.status_code}): {_said(answer)}"
-    accounts = {
-        key: value for key, value in answer.json().items() if key in ("x", "bluesky")
-    }
+    accounts = {key: value for key, value in answer.json().items() if key in ACCOUNTS}
     with _lock:
         _state["accounts"] = accounts
     return accounts
@@ -416,3 +432,106 @@ async def post_to_bluesky(
         "uri": uri,
         "post_url": f"https://bsky.app/profile/{did}/post/{rkey}" if did else "",
     }
+
+
+async def post_to_linkedin(
+    text: str, image: Optional[str] = None, alt: Optional[str] = None
+) -> Any:
+    """Publish one post on the person's own LinkedIn profile, linked in Settings.
+
+    It waits for the person's approval every time. Links in the text are
+    shown as links; LinkedIn makes no card from them.
+
+    Args:
+        text: The post, at most 3000 characters.
+        image: One PNG or JPEG image, a ``data:`` URL or an ``https://`` URL, at
+            most 8 MB.
+        alt: The image's alt text.
+
+    Returns:
+        ``{"post_urn", "post_url"}``, or a sentence saying why nothing was posted.
+    """
+    text = str(text or "").strip()
+    if not text:
+        return "A LinkedIn post needs some text."
+    if len(text) > 3000:
+        return "A LinkedIn post holds at most 3000 characters."
+    body: Dict[str, Any] = {"commentary": text}
+    if image:
+        picture = await _image(image, "linkedin")
+        if isinstance(picture, str):
+            return picture
+        content_type, content = picture
+        uploaded = await _iam(
+            "POST",
+            "/api/iam/v1/social/linkedin/images",
+            json={
+                "data_url": f"data:{content_type};base64,{base64.b64encode(content).decode()}"
+            },
+        )
+        if isinstance(uploaded, str):
+            return uploaded
+        if uploaded.status_code != 201:
+            return f"LinkedIn did not take the image ({uploaded.status_code}): {_said(uploaded)}"
+        body["image_urn"] = str(uploaded.json().get("image_urn") or "")
+        if alt:
+            body["image_alt_text"] = str(alt)[:4086]
+    posted = await _iam("POST", "/api/iam/v1/social/linkedin/posts", json=body)
+    if isinstance(posted, str):
+        return posted
+    if posted.status_code != 201:
+        return f"Nothing was posted to LinkedIn ({posted.status_code}): {_said(posted)}"
+    answer = posted.json()
+    return {"post_urn": answer.get("post_urn"), "post_url": answer.get("post_url")}
+
+
+_LINKEDIN_URN = re.compile(r"urn:li:(share|ugcPost|activity):([0-9]{1,30})")
+_LINKEDIN_ACTIVITY = re.compile(r"-activity-([0-9]{1,30})")
+
+
+def linkedin_post_urn(post: str) -> Optional[str]:
+    """The post a URN or a LinkedIn address names, as ``urn:li:<kind>:<id>``; ``None`` for anything else."""
+    value = str(post or "").strip()
+    match = _LINKEDIN_URN.search(value.replace("%3A", ":").replace("%3a", ":"))
+    if match:
+        return f"urn:li:{match.group(1)}:{match.group(2)}"
+    if value.startswith("https://www.linkedin.com/posts/"):
+        activity = _LINKEDIN_ACTIVITY.search(value)
+        if activity:
+            return f"urn:li:activity:{activity.group(1)}"
+    return None
+
+
+async def comment_on_linkedin(post: str, text: str) -> Any:
+    """Comment as the person under one LinkedIn post they point at.
+
+    It waits for the person's approval every time. LinkedIn does not let this
+    agent read a post's comments, so it comments under the post the person
+    names, never in reply to a comment it read.
+
+    Args:
+        post: The post's address on LinkedIn (``https://www.linkedin.com/feed/update/urn:li:…``
+            or ``https://www.linkedin.com/posts/…-activity-…``) or its URN.
+        text: The comment, at most 1250 characters.
+
+    Returns:
+        ``{"comment_urn"}``, or a sentence saying why nothing was posted.
+    """
+    urn = linkedin_post_urn(post)
+    if not urn:
+        return "Name the LinkedIn post by its address or its urn:li:share, ugcPost or activity URN."
+    text = str(text or "").strip()
+    if not text:
+        return "A LinkedIn comment needs some text."
+    if len(text) > 1250:
+        return "A LinkedIn comment holds at most 1250 characters."
+    written = await _iam(
+        "POST",
+        "/api/iam/v1/social/linkedin/comments",
+        json={"post_urn": urn, "text": text},
+    )
+    if isinstance(written, str):
+        return written
+    if written.status_code != 201:
+        return f"Nothing was commented on LinkedIn ({written.status_code}): {_said(written)}"
+    return {"comment_urn": written.json().get("comment_urn")}

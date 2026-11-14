@@ -42,12 +42,25 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     assert marketer.optional.mcp_servers == ["x", "bluesky", "discord"]
     assert marketer.optional.skills == ["crawl", "github"]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
-    assert marketer.optional.backend_tools == ["social-post-x", "social-post-bluesky"]
-    assert marketer.optional.at_least_one == [
-        ["x", "bluesky", "discord", "social-post-x", "social-post-bluesky"]
+    assert marketer.optional.backend_tools == [
+        "social-post-x",
+        "social-post-bluesky",
+        "social-post-linkedin",
+        "social-comment-linkedin",
     ]
+    assert marketer.optional.at_least_one == [
+        [
+            "x",
+            "bluesky",
+            "discord",
+            "social-post-x",
+            "social-post-bluesky",
+            "social-post-linkedin",
+        ]
+    ]
+    # LinkedIn through IAM (agentspecs 0.0.190), never the browser-session server; it reads nothing back.
     assert "linkedin" not in [server.id for server in marketer.mcp_servers]
-    assert "LinkedIn" not in (marketer.system_prompt or "")
+    assert "read nothing back" in " ".join((marketer.system_prompt or "").split())
     shopper = get_agent_spec("worker-shopper")
     assert shopper is not None and shopper.optional is not None
     assert shopper.optional.skills == ["crawl"]
@@ -76,6 +89,7 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     assert group == [
         "Marketer is not set up: it needs one at least of the MCP server bluesky, "
         "the MCP server discord, the MCP server x, the backend tool social-post-bluesky, "
+        "the backend tool social-post-linkedin, "
         "the backend tool social-post-x, and none was given its secrets: add those of "
         "one to the account's secrets or link its account in Settings, then configure it again."
     ]
@@ -98,6 +112,8 @@ def test_what_is_not_set_up_is_left_out_and_said():
     assert left.tools == {
         "social-post-bluesky": ["a linked Bluesky account"],
         "social-post-x": ["a linked X account"],
+        "social-post-linkedin": ["a linked LinkedIn account"],
+        "social-comment-linkedin": ["a linked LinkedIn account"],
     }
     sentence = left.sentence()
     assert "the MCP server bluesky (no BLUESKY_APP_PASSWORD" in sentence

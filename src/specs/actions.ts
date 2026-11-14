@@ -58,7 +58,9 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'runtime-send-mail': ['send'],
   'runtime-sensitive-echo': ['read'],
   'social-accounts': ['read'],
+  'social-comment-linkedin': ['publish'],
   'social-post-bluesky': ['publish'],
+  'social-post-linkedin': ['publish'],
   'social-post-x': ['publish'],
   'update-plan-step': ['read'],
 };
