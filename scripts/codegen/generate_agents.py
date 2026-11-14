@@ -1104,7 +1104,7 @@ import type { Agentspec } from '"""
     code += """';
 import { isAgentspecComponentOptional } from '"""
     code += types_import_path
-    code += """';
+    code += """/agentspecs';
 """
 
     # Only add MCP server imports if needed
@@ -1798,7 +1798,7 @@ __all__ = ["AGENTSPECS", "get_agent_spec", "list_agentspecs"]
  */
 
 import type { Agentspec } from '../../types';
-import { isAgentspecComponentOptional } from '../../types';
+import { isAgentspecComponentOptional } from '../../types/agentspecs';
 
 """
 

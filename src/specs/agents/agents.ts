@@ -12,7 +12,7 @@
  */
 
 import type { Agentspec } from '../../types';
-import { isAgentspecComponentOptional } from '../../types';
+import { isAgentspecComponentOptional } from '../../types/agentspecs';
 import {
   ALPHAVANTAGE_MCP_SERVER_0_0_1,
   BLUESKY_MCP_SERVER_0_0_1,

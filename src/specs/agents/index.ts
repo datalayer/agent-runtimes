@@ -10,7 +10,7 @@
  */
 
 import type { Agentspec } from '../../types';
-import { isAgentspecComponentOptional } from '../../types';
+import { isAgentspecComponentOptional } from '../../types/agentspecs';
 
 import { AGENTSPECS as ROOT_AGENTS } from './agents';
 
