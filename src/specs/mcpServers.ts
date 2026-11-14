@@ -1203,6 +1203,43 @@ export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
   },
 };
 
+export const SHOPIFY_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'shopify',
+  version: '0.0.1',
+  name: 'Shopify',
+  description:
+    "Products from every Shopify store — search, compare variants and prices, read a product and its seller's checkout link — through Shopify's Global Catalog",
+  icon: '@primer/octicons-react:package',
+  emoji: '🛒',
+  url: 'https://catalog.shopify.com/api/ucp/mcp',
+  args: [],
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+  tags: ['commerce', 'shopping', 'shopify', 'ucp'],
+  documentationUrl: 'https://shopify.dev/docs/agents/catalog/global-catalog',
+  signupUrl: 'https://shopify.dev/docs/agents',
+  apiKeyUrl: 'https://shopify.dev/docs/agents/profiles/auth-and-rate-limiting',
+  setup:
+    "Nothing to set: the runtime reaches Shopify's [Global Catalog](https://shopify.dev/docs/agents/catalog/global-catalog) at https://catalog.shopify.com/api/ucp/mcp anonymously, limited per address. It finds and compares products and returns each seller's checkout link; it buys nothing.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Shopify's hosted Global Catalog, reached at its URL over Streamable HTTP.",
+  },
+  actions: {
+    tools: {
+      search_catalog: 'read',
+      lookup_catalog: 'read',
+      get_product: 'read',
+    },
+    checked: '2026-11-14',
+    note: "Read off the running server's tools/list (universal-ucp-mcp 0.1.0, UCP 2026-08-25): three catalogue reads. Nothing here creates a cart, a checkout or an order.",
+  },
+};
+
 export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
   id: 'slack',
   version: '0.0.1',
@@ -1349,6 +1386,7 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   'odoo-accounting': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   odoo: ODOO_MCP_SERVER_0_0_1,
   salesforce: SALESFORCE_MCP_SERVER_0_0_1,
+  shopify: SHOPIFY_MCP_SERVER_0_0_1,
   slack: SLACK_MCP_SERVER_0_0_1,
   tavily: TAVILY_MCP_SERVER_0_0_1,
   x: X_MCP_SERVER_0_0_1,

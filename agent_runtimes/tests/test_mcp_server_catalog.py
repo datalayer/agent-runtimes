@@ -113,7 +113,8 @@ class TestTheThreeCopiesAgree:
         assert spec.get("command") == server.command
         assert _comparable(spec.get("args") or []) == _comparable(server.args)
         assert spec.get("url", "") == server.url
-        assert spec.get("headers") == server.headers
+        # No headers either way: `headers: {}` (the anonymous `shopify`) is generated as none.
+        assert (spec.get("headers") or None) == server.headers
         assert spec.get("transport", "stdio") == server.transport
         assert bool(spec.get("enabled", True)) is bool(server.enabled)
         assert list(spec.get("envvars") or []) == list(server.required_env_vars or [])
