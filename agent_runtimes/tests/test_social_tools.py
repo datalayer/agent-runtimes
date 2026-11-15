@@ -134,6 +134,12 @@ class FakeIam:
             if what == "post":
                 return httpx.Response(200, json={"success": True, "data": post, "meta": {}, "resources": 1})
             return httpx.Response(200, json={"success": True, "data": [post, {**post, "id": "8"}], "meta": {"result_count": 2, "next_token": "n2"}, "resources": 2})
+        if path == "/api/iam/v1/social/mail":
+            if body["to"] not in ("support", "me"):
+                return httpx.Response(422, json={"detail": "to is support or me"})
+            if getattr(self, "mail_status", 202) != 202:
+                return httpx.Response(self.mail_status, json={"detail": "No more mail today: Datalayer sends at most 10 a day for one person's agents. Try again tomorrow."})
+            return httpx.Response(202, json={"success": True, "to": body["to"]})
         if path in ("/api/iam/v1/social/x/likes", "/api/iam/v1/social/x/reposts"):
             done = "liked" if path.endswith("likes") else "retweeted"
             return httpx.Response(201, json={"success": True, "post_id": body["post_id"], done: True})
@@ -632,3 +638,48 @@ class TestXEverything:
         marketer = get_agent_spec("worker-marketer")
         assert "x" not in [server.id for server in marketer.mcp_servers]
         assert "X_BEARER_TOKEN" not in json.dumps(marketer.model_dump(), default=str)
+
+
+class TestAMail:
+    """15 November 2026: a mail through Datalayer's mailer (IAM's /social/mail), to support or the person alone."""
+
+    def test_to_the_person_and_to_support_through_iam(self, iam):
+        assert asyncio.run(social.send_mail("me", "Your week on X", "Three posts.")) == {"sent": True, "to": "me"}
+        assert asyncio.run(social.send_mail("support", "X budget", "80%")) == {"sent": True, "to": "support"}
+        assert [(c[1], c[2]) for c in iam.calls] == [
+            ("/api/iam/v1/social/mail", {"to": "me", "subject": "Your week on X", "text": "Three posts."}),
+            ("/api/iam/v1/social/mail", {"to": "support", "subject": "X budget", "text": "80%"}),
+        ]
+
+    @pytest.mark.parametrize("to, subject, text, said", [
+        ("bob@example.com", "s", "t", "never to another address"),
+        ("me", "", "t", "a subject and some text"),
+        ("me", "s" * 151, "t", "at most 150"),
+    ])
+    def test_what_it_cannot_send_calls_nothing(self, iam, to, subject, text, said):
+        assert said in asyncio.run(social.send_mail(to, subject, text))
+        assert iam.calls == []
+
+    def test_a_refusal_is_said(self, iam):
+        iam.mail_status = 429
+        assert "No more mail today" in asyncio.run(social.send_mail("me", "s", "t"))
+
+    def test_without_a_social_token_it_sends_nothing(self, iam):
+        social.give_social_token(None)
+        said = asyncio.run(social.send_mail("me", "s", "t"))
+        assert isinstance(said, str) and "social token" in said and iam.calls == []
+
+    def test_the_skill_s_route_mails_the_person_alone(self, iam):
+        from fastapi import HTTPException
+
+        from agent_runtimes.routes.configure import MailToMeRequest, mail_me_endpoint
+
+        assert asyncio.run(mail_me_endpoint(MailToMeRequest(subject="Summary", text="Hi"))) == {"sent": True, "to": "me"}
+        assert iam.calls[-1][2]["to"] == "me"
+        iam.mail_status = 429
+        try:
+            asyncio.run(mail_me_endpoint(MailToMeRequest(subject="Summary", text="Hi")))
+        except HTTPException as refused:
+            assert refused.status_code == 409 and "No more mail today" in refused.detail
+        else:
+            raise AssertionError("refused")

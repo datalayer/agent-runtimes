@@ -41,7 +41,7 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     # No bluesky server (agentspecs 0.0.192) nor x server (0.0.194): Bluesky and X
     # are read and acted on with the linked account.
     assert marketer.optional.mcp_servers == ["discord", "linkedin"]
-    assert marketer.optional.skills == ["crawl", "github"]
+    assert marketer.optional.skills == ["crawl", "github", "datalayer-email"]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
     assert marketer.optional.backend_tools == [
         "social-post-x",

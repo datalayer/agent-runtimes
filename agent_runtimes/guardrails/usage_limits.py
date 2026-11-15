@@ -268,6 +268,13 @@ def _default_person() -> str:
     return resolve_memory_identity().user_id
 
 
+async def _mail_support(subject: str, text: str) -> Any:
+    """A mail to Datalayer's support through IAM's mailer, with the runtime's social token."""
+    from ..tools.social import send_mail  # noqa: PLC0415
+
+    return await send_mail("support", subject, text)
+
+
 def _default_store() -> Any:
     from ..protocol_state.store import protocol_state_store  # noqa: PLC0415
 
@@ -321,6 +328,10 @@ class ApiBudgetCapability(AbstractCapability[Any]):
     store: Any = None
     person: Callable[[], str] | None = None
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(timezone.utc))
+    #: The shares of the platform's month at which support is mailed, once each a month.
+    alert_at: tuple[float, ...] = (0.8, 1.0)
+    #: How support is mailed: ``(subject, text)``, answering a sentence when it was not sent.
+    alert: Callable[[str, str], Any] | None = None
 
     def __post_init__(self) -> None:
         self._prices = {unit: _micros(price) for unit, price in self.prices.items()}
@@ -443,6 +454,12 @@ class ApiBudgetCapability(AbstractCapability[Any]):
         spent = await self.spent(person, now)
         for scope, cap in self._caps().items():
             if cap is not None and spent[scope] + cost > cap:
+                if scope == "platform_month":
+                    # The platform's total never passes its cap — the call that
+                    # would is refused — so support is told at the first refusal.
+                    key = budget_keys(self.budget_id, person, now)["platform_month"]
+                    platform = await self._store().get(API_BUDGET_KIND, key) or {}
+                    await self._alert_support(platform, now, at_cap=True)
                 return self.refusal(scope, cap, now)
         return None
 
@@ -491,7 +508,128 @@ class ApiBudgetCapability(AbstractCapability[Any]):
                 periods["month"],
                 periods["month_resets_at"].isoformat(),
             )
+        await self._alert_support(records["platform_month"], now)
         return records
+
+    async def top_spenders(self, month: str, most: int = 5) -> list[dict[str, Any]]:
+        """The people who spent most of a month, by uid: their spend and calls, never what they did."""
+        rows = await self._store().list(
+            API_BUDGET_KIND, prefix=f"{self.budget_id}:person:"
+        )
+        months = [
+            row
+            for row in rows
+            if row.get("scope") == "person_month" and row.get("period") == month
+        ]
+        months.sort(key=lambda row: int(row.get("micros") or 0), reverse=True)
+        return [
+            {
+                "person": str(row.get("person") or ""),
+                "micros": int(row.get("micros") or 0),
+                "calls": int(row.get("calls") or 0),
+            }
+            for row in months[:most]
+        ]
+
+    def alert_words(
+        self,
+        share: float,
+        platform: dict[str, Any],
+        top: list[dict[str, Any]],
+        now: datetime,
+    ) -> tuple[str, str]:
+        """The mail support is sent at a share of the platform's month: its subject and its text."""
+        periods = budget_periods(now)
+        month = periods["month"]
+        cap = int(self._caps()["platform_month"] or 0)
+        total = int(platform.get("micros") or 0)
+        spent = f"{_money(total, self.currency)} of {_money(cap, self.currency)}"
+        if share >= 1:
+            subject = f"{self.provider} budget for {month} used up ({spent})"
+            lead = (
+                f"Datalayer's {self.provider} budget for {month} is used up: {spent}, and the next "
+                f"call would pass it. Every "
+                f"{self.provider} call of every agent is refused until {_resets(periods['month_resets_at'])}."
+            )
+        else:
+            subject = f"{self.provider} budget for {month} at {int(round(share * 100))}% ({spent})"
+            lead = (
+                f"Datalayer's {self.provider} budget for {month} has reached {int(round(share * 100))}%: "
+                f"{spent}. At the cap every {self.provider} call is refused until "
+                f"{_resets(periods['month_resets_at'])}."
+            )
+        lines = [
+            lead,
+            f"Month: {month}\nTotal: {_money(total, self.currency)}\nCap: {_money(cap, self.currency)}\n"
+            f"Calls: {int(platform.get('calls') or 0)}\nResources: {int(platform.get('resources') or 0)}",
+            "Top spenders this month, by person:\n"
+            + (
+                "\n".join(
+                    f"{row['person']}: {_money(row['micros'], self.currency)} in {row['calls']} calls"
+                    for row in top
+                )
+                or "none recorded"
+            ),
+            f"The budget is the agents' {self.budget_id} guardrail; the month's spend, per person, "
+            "is on /admin/usage/platform (X spend).",
+        ]
+        return subject, "\n\n".join(lines)
+
+    async def _alert_support(
+        self, platform: dict[str, Any], now: datetime, at_cap: bool = False
+    ) -> None:
+        """Mail support once a month at each share of the platform's budget it has reached.
+
+        The mark is a counter of the same store: the first runtime to add to
+        it mails, every other finds it at more than one and does not. A mail
+        that was not sent takes its mark back, so the next call tries again.
+        """
+        cap = self._caps()["platform_month"]
+        if not cap:
+            return
+        total = int(platform.get("micros") or 0)
+        month = budget_periods(now)["month"]
+        store = self._store()
+        for share in sorted(self.alert_at):
+            if total < share * cap and not (at_cap and share >= 1):
+                continue
+            key = f"{self.budget_id}:platform:alert:{month}:{int(round(share * 100))}"
+            try:
+                mark = await store.increment(
+                    API_BUDGET_KIND,
+                    key,
+                    {"sent": 1},
+                    {
+                        "budget": self.budget_id,
+                        "scope": "platform_alert",
+                        "period": month,
+                    },
+                )
+            except Exception as error:  # noqa: BLE001 - the call is counted; the alert waits for the next one
+                logger.warning(
+                    "%s: an alert could not be marked (%s)",
+                    self.budget_id,
+                    type(error).__name__,
+                )
+                return
+            if int(mark.get("sent") or 0) != 1:
+                continue
+            try:
+                subject, text = self.alert_words(
+                    share, platform, await self.top_spenders(month), now
+                )
+                answer = await (self.alert or _mail_support)(subject, text)
+                failed = isinstance(answer, str)
+            except Exception as error:  # noqa: BLE001 - taken back below, tried again
+                failed = True
+                answer = type(error).__name__
+            if failed:
+                logger.warning(
+                    "%s: support was not mailed at %s: %s", self.budget_id, key, answer
+                )
+                await store.increment(API_BUDGET_KIND, key, {"sent": -1})
+            else:
+                logger.info("%s: support mailed at %s", self.budget_id, key)
 
     # -- the hook ----------------------------------------------------------------
 

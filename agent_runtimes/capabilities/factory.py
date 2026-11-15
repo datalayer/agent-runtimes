@@ -236,6 +236,12 @@ def build_capabilities_from_agent_spec(
                     platform_monthly=_parse_money(budgets.get("platform_monthly")),
                     results=dict(api_budget.get("results") or {}),
                     counted_by=str(api_budget.get("counted_by") or "resources"),
+                    alert_at=tuple(
+                        float(share)
+                        for share in (
+                            (api_budget.get("alerts") or {}).get("at") or (0.8, 1.0)
+                        )
+                    ),
                 )
             )
 

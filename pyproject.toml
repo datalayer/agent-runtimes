@@ -67,7 +67,8 @@ dependencies = [
     # `datalayer_skills.skills.<name>`; the memory skills since 0.2.0. Each skill's own
     # dependencies are the extras `datalayer-skills[skills-<name>]`, installed where the
     # skills' scripts run (docker/Dockerfile.agent-runtime installs `[skills]`).
-    "datalayer-skills>=0.5.0",  # the Voyager's travel skills (travel-planning, fare-and-stay-comparison, dining)
+    # 1.6.65 with datalayer-skills 0.6.0: the email skill (datalayer-email), through IAM's /social/mail.
+    "datalayer-skills>=0.6.0",  # the Voyager's travel skills (travel-planning, fare-and-stay-comparison, dining)
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
     # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
@@ -111,7 +112,8 @@ dependencies = [
     # 1.6.55 with agentspecs 0.0.191: the linkedin server back in the Marketer, on a browser session.
     # 1.6.56 with agentspecs 0.0.193: Bluesky, everything through the linked account (datalayer-social).
     # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
-    "agentspecs>=0.0.198",  # UI placements; the six seed agents' chrome and A2UI UI
+    # 1.6.65 with agentspecs 0.0.199: datalayer-email, the Marketer's alerts.at.
+    "agentspecs>=0.0.199",  # UI placements; the six seed agents' chrome and A2UI UI
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

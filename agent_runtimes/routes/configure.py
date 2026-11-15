@@ -415,6 +415,31 @@ async def give_social_token_endpoint(
     }
 
 
+class MailToMeRequest(BaseModel):
+    """A mail to the person this runtime runs for (the email skill, 15 November 2026)."""
+
+    subject: str
+    text: str
+
+
+@router.post("/mail")
+async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
+    """Send one mail to the person this runtime runs for, through Datalayer's mailer.
+
+    The datalayer-skills `email` skill calls it from the sandbox: the runtime
+    sends it with its social token through IAM's ``/social/mail``, to the
+    person alone (never another address), a few a day; no mail credential is in
+    the runtime or the sandbox. A runtime given no social token (a visitor's, a
+    deployment's) sends none.
+    """
+    from agent_runtimes.tools.social import send_mail
+
+    sent = await send_mail("me", body.subject, body.text)
+    if isinstance(sent, str):
+        raise HTTPException(status_code=409, detail=sent)
+    return sent
+
+
 class AgentCoreWorkloadRequest(BaseModel):
     """The workload token a pod is given for AgentCore Identity, as the companion gives it."""
 

@@ -26,7 +26,7 @@ describe('an agent’s optional servers and skills', () => {
       // bluesky server: the linked account reads and acts (agentspecs 0.0.192);
       // no x server either (agentspecs 0.0.194).
       mcpServers: ['discord', 'linkedin'],
-      skills: ['crawl', 'github'],
+      skills: ['crawl', 'github', 'datalayer-email'],
       // Set up by an X, Bluesky or LinkedIn account linked in Settings
       // (agentspecs 0.0.189, LinkedIn 0.0.190).
       backendTools: [

@@ -90,6 +90,7 @@ __all__ = [
     "like_on_x",
     "repost_on_x",
     "x_post_id",
+    "send_mail",
     "refresh_linked_accounts",
     "reply_on_bluesky",
     "repost_on_bluesky",
@@ -1270,3 +1271,37 @@ async def repost_on_x(post: str) -> Any:
         ``{"post_id", "retweeted"}``, or a sentence saying why nothing was reposted.
     """
     return await _x_interact("reposts", post, "reposted")
+
+
+# -- A mail through Datalayer's mailer (15 November 2026) ---------------------------
+
+#: Whom a runtime mails: Datalayer's support, or the person it runs for. Never an address.
+MAIL_RECIPIENTS = ("support", "me")
+
+
+async def send_mail(to: str, subject: str, text: str) -> Dict[str, Any] | str:
+    """Send one mail through Datalayer's mailer (IAM's ``/social/mail``), with the social token.
+
+    ``to`` is ``support`` (Datalayer's support address) or ``me`` (the person
+    this runtime runs for); IAM refuses any other, and sends a few a day per
+    person. No mail credential is in the runtime.
+
+    Returns:
+        ``{"sent": True, "to": …}``, or a sentence saying why it was not sent.
+    """
+    if to not in MAIL_RECIPIENTS:
+        return "A mail goes to Datalayer's support or to you, never to another address."
+    subject = " ".join(str(subject or "").split())
+    text = str(text or "").strip()
+    if not subject or not text:
+        return "A mail needs a subject and some text."
+    if len(subject) > 150:
+        return "A mail's subject is at most 150 characters."
+    if len(text) > 20000:
+        return "A mail's text is at most 20 000 characters."
+    answer = await _iam("POST", "/api/iam/v1/social/mail", json={"to": to, "subject": subject, "text": text})
+    if isinstance(answer, str):
+        return answer.replace("nothing was posted", "nothing was sent").replace("it posts nowhere", "it sends no mail")
+    if answer.status_code != 202:
+        return f"The mail was not sent ({answer.status_code}): {_said(answer)}"
+    return {"sent": True, "to": to}

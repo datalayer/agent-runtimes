@@ -14,7 +14,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import InstallSpec, SkillSpec
 
-
 # ============================================================================
 # Skill Definitions
 # ============================================================================
@@ -67,6 +66,29 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["web", "crawl", "scraping"],
     icon="@primer/octicons-react:globe",
     emoji="🌐",
+    enabled=True,
+)
+
+DATALAYER_EMAIL_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="datalayer-email",
+    version="0.0.1",
+    name="Email Skill",
+    description="Send the person whose agent this is one email — a summary, a report, a draft they asked for — through Datalayer's mailer, to them alone, a few a day",
+    module="datalayer_skills.skills.email",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["datalayer-skills>=0.6.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills>=0.6.0"',
+        note="Standard library only; the runtime sends the mail (agent-runtimes 1.6.65, IAM 1.1.124).",
+    ),
+    tags=["email", "mail", "datalayer"],
+    icon="@primer/octicons-react:mail",
+    emoji="✉️",
     enabled=True,
 )
 
@@ -313,6 +335,7 @@ VIDEO_SKILL_SPEC_0_0_1 = SkillSpec(
 SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "accounting": ACCOUNTING_SKILL_SPEC_0_0_1,
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
+    "datalayer-email": DATALAYER_EMAIL_SKILL_SPEC_0_0_1,
     "dining": DINING_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "fare-and-stay-comparison": FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1,

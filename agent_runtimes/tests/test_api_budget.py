@@ -701,3 +701,176 @@ class TestADeferredCall:
         assert approver.asked == []
         assert posted == []
         assert "X budget for today is used up" in str(result.all_messages())
+
+
+class Mailbox:
+    """Support's mailbox, as the guardrail mails it: each (subject, text), or a refusal to answer."""
+
+    def __init__(self, refuse: str | None = None) -> None:
+        self.sent: list[tuple[str, str]] = []
+        self.refuse = refuse
+
+    async def __call__(self, subject: str, text: str) -> Any:
+        if self.refuse:
+            return self.refuse
+        self.sent.append((subject, text))
+        return {"sent": True, "to": "support"}
+
+
+def alerting(
+    store: Any, clock: Clock, mailbox: Mailbox, person: str = ANA, platform: float = 1.0
+) -> ApiBudgetCapability:
+    """The Marketer's guardrail with a USD 1 platform month, generous people, mailing support to `mailbox`."""
+    budget = guardrail(
+        store, clock, person, daily=100.0, monthly=100.0, platform=platform
+    )
+    budget.alert = mailbox
+    return budget
+
+
+class TestSupportIsMailed:
+    """15 November 2026: support is told once a month at 80% of the platform's X budget, and once at the cap."""
+
+    @pytest.mark.asyncio
+    async def test_nothing_below_80_percent(self, store: Any) -> None:
+        mailbox = Mailbox()
+        budget = alerting(store, Clock(NOON), mailbox)
+        for _ in range(3):  # USD 0.60 of USD 1.00
+            await call(
+                budget, "post_to_x", {"text": "https://a.b"}, Tool({"post_id": "1"})
+            )
+        assert mailbox.sent == []
+
+    @pytest.mark.asyncio
+    async def test_once_at_80_percent_once_at_the_cap_never_again_that_month(
+        self, store: Any
+    ) -> None:
+        mailbox = Mailbox()
+        clock = Clock(NOON)
+        ana = alerting(store, clock, mailbox, ANA)
+        ben = alerting(store, clock, mailbox, BEN)
+        tool = Tool({"post_id": "1"})
+        for _ in range(4):  # USD 0.80: 80%
+            await call(ana, "post_to_x", {"text": "https://a.b"}, tool)
+        assert [subject for subject, _ in mailbox.sent] == [
+            "X budget for 2026-11 at 80% (USD 0.80 of USD 1.00)"
+        ]
+        await call(
+            ben, "post_to_x", {"text": "Hi"}, tool
+        )  # 81.5%: no second mail at 80%
+        assert len(mailbox.sent) == 1
+        # USD 0.815 + 0.20 would pass the cap: refused, and support told once, at that first refusal.
+        assert (await call(ben, "post_to_x", {"text": "https://a.b"}, tool)).startswith(
+            "Datalayer's X budget for this month is used up"
+        )
+        assert [subject for subject, _ in mailbox.sent][
+            1
+        ] == "X budget for 2026-11 used up (USD 0.815 of USD 1.00)"
+        assert "the next call would pass it" in mailbox.sent[1][1]
+        # Refused for everyone from now on, and nobody is mailed again this month, by any runtime.
+        assert (await call(ana, "post_to_x", {"text": "https://c.d"}, tool)).startswith(
+            "Datalayer's X budget for this month is used up"
+        )
+        assert len(mailbox.sent) == 2
+        again = alerting(store, clock, mailbox, ANA)
+        await again._alert_support(
+            await store.get(API_BUDGET_KIND, "x-api-budget:platform:month:2026-11"),
+            clock.moment,
+        )
+        assert len(mailbox.sent) == 2
+
+    @pytest.mark.asyncio
+    async def test_the_mail_names_the_month_the_total_the_cap_and_the_top_spenders_never_content(
+        self, store: Any
+    ) -> None:
+        mailbox = Mailbox()
+        clock = Clock(NOON)
+        tool = Tool({"post_id": "1"})
+        await call(
+            alerting(store, clock, mailbox, BEN),
+            "post_to_x",
+            {"text": "a private draft"},
+            tool,
+        )
+        for _ in range(4):
+            await call(
+                alerting(store, clock, mailbox, ANA),
+                "post_to_x",
+                {"text": "my secret launch https://a.b"},
+                tool,
+            )
+        ((subject, text),) = mailbox.sent
+        assert "Month: 2026-11\nTotal: USD 0.815\nCap: USD 1.00" in text
+        assert f"{ANA}: USD 0.80 in 4 calls\n{BEN}: USD 0.015 in 1 calls" in text
+        assert "refused until 00:00 UTC on 2026-12-01" in text
+        assert "secret" not in text and "draft" not in text and "secret" not in subject
+
+    @pytest.mark.asyncio
+    async def test_a_fresh_month_starts_again(self, store: Any) -> None:
+        mailbox = Mailbox()
+        clock = Clock(datetime(2026, 11, 30, 23, 0, tzinfo=timezone.utc))
+        budget = alerting(store, clock, mailbox)
+        tool = Tool({"post_id": "1"})
+        for _ in range(4):
+            await call(budget, "post_to_x", {"text": "https://a.b"}, tool)
+        clock.moment = datetime(2026, 12, 1, 0, 0, tzinfo=timezone.utc)
+        for _ in range(3):
+            await call(budget, "post_to_x", {"text": "https://a.b"}, tool)
+        assert len(mailbox.sent) == 1
+        await call(budget, "post_to_x", {"text": "https://a.b"}, tool)
+        assert [subject for subject, _ in mailbox.sent] == [
+            "X budget for 2026-11 at 80% (USD 0.80 of USD 1.00)",
+            "X budget for 2026-12 at 80% (USD 0.80 of USD 1.00)",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_mail_that_was_not_sent_is_tried_again(self, store: Any) -> None:
+        refusing = Mailbox(
+            refuse="The mail was not sent (502): Datalayer's mailer could not send it just now."
+        )
+        clock = Clock(NOON)
+        budget = alerting(store, clock, refusing)
+        tool = Tool({"post_id": "1"})
+        for _ in range(4):
+            await call(budget, "post_to_x", {"text": "https://a.b"}, tool)
+        mailbox = Mailbox()
+        budget.alert = mailbox
+        await call(budget, "post_to_x", {"text": "Hi"}, tool)
+        assert len(mailbox.sent) == 1 and "at 80%" in mailbox.sent[0][0]
+
+    @pytest.mark.asyncio
+    async def test_two_runtimes_crossing_at_once_mail_once(self, store: Any) -> None:
+        mailbox = Mailbox()
+        clock = Clock(NOON)
+        budgets = [alerting(store, clock, mailbox, person) for person in (ANA, BEN) * 3]
+        # USD 0.60 first, then six USD 0.20 posts at once: 80% is crossed, then the cap refuses.
+        for _ in range(3):
+            await call(
+                budgets[0], "post_to_x", {"text": "https://a.b"}, Tool({"post_id": "1"})
+            )
+        await asyncio.gather(
+            *(
+                call(b, "post_to_x", {"text": "https://a.b"}, Tool({"post_id": "1"}))
+                for b in budgets
+            )
+        )
+        await asyncio.gather(
+            *(
+                call(b, "post_to_x", {"text": "https://a.b"}, Tool({"post_id": "1"}))
+                for b in budgets
+            )
+        )
+        subjects = [subject for subject, _ in mailbox.sent]
+        assert (
+            len(subjects) == 2 and "at 80%" in subjects[0] and "used up" in subjects[1]
+        )
+
+    def test_the_spec_says_when(self) -> None:
+        built = [
+            c
+            for c in build_capabilities_from_agent_spec(
+                MARKETER, agent_id="worker-marketer"
+            )
+            if isinstance(c, ApiBudgetCapability)
+        ]
+        assert built[0].alert_at == (0.8, 1.0)
