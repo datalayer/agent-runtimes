@@ -65,6 +65,30 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   enabled: true,
 };
 
+export const DINING_SKILL_SPEC_0_0_1: SkillSpec = {
+  id: 'dining',
+  version: '0.0.1',
+  name: 'Dining Skill',
+  description:
+    "Restaurants, sights, activities and stops along a route that fit the travellers' tastes, diet and budget, placed in the trip's days with their travel times and map links",
+  module: 'datalayer_skills.skills.dining',
+  package: undefined,
+  method: undefined,
+  path: undefined,
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['datalayer-skills>=0.5.0'],
+  install: {
+    type: 'python',
+    command: 'pip install "datalayer-skills>=0.5.0"',
+    note: 'Instructions alone: no dependencies of its own.',
+  },
+  tags: ['travel', 'dining', 'restaurants', 'activities'],
+  icon: '@primer/octicons-react:flame',
+  emoji: '🍽️',
+  enabled: true,
+};
+
 export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'events',
   version: '0.0.1',
@@ -85,6 +109,30 @@ export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['events', 'orchestration', 'automation'],
   icon: '@primer/octicons-react:calendar',
   emoji: '📅',
+  enabled: true,
+};
+
+export const FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1: SkillSpec = {
+  id: 'fare-and-stay-comparison',
+  version: '0.0.1',
+  name: 'Fare and Stay Comparison Skill',
+  description:
+    'Compare flights by route, fare, baggage, connections and travel time, and stays by location, price, amenities and cancellation terms, with one recommendation and the booking links',
+  module: 'datalayer_skills.skills.fare_and_stay_comparison',
+  package: undefined,
+  method: undefined,
+  path: undefined,
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['datalayer-skills>=0.5.0'],
+  install: {
+    type: 'python',
+    command: 'pip install "datalayer-skills>=0.5.0"',
+    note: 'Instructions alone: no dependencies of its own.',
+  },
+  tags: ['travel', 'flights', 'accommodation', 'comparison'],
+  icon: '@primer/octicons-react:arrow-switch',
+  emoji: '⚖️',
   enabled: true,
 };
 
@@ -207,6 +255,30 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
   enabled: true,
 };
 
+export const TRAVEL_PLANNING_SKILL_SPEC_0_0_1: SkillSpec = {
+  id: 'travel-planning',
+  version: '0.0.1',
+  name: 'Travel Planning Skill',
+  description:
+    'Plan a trip end to end — dates, destinations, travellers, preferences and budget first, then three trip options, each with its transport, stay, daily schedule, travel times, a map link, a budget with its total and the booking links',
+  module: 'datalayer_skills.skills.travel_planning',
+  package: undefined,
+  method: undefined,
+  path: undefined,
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['datalayer-skills>=0.5.0'],
+  install: {
+    type: 'python',
+    command: 'pip install "datalayer-skills>=0.5.0"',
+    note: 'Instructions alone: no dependencies of its own.',
+  },
+  tags: ['travel', 'planning', 'itinerary', 'budget'],
+  icon: '@primer/octicons-react:milestone',
+  emoji: '🧭',
+  enabled: true,
+};
+
 export const VIDEO_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'video',
   version: '0.0.1',
@@ -239,12 +311,15 @@ export const VIDEO_SKILL_SPEC_0_0_1: SkillSpec = {
 export const SKILLS_CATALOG: Record<string, SkillSpec> = {
   accounting: ACCOUNTING_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
+  dining: DINING_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
+  'fare-and-stay-comparison': FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,
   image: IMAGE_SKILL_SPEC_0_0_1,
   jokes: JOKES_SKILL_SPEC_0_0_1,
   pdf: PDF_SKILL_SPEC_0_0_1,
   'text-summarizer': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+  'travel-planning': TRAVEL_PLANNING_SKILL_SPEC_0_0_1,
   video: VIDEO_SKILL_SPEC_0_0_1,
 };
 

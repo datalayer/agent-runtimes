@@ -98,6 +98,9 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
             "signs": {},
         }
     ),
+    "booking-com": ServerActionsSpec.model_validate(
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
+    ),
     "chart": ServerActionsSpec.model_validate(
         {
             "checked": "2026-10-02",
@@ -447,6 +450,22 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     "github": ServerActionsSpec.model_validate(
         {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
+    "google-maps": ServerActionsSpec.model_validate(
+        {
+            "checked": "2026-11-15",
+            "default": [],
+            "tools": {
+                "search_places": ["read"],
+                "search_along_route": ["read"],
+                "compute_routes": ["read"],
+                "lookup_weather": ["read"],
+                "resolve_names": ["read"],
+                "resolve_maps_urls": ["read"],
+            },
+            "conditions": {},
+            "signs": {},
+        }
+    ),
     "google-workspace": ServerActionsSpec.model_validate(
         {
             "checked": "2026-10-02",
@@ -663,6 +682,15 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     ),
     "kaggle": ServerActionsSpec.model_validate(
         {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
+    ),
+    "kiwi": ServerActionsSpec.model_validate(
+        {
+            "checked": "2026-11-15",
+            "default": [],
+            "tools": {"search-flight": ["read"], "feedback-to-devs": ["send"]},
+            "conditions": {},
+            "signs": {},
+        }
     ),
     "linkedin": ServerActionsSpec.model_validate(
         {
@@ -1016,6 +1044,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "demo-marketer": {},
     "demo-shopper": {},
     "demo-terra": {},
+    "demo-voyager": {},
     "disaster-assessment": {
         "earthdata.download_earth_data_granules": "leave_to_me",
         "earthdata.search_earth_datagranules": "do_it",
@@ -1351,6 +1380,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "demo-marketer": {},
     "demo-shopper": {},
     "demo-terra": {},
+    "demo-voyager": {},
     "disaster-assessment": {},
     "errand-runner": {},
     "event-response": {},

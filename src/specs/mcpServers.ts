@@ -148,6 +148,45 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
   },
 };
 
+export const BOOKING_COM_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'booking-com',
+  version: '0.0.1',
+  name: 'Booking.com',
+  description:
+    'Stays from Booking.com — hotels and apartments compared by location, price, amenities and cancellation terms — for Booking.com partners, with their affiliate id and Demand API key',
+  icon: '@primer/octicons-react:home',
+  emoji: '🏨',
+  url: 'https://demandapi-mcp.booking.com/v1/sp/mcp/',
+  args: [],
+  headers: {
+    'x-booking-affiliate-id': '${BOOKING_AFFILIATE_ID}',
+    'x-booking-authorization': '${BOOKING_DEMAND_API_KEY}',
+  },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [
+    'BOOKING_AFFILIATE_ID:0.0.1',
+    'BOOKING_DEMAND_API_KEY:0.0.1',
+  ],
+  tags: ['travel', 'accommodation', 'hotels', 'booking'],
+  documentationUrl: 'https://developers.booking.com/mcp-server/docs/about',
+  signupUrl: 'https://www.booking.com/affiliate-program/v2/index.html',
+  apiKeyUrl: 'https://developers.booking.com/mcp-server/docs/get-started',
+  setup:
+    "For Booking.com partners only: once your partner onboarding is done, Booking.com issues an affiliate id and a Demand API key. Paste them into `BOOKING_AFFILIATE_ID` and `BOOKING_DEMAND_API_KEY`; the runtime reaches [Booking.com's MCP server](https://developers.booking.com/mcp-server/docs/get-started) with them. Your Account Manager says which tools your account has. Without partner access, leave it: the Voyager finds stays with Google Maps instead.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Booking.com's hosted MCP server, reached at its URL with your affiliate id and Demand API key.",
+  },
+  actions: {
+    tools: {},
+    note: "Not read off the running server: listing its tools needs partner access, which Datalayer does not hold. Booking.com's documentation names one tool, accommodations_search, a search. A tool not classed here is unknown, and unknown is the most restricted: run it with partner credentials, list its tools, and class each one here.",
+  },
+};
+
 export const CHART_MCP_SERVER_0_0_1: MCPServer = {
   id: 'chart',
   version: '0.0.1',
@@ -693,6 +732,47 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   },
 };
 
+export const GOOGLE_MAPS_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'google-maps',
+  version: '0.0.1',
+  name: 'Google Maps',
+  description:
+    "Google Maps — places, restaurants and sights, routes with their travel times, stops along a route and the weather — through Google's Maps Experience agent tools",
+  icon: '@primer/octicons-react:location',
+  emoji: '🗺️',
+  url: 'https://mapstools.googleapis.com/mcp',
+  args: [],
+  headers: { 'X-Goog-Api-Key': '${GOOGLE_MAPS_API_KEY}' },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['GOOGLE_MAPS_API_KEY:0.0.1'],
+  tags: ['travel', 'maps', 'places', 'routes', 'weather', 'google'],
+  documentationUrl: 'https://developers.google.com/maps/ai/grounding-lite',
+  signupUrl: 'https://console.cloud.google.com/google/maps-apis/start',
+  apiKeyUrl: 'https://console.cloud.google.com/google/maps-apis/credentials',
+  setup:
+    'In a Google Cloud project with billing on, enable the **Maps Experience agent tools API** (`mapstools.googleapis.com`), create an API key restricted to it in [Keys & Credentials](https://console.cloud.google.com/google/maps-apis/credentials) and paste it into `GOOGLE_MAPS_API_KEY`. Google bills your project: 10,000 requests a month are free, then USD 7 per 1,000 ([pricing](https://developers.google.com/maps/ai/grounding-lite)).',
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Google's hosted Maps Experience agent tools, reached at their URL with your GOOGLE_MAPS_API_KEY.",
+  },
+  actions: {
+    tools: {
+      search_places: 'read',
+      search_along_route: 'read',
+      compute_routes: 'read',
+      lookup_weather: 'read',
+      resolve_names: 'read',
+      resolve_maps_urls: 'read',
+    },
+    checked: '2026-11-15',
+    note: "Read off the running server's tools/list: six reads of Google Maps — places, places along a route, routes, weather, and names or Maps links resolved to place ids. Nothing here changes anything.",
+  },
+};
+
 export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
   id: 'google-workspace',
   version: '0.0.1',
@@ -942,6 +1022,39 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
+  },
+};
+
+export const KIWI_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'kiwi',
+  version: '0.0.1',
+  name: 'Kiwi.com',
+  description:
+    'Flights from Kiwi.com — routes, fares, baggage and connections compared for your dates and travellers, each with its booking link at Kiwi.com',
+  icon: '@primer/octicons-react:paper-airplane',
+  emoji: '✈️',
+  url: 'https://mcp.kiwi.com',
+  args: [],
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+  tags: ['travel', 'flights', 'kiwi'],
+  documentationUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  signupUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  apiKeyUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  setup:
+    "Nothing to set: the runtime reaches [Kiwi.com's flight search](https://www.kiwi.com/ag/pages/mcp/) at https://mcp.kiwi.com anonymously. It searches and compares flights and returns each one's booking link at Kiwi.com, where you book and pay; it books nothing.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Kiwi.com's hosted flight search, reached at its URL over Streamable HTTP.",
+  },
+  actions: {
+    tools: { 'search-flight': 'read', 'feedback-to-devs': 'send' },
+    checked: '2026-11-15',
+    note: "Read off the running server's tools/list (kiwicom-flight-search): one search that reads fares and returns booking links, and a feedback form that sends a text to Kiwi.com's developers. Nothing here books or pays.",
   },
 };
 
@@ -1372,6 +1485,7 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   'agentcore-gateway-example': AGENTCORE_GATEWAY_EXAMPLE_MCP_SERVER_0_0_1,
   alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
   bluesky: BLUESKY_MCP_SERVER_0_0_1,
+  'booking-com': BOOKING_COM_MCP_SERVER_0_0_1,
   chart: CHART_MCP_SERVER_0_0_1,
   datalayer: DATALAYER_MCP_SERVER_0_0_1,
   discord: DISCORD_MCP_SERVER_0_0_1,
@@ -1379,9 +1493,11 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   eurus: EURUS_MCP_SERVER_0_0_1,
   filesystem: FILESYSTEM_MCP_SERVER_0_0_1,
   github: GITHUB_MCP_SERVER_0_0_1,
+  'google-maps': GOOGLE_MAPS_MCP_SERVER_0_0_1,
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
   huggingface: HUGGINGFACE_MCP_SERVER_0_0_1,
   kaggle: KAGGLE_MCP_SERVER_0_0_1,
+  kiwi: KIWI_MCP_SERVER_0_0_1,
   linkedin: LINKEDIN_MCP_SERVER_0_0_1,
   'odoo-accounting': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   odoo: ODOO_MCP_SERVER_0_0_1,

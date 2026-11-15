@@ -869,19 +869,21 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
 def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
     local one offer the agents the catalogue enables and lists, the home page's
-    five; example-simple, enabled and not listed, stays the neutral default."""
+    six (the Voyager since 15 November 2026); example-simple, enabled and not
+    listed, stays the neutral default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 
-    five = [
+    six = [
         "worker-accountant",
         "worker-marketer",
         "worker-shopper",
         "worker-steward-aws",
         "worker-terra",
+        "worker-voyager",
     ]
-    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == five
-    assert cli.offered_agentspec_ids() == five
+    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == six
+    assert cli.offered_agentspec_ids() == six
     simple = get_agent_spec("example-simple")
     assert simple is not None and simple.enabled and not simple.listed
     assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"

@@ -72,6 +72,28 @@ BLUESKY_SERVICE_URL_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔗",
 )
 
+BOOKING_AFFILIATE_ID_SPEC_0_0_1 = EnvvarSpec(
+    id="BOOKING_AFFILIATE_ID",
+    version="0.0.1",
+    name="Booking.com Affiliate ID",
+    description="The digit-only affiliate id of a Booking.com partner account, issued at partner onboarding. Sent as x-booking-affiliate-id to Booking.com's MCP server at https://demandapi-mcp.booking.com/v1/sp/mcp/, with the Demand API key.",
+    registrationUrl="https://www.booking.com/affiliate-program/v2/index.html",
+    tags=["authentication", "booking", "travel", "partner"],
+    icon="key",
+    emoji="🔑",
+)
+
+BOOKING_DEMAND_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="BOOKING_DEMAND_API_KEY",
+    version="0.0.1",
+    name="Booking.com Demand API Key",
+    description="The Demand API key Booking.com issues to a partner at onboarding. Sent unchanged, with no Bearer prefix, as x-booking-authorization to Booking.com's MCP server at https://demandapi-mcp.booking.com/v1/sp/mcp/, with the affiliate id; the tools it answers are those enabled for the partner's account.",
+    registrationUrl="https://developers.booking.com/mcp-server/docs/get-started",
+    tags=["authentication", "api-key", "booking", "travel", "partner"],
+    icon="key",
+    emoji="🔑",
+)
+
 DISCORD_BOT_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="DISCORD_BOT_TOKEN",
     version="0.0.1",
@@ -134,6 +156,17 @@ GITHUB_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     description="GitHub API token for repository management and code operations. Required for GitHub MCP server and GitHub skill to interact with GitHub repositories programmatically.",
     registrationUrl="https://github.com/settings/tokens",
     tags=["authentication", "token", "github", "git", "mcp-server", "skill"],
+    icon="key",
+    emoji="🔑",
+)
+
+GOOGLE_MAPS_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="GOOGLE_MAPS_API_KEY",
+    version="0.0.1",
+    name="Google Maps Platform API Key",
+    description="A Google Maps Platform API key from a Google Cloud project with billing on and the Maps Experience agent tools API (mapstools.googleapis.com) enabled, restricted to that API. Sent as X-Goog-Api-Key to Google's Maps MCP server at https://mapstools.googleapis.com/mcp for places, routes and weather; Google bills the key's project.",
+    registrationUrl="https://console.cloud.google.com/google/maps-apis/credentials",
+    tags=["authentication", "api-key", "google", "maps", "travel"],
     icon="key",
     emoji="🔑",
 )
@@ -287,12 +320,15 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "BLUESKY_APP_PASSWORD": BLUESKY_APP_PASSWORD_SPEC_0_0_1,
     "BLUESKY_IDENTIFIER": BLUESKY_IDENTIFIER_SPEC_0_0_1,
     "BLUESKY_SERVICE_URL": BLUESKY_SERVICE_URL_SPEC_0_0_1,
+    "BOOKING_AFFILIATE_ID": BOOKING_AFFILIATE_ID_SPEC_0_0_1,
+    "BOOKING_DEMAND_API_KEY": BOOKING_DEMAND_API_KEY_SPEC_0_0_1,
     "DISCORD_BOT_TOKEN": DISCORD_BOT_TOKEN_SPEC_0_0_1,
     "DISCORD_GUILD_ID": DISCORD_GUILD_ID_SPEC_0_0_1,
     "EARTHDATA_PASSWORD": EARTHDATA_PASSWORD_SPEC_0_0_1,
     "EARTHDATA_USERNAME": EARTHDATA_USERNAME_SPEC_0_0_1,
     "GEMINI_API_KEY": GEMINI_API_KEY_SPEC_0_0_1,
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC_0_0_1,
+    "GOOGLE_MAPS_API_KEY": GOOGLE_MAPS_API_KEY_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
     "HF_TOKEN": HF_TOKEN_SPEC_0_0_1,

@@ -296,8 +296,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"export const {const_name}: SkillSpec = {{",
             f"  id: '{skill_id}',",
             f"  version: '{version}',",
-            f"  name: '{spec['name']}',",
-            f"  description: '{spec['description']}',",
+            # Quoted as JSON: a description may hold an apostrophe ("the trip's days").
+            f"  name: {json.dumps(spec['name'], ensure_ascii=False)},",
+            f"  description: {json.dumps(spec['description'], ensure_ascii=False)},",
             f"  module: {module_ts},",
             f"  package: {package_ts},",
             f"  method: {method_ts},",

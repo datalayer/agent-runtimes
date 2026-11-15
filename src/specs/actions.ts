@@ -117,6 +117,12 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
     conditions: {},
     signs: {},
   },
+  'booking-com': {
+    default: [],
+    tools: {},
+    conditions: {},
+    signs: {},
+  },
   chart: {
     checked: '2026-10-02',
     default: [],
@@ -462,6 +468,20 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
     conditions: {},
     signs: {},
   },
+  'google-maps': {
+    checked: '2026-11-15',
+    default: [],
+    tools: {
+      search_places: ['read'],
+      search_along_route: ['read'],
+      compute_routes: ['read'],
+      lookup_weather: ['read'],
+      resolve_names: ['read'],
+      resolve_maps_urls: ['read'],
+    },
+    conditions: {},
+    signs: {},
+  },
   'google-workspace': {
     checked: '2026-10-02',
     default: [],
@@ -744,6 +764,16 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
   kaggle: {
     default: [],
     tools: {},
+    conditions: {},
+    signs: {},
+  },
+  kiwi: {
+    checked: '2026-11-15',
+    default: [],
+    tools: {
+      'search-flight': ['read'],
+      'feedback-to-devs': ['send'],
+    },
     conditions: {},
     signs: {},
   },
@@ -1109,6 +1139,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'demo-marketer': {},
   'demo-shopper': {},
   'demo-terra': {},
+  'demo-voyager': {},
   'disaster-assessment': {
     'earthdata.download_earth_data_granules': 'leave_to_me',
     'earthdata.search_earth_datagranules': 'do_it',
@@ -1450,6 +1481,7 @@ export const APP_ESCALATIONS: Record<
   'demo-marketer': {},
   'demo-shopper': {},
   'demo-terra': {},
+  'demo-voyager': {},
   'disaster-assessment': {},
   'errand-runner': {},
   'event-response': {},
