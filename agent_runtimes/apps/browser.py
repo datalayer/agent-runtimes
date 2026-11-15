@@ -61,6 +61,25 @@ WIDTH, HEIGHT = 1280, 800
 LOAD_TIMEOUT = 30.0
 START_TIMEOUT = 60.0
 
+#: How Chromium is started headless, wherever it runs: the runtime's container
+#: runs as nobody, with no user namespaces for Chromium's own sandbox (the pod
+#: is the sandbox), and so does the Jupyter container's.
+CHROMIUM_FLAGS = (
+    "--headless=new",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--mute-audio",
+    f"--window-size={WIDTH},{HEIGHT}",
+    "--remote-debugging-address=127.0.0.1",
+    "--remote-debugging-port=0",
+)
+
 #: The most of a page's text an agent is told.
 TEXT_LIMIT = 60_000
 
@@ -328,13 +347,17 @@ class ChromiumBrowser:
 
     def __init__(
         self,
-        process: asyncio.subprocess.Process,
+        process: Optional[asyncio.subprocess.Process],
         profile: str,
         connection: _Connection,
         private: bool,
+        on_close: Optional[Callable[[], Awaitable[None]]] = None,
     ) -> None:
-        """Keep the browser process, its profile and its connection."""
+        """Keep the browser process (none when another container runs it), its profile and its connection."""
         self._process = process
+        self._on_close = on_close
+        #: Its DevTools port on the Pod's 127.0.0.1, once known.
+        self.devtools_port: Optional[int] = None
         self._profile = profile
         self._connection = connection
         self._private = private
@@ -353,21 +376,7 @@ class ChromiumBrowser:
         profile = tempfile.mkdtemp(prefix="computer-browser-")
         process = await asyncio.create_subprocess_exec(
             executable,
-            "--headless=new",
-            # The runtime's container runs as nobody, with no user namespaces
-            # for Chromium's own sandbox: the pod is the sandbox.
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-extensions",
-            "--disable-background-networking",
-            "--disable-sync",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--mute-audio",
-            f"--window-size={WIDTH},{HEIGHT}",
-            "--remote-debugging-address=127.0.0.1",
-            "--remote-debugging-port=0",
+            *CHROMIUM_FLAGS,
             f"--user-data-dir={profile}",
             "about:blank",
             stdin=asyncio.subprocess.DEVNULL,
@@ -386,6 +395,33 @@ class ChromiumBrowser:
             raise
         private = private_allowed()
         browser = cls(process, profile, _Connection(socket_), private)
+        browser.devtools_port = port
+        await browser._prepare()
+        return browser
+
+    @classmethod
+    async def attach(
+        cls, port: int, on_close: Callable[[], Awaitable[None]]
+    ) -> "ChromiumBrowser":
+        """
+        Drive a Chromium another container of the Pod started, at its DevTools port.
+
+        The browser a person signs in to LinkedIn with on a cloud runtime runs
+        in its Jupyter container (``agent_runtimes.mcp.jupyter_host``), on the
+        Pod's 127.0.0.1: driven from here as one started here is, and stopped
+        there by ``on_close``. Its pages are refused private addresses the same
+        way.
+        """
+        try:
+            page_url = await _page_socket(port)
+            import websockets
+
+            socket_ = await websockets.connect(page_url, max_size=None)
+        except BaseException:
+            await on_close()
+            raise
+        browser = cls(None, "", _Connection(socket_), private_allowed(), on_close)
+        browser.devtools_port = port
         await browser._prepare()
         return browser
 
@@ -621,7 +657,8 @@ class ChromiumBrowser:
     @property
     def alive(self) -> bool:
         """Tell whether the browser and its connection are up."""
-        return self._process.returncode is None and self._connection.open
+        running = self._process is None or self._process.returncode is None
+        return running and self._connection.open
 
     async def close(self) -> None:
         """Close the connection and stop the browser."""
@@ -629,6 +666,10 @@ class ChromiumBrowser:
             await self._connection.close()
         except Exception:
             pass
+        if self._process is None:
+            if self._on_close is not None:
+                await self._on_close()
+            return
         _stop(self._process)
         try:
             await asyncio.wait_for(self._process.wait(), 5)
@@ -704,8 +745,10 @@ def browser_running(agent_id: str) -> Optional[Browser]:
     return browser if browser is not None and browser.alive else None
 
 
-async def browser_of(agent_id: str) -> Browser:
-    """An agent's browser, started on its first page."""
+async def browser_of(
+    agent_id: str, factory: Optional[BrowserFactory] = None
+) -> Browser:
+    """An agent's browser, started on its first page (by ``factory`` when given)."""
     lock = _STARTING.setdefault(agent_id, asyncio.Lock())
     async with lock:
         running = browser_running(agent_id)
@@ -714,7 +757,7 @@ async def browser_of(agent_id: str) -> Browser:
         stale = _BROWSERS.pop(agent_id, None)
         if stale is not None:
             await stale.close()
-        browser = await (_FACTORY or ChromiumBrowser.launch)()
+        browser = await (_FACTORY or factory or ChromiumBrowser.launch)()
         _BROWSERS[agent_id] = browser
         return browser
 
@@ -742,6 +785,7 @@ async def close_browsers() -> None:
 __all__ = [
     "BROWSER_ENV",
     "Browser",
+    "CHROMIUM_FLAGS",
     "BrowserFailed",
     "ChromiumBrowser",
     "HEIGHT",

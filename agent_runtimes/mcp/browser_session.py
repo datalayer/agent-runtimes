@@ -31,6 +31,15 @@ session's state, never a cookie; a visitors' runtime refuses it outright, and
 so does a deployment's (its routes are its application's alone). The platform
 keeps no browser profile per person, so a new runtime asks again.
 
+On a cloud runtime (15 November 2026, the user: "reuse the existing jupyter
+one") the server, the sign-in browser and the session are all in the Pod's
+Jupyter container, the agent-runtimes image (Alpine) running none of them
+(:mod:`agent_runtimes.mcp.jupyter_host`): the browser is driven from here over
+its DevTools port on the Pod's 127.0.0.1, and Done has the Jupyter container read
+its cookies and write them there, outside its home, 0600 in 0700. No cookie
+crosses into agent-runtimes; what it keeps of the session is its state and the
+session cookie's expiry.
+
 Pure but for the files, the browser and the MCP server it restarts.
 """
 
@@ -252,6 +261,8 @@ def session_state(
     """
     if provider.id != LINKEDIN.id:
         return "none"
+    if environ is None and in_jupyter(provider):
+        return _held_state(provider, now)
     path = auth_root(environ) / "cookies.json"
     try:
         cookies = json.loads(path.read_text(encoding="utf-8"))
@@ -312,20 +323,74 @@ def on_musl() -> bool:
     return bool(glob.glob("/lib/ld-musl-*")) or platform.libc_ver()[0] == ""
 
 
+def in_jupyter(provider: SessionProvider) -> bool:
+    """
+    Whether the provider's server, its sign-in browser and its session are the Jupyter container's.
+
+    On a musl runtime (the platform's Alpine image) whose Pod has a Jupyter
+    container: the image the server and its browser driver run on.
+    """
+    from agent_runtimes.mcp import jupyter_host
+
+    return (
+        provider.id == LINKEDIN.id
+        and on_musl()
+        and jupyter_host.hosts(provider.server)
+        and jupyter_host.available()
+    )
+
+
 def server_runs_here(provider: SessionProvider) -> str:
     """
-    Why the provider's server cannot run on this runtime, or ``""`` when it can.
+    Why the provider's server cannot run for this runtime, or ``""`` when it can.
 
     ``mcp-server-linkedin`` drives its browser with patchright, which publishes
-    no build for musl: on the platform's Alpine runtime image it does not
-    install, and no session would help.
+    no build for musl: on the platform's Alpine runtime image it runs in the
+    Pod's Jupyter container (:func:`in_jupyter`); a musl runtime without one
+    cannot run it, and no session would help.
     """
-    if provider.id == LINKEDIN.id and on_musl():
+    if provider.id == LINKEDIN.id and on_musl() and not in_jupyter(provider):
         return (
             "LinkedIn's full access needs its MCP server, which does not run on "
-            "this runtime's image yet (its browser driver has no Alpine build)."
+            "this runtime's image (its browser driver has no Alpine build) and "
+            "this runtime has no Jupyter container to run it in."
         )
     return ""
+
+
+#: What the runtime knows of a session the Jupyter container holds: its state
+#: and its session cookie's expiry, never a cookie. None until asked.
+_HELD: Dict[str, Dict[str, Any]] = {}
+
+
+def _held_state(provider: SessionProvider, now: Optional[float] = None) -> str:
+    """The state of a session the Jupyter container holds, as last learned."""
+    held = _HELD.get(provider.id)
+    if not held or held.get("state") != "signed-in":
+        return "none"
+    expires = held.get("expires")
+    moment = time.time() if now is None else now
+    if isinstance(expires, (int, float)) and 0 < expires < moment:
+        return "expired"
+    return "signed-in"
+
+
+async def refresh(provider: SessionProvider) -> None:
+    """Learn what the Jupyter container holds, once, when it was never asked."""
+    if provider.id in _HELD or not in_jupyter(provider):
+        return
+    from agent_runtimes.mcp import jupyter_host
+
+    try:
+        _HELD[provider.id] = await jupyter_host.session_state(
+            provider.id, provider.session_cookie
+        )
+    except Exception as error:
+        logger.warning(
+            "What the Jupyter container holds of %s is unknown: %s",
+            provider.name,
+            type(error).__name__,
+        )
 
 
 def status(provider: SessionProvider) -> Dict[str, Any]:
@@ -342,13 +407,31 @@ def status(provider: SessionProvider) -> Dict[str, Any]:
     }
 
 
+def _factory(provider: SessionProvider) -> Optional[Any]:
+    """Where the sign-in browser starts: the Jupyter container, or here."""
+    if not in_jupyter(provider):
+        return None
+    from agent_runtimes.apps.browser import CHROMIUM_FLAGS, ChromiumBrowser
+    from agent_runtimes.mcp import jupyter_host
+
+    async def launch() -> Browser:
+        port = await jupyter_host.start_browser(provider.id, list(CHROMIUM_FLAGS))
+
+        async def stop() -> None:
+            await jupyter_host.stop_browser(provider.id)
+
+        return await ChromiumBrowser.attach(port, stop)
+
+    return launch
+
+
 async def start(provider: SessionProvider) -> Dict[str, Any]:
     """Start the runtime's browser at the provider's login page."""
     refuse_here()
     unavailable = server_runs_here(provider)
     if unavailable:
         raise SessionRefused(409, unavailable)
-    browser = await browser_of(_browser_key(provider))
+    browser = await browser_of(_browser_key(provider), _factory(provider))
     seen = await browser.open(provider.login_url)
     logger.info("A %s browser session is being signed in", provider.name)
     return {"page": seen.describe()}
@@ -384,6 +467,29 @@ async def step(provider: SessionProvider, kind: str, body: Dict[str, Any]) -> Pa
     raise SessionRefused(422, f"{kind!r} is no step: click, type, key or scroll.")
 
 
+async def _keep_in_jupyter(provider: SessionProvider, browser: Browser) -> None:
+    """Have the Jupyter container read the sign-in browser's cookies and keep them there."""
+    from agent_runtimes.mcp import jupyter_host
+
+    port = getattr(browser, "devtools_port", None)
+    if not isinstance(port, int):
+        raise SessionRefused(501, "This runtime's browser does not give its cookies.")
+    kept = await jupyter_host.keep_session(
+        provider.id,
+        port,
+        list(provider.cookie_urls),
+        provider.session_cookie,
+        SOURCE_RUNTIME,
+        PROFILE_MARK,
+    )
+    if kept.get("refused"):
+        raise SessionRefused(
+            409,
+            f"{provider.name} did not sign you in yet: finish signing in on its page, then press Done.",
+        )
+    _HELD[provider.id] = {"state": kept.get("state"), "expires": kept.get("expires")}
+
+
 async def finish(provider: SessionProvider) -> Dict[str, Any]:
     """
     Keep the session the person signed in, close the browser, start the server again.
@@ -395,11 +501,16 @@ async def finish(provider: SessionProvider) -> Dict[str, Any]:
     """
     refuse_here()
     browser = await held(provider)
-    read = getattr(browser, "cookies", None)
-    if read is None:
-        raise SessionRefused(501, "This runtime's browser does not give its cookies.")
-    cookies = await read(list(provider.cookie_urls))
-    write_linkedin_session(cookies)
+    if in_jupyter(provider):
+        await _keep_in_jupyter(provider, browser)
+    else:
+        read = getattr(browser, "cookies", None)
+        if read is None:
+            raise SessionRefused(
+                501, "This runtime's browser does not give its cookies."
+            )
+        cookies = await read(list(provider.cookie_urls))
+        write_linkedin_session(cookies)
     await close_browser(_browser_key(provider))
     logger.info("A %s browser session was kept for this runtime", provider.name)
     restarted = False
@@ -426,7 +537,14 @@ async def cancel(provider: SessionProvider) -> Dict[str, Any]:
 async def sign_out(provider: SessionProvider) -> Dict[str, Any]:
     """Forget the session and start the server again, without it."""
     await close_browser(_browser_key(provider))
-    forget(provider)
+    if in_jupyter(provider):
+        from agent_runtimes.mcp import jupyter_host
+
+        _HELD[provider.id] = await jupyter_host.forget(
+            provider.id, provider.session_cookie
+        )
+    else:
+        forget(provider)
     if _server_known(provider):
         from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 
@@ -447,10 +565,12 @@ __all__ = [
     "cancel",
     "finish",
     "forget",
+    "in_jupyter",
     "playwright_cookie",
     "profile_dir",
     "provider_of",
     "provider_of_server",
+    "refresh",
     "screenshot",
     "session_state",
     "sign_out",

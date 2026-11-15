@@ -89,7 +89,9 @@ def profile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     where = tmp_path / ".linkedin-mcp" / "profile"
     monkeypatch.setenv("USER_DATA_DIR", str(where))
     monkeypatch.delenv("AGENT_RUNTIMES_VISITORS", raising=False)
+    monkeypatch.delenv("AGENT_RUNTIMES_JUPYTER_SANDBOX", raising=False)
     monkeypatch.setattr(sessions, "on_musl", lambda: False)
+    monkeypatch.setattr(sessions, "_HELD", {})
     return where
 
 
@@ -211,11 +213,12 @@ def test_no_cookie_is_logged(client, caplog: pytest.LogCaptureFixture) -> None:
     assert "secret-session" not in caplog.text
 
 
-def test_alpine_says_the_server_does_not_run_here(
+def test_alpine_without_jupyter_says_the_server_does_not_run_here(
     client, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     test_client, made = client
     monkeypatch.setattr(sessions, "on_musl", lambda: True)
+    monkeypatch.setattr("agent_runtimes.mcp.jupyter_host.available", lambda: False)
     status = test_client.get("/api/v1/configure/browser-sessions/linkedin").json()
     assert status["offered"] is False
     assert "Alpine" in status["unavailable"]

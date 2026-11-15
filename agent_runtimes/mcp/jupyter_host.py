@@ -1,0 +1,582 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""What runs in the runtime's Jupyter container: a server, a browser, a session.
+
+The user, 15 November 2026: "OK in the jupyter which is not a sidecar, but a
+container as such - no new sidecar/container, reuse the existing jupyter one."
+
+A cloud runtime's Pod has two containers this module knows: agent-runtimes
+(Alpine, musl) and Jupyter (the environment's image, Debian, glibc), on one
+network — the Pod's 127.0.0.1 — but on separate disks. The agent-runtimes
+container already reaches the Jupyter one through its server and kernels: its
+agents' code runs there (``AGENT_RUNTIMES_JUPYTER_SANDBOX``, the sandbox of
+:mod:`agent_runtimes.services.code_sandbox_manager`), and so do their skills'
+scripts. What its own image cannot run is started the same way: a short cell,
+in a kernel of its own that is shut down after it, starts a process in its own
+session (it outlives the kernel), and agent-runtimes reaches what it serves on
+127.0.0.1.
+
+What runs there:
+
+- the catalogue's ``linkedin`` MCP server (``mcp-server-linkedin``, whose
+  browser driver, patchright, has no musl build), over Streamable HTTP bound to
+  127.0.0.1 on a port chosen at its start (:func:`start_server`);
+- the headless Chromium a person signs in to LinkedIn with, driven over its
+  DevTools port from agent-runtimes as its own browser is
+  (:func:`start_browser`);
+- the session it leaves: the cookies are read off that browser and written
+  *in the Jupyter container*, under :data:`SESSIONS_ROOT` (0600 in 0700, outside
+  the home, so neither the file browser nor a snapshot of the home sees it),
+  where the server reads it (:func:`keep_session`). A cookie never crosses into
+  agent-runtimes, nor into a cell's code, a log or an answer: the cells carry
+  ports, paths and process ids alone.
+
+The Jupyter container is the runtime's, one person's, and gone with the Pod.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+import json
+import logging
+import os
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+#: The Jupyter server of the runtime's Pod, its token in its query.
+JUPYTER_SANDBOX_ENV = "AGENT_RUNTIMES_JUPYTER_SANDBOX"
+
+#: Where the sessions are kept in the Jupyter container: never under its home.
+SESSIONS_ROOT = "/tmp/.datalayer-browser-sessions"  # nosec B108 - the Jupyter container's, made 0700 there, one person's
+
+#: What the Jupyter container runs for a server of the catalogue, by its id.
+SERVER_COMMANDS: Dict[str, List[str]] = {"linkedin": ["mcp-server-linkedin"]}
+
+#: The browsers the Jupyter image carries (Playwright's, patchright's).
+BROWSERS_GLOB = "/opt/playwright/chromium-*/chrome-linux*/chrome"
+
+#: How the answer of a cell is told apart from what else it printed.
+MARK = "__datalayer_jupyter_host__"
+
+#: How long a server is given to listen, and a browser to start, in seconds.
+SERVER_WAIT = 120.0
+BROWSER_WAIT = 60.0
+
+_LOCK: Optional[asyncio.Lock] = None
+
+
+class JupyterHostFailed(RuntimeError):
+    """The Jupyter container did not do what it was asked, in a sentence."""
+
+
+def jupyter_url() -> str:
+    """The runtime's Jupyter server, or ``""`` when its Pod has none."""
+    named = os.environ.get(JUPYTER_SANDBOX_ENV, "").strip()
+    if named:
+        return named
+    try:
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        config = get_code_sandbox_manager().config
+        if config.variant == "jupyter-server" and config.jupyter_url:
+            if config.jupyter_token and "token=" not in config.jupyter_url:
+                separator = "&" if "?" in config.jupyter_url else "?"
+                return f"{config.jupyter_url}{separator}token={config.jupyter_token}"
+            return str(config.jupyter_url)
+    except Exception:
+        pass
+    return ""
+
+
+def available() -> bool:
+    """Whether this runtime has a Jupyter container to run things in."""
+    return bool(jupyter_url())
+
+
+def hosts(server_id: str) -> bool:
+    """Whether the Jupyter container runs this server of the catalogue."""
+    return server_id in SERVER_COMMANDS
+
+
+# --- the cell -----------------------------------------------------------------------------
+
+
+def _playwright_cookie_source() -> str:
+    """The one conversion of a DevTools cookie, shared with the runtime's own path."""
+    from agent_runtimes.mcp.browser_session import playwright_cookie
+
+    return inspect.getsource(playwright_cookie)
+
+
+#: What runs in the Jupyter container's kernel. Its standard library and
+#: tornado (Jupyter's own) alone; every name kept inside ``_dl_host``.
+_CELL = r"""
+def _dl_host(raw):
+    import asyncio, glob, json, os, shutil, signal, socket, subprocess, threading, time, uuid
+    from typing import Any, Dict
+    from datetime import datetime, timezone
+    args = json.loads(raw)
+    root = os.path.join(args["sessions"], args["provider"])
+    # The server's own directory, apart from what runs it: it takes the
+    # profile's parent whole (it rotates and clears it), and refuses one that
+    # holds files not its own.
+    auth = os.path.join(root, "auth")
+    profile = os.path.join(auth, "profile")
+
+    def private_dir(path):
+        os.makedirs(path, mode=0o700, exist_ok=True)
+        os.chmod(path, 0o700)
+
+    def private_write(path, text):
+        temporary = "%s.%s" % (path, uuid.uuid4().hex)
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as written:
+            written.write(text)
+        os.replace(temporary, path)
+
+    def kill(name):
+        path = os.path.join(root, name + ".pid")
+        try:
+            pid = int(open(path).read().strip())
+        except (OSError, ValueError):
+            return False
+        def reaped():
+            try:
+                return os.waitpid(pid, os.WNOHANG)[0] == pid
+            except ChildProcessError:
+                return False
+        try:
+            os.killpg(pid, signal.SIGTERM)
+            for _ in range(50):
+                if reaped():
+                    break
+                os.kill(pid, 0)
+                time.sleep(0.1)
+            else:
+                os.killpg(pid, signal.SIGKILL)
+                reaped()
+        except (ProcessLookupError, PermissionError):
+            pass
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        return True
+
+    def free_port():
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            return probe.getsockname()[1]
+
+    def listens(port):
+        with socket.socket() as probe:
+            probe.settimeout(1)
+            return probe.connect_ex(("127.0.0.1", port)) == 0
+
+    def tail(path, lines=30):
+        try:
+            with open(path, encoding="utf-8", errors="replace") as read:
+                return "".join(read.readlines()[-lines:])
+        except OSError:
+            return ""
+
+    def started(name, command, env):
+        private_dir(root)
+        log = os.path.join(root, name + ".log")
+        descriptor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        process = subprocess.Popen(
+            command, env=env, cwd=root, stdin=subprocess.DEVNULL,
+            stdout=descriptor, stderr=descriptor, start_new_session=True,
+        )
+        os.close(descriptor)
+        private_write(os.path.join(root, name + ".pid"), str(process.pid))
+        return process, log
+
+    def cookies_of(port, urls):
+        from urllib.request import urlopen
+        from tornado.websocket import websocket_connect
+        targets = json.load(urlopen("http://127.0.0.1:%d/json/list" % port, timeout=10))
+        pages = [t for t in targets if t.get("type") == "page"]
+        if not pages:
+            raise RuntimeError("the sign-in browser has no page")
+        async def ask():
+            connection = await websocket_connect(pages[0]["webSocketDebuggerUrl"], max_message_size=64 * 1024 * 1024)
+            try:
+                connection.write_message(json.dumps({"id": 1, "method": "Network.getCookies", "params": {"urls": urls}}))
+                while True:
+                    message = await asyncio.wait_for(connection.read_message(), 20)
+                    if message is None:
+                        raise RuntimeError("the sign-in browser closed its connection")
+                    answer = json.loads(message)
+                    if answer.get("id") == 1:
+                        return list((answer.get("result") or {}).get("cookies") or [])
+            finally:
+                connection.close()
+        box = {}
+        def run():
+            try:
+                box["cookies"] = asyncio.run(ask())
+            except BaseException as error:
+                box["error"] = error
+        worker = threading.Thread(target=run)
+        worker.start()
+        worker.join(40)
+        if "error" in box:
+            raise box["error"]
+        return box.get("cookies") or []
+
+    def state():
+        try:
+            cookies = json.load(open(os.path.join(auth, "cookies.json"), encoding="utf-8"))
+        except (OSError, ValueError):
+            return {"state": "none", "expires": None}
+        for cookie in cookies if isinstance(cookies, list) else []:
+            if isinstance(cookie, dict) and cookie.get("name") == args.get("session_cookie"):
+                expires = cookie.get("expires")
+                return {"state": "signed-in", "expires": expires if isinstance(expires, (int, float)) and expires > 0 else None}
+        return {"state": "none", "expires": None}
+
+    PLAYWRIGHT_COOKIE
+
+    do = args["do"]
+    answer: Dict[str, Any] = {}
+    if do in ("start-server", "start-browser", "keep-session"):
+        private_dir(args["sessions"])
+    if do == "start-server":
+        kill("server")
+        private_dir(root)
+        port = free_port()
+        env = {
+            "HOME": os.environ.get("HOME", "/home/datalayer"),
+            "PATH": "/opt/linkedin-mcp/bin:/usr/local/bin:/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+            "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/playwright"),
+            "USER_DATA_DIR": profile,
+        }
+        env.update(args.get("env") or {})
+        command = list(args["command"]) + [
+            "--transport", "streamable-http", "--host", "127.0.0.1",
+            "--port", str(port), "--path", "/mcp",
+        ]
+        if shutil.which(command[0], path=env["PATH"]) is None:
+            answer = {"error": "%s is not installed in this Jupyter container" % command[0]}
+        else:
+            process, log = started("server", command, env)
+            deadline = time.time() + args["wait"]
+            while time.time() < deadline and process.poll() is None and not listens(port):
+                time.sleep(0.25)
+            if process.poll() is None and listens(port):
+                answer = {"port": port, "pid": process.pid}
+            else:
+                kill("server")
+                answer = {"error": "it did not listen", "tail": tail(log)}
+    elif do == "stop-server":
+        answer = {"stopped": kill("server")}
+    elif do == "start-browser":
+        kill("browser")
+        signin = os.path.join(root, "signin")
+        shutil.rmtree(signin, ignore_errors=True)
+        private_dir(root)
+        private_dir(signin)
+        found = sorted(glob.glob(args["browsers"]))
+        if not found:
+            answer = {"error": "no Chromium in this Jupyter container"}
+        else:
+            # As a person's Chrome says itself: LinkedIn's bot check (Cloudflare)
+            # holds a browser saying HeadlessChrome on "Just a moment..." for
+            # good, and lets the same one through under its regular name.
+            try:
+                said = subprocess.run([found[-1], "--version"], capture_output=True, text=True, timeout=20).stdout
+                major = [w for w in said.split() if w[:1].isdigit()][0].split(".")[0]
+            except Exception:
+                major = "140"
+            regular = [
+                "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s.0.0.0 Safari/537.36" % major,
+                "--disable-blink-features=AutomationControlled",
+            ]
+            command = [found[-1]] + list(args["flags"]) + regular + ["--user-data-dir=" + signin, "about:blank"]
+            process, log = started("browser", command, {"HOME": os.environ.get("HOME", "/home/datalayer"), "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"})
+            written = os.path.join(signin, "DevToolsActivePort")
+            deadline = time.time() + args["wait"]
+            port = 0
+            while time.time() < deadline and process.poll() is None:
+                try:
+                    first = open(written).read().splitlines()[:1]
+                except OSError:
+                    first = []
+                if first and first[0].strip().isdigit():
+                    port = int(first[0])
+                    break
+                time.sleep(0.05)
+            if port:
+                answer = {"port": port}
+            else:
+                kill("browser")
+                answer = {"error": "its browser did not start", "tail": tail(log)}
+    elif do == "stop-browser":
+        kill("browser")
+        shutil.rmtree(os.path.join(root, "signin"), ignore_errors=True)
+        answer = {"stopped": True}
+    elif do == "keep-session":
+        cookies = cookies_of(int(args["port"]), list(args["urls"]))
+        if not any(c.get("name") == args["session_cookie"] and c.get("value") for c in cookies):
+            answer = {"refused": "not-signed-in"}
+        else:
+            private_dir(root)
+            private_dir(auth)
+            private_dir(profile)
+            cookies_path = os.path.join(auth, "cookies.json")
+            private_write(cookies_path, json.dumps([playwright_cookie(c) for c in cookies], indent=2))
+            private_write(os.path.join(auth, "source-state.json"), json.dumps({
+                "version": 1,
+                "source_runtime_id": args["source_runtime"],
+                "login_generation": str(uuid.uuid4()),
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "profile_path": profile,
+                "cookies_path": cookies_path,
+            }, indent=2))
+            private_write(os.path.join(profile, args["profile_mark"]), "Written by agent-runtimes' browser session.\n")
+            answer = state()
+        del cookies
+    elif do == "state":
+        answer = state()
+    elif do == "forget":
+        for name in ("cookies.json", "source-state.json"):
+            try:
+                os.unlink(os.path.join(auth, name))
+            except OSError:
+                pass
+        shutil.rmtree(profile, ignore_errors=True)
+        shutil.rmtree(os.path.join(auth, "runtime-profiles"), ignore_errors=True)
+        answer = state()
+    else:
+        answer = {"error": "no %r here" % do}
+    print(MARK_TEXT + json.dumps(answer))
+"""
+
+
+def cell(operation: str, arguments: Dict[str, Any]) -> str:
+    """The code a kernel of the Jupyter container runs for one operation."""
+    body = _CELL.replace(
+        "    PLAYWRIGHT_COOKIE\n",
+        "".join(
+            f"    {line}\n" if line.strip() else "\n"
+            for line in _playwright_cookie_source().splitlines()
+        ),
+    ).replace("MARK_TEXT", repr(MARK))
+    raw = json.dumps({"do": operation, "sessions": SESSIONS_ROOT, **arguments})
+    return f"{body}\n_dl_host({raw!r})\ndel _dl_host\n"
+
+
+def answer_of(stdout: str) -> Dict[str, Any]:
+    """The answer a cell printed, or refused when it printed none."""
+    for line in reversed(stdout.splitlines()):
+        if line.startswith(MARK):
+            answer = json.loads(line[len(MARK) :])
+            if isinstance(answer, dict):
+                return answer
+    raise JupyterHostFailed("The Jupyter container gave no answer.")
+
+
+def _run(code: str, timeout: float) -> str:
+    """Run a cell in a kernel of its own on the runtime's Jupyter, and shut it down."""
+    url = jupyter_url()
+    if not url:
+        raise JupyterHostFailed("This runtime has no Jupyter container.")
+    from code_sandboxes import CodeSandboxClient
+
+    sandbox = CodeSandboxClient.create(
+        variant="jupyter-server", server_url=url, reuse_kernel=False
+    ).sandbox
+    sandbox.start()
+    try:
+        execution = sandbox.run_code(code, timeout=timeout)
+    finally:
+        try:
+            sandbox.stop()
+        except Exception:
+            pass
+    error = getattr(execution, "code_error", None)
+    if error is not None:
+        # The error's name alone: its value may quote what the cell held.
+        raise JupyterHostFailed(
+            f"The Jupyter container failed: {getattr(error, 'name', 'an error')}."
+        )
+    if getattr(execution, "execution_ok", True) is False:
+        raise JupyterHostFailed("The Jupyter container did not run the cell.")
+    return str(execution.logs.stdout_text)
+
+
+async def call(
+    operation: str, timeout: float = 180.0, **arguments: Any
+) -> Dict[str, Any]:
+    """One operation in the Jupyter container, one at a time, its answer."""
+    global _LOCK
+    if _LOCK is None:
+        _LOCK = asyncio.Lock()
+    code = cell(operation, arguments)
+    async with _LOCK:
+        stdout = await asyncio.to_thread(_run, code, timeout)
+    return answer_of(stdout)
+
+
+# --- a server ----------------------------------------------------------------------------
+
+
+async def start_server(server_id: str, env: Dict[str, str]) -> str:
+    """
+    Start a server of the catalogue in the Jupyter container, its address.
+
+    Parameters
+    ----------
+    server_id : str
+        The server, one of :data:`SERVER_COMMANDS`.
+    env : dict
+        Its catalogue's environment, expanded: never the runtime's own, which
+        holds the person's secrets for other servers.
+
+    Returns
+    -------
+    str
+        Where it listens on the Pod's 127.0.0.1, over Streamable HTTP.
+    """
+    command = SERVER_COMMANDS.get(server_id)
+    if command is None:
+        raise JupyterHostFailed(f"The Jupyter container does not run {server_id!r}.")
+    from agent_runtimes.mcp.browser_session import provider_of_server
+
+    provider = provider_of_server(server_id)
+    answer = await call(
+        "start-server",
+        timeout=SERVER_WAIT + 60,
+        provider=provider.id if provider else server_id,
+        command=command,
+        env=env,
+        wait=SERVER_WAIT,
+        session_cookie=provider.session_cookie if provider else "",
+    )
+    if "port" not in answer:
+        tail = str(answer.get("tail") or "").strip()
+        if tail:
+            logger.warning("%s in the Jupyter container said:\n%s", server_id, tail)
+        raise JupyterHostFailed(
+            f"{server_id} did not start in the Jupyter container: "
+            f"{answer.get('error') or 'no port'}."
+        )
+    logger.info(
+        "MCP server '%s' runs in the Jupyter container on 127.0.0.1:%s",
+        server_id,
+        answer["port"],
+    )
+    return f"http://127.0.0.1:{int(answer['port'])}/mcp"
+
+
+async def stop_server(server_id: str) -> None:
+    """Stop a server the Jupyter container runs."""
+    from agent_runtimes.mcp.browser_session import provider_of_server
+
+    provider = provider_of_server(server_id)
+    try:
+        await call(
+            "stop-server", timeout=60, provider=provider.id if provider else server_id
+        )
+    except Exception as error:
+        logger.warning("%s did not stop in the Jupyter container: %s", server_id, error)
+
+
+# --- a sign-in browser and its session ------------------------------------------------
+
+
+async def start_browser(provider_id: str, flags: List[str]) -> int:
+    """Start a headless Chromium in the Jupyter container, its DevTools port."""
+    answer = await call(
+        "start-browser",
+        timeout=BROWSER_WAIT + 60,
+        provider=provider_id,
+        browsers=BROWSERS_GLOB,
+        flags=flags,
+        wait=BROWSER_WAIT,
+    )
+    if "port" not in answer:
+        raise JupyterHostFailed(
+            f"The sign-in browser did not start in the Jupyter container: "
+            f"{answer.get('error') or 'no port'}."
+        )
+    return int(answer["port"])
+
+
+async def stop_browser(provider_id: str) -> None:
+    """Stop the sign-in browser and remove its profile."""
+    try:
+        await call("stop-browser", timeout=60, provider=provider_id)
+    except Exception as error:
+        logger.warning("The sign-in browser did not stop: %s", error)
+
+
+async def keep_session(
+    provider_id: str,
+    port: int,
+    urls: List[str],
+    session_cookie: str,
+    source_runtime: str,
+    profile_mark: str,
+) -> Dict[str, Any]:
+    """
+    Read the sign-in browser's cookies and write them for the server, all in Jupyter.
+
+    Returns
+    -------
+    dict
+        ``{"state": "signed-in", "expires": …}``, or ``{"refused": "not-signed-in"}``.
+    """
+    return await call(
+        "keep-session",
+        timeout=120,
+        provider=provider_id,
+        port=port,
+        urls=urls,
+        session_cookie=session_cookie,
+        source_runtime=source_runtime,
+        profile_mark=profile_mark,
+    )
+
+
+async def session_state(provider_id: str, session_cookie: str) -> Dict[str, Any]:
+    """What the Jupyter container holds of a session: its state and its expiry."""
+    return await call(
+        "state", timeout=60, provider=provider_id, session_cookie=session_cookie
+    )
+
+
+async def forget(provider_id: str, session_cookie: str) -> Dict[str, Any]:
+    """Remove a session from the Jupyter container."""
+    return await call(
+        "forget", timeout=60, provider=provider_id, session_cookie=session_cookie
+    )
+
+
+__all__ = [
+    "BROWSERS_GLOB",
+    "JUPYTER_SANDBOX_ENV",
+    "JupyterHostFailed",
+    "SERVER_COMMANDS",
+    "SESSIONS_ROOT",
+    "answer_of",
+    "available",
+    "call",
+    "cell",
+    "forget",
+    "hosts",
+    "jupyter_url",
+    "keep_session",
+    "session_state",
+    "start_browser",
+    "start_server",
+    "stop_browser",
+    "stop_server",
+]

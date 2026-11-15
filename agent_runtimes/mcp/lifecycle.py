@@ -734,6 +734,7 @@ class MCPLifecycleManager:
             self._failed_servers[server_id] = error
             return None
 
+        in_jupyter = False
         # Create the pydantic MCP server
         try:
             # Build env dict:
@@ -834,6 +835,30 @@ class MCPLifecycleManager:
                     MCP_SERVER_HANDSHAKE_TIMEOUT,
                     auth=gateway_auth,
                 )
+            elif self._in_jupyter(server_id):
+                # The Pod's Jupyter container runs it (the agent-runtimes
+                # image cannot: patchright has no musl build), reached on the
+                # Pod's 127.0.0.1 over Streamable HTTP; given its catalogue's
+                # environment alone, never this process's secrets.
+                from agent_runtimes.mcp import jupyter_host
+
+                hosted_env = {
+                    key: str(env[key]) for key in (config.env or {}) if key in env
+                }
+                try:
+                    hosted_url = await jupyter_host.start_server(server_id, hosted_env)
+                except Exception as error:  # noqa: BLE001 - said, as any start that fails
+                    detail = redact(
+                        f"Failed to start MCP server '{server_id}' in the "
+                        f"Jupyter container: {error}"
+                    )
+                    logger.error(f"✗ {detail}")
+                    self._failed_servers[server_id] = detail
+                    return None
+                in_jupyter = True
+                pydantic_server = remote_toolset(
+                    server_id, hosted_url, {}, MCP_SERVER_HANDSHAKE_TIMEOUT
+                )
             elif config.transport == "streamable-http" and config.url:
                 # Its command runs as a local HTTP process, reached at its
                 # url (W-02: Gmail, whose every request carries a
@@ -885,6 +910,11 @@ class MCPLifecycleManager:
         # Start the server
         exit_stack = AsyncExitStack()
         await exit_stack.__aenter__()
+        if in_jupyter:
+            from agent_runtimes.mcp import jupyter_host
+
+            # Stopped there when it stops here, or when no attempt succeeds.
+            exit_stack.push_async_callback(jupyter_host.stop_server, server_id)
 
         try:
             return await self._attempts(server_id, config, pydantic_server, exit_stack)
@@ -1157,6 +1187,14 @@ class MCPLifecycleManager:
         refusals = getattr(pydantic_server, "refusals", None)
         sentence = getattr(refusals, "sentence", None)
         return sentence or error_detail
+
+    @staticmethod
+    def _in_jupyter(server_id: str) -> bool:
+        """Whether the Pod's Jupyter container runs this server (a browser session's, on Alpine)."""
+        from agent_runtimes.mcp.browser_session import in_jupyter, provider_of_server
+
+        provider = provider_of_server(server_id)
+        return provider is not None and in_jupyter(provider)
 
     async def _start_http_process_server(
         self,

@@ -61,7 +61,9 @@ async def _answer(work: Any) -> Any:
 @router.get("/{provider}")
 async def session_status(provider: str) -> Dict[str, Any]:
     """The session's state, and whether one is being signed in."""
-    return sessions.status(_provider(provider))
+    chosen = _provider(provider)
+    await sessions.refresh(chosen)
+    return sessions.status(chosen)
 
 
 @router.post("/{provider}/start")
