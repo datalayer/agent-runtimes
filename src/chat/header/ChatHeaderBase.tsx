@@ -10,12 +10,20 @@
  * (new chat, clear, settings), view-mode segmented toggle, and custom
  * header actions / content.
  *
+ * The actions side is a primer-addons `Toolbar` (the user, 15 November
+ * 2026: "the chat header is actually a primer addons toolbar"): the chat's
+ * own controls, the items the agent's UI plugins and the host add
+ * (`headerItems`), and the host's `headerActions`, each an item of one bar.
+ * What does not fit a narrow chat (the Personal page's column, an embed)
+ * moves into its "…" menu — the plugins' chips first, the host's actions,
+ * the kernel indicator and what a host pins never.
+ *
  * @module chat/header/ChatHeaderBase
  */
 
 import { type ReactNode } from 'react';
 import { Heading, IconButton, Text, Truncate } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, Toolbar, type ToolbarItem } from '@datalayer/primer-addons';
 import {
   KernelIndicator,
   type ExecutionState,
@@ -92,6 +100,11 @@ export interface ChatBaseHeaderProps {
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
   headerActions?: ReactNode;
+  /**
+   * Items of the actions toolbar, after the chat's own controls: the agent's
+   * UI plugins' header chrome, the session menu… — see `ChatCommonProps`.
+   */
+  headerItems?: ToolbarItem[];
   showInformation?: boolean;
   onInformationClick?: () => void;
   padding: number;
@@ -160,6 +173,7 @@ export function ChatBaseHeader({
   brandIcon,
   headerContent,
   headerActions,
+  headerItems,
   showInformation,
   onInformationClick,
   padding,
@@ -224,6 +238,95 @@ export function ChatBaseHeader({
     />
   ) : null;
 
+  /*
+   * The actions toolbar: a leading spacer keeps them on the trailing edge,
+   * then the chat's controls, the given items, and the host's own actions —
+   * pinned, since a host puts its close button there.
+   */
+  const toolbarItems: ToolbarItem[] = [
+    { key: 'chat-header-lead', type: 'spacer' },
+  ];
+  if (kernelIndicatorPlacement === 'right' && kernelIndicatorElement) {
+    toolbarItems.push({
+      key: 'chat-header-kernel',
+      type: 'custom',
+      pinned: true,
+      render: () => kernelIndicatorElement,
+    });
+  }
+  if (headerButtons?.showNewChat) {
+    toolbarItems.push({
+      key: 'chat-header-new',
+      type: 'button',
+      icon: PlusIcon,
+      ariaLabel: 'New chat',
+      title: 'New chat',
+      onClick: onNewChat,
+    });
+  }
+  if (headerButtons?.showClear && messageCount > 0) {
+    toolbarItems.push({
+      key: 'chat-header-clear',
+      type: 'button',
+      icon: TrashIcon,
+      ariaLabel: 'Clear messages',
+      title: 'Clear messages',
+      onClick: onClear,
+    });
+  }
+  if (headerButtons?.showSettings) {
+    toolbarItems.push({
+      key: 'chat-header-settings',
+      type: 'button',
+      icon: GearIcon,
+      ariaLabel: 'Settings',
+      title: 'Settings',
+      onClick: () => headerButtons?.onSettings?.(),
+    });
+  }
+  // Companion surface control (Chat only / Notebook / Document).
+  if (showEphemeralSurfaceControl) {
+    toolbarItems.push({
+      key: 'chat-header-surface',
+      type: 'custom',
+      render: () => (
+        <EphemeralSurfaceControl
+          mode={ephemeralSurfaceMode}
+          onChange={onEphemeralSurfaceModeChange}
+          enableNotebook={enableEphemeralNotebookOption}
+          enableDocument={enableEphemeralDocumentOption}
+        />
+      ),
+    });
+  }
+  // View mode segmented toggle — the same control a floating composer
+  // carries in its footer; see `ChatViewModeToggle`.
+  if (chatViewMode && onChatViewModeChange) {
+    toolbarItems.push({
+      key: 'chat-header-view-mode',
+      type: 'custom',
+      render: () => (
+        <ChatViewModeToggle
+          value={chatViewMode}
+          onChange={onChatViewModeChange}
+          disabledModes={disabledViewModes}
+          modes={offeredViewModes}
+        />
+      ),
+    });
+  }
+  if (headerItems?.length) {
+    toolbarItems.push(...headerItems);
+  }
+  if (headerActions) {
+    toolbarItems.push({
+      key: 'chat-header-actions',
+      type: 'custom',
+      pinned: true,
+      render: () => headerActions,
+    });
+  }
+
   return (
     <Box
       display="flex"
@@ -244,7 +347,8 @@ export function ChatBaseHeader({
           alignItems="center"
           gap={2}
           minWidth={0}
-          flex="1 1 auto"
+          maxWidth="65%"
+          flex="0 1 auto"
         >
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
@@ -300,57 +404,16 @@ export function ChatBaseHeader({
           {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
-        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
-          {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
-          {/* Header buttons */}
-          {headerButtons?.showNewChat && (
-            <IconButton
-              icon={PlusIcon}
-              aria-label="New chat"
-              variant="invisible"
-              size="small"
-              onClick={onNewChat}
-            />
-          )}
-          {headerButtons?.showClear && messageCount > 0 && (
-            <IconButton
-              icon={TrashIcon}
-              aria-label="Clear messages"
-              variant="invisible"
-              size="small"
-              onClick={onClear}
-            />
-          )}
-          {headerButtons?.showSettings && (
-            <IconButton
-              icon={GearIcon}
-              aria-label="Settings"
-              variant="invisible"
-              size="small"
-              onClick={headerButtons.onSettings}
-            />
-          )}
-          {/* Companion surface control (Chat only / Notebook / Document) */}
-          {showEphemeralSurfaceControl && (
-            <EphemeralSurfaceControl
-              mode={ephemeralSurfaceMode}
-              onChange={onEphemeralSurfaceModeChange}
-              enableNotebook={enableEphemeralNotebookOption}
-              enableDocument={enableEphemeralDocumentOption}
-            />
-          )}
-          {/* View mode segmented toggle — the same control a floating
-              composer carries in its footer; see `ChatViewModeToggle`. */}
-          {chatViewMode && onChatViewModeChange && (
-            <ChatViewModeToggle
-              value={chatViewMode}
-              onChange={onChatViewModeChange}
-              disabledModes={disabledViewModes}
-              modes={offeredViewModes}
-            />
-          )}
-          {/* Custom header actions */}
-          {headerActions}
+        {/* A box of its own: its width, what the row leaves after the
+            title, is the room the toolbar measures. */}
+        <Box flex="1 1 0" minWidth="40px" ml={2}>
+          <Toolbar
+            items={toolbarItems}
+            variant="inline"
+            gap={4}
+            ariaLabel="Chat actions"
+            overflowAriaLabel="More chat actions"
+          />
         </Box>
       </Box>
       {/* Why the chat is off, under what it is, wrapped on its own line.

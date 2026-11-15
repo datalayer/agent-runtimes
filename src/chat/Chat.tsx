@@ -23,7 +23,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner, ThemeProvider } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, type ToolbarItem } from '@datalayer/primer-addons';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { useConnectedIdentities } from '../identity';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
@@ -38,7 +38,7 @@ import {
   placementOf,
   type AgentUiChoice,
 } from '../apps/agentUiPlugins';
-import { LockedUiChips } from '../apps/plugins/locked-ui';
+import { uiChromeHeaderItems } from './header/uiChromeItems';
 import type { ChromePlacement } from '../apps/toolCards/chrome';
 import {
   ToolResultsContext,
@@ -904,46 +904,57 @@ export function Chat({
         : [],
     [uiChoices, uiPluginsAnonymous, givenUiPlugins, uiAgentSpecId],
   );
-  const chromeShown = chromeOf('header');
-  const headerChrome =
-    lockedUi.length > 0 ? (
-      <>
-        {chromeShown}
-        <LockedUiChips labels={lockedUi} />
-      </>
-    ) : (
-      chromeShown
-    );
-  const mergedHeaderActions = useMemo(
-    () =>
-      menuDrawn || sessionPlace || headerChrome ? (
-        <Box display="inline-flex" alignItems="center" gap={2}>
-          {headerChrome}
-          {sessionPlace ? <BrowserSessionButton place={sessionPlace} /> : null}
-          {headerActions}
-          {menuDrawn ? (
-            <SessionActionsMenu
-              uid={threadId || chatThread?.id || undefined}
-              describe={describeSession}
-              context={sessionContext}
-            />
-          ) : null}
-        </Box>
-      ) : (
-        headerActions
-      ),
-    [
-      menuDrawn,
-      sessionPlace,
-      uiChrome,
-      lockedUi,
-      headerActions,
-      threadId,
-      chatThread?.id,
-      describeSession,
-      sessionContext,
-    ],
-  );
+  /*
+   * The header's toolbar items (a primer-addons `Toolbar`): each header
+   * chrome UI of the agent's, each locked UI a visitor could sign in for, the
+   * browser-session button, the host's actions and the session menu — one
+   * item each, so a narrow chat moves them into the "…" menu one by one. The
+   * plugins' chips leave first (`priority: -1`); the host's actions and the
+   * session menu stay (`pinned`).
+   */
+  const headerItems = useMemo<ToolbarItem[]>(() => {
+    const items = uiChromeHeaderItems(uiChrome.header, lockedUi);
+    if (sessionPlace) {
+      items.push({
+        key: 'browser-session',
+        type: 'custom',
+        render: () => <BrowserSessionButton place={sessionPlace} />,
+      });
+    }
+    if (headerActions) {
+      items.push({
+        key: 'host-actions',
+        type: 'custom',
+        pinned: true,
+        render: () => headerActions,
+      });
+    }
+    if (menuDrawn) {
+      items.push({
+        key: 'session-actions',
+        type: 'custom',
+        pinned: true,
+        render: () => (
+          <SessionActionsMenu
+            uid={threadId || chatThread?.id || undefined}
+            describe={describeSession}
+            context={sessionContext}
+          />
+        ),
+      });
+    }
+    return items;
+  }, [
+    menuDrawn,
+    sessionPlace,
+    uiChrome,
+    lockedUi,
+    headerActions,
+    threadId,
+    chatThread?.id,
+    describeSession,
+    sessionContext,
+  ]);
 
   const headerButtons = useMemo(
     () => ({
@@ -1165,7 +1176,7 @@ export function Chat({
                     }
                     footerContent={chromeOf('footer') ?? undefined}
                     toolbarExtras={chromeOf('toolbar') ?? undefined}
-                    headerActions={mergedHeaderActions}
+                    headerItems={headerItems}
                     showModelSelector={showModelSelector}
                     showToolsMenu={showToolsMenu}
                     showInput={showInput}

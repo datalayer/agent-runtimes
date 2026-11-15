@@ -2864,61 +2864,99 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 See `toggleFullScreen` for why it is the browser's API rather
                 than a big box.
               */
-              headerActions={
-                <Box display="inline-flex" alignItems="center" gap={2}>
-                  {/* The host's own additions first, then the plugins', then
-                      the chat's — so what belongs to the page reads as part of
-                      the page and the chat's controls stay together at the
-                      trailing edge, where a reader looks for them.
-
-                      The slot is asked whether anyone filled it before it is
-                      drawn: an empty `ReactorSlot` is still an element, and
-                      three of them would space a header out around nothing. */}
-                  {workspace.chatHeaderActions}
-                  {/* The temporary key's clock (the user, 15 November 2026). */}
-                  {anonymousState &&
-                  !anonymousState.validating &&
-                  !anonymousState.refused ? (
-                    <AnonymousKeyClock state={anonymousState} />
-                  ) : null}
-                  {/* The thread's menu (MH-F08): what the `loop.session.action`
-                      registry holds and applies to this session, read when
-                      it opens — nothing for a thread that is no session. */}
-                  {runsApp && agentServerUrl ? (
-                    <>
-                      {/* The session's state words and where it comes from
-                          (MH-27, MH-10). */}
-                      <SessionStateLine facts={facts} />
-                      <SessionActionsMenu
-                        uid={threadUid || undefined}
-                        describe={uid => sessionsClient.described(uid)}
-                        context={sessionContext}
-                      />
-                    </>
-                  ) : null}
-                  {chatHeaderItems.length > 0 ? (
-                    <ReactorSlot
-                      slot={LoopSlots.chatHeader}
-                      props={{ workspace }}
-                    />
-                  ) : null}
-                  <IconButton
-                    icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
-                    aria-label={
-                      fullScreen ? 'Exit full screen' : 'Enter full screen'
-                    }
-                    variant="invisible"
-                    size="small"
-                    onClick={() => {
-                      // Whether or not it takes, the hint has been answered:
-                      // they found the control, which is all it was for.
-                      setHintFullScreen(false);
-                      toggleFullScreen();
-                    }}
-                    sx={
-                      hintFullScreen
-                        ? {
-                            /*
+              headerItems={[
+                /* The title bar is a primer-addons `Toolbar`: one item each,
+                   so a narrow chat moves them into its "…" menu one by one.
+                   The host's own additions first, then the plugins', then the
+                   chat's — so what belongs to the page reads as part of the
+                   page and the chat's controls stay together at the trailing
+                   edge, where a reader looks for them. The host's additions,
+                   the session menu and full screen stay on the bar
+                   (`pinned`); the plugins' leave first (`priority: -1`). */
+                ...(workspace.chatHeaderActions
+                  ? [
+                      {
+                        key: 'workspace-actions',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => workspace.chatHeaderActions,
+                      },
+                    ]
+                  : []),
+                // The temporary key's clock (the user, 15 November 2026).
+                ...(anonymousState &&
+                !anonymousState.validating &&
+                !anonymousState.refused
+                  ? [
+                      {
+                        key: 'anonymous-key-clock',
+                        type: 'custom' as const,
+                        render: () => (
+                          <AnonymousKeyClock state={anonymousState} />
+                        ),
+                      },
+                    ]
+                  : []),
+                /* The thread's menu (MH-F08): what the `loop.session.action`
+                   registry holds and applies to this session, read when it
+                   opens — nothing for a thread that is no session; with the
+                   session's state words and where it comes from (MH-27,
+                   MH-10). */
+                ...(runsApp && agentServerUrl
+                  ? [
+                      {
+                        key: 'session-state',
+                        type: 'custom' as const,
+                        render: () => <SessionStateLine facts={facts} />,
+                      },
+                      {
+                        key: 'session-actions',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => (
+                          <SessionActionsMenu
+                            uid={threadUid || undefined}
+                            describe={uid => sessionsClient.described(uid)}
+                            context={sessionContext}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
+                /* What plugins put in the title bar (`LoopSlots.chatHeader`),
+                   each contribution its own item — the slot's own list, so a
+                   contribution that draws nothing takes no room. */
+                ...chatHeaderItems.map(entry => {
+                  const Contributed = entry.Component;
+                  return {
+                    key: `slot-${entry.slot}:${entry.id}`,
+                    type: 'custom' as const,
+                    priority: -1,
+                    render: () => <Contributed workspace={workspace} />,
+                  };
+                }),
+                {
+                  key: 'full-screen',
+                  type: 'custom' as const,
+                  pinned: true,
+                  render: () => (
+                    <IconButton
+                      icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
+                      aria-label={
+                        fullScreen ? 'Exit full screen' : 'Enter full screen'
+                      }
+                      variant="invisible"
+                      size="small"
+                      onClick={() => {
+                        // Whether or not it takes, the hint has been answered:
+                        // they found the control, which is all it was for.
+                        setHintFullScreen(false);
+                        toggleFullScreen();
+                      }}
+                      sx={
+                        hintFullScreen
+                          ? {
+                              /*
                               Colour and opacity, never geometry.
 
                               The colour is the theme's own `primary` — the
@@ -2935,11 +2973,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                               controls beside it stay where a reader last saw
                               them.
                             */
-                            '@keyframes dla-fullscreen-hint': {
-                              '0%, 100%': { opacity: 1 },
-                              '50%': { opacity: 0.4 },
-                            },
-                            /* `&&` doubles the specificity, because Primer
+                              '@keyframes dla-fullscreen-hint': {
+                                '0%, 100%': { opacity: 1 },
+                                '50%': { opacity: 0.4 },
+                              },
+                              /* `&&` doubles the specificity, because Primer
                                ships Button as a CSS module and
                                `prc-Button-*` outranks a single generated
                                class — without it the keyframes register and
@@ -2953,8 +2991,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                which is exactly how the first version of this
                                silently did nothing. It ends when the reader
                                takes the offer, or arrives without it. */
-                            '&&': {
-                              /*
+                              '&&': {
+                                /*
                                 The brand on the box, not on the glyph.
 
                                 Painting the icon `palette.primary` was the
@@ -2975,23 +3013,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                 rule that works for one fails for another. The
                                 glyph keeps the colour it can be read in.
                               */
-                              bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
-                              boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
-                              animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
-                            },
-                            // A reader who asked the machine to hold still
-                            // keeps the colour and loses the knocking: the
-                            // control is still the findable one, it just
-                            // holds still.
-                            '@media (prefers-reduced-motion: reduce)': {
-                              '&&': { animation: 'none' },
-                            },
-                          }
-                        : undefined
-                    }
-                  />
-                </Box>
-              }
+                                bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
+                                boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
+                                animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
+                              },
+                              // A reader who asked the machine to hold still
+                              // keeps the colour and loses the knocking: the
+                              // control is still the findable one, it just
+                              // holds still.
+                              '@media (prefers-reduced-motion: reduce)': {
+                                '&&': { animation: 'none' },
+                              },
+                            }
+                          : undefined
+                      }
+                    />
+                  ),
+                },
+              ]}
               // This view owns the prompt, below, so the chat does not draw a
               // second one: two input boxes on one screen is one too many.
               showInput={false}

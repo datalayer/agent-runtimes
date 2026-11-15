@@ -848,6 +848,15 @@ export interface ChatCommonProps {
   /** Custom header actions (rendered in title row, right side) */
   headerActions?: ReactNode;
 
+  /**
+   * Items of the header's toolbar (a primer-addons `Toolbar`), beside the
+   * chat's own controls: what the agent's UI plugins and the host add to the
+   * title bar, each its own item, so what does not fit moves into the "…"
+   * menu one item at a time. `pinned` keeps one on the bar; `priority`
+   * orders who leaves first (the plugins' chips: -1).
+   */
+  headerItems?: ToolbarItem[];
+
   // ============ Misc ============
 
   /** Auto-focus the input on mount */
@@ -1142,6 +1151,15 @@ export interface ChatBaseProps {
 
   /** Header actions */
   headerActions?: React.ReactNode;
+
+  /**
+   * Items of the header's toolbar (a primer-addons `Toolbar`), beside the
+   * chat's own controls: what the agent's UI plugins and the host add to the
+   * title bar, each its own item, so what does not fit moves into the "…"
+   * menu one item at a time. `pinned` keeps one on the bar; `priority`
+   * orders who leaves first (the plugins' chips: -1).
+   */
+  headerItems?: ToolbarItem[];
 
   /** Notebook kernel indicator state override for the chat header. */
   kernelIndicatorState?: import('@datalayer/jupyter-react').ExecutionState;

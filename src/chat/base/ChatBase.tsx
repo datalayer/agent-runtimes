@@ -802,6 +802,7 @@ function ChatBaseInner({
   className,
   loadingState,
   headerActions,
+  headerItems,
   kernelIndicatorState,
   kernelIndicatorPlacement = 'left',
   kernelIndicatorPosition = 's',
@@ -5425,6 +5426,7 @@ function ChatBaseInner({
     brandIcon,
     headerContent,
     headerActions,
+    headerItems,
     showInformation,
     /*
       A default, so the button does something.

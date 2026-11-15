@@ -11,7 +11,7 @@
  *
  * | Placement | A Loop workspace          | `Chat`                               |
  * |-----------|---------------------------|--------------------------------------|
- * | `header`  | `loop.chatHeader`         | its header actions                   |
+ * | `header`  | `loop.chatHeader`         | items of its header toolbar ("…" when narrow) |
  * | `toolbar` | `loop.promptAction`       | the input toolbar (`toolbarExtras`)  |
  * | `footer`  | `loop.status`             | the band over the prompt (`footerContent`) |
  * | `banner`  | `loop.chatBanner`         | under the title (`headerContent`)    |
