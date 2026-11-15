@@ -586,7 +586,63 @@ def build_capabilities_from_agent_spec(
         if compaction_capability is not None:
             capabilities.append(compaction_capability)
 
-    return capabilities
+    return order_before_approvals(capabilities)
+
+
+def order_before_approvals(capabilities: list[Any]) -> list[Any]:
+    """
+    The capabilities with each pre-call check ahead of the tool approvals.
+
+    A capability whose class says ``CHECKS_BEFORE_APPROVAL`` (the API budget
+    guardrail) refuses a call before the person is asked to approve it, so a
+    call is never approved and then refused (15 November 2026). Its
+    ``before_tool_execute`` must then run before the approval guardrail's:
+    pydantic-ai runs them in the capabilities' order. Every other capability
+    keeps its place.
+
+    Parameters
+    ----------
+    capabilities : list
+        The capabilities, in the order built.
+
+    Returns
+    -------
+    list
+        The same capabilities, each pre-call check moved just before the first
+        tool approval guardrail when it came after it.
+    """
+    from agent_runtimes.guardrails.tool_approvals import (  # noqa: PLC0415
+        ToolsGuardrailCapability,
+    )
+
+    first = next(
+        (
+            index
+            for index, capability in enumerate(capabilities)
+            if isinstance(capability, ToolsGuardrailCapability)
+        ),
+        None,
+    )
+    if first is None:
+        return capabilities
+    early = [
+        capability
+        for capability in capabilities[first:]
+        if getattr(type(capability), "CHECKS_BEFORE_APPROVAL", False)
+    ]
+    if not early:
+        return capabilities
+    rest = [
+        capability
+        for capability in capabilities
+        if all(capability is not moved for moved in early)
+    ]
+    insert_at = next(
+        index
+        for index, capability in enumerate(rest)
+        if capability is capabilities[first]
+    )
+    return rest[:insert_at] + early + rest[insert_at:]
 
 
 def build_default_choice_guardrails(agent_id: str | None = None) -> list[Any]:

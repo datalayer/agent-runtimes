@@ -547,3 +547,157 @@ class TestInThePostgreSQL:
             for scope_key in budget_keys(f"test-{key}", ANA, NOON).values():
                 await store.delete(API_BUDGET_KIND, scope_key)
             await store.close()
+
+
+class TestBeforeTheApproval:
+    """The estimate runs before the person is asked (15 November 2026): a call
+    past a budget is refused with the guardrail's sentence, and the approval
+    guardrail is never reached for it."""
+
+    @pytest.mark.asyncio
+    async def test_a_call_past_the_budget_is_refused_before_any_approval(
+        self, store: Any
+    ) -> None:
+        from pydantic_ai.exceptions import SkipToolExecution
+
+        budget = guardrail(store, Clock(NOON), daily=0.01)
+        with pytest.raises(SkipToolExecution) as skipped:
+            await budget.before_tool_execute(
+                None,  # type: ignore[arg-type]
+                call=ToolCallPart(tool_name="post_to_x", args={"text": "hi"}),
+                tool_def=ToolDefinition(name="post_to_x"),
+                args={"text": "hi"},
+            )
+        assert skipped.value.result.startswith(
+            "This agent's X budget for today is used up"
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_call_within_the_budget_goes_on_to_the_approval_bounded(
+        self, store: Any
+    ) -> None:
+        budget = guardrail(store, Clock(NOON))
+        args = await budget.before_tool_execute(
+            None,  # type: ignore[arg-type]
+            call=ToolCallPart(
+                tool_name="read_x", args={"what": "search", "query": "q", "limit": 100}
+            ),
+            tool_def=ToolDefinition(name="read_x"),
+            args={"what": "search", "query": "q", "limit": 100},
+        )
+        assert args["limit"] <= X["results"]["most"]
+        # Another tool is not the guardrail's.
+        untouched = {"text": "x"}
+        assert (
+            await budget.before_tool_execute(
+                None,  # type: ignore[arg-type]
+                call=ToolCallPart(tool_name="post_to_bluesky", args=untouched),
+                tool_def=ToolDefinition(name="post_to_bluesky"),
+                args=untouched,
+            )
+            is untouched
+        )
+
+    def test_the_budget_runs_before_the_approval_guardrail(self, store: Any) -> None:
+        from agent_runtimes.capabilities.factory import order_before_approvals
+        from agent_runtimes.guardrails.tool_approvals import (
+            ToolApprovalConfig,
+            ToolsGuardrailCapability,
+        )
+
+        approval = ToolsGuardrailCapability(config=ToolApprovalConfig())
+        budget = guardrail(store, Clock(NOON))
+        other = object()
+        ordered = order_before_approvals([other, approval, budget])
+        assert [id(each) for each in ordered] == [id(other), id(budget), id(approval)]
+        # Already before: kept as it is.
+        kept = [budget, approval]
+        assert order_before_approvals(kept) is kept
+        # Built from the Marketer's spec with an approval guardrail: the budget comes first.
+        spec = MARKETER.model_copy(
+            update={
+                "guardrails": [{"tool_approval": True}, *(MARKETER.guardrails or [])]
+            }
+        )
+        built = build_capabilities_from_agent_spec(spec)
+        kinds = [type(each).__name__ for each in built]
+        assert kinds.index("ApiBudgetCapability") < kinds.index(
+            "ToolsGuardrailCapability"
+        )
+
+
+class TestADeferredCall:
+    """A post asks first: pydantic-ai defers it for approval before any execute
+    hook, and the approval guardrail asks the person in `handle_deferred_tool_calls`.
+    The budget answers there first."""
+
+    @pytest.mark.asyncio
+    async def test_a_post_past_the_budget_is_denied_before_the_person_is_asked(
+        self, store: Any
+    ) -> None:
+        from pydantic_ai.tools import DeferredToolRequests, ToolDenied
+
+        budget = guardrail(store, Clock(NOON), daily=0.01)
+        post = ToolCallPart(
+            tool_name="post_to_x", args={"text": "hi"}, tool_call_id="p1"
+        )
+        other = ToolCallPart(
+            tool_name="post_to_bluesky", args={"text": "hi"}, tool_call_id="b1"
+        )
+        answered = await budget.handle_deferred_tool_calls(
+            None,  # type: ignore[arg-type]
+            requests=DeferredToolRequests(approvals=[post, other]),
+        )
+        assert answered is not None
+        assert list(answered.approvals) == ["p1"]
+        denied = answered.approvals["p1"]
+        assert isinstance(denied, ToolDenied)
+        assert denied.message.startswith("This agent's X budget for today is used up")
+        # Within the budget, nothing is answered: the person is asked as before.
+        roomy = guardrail(store, Clock(NOON))
+        assert (
+            await roomy.handle_deferred_tool_calls(
+                None,  # type: ignore[arg-type]
+                requests=DeferredToolRequests(approvals=[post]),
+            )
+            is None
+        )
+
+    @pytest.mark.asyncio
+    async def test_in_a_run_the_approver_never_sees_a_post_past_the_budget(
+        self, store: Any
+    ) -> None:
+        """Through pydantic-ai: the budget, then an approver, on a tool that asks first."""
+        from dataclasses import dataclass, field
+
+        from pydantic_ai import Agent
+        from pydantic_ai.capabilities import AbstractCapability
+        from pydantic_ai.models.test import TestModel
+        from pydantic_ai.tools import DeferredToolResults
+
+        @dataclass
+        class Approver(AbstractCapability[Any]):
+            asked: list[str] = field(default_factory=list)
+
+            async def handle_deferred_tool_calls(self, ctx, *, requests):  # type: ignore[override]
+                self.asked += [call.tool_name for call in requests.approvals]
+                return DeferredToolResults(
+                    approvals={call.tool_call_id: True for call in requests.approvals}
+                )
+
+        approver = Approver()
+        posted: list[str] = []
+        agent = Agent(
+            TestModel(call_tools=["post_to_x"]),
+            capabilities=[guardrail(store, Clock(NOON), daily=0.01), approver],
+        )
+
+        @agent.tool_plain(requires_approval=True)
+        def post_to_x(text: str) -> dict[str, Any]:
+            posted.append(text)
+            return {"post_id": "1"}
+
+        result = await agent.run("post it")
+        assert approver.asked == []
+        assert posted == []
+        assert "X budget for today is used up" in str(result.all_messages())

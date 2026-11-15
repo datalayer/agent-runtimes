@@ -13,8 +13,14 @@ from typing import Any, Callable, Literal
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.exceptions import SkipToolExecution
 from pydantic_ai.messages import ToolCallPart
-from pydantic_ai.tools import ToolDefinition
+from pydantic_ai.tools import (
+    DeferredToolRequests,
+    DeferredToolResults,
+    ToolDefinition,
+    ToolDenied,
+)
 
 from .common import GuardrailBlockedError
 
@@ -289,7 +295,18 @@ class ApiBudgetCapability(AbstractCapability[Any]):
     The day and the month are UTC's; their records are new each period, so
     the budgets reset at 00:00 UTC. A store that cannot be read refuses the
     call: an unknown spend is never taken for none.
+
+    The estimate runs before the person is asked (15 November 2026): a call
+    that would pass a budget is refused with its sentence and no approval is
+    asked for it (``handle_deferred_tool_calls`` for a tool deferred for
+    approval, ``before_tool_execute`` for the others, both ordered before the
+    approval guardrail, ``CHECKS_BEFORE_APPROVAL``); the call is checked again as it
+    runs, since a budget may be spent while the person decides, and counted
+    after it.
     """
+
+    #: Its check runs before a tool approval is asked (`order_before_approvals`).
+    CHECKS_BEFORE_APPROVAL = True
 
     budget_id: str
     provider: str
@@ -477,6 +494,120 @@ class ApiBudgetCapability(AbstractCapability[Any]):
         return records
 
     # -- the hook ----------------------------------------------------------------
+
+    async def before_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Refuse a call past a budget before anyone is asked to approve it.
+
+        Parameters
+        ----------
+        ctx : RunContext
+            The run.
+        call : ToolCallPart
+            The call.
+        tool_def : ToolDefinition
+            Its tool.
+        args : dict
+            Its arguments.
+
+        Returns
+        -------
+        dict
+            The arguments, a read's result count bounded.
+
+        Raises
+        ------
+        SkipToolExecution
+            With the guardrail's sentence, for a call that would pass a
+            budget or whose budget cannot be read: the tool does not run and
+            no approval is asked.
+        """
+        name = tool_def.name
+        if name not in self.tools:
+            return args
+        unit, most, _, bounded = self.estimate(name, dict(args))
+        if not unit:
+            return bounded
+        try:
+            refused = await self.check(
+                self._who(), self.price_of(unit, most), self.clock()
+            )
+        except Exception as error:  # noqa: BLE001 - an unknown spend is never taken for none
+            logger.warning(
+                "%s: the budget could not be read (%s)",
+                self.budget_id,
+                type(error).__name__,
+            )
+            raise SkipToolExecution(
+                f"This agent's {self.provider} budget could not be read just now, so nothing was "
+                f"asked of {self.provider}. Try again in a moment."
+            ) from None
+        if refused:
+            raise SkipToolExecution(refused)
+        return bounded
+
+    async def handle_deferred_tool_calls(
+        self,
+        ctx: RunContext[Any],
+        *,
+        requests: DeferredToolRequests,
+    ) -> DeferredToolResults | None:
+        """
+        Deny a call waiting for approval that would pass a budget, before the person is asked.
+
+        A tool that asks first (a post, a reply) is deferred for approval
+        before any execute hook runs; the approval guardrail asks the person
+        in this same hook, after this one (`order_before_approvals`). A call
+        past a budget is answered here with the guardrail's sentence, so it is
+        never put to the person; the others go on to be asked.
+
+        Parameters
+        ----------
+        ctx : RunContext
+            The run.
+        requests : DeferredToolRequests
+            The calls waiting.
+
+        Returns
+        -------
+        DeferredToolResults or None
+            The calls denied, with the guardrail's sentence; ``None`` when none is.
+        """
+        denied: dict[str, Any] = {}
+        for call in requests.approvals:
+            if call.tool_name not in self.tools:
+                continue
+            try:
+                args = call.args_as_dict()
+            except Exception:  # noqa: BLE001 - unreadable arguments are the approval's to show
+                continue
+            unit, most, _, _ = self.estimate(call.tool_name, dict(args))
+            if not unit:
+                continue
+            try:
+                refused = await self.check(
+                    self._who(), self.price_of(unit, most), self.clock()
+                )
+            except Exception as error:  # noqa: BLE001 - an unknown spend is never taken for none
+                logger.warning(
+                    "%s: the budget could not be read (%s)",
+                    self.budget_id,
+                    type(error).__name__,
+                )
+                refused = (
+                    f"This agent's {self.provider} budget could not be read just now, so nothing was "
+                    f"asked of {self.provider}. Try again in a moment."
+                )
+            if refused:
+                denied[call.tool_call_id] = ToolDenied(refused)
+        return DeferredToolResults(approvals=denied) if denied else None
 
     async def wrap_tool_execute(
         self,

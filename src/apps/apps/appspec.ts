@@ -508,6 +508,8 @@ function parseConnection(data: Data): AppConnectionSpec {
     access: oneOf(data.access, ['read', 'write'] as const, 'read'),
     as: oneOf(data.as, ['owner', 'user'] as const, 'owner'),
     only: texts(data.only),
+    // Optional as its agent says (agentspecs 0.0.189): it starts without it.
+    optional: data.optional === true,
   };
 }
 
@@ -2146,7 +2148,9 @@ export function dumpAppspec(app: AppSpec): Data {
             .text('server', connection.server, '\u0000')
             .value<string>('access', connection.access, 'read')
             .value<string>('as', connection.as, 'owner')
-            .list('only', connection.only).data,
+            .list('only', connection.only)
+            .value<boolean>('optional', connection.optional ?? false, false)
+            .data,
       ),
     )
     .list('protocols', app.protocols)

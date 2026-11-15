@@ -597,9 +597,18 @@ function referenceProblems(
       problems.push(`Its organization has no context named “${ref}”.`);
     }
   }
+  // An optional connection follows its agent's rule (agentspecs 0.0.189): the
+  // agent starts without that server, and its groups say which one at least
+  // it needs; only a server the agent says optional may be.
+  const agentOptional = new Set((agent?.optional?.mcpServers ?? []).map(idOf));
   for (const connection of app.connections) {
     if (!own(MCP_SERVER_LIBRARY, idOf(connection.server))) {
       missing('MCP server', connection.server);
+    }
+    if (connection.optional && !agentOptional.has(idOf(connection.server))) {
+      problems.push(
+        `The connection “${connection.server}” is optional, and its agent does not start without it: only a server the agent says optional may be.`,
+      );
     }
   }
   for (const ref of app.skills) {
@@ -1049,6 +1058,8 @@ export function documentShapeProblems(document: unknown): string[] {
     oneOf(item.access, ENUMS.access, `${where}.access`);
     oneOf(item.as, ENUMS.as, `${where}.as`);
     texts(item.only, `${where}.only`);
+    if (item.optional !== undefined && typeof item.optional !== 'boolean')
+      at(`${where}.optional`, 'is true or false');
   });
   records(d.rules, 'rules', (item, where) => {
     required(item, 'action', where);

@@ -65,6 +65,7 @@ describe('reading a YAML file', () => {
       access: 'write',
       as: 'owner',
       only: ['*gmail*'],
+      optional: false,
     });
     expect(app.interface.starters[0].message).toBe(
       'How do I reset my password? I have lost the device I used to sign in with, and the recovery address is one I no longer read.',

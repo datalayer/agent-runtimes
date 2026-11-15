@@ -103,7 +103,14 @@ describe('reading an Appspec', () => {
     expect(app.kind).toBe('chat');
     expect(app.rules).toEqual([]);
     expect(app.connections).toEqual([
-      { server: 'tavily', access: 'read', as: 'owner', only: [] },
+      // Not optional unless it says so, as agentspecs reads it.
+      {
+        server: 'tavily',
+        access: 'read',
+        as: 'owner',
+        only: [],
+        optional: false,
+      },
     ]);
     expect(parseAppspec('not an application').problems).toEqual([
       'The document is not an application.',
