@@ -25,7 +25,6 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
 )
 
 NETWORKS = {
-    "x": ["X_BEARER_TOKEN"],
     "discord": ["DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID"],
 }
 
@@ -39,12 +38,17 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     marketer = get_agent_spec("worker-marketer")
     assert marketer is not None and marketer.optional is not None
     # The linkedin server, on a browser session signed in from the chat (agentspecs 0.0.191).
-    # No bluesky server (agentspecs 0.0.192): Bluesky is read and acted on with the linked account.
-    assert marketer.optional.mcp_servers == ["x", "discord", "linkedin"]
+    # No bluesky server (agentspecs 0.0.192) nor x server (0.0.194): Bluesky and X
+    # are read and acted on with the linked account.
+    assert marketer.optional.mcp_servers == ["discord", "linkedin"]
     assert marketer.optional.skills == ["crawl", "github"]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
     assert marketer.optional.backend_tools == [
         "social-post-x",
+        "social-read-x",
+        "social-reply-x",
+        "social-like-x",
+        "social-repost-x",
         "social-post-bluesky",
         "social-read-bluesky",
         "social-reply-bluesky",
@@ -56,7 +60,6 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     ]
     assert marketer.optional.at_least_one == [
         [
-            "x",
             "discord",
             "linkedin",
             "social-post-x",
@@ -95,7 +98,7 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     group = [sentence for sentence in nothing if "one at least of" in sentence]
     assert group == [
         "Marketer is not set up: it needs one at least of "
-        "the MCP server discord, the MCP server linkedin, the MCP server x, "
+        "the MCP server discord, the MCP server linkedin, "
         "the backend tool social-post-bluesky, the backend tool social-post-linkedin, "
         "the backend tool social-post-x, and none was given its secrets: add those of "
         "one to the account's secrets or link its account in Settings, or sign in to "
@@ -104,9 +107,10 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     for server, names in NETWORKS.items():
         one = declared.missing(_having(names), who="Marketer")
         assert not any("one at least of" in sentence for sentence in one), server
-    # Bluesky's app password no longer counts: the linked account does.
+    # Bluesky's app password and X's bearer token no longer count: the linked account does.
     pasted = declared.missing(_having(["BLUESKY_IDENTIFIER", "BLUESKY_APP_PASSWORD", "BLUESKY_SERVICE_URL"]), who="Marketer")
     assert any("one at least of" in sentence for sentence in pasted)
+    assert any("one at least of" in sentence for sentence in declared.missing(_having(["X_BEARER_TOKEN"]), who="Marketer"))
 
 
 def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
@@ -129,7 +133,7 @@ def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
 
 def test_what_is_not_set_up_is_left_out_and_said():
     declared = declared_secrets(get_agent_spec("worker-marketer"))
-    left = declared.left_out(_having(NETWORKS["x"] + ["GITHUB_TOKEN"]))
+    left = declared.left_out(_having(["GITHUB_TOKEN"]))
     assert left.servers == {"discord": NETWORKS["discord"]}
     assert left.skills == {"crawl": ["TAVILY_API_KEY"]}
     assert left.tools == {
@@ -140,6 +144,10 @@ def test_what_is_not_set_up_is_left_out_and_said():
         "social-repost-bluesky": ["a linked Bluesky account"],
         "social-follow-bluesky": ["a linked Bluesky account"],
         "social-post-x": ["a linked X account"],
+        "social-read-x": ["a linked X account"],
+        "social-reply-x": ["a linked X account"],
+        "social-like-x": ["a linked X account"],
+        "social-repost-x": ["a linked X account"],
         "social-post-linkedin": ["a linked LinkedIn account"],
         "social-comment-linkedin": ["a linked LinkedIn account"],
     }

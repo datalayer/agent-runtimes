@@ -63,10 +63,49 @@ export interface AgentContentSafety {
   [key: string]: unknown;
 }
 
+/** How one priced tool is billed: by a unit of the price table, or by what it reads. */
+export interface AgentApiBudgetTool {
+  unit?: string;
+  /** The unit of a post carrying a link (`create_post_with_url`). */
+  with_url?: string;
+  /** The argument saying what is read (`what`). */
+  by?: string;
+  reads?: Record<
+    string,
+    { unit: string; per_result?: boolean; fewest?: number }
+  >;
+  [key: string]: unknown;
+}
+
+/**
+ * What a paid API costs Datalayer, held to budgets (the X budget of the
+ * Marketer, `x-api-budget`, 15 November 2026): its price table, its budgets,
+ * the most results a read asks for, and how each tool is priced. The runtime's
+ * `ApiBudgetCapability` enforces it; the counters live in the agent-memories
+ * PostgreSQL (protocol-state kind `guardrail.api_budget`).
+ */
+export interface AgentApiBudget {
+  id: string;
+  provider: string;
+  currency?: string;
+  prices: Record<string, number>;
+  budgets?: {
+    per_person_daily?: number;
+    per_person_monthly?: number;
+    platform_monthly?: number;
+  };
+  results?: { argument?: string; default?: number; most?: number };
+  counted_by?: string;
+  tools?: Record<string, AgentApiBudgetTool>;
+  [key: string]: unknown;
+}
+
 /** One entry of an agent spec's `guardrails`. */
 export interface AgentGuardrail {
   name?: string;
   cost_budget?: AgentCostBudget;
+  /** What a paid API costs, held to budgets per person and for the platform. */
+  api_budget?: AgentApiBudget;
   token_limits?: AgentTokenLimits;
   /** Permission flags, `read:data` and the like, each true or false. */
   permissions?: Record<string, boolean>;
@@ -83,4 +122,18 @@ export interface AgentGuardrail {
   tool_approval?: Record<string, unknown> | boolean;
   /** What a spec writes beyond this is carried as written, as the Python type (`List[Dict[str, Any]]`) carries it. */
   [key: string]: unknown;
+}
+
+/** The `api_budget` of an agent's guardrails with this id (`x-api-budget`), if it declares one. */
+export function apiBudgetOf(
+  guardrails: readonly unknown[] | undefined | null,
+  id: string,
+): AgentApiBudget | undefined {
+  for (const entry of guardrails ?? []) {
+    const budget = (entry as AgentGuardrail | null)?.api_budget;
+    if (budget && budget.id === id) {
+      return budget;
+    }
+  }
+  return undefined;
 }

@@ -3498,19 +3498,12 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [
             {
-                "server": "x:0.0.1",
-                "access": "read",
-                "as": "owner",
-                "only": [],
-                "optional": True,
-            },
-            {
                 "server": "discord:0.0.1",
                 "access": "write",
                 "as": "owner",
                 "only": [],
                 "optional": True,
-            },
+            }
         ],
         "protocols": [],
         "ui": [{"plugin": "chat", "renderer": None}],
@@ -3640,7 +3633,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Not played live yet: X reads with a bearer token; posting to X, Bluesky and LinkedIn on the linked accounts waits for the runtime image that carries the posting tools; Discord's runs in Docker."
+                    "Not played live yet: posting to X, Bluesky and LinkedIn on the linked accounts waits for the runtime image that carries the posting tools; Discord's runs in Docker."
                 ],
             },
         },

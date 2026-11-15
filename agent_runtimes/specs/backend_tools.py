@@ -571,6 +571,26 @@ SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     emoji="❤️",
 )
 
+SOCIAL_LIKE_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-like-x",
+    version="0.0.1",
+    name="Like on X",
+    description="Like one X post as the person, through Datalayer's IAM; it waits for the person's approval every time, held to the person's X budget.",
+    tags=["social", "x", "datalayer-social"],
+    enabled=True,
+    approval="manual",
+    timeout=None,
+    requires_approval=True,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="like_on_x",
+    ),
+    linked_accounts=["x"],
+    icon="@primer/octicons-react:heart",
+    emoji="❤️",
+)
+
 SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="social-post-bluesky",
     version="0.0.1",
@@ -651,6 +671,26 @@ SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     emoji="🦋",
 )
 
+SOCIAL_READ_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-read-x",
+    version="0.0.1",
+    name="Read X",
+    description="Read X as the person, with their account linked in Settings: their own profile, someone's, a post, their timeline, their posts, their mentions, the replies to a post and a search of recent posts, through Datalayer's IAM; each read is held to the person's X budget.",
+    tags=["social", "x", "datalayer-social"],
+    enabled=True,
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="read_x",
+    ),
+    linked_accounts=["x"],
+    icon="@datalayer/icons-react:x",
+    emoji="✖️",
+)
+
 SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="social-reply-bluesky",
     version="0.0.1",
@@ -671,6 +711,26 @@ SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     emoji="💬",
 )
 
+SOCIAL_REPLY_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-reply-x",
+    version="0.0.1",
+    name="Reply on X",
+    description="Reply as the person under one X post, through Datalayer's IAM; it waits for the person's approval every time. A reply costs Datalayer USD 0.015 at X, USD 0.20 with a link, held to the person's X budget.",
+    tags=["social", "x", "datalayer-social"],
+    enabled=True,
+    approval="manual",
+    timeout=None,
+    requires_approval=True,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="reply_on_x",
+    ),
+    linked_accounts=["x"],
+    icon="@primer/octicons-react:reply",
+    emoji="↩️",
+)
+
 SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="social-repost-bluesky",
     version="0.0.1",
@@ -687,6 +747,26 @@ SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
         method="repost_on_bluesky",
     ),
     linked_accounts=["bluesky"],
+    icon="@primer/octicons-react:sync",
+    emoji="🔁",
+)
+
+SOCIAL_REPOST_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="social-repost-x",
+    version="0.0.1",
+    name="Repost on X",
+    description="Repost one X post on the person's profile, through Datalayer's IAM; it waits for the person's approval every time, held to the person's X budget.",
+    tags=["social", "x", "datalayer-social"],
+    enabled=True,
+    approval="manual",
+    timeout=None,
+    requires_approval=True,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.social",
+        method="repost_on_x",
+    ),
+    linked_accounts=["x"],
     icon="@primer/octicons-react:sync",
     emoji="🔁",
 )
@@ -744,12 +824,16 @@ BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
     "social-comment-linkedin": SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
     "social-follow-bluesky": SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
     "social-like-bluesky": SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+    "social-like-x": SOCIAL_LIKE_X_BACKEND_TOOL_SPEC_0_0_1,
     "social-post-bluesky": SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
     "social-post-linkedin": SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
     "social-post-x": SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1,
     "social-read-bluesky": SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+    "social-read-x": SOCIAL_READ_X_BACKEND_TOOL_SPEC_0_0_1,
     "social-reply-bluesky": SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+    "social-reply-x": SOCIAL_REPLY_X_BACKEND_TOOL_SPEC_0_0_1,
     "social-repost-bluesky": SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+    "social-repost-x": SOCIAL_REPOST_X_BACKEND_TOOL_SPEC_0_0_1,
     "update-plan-step": UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 }
 

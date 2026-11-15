@@ -12,6 +12,7 @@ from pydantic_ai import UsageLimits
 
 from ..guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
+    ApiBudgetCapability,
     AsyncGuardrailCapability,
     BlockedKeywordsCapability,
     ContentSafetyCapability,
@@ -209,6 +210,32 @@ def build_capabilities_from_agent_spec(
                     cumulative_usd=_parse_money(cost_budget.get("cumulative_usd")),
                     on_budget_exceeded=cost_budget.get("on_budget_exceeded", "stop"),
                     model_name=getattr(agent_spec, "model", None),
+                )
+            )
+
+        # What a paid API costs Datalayer, held to budgets per person and for
+        # the platform (the user, 15 November 2026: the X budget of the
+        # Marketer, "an agent guardrail, not a iam cap").
+        api_budget = entry.get("api_budget") or {}
+        if isinstance(api_budget, dict) and api_budget:
+            budgets = api_budget.get("budgets") or {}
+            capabilities.append(
+                ApiBudgetCapability(
+                    budget_id=str(
+                        api_budget.get("id") or entry.get("name") or "api-budget"
+                    ),
+                    provider=str(api_budget.get("provider") or "the API"),
+                    currency=str(api_budget.get("currency") or "USD"),
+                    prices={
+                        str(unit): float(price)
+                        for unit, price in (api_budget.get("prices") or {}).items()
+                    },
+                    tools=dict(api_budget.get("tools") or {}),
+                    per_person_daily=_parse_money(budgets.get("per_person_daily")),
+                    per_person_monthly=_parse_money(budgets.get("per_person_monthly")),
+                    platform_monthly=_parse_money(budgets.get("platform_monthly")),
+                    results=dict(api_budget.get("results") or {}),
+                    counted_by=str(api_budget.get("counted_by") or "resources"),
                 )
             )
 

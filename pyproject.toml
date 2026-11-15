@@ -110,7 +110,8 @@ dependencies = [
     # 1.6.53 with agentspecs 0.0.190: LinkedIn in datalayer-social (social-post-linkedin, social-comment-linkedin).
     # 1.6.55 with agentspecs 0.0.191: the linkedin server back in the Marketer, on a browser session.
     # 1.6.56 with agentspecs 0.0.193: Bluesky, everything through the linked account (datalayer-social).
-    "agentspecs>=0.0.193",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
+    "agentspecs>=0.0.194",  # the company role's website flags (web.unscoped, web.disabled)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

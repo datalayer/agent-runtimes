@@ -58,6 +58,8 @@ class FakeIam:
         self.renew_status = 200
         self.reads: list[tuple[str, dict]] = []
         self.read_status = 200
+        self.x_reads: list[tuple[str, dict]] = []
+        self.x_read_status = 200
 
     def read_answer(self, what: str) -> dict:
         if self.read_status != 200:
@@ -117,6 +119,24 @@ class FakeIam:
                     "post_url": "https://x.com/ana_x/status/1",
                 },
             )
+        if path.startswith("/api/iam/v1/social/x/read/"):
+            what = path.rsplit("/", 1)[1]
+            self.x_reads.append((what, dict(request.url.params)))
+            if self.x_read_status != 200:
+                return httpx.Response(self.x_read_status, json={"detail": "X was linked for posting only. Link X again in Settings › X so Datalayer can read it too."})
+            post = {"id": "7", "text": "Hello Ana", "author_id": "9", "created_at": "2026-11-15T08:00:00Z",
+                    "public_metrics": {"reply_count": 1, "retweet_count": 2, "like_count": 3, "quote_count": 0, "impression_count": 40},
+                    "referenced_tweets": [{"type": "replied_to", "id": "6"}]}
+            if what in ("me", "user"):
+                data = {"id": "42", "username": "ana_x", "name": "Ana", "description": "Ana's",
+                        "public_metrics": {"followers_count": 10, "following_count": 5, "tweet_count": 7}}
+                return httpx.Response(200, json={"success": True, "data": data, "meta": {}, "resources": 1})
+            if what == "post":
+                return httpx.Response(200, json={"success": True, "data": post, "meta": {}, "resources": 1})
+            return httpx.Response(200, json={"success": True, "data": [post, {**post, "id": "8"}], "meta": {"result_count": 2, "next_token": "n2"}, "resources": 2})
+        if path in ("/api/iam/v1/social/x/likes", "/api/iam/v1/social/x/reposts"):
+            done = "liked" if path.endswith("likes") else "retweeted"
+            return httpx.Response(201, json={"success": True, "post_id": body["post_id"], done: True})
         if path == "/api/iam/v1/social/bluesky/blobs":
             return httpx.Response(201, json={"success": True, "blob": {"ref": "b"}})
         if path == "/api/iam/v1/social/bluesky/records":
@@ -540,3 +560,75 @@ class TestBlueskyEverything:
     def test_the_marketer_reads_bluesky_without_its_server(self):
         marketer = get_agent_spec("worker-marketer")
         assert "bluesky" not in [server.id for server in marketer.mcp_servers]
+
+
+class TestXEverything:
+    """15 November 2026: X read and acted on as the person through IAM ("move X read/write to iam"), every call held to the X budget."""
+
+    def test_the_timeline_is_read_through_iam_made_short_with_what_x_returned(self, iam):
+        answer = asyncio.run(social.read_x("timeline", limit=5))
+        assert iam.x_reads == [("timeline", {"max_results": "5"})]
+        assert answer["resources"] == 2 and answer["cursor"] == "n2"
+        assert answer["posts"][0] == {
+            "id": "7", "url": "https://x.com/i/status/7", "author_id": "9", "text": "Hello Ana",
+            "created_at": "2026-11-15T08:00:00Z", "replies": 1, "reposts": 2, "likes": 3, "quotes": 0,
+            "impressions": 40, "in_reply_to": "6",
+        }
+
+    def test_the_person_s_profile_someone_s_a_post_its_replies_and_a_search(self, iam):
+        me = asyncio.run(social.read_x("me"))
+        asyncio.run(social.read_x("user", username="@bob_x"))
+        asyncio.run(social.read_x("post", post="https://x.com/bob_x/status/7"))
+        asyncio.run(social.read_x("replies", post="7", cursor="n2"))
+        asyncio.run(social.read_x("search", query="datalayer"))
+        assert me["profile"]["username"] == "ana_x" and me["resources"] == 1
+        assert iam.x_reads == [
+            ("me", {}),
+            ("user", {"username": "bob_x"}),
+            ("post", {"post_id": "7"}),
+            ("replies", {"post_id": "7", "pagination_token": "n2"}),
+            ("search", {"query": "datalayer"}),
+        ]
+
+    @pytest.mark.parametrize(
+        "kwargs, said",
+        [
+            ({"what": "everything"}, "Read one of"),
+            ({"what": "post"}, "x.com address or its id"),
+            ({"what": "search"}, "words to search"),
+            ({"what": "user"}, "username"),
+            ({"what": "me", "query": "x"}, "takes nothing more"),
+        ],
+    )
+    def test_a_read_it_cannot_make_calls_nothing(self, iam, kwargs, said):
+        assert said in asyncio.run(social.read_x(**kwargs))
+        assert iam.x_reads == []
+
+    def test_a_grant_made_for_posting_only_says_link_again(self, iam):
+        iam.x_read_status = 403
+        assert "Link X again" in asyncio.run(social.read_x("mentions"))
+
+    def test_a_reply_a_like_and_a_repost_through_iam(self, iam):
+        replied = asyncio.run(social.reply_on_x("https://x.com/bob_x/status/7", "Thanks!"))
+        liked = asyncio.run(social.like_on_x("7"))
+        reposted = asyncio.run(social.repost_on_x("https://twitter.com/bob_x/status/7"))
+        assert replied == {"post_id": "1", "post_url": "https://x.com/ana_x/status/1", "in_reply_to": "7"}
+        assert liked == {"post_id": "7", "liked": True} and reposted == {"post_id": "7", "retweeted": True}
+        assert [(c[1], c[2]) for c in iam.calls] == [
+            ("/api/iam/v1/social/x/posts", {"text": "Thanks!", "in_reply_to": "7"}),
+            ("/api/iam/v1/social/x/likes", {"post_id": "7"}),
+            ("/api/iam/v1/social/x/reposts", {"post_id": "7"}),
+        ]
+        assert "x.com address" in asyncio.run(social.like_on_x("not a post"))
+
+    def test_the_acting_tools_wait_for_approval_and_the_read_does_not(self):
+        tools = {spec.id: spec for spec in BACKEND_TOOL_CATALOG.values()}
+        assert tools["social-read-x"].approval == "auto" and tools["social-read-x"].linked_accounts == ["x"]
+        for tool_id in ("social-reply-x", "social-like-x", "social-repost-x"):
+            assert tools[tool_id].approval == "manual" and tools[tool_id].linked_accounts == ["x"]
+            assert callable(getattr(social, tools[tool_id].runtime.method))
+
+    def test_the_marketer_reads_x_without_its_server_or_a_pasted_key(self):
+        marketer = get_agent_spec("worker-marketer")
+        assert "x" not in [server.id for server in marketer.mcp_servers]
+        assert "X_BEARER_TOKEN" not in json.dumps(marketer.model_dump(), default=str)

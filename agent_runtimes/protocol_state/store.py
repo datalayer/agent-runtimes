@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -110,9 +111,60 @@ class ProtocolStateStore(ABC):
             Its key within the kind.
         """
 
+    @abstractmethod
+    async def increment(
+        self,
+        kind: str,
+        key: str,
+        amounts: dict[str, int],
+        fields: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Add to whole-number counters of a record at once, making it when missing.
+
+        Two runtimes counting under one key at the same moment both count: the
+        sum is made by the database, never read back and written (15 November
+        2026, the X budget guardrail's counters).
+
+        Parameters
+        ----------
+        kind : str
+            What the record is.
+        key : str
+            Its key within the kind.
+        amounts : dict[str, int]
+            What to add to each counter, a counter missing counting from 0.
+        fields : dict[str, Any] | None
+            Other fields to set on the record as they are.
+
+        Returns
+        -------
+        dict[str, Any]
+            The record as it is after the addition.
+        """
+
     async def close(self) -> None:
         """Let go of what the store holds open."""
         return None
+
+
+_COUNTER = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+
+def _checked_counters(amounts: dict[str, int]) -> dict[str, int]:
+    """The counters, each a plain name and a whole number; raised otherwise."""
+    checked: dict[str, int] = {}
+    for name, amount in amounts.items():
+        if (
+            not _COUNTER.match(name)
+            or isinstance(amount, bool)
+            or not isinstance(amount, int)
+        ):
+            raise ValueError(
+                f"A counter is a plain name and a whole number, not {name!r}: {amount!r}"
+            )
+        checked[name] = amount
+    return checked
 
 
 _SQLITE_TABLE = (
@@ -201,6 +253,49 @@ class SqliteProtocolStateStore(ProtocolStateStore):
             (kind, key),
         )
 
+    def _increment(
+        self, kind: str, key: str, amounts: dict[str, int], fields: dict[str, Any]
+    ) -> dict[str, Any]:
+        # One write transaction from the read to the write: a second process
+        # waits for it (BEGIN IMMEDIATE), so neither loses the other's count.
+        connection = sqlite3.connect(self._path, timeout=30, isolation_level=None)
+        try:
+            self._make(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                rows = connection.execute(
+                    f"SELECT value FROM {TABLE} WHERE kind = ? AND key = ?",  # nosec B608 - TABLE is a module constant; values are bound parameters
+                    (kind, key),
+                ).fetchall()
+                record = json.loads(rows[0][0]) if rows else {}
+                record.update(fields)
+                for name, amount in amounts.items():
+                    record[name] = int(record.get(name) or 0) + amount
+                connection.execute(
+                    f"INSERT INTO {TABLE} (kind, key, value, updated_at) VALUES (?, ?, ?, ?) "  # nosec B608 - TABLE is a module constant; values are bound parameters
+                    "ON CONFLICT(kind, key) DO UPDATE SET value = excluded.value, "
+                    "updated_at = excluded.updated_at",
+                    (kind, key, json.dumps(record, default=str), time.time()),
+                )
+                connection.execute("COMMIT")
+            except BaseException:
+                connection.execute("ROLLBACK")
+                raise
+            return record
+        finally:
+            connection.close()
+
+    async def increment(
+        self,
+        kind: str,
+        key: str,
+        amounts: dict[str, int],
+        fields: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            self._increment, kind, key, _checked_counters(amounts), dict(fields or {})
+        )
+
 
 _POSTGRES_TABLE = (
     f"CREATE TABLE IF NOT EXISTS {TABLE} ("
@@ -268,6 +363,41 @@ class PostgresProtocolStateStore(ProtocolStateStore):
             f"DELETE FROM {TABLE} WHERE kind = %s AND key = %s",  # nosec B608 - TABLE is a module constant; values are bound parameters
             (kind, key),
         )
+
+    async def increment(
+        self,
+        kind: str,
+        key: str,
+        amounts: dict[str, int],
+        fields: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        amounts = _checked_counters(amounts)
+        fields = dict(fields or {})
+        # The sum is the database's, in one statement: two runtimes counting
+        # under one key both count. The names are checked plain identifiers,
+        # bound as values anyway; the amounts are bound parameters.
+        sums = ", ".join(
+            "%s::text, to_jsonb(COALESCE((state.value->>%s::text)::bigint, 0) + %s::bigint)"
+            for _ in amounts
+        )
+        parameters: list[Any] = [
+            kind,
+            key,
+            json.dumps({**fields, **amounts}, default=str),
+            time.time(),
+        ]
+        parameters.append(json.dumps(fields, default=str))
+        for name, amount in amounts.items():
+            parameters.extend([name, name, amount])
+        rows = await self._execute(
+            f"INSERT INTO {TABLE} AS state (kind, key, value, updated_at) "  # nosec B608 - TABLE is a module constant; values are bound parameters
+            "VALUES (%s, %s, %s::jsonb, %s) ON CONFLICT (kind, key) DO UPDATE "
+            f"SET value = state.value || %s::jsonb || jsonb_build_object({sums}), "
+            "updated_at = EXCLUDED.updated_at RETURNING value",
+            tuple(parameters),
+            fetch=True,
+        )
+        return dict(rows[0][0])
 
     async def close(self) -> None:
         if self._connection is not None and not self._connection.closed:

@@ -61,12 +61,16 @@ export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'social-comment-linkedin': ['publish'],
   'social-follow-bluesky': ['write'],
   'social-like-bluesky': ['write'],
+  'social-like-x': ['write'],
   'social-post-bluesky': ['publish'],
   'social-post-linkedin': ['publish'],
   'social-post-x': ['publish'],
   'social-read-bluesky': ['read'],
+  'social-read-x': ['read'],
   'social-reply-bluesky': ['publish'],
+  'social-reply-x': ['publish'],
   'social-repost-bluesky': ['publish'],
+  'social-repost-x': ['publish'],
   'update-plan-step': ['read'],
 };
 

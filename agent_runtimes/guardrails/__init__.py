@@ -32,13 +32,18 @@ from .tool_approvals import (
     ToolApprovalTimeoutError,
     ToolsGuardrailCapability,
 )
-from .usage_limits import CostBudgetCapability, TokenLimitCapability
+from .usage_limits import (
+    ApiBudgetCapability,
+    CostBudgetCapability,
+    TokenLimitCapability,
+)
 
 __all__ = [
     "GuardrailBlockedError",
     "_contains_any",
     "_parse_token_limit",
     "DEFAULT_TOOL_PERMISSION_MAP",
+    "ApiBudgetCapability",
     "AsyncGuardrailCapability",
     "BlockedKeywordsCapability",
     "ContentSafetyCapability",
