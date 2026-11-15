@@ -20,7 +20,18 @@ The tools, no secret pasted for any:
   with images (``publish``, ``approval: manual``: each waits for the person's
   word);
 - ``comment_on_linkedin`` comments as the person under a LinkedIn post they
-  name (``send``, ``approval: manual``).
+  name (``send``, ``approval: manual``);
+- ``read_bluesky`` reads Bluesky as the person (15 November 2026): their
+  timeline, a person's posts, a thread and its replies, who liked or reposted a
+  post, a profile, search of posts and people, their notifications, follows and
+  followers (``read``);
+- ``reply_on_bluesky``, ``like_on_bluesky``, ``repost_on_bluesky`` and
+  ``follow_on_bluesky`` act as the person on Bluesky, each asked first
+  (``approval: manual``).
+
+Bluesky is read with the person's own session, which IAM holds: no app
+password is pasted. A session connected before 15 November 2026 only posts;
+the tools say to connect Bluesky again in Settings to read.
 
 LinkedIn lets Datalayer's application post and comment as the member and read
 the member's profile, nothing more (14 November 2026): reading the member's
@@ -47,15 +58,22 @@ import httpx
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "BLUESKY_READS",
     "MAX_IMAGES",
+    "bluesky_post_uri",
     "comment_on_linkedin",
+    "follow_on_bluesky",
     "give_social_token",
     "is_linked",
+    "like_on_bluesky",
     "linked_accounts",
     "post_to_bluesky",
     "post_to_linkedin",
     "post_to_x",
+    "read_bluesky",
     "refresh_linked_accounts",
+    "reply_on_bluesky",
+    "repost_on_bluesky",
     "social_accounts",
     "social_token_refusal",
 ]
@@ -535,3 +553,381 @@ async def comment_on_linkedin(post: str, text: str) -> Any:
     if written.status_code != 201:
         return f"Nothing was commented on LinkedIn ({written.status_code}): {_said(written)}"
     return {"comment_urn": written.json().get("comment_urn")}
+
+
+# Bluesky, read and acted on as the person (the user, 15 November 2026: "for
+# Bluesky, make it clear we can do everything"). IAM's read routes, one per
+# AppView method, with the person's own session; the answers are made short
+# here, so a timeline fits in a turn.
+
+#: Each read IAM serves, and the arguments of ``read_bluesky`` it takes, as IAM names them.
+BLUESKY_READS: Dict[str, Dict[str, str]] = {
+    "timeline": {"limit": "limit", "cursor": "cursor"},
+    "author-feed": {"actor": "actor", "limit": "limit", "cursor": "cursor", "filter": "filter"},
+    "thread": {"post": "uri", "depth": "depth"},
+    "likes": {"post": "uri", "limit": "limit", "cursor": "cursor"},
+    "reposted-by": {"post": "uri", "limit": "limit", "cursor": "cursor"},
+    "profile": {"actor": "actor"},
+    "search-posts": {"query": "q", "actor": "author", "limit": "limit", "cursor": "cursor", "sort": "sort"},
+    "search-actors": {"query": "q", "limit": "limit", "cursor": "cursor"},
+    "notifications": {"limit": "limit", "cursor": "cursor"},
+    "follows": {"actor": "actor", "limit": "limit", "cursor": "cursor"},
+    "followers": {"actor": "actor", "limit": "limit", "cursor": "cursor"},
+}
+
+_BSKY_POST_URL = re.compile(r"^https://bsky\.app/profile/([^/\s]+)/post/([A-Za-z0-9]+)/?$")
+_AT_POST = re.compile(r"^at://([^/\s]+)/app\.bsky\.feed\.post/([A-Za-z0-9]+)$")
+
+
+def bluesky_post_uri(post: str) -> Optional[str]:
+    """The post an ``at://`` URI or a bsky.app address names, as ``at://<actor>/app.bsky.feed.post/<key>``; ``None`` otherwise."""
+    value = str(post or "").strip()
+    match = _AT_POST.match(value) or _BSKY_POST_URL.match(value)
+    if not match:
+        return None
+    return f"at://{match.group(1)}/app.bsky.feed.post/{match.group(2)}"
+
+
+def _post_url(uri: str, handle: str = "") -> str:
+    match = _AT_POST.match(str(uri or ""))
+    if not match:
+        return ""
+    return f"https://bsky.app/profile/{handle or match.group(1)}/post/{match.group(2)}"
+
+
+def _person(actor: Any) -> Dict[str, Any]:
+    actor = actor if isinstance(actor, dict) else {}
+    person = {"handle": actor.get("handle"), "did": actor.get("did")}
+    if actor.get("displayName"):
+        person["name"] = actor["displayName"]
+    return person
+
+
+def _post(view: Any) -> Dict[str, Any]:
+    """A post as the agent reads it: who, what, when, its numbers and its address."""
+    view = view if isinstance(view, dict) else {}
+    record = view.get("record") if isinstance(view.get("record"), dict) else {}
+    author = _person(view.get("author"))
+    post: Dict[str, Any] = {
+        "uri": view.get("uri"),
+        "cid": view.get("cid"),
+        "url": _post_url(str(view.get("uri") or ""), str(author.get("handle") or "")),
+        "author": author,
+        "text": record.get("text", ""),
+        "created_at": record.get("createdAt"),
+        "replies": view.get("replyCount", 0),
+        "reposts": view.get("repostCount", 0),
+        "likes": view.get("likeCount", 0),
+        "quotes": view.get("quoteCount", 0),
+    }
+    reply = record.get("reply") if isinstance(record.get("reply"), dict) else None
+    if reply:
+        post["in_reply_to"] = (reply.get("parent") or {}).get("uri")
+    images = ((view.get("embed") or {}).get("images")) if isinstance(view.get("embed"), dict) else None
+    if images:
+        post["images"] = [image.get("alt", "") for image in images if isinstance(image, dict)]
+    return post
+
+
+def _thread(node: Any, depth: int = 0) -> Dict[str, Any]:
+    node = node if isinstance(node, dict) else {}
+    if "post" not in node:
+        return {"unavailable": node.get("$type", "")}
+    thread = _post(node["post"])
+    replies = [reply for reply in (node.get("replies") or []) if isinstance(reply, dict)]
+    if replies and depth < 10:
+        thread["thread_replies"] = [_thread(reply, depth + 1) for reply in replies]
+    parent = node.get("parent")
+    if depth == 0 and isinstance(parent, dict) and "post" in parent:
+        thread["parent"] = _post(parent["post"])
+    return thread
+
+
+def _profile(view: Any) -> Dict[str, Any]:
+    view = view if isinstance(view, dict) else {}
+    return {
+        **_person(view),
+        "description": view.get("description", ""),
+        "followers": view.get("followersCount"),
+        "follows": view.get("followsCount"),
+        "posts": view.get("postsCount"),
+        "url": f"https://bsky.app/profile/{view.get('handle') or view.get('did')}",
+    }
+
+
+def _shorten(what: str, answer: Dict[str, Any]) -> Dict[str, Any]:
+    """Bluesky's answer, kept to what the agent reads."""
+    cursor = {"cursor": answer["cursor"]} if answer.get("cursor") else {}
+    if what in {"timeline", "author-feed"}:
+        items = []
+        for item in answer.get("feed") or []:
+            post = _post(item.get("post"))
+            reason = item.get("reason") or {}
+            if str(reason.get("$type", "")).endswith("reasonRepost"):
+                post["reposted_by"] = _person(reason.get("by"))
+            items.append(post)
+        return {"posts": items, **cursor}
+    if what == "search-posts":
+        return {"posts": [_post(view) for view in answer.get("posts") or []], **cursor}
+    if what == "thread":
+        return {"thread": _thread(answer.get("thread"))}
+    if what == "likes":
+        return {"liked_by": [_person(like.get("actor")) for like in answer.get("likes") or []], **cursor}
+    if what == "reposted-by":
+        return {"reposted_by": [_person(actor) for actor in answer.get("repostedBy") or []], **cursor}
+    if what == "profile":
+        return {"profile": _profile(answer)}
+    if what == "search-actors":
+        return {"people": [_profile(actor) for actor in answer.get("actors") or []], **cursor}
+    if what in {"follows", "followers"}:
+        return {what: [_profile(actor) for actor in answer.get(what) or []], **cursor}
+    if what == "notifications":
+        notes = []
+        for note in answer.get("notifications") or []:
+            record = note.get("record") if isinstance(note.get("record"), dict) else {}
+            entry = {
+                "reason": note.get("reason"),
+                "by": _person(note.get("author")),
+                "uri": note.get("uri"),
+                "about": note.get("reasonSubject"),
+                "read": note.get("isRead"),
+                "at": note.get("indexedAt"),
+            }
+            if record.get("text"):
+                entry["text"] = record["text"]
+            notes.append(entry)
+        return {"notifications": notes, **cursor}
+    return answer
+
+
+async def _bluesky_read(what: str, params: Dict[str, Any]) -> Dict[str, Any] | str:
+    answer = await _iam(
+        "GET",
+        f"/api/iam/v1/social/bluesky/read/{what}",
+        params={key: value for key, value in params.items() if value not in (None, "")},
+    )
+    if isinstance(answer, str):
+        return answer
+    if answer.status_code != 200:
+        return f"Bluesky was not read ({answer.status_code}): {_said(answer)}"
+    body = answer.json()
+    body.pop("success", None)
+    return body
+
+
+async def read_bluesky(
+    what: str,
+    actor: Optional[str] = None,
+    post: Optional[str] = None,
+    query: Optional[str] = None,
+    limit: Optional[int] = None,
+    cursor: Optional[str] = None,
+    sort: Optional[str] = None,
+    filter: Optional[str] = None,
+    depth: Optional[int] = None,
+) -> Any:
+    """Read Bluesky as the person, with their account linked in Settings.
+
+    Args:
+        what: What to read: ``timeline`` (the person's home feed),
+            ``author-feed`` (someone's posts; the person's own without
+            ``actor``), ``thread`` (a post and its replies), ``likes`` and
+            ``reposted-by`` (who liked or reposted a post), ``profile`` (the
+            person's own without ``actor``), ``search-posts``,
+            ``search-actors``, ``notifications`` (replies, mentions, likes,
+            reposts, follows of the person), ``follows`` and ``followers``.
+        actor: A handle (``ana.bsky.social``) or a DID, for ``author-feed``,
+            ``profile``, ``follows``, ``followers``; the author to search in
+            for ``search-posts``.
+        post: The post, by its bsky.app address or its ``at://`` URI, for
+            ``thread``, ``likes`` and ``reposted-by``.
+        query: The words to search, for ``search-posts`` and ``search-actors``.
+        limit: How many, 1 to 100 (Bluesky's default otherwise).
+        cursor: The ``cursor`` of a previous answer, for the next page.
+        sort: ``top`` or ``latest``, for ``search-posts``.
+        filter: For ``author-feed``: ``posts_with_replies``,
+            ``posts_no_replies``, ``posts_with_media`` or
+            ``posts_and_author_threads``.
+        depth: How deep the replies of a ``thread`` go, 0 to 10.
+
+    Returns:
+        The posts, people or notifications read, each post with its address,
+        text, date and numbers, and a ``cursor`` when there is more; or a
+        sentence saying why nothing was read.
+    """
+    what = str(what or "").strip()
+    takes = BLUESKY_READS.get(what)
+    if takes is None:
+        return f"Read one of: {', '.join(BLUESKY_READS)}."
+    given = {
+        "actor": actor,
+        "post": post,
+        "query": query,
+        "limit": limit,
+        "cursor": cursor,
+        "sort": sort,
+        "filter": filter,
+        "depth": depth,
+    }
+    unused = [name for name, value in given.items() if value not in (None, "") and name not in takes]
+    if unused:
+        return f"Reading {what} takes {', '.join(takes) or 'nothing more'}, not {', '.join(unused)}."
+    params: Dict[str, Any] = {}
+    for name, param in takes.items():
+        value = given.get(name)
+        if value in (None, ""):
+            continue
+        if name == "post":
+            uri = bluesky_post_uri(str(value))
+            if not uri:
+                return "Name the Bluesky post by its bsky.app address or its at:// URI."
+            value = uri
+        params[param] = value
+    if what in {"thread", "likes", "reposted-by"} and "uri" not in params:
+        return f"Reading {what} needs the post, by its bsky.app address or its at:// URI."
+    if what in {"search-posts", "search-actors"} and "q" not in params:
+        return f"Reading {what} needs the words to search (query)."
+    answer = await _bluesky_read(what, params)
+    if isinstance(answer, str):
+        return answer
+    return _shorten(what, answer)
+
+
+async def _subject(post: str) -> Dict[str, Any] | str:
+    """The post a tool acts on: its URI and CID, and the root of its thread."""
+    uri = bluesky_post_uri(post)
+    if not uri:
+        return "Name the Bluesky post by its bsky.app address or its at:// URI."
+    answer = await _bluesky_read("thread", {"uri": uri, "depth": 0, "parentHeight": 0})
+    if isinstance(answer, str):
+        return answer
+    view = (answer.get("thread") or {}).get("post") if isinstance(answer.get("thread"), dict) else None
+    if not isinstance(view, dict) or not view.get("uri") or not view.get("cid"):
+        return "That Bluesky post could not be found."
+    subject = {"uri": view["uri"], "cid": view["cid"]}
+    record = view.get("record") if isinstance(view.get("record"), dict) else {}
+    root = ((record.get("reply") or {}).get("root")) if isinstance(record.get("reply"), dict) else None
+    return {
+        "subject": subject,
+        "root": root if isinstance(root, dict) and root.get("uri") and root.get("cid") else subject,
+        "handle": str((view.get("author") or {}).get("handle") or ""),
+    }
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+async def _write(collection: str, record: Dict[str, Any], what: str) -> Dict[str, Any] | str:
+    rkey = _tid()
+    written = await _iam(
+        "PUT",
+        "/api/iam/v1/social/bluesky/records",
+        json={"collection": collection, "rkey": rkey, "record": record},
+    )
+    if isinstance(written, str):
+        return written
+    if written.status_code != 200:
+        return f"Nothing was {what} on Bluesky ({written.status_code}): {_said(written)}"
+    return {"uri": str(written.json().get("uri") or ""), "rkey": rkey}
+
+
+async def reply_on_bluesky(post: str, text: str) -> Any:
+    """Reply as the person under one Bluesky post.
+
+    It waits for the person's approval every time.
+
+    Args:
+        post: The post replied to, by its bsky.app address or its ``at://`` URI.
+        text: The reply, at most 300 characters.
+
+    Returns:
+        ``{"uri", "post_url"}`` of the reply, or a sentence saying why nothing was posted.
+    """
+    text = str(text or "").strip()
+    if not text:
+        return "A Bluesky reply needs some text."
+    if len(text) > 300:
+        return "A Bluesky reply holds at most 300 characters."
+    target = await _subject(post)
+    if isinstance(target, str):
+        return target
+    record: Dict[str, Any] = {
+        "$type": "app.bsky.feed.post",
+        "text": text,
+        "createdAt": _now(),
+        "reply": {"root": target["root"], "parent": target["subject"]},
+    }
+    facets = _link_facets(text)
+    if facets:
+        record["facets"] = facets
+    written = await _write("app.bsky.feed.post", record, "replied")
+    if isinstance(written, str):
+        return written
+    return {"uri": written["uri"], "post_url": _post_url(written["uri"])}
+
+
+async def like_on_bluesky(post: str) -> Any:
+    """Like one Bluesky post as the person. It waits for the person's approval every time.
+
+    Args:
+        post: The post, by its bsky.app address or its ``at://`` URI.
+
+    Returns:
+        ``{"uri"}`` of the like, or a sentence saying why nothing was liked.
+    """
+    target = await _subject(post)
+    if isinstance(target, str):
+        return target
+    written = await _write(
+        "app.bsky.feed.like",
+        {"$type": "app.bsky.feed.like", "subject": target["subject"], "createdAt": _now()},
+        "liked",
+    )
+    return written if isinstance(written, str) else {"uri": written["uri"], "liked": target["subject"]["uri"]}
+
+
+async def repost_on_bluesky(post: str) -> Any:
+    """Repost one Bluesky post on the person's profile. It waits for the person's approval every time.
+
+    Args:
+        post: The post, by its bsky.app address or its ``at://`` URI.
+
+    Returns:
+        ``{"uri"}`` of the repost, or a sentence saying why nothing was reposted.
+    """
+    target = await _subject(post)
+    if isinstance(target, str):
+        return target
+    written = await _write(
+        "app.bsky.feed.repost",
+        {"$type": "app.bsky.feed.repost", "subject": target["subject"], "createdAt": _now()},
+        "reposted",
+    )
+    return written if isinstance(written, str) else {"uri": written["uri"], "reposted": target["subject"]["uri"]}
+
+
+async def follow_on_bluesky(actor: str) -> Any:
+    """Follow one Bluesky account as the person. It waits for the person's approval every time.
+
+    Args:
+        actor: The account's handle (``ana.bsky.social``) or DID.
+
+    Returns:
+        ``{"uri", "followed"}``, or a sentence saying why nobody was followed.
+    """
+    actor = str(actor or "").strip().lstrip("@")
+    if not actor:
+        return "Name the Bluesky account to follow by its handle or DID."
+    answer = await _bluesky_read("profile", {"actor": actor})
+    if isinstance(answer, str):
+        return answer
+    did = str(answer.get("did") or "")
+    if not did.startswith("did:"):
+        return "That Bluesky account could not be found."
+    written = await _write(
+        "app.bsky.graph.follow",
+        {"$type": "app.bsky.graph.follow", "subject": did, "createdAt": _now()},
+        "followed",
+    )
+    return written if isinstance(written, str) else {"uri": written["uri"], "followed": answer.get("handle") or did}

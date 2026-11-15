@@ -560,6 +560,48 @@ export const SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
     emoji: '💬',
   };
 
+export const SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-follow-bluesky',
+  version: '0.0.1',
+  name: 'Follow on Bluesky',
+  description:
+    "Follow one Bluesky account as the person, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'follow_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:person-add',
+  emoji: '➕',
+};
+
+export const SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-like-bluesky',
+  version: '0.0.1',
+  name: 'Like on Bluesky',
+  description:
+    "Like one Bluesky post as the person, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'like_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:heart',
+  emoji: '❤️',
+};
+
 export const SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'social-post-bluesky',
   version: '0.0.1',
@@ -623,6 +665,69 @@ export const SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '✖️',
 };
 
+export const SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-read-bluesky',
+  version: '0.0.1',
+  name: 'Read Bluesky',
+  description:
+    "Read Bluesky as the person, with their account linked in Settings: their timeline, someone's posts, a thread and its replies, who liked or reposted a post, a profile, search of posts and people, their notifications, follows and followers, through Datalayer's IAM.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'read_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '🦋',
+};
+
+export const SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-reply-bluesky',
+  version: '0.0.1',
+  name: 'Reply on Bluesky',
+  description:
+    "Reply as the person under one Bluesky post they or the agent named by its address, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'reply_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '💬',
+};
+
+export const SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-repost-bluesky',
+  version: '0.0.1',
+  name: 'Repost on Bluesky',
+  description:
+    "Repost one Bluesky post on the person's profile, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'repost_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:sync',
+  emoji: '🔁',
+};
+
 export const UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'update-plan-step',
   version: '0.0.1',
@@ -678,9 +783,14 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'social-accounts': SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,
   'social-comment-linkedin': SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
+  'social-follow-bluesky': SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-like-bluesky': SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
   'social-post-bluesky': SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
   'social-post-linkedin': SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
   'social-post-x': SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1,
+  'social-read-bluesky': SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-reply-bluesky': SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-repost-bluesky': SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
   'update-plan-step': UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 };
 

@@ -22,21 +22,26 @@ describe('an agent’s optional servers and skills', () => {
 
   it('are the catalogue’s: one network at least, neither search nor the repositories', () => {
     expect(marketer.optional).toEqual({
-      // The linkedin server on a browser session (agentspecs 0.0.191).
-      mcpServers: ['x', 'bluesky', 'discord', 'linkedin'],
+      // The linkedin server on a browser session (agentspecs 0.0.191); no
+      // bluesky server: the linked account reads and acts (agentspecs 0.0.192).
+      mcpServers: ['x', 'discord', 'linkedin'],
       skills: ['crawl', 'github'],
       // Set up by an X, Bluesky or LinkedIn account linked in Settings
       // (agentspecs 0.0.189, LinkedIn 0.0.190).
       backendTools: [
         'social-post-x',
         'social-post-bluesky',
+        'social-read-bluesky',
+        'social-reply-bluesky',
+        'social-like-bluesky',
+        'social-repost-bluesky',
+        'social-follow-bluesky',
         'social-post-linkedin',
         'social-comment-linkedin',
       ],
       atLeastOne: [
         [
           'x',
-          'bluesky',
           'discord',
           'linkedin',
           'social-post-x',
@@ -83,7 +88,6 @@ describe('an agent’s optional servers and skills', () => {
     expect(unmetAgentspecGroups(marketer, () => false)).toEqual([
       [
         'x',
-        'bluesky',
         'discord',
         'linkedin',
         'social-post-x',

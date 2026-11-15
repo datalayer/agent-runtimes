@@ -3505,13 +3505,6 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "optional": True,
             },
             {
-                "server": "bluesky:0.0.1",
-                "access": "read",
-                "as": "owner",
-                "only": [],
-                "optional": True,
-            },
-            {
                 "server": "discord:0.0.1",
                 "access": "write",
                 "as": "owner",

@@ -26,7 +26,6 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
 
 NETWORKS = {
     "x": ["X_BEARER_TOKEN"],
-    "bluesky": ["BLUESKY_APP_PASSWORD", "BLUESKY_IDENTIFIER", "BLUESKY_SERVICE_URL"],
     "discord": ["DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID"],
 }
 
@@ -40,19 +39,24 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     marketer = get_agent_spec("worker-marketer")
     assert marketer is not None and marketer.optional is not None
     # The linkedin server, on a browser session signed in from the chat (agentspecs 0.0.191).
-    assert marketer.optional.mcp_servers == ["x", "bluesky", "discord", "linkedin"]
+    # No bluesky server (agentspecs 0.0.192): Bluesky is read and acted on with the linked account.
+    assert marketer.optional.mcp_servers == ["x", "discord", "linkedin"]
     assert marketer.optional.skills == ["crawl", "github"]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
     assert marketer.optional.backend_tools == [
         "social-post-x",
         "social-post-bluesky",
+        "social-read-bluesky",
+        "social-reply-bluesky",
+        "social-like-bluesky",
+        "social-repost-bluesky",
+        "social-follow-bluesky",
         "social-post-linkedin",
         "social-comment-linkedin",
     ]
     assert marketer.optional.at_least_one == [
         [
             "x",
-            "bluesky",
             "discord",
             "linkedin",
             "social-post-x",
@@ -90,7 +94,7 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
         assert not any(f"needs {name}," in sentence for sentence in nothing), name
     group = [sentence for sentence in nothing if "one at least of" in sentence]
     assert group == [
-        "Marketer is not set up: it needs one at least of the MCP server bluesky, "
+        "Marketer is not set up: it needs one at least of "
         "the MCP server discord, the MCP server linkedin, the MCP server x, "
         "the backend tool social-post-bluesky, the backend tool social-post-linkedin, "
         "the backend tool social-post-x, and none was given its secrets: add those of "
@@ -100,9 +104,9 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     for server, names in NETWORKS.items():
         one = declared.missing(_having(names), who="Marketer")
         assert not any("one at least of" in sentence for sentence in one), server
-    # Half of Bluesky's secrets is not Bluesky set up.
-    half = declared.missing(_having(["BLUESKY_IDENTIFIER"]), who="Marketer")
-    assert any("one at least of" in sentence for sentence in half)
+    # Bluesky's app password no longer counts: the linked account does.
+    pasted = declared.missing(_having(["BLUESKY_IDENTIFIER", "BLUESKY_APP_PASSWORD", "BLUESKY_SERVICE_URL"]), who="Marketer")
+    assert any("one at least of" in sentence for sentence in pasted)
 
 
 def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
@@ -126,19 +130,21 @@ def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
 def test_what_is_not_set_up_is_left_out_and_said():
     declared = declared_secrets(get_agent_spec("worker-marketer"))
     left = declared.left_out(_having(NETWORKS["x"] + ["GITHUB_TOKEN"]))
-    assert left.servers == {
-        "bluesky": NETWORKS["bluesky"],
-        "discord": NETWORKS["discord"],
-    }
+    assert left.servers == {"discord": NETWORKS["discord"]}
     assert left.skills == {"crawl": ["TAVILY_API_KEY"]}
     assert left.tools == {
         "social-post-bluesky": ["a linked Bluesky account"],
+        "social-read-bluesky": ["a linked Bluesky account"],
+        "social-reply-bluesky": ["a linked Bluesky account"],
+        "social-like-bluesky": ["a linked Bluesky account"],
+        "social-repost-bluesky": ["a linked Bluesky account"],
+        "social-follow-bluesky": ["a linked Bluesky account"],
         "social-post-x": ["a linked X account"],
         "social-post-linkedin": ["a linked LinkedIn account"],
         "social-comment-linkedin": ["a linked LinkedIn account"],
     }
     sentence = left.sentence()
-    assert "the MCP server bluesky (no BLUESKY_APP_PASSWORD" in sentence
+    assert "the MCP server discord (no DISCORD_BOT_TOKEN" in sentence
     assert "the skill crawl (no TAVILY_API_KEY)" in sentence
     assert "say that you cannot" in sentence
     everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN", "TAVILY_API_KEY"]
