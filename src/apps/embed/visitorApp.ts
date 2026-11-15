@@ -163,14 +163,19 @@ export async function readVisitorApp({
     if (example.kind === 'decision') {
       return { kind: 'decision', app: named };
     }
-    if (!VISITOR_EXAMPLES.includes(example.id)) {
+    if (VISITOR_EXAMPLES.includes(example.id)) {
+      return {
+        kind: 'visitors',
+        app: runnable({ app: example, problems: [] }),
+        visitors: visitorsAt(agents, example.id, undefined, mints),
+      };
+    }
+    // An example the visitors' runtime does not keep may be deployed at an
+    // address of the same name (the landing's demo-marketer and the like,
+    // whose specs the catalogue carries since 14 November 2026): read it there.
+    if (!SLUG.test(named)) {
       return { kind: 'said', text: notKeptSentence(named) };
     }
-    return {
-      kind: 'visitors',
-      app: runnable({ app: example, problems: [] }),
-      visitors: visitorsAt(agents, example.id, undefined, mints),
-    };
   }
   if (!SLUG.test(named)) {
     return {
@@ -196,6 +201,9 @@ export async function readVisitorApp({
     unknown
   >;
   if (!response.ok || body.success === false) {
+    if (example && response.status === 404) {
+      return { kind: 'said', text: notKeptSentence(named) };
+    }
     const reason = String(
       body.detail ?? body.message ?? `No application is at "${named}".`,
     );

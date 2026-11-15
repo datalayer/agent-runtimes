@@ -114,9 +114,36 @@ describe('a visitor’s application', () => {
     });
   });
 
-  it('says an example the visitors’ runtime does not keep, naming the ones it does', async () => {
+  it('runs an example the visitors’ runtime does not keep at the address of its name, when one is deployed there (the landing’s demo-marketer)', async () => {
+    const spec = {
+      schema: 'loop.app/v1',
+      id: 'demo-marketer',
+      name: 'Marketer',
+      kind: 'chat',
+      agent: 'marketer',
+    };
+    const fetcher = answer(200, opened(spec));
+    const read = await readVisitorApp({
+      app: 'demo-marketer',
+      fetcher,
+      catalogue: id =>
+        id === 'demo-marketer' ? emptyAppspec('chat') : undefined,
+    });
+    expect(calledWith(fetcher)).toBe(
+      `${DEFAULT_API}/api/ai-agents/v1/apps/deployments/at/demo-marketer`,
+    );
+    expect(read.kind).toBe('visitors');
+    if (read.kind !== 'visitors') return;
+    expect(read.visitors.app).toBe('at:demo-marketer');
+  });
+
+  it('says an example the visitors’ runtime does not keep, naming the ones it does, when no address of its name is deployed', async () => {
     const read = await readVisitorApp({
       app: 'accounting',
+      fetcher: answer(404, {
+        success: false,
+        detail: 'No application is at "accounting".',
+      }),
       catalogue: id => (id === 'accounting' ? emptyAppspec('chat') : undefined),
     });
     expect(read.kind).toBe('said');
