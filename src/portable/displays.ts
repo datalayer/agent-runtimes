@@ -229,7 +229,9 @@ export function protocolDisplayOf(wire: unknown): ProtocolDisplay | null {
       const expiresAt = words(data.expires_at);
       if (
         !company ||
-        (data.summary !== undefined && data.summary !== null && !given.trim()) ||
+        (data.summary !== undefined &&
+          data.summary !== null &&
+          !given.trim()) ||
         !operationRef ||
         !revision ||
         !terms ||

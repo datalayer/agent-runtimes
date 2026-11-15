@@ -147,7 +147,9 @@ describe('protocol displays', () => {
   it('shows the values of the terms when the company wrote no summary', () => {
     const noSummary: Record<string, unknown> = { ...CONFIRM };
     delete noSummary.summary;
-    const shown = protocolDisplayOf(wire('confirm', noSummary, 'appr-9-confirm'));
+    const shown = protocolDisplayOf(
+      wire('confirm', noSummary, 'appr-9-confirm'),
+    );
     expect(shown).toMatchObject({
       kind: 'confirm',
       summaryGiven: false,
