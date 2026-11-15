@@ -160,6 +160,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "demo-marketer",
         "demo-shopper",
         "demo-terra",
+        "demo-voyager",
         "demo-accountant",
         "demo-aws-steward",
     }
@@ -168,8 +169,9 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     # Its agent, example-simple, the neutral default: enabled, out of the pickers
     # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
-    # The home page's demos run on the five agents the catalogue enables.
-    for demo in ("marketer", "shopper", "terra", "accountant", "aws-steward"):
+    # The home page's demos run on the six agents the catalogue enables (the Voyager's
+    # on example-blank until the visitors' runtime image carries worker-voyager).
+    for demo in ("marketer", "shopper", "accountant", "voyager", "terra", "aws-steward"):
         assert reports[f"demo-{demo}"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
     # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
