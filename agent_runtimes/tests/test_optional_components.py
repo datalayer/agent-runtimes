@@ -101,16 +101,23 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
         "the MCP server discord, the MCP server linkedin, "
         "the backend tool social-post-bluesky, the backend tool social-post-linkedin, "
         "the backend tool social-post-x, and none was given its secrets: add those of "
-        "one to the account's secrets or link its account in Settings, or sign in to "
-        "LinkedIn from its chat, then configure it again."
+        "one to the account's secrets or link its account in Settings, or save your "
+        "LinkedIn session in Settings › LinkedIn or sign in to LinkedIn from its chat, "
+        "then configure it again."
     ]
     for server, names in NETWORKS.items():
         one = declared.missing(_having(names), who="Marketer")
         assert not any("one at least of" in sentence for sentence in one), server
     # Bluesky's app password and X's bearer token no longer count: the linked account does.
-    pasted = declared.missing(_having(["BLUESKY_IDENTIFIER", "BLUESKY_APP_PASSWORD", "BLUESKY_SERVICE_URL"]), who="Marketer")
+    pasted = declared.missing(
+        _having(["BLUESKY_IDENTIFIER", "BLUESKY_APP_PASSWORD", "BLUESKY_SERVICE_URL"]),
+        who="Marketer",
+    )
     assert any("one at least of" in sentence for sentence in pasted)
-    assert any("one at least of" in sentence for sentence in declared.missing(_having(["X_BEARER_TOKEN"]), who="Marketer"))
+    assert any(
+        "one at least of" in sentence
+        for sentence in declared.missing(_having(["X_BEARER_TOKEN"]), who="Marketer")
+    )
 
 
 def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
@@ -128,6 +135,21 @@ def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
     )
     assert not any(
         "one at least of" in s for s in declared.missing(_having([]), who="M")
+    )
+
+
+def test_linkedin_counts_for_the_group_with_its_session_from_settings(
+    tmp_path, monkeypatch
+):
+    """LINKEDIN_LI_AT (15 November 2026): given, never required, and the Marketer's one network."""
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / ".linkedin-mcp" / "profile"))
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    assert "LINKEDIN_LI_AT" in declared.runtime
+    assert "LINKEDIN_LI_AT" not in declared.kernel
+    assert "linkedin" not in declared.left_out(_having([])).servers
+    assert not any(
+        "one at least of" in s
+        for s in declared.missing(_having(["LINKEDIN_LI_AT"]), who="M")
     )
 
 

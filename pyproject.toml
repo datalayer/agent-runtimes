@@ -113,7 +113,7 @@ dependencies = [
     # 1.6.56 with agentspecs 0.0.193: Bluesky, everything through the linked account (datalayer-social).
     # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
     # 1.6.65 with agentspecs 0.0.199: datalayer-email, the Marketer's alerts.at.
-    "agentspecs>=0.0.199",  # UI placements; the six seed agents' chrome and A2UI UI
+    "agentspecs>=0.0.201",  # LinkedIn's session from Settings (LINKEDIN_LI_AT, optional_envvars)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

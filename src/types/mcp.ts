@@ -76,6 +76,8 @@ export interface MCPServer {
   env?: Record<string, string>;
   /** The variables the code its tools write reads in the code sandbox, never the server (a download's script) */
   sandboxEnvVars?: string[];
+  /** The variables the runtime is given when the account has them, never required (LinkedIn's `LINKEDIN_LI_AT`, the person's session pasted in Settings › LinkedIn) */
+  optionalEnvVars?: string[];
   /** Where to read about it (the user, 7 November 2026) */
   documentationUrl?: string;
   /** Where to sign up for the service behind it */

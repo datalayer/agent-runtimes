@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { MCP_SERVER_LIBRARY } from '../mcpServers';
+import { ENVVAR_CATALOG } from '../envvars';
 
 describe('the MCP server catalogue', () => {
   it('says where to read about each server and how it is set up', () => {
@@ -36,6 +37,18 @@ describe('the MCP server catalogue', () => {
     expect(earthdata.headers).toEqual({
       Authorization: 'Bearer ${DATALAYER_API_KEY}',
     });
+  });
+
+  it('gives LinkedIn the person’s session from Settings when there, never required (the user, 15 November 2026)', () => {
+    const linkedin = MCP_SERVER_LIBRARY.linkedin;
+    expect(linkedin.requiredEnvVars).toEqual([]);
+    expect(linkedin.optionalEnvVars).toEqual(['LINKEDIN_LI_AT:0.0.1']);
+    expect(linkedin.setup).toContain('Settings › LinkedIn');
+    const cookie = ENVVAR_CATALOG.LINKEDIN_LI_AT;
+    expect(cookie.name).toBe('LinkedIn session cookie (li_at)');
+    expect(cookie.description).toContain('`li_at`');
+    expect(cookie.description).toContain('Application › Storage › Cookies');
+    expect(cookie.registrationUrl).toBe('https://www.linkedin.com');
   });
 
   it('carries what each tool does to the world, and the day it was checked', () => {

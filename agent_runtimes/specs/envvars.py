@@ -222,6 +222,17 @@ KAGGLE_API_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+LINKEDIN_LI_AT_SPEC_0_0_1 = EnvvarSpec(
+    id="LINKEDIN_LI_AT",
+    version="0.0.1",
+    name="LinkedIn session cookie (li_at)",
+    description="Your LinkedIn session for your agents' reading: the **value of the cookie named `li_at`** on `www.linkedin.com`, copied from a browser where you are signed in to LinkedIn. Not `JSESSIONID`, `bcookie`, `bscookie`, `liap` or `lidc`: only `li_at`. It is a long string, usually starting with `AQED`.\n\n**Chrome or Edge:** open https://www.linkedin.com signed in, press F12 (or right-click › Inspect), then Application › Storage › Cookies › `https://www.linkedin.com`, find the row named `li_at` and copy its Value column (double-click the value, then copy).\n\n**Firefox:** open https://www.linkedin.com signed in, press F12, then Storage › Cookies › `https://www.linkedin.com`, select the row `li_at` and copy its Value.\n\n**Safari:** Settings › Advanced › Show features for web developers, then Develop › Show Web Inspector › Storage › Cookies › `www.linkedin.com` › `li_at`.\n\nPaste it in Settings › LinkedIn (or as a secret named `LINKEDIN_LI_AT`). It is stored encrypted in your Vault secrets and handed to each new runtime of yours whose agent reads LinkedIn (the Marketer's linkedin MCP server), never to anybody else's. It works until you sign out of LinkedIn in that browser, or it expires (about a year): then paste a new one. Treat it like a password: whoever holds it is signed in to LinkedIn as you.",
+    registrationUrl="https://www.linkedin.com",
+    tags=["authentication", "cookie", "linkedin", "social"],
+    icon="key",
+    emoji="🔑",
+)
+
 LLM_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     id="LLM_API_KEY",
     version="0.0.1",
@@ -344,6 +355,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
     "HF_TOKEN": HF_TOKEN_SPEC_0_0_1,
     "KAGGLE_API_TOKEN": KAGGLE_API_TOKEN_SPEC_0_0_1,
+    "LINKEDIN_LI_AT": LINKEDIN_LI_AT_SPEC_0_0_1,
     "LLM_API_KEY": LLM_API_KEY_SPEC_0_0_1,
     "OPENAI_API_KEY": OPENAI_API_KEY_SPEC_0_0_1,
     "OPENROUTER_API_KEY": OPENROUTER_API_KEY_SPEC_0_0_1,

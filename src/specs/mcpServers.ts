@@ -1094,12 +1094,13 @@ export const LINKEDIN_MCP_SERVER_0_0_1: MCPServer = {
   ui: [{ plugin: 'browser-session' }],
   tags: ['social', 'linkedin', 'jobs', 'messaging'],
   env: { UV_HTTP_TIMEOUT: '300', HEADLESS: 'true' },
+  optionalEnvVars: ['LINKEDIN_LI_AT:0.0.1'],
   documentationUrl: 'https://github.com/stickerdaniel/linkedin-mcp-server',
   signupUrl: 'https://www.linkedin.com/signup',
   apiKeyUrl:
     'https://github.com/stickerdaniel/linkedin-mcp-server#installation',
   setup:
-    "No key: the server uses your signed-in LinkedIn session. In the chat, press Sign in to LinkedIn: LinkedIn's login opens in your runtime's own browser, you sign in there, and the server reads and acts through that session, kept on that runtime alone and gone when it ends. On your own machine, `uvx mcp-server-linkedin --login` does the same. LinkedIn restricts automated access: use an account you can afford to see restricted.",
+    "No key: the server uses your signed-in LinkedIn session. Paste it once in Settings › LinkedIn (the `li_at` cookie of a browser where you are signed in to LinkedIn, kept in your Vault secrets as LINKEDIN_LI_AT): each new runtime of yours starts the server signed in with it. Or, in the chat, press Sign in to LinkedIn: LinkedIn's login opens in your runtime's own browser, you sign in there, and the server reads and acts through that session, kept on that runtime alone and gone when it ends. On your own machine, `uvx mcp-server-linkedin --login` does the same. LinkedIn restricts automated access: use an account you can afford to see restricted.",
   install: {
     type: 'python',
     command: 'uv tool install --python 3.12 mcp-server-linkedin',

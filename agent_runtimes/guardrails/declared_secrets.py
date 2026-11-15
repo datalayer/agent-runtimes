@@ -314,6 +314,27 @@ def sandbox_env_names(server: Any) -> FrozenSet[str]:
     )
 
 
+def optional_env_names(server: Any) -> FrozenSet[str]:
+    """
+    What an MCP server's runtime is given when the account has it: its ``optional_envvars``.
+
+    Never required, never the sandbox's: LinkedIn's ``LINKEDIN_LI_AT``, the
+    person's session pasted in Settings › LinkedIn (15 November 2026), which
+    the runtime writes as the server's session before it starts it.
+    """
+    return frozenset(
+        name
+        for name in (
+            env_name(ref)
+            for ref in _get(
+                server, "optional_env_vars", "optionalEnvVars", "optional_envvars"
+            )
+            or []
+        )
+        if name
+    )
+
+
 def _catalog_server(server_id: str) -> Any:
     from agent_runtimes.mcp.catalog_mcp_servers import get_catalog_server
 
@@ -526,15 +547,21 @@ class DeclaredSecrets:
 
         A server read through a person's browser session (the linkedin server,
         15 November 2026) needs no secret, so it would always count: it counts
-        once the runtime holds that session, signed in from the chat. It is
-        still started, never left out, so that the chat offers the sign-in.
+        once the runtime holds that session, signed in from the chat, or the
+        person's session pasted in Settings › LinkedIn was given to it
+        (``LINKEDIN_LI_AT``, 15 November 2026). It is still started, never left
+        out, so that the chat offers the sign-in.
         """
         from agent_runtimes.mcp.browser_session import provider_of_server, session_state
 
         if consumer.startswith(server_consumer("")):
             provider = provider_of_server(consumer[len(server_consumer("")) :])
             if provider is not None:
-                return session_state(provider) == "signed-in"
+                return session_state(provider) == "signed-in" or bool(
+                    provider.settings_secret
+                    and self.for_a_deployment is False
+                    and available(provider.settings_secret)
+                )
         return self._set_up(consumer, available)
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
@@ -562,7 +589,8 @@ class DeclaredSecrets:
                         else ""
                     )
                     + (
-                        ", or sign in to LinkedIn from its chat"
+                        ", or save your LinkedIn session in Settings › LinkedIn"
+                        " or sign in to LinkedIn from its chat"
                         if server_consumer("linkedin") in group
                         else ""
                     )
@@ -686,13 +714,19 @@ def declared_secrets(
                 return
         names = server_env_names(server)
         sandbox = sandbox_env_names(server)
+        unrequired = optional_env_names(server)
         from_catalogue = as_the_catalogue_wrote_it(server_id, server)
         refuse_server_names(
             server_id,
-            names | sandbox,
+            names | sandbox | unrequired,
             from_catalogue=from_catalogue,
             held=for_a_deployment,
         )
+        if not for_a_deployment:
+            # Held by the process when the account has it, never required,
+            # never the sandbox's nor the server's env: a person's own runtime
+            # alone, never a deployment's (LINKEDIN_LI_AT, 15 November 2026).
+            held.update(unrequired)
         if from_catalogue:
             platform.update((names | sandbox) & CATALOGUE_MAY_DECLARE)
         servers[server_id] = servers.get(server_id, frozenset()) | names
@@ -951,6 +985,7 @@ __all__ = [
     "sandbox_env_names",
     "server_consumer",
     "server_env_names",
+    "optional_env_names",
     "skill_consumer",
     "tool_consumer",
     "account_linked",

@@ -202,6 +202,15 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 + ", ".join(f'"{v}"' for v in sandbox_envvars)
                 + "],"
             )
+        # What the runtime is given when the account has it, never required
+        # (LinkedIn's LINKEDIN_LI_AT, the person's session, 15 November 2026).
+        optional_envvars = spec.get("optional_envvars", [])
+        if optional_envvars:
+            lines.append(
+                "    optional_env_vars=["
+                + ", ".join(f'"{v}"' for v in optional_envvars)
+                + "],"
+            )
         # The rest of what the spec says (the user, 7 November 2026): its tags,
         # where to read about it and get its key, and what its tools do.
         if spec.get("tags"):
@@ -418,6 +427,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 *(
                     [f"  sandboxEnvVars: {json.dumps(list(spec['sandbox_envvars']))},"]
                     if spec.get("sandbox_envvars")
+                    else []
+                ),
+                *(
+                    [f"  optionalEnvVars: {json.dumps(list(spec['optional_envvars']))},"]
+                    if spec.get("optional_envvars")
                     else []
                 ),
                 *[

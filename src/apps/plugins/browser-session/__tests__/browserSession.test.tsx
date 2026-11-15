@@ -170,10 +170,77 @@ describe('Sign in to LinkedIn', () => {
     vi.unstubAllGlobals();
   });
 
-  it('is not drawn once signed in', async () => {
+  it('says signed in once signed in, and Sign in is no longer offered', async () => {
     const fetcher = draw(status({ state: 'signed-in' }));
     await waitFor(() => expect(fetcher).toHaveBeenCalled());
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(
+      await screen.findByRole('button', { name: 'LinkedIn: signed in' }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Sign in to LinkedIn' }),
+    ).toBeNull();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('the session pasted in Settings › LinkedIn (the user, 15 November 2026)', () => {
+  it('says where the session came from, and Sign out forgets the runtime’s copy alone', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const fetcher = draw(status({ state: 'signed-in', settings: 'used' }));
+    const button = await screen.findByRole('button', {
+      name: 'LinkedIn: signed in',
+    });
+    expect(button.getAttribute('title')).toBe(
+      'Signed in with your LinkedIn session from Settings › LinkedIn.',
+    );
+    fireEvent.click(button);
+    expect(
+      await screen.findByText(/stays there, for your next runtime/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() =>
+      expect(
+        fetcher.mock.calls.some(
+          ([url, init]) =>
+            String(url).endsWith('/browser-sessions/linkedin') &&
+            (init as RequestInit | undefined)?.method === 'DELETE',
+        ),
+      ).toBe(true),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it('says it no longer works when LinkedIn refused it, and keeps Sign in', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:page');
+    globalThis.URL.revokeObjectURL = vi.fn();
+    const notice =
+      'Your LinkedIn session in Settings no longer works: paste a new one.';
+    draw(status({ settings: 'refused', notice }));
+    const button = await screen.findByRole('button', {
+      name: 'Sign in to LinkedIn',
+    });
+    expect(button.getAttribute('title')).toBe(notice);
+    expect(button.getAttribute('data-browser-session-settings')).toBe(
+      'refused',
+    );
+    fireEvent.click(button);
+    expect(await screen.findByText(new RegExp(notice))).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Done' })).toBeTruthy();
     vi.unstubAllGlobals();
   });
 });

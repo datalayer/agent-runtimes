@@ -30,7 +30,13 @@ What runs there:
   the home, so neither the file browser nor a snapshot of the home sees it),
   where the server reads it (:func:`keep_session`). A cookie never crosses into
   agent-runtimes, nor into a cell's code, a log or an answer: the cells carry
-  ports, paths and process ids alone.
+  ports, paths and process ids alone;
+- or the person's session pasted in Settings › LinkedIn (``LINKEDIN_LI_AT``,
+  their Vault's, given to this runtime: the user, 15 November 2026), written
+  there the same way before the server first starts (:func:`seed_session`).
+  It is handed over the Pod's 127.0.0.1, once, to the cell that names a
+  nonce (:class:`Handoff`): the cell's code — what a kernel's history keeps —
+  holds a port and a nonce, never the value, and so do its answer and its log.
 
 The Jupyter container is the runtime's, one person's, and gone with the Pod.
 """
@@ -38,10 +44,15 @@ The Jupyter container is the runtime's, one person's, and gone with the Pod.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import inspect
 import json
 import logging
 import os
+import secrets
+import socket
+import threading
+import time
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -117,6 +128,68 @@ def hosts(server_id: str) -> bool:
     return server_id in SERVER_COMMANDS
 
 
+# --- a value handed over the Pod's loopback -------------------------------------------------
+
+
+class Handoff:
+    """
+    One value, handed once over the Pod's 127.0.0.1 to the cell that names its nonce.
+
+    What keeps a secret out of a cell's code, which a kernel's history keeps:
+    the cell carries the port and the nonce, and reads the value from here. It
+    listens on the loopback alone, answers the first connection that sends the
+    nonce and nothing else, and closes after it or after ``timeout`` seconds.
+    """
+
+    def __init__(self, value: str, timeout: float = 120.0) -> None:
+        self._value = value.encode("utf-8")
+        self.nonce = secrets.token_hex(16)
+        self.handed = False
+        self._deadline = time.monotonic() + timeout
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.bind(("127.0.0.1", 0))
+        self._socket.listen(4)
+        self._socket.settimeout(0.5)
+        self.port = int(self._socket.getsockname()[1])
+        self._thread = threading.Thread(target=self._serve, daemon=True)
+        self._thread.start()
+
+    def _serve(self) -> None:
+        try:
+            while time.monotonic() < self._deadline and not self.handed:
+                try:
+                    connection, _ = self._socket.accept()
+                except (socket.timeout, OSError):
+                    continue
+                with connection:
+                    try:
+                        connection.settimeout(5)
+                        said = b""
+                        while b"\n" not in said and len(said) < 128:
+                            chunk = connection.recv(128)
+                            if not chunk:
+                                break
+                            said += chunk
+                        if hmac.compare_digest(
+                            said.split(b"\n")[0].strip(), self.nonce.encode()
+                        ):
+                            connection.sendall(self._value)
+                            self.handed = True
+                    except OSError:
+                        continue
+        finally:
+            self._value = b""
+            try:
+                self._socket.close()
+            except OSError:
+                pass
+
+    def close(self) -> None:
+        """Stop listening, whether or not it was handed."""
+        self._deadline = 0.0
+        self._thread.join(5)
+
+
 # --- the cell -----------------------------------------------------------------------------
 
 
@@ -125,6 +198,13 @@ def _playwright_cookie_source() -> str:
     from agent_runtimes.mcp.browser_session import playwright_cookie
 
     return inspect.getsource(playwright_cookie)
+
+
+def _probe_source() -> str:
+    """The one question to LinkedIn of a pasted session, shared with the runtime's own path."""
+    from agent_runtimes.mcp.browser_session import probe_li_at
+
+    return inspect.getsource(probe_li_at)
 
 
 #: What runs in the Jupyter container's kernel. Its standard library and
@@ -257,9 +337,56 @@ def _dl_host(raw):
 
     PLAYWRIGHT_COOKIE
 
+    PROBE_LI_AT
+
+    def received(port, nonce):
+        # The value from agent-runtimes, over the Pod's loopback: never in this code.
+        with socket.create_connection(("127.0.0.1", int(port)), timeout=10) as connection:
+            connection.sendall((nonce + "\n").encode())
+            chunks = []
+            while True:
+                chunk = connection.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        return b"".join(chunks).decode("utf-8").strip()
+
+    def origin():
+        try:
+            said = json.load(open(os.path.join(auth, "source-state.json"), encoding="utf-8"))
+        except (OSError, ValueError):
+            return ""
+        return str(said.get("origin") or "sign-in") if isinstance(said, dict) else ""
+
+    def write_session(cookies, made_from):
+        private_dir(root)
+        private_dir(auth)
+        private_dir(profile)
+        cookies_path = os.path.join(auth, "cookies.json")
+        private_write(cookies_path, json.dumps([playwright_cookie(c) for c in cookies], indent=2))
+        private_write(os.path.join(auth, "source-state.json"), json.dumps({
+            "version": 1,
+            "source_runtime_id": args["source_runtime"],
+            "login_generation": str(uuid.uuid4()),
+            "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "profile_path": profile,
+            "cookies_path": cookies_path,
+            "origin": made_from,
+        }, indent=2))
+        private_write(os.path.join(profile, args["profile_mark"]), "Written by agent-runtimes' browser session.\n")
+
+    def forget_session():
+        for name in ("cookies.json", "source-state.json"):
+            try:
+                os.unlink(os.path.join(auth, name))
+            except OSError:
+                pass
+        shutil.rmtree(profile, ignore_errors=True)
+        shutil.rmtree(os.path.join(auth, "runtime-profiles"), ignore_errors=True)
+
     do = args["do"]
     answer: Dict[str, Any] = {}
-    if do in ("start-server", "start-browser", "keep-session"):
+    if do in ("start-server", "start-browser", "keep-session", "seed-session"):
         private_dir(args["sessions"])
     if do == "start-server":
         kill("server")
@@ -366,32 +493,32 @@ def _dl_host(raw):
         if not any(c.get("name") == args["session_cookie"] and c.get("value") for c in cookies):
             answer = {"refused": "not-signed-in"}
         else:
-            private_dir(root)
-            private_dir(auth)
-            private_dir(profile)
-            cookies_path = os.path.join(auth, "cookies.json")
-            private_write(cookies_path, json.dumps([playwright_cookie(c) for c in cookies], indent=2))
-            private_write(os.path.join(auth, "source-state.json"), json.dumps({
-                "version": 1,
-                "source_runtime_id": args["source_runtime"],
-                "login_generation": str(uuid.uuid4()),
-                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "profile_path": profile,
-                "cookies_path": cookies_path,
-            }, indent=2))
-            private_write(os.path.join(profile, args["profile_mark"]), "Written by agent-runtimes' browser session.\n")
+            write_session(cookies, "sign-in")
             answer = state()
         del cookies
+    elif do == "seed-session":
+        # The person's session pasted in Settings: written for the server
+        # unless one signed in from the chat is there; LinkedIn asked once.
+        value = received(args["port"], args["nonce"])
+        if not value:
+            answer = {"settings": "none", **state()}
+        elif state()["state"] == "signed-in" and origin() == "sign-in":
+            answer = {"settings": "kept", **state()}
+        elif args.get("probe", True) and probe_li_at(value) == "refused":
+            if origin() == "settings":
+                forget_session()
+            answer = {"settings": "refused", **state()}
+        else:
+            cookie = dict(args["cookie"])
+            cookie["value"] = value
+            write_session([cookie], "settings")
+            del cookie
+            answer = {"settings": "used", **state()}
+        del value
     elif do == "state":
         answer = state()
     elif do == "forget":
-        for name in ("cookies.json", "source-state.json"):
-            try:
-                os.unlink(os.path.join(auth, name))
-            except OSError:
-                pass
-        shutil.rmtree(profile, ignore_errors=True)
-        shutil.rmtree(os.path.join(auth, "runtime-profiles"), ignore_errors=True)
+        forget_session()
         answer = state()
     else:
         answer = {"error": "no %r here" % do}
@@ -399,15 +526,19 @@ def _dl_host(raw):
 """
 
 
+def _indented(source: str) -> str:
+    return "".join(
+        f"    {line}\n" if line.strip() else "\n" for line in source.splitlines()
+    )
+
+
 def cell(operation: str, arguments: Dict[str, Any]) -> str:
     """The code a kernel of the Jupyter container runs for one operation."""
-    body = _CELL.replace(
-        "    PLAYWRIGHT_COOKIE\n",
-        "".join(
-            f"    {line}\n" if line.strip() else "\n"
-            for line in _playwright_cookie_source().splitlines()
-        ),
-    ).replace("MARK_TEXT", repr(MARK))
+    body = (
+        _CELL.replace("    PLAYWRIGHT_COOKIE\n", _indented(_playwright_cookie_source()))
+        .replace("    PROBE_LI_AT\n", _indented(_probe_source()))
+        .replace("MARK_TEXT", repr(MARK))
+    )
     raw = json.dumps({"do": operation, "sessions": SESSIONS_ROOT, **arguments})
     return f"{body}\n_dl_host({raw!r})\ndel _dl_host\n"
 
@@ -603,6 +734,44 @@ async def keep_session(
     )
 
 
+async def seed_session(
+    provider_id: str,
+    value: str,
+    cookie: Dict[str, Any],
+    session_cookie: str,
+    source_runtime: str,
+    profile_mark: str,
+    probe: bool = True,
+) -> Dict[str, Any]:
+    """
+    Write the person's session pasted in Settings for the server, in Jupyter.
+
+    The value is handed over the Pod's loopback (:class:`Handoff`), never put
+    in the cell's code; ``cookie`` is its shape without it.
+
+    Returns
+    -------
+    dict
+        ``{"settings": "used" | "kept" | "refused" | "none", "state": …, "expires": …}``.
+    """
+    handoff = Handoff(value)
+    try:
+        return await call(
+            "seed-session",
+            timeout=120,
+            provider=provider_id,
+            port=handoff.port,
+            nonce=handoff.nonce,
+            cookie={**cookie, "value": ""},
+            session_cookie=session_cookie,
+            source_runtime=source_runtime,
+            profile_mark=profile_mark,
+            probe=probe,
+        )
+    finally:
+        await asyncio.to_thread(handoff.close)
+
+
 async def session_state(provider_id: str, session_cookie: str) -> Dict[str, Any]:
     """What the Jupyter container holds of a session: its state and its expiry."""
     return await call(
@@ -619,6 +788,7 @@ async def forget(provider_id: str, session_cookie: str) -> Dict[str, Any]:
 
 __all__ = [
     "BROWSERS_GLOB",
+    "Handoff",
     "JUPYTER_SANDBOX_ENV",
     "JupyterHostFailed",
     "SERVER_COMMANDS",
@@ -632,6 +802,7 @@ __all__ = [
     "hosts",
     "jupyter_url",
     "keep_session",
+    "seed_session",
     "session_state",
     "start_browser",
     "start_server",

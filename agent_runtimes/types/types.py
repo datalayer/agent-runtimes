@@ -1701,6 +1701,15 @@ class MCPServer(BaseModel):
         ),
         alias="sandboxEnvVars",
     )
+    optional_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variables the runtime is given when the account has "
+            "them, never required: LinkedIn's LINKEDIN_LI_AT, the person's "
+            "session pasted in Settings, written as the server's session"
+        ),
+        alias="optionalEnvVars",
+    )
     is_available: bool = Field(
         default=False,
         description="Whether the server is available (based on env var presence)",

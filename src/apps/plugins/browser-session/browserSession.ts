@@ -39,6 +39,14 @@ export type BrowserSessionStatus = {
   signingIn: boolean;
   /** After *Done*: whether the server runs again. */
   restarted?: boolean;
+  /**
+   * The person's session pasted in Settings › LinkedIn (the user, 15 November
+   * 2026), never its value: `used` (the server was started with it),
+   * `refused` (LinkedIn deleted it, or sent it to its login), `none`.
+   */
+  settings?: 'used' | 'refused' | 'none';
+  /** What the chat says of it, when it says something: the refused session's words. */
+  notice?: string;
 };
 
 /** Where the runtime is, and who asks. */
@@ -71,6 +79,17 @@ export const BROWSER_SESSION_WORDS = {
     `Signed in: the ${name} tools read and act through your session now.`,
   keptNotStarted: (name: string) =>
     `Signed in, and your session is kept; the ${name} server did not start again. Ask again in a moment.`,
+  fromSettings: (name: string) =>
+    `Signed in with your ${name} session from Settings › ${name}.`,
+  signedInHere: (name: string) =>
+    `Signed in to ${name} on this runtime: its tools read and act through your session.`,
+  settingsRefused: (name: string) =>
+    `Your ${name} session in Settings no longer works: paste a new one.`,
+  orSignInHere: (name: string) =>
+    `Paste a new one in Settings › ${name}, or sign in to ${name} below.`,
+  signOutWhat: (name: string) =>
+    `Sign out forgets this runtime's copy of your ${name} session and stops the ${name} server. A session you saved in Settings › ${name} stays there, for your next runtime.`,
+  close: 'Close',
 } as const;
 
 const base = (serverUrl: string) =>
@@ -184,6 +203,14 @@ export function pagePoint(
   const sx = drawn.width > 0 ? BROWSER_PAGE.width / drawn.width : 1;
   const sy = drawn.height > 0 ? BROWSER_PAGE.height / drawn.height : 1;
   return { x: Math.round(click.x * sx), y: Math.round(click.y * sy) };
+}
+
+/** Whether the chat says *signed in*: the server used, a live session, nobody anonymous. */
+export function showsSignedIn(
+  status: BrowserSessionStatus | undefined,
+  anonymous: boolean,
+): boolean {
+  return Boolean(!anonymous && status?.offered && status.state === 'signed-in');
 }
 
 /** Whether the chat offers *Sign in*: the server used, no live session, nobody anonymous. */

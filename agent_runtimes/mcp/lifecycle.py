@@ -806,6 +806,8 @@ class MCPLifecycleManager:
                 self._failed_servers[server_id] = problem
                 return None
 
+            await self._seed_browser_session(server_id)
+
             if remote:
                 # Reached at its url, no process: its headers sent with
                 # every request, the bearer among them expanded here and
@@ -1187,6 +1189,29 @@ class MCPLifecycleManager:
         refusals = getattr(pydantic_server, "refusals", None)
         sentence = getattr(refusals, "sentence", None)
         return sentence or error_detail
+
+    @staticmethod
+    async def _seed_browser_session(server_id: str) -> None:
+        """
+        Write the person's session pasted in Settings as the server's, before its first start.
+
+        A server read through a browser session (LinkedIn's): its session from
+        ``LINKEDIN_LI_AT`` when the runtime was given it (the user, 15 November
+        2026). What fails is said by its name alone, and the server starts
+        anyway: the chat's Sign in stays.
+        """
+        from agent_runtimes.mcp.browser_session import provider_of_server, seed
+
+        provider = provider_of_server(server_id)
+        if provider is None:
+            return
+        try:
+            await seed(provider)
+        except Exception as error:  # noqa: BLE001 - never the value: its name alone
+            logger.warning(
+                f"The {provider.name} session in Settings was not written: "
+                f"{type(error).__name__}"
+            )
 
     @staticmethod
     def _in_jupyter(server_id: str) -> bool:

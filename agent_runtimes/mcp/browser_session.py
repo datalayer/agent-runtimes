@@ -25,6 +25,20 @@ How a session is made, on the person's own runtime:
    under ``~/.linkedin-mcp`` — closes the browser, and starts the server again,
    which signs in from them.
 
+Or pasted once, in Settings › LinkedIn (the user, 15 November 2026: LinkedIn's
+reCAPTCHA loops forever on a sign-in made from an AWS address): the ``li_at``
+cookie of the person's own browser, kept in their Vault secrets as
+``LINKEDIN_LI_AT``, given to each new runtime of theirs whose agent uses the
+server (the catalogue's ``optional_envvars``: never required, never to a
+deployment's, never in the sandbox). Before the server first starts, the
+runtime writes it as the server's session (:func:`seed`) — in the Jupyter
+container, handed over the Pod's loopback so that no cell's code holds it — and
+asks LinkedIn once whether it signs in: sent to its login, the chat says the
+session in Settings no longer works. The interactive sign-in stays beside it,
+unchanged; a session signed in there is never overwritten, and *Sign out* forgets
+the runtime's copy alone (the Vault's stays, and is not written again on that
+runtime).
+
 What keeps it the person's: the files are the runtime's own, mode 0600 in a
 0700 directory of its home, on the pod's own disk — a runtime is one person's,
 never shared, and its disk is gone when it ends; nothing is logged but the
@@ -56,7 +70,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from agent_runtimes.apps.browser import (
     Browser,
@@ -85,6 +99,10 @@ class SessionProvider:
     cookie_urls: tuple[str, ...]
     #: The cookie without which there is no session.
     session_cookie: str
+    #: The person's secret that holds that cookie, pasted in Settings (``""``: none).
+    settings_secret: str = ""
+    #: Where the cookie is set, as the provider sets it.
+    cookie_domain: str = ""
 
 
 LINKEDIN = SessionProvider(
@@ -94,6 +112,8 @@ LINKEDIN = SessionProvider(
     login_url="https://www.linkedin.com/login",
     cookie_urls=("https://www.linkedin.com/", "https://linkedin.com/"),
     session_cookie="li_at",
+    settings_secret="LINKEDIN_LI_AT",
+    cookie_domain=".linkedin.com",
 )
 
 PROVIDERS: Dict[str, SessionProvider] = {LINKEDIN.id: LINKEDIN}
@@ -105,6 +125,14 @@ SOURCE_RUNTIME = "datalayer-browser-session"
 
 #: The file that marks the profile directory as one this module wrote.
 PROFILE_MARK = ".datalayer-browser-session"
+
+#: Where a session came from, as ``source-state.json`` says it: signed in from
+#: the chat, or the person's pasted in Settings.
+FROM_SIGN_IN = "sign-in"
+FROM_SETTINGS = "settings"
+
+#: How long a pasted ``li_at`` is taken to live: LinkedIn's last about a year.
+SETTINGS_COOKIE_SECONDS = 365 * 24 * 3600
 
 
 class SessionRefused(Exception):
@@ -171,6 +199,86 @@ def playwright_cookie(cookie: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def settings_cookie_of(
+    provider: SessionProvider, value: str, now: Optional[float] = None
+) -> Dict[str, Any]:
+    """The person's pasted session as the cookie the browser would hold, DevTools' shape."""
+    moment = time.time() if now is None else now
+    return {
+        "name": provider.session_cookie,
+        "value": value,
+        "domain": provider.cookie_domain,
+        "path": "/",
+        "expires": float(int(moment) + SETTINGS_COOKIE_SECONDS),
+        "httpOnly": True,
+        "secure": True,
+        "sameSite": "None",
+    }
+
+
+def probe_li_at(value: str, timeout: float = 15.0) -> str:
+    """
+    Whether LinkedIn signs in with an ``li_at``: ``accepted``, ``refused`` or ``unchecked``.
+
+    One read of the feed, its redirect not followed: LinkedIn answers a live
+    session with the page, and a dead one by deleting it (``Set-Cookie:
+    li_at=delete me``, ``Max-Age=0``; seen 15 November 2026 with a fake value)
+    or with its login (``refused``). Anything
+    else — its bot wall (999), a challenge, no network — is ``unchecked``, and
+    the session is kept: the server says more when it reads. Its standard
+    library alone: the Jupyter container runs this very function. Never says
+    any part of the value.
+    """
+    import http.client
+    import ssl
+
+    if not value or any(c in value for c in ' ;,"\r\n\t') or not value.isprintable():
+        return "refused"
+    try:
+        connection = http.client.HTTPSConnection(
+            "www.linkedin.com", timeout=timeout, context=ssl.create_default_context()
+        )
+        try:
+            connection.request(
+                "GET",
+                "/feed/",
+                headers={
+                    "Cookie": "li_at=" + value,
+                    "User-Agent": (
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+                    ),
+                    "Accept": "text/html,application/xhtml+xml",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            )
+            response = connection.getresponse()
+            status = response.status
+            location = str(response.getheader("Location") or "").lower()
+            set_cookies = [
+                str(header).lower()
+                for name, header in (response.getheaders() or [])
+                if str(name).lower() == "set-cookie"
+            ]
+            response.read(1024)
+        finally:
+            connection.close()
+    except Exception:
+        return "unchecked"
+    if any(
+        cookie.startswith("li_at=") and ("delete me" in cookie or "max-age=0" in cookie)
+        for cookie in set_cookies
+    ):
+        return "refused"
+    if status == 200:
+        return "accepted"
+    if 300 <= status < 400 and any(
+        word in location for word in ("/login", "/authwall", "/uas/login", "/signup")
+    ):
+        return "refused"
+    return "unchecked"
+
+
 def _private_write(path: Path, text: str) -> None:
     """Write a file only its owner reads, replacing it whole."""
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}")
@@ -184,6 +292,7 @@ def write_linkedin_session(
     cookies: List[Dict[str, Any]],
     environ: Optional[Dict[str, str]] = None,
     now: Optional[float] = None,
+    origin: str = FROM_SIGN_IN,
 ) -> Path:
     """
     Write a LinkedIn session where ``mcp-server-linkedin`` reads one made elsewhere.
@@ -200,6 +309,8 @@ def write_linkedin_session(
         The server's environment (``USER_DATA_DIR``); the process's when unsaid.
     now : float, optional
         The moment written, epoch seconds; the clock's when unsaid.
+    origin : str
+        Where it came from: :data:`FROM_SIGN_IN` or :data:`FROM_SETTINGS`.
 
     Returns
     -------
@@ -239,6 +350,7 @@ def write_linkedin_session(
                 "created_at": created.isoformat().replace("+00:00", "Z"),
                 "profile_path": str(profile),
                 "cookies_path": str(cookies_path),
+                "origin": origin,
             },
             indent=2,
         ),
@@ -277,6 +389,17 @@ def session_state(
                 return "expired"
             return "signed-in"
     return "none"
+
+
+def session_origin(environ: Optional[Dict[str, str]] = None) -> str:
+    """Where the session this runtime holds came from, read off ``source-state.json``; ``""`` when none."""
+    try:
+        state = json.loads(
+            (auth_root(environ) / "source-state.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return ""
+    return str(state.get("origin") or FROM_SIGN_IN) if isinstance(state, dict) else ""
 
 
 def forget(provider: SessionProvider, environ: Optional[Dict[str, str]] = None) -> None:
@@ -394,9 +517,107 @@ async def refresh(provider: SessionProvider) -> None:
         )
 
 
+#: What came of the person's session pasted in Settings, by provider, on this
+#: runtime: ``used`` (written for the server: LinkedIn took it, or could not be
+#: asked), ``refused`` (LinkedIn sent it to its login), ``kept`` (a session
+#: signed in from the chat was there, and stays). None until it was tried.
+_SETTINGS: Dict[str, str] = {}
+
+#: The providers whose Settings session was tried on this runtime: once, at the
+#: server's first start; a restart after a sign-in never writes it again.
+_TRIED: Set[str] = set()
+
+#: The providers signed out of on this runtime: their Settings session is not
+#: written again here (the Vault keeps it for the next runtime).
+_SIGNED_OUT: Set[str] = set()
+
+
+def settings_refused_words(provider: SessionProvider) -> str:
+    """What the chat says when LinkedIn sent the pasted session to its login."""
+    return f"Your {provider.name} session in Settings no longer works: paste a new one."
+
+
+def settings_cookie(provider: SessionProvider) -> str:
+    """
+    The person's session pasted in Settings, as this runtime was given it; ``""`` when none here.
+
+    Never on a visitors' runtime nor a deployment's (the catalogue gives it to
+    neither: a person's own runtime alone), nor once the person signed out here.
+    """
+    if not provider.settings_secret or provider.id in _SIGNED_OUT:
+        return ""
+    from agent_runtimes.apps.visitors import visitors_runtime
+    from agent_runtimes.guardrails.declared_secrets import on_a_deployment
+
+    try:
+        if visitors_runtime() or on_a_deployment():
+            return ""
+    except Exception:
+        return ""
+    return os.environ.get(provider.settings_secret, "").strip()
+
+
+async def seed(provider: SessionProvider) -> str:
+    """
+    Write the person's session pasted in Settings as the server's, before it first starts.
+
+    In the Jupyter container when the server runs there (handed over the Pod's
+    loopback, never in a cell's code), else beside the server's profile here;
+    LinkedIn asked once whether it signs in. A session signed in from the chat
+    is never overwritten. Never logs, says or returns any part of the value.
+
+    Returns
+    -------
+    str
+        What came of it (:data:`_SETTINGS`), ``""`` when there was nothing to do.
+    """
+    if provider.id in _TRIED:
+        return ""
+    value = settings_cookie(provider)
+    if not value:
+        return ""
+    _TRIED.add(provider.id)
+    from agent_runtimes.guardrails.credentials import hold
+
+    # Withheld wherever it would be shown: an answer, a tool's result, a log.
+    hold(value)
+    if in_jupyter(provider):
+        from agent_runtimes.mcp import jupyter_host
+
+        answer = await jupyter_host.seed_session(
+            provider.id,
+            value,
+            settings_cookie_of(provider, ""),
+            provider.session_cookie,
+            SOURCE_RUNTIME,
+            PROFILE_MARK,
+        )
+        outcome = str(answer.get("settings") or "used")
+        _HELD[provider.id] = {
+            "state": answer.get("state"),
+            "expires": answer.get("expires"),
+        }
+    elif session_state(provider) == "signed-in" and session_origin() == FROM_SIGN_IN:
+        outcome = "kept"
+    elif probe_li_at(value) == "refused":
+        if session_origin() == FROM_SETTINGS:
+            forget(provider)
+        outcome = "refused"
+    else:
+        write_linkedin_session(
+            [settings_cookie_of(provider, value)], origin=FROM_SETTINGS
+        )
+        outcome = "used"
+    del value
+    _SETTINGS[provider.id] = outcome
+    logger.info("The %s session in Settings: %s", provider.name, outcome)
+    return outcome
+
+
 def status(provider: SessionProvider) -> Dict[str, Any]:
     """What the chat is told: the session's state, and whether one is being made."""
     browsing = browser_running(_browser_key(provider)) is not None
+    settings = _SETTINGS.get(provider.id, "none")
     return {
         "provider": provider.id,
         "name": provider.name,
@@ -405,6 +626,9 @@ def status(provider: SessionProvider) -> Dict[str, Any]:
         "unavailable": server_runs_here(provider),
         "state": session_state(provider),
         "signingIn": browsing,
+        # The session pasted in Settings: never its value, what came of it.
+        "settings": "used" if settings == "kept" else settings,
+        "notice": settings_refused_words(provider) if settings == "refused" else "",
     }
 
 
@@ -516,6 +740,8 @@ async def finish(provider: SessionProvider) -> Dict[str, Any]:
         cookies = await read(list(provider.cookie_urls))
         write_linkedin_session(cookies)
     await close_browser(_browser_key(provider))
+    # Signed in from the chat: what was said of the Settings session is past.
+    _SETTINGS.pop(provider.id, None)
     logger.info("A %s browser session was kept for this runtime", provider.name)
     restarted = False
     if _server_known(provider):
@@ -539,8 +765,15 @@ async def cancel(provider: SessionProvider) -> Dict[str, Any]:
 
 
 async def sign_out(provider: SessionProvider) -> Dict[str, Any]:
-    """Forget the session and start the server again, without it."""
+    """
+    Forget the session and start the server again, without it.
+
+    The runtime's copy alone: a session pasted in Settings stays in the Vault,
+    for the next runtime, and is not written again on this one.
+    """
     await close_browser(_browser_key(provider))
+    _SIGNED_OUT.add(provider.id)
+    _SETTINGS.pop(provider.id, None)
     if in_jupyter(provider):
         from agent_runtimes.mcp import jupyter_host
 
@@ -572,9 +805,14 @@ __all__ = [
     "in_jupyter",
     "playwright_cookie",
     "profile_dir",
+    "probe_li_at",
     "provider_of",
     "provider_of_server",
     "refresh",
+    "seed",
+    "session_origin",
+    "settings_cookie",
+    "settings_cookie_of",
     "screenshot",
     "session_state",
     "sign_out",

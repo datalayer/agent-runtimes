@@ -11,6 +11,12 @@
  * types and presses keys as on any page; *Done* keeps the session for the
  * server, *Cancel* keeps nothing. Never for an anonymous visitor.
  *
+ * Signed in — with the person's session pasted in Settings › LinkedIn (the
+ * user, 15 November 2026), or from this dialog — it says so, and opens what
+ * *Sign out* does: the runtime's copy forgotten, Settings' kept. When LinkedIn
+ * refused the session from Settings, the button says it and the dialog leads
+ * with it: paste a new one, or sign in here.
+ *
  * @module apps/plugins/browser-session/BrowserSessionButton
  */
 
@@ -33,7 +39,9 @@ import {
   BROWSER_SESSION_WORDS as WORDS,
   cancelSession,
   finishSession,
+  forgetSession,
   offersSignIn,
+  showsSignedIn,
   pagePoint,
   sessionScreenshot,
   sessionStatus,
@@ -110,20 +118,62 @@ export function BrowserSessionButton({
     const timer = setInterval(() => void refresh(), STATUS_MS);
     return () => clearInterval(timer);
   }, [refresh]);
+  const [signedInOpen, setSignedInOpen] = useState(false);
   // The slot and `Chat` leave an anonymous visitor's chat out before this.
+  const name = status?.name ?? 'LinkedIn';
+  if (showsSignedIn(status, false) && !open) {
+    return (
+      <>
+        <Button
+          size="small"
+          variant="invisible"
+          onClick={() => setSignedInOpen(true)}
+          data-browser-session-signed-in={provider}
+          title={
+            status?.settings === 'used'
+              ? WORDS.fromSettings(name)
+              : WORDS.signedInHere(name)
+          }
+        >
+          {WORDS.signedIn(name)}
+        </Button>
+        {signedInOpen ? (
+          <BrowserSessionSignedIn
+            place={place}
+            provider={provider}
+            name={name}
+            fromSettings={status?.settings === 'used'}
+            onClose={next => {
+              setSignedInOpen(false);
+              if (next) {
+                setStatus(next);
+              } else {
+                void refresh();
+              }
+            }}
+          />
+        ) : null}
+      </>
+    );
+  }
   if (!offersSignIn(status, false) && !open) {
     return null;
   }
-  const name = status?.name ?? 'LinkedIn';
+  const refused = status?.settings === 'refused';
   return (
     <>
       <Button
         size="small"
-        variant={status?.state === 'expired' ? 'danger' : 'default'}
+        variant={status?.state === 'expired' || refused ? 'danger' : 'default'}
         onClick={() => setOpen(true)}
         data-browser-session-sign-in={provider}
+        data-browser-session-settings={status?.settings ?? 'none'}
         title={
-          status?.state === 'expired' ? WORDS.expired(name) : WORDS.why(name)
+          refused
+            ? (status?.notice ?? WORDS.settingsRefused(name))
+            : status?.state === 'expired'
+              ? WORDS.expired(name)
+              : WORDS.why(name)
         }
       >
         {status?.state === 'expired'
@@ -135,6 +185,9 @@ export function BrowserSessionButton({
           place={place}
           provider={provider}
           name={name}
+          notice={
+            refused ? (status?.notice ?? WORDS.settingsRefused(name)) : ''
+          }
           onClose={next => {
             setOpen(false);
             if (next) {
@@ -163,6 +216,67 @@ export const BROWSER_SESSION_DIALOG_SX = {
 } as const;
 
 /**
+ * Signed in, said: where the session came from, and *Sign out*, which forgets
+ * the runtime's copy alone — a session saved in Settings stays in the Vault.
+ */
+export function BrowserSessionSignedIn({
+  place,
+  provider,
+  name,
+  fromSettings,
+  onClose,
+}: {
+  place: BrowserSessionPlace;
+  provider: BrowserSessionProvider;
+  name: string;
+  fromSettings: boolean;
+  onClose: (status?: BrowserSessionStatus) => void;
+}): JSX.Element {
+  const [error, setError] = useState('');
+  const [leaving, setLeaving] = useState(false);
+  const signOut = async () => {
+    setLeaving(true);
+    setError('');
+    try {
+      onClose(await forgetSession(place, provider));
+    } catch (failed) {
+      setError(failed instanceof Error ? failed.message : String(failed));
+      setLeaving(false);
+    }
+  };
+  return (
+    <Dialog
+      title={WORDS.signedIn(name)}
+      onClose={() => onClose()}
+      footerButtons={[
+        { content: WORDS.close, onClick: () => onClose() },
+        {
+          content: WORDS.signOut,
+          buttonType: 'danger',
+          onClick: () => void signOut(),
+          disabled: leaving,
+        },
+      ]}
+    >
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={2}
+        data-browser-session-signed-in-dialog={provider}
+      >
+        <Text as="p" sx={{ m: 0, fontSize: 1 }}>
+          {fromSettings ? WORDS.fromSettings(name) : WORDS.signedInHere(name)}
+        </Text>
+        <Text as="p" sx={{ m: 0, fontSize: 1, color: 'fg.muted' }}>
+          {WORDS.signOutWhat(name)}
+        </Text>
+        {error ? <Flash variant="danger">{error}</Flash> : null}
+      </Box>
+    </Dialog>
+  );
+}
+
+/**
  * The runtime's browser at the provider's login, drawn from its screenshots,
  * the person's steps sent back.
  */
@@ -170,11 +284,14 @@ export function BrowserSessionDialog({
   place,
   provider,
   name,
+  notice = '',
   onClose,
 }: {
   place: BrowserSessionPlace;
   provider: BrowserSessionProvider;
   name: string;
+  /** Said first: the session from Settings that LinkedIn refused. */
+  notice?: string;
   onClose: (status?: BrowserSessionStatus) => void;
 }): JSX.Element {
   const [image, setImage] = useState('');
@@ -284,6 +401,11 @@ export function BrowserSessionDialog({
       ]}
     >
       <Box display="flex" flexDirection="column" gap={2}>
+        {notice ? (
+          <Flash variant="warning" data-browser-session-notice={provider}>
+            {notice} {WORDS.orSignInHere(name)}
+          </Flash>
+        ) : null}
         <Text as="p" sx={{ m: 0, fontSize: 1, color: 'fg.muted' }}>
           {WORDS.why(name)}
         </Text>
